@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -40,14 +40,14 @@ export function BreadcrumbItem({ children, className, isCurrent }: BreadcrumbIte
 export type BreadcrumbLinkProps = {
   children: ReactNode;
   href?: string;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLAnchorElement | HTMLButtonElement>;
   className?: string;
 };
 
 export function BreadcrumbLink({ children, href, onClick, className }: BreadcrumbLinkProps) {
   if (href) {
     return (
-      <a href={href} className={cx('kds-breadcrumb-link', className)}>
+      <a href={href} onClick={onClick} className={cx('kds-breadcrumb-link', className)}>
         {children}
       </a>
     );

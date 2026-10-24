@@ -1,1874 +1,683 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Helmet } from 'react-helmet';
 import {
-  AlertTriangle,
+  ArrowDown,
   ArrowRight,
-  Bell,
-  Bold,
-  Bookmark,
-  Calendar as CalendarIcon,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
+  Boxes,
+  Check,
   ChevronRight,
-  ChevronUp,
-  Copy,
-  DollarSign,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  FileText,
-  Filter,
-  Folder,
-  GripVertical,
-  Home,
-  Image as ImageIcon,
-  Italic,
-  LayoutGrid,
-  List,
-  ListOrdered,
-  Loader2,
-  Mail,
-  MessageCircle,
-  Minus,
+  Menu,
+  Monitor,
   Moon,
-  Music,
-  Pause,
-  Pencil,
-  Play,
-  Plus,
-  Search,
-  Save,
-  Settings,
-  Share2,
-  Sliders as SlidersIcon,
-  SlidersHorizontal,
-  Sparkles,
+  Palette,
+  Smartphone,
   Sun,
-  Trash2,
-  Underline,
-  Upload,
-  User,
-  Users,
-  X,
+  Tablet,
 } from 'lucide-react';
-
 import {
   Alert,
-  ActionSurface,
-  Avatar,
-  AvatarBadge,
-  AvatarGroup,
   Badge,
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbSeparator,
   Button,
-  ButtonGroup,
-  Card,
-  Checkbox,
-  Combobox,
-  ConfirmDialog,
-  DateRangeFilter,
-  DateTimePicker,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
   Drawer,
   DrawerBody,
-  DrawerFooter,
   DrawerHeader,
   EmptyState,
-  Field,
-  FilterBar,
-  FilterMultiSelect,
-  FilterSelect,
   IconButton,
-  Input,
-  InputAddon,
-  InputGroup,
-  KpiCard,
-  LinkButton,
-  LoadingState,
-  MultiSelect,
-  PageContainer,
-  PageHeader,
-  PageSection,
-  OperationalMetricChip,
-  OperationalStatusBadge,
-  OperationalStatusDot,
-  Pagination,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Progress,
-  Radio,
-  RadioGroup,
+  NavigationList,
   SearchInput,
   SegmentedControl,
-  Select,
-  SectionHeader,
-  Skeleton,
-  Stepper,
-  Stack,
-  Surface,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Tabs,
-  Textarea,
-  Text,
-  TextLink,
-  Heading,
   ToastProvider,
   Tooltip,
-  Toolbar,
-  ToolbarActions,
-  ToolbarSearch,
-  Inline,
-  PublicCard,
-  PublicEmptyState,
-  PublicSection,
-  useToast,
 } from '../../design-system';
+import Foundations from './showcase/Foundations';
+import ComponentCatalog from './showcase/ComponentCatalog';
+import States from './showcase/States';
+import WorkspacePreview from './showcase/WorkspacePreview';
+import {
+  isPattern,
+  isSection,
+  normalizeSearch,
+  patterns,
+  sections,
+  type Pattern,
+  type SectionId,
+  type ShowcaseTheme,
+} from './showcase/catalog';
+import {
+  ExploreButton,
+  PreviewLink,
+  SectionIntro,
+  UsageNote,
+} from './showcase/ShowcaseParts';
 import './design-system-showcase.css';
 
-type Theme = 'light' | 'dark';
-const THEME_STORAGE_KEY = 'kifer-ds-showcase-theme';
-
-/* ── Layout helpers ─────────────────────────────────────────── */
-
-function Cat({ id, title, description, children }: { id: string; title: string; description: string; children: ReactNode }) {
-  return (
-    <section id={id} className="mb-16 scroll-mt-8">
-      <div className="mb-6 border-b border-[var(--border-default)] pb-4">
-        <Heading level={2}>{title}</Heading>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{description}</p>
-      </div>
-      <div className="ds-cat-grid">{children}</div>
-    </section>
-  );
+const storageKey = 'kifer-ds-showcase-theme';
+function readTheme(): ShowcaseTheme {
+  try {
+    return localStorage.getItem(storageKey) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 }
-
-function Item({
-  title,
-  span,
-  children,
-}: {
-  title: string;
-  span?: 'sm' | 'md' | 'lg' | 'full';
-  children: ReactNode;
-}) {
-  const spanClass =
-    span === 'full'
-      ? 'sm:col-span-full'
-      : span === 'lg'
-        ? 'sm:col-span-2 xl:col-span-3'
-        : span === 'md'
-          ? 'sm:col-span-2'
-          : '';
-  return (
-    <div className={['ds-item-card flex min-w-0 flex-col gap-4', spanClass].join(' ')}>
-      <p className="text-[13px] font-medium text-[var(--text-muted)]">{title}</p>
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">{children}</div>
-    </div>
-  );
-}
-
-function ThemeToggle({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
-  return (
-    <div className="fixed right-4 top-4 z-50 flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] p-1 shadow-[var(--shadow-popover)]">
-      <button
-        type="button"
-        aria-label="Modo claro"
-        aria-pressed={theme === 'light'}
-        onClick={() => onChange('light')}
-        className={[
-          'flex h-8 w-8 items-center justify-center rounded-full transition',
-          theme === 'light' ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]' : 'text-[var(--text-muted)]',
-        ].join(' ')}
-      >
-        <Sun className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        aria-label="Modo escuro"
-        aria-pressed={theme === 'dark'}
-        onClick={() => onChange('dark')}
-        className={[
-          'flex h-8 w-8 items-center justify-center rounded-full transition',
-          theme === 'dark' ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]' : 'text-[var(--text-muted)]',
-        ].join(' ')}
-      >
-        <Moon className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-function CatNav() {
-  const cats = [
-    ['foundations', 'Foundations'],
-    ['actions', 'Actions'],
-    ['forms', 'Forms'],
-    ['navigation', 'Navigation'],
-    ['containers', 'Containers'],
-    ['feedback', 'Feedback'],
-    ['data', 'Data Display'],
-    ['media', 'Media'],
-    ['search', 'Search & Filters'],
-    ['advanced', 'Advanced'],
-    ['layout', 'Layout / Utility'],
-  ] as const;
-  return (
-    <nav className="mb-12 flex flex-wrap justify-center gap-2">
-      {cats.map(([id, label]) => (
-        <a
-          key={id}
-          href={`#${id}`}
-          className="rounded-full bg-[var(--bg-hover)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)]"
-        >
-          {label}
-        </a>
-      ))}
-    </nav>
-  );
-}
-
-/* ── Data ─────────────────────────────────────────── */
-
-const STATUS_DROPDOWN_OPTIONS = [
-  { nome: 'Novo', cor: 'var(--brand-primary)' },
-  { nome: 'Contato Inicial', cor: 'var(--chart-2)' },
-  { nome: 'Em Análise', cor: 'var(--chart-3)' },
-  { nome: 'Proposta Enviada', cor: 'var(--chart-4)' },
-];
-
-const SHOWCASE_COLORS = ['var(--brand-primary)', 'var(--accent-gold)', 'var(--success)', 'var(--info)', 'var(--text-primary)'];
-const SHOWCASE_CODE = "const lead = { nome: 'Ana Paula' };";
-const SHOWCASE_CAROUSEL_ITEMS = ['Imagem principal', 'Detalhes do plano', 'Documentos'];
-const SHOWCASE_INFINITE_ITEMS = ['Ana Paula', 'Carlos Silva', 'Fernanda Oliveira'];
-
-/* ── Page ─────────────────────────────────────────── */
-
-function ShowcaseContent() {
-  const { toast } = useToast();
-
-  const [accordionOpen, setAccordionOpen] = useState<'q1' | 'q2' | null>('q2');
-  const [checkTri, setCheckTri] = useState<'checked' | 'indeterminate' | 'unchecked'>('checked');
-  const [switchOn, setSwitchOn] = useState(true);
-  const [radioValue, setRadioValue] = useState('checked');
-  const [sliderValue, setSliderValue] = useState(68);
-  const [sliderActive, setSliderActive] = useState(false);
-  const [rangeLow, setRangeLow] = useState(20);
-  const [rangeHigh, setRangeHigh] = useState(70);
-  const [segmentIcon, setSegmentIcon] = useState<'grid' | 'list'>('grid');
-  const [comboboxValue, setComboboxValue] = useState('bradesco');
-  const [multiSelectValues, setMultiSelectValues] = useState(['luiza']);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterOwners, setFilterOwners] = useState<string[]>([]);
-  const [filterFrom, setFilterFrom] = useState('2026-08-01');
-  const [filterTo, setFilterTo] = useState('2026-08-31');
-  const [metricTab, setMetricTab] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
-  const [underlineTab, setUnderlineTab] = useState<'leads' | 'contratos' | 'comissoes'>('leads');
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-  const [statusDropdownValue, setStatusDropdownValue] = useState('Proposta Enviada');
-  const [splitMenuOpen, setSplitMenuOpen] = useState(false);
-  const [buttonGroupValue, setButtonGroupValue] = useState('Semana');
-  const [page, setPage] = useState(3);
-  const [actionSurfaceSelected, setActionSurfaceSelected] = useState(false);
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [tagsInput, setTagsInput] = useState(['Bradesco Saúde', 'Amil']);
-  const [colorValue, setColorValue] = useState(SHOWCASE_COLORS[0]);
-  const [otp, setOtp] = useState(['4', '2', '', '', '', '']);
-  const [toggleGridPressed, setToggleGridPressed] = useState(true);
-  const [selectedTreeOpen, setSelectedTreeOpen] = useState(true);
-  const [fileName, setFileName] = useState('');
-  const [tagDraft, setTagDraft] = useState('');
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [videoPlaying, setVideoPlaying] = useState(false);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [splitRatio, setSplitRatio] = useState(34);
-  const [infiniteItems, setInfiniteItems] = useState(SHOWCASE_INFINITE_ITEMS);
-  const [sortableStatuses, setSortableStatuses] = useState(['Novo', 'Contato Inicial', 'Proposta Enviada']);
-  const [draggedStatus, setDraggedStatus] = useState<string | null>(null);
-  const [tourVisible, setTourVisible] = useState(true);
-  const [wizardStep, setWizardStep] = useState(0);
-  const [copied, setCopied] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
-
-  const sliderCurrency = 800 + Math.round((sliderValue / 100) * 3200);
-
-  const addTag = () => {
-    const nextTag = tagDraft.trim().replace(/,$/, '');
-    if (!nextTag || tagsInput.includes(nextTag)) return;
-    setTagsInput((prev) => [...prev, nextTag]);
-    setTagDraft('');
-  };
-
-  const copyShowcaseCode = async () => {
-    try {
-      await navigator.clipboard?.writeText(SHOWCASE_CODE);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      toast({ description: 'Não foi possível copiar o código.', variant: 'error' });
-    }
-  };
-
-  const loadMoreInfiniteItems = () => {
-    setInfiniteItems((prev) => {
-      if (prev.length >= 9) return prev;
-      const next = ['João Mendes', 'Mariana Alves', 'Rafael Costa'];
-      return [...prev, ...next.slice(0, 9 - prev.length)];
-    });
-  };
-
-  return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] px-4 py-16 sm:px-8">
-      <div className="mx-auto max-w-7xl">
-        <Heading level={1} className="mb-2 text-center">
-          Design System
-        </Heading>
-        <p className="mb-8 text-center text-sm text-[var(--text-muted)]">
-          Kifer Saúde · biblioteca completa de componentes, por categoria
-        </p>
-
-        <CatNav />
-
-        {/* ═══════════════════ FOUNDATIONS ═══════════════════ */}
-        <Cat id="foundations" title="Foundations" description="Tipografia, layout e superfícies públicas reutilizáveis.">
-          <Item title="Hierarquia tipográfica" span="full">
-            <Stack gap="sm">
-              <Heading level={3} size="lg">Leads em negociação</Heading>
-              <Text size="sm" tone="secondary">Use a escala tipográfica para diferenciar contexto, conteúdo e apoio.</Text>
-              <Inline gap="sm" align="center">
-                <Text size="xs" tone="muted" weight="medium">Última atualização há 2 min</Text>
-                <TextLink href="#feedback" underline>Ver feedback</TextLink>
-              </Inline>
-            </Stack>
-          </Item>
-
-          <Item title="Playfair Display nos títulos" span="md">
-            <Stack gap="md">
-              <Heading level={3} size="display">Cuidado em cada <em>escolha.</em></Heading>
-              <Text size="sm">Títulos maiores em medium, seções em semibold e títulos locais em medium. Itálico apenas em destaques editoriais.</Text>
-              {(['regular', 'medium', 'semibold', 'bold'] as const).map((weight) => (
-                <div key={weight}>
-                  <Text size="xs" tone="muted">{weight}</Text>
-                  <Heading level={4} size="lg" weight={weight}>Atendimento com atenção</Heading>
-                </div>
-              ))}
-            </Stack>
-          </Item>
-
-          <Item title="Inter na operação" span="md">
-            <Stack gap="md">
-              {(['regular', 'medium', 'semibold', 'bold'] as const).map((weight) => (
-                <div key={weight}>
-                  <Text size="xs" tone="muted">{weight}</Text>
-                  <Text tone="primary" weight={weight}>Acompanhe cada oportunidade</Text>
-                </div>
-              ))}
-              <Text size="sm">Corpo e apoio em regular, rótulos em medium, ações em semibold e números importantes em bold.</Text>
-              <div className="panel-page-shell">
-                <OperationalMetricChip value="128" label="oportunidades" />
-                <Heading level={4} size="md" className="mt-4">Resumo do atendimento</Heading>
-                <h3 className="kds-op-lead-title mt-2">Ana Paula Costa</h3>
-                <p className="kds-op-lead-meta">Contato recebido hoje</p>
-                <KpiCard title="Contratos ativos" value="1.248" subtitle="Atualizado hoje" className="mt-4" />
-              </div>
-            </Stack>
-          </Item>
-
-          <Item title="Layout primitives">
-            <Stack gap="sm">
-              <Inline gap="sm" justify="between" align="center" className="rounded-xl bg-[var(--bg-hover)] p-3">
-                <Text as="span" size="sm" weight="semibold" tone="primary">Stack + Inline</Text>
-                <Badge tone="info">Responsivo</Badge>
-              </Inline>
-              <Stack as="ul" gap="xs" className="list-disc pl-5 text-sm text-[var(--text-secondary)]">
-                <li>Espaçamento semântico</li>
-                <li>Alinhamento consistente</li>
-              </Stack>
-            </Stack>
-          </Item>
-
-          <Item title="Application composition" span="lg">
-            <PageContainer size="full" spacing="sm" className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-canvas)] p-3">
-              <PageHeader
-                eyebrow="CRM / LEADS"
-                title="Cabeçalho de página"
-                description="Composição pronta para telas operacionais."
-                actions={<LinkButton href="#data" size="sm">Ver métricas</LinkButton>}
-              />
-              <PageSection className="mt-4">
-                <Toolbar>
-                  <ToolbarSearch><SearchInput placeholder="Buscar nesta tela" /></ToolbarSearch>
-                  <ToolbarActions><Button size="sm" variant="secondary">Filtrar</Button></ToolbarActions>
-                </Toolbar>
-              </PageSection>
-            </PageContainer>
-          </Item>
-
-          <Item title="Section header + empty state">
-            <Stack gap="sm">
-              <SectionHeader title="Nenhum resultado" description="A composição mantém título, contexto e ação alinhados." action={<Button size="sm">Criar lead</Button>} />
-              <EmptyState icon={<Users className="h-5 w-5" />} title="Sua busca está vazia" description="Ajuste os filtros para continuar." />
-            </Stack>
-          </Item>
-
-          <Item title="Public surfaces" span="md">
-            <PublicSection tone="muted" className="rounded-2xl p-3">
-              <PublicCard className="p-4">
-                <Heading level={4} size="sm">Conteúdo público</Heading>
-                <Text size="sm" className="mt-1">Card, seção e estado vazio com os mesmos tokens.</Text>
-                <PublicEmptyState
-                  className="mt-3"
-                  icon={<CheckCircle2 className="h-5 w-5" />}
-                  title="Tudo certo"
-                  description="Nenhuma pendência para este visitante."
-                />
-              </PublicCard>
-            </PublicSection>
-          </Item>
-
-          <Item title="Action surface">
-            <ActionSurface
-              type="button"
-              padding="sm"
-              variant="muted"
-              selected={actionSurfaceSelected}
-              onClick={() => setActionSurfaceSelected((value) => !value)}
-              aria-pressed={actionSurfaceSelected}
-            >
-              <Text as="span" size="sm" weight="semibold" tone="primary">{actionSurfaceSelected ? 'Selecionado' : 'Selecionar superfície'}</Text>
-            </ActionSurface>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ ACTIONS ═══════════════════ */}
-        <Cat id="actions" title="Actions" description="Botões e controles de ação.">
-          <Item title="Button">
-            <div className="flex flex-wrap gap-2">
-              <Button variant="primary">Novo Lead</Button>
-              <Button variant="secondary">Cancelar</Button>
-              <Button variant="tertiary">Filtrar</Button>
-              <Button variant="ghost">Ghost</Button>
-              <Button variant="danger">Excluir</Button>
-              <Button loading><Save />Salvando</Button>
-            </div>
-          </Item>
-
-          <Item title="Escala canônica sm / md / lg">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="sm" variant="secondary"><Plus />32 px</Button>
-              <Button size="md" variant="primary"><Plus />40 px</Button>
-              <Button size="lg" variant="secondary"><Plus />48 px</Button>
-            </div>
-          </Item>
-
-          <Item title="Icon Button">
-            <div className="flex flex-wrap gap-2">
-              <IconButton aria-label="Configurações" variant="secondary">
-                <Settings className="kds-control-icon" />
-              </IconButton>
-              <IconButton aria-label="Filtrar" variant="tertiary">
-                <SlidersHorizontal className="kds-control-icon" />
-              </IconButton>
-              <IconButton aria-label="Avançar" variant="primary">
-                <ArrowRight className="kds-control-icon" />
-              </IconButton>
-            </div>
-          </Item>
-
-          <Item title="Button Group">
-            <ButtonGroup>
-              {['Dia', 'Semana', 'Mês'].map((option) => (
-                <Button
-                  key={option}
-                  variant={buttonGroupValue === option ? 'primary' : 'ghost'}
-                  size="sm"
-                  aria-pressed={buttonGroupValue === option}
-                  onClick={() => setButtonGroupValue(option)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </ButtonGroup>
-          </Item>
-
-          <Item title="Split Button">
-            <Popover open={splitMenuOpen} onOpenChange={setSplitMenuOpen}>
-              <ButtonGroup>
-                <Button onClick={() => toast({ title: 'Alterações salvas', description: 'O exemplo de split button respondeu ao clique.', variant: 'success' })}>Salvar</Button>
-                <PopoverTrigger>
-                  <IconButton aria-label="Mais opções de salvar" variant="primary"><ChevronDown /></IconButton>
-                </PopoverTrigger>
-              </ButtonGroup>
-              <PopoverContent className="w-48 p-1.5">
-                {['Salvar e fechar', 'Salvar como rascunho'].map((option) => (
-                  <button key={option} type="button" className="kds-dropdown-option flex w-full px-3 py-2 text-left text-sm" onClick={() => setSplitMenuOpen(false)}>
-                    {option}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-          </Item>
-
-          <Item title="Floating Action Button">
-            <IconButton size="lg" variant="primary" aria-label="Adicionar"><Plus /></IconButton>
-          </Item>
-
-          <Item title="Link">
-            <TextLink href="#containers" underline className="inline-flex items-center gap-1">
-              Ver todos os contratos
-              <ExternalLink className="h-3.5 w-3.5" />
-            </TextLink>
-          </Item>
-
-          <Item title="Toggle Button">
-            <div className="flex gap-2">
-              <IconButton
-                aria-pressed={toggleGridPressed}
-                aria-label="Salvar lead"
-                onClick={() => setToggleGridPressed((v) => !v)}
-                variant={toggleGridPressed ? 'primary' : 'secondary'}
-              >
-                <Bookmark />
-              </IconButton>
-              <span className="self-center text-xs text-[var(--text-muted)]">
-                {toggleGridPressed ? 'Salvo' : 'Salvar lead'}
-              </span>
-            </div>
-          </Item>
-
-          <Item title="Segmented Control">
-            <SegmentedControl
-              value={segmentIcon}
-              onChange={setSegmentIcon}
-              ariaLabel="Modo de visualização"
-              items={[
-                { id: 'grid', label: 'Grade', icon: LayoutGrid },
-                { id: 'list', label: 'Lista', icon: List },
-              ]}
-            />
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ FORMS ═══════════════════ */}
-        <Cat id="forms" title="Forms" description="Campos e controles de entrada de dados.">
-          <Item title="Input">
-            <Input placeholder="Nome do responsável" leftIcon={User} />
-          </Item>
-
-          <Item title="Textarea">
-            <Textarea placeholder="Observações sobre o lead" rows={3} />
-          </Item>
-
-          <Item title="Search Input">
-            <SearchInput placeholder="Buscar leads por nome ou telefone" />
-          </Item>
-
-          <Item title="Number Input">
-            <Input type="number" placeholder="0" leftIcon={DollarSign} defaultValue={340} />
-          </Item>
-
-          <Item title="Password Input">
-            <Input
-              type={passwordVisible ? 'text' : 'password'}
-              placeholder="********"
-              leftIcon={undefined}
-              defaultValue="segredo123"
-                action={
-                <button type="button" aria-label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setPasswordVisible((v) => !v)} >
-                  {passwordVisible ? <EyeOff className="w-4" /> : <Eye className="w-4" />}
-                </button>
-              }
-            />
-          </Item>
-
-          <Item title="OTP Input">
-            <div className="flex gap-2">
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(element) => { otpRefs.current[i] = element; }}
-                  value={digit}
-                  inputMode="numeric"
-                  aria-label={`Código, dígito ${i + 1} de ${otp.length}`}
-                  onChange={(e) => {
-                    const nextDigit = e.target.value.replace(/\D/g, '').slice(-1);
-                    setOtp((prev) => prev.map((d, idx) => (idx === i ? nextDigit : d)));
-                    if (nextDigit && i < otp.length - 1) otpRefs.current[i + 1]?.focus();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Backspace' && !digit && i > 0) otpRefs.current[i - 1]?.focus();
-                  }}
-                  maxLength={1}
-                  className="h-11 w-9 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-surface)] text-center text-lg font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
-                />
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Select">
-            <Select
-              placeholder="Operadora"
-              options={[
-                { value: 'bradesco', label: 'Bradesco Saúde' },
-                { value: 'amil', label: 'Amil' },
-                { value: 'sulamerica', label: 'SulAmérica' },
-              ]}
-            />
-          </Item>
-
-          <Item title="Multi Select">
-            <MultiSelect
-              placeholder="Responsáveis"
-              values={multiSelectValues}
-              onChange={setMultiSelectValues}
-              options={[
-                { value: 'luiza', label: 'Luiza' },
-                { value: 'nick', label: 'Nick' },
-              ]}
-            />
-          </Item>
-
-          <Item title="Combobox">
-            <Combobox
-              value={comboboxValue}
-              onChange={setComboboxValue}
-              placeholder="Buscar operadora..."
-              options={[
-                { value: 'bradesco', label: 'Bradesco Saúde' },
-                { value: 'amil', label: 'Amil' },
-                { value: 'sulamerica', label: 'SulAmérica' },
-              ]}
-            />
-          </Item>
-
-          <Item title="Autocomplete">
-            <div className="relative">
-              <SearchInput placeholder="Buscar cidade..." defaultValue="São" />
-              <div className="absolute left-0 right-0 top-full z-10 mt-1.5 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-[var(--shadow-popover)]">
-                <div className="rounded-xl px-3 py-2 text-sm text-[var(--text-secondary)]"><strong className="text-[var(--text-primary)]">São</strong> Paulo, SP</div>
-                <div className="rounded-xl px-3 py-2 text-sm text-[var(--text-secondary)]"><strong className="text-[var(--text-primary)]">São</strong> Bernardo, SP</div>
-              </div>
-            </div>
-          </Item>
-
-          <Item title="Checkbox">
-            <div className="flex items-center gap-3">
-              <Checkbox checked={checkTri === 'checked'} onChange={() => setCheckTri('checked')} />
-              <Checkbox ref={(el) => el && (el.indeterminate = checkTri === 'indeterminate')} onChange={() => setCheckTri('indeterminate')} />
-              <Checkbox checked={false} onChange={() => setCheckTri('unchecked')} />
-              <Checkbox disabled checked />
-            </div>
-          </Item>
-
-          <Item title="Radio">
-            <RadioGroup name="ds-radio-demo" value={radioValue} onValueChange={setRadioValue} orientation="horizontal">
-              <Radio value="checked" label="Ativo" />
-              <Radio value="unchecked" label="Inativo" />
-            </RadioGroup>
-          </Item>
-
-          <Item title="Switch">
-            <Switch checked={switchOn} onChange={() => setSwitchOn((v) => !v)} label="Notificações por WhatsApp" />
-          </Item>
-
-          <Item title="Slider">
-            <div className="relative pt-8">
-              {sliderActive && (
-                <span
-                  className="absolute -top-1 flex -translate-x-1/2 items-center rounded-lg bg-[var(--text-primary)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-inverse)]"
-                  style={{ left: `${sliderValue}%` }}
-                >
-                  R$ {sliderCurrency.toLocaleString('pt-BR')}
-                </span>
-              )}
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={sliderValue}
-                onChange={(e) => setSliderValue(Number(e.target.value))}
-                onPointerDown={() => setSliderActive(true)}
-                onPointerUp={() => setSliderActive(false)}
-                className="ds-slider"
-                style={{ ['--ds-slider-fill' as string]: `${sliderValue}%` }}
-              />
-            </div>
-          </Item>
-
-          <Item title="Range Slider">
-            <div className="relative pt-2">
-              <div className="relative h-1.5 rounded-full bg-[var(--border-default)]">
-                <div
-                  className="absolute h-1.5 rounded-full bg-[var(--text-primary)]"
-                  style={{ left: `${rangeLow}%`, right: `${100 - rangeHigh}%` }}
-                />
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={rangeLow}
-                onChange={(e) => setRangeLow(Math.min(Number(e.target.value), rangeHigh - 5))}
-                className="ds-slider absolute inset-x-0 top-2 !bg-none"
-              />
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={rangeHigh}
-                onChange={(e) => setRangeHigh(Math.max(Number(e.target.value), rangeLow + 5))}
-                className="ds-slider absolute inset-x-0 top-2 !bg-none"
-              />
-              <p className="mt-4 text-xs text-[var(--text-muted)]">
-                R$ {(rangeLow * 40).toLocaleString('pt-BR')} — R$ {(rangeHigh * 40).toLocaleString('pt-BR')}
-              </p>
-            </div>
-          </Item>
-
-          <Item title="Date Picker">
-            <DateTimePicker type="date" defaultValue="2026-08-16" />
-          </Item>
-
-          <Item title="Date Range Picker">
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-              <div className="w-full min-w-0 flex-1">
-                <DateTimePicker type="date" defaultValue="2026-08-01" />
-              </div>
-              <span className="text-[var(--text-muted)]">–</span>
-              <div className="w-full min-w-0 flex-1">
-                <DateTimePicker type="date" defaultValue="2026-08-31" />
-              </div>
-            </div>
-          </Item>
-
-          <Item title="Time Picker">
-            <DateTimePicker type="time" defaultValue="09:00" />
-          </Item>
-
-          <Item title="File Upload">
-            <label
-              htmlFor="showcase-file-upload"
-              className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-[var(--border-strong)] px-4 py-6 text-center transition hover:border-[var(--brand-primary)] hover:bg-[var(--bg-hover)]"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                const file = event.dataTransfer.files[0];
-                if (file) setFileName(file.name);
-              }}
-            >
-              <Upload className="h-5 w-5 text-[var(--text-muted)]" />
-              <p className="text-sm text-[var(--text-secondary)]">Arraste um arquivo ou clique para selecionar</p>
-              <p className="text-xs text-[var(--text-muted)]">PDF, JPG até 10MB</p>
-              <input
-                ref={fileInputRef}
-                id="showcase-file-upload"
-                type="file"
-                accept="application/pdf,image/jpeg,image/png"
-                className="sr-only"
-                onChange={(event) => setFileName(event.target.files?.[0]?.name ?? '')}
-              />
-              {fileName && <span className="text-xs font-medium text-[var(--brand-primary)]">Selecionado: {fileName}</span>}
-            </label>
-          </Item>
-
-          <Item title="Tags Input">
-            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-2">
-              {tagsInput.map((tag) => (
-                <span key={tag} className="flex items-center gap-1 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)]">
-                  {tag}
-                  <button type="button" aria-label={`Remover ${tag}`} onClick={() => setTagsInput((prev) => prev.filter((t) => t !== tag))}>
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-              <input
-                value={tagDraft}
-                onChange={(event) => setTagDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ',') {
-                    event.preventDefault();
-                    addTag();
-                  }
-                  if (event.key === 'Backspace' && !tagDraft && tagsInput.length > 0) {
-                    setTagsInput((prev) => prev.slice(0, -1));
-                  }
-                }}
-                aria-label="Adicionar tag"
-                placeholder="Adicionar..."
-                className="min-w-[6rem] flex-1 bg-transparent px-1 text-sm outline-none"
-              />
-            </div>
-          </Item>
-
-          <Item title="Color Picker">
-            <div className="flex items-center gap-2">
-              {SHOWCASE_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`Selecionar cor ${c}`}
-                  aria-pressed={colorValue === c}
-                  onClick={() => setColorValue(c)}
-                  className={['h-7 w-7 rounded-full ring-offset-2 ring-offset-[var(--bg-surface)]', colorValue === c ? 'ring-2 ring-[var(--text-primary)]' : ''].join(' ')}
-                  style={{ background: c }}
-                />
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Input Group">
-            <InputGroup>
-              <InputAddon>https://</InputAddon>
-              <Input defaultValue="kifersaude.com.br"  />
-            </InputGroup>
-          </Item>
-
-          <Item title="Form Field">
-            <Field label="E-mail" description="Usado para notificações do sistema">
-              <Input type="email" leftIcon={Mail} placeholder="voce@kifersaude.com.br" />
-            </Field>
-          </Item>
-
-          <Item title="Form Validation">
-            <Field label="CPF" error="CPF inválido, verifique os números.">
-              <Input state="error" defaultValue="123.456.789-00" />
-            </Field>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ NAVIGATION ═══════════════════ */}
-        <Cat id="navigation" title="Navigation" description="Estruturas de navegação e orientação.">
-          <Item title="Navbar" span="md">
-            <div className="flex items-center justify-between rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
-              <span className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">Kifer Saúde</span>
-              <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
-                <span>Dashboard</span>
-                <span>Leads</span>
-                <span>Contratos</span>
-              </div>
-              <Avatar name="Luiza Ramos" size="xs" />
-            </div>
-          </Item>
-
-          <Item title="Sidebar">
-            <div className="flex w-16 flex-col items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] py-4">
-              {[Home, Users, FileText, Settings].map((Icon, i) => (
-                <span
-                  key={i}
-                  className={[
-                    'flex h-9 w-9 items-center justify-center rounded-xl',
-                    i === 0 ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]' : 'text-[var(--text-muted)]',
-                  ].join(' ')}
-                >
-                  <Icon className="h-4 w-4" />
-                </span>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Navigation Rail">
-            <div className="flex w-14 flex-col items-center gap-4 rounded-2xl bg-[var(--bg-hover)] py-3">
-              {[Home, Bell, User].map((Icon, i) => (
-                <Icon key={i} className={['h-4 w-4', i === 0 ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)]'].join(' ')} />
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Bottom Navigation">
-            <div className="flex items-center justify-around rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 py-2.5">
-              {[Home, Search, Bell, User].map((Icon, i) => (
-                <Icon key={i} className={['h-4 w-4', i === 0 ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)]'].join(' ')} />
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Tabs (pill)">
-            <SegmentedControl
-              items={[
-                { id: 'leads', label: 'Leads' },
-                { id: 'contratos', label: 'Contratos' },
-                { id: 'comissoes', label: 'Comissões' },
-              ]}
-              value={metricTab}
-              onChange={setMetricTab}
-            />
-          </Item>
-
-          <Item title="Tabs (underline)">
-            <Tabs
-              variant="underline"
-              items={[
-                { id: 'leads', label: 'Leads' },
-                { id: 'contratos', label: 'Contratos' },
-                { id: 'comissoes', label: 'Comissões' },
-              ]}
-              value={underlineTab}
-              onChange={setUnderlineTab}
-            />
-          </Item>
-
-          <Item title="Breadcrumbs">
-            <Breadcrumb>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#foundations">Painel</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#actions">Leads</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem isCurrent>Ana Paula Costa</BreadcrumbItem>
-            </Breadcrumb>
-          </Item>
-
-          <Item title="Pagination">
-            <Pagination currentPage={page} totalPages={12} onPageChange={setPage} />
-          </Item>
-
-          <Item title="Stepper" span="md">
-            <Stepper
-              currentStep={1}
-              steps={[
-                { label: 'Dados do lead' },
-                { label: 'Operadora' },
-                { label: 'Documentos' },
-                { label: 'Revisão' },
-              ]}
-            />
-          </Item>
-
-          <Item title="Menu / Dropdown Menu">
-            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-              <PopoverTrigger>
-                <Button variant="secondary">
-                  Ações
-                  <ChevronDown className="ml-1" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1.5">
-                <button type="button" onClick={() => { setMenuOpen(false); toast({ description: 'Ação de editar selecionada.', variant: 'default' }); }} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-                  <Pencil className="h-3.5 w-3.5" />
-                  Editar
-                </button>
-                <button type="button" onClick={() => { setMenuOpen(false); toast({ description: 'Ação de compartilhar selecionada.', variant: 'default' }); }} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-                  <Share2 className="h-3.5 w-3.5" />
-                  Compartilhar
-                </button>
-                <button type="button" onClick={() => { setMenuOpen(false); toast({ description: 'Ação de excluir selecionada.', variant: 'default' }); }} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--danger-text)]">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Excluir
-                </button>
-              </PopoverContent>
-            </Popover>
-          </Item>
-
-          <Item title="Context Menu">
-            <div className="relative rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5">
-              <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lead: Ana Paula</p>
-              <button type="button" onClick={() => toast({ description: 'Telefone copiado no exemplo.', variant: 'success' })} className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-                <Copy className="h-3.5 w-3.5" />
-                Copiar telefone
-              </button>
-              <button type="button" onClick={() => toast({ description: 'Abrindo conversa no WhatsApp.', variant: 'default' })} className="kds-dropdown-option is-selected flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-                <MessageCircle className="h-3.5 w-3.5" />
-                Abrir WhatsApp
-              </button>
-            </div>
-          </Item>
-
-          <Item title="Command Palette" span="md">
-            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-2 shadow-[var(--shadow-popover)]">
-              <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-2 pb-2">
-                <Search className="h-4 w-4 text-[var(--text-muted)]" />
-                <span className="text-sm text-[var(--text-muted)]">Buscar leads, contratos, ações...</span>
-              </div>
-              <div className="mt-1.5 space-y-0.5">
-                <div className="kds-dropdown-option is-selected flex items-center justify-between px-3 py-2 text-sm">
-                  <span>Ir para Leads</span>
-                  <span className="text-xs text-[var(--text-muted)]">G L</span>
-                </div>
-                <div className="kds-dropdown-option flex items-center justify-between px-3 py-2 text-sm">
-                  <span>Criar novo contrato</span>
-                  <span className="text-xs text-[var(--text-muted)]">⌘ N</span>
-                </div>
-              </div>
-            </div>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ CONTAINERS ═══════════════════ */}
-        <Cat id="containers" title="Containers" description="Superfícies que agrupam e organizam conteúdo.">
-          <Item title="Card">
-            <Card padding="sm">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Ana Paula Costa</p>
-              <p className="mt-1 text-xs text-[var(--text-muted)]">São Paulo, SP · resp. Luiza</p>
-            </Card>
-          </Item>
-
-          <Item title="Panel (Surface)">
-            <Surface variant="muted" padding="sm">
-              <p className="text-sm text-[var(--text-secondary)]">Painel neutro para agrupar conteúdo secundário.</p>
-            </Surface>
-          </Item>
-
-          <Item title="Accordion" span="md">
-            <div className="flex flex-col gap-2">
-              <div className="rounded-2xl border border-[var(--border-default)] px-4 py-3">
-                <button
-                  className="flex w-full items-center justify-between text-left"
-                  onClick={() => setAccordionOpen(accordionOpen === 'q1' ? null : 'q1')}
-                >
-                  <span className="text-sm font-medium text-[var(--text-primary)]">MEI pode contratar plano empresarial?</span>
-                  <Plus className="h-4 w-4 text-[var(--text-muted)]" />
-                </button>
-                <div className={['ds-accordion-panel', accordionOpen === 'q1' ? 'is-open' : ''].join(' ')}>
-                  <div>
-                    <p className="pt-2 text-sm text-[var(--text-secondary)]">Sim, com CNPJ ativo e enquadramento aceito pela operadora.</p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-[var(--border-default)] px-4 py-3">
-                <button
-                  className="flex w-full items-center justify-between text-left"
-                  onClick={() => setAccordionOpen(accordionOpen === 'q2' ? null : 'q2')}
-                >
-                  <span className="text-sm font-medium text-[var(--text-primary)]">Tem carência?</span>
-                  <Minus className="h-4 w-4 text-[var(--text-muted)]" />
-                </button>
-                <div className={['ds-accordion-panel', accordionOpen === 'q2' ? 'is-open' : ''].join(' ')}>
-                  <div>
-                    <p className="pt-2 text-sm text-[var(--text-secondary)]">Varia por operadora, tipo de contratação e regra do produto.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Item>
-
-          <Item title="Collapsible">
-            <button onClick={() => setSelectedTreeOpen((v) => !v)} className="flex w-full items-center gap-2 text-left text-sm font-medium text-[var(--text-primary)]">
-              <ChevronRight className={['h-4 w-4 transition-transform', selectedTreeOpen ? 'rotate-90' : ''].join(' ')} />
-              Detalhes do contrato
-            </button>
-            {selectedTreeOpen && <p className="mt-2 pl-6 text-sm text-[var(--text-secondary)]">Código KF-2026-0114 · Ativo desde 12/03/2026</p>}
-          </Item>
-
-          <Item title="Drawer">
-            <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
-              Abrir drawer
-            </Button>
-            <Drawer side="right" open={drawerOpen} onOpenChange={setDrawerOpen}>
-              <DrawerHeader onClose={() => setDrawerOpen(false)}>
-                <p className="kds-dialog-title">Detalhes do lead</p>
-              </DrawerHeader>
-              <DrawerBody>
-                <p className="text-sm text-[var(--text-secondary)]">Ana Paula Costa · São Paulo, SP</p>
-              </DrawerBody>
-              <DrawerFooter>
-                <Button variant="ghost" onClick={() => setDrawerOpen(false)}>Fechar</Button>
-              </DrawerFooter>
-            </Drawer>
-          </Item>
-
-          <Item title="Sheet">
-            <Button variant="secondary" onClick={() => setSheetOpen(true)}>
-              Abrir sheet
-            </Button>
-            <Drawer side="bottom" open={sheetOpen} onOpenChange={setSheetOpen}>
-              <DrawerHeader onClose={() => setSheetOpen(false)}>
-                <p className="kds-dialog-title">Ações rápidas</p>
-              </DrawerHeader>
-              <DrawerBody>
-                <p className="text-sm text-[var(--text-secondary)]">Ligar, enviar WhatsApp ou agendar follow-up.</p>
-              </DrawerBody>
-            </Drawer>
-          </Item>
-
-          <Item title="Modal / Dialog">
-            <Button variant="secondary" onClick={() => setDialogOpen(true)}>
-              Abrir modal
-            </Button>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen} size="sm">
-              <DialogHeader onClose={() => setDialogOpen(false)}>
-                <DialogTitle>Novo lembrete</DialogTitle>
-              </DialogHeader>
-              <DialogBody>
-                <Field label="Título">
-                  <Input placeholder="Ligar para Ana Paula" />
-                </Field>
-              </DialogBody>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                <Button variant="primary" onClick={() => setDialogOpen(false)}>Criar</Button>
-              </DialogFooter>
-            </Dialog>
-          </Item>
-
-          <Item title="Alert Dialog">
-            <Button variant="danger" onClick={() => setAlertDialogOpen(true)}>
-              Excluir lead
-            </Button>
-            <ConfirmDialog
-              open={alertDialogOpen}
-              onOpenChange={setAlertDialogOpen}
-              onConfirm={() => setAlertDialogOpen(false)}
-              title="Excluir este lead?"
-              description="Essa ação não pode ser desfeita."
-              destructive
-              closeOnConfirm
-            />
-          </Item>
-
-          <Item title="Popover">
-            <Popover open={statusDropdownOpen} onOpenChange={setStatusDropdownOpen}>
-              <PopoverTrigger>
-                <button className="flex items-center gap-2 rounded-full bg-[var(--bg-hover)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)]">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ background: STATUS_DROPDOWN_OPTIONS.find((o) => o.nome === statusDropdownValue)?.cor }}
-                  />
-                  {statusDropdownValue}
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-52 p-1.5">
-                {STATUS_DROPDOWN_OPTIONS.map((option) => (
-                  <button
-                    key={option.nome}
-                    onClick={() => {
-                      setStatusDropdownValue(option.nome);
-                      setStatusDropdownOpen(false);
-                    }}
-                    className="kds-dropdown-option flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
-                  >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: option.cor }} />
-                    {option.nome}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ FEEDBACK ═══════════════════ */}
-        <Cat id="feedback" title="Feedback" description="Comunicação de estado, status e resultado.">
-          <Item title="Alert" span="md">
-            <div className="flex flex-col gap-2">
-              <Alert tone="danger">Não foi possível carregar os dados. Tente novamente.</Alert>
-              <Alert tone="warning">Preencha as datas de início e fim para continuar.</Alert>
-            </div>
-          </Item>
-
-          <Item title="Banner" span="md">
-            <div className="flex items-center justify-between rounded-2xl bg-[var(--brand-primary-soft)] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[var(--brand-primary)]" />
-                <p className="text-sm text-[var(--text-primary)]">Novo design system disponível em todo o painel.</p>
-              </div>
-                  <LinkButton href="#foundations" size="sm" variant="ghost">Ver mais</LinkButton>
-            </div>
-          </Item>
-
-          <Item title="Toast / Snackbar">
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => toast({ title: 'Lead atualizado', description: 'Ana Paula Costa movida para Proposta Enviada.', variant: 'success' })}
-              >
-                Disparar toast
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => toast({ description: 'Lembrete criado.', variant: 'default' })}
-              >
-                Snackbar
-              </Button>
-            </div>
-          </Item>
-
-          <Item title="Badge">
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="accent">Proposta</Badge>
-              <Badge tone="success">Ativo</Badge>
-              <Badge tone="warning">Pendente</Badge>
-              <Badge tone="danger">Perdido</Badge>
-              <Badge tone="neutral">Rascunho</Badge>
-            </div>
-          </Item>
-
-          <Item title="Status Badge">
-            <div className="flex flex-wrap gap-2">
-              <OperationalStatusBadge statusColor="var(--brand-primary)">Novo</OperationalStatusBadge>
-              <OperationalStatusBadge statusColor="var(--success)">Convertido</OperationalStatusBadge>
-              <OperationalStatusDot statusColor="var(--brand-primary)" />
-            </div>
-          </Item>
-
-          <Item title="Chip">
-            <div className="flex flex-wrap gap-2">
-              <span className="flex items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)]">
-                Instagram
-                <X className="h-3 w-3" />
-              </span>
-              <OperationalMetricChip icon={<Users className="h-3.5 w-3.5" />} value="23" label="leads" tone="accent" active />
-            </div>
-          </Item>
-
-          <Item title="Tag">
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-[var(--bg-hover)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
-                Indicação
-              </span>
-            </div>
-          </Item>
-
-          <Item title="Tooltip">
-            <Tooltip content="Enviar mensagem no WhatsApp">
-              <button type="button" aria-label="Enviar mensagem no WhatsApp" onClick={() => toast({ description: 'Ação de tooltip executada.', variant: 'default' })} className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-hover)] text-[var(--text-primary)]">
-                <MessageCircle className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          </Item>
-
-          <Item title="Progress Bar">
-            <Progress value={68} showLabel />
-          </Item>
-
-          <Item title="Circular Progress">
-            <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
-              <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border-default)" strokeWidth="3" />
-              <circle
-                cx="18"
-                cy="18"
-                r="15.5"
-                fill="none"
-                stroke="var(--brand-primary)"
-                strokeWidth="3"
-                strokeDasharray={`${2 * Math.PI * 15.5}`}
-                strokeDashoffset={`${2 * Math.PI * 15.5 * (1 - 0.68)}`}
-                strokeLinecap="round"
-              />
-            </svg>
-          </Item>
-
-          <Item title="Spinner">
-            <div className="flex gap-4">
-              <Loader2 className="h-6 w-6 animate-spin text-[var(--text-primary)]" />
-              <div className="h-6 w-6 animate-spin rounded-full border-[3px] border-[var(--border-default)] border-t-[var(--text-primary)]" />
-            </div>
-          </Item>
-
-          <Item title="Skeleton">
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          </Item>
-
-          <Item title="Empty / Error / Success State" span="lg">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <EmptyState icon={<Folder className="h-5 w-5" />} title="Nenhum lead" description="Ajuste os filtros para ver resultados." />
-              <EmptyState icon={<AlertTriangle className="h-5 w-5 text-[var(--danger-text)]" />} title="Erro ao carregar" description="Tente novamente em instantes." />
-              <EmptyState icon={<CheckCircle2 className="h-5 w-5 text-[var(--success-text)]" />} title="Tudo certo" description="Contrato enviado com sucesso." />
-            </div>
-          </Item>
-
-          <Item title="Loading State">
-            <LoadingState label="Carregando leads" compact />
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ DATA DISPLAY ═══════════════════ */}
-        <Cat id="data" title="Data Display" description="Exibição estruturada de dados e métricas.">
-          <Item title="Table / Data Grid" span="lg">
-            <Table size="sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lead</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead align="right">Comissão</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>Ana Paula Costa</TableCell>
-                  <TableCell><Badge tone="accent">Proposta</Badge></TableCell>
-                  <TableCell align="right">R$ 340</TableCell>
-                </TableRow>
-                <TableRow selected>
-                  <TableCell>Carlos Eduardo Silva</TableCell>
-                  <TableCell><Badge tone="success">Convertido</Badge></TableCell>
-                  <TableCell align="right">R$ 512</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Item>
-
-          <Item title="List / List Item">
-            <ul className="flex flex-col gap-1.5">
-              {['Ana Paula Costa', 'Carlos Eduardo Silva', 'Fernanda Oliveira'].map((name) => (
-                <li key={name} className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)]">
-                  <Avatar name={name} size="xs" />
-                  {name}
-                </li>
-              ))}
-            </ul>
-          </Item>
-
-          <Item title="Description List">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-              <dt className="text-[var(--text-muted)]">Operadora</dt>
-              <dd className="text-[var(--text-primary)]">Bradesco Saúde</dd>
-              <dt className="text-[var(--text-muted)]">Modalidade</dt>
-              <dd className="text-[var(--text-primary)]">PME</dd>
-            </dl>
-          </Item>
-
-          <Item title="Timeline">
-            <div className="flex flex-col gap-3 border-l-2 border-[var(--border-default)] pl-4">
-              {['Lead criado', 'Contato realizado', 'Proposta enviada'].map((event, i) => (
-                <div key={event} className="relative">
-                  <span className="absolute -left-[1.35rem] top-1 h-2.5 w-2.5 rounded-full bg-[var(--brand-primary)]" />
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{event}</p>
-                  <p className="text-xs text-[var(--text-muted)]">{i === 0 ? '12 ago' : i === 1 ? '13 ago' : '15 ago'}</p>
-                </div>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Tree View">
-            <div className="text-sm text-[var(--text-primary)]">
-              <button onClick={() => setSelectedTreeOpen((v) => !v)} className="flex items-center gap-1.5">
-                <ChevronRight className={['h-3.5 w-3.5 transition-transform', selectedTreeOpen ? 'rotate-90' : ''].join(' ')} />
-                <Folder className="h-3.5 w-3.5" />
-                Contratos
-              </button>
-              {selectedTreeOpen && (
-                <div className="ml-5 mt-1 flex flex-col gap-1 text-[var(--text-secondary)]">
-                  <span>KF-2026-0114</span>
-                  <span>KF-2026-0115</span>
-                </div>
-              )}
-            </div>
-          </Item>
-
-          <Item title="Calendar">
-            <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                <span key={i} className="text-[var(--text-muted)]">{d}</span>
-              ))}
-              {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
-                <span
-                  key={day}
-                  className={[
-                    'flex h-6 w-6 items-center justify-center rounded-full',
-                    day === 18 ? 'bg-[var(--text-primary)] text-[var(--text-inverse)]' : 'text-[var(--text-secondary)]',
-                  ].join(' ')}
-                >
-                  {day}
-                </span>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Stat / KPI / Metric Card" span="md">
-            <KpiCard
-              padding="sm"
-              title="Leads em negociação"
-              subtitle="Base de leads"
-              value="23 / 58"
-              trend={<span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)]"><Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" />Negociações em andamento</span>}
-            />
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ MEDIA ═══════════════════ */}
-        <Cat id="media" title="Media" description="Avatares, imagens e mídia.">
-          <Item title="Avatar">
-            <div className="flex items-center gap-2">
-              <Avatar name="Ana Paula Costa" size="xs" />
-              <Avatar name="Luiza Ramos" size="md" />
-              <Avatar name="Carlos Silva" size="lg" />
-            </div>
-          </Item>
-
-          <Item title="Avatar Group">
-            <AvatarGroup max={3}>
-              <Avatar name="Ana Paula" />
-              <Avatar name="Carlos Silva" />
-              <Avatar name="Fernanda Oliveira" />
-              <Avatar name="Roberto Almeida" />
-            </AvatarGroup>
-          </Item>
-
-          <Item title="Avatar Badge">
-            <div className="relative inline-block">
-              <Avatar name="Luiza Ramos" size="lg" />
-              <AvatarBadge>
-                <span className="block h-3 w-3 rounded-full bg-[var(--success)] ring-2 ring-[var(--bg-surface)]" />
-              </AvatarBadge>
-            </div>
-          </Item>
-
-          <Item title="Image / Thumbnail">
-            <div className="flex gap-2">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--bg-hover)]">
-                <ImageIcon className="h-5 w-5 text-[var(--text-muted)]" />
-              </div>
-              <div className="flex h-16 w-24 items-center justify-center rounded-2xl bg-[var(--bg-hover)]">
-                <ImageIcon className="h-5 w-5 text-[var(--text-muted)]" />
-              </div>
-            </div>
-          </Item>
-
-          <Item title="Image Gallery" span="md">
-            <div className="grid grid-cols-4 gap-2">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex aspect-square items-center justify-center rounded-xl bg-[var(--bg-hover)]">
-                  <ImageIcon className="h-4 w-4 text-[var(--text-muted)]" />
-                </div>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Carousel / Image Carousel" span="md">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Imagem anterior"
-                onClick={() => setCarouselIndex((index) => (index - 1 + SHOWCASE_CAROUSEL_ITEMS.length) % SHOWCASE_CAROUSEL_ITEMS.length)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)]"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <div className="flex min-w-0 flex-1 items-center justify-center rounded-xl bg-[var(--bg-hover)] py-6">
-                <ImageIcon className="h-5 w-5 text-[var(--text-muted)]" />
-                <span className="ml-2 text-xs text-[var(--text-muted)]">{SHOWCASE_CAROUSEL_ITEMS[carouselIndex]}</span>
-              </div>
-              <button
-                type="button"
-                aria-label="Próxima imagem"
-                onClick={() => setCarouselIndex((index) => (index + 1) % SHOWCASE_CAROUSEL_ITEMS.length)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-hover)]"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex justify-center gap-1">
-              {SHOWCASE_CAROUSEL_ITEMS.map((item, i) => (
-                <button
-                  key={item}
-                  type="button"
-                  aria-label={`Ir para ${item}`}
-                  aria-pressed={carouselIndex === i}
-                  onClick={() => setCarouselIndex(i)}
-                  className={['h-1.5 w-1.5 rounded-full', carouselIndex === i ? 'bg-[var(--text-primary)]' : 'bg-[var(--border-strong)]'].join(' ')}
-                />
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Lightbox">
-            <button
-              type="button"
-              aria-label="Abrir lightbox"
-              onClick={() => setLightboxOpen(true)}
-              className="relative flex h-24 w-full items-center justify-center rounded-2xl bg-[color:var(--overlay)]"
-            >
-              <ImageIcon className="h-5 w-5 text-[color:var(--text-inverse)] opacity-70" />
-            </button>
-            <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen} size="md" aria-label="Visualização da imagem">
-              <DialogHeader onClose={() => setLightboxOpen(false)}><DialogTitle>Lightbox</DialogTitle></DialogHeader>
-              <DialogBody>
-                <div className="flex h-48 items-center justify-center rounded-2xl bg-[var(--bg-hover)] text-sm text-[var(--text-muted)]">Pré-visualização da imagem</div>
-              </DialogBody>
-            </Dialog>
-          </Item>
-
-          <Item title="Video Player">
-            <div className="relative flex h-24 items-center justify-center rounded-2xl bg-[var(--bg-hover)]">
-              <button
-                type="button"
-                aria-label={videoPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
-                aria-pressed={videoPlaying}
-                onClick={() => setVideoPlaying((value) => !value)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"
-              >
-                {videoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </button>
-              {videoPlaying && <span className="absolute bottom-2 text-[11px] text-[var(--text-muted)]">Reproduzindo demonstração</span>}
-            </div>
-          </Item>
-
-          <Item title="Audio Player">
-            <div className="flex items-center gap-3 rounded-2xl bg-[var(--bg-hover)] px-3 py-2.5">
-              <button
-                type="button"
-                aria-label={audioPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
-                aria-pressed={audioPlaying}
-                onClick={() => setAudioPlaying((value) => !value)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"
-              >
-                {audioPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-              </button>
-              <div className="flex flex-1 items-center gap-0.5">
-                {Array.from({ length: 20 }, (_, i) => (
-                  <span key={i} className="w-0.5 rounded-full bg-[var(--border-strong)]" style={{ height: `${8 + (i % 5) * 4}px` }} />
-                ))}
-              </div>
-              <Music className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-            </div>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ SEARCH & FILTERS ═══════════════════ */}
-        <Cat id="search" title="Search & Filters" description="Localização e refinamento de dados.">
-          <Item title="Search / Search Bar" span="md">
-            <SearchInput placeholder="Buscar leads, contratos, operadoras..." />
-          </Item>
-
-          <Item title="Filter">
-            <FilterSelect
-              icon={Filter}
-              placeholder="Status"
-              value={filterStatus}
-              onChange={setFilterStatus}
-              options={[
-                { value: 'novo', label: 'Novo' },
-                { value: 'contato', label: 'Contato inicial' },
-              ]}
-            />
-          </Item>
-
-          <Item title="Filter Multi Select">
-            <FilterMultiSelect
-              icon={Users}
-              placeholder="Responsáveis"
-              values={filterOwners}
-              onChange={setFilterOwners}
-              options={[
-                { value: 'luiza', label: 'Luiza' },
-                { value: 'nick', label: 'Nick' },
-                { value: 'ana', label: 'Ana' },
-              ]}
-            />
-          </Item>
-
-          <Item title="Date Range Filter">
-            <DateRangeFilter
-              icon={CalendarIcon}
-              label="Período"
-              fromValue={filterFrom}
-              toValue={filterTo}
-              onFromChange={setFilterFrom}
-              onToChange={setFilterTo}
-            />
-          </Item>
-
-          <Item title="Filter Bar" span="lg">
-            <FilterBar>
-              <SearchInput placeholder="Buscar" className="max-w-[14rem]" />
-              <FilterSelect icon={Filter} placeholder="Status" value={filterStatus} onChange={setFilterStatus} options={STATUS_DROPDOWN_OPTIONS.map((option) => ({ value: option.nome, label: option.nome }))} />
-              <Button variant="tertiary"><SlidersIcon />Ordenar</Button>
-            </FilterBar>
-          </Item>
-
-          <Item title="Filter Chips">
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="primary">Novo</Badge>
-              <Badge tone="neutral">Instagram</Badge>
-            </div>
-          </Item>
-
-          <Item title="Sort">
-            <Button variant="tertiary"><SlidersIcon />Mais recentes</Button>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ ADVANCED ═══════════════════ */}
-        <Cat id="advanced" title="Advanced" description="Padrões de interação avançados.">
-          <Item title="Drag & Drop / Sortable List">
-            <div className="flex flex-col gap-1.5">
-              {sortableStatuses.map((status, index) => (
-                <div
-                  key={status}
-                  draggable
-                  onDragStart={() => setDraggedStatus(status)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => {
-                    if (!draggedStatus || draggedStatus === status) return;
-                    setSortableStatuses((items) => {
-                      const next = [...items];
-                      const from = next.indexOf(draggedStatus);
-                      next.splice(from, 1);
-                      next.splice(index, 0, draggedStatus);
-                      return next;
-                    });
-                    setDraggedStatus(null);
-                  }}
-                  className="flex items-center gap-2 rounded-xl bg-[var(--bg-hover)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                >
-                  <GripVertical className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate">{status}</span>
-                  <button
-                    type="button"
-                    aria-label={`Mover ${status} para cima`}
-                    disabled={index === 0}
-                    onClick={() => setSortableStatuses((items) => items.map((item, itemIndex) => itemIndex === index - 1 ? items[index] : itemIndex === index ? items[index - 1] : item))}
-                    className="text-[var(--text-muted)] disabled:opacity-40"
-                  >
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Mover ${status} para baixo`}
-                    disabled={index === sortableStatuses.length - 1}
-                    onClick={() => setSortableStatuses((items) => items.map((item, itemIndex) => itemIndex === index ? items[index + 1] : itemIndex === index + 1 ? items[index] : item))}
-                    className="text-[var(--text-muted)] disabled:opacity-40"
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Resizable Panel / Split Pane">
-            <div>
-              <div className="flex h-20 overflow-hidden rounded-2xl border border-[var(--border-default)]">
-                <div className="bg-[var(--bg-hover)]" style={{ width: `${splitRatio}%` }} />
-                <div className="w-1.5 shrink-0 bg-[var(--border-strong)]" />
-                <div className="flex-1 bg-[var(--bg-surface)]" />
-              </div>
-              <label className="mt-3 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                <span>Divisão</span>
-                <input aria-label="Tamanho do painel esquerdo" type="range" min={20} max={70} value={splitRatio} onChange={(event) => setSplitRatio(Number(event.target.value))} className="ds-slider" />
-              </label>
-            </div>
-          </Item>
-
-          <Item title="Infinite Scroll">
-            <div
-              className="relative h-24 overflow-y-auto rounded-2xl border border-[var(--border-default)] p-2"
-              onScroll={(event) => {
-                const element = event.currentTarget;
-                if (element.scrollTop + element.clientHeight >= element.scrollHeight - 8) loadMoreInfiniteItems();
-              }}
-            >
-              {infiniteItems.map((n) => (
-                <p key={n} className="py-1 text-sm text-[var(--text-secondary)]">{n}</p>
-              ))}
-              {infiniteItems.length < 9 && <button type="button" onClick={loadMoreInfiniteItems} className="w-full py-1 text-xs font-medium text-[var(--brand-primary)]">Carregar mais</button>}
-            </div>
-          </Item>
-
-          <Item title="Tour / Onboarding">
-            {tourVisible ? (
-              <div className="relative rounded-2xl bg-[var(--text-primary)] px-4 py-3 text-[var(--text-inverse)]">
-                <p className="text-sm font-medium">Novo: filtros por operadora</p>
-                <p className="mt-0.5 text-xs opacity-80">Clique aqui para refinar sua busca.</p>
-                <button type="button" onClick={() => setTourVisible(false)} className="mt-3 text-xs font-semibold underline underline-offset-2">Entendi</button>
-                <span className="absolute -bottom-1.5 left-6 h-3 w-3 rotate-45 bg-[var(--text-primary)]" />
-              </div>
-            ) : (
-              <Button size="sm" variant="ghost" onClick={() => setTourVisible(true)}>Reabrir tour</Button>
-            )}
-          </Item>
-
-          <Item title="Wizard / Multi-step Form" span="md">
-            <Stepper currentStep={wizardStep} orientation="vertical" steps={[{ label: 'Dados pessoais', description: 'Nome, telefone, e-mail' }, { label: 'Operadora', description: 'Escolha do plano' }, { label: 'Confirmação' }]} />
-            <div className="flex items-center justify-between gap-2">
-              <Button size="sm" variant="ghost" disabled={wizardStep === 0} onClick={() => setWizardStep((step) => Math.max(0, step - 1))}>Voltar</Button>
-              <Button size="sm" onClick={() => setWizardStep((step) => Math.min(2, step + 1))}>{wizardStep === 2 ? 'Concluído' : 'Próximo'}</Button>
-            </div>
-          </Item>
-
-          <Item title="Rich Text Editor" span="md">
-            <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)]">
-              <div className="flex items-center gap-1 border-b border-[var(--border-subtle)] px-2 py-1.5">
-                {[
-                  { command: 'bold', label: 'Negrito', icon: Bold },
-                  { command: 'italic', label: 'Itálico', icon: Italic },
-                  { command: 'underline', label: 'Sublinhado', icon: Underline },
-                  { command: 'insertOrderedList', label: 'Lista numerada', icon: ListOrdered },
-                  { command: 'insertUnorderedList', label: 'Lista', icon: List },
-                ].map(({ command, label, icon: Icon }) => (
-                  <button
-                    key={command}
-                    type="button"
-                    aria-label={label}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => document.execCommand(command)}
-                    className="rounded-md p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                  </button>
-                ))}
-              </div>
-              <div contentEditable role="textbox" aria-multiline="true" aria-label="Anotações sobre o atendimento" suppressContentEditableWarning className="min-h-20 px-3 py-2.5 text-sm text-[var(--text-secondary)] outline-none">Anotações sobre o atendimento...</div>
-            </div>
-          </Item>
-
-          <Item title="Code Block / Copy Button">
-            <div className="relative rounded-2xl bg-[var(--text-primary)] p-3 font-mono text-xs text-[var(--text-inverse)]">
-              <button type="button" aria-label="Copiar código" onClick={copyShowcaseCode} className="absolute right-2 top-2 flex items-center gap-1 text-[var(--text-muted)]">
-                <Copy className="h-3.5 w-3.5" />
-                <span>{copied ? 'Copiado' : 'Copiar'}</span>
-              </button>
-              <pre className="max-w-full overflow-x-auto pr-20">{SHOWCASE_CODE}</pre>
-            </div>
-          </Item>
-
-          <Item title="File Manager">
-            <div className="flex flex-col gap-1">
-              {[{ n: 'contrato.pdf', s: '240 KB' }, { n: 'rg-titular.jpg', s: '1.1 MB' }].map((f) => (
-                <div key={f.n} className="flex items-center justify-between rounded-xl px-2 py-1.5 hover:bg-[var(--bg-hover)]">
-                  <span className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
-                    <FileText className="h-4 w-4 text-[var(--text-muted)]" />
-                    {f.n}
-                  </span>
-                  <span className="text-xs text-[var(--text-muted)]">{f.s}</span>
-                </div>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Kanban Board" span="full">
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { title: 'Novo', items: ['Ana Paula Costa', 'Roberto Almeida'] },
-                { title: 'Proposta Enviada', items: ['Carlos Eduardo'] },
-                { title: 'Convertido', items: ['Fernanda Oliveira'] },
-              ].map((col) => (
-                <div key={col.title} className="rounded-2xl bg-[var(--bg-hover)] p-2.5">
-                  <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{col.title}</p>
-                  <div className="flex flex-col gap-2">
-                    {col.items.map((item) => (
-                      <div key={item} className="rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] shadow-[var(--shadow-card)]">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Item>
-        </Cat>
-
-        {/* ═══════════════════ LAYOUT / UTILITY ═══════════════════ */}
-        <Cat id="layout" title="Layout / Utility" description="Blocos estruturais e utilitários de composição.">
-          <Item title="Container">
-            <div className="mx-auto max-w-[12rem] rounded-xl bg-[var(--bg-hover)] px-3 py-2 text-center text-xs text-[var(--text-muted)]">
-              max-width container
-            </div>
-          </Item>
-
-          <Item title="Stack">
-            <div className="flex flex-col gap-1.5">
-              <div className="h-6 rounded-lg bg-[var(--bg-hover)]" />
-              <div className="h-6 rounded-lg bg-[var(--bg-hover)]" />
-              <div className="h-6 rounded-lg bg-[var(--bg-hover)]" />
-            </div>
-          </Item>
-
-          <Item title="Grid">
-            <div className="grid grid-cols-4 gap-1.5">
-              {Array.from({ length: 8 }, (_, i) => (
-                <div key={i} className="flex h-8 items-center justify-center rounded-lg bg-[var(--bg-hover)] text-[10px] text-[var(--text-muted)]">
-                  {i + 1}
-                </div>
-              ))}
-            </div>
-          </Item>
-
-          <Item title="Divider / Separator">
-            <div className="flex flex-col gap-3">
-              <p className="text-xs text-[var(--text-muted)]">Acima</p>
-              <hr className="border-[var(--border-default)]" />
-              <p className="text-xs text-[var(--text-muted)]">Abaixo</p>
-            </div>
-          </Item>
-
-          <Item title="Spacer">
-            <div className="flex items-center text-xs text-[var(--text-muted)]">
-              <span>A</span>
-              <span className="mx-3 h-px flex-1 border-t border-dashed border-[var(--border-strong)]" />
-              <span>B</span>
-            </div>
-          </Item>
-
-          <Item title="Aspect Ratio">
-            <div className="kds-showcase-aspect-video w-full overflow-hidden rounded-xl bg-[var(--bg-hover)]">
-              <div className="flex h-full items-center justify-center text-xs text-[var(--text-muted)]">16:9</div>
-            </div>
-          </Item>
-
-          <Item title="Scroll Area">
-            <div className="h-20 overflow-y-auto rounded-xl border border-[var(--border-default)] p-2 text-sm text-[var(--text-secondary)]">
-              <p className="pb-2">Linha 1 de conteúdo rolável</p>
-              <p className="pb-2">Linha 2 de conteúdo rolável</p>
-              <p className="pb-2">Linha 3 de conteúdo rolável</p>
-              <p className="pb-2">Linha 4 de conteúdo rolável</p>
-            </div>
-          </Item>
-
-          <Item title="Portal">
-            <p className="text-sm text-[var(--text-secondary)]">
-              Renderiza fora da árvore local (usado por Dialog, Drawer e Toast neste sistema).
-            </p>
-          </Item>
-
-          <Item title="Visually Hidden">
-            <p className="text-sm text-[var(--text-secondary)]">
-              Conteúdo acessível a leitores de tela, oculto visualmente — usado em labels de ícones e campos.
-            </p>
-          </Item>
-        </Cat>
-
-        <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
-          Catálogo completo dos componentes públicos exportados pelo design system.
-        </p>
-      </div>
-    </div>
-  );
+function currentSection(): SectionId {
+  const value = window.location.hash.slice(1);
+  return isSection(value) ? value : 'overview';
 }
 
 export default function DesignSystemShowcase() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'light';
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return stored === 'dark' ? 'dark' : 'light';
-  });
-
+  const query = new URLSearchParams(window.location.search);
+  const preview = query.get('preview') === '1';
+  const requestedPattern = query.get('pattern') ?? 'list';
+  const [theme, setTheme] = useState<ShowcaseTheme>(() =>
+    preview ? (query.get('theme') === 'dark' ? 'dark' : 'light') : readTheme(),
+  );
   useEffect(() => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
-
+    if (!preview) {
+      try {
+        localStorage.setItem(storageKey, theme);
+      } catch {
+        /* Theme still works without browser storage. */
+      }
+    }
+  }, [preview, theme]);
   return (
-    <div className={`painel-theme kifer-ds theme-${theme}`}>
+    <div
+      className={`painel-theme kifer-ds theme-${theme} ds-showcase${preview ? ' ds-preview-document' : ''}`}
+    >
+      <Helmet>
+        <title>Design system | Kifer Saúde</title>
+      </Helmet>
       <ToastProvider position="bottom-right">
-        <ThemeToggle theme={theme} onChange={setTheme} />
-        <ShowcaseContent />
+        {preview ? (
+          <WorkspacePreview
+            initialPattern={
+              isPattern(requestedPattern) ? requestedPattern : 'list'
+            }
+          />
+        ) : (
+          <Showcase
+            theme={theme}
+            onThemeChange={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          />
+        )}
       </ToastProvider>
     </div>
+  );
+}
+
+function Showcase({
+  theme,
+  onThemeChange,
+}: {
+  theme: ShowcaseTheme;
+  onThemeChange: () => void;
+}) {
+  const [section, setSection] = useState<SectionId>(currentSection);
+  const [search, setSearch] = useState('');
+  const [mobileNav, setMobileNav] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const handleHash = () => setSection(currentSection());
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+  const navigate = (id: string) => {
+    if (!isSection(id)) return;
+    setSection(id);
+    setSearch('');
+    setMobileNav(false);
+    window.location.hash = id;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    mainRef.current?.focus({ preventScroll: true });
+  };
+  const active = sections.find((item) => item.id === section)!;
+  const results = sections.filter((item) =>
+    normalizeSearch(`${item.label} ${item.description}`).includes(
+      normalizeSearch(search),
+    ),
+  );
+  return (
+    <>
+      <a href="#ds-main" className="ds-skip-link">
+        Pular para o conteúdo
+      </a>
+      <aside className="ds-sidebar">
+        <a
+          className="ds-brand ds-main-brand"
+          href="#overview"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate('overview');
+          }}
+          aria-label="Kifer Saúde, visão geral do design system"
+        >
+          <span className="ds-brand-mark">k.</span>
+          <strong>
+            Kifer Saúde<span>DESIGN SYSTEM</span>
+          </strong>
+        </a>
+        <div className="ds-sidebar-section">
+          <span className="ds-eyebrow">BIBLIOTECA DO CRM</span>
+        </div>
+        <NavigationList
+          items={sections.map((item) => ({ ...item, href: `#${item.id}` }))}
+          activeId={section}
+          ariaLabel="Seções do design system"
+          onNavigate={navigate}
+        />
+        <div className="ds-sidebar-bottom">
+          <span className="ds-live-dot" />
+          <span>Componentes reais do CRM</span>
+          <p>
+            Uma base compartilhada.
+            <br />
+            Cada experiência conectada.
+          </p>
+          <a className="ds-text-link" href="/painel">
+            Acessar o CRM
+            <ArrowRight size={14} aria-hidden="true" />
+          </a>
+        </div>
+      </aside>
+      <Drawer
+        open={mobileNav}
+        onOpenChange={setMobileNav}
+        side="left"
+        size="sm"
+      >
+        <DrawerHeader onClose={() => setMobileNav(false)}>
+          <DialogTitle>Design system</DialogTitle>
+        </DrawerHeader>
+        <DrawerBody>
+          <NavigationList
+            items={sections.map((item) => ({ ...item, href: `#${item.id}` }))}
+            activeId={section}
+            ariaLabel="Seções do design system no mobile"
+            onNavigate={navigate}
+          />
+        </DrawerBody>
+      </Drawer>
+      <div className="ds-content-shell">
+        <header className="ds-topbar">
+          <div className="ds-row">
+            <IconButton
+              className="ds-mobile-control"
+              aria-label="Abrir navegação"
+              onClick={() => setMobileNav(!mobileNav)}
+              aria-expanded={mobileNav}
+            >
+              <Menu />
+            </IconButton>
+            <Breadcrumb>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  href="#overview"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    navigate('overview');
+                  }}
+                >
+                  Design system
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>{active.label}</BreadcrumbItem>
+            </Breadcrumb>
+          </div>
+          <div className="ds-topbar-actions">
+            <SearchInput
+              size="sm"
+              aria-label="Buscar no design system"
+              placeholder="Buscar no catálogo…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <Tooltip
+              content={
+                theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'
+              }
+              side="bottom"
+            >
+              <IconButton
+                variant="ghost"
+                size="sm"
+                aria-label={
+                  theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'
+                }
+                onClick={onThemeChange}
+              >
+                {theme === 'light' ? <Moon /> : <Sun />}
+              </IconButton>
+            </Tooltip>
+          </div>
+        </header>
+        <main id="ds-main" className="ds-main" ref={mainRef} tabIndex={-1}>
+          {search.trim() ? (
+            <>
+              <SectionIntro number="BUSCA" title="Encontre o padrão certo">
+                Resultados para “{search}”.
+              </SectionIntro>
+              <div className="ds-search-results">
+                {results.length ? (
+                  results.map((item) => (
+                    <button
+                      key={item.id}
+                      className="ds-search-result"
+                      onClick={() => navigate(item.id)}
+                    >
+                      <item.icon size={22} />
+                      <div>
+                        <strong>{item.label}</strong>
+                        <p>{item.description}</p>
+                      </div>
+                      <ChevronRight size={18} />
+                    </button>
+                  ))
+                ) : (
+                  <EmptyState
+                    title="Nenhum padrão encontrado"
+                    description="Tente buscar por botões, formulário, cores ou mobile."
+                    action={
+                      <Button variant="secondary" onClick={() => setSearch('')}>
+                        Limpar busca
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {section === 'overview' && (
+                <Overview theme={theme} navigate={navigate} />
+              )}
+              {section === 'foundations' && <Foundations />}
+              {section === 'components' && <ComponentCatalog />}
+              {section === 'states' && <States />}
+              {(section === 'patterns' || section === 'responsive') && (
+                <PatternSection
+                  theme={theme}
+                  responsive={section === 'responsive'}
+                />
+              )}
+            </>
+          )}
+          <footer className="ds-page-footer">
+            <span>
+              Kifer Saúde <span aria-hidden="true">/</span> Design system
+            </span>
+            <span>Clareza em cada interação.</span>
+          </footer>
+        </main>
+      </div>
+    </>
+  );
+}
+
+function Overview({
+  theme,
+  navigate,
+}: {
+  theme: ShowcaseTheme;
+  navigate: (id: string) => void;
+}) {
+  return (
+    <>
+      <section className="ds-hero">
+        <div className="ds-hero-copy">
+          <Badge tone="accent" size="sm">
+            <span className="ds-live-dot" />
+            TERRACOTA CRM
+          </Badge>
+          <h1>
+            Uma base comum.
+            <br />
+            Mais clareza em
+            <br />
+            <em>cada experiência.</em>
+          </h1>
+          <p>
+            O design system do Kifer Saúde reúne os fundamentos, componentes e
+            padrões que dão forma ao nosso CRM.
+          </p>
+          <div className="ds-row ds-hero-actions">
+            <Button onClick={() => navigate('components')}>
+              Explorar componentes
+              <ArrowRight />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                document
+                  .getElementById('ds-in-action')
+                  ?.scrollIntoView({ behavior: 'smooth' })
+              }
+            >
+              Ver em uso
+              <ArrowDown />
+            </Button>
+          </div>
+        </div>
+        <div className="ds-identity" aria-label="Identidade visual Terracota">
+          <div className="ds-between">
+            <span className="ds-eyebrow">A NOSSA LINGUAGEM</span>
+            <Palette size={20} />
+          </div>
+          <div className="ds-identity-aa">
+            Aa<span>Playfair Display + Inter</span>
+          </div>
+          <div className="ds-identity-swatches">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="ds-between">
+            <span>
+              Humana no tom.
+              <br />
+              Precisa na operação.
+            </span>
+            <span className="ds-identity-mark">k.</span>
+          </div>
+        </div>
+      </section>
+      <div className="ds-principles">
+        {[
+          {
+            number: '01',
+            title: 'Clareza primeiro',
+            text: 'Hierarquia que orienta. Uma ação principal por contexto.',
+          },
+          {
+            number: '02',
+            title: 'Consistência sempre',
+            text: 'Os mesmos componentes, do primeiro contato ao contrato.',
+          },
+          {
+            number: '03',
+            title: 'Cuidado nos detalhes',
+            text: 'Feedback útil, navegação acessível e espaço para respirar.',
+          },
+        ].map((item) => (
+          <div key={item.number}>
+            <span>{item.number}</span>
+            <div>
+              <h2>{item.title}</h2>
+              <p>{item.text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <section id="ds-in-action" className="ds-in-action">
+        <div className="ds-section-heading">
+          <div>
+            <span className="ds-eyebrow">DO COMPONENTE À EXPERIÊNCIA</span>
+            <h2>O sistema, em uso.</h2>
+            <p>
+              Explore uma listagem real de componentes. Busque, filtre, edite e
+              experimente.
+            </p>
+          </div>
+          <ExploreButton onClick={() => navigate('patterns')}>
+            Todos os padrões
+          </ExploreButton>
+        </div>
+        <PreviewStudio theme={theme} compact />
+      </section>
+      <div className="ds-section-heading">
+        <div>
+          <span className="ds-eyebrow">COMECE POR AQUI</span>
+          <h2>Uma linguagem. Cinco perspectivas.</h2>
+        </div>
+      </div>
+      <div className="ds-overview-links">
+        {sections
+          .filter((item) => item.id !== 'overview')
+          .map((item, index) => (
+            <button onClick={() => navigate(item.id)} key={item.id}>
+              <item.icon size={22} />
+              <span className="ds-eyebrow">0{index + 1}</span>
+              <strong>{item.label}</strong>
+              <span>
+                {
+                  [
+                    'A matéria-prima de toda interface.',
+                    'Blocos reais, prontos para reutilizar.',
+                    'Cada ação merece uma resposta clara.',
+                    'Páginas que seguem a mesma lógica.',
+                    'A mesma experiência, em cada tela.',
+                  ][index]
+                }
+              </span>
+              <ArrowRight size={18} />
+            </button>
+          ))}
+      </div>
+      <details className="ds-technical">
+        <summary>Como esta biblioteca se conecta ao projeto</summary>
+        <p>
+          React 18, TypeScript e Vite. Componentes em src/design-system; estilos
+          em styles.css, foundation.css, components.css, operational.css,
+          primitives.css e themes.css. Tailwind compõe o layout; Lucide fornece
+          os ícones. Os exemplos importam a API pública usada pelo CRM. As
+          interações usam dados locais e não chamam integrações comerciais.
+        </p>
+      </details>
+    </>
+  );
+}
+
+function PreviewStudio({
+  theme,
+  compact = false,
+}: {
+  theme: ShowcaseTheme;
+  compact?: boolean;
+}) {
+  const [pattern, setPattern] = useState<Pattern>('list');
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(
+    'desktop',
+  );
+  const dimensions = { desktop: 'calc(100% - 2px)', tablet: '768px', mobile: '390px' };
+  return (
+    <div className="ds-studio">
+      <div className="ds-studio-toolbar">
+        {compact ? (
+          <div className="ds-row">
+            <Boxes size={16} />
+            <strong>Listagem de contatos</strong>
+          </div>
+        ) : (
+          <SegmentedControl
+            ariaLabel="Padrão de página"
+            size="sm"
+            items={patterns}
+            value={pattern}
+            onChange={setPattern}
+          />
+        )}
+        <div
+          className="ds-device-controls"
+          role="group"
+          aria-label="Largura da prévia"
+        >
+          {(
+            [
+              { id: 'desktop', label: 'Desktop', icon: Monitor },
+              { id: 'tablet', label: 'Tablet', icon: Tablet },
+              { id: 'mobile', label: 'Mobile', icon: Smartphone },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => (
+            <Tooltip key={id} content={label} side="bottom">
+              <IconButton
+                size="sm"
+                variant={device === id ? 'soft' : 'ghost'}
+                aria-label={`Visualizar em ${label.toLowerCase()}`}
+                aria-pressed={device === id}
+                onClick={() => setDevice(id)}
+              >
+                <Icon />
+              </IconButton>
+            </Tooltip>
+          ))}
+        </div>
+      </div>
+      <div className="ds-studio-canvas" data-device={device}>
+        <div className="ds-browser-frame" style={{ width: dimensions[device] }}>
+          <div className="ds-browser-bar">
+            <div>
+              <i />
+              <i />
+              <i />
+            </div>
+            <span>
+              kifersaude ·{' '}
+              {patterns
+                .find((item) => item.id === pattern)
+                ?.label.toLocaleLowerCase('pt-BR')}
+            </span>
+            <span>
+              {device === 'desktop'
+                ? 'Fluido'
+                : device === 'tablet'
+                  ? '768 px'
+                  : '390 px'}
+            </span>
+          </div>
+          <iframe
+            title={`Prévia interativa: ${patterns.find((item) => item.id === pattern)?.label}`}
+            src={`/design-system?preview=1&pattern=${pattern}&theme=${theme}`}
+            className={`ds-preview-iframe${compact ? ' is-compact' : ''}`}
+          />
+        </div>
+      </div>
+      <div className="ds-studio-footer">
+        <span>
+          <Check size={14} />
+          Componentes do projeto · dados demonstrativos
+        </span>
+        <PreviewLink pattern={pattern} theme={theme} />
+      </div>
+    </div>
+  );
+}
+
+function PatternSection({
+  theme,
+  responsive,
+}: {
+  theme: ShowcaseTheme;
+  responsive: boolean;
+}) {
+  return (
+    <>
+      <SectionIntro
+        number={responsive ? '05' : '04'}
+        title={
+          responsive ? 'Uma experiência que se adapta.' : 'Padrões de layout'
+        }
+      >
+        {responsive
+          ? 'Teste a largura real da prévia. Os mesmos controles e fluxos se reorganizam para desktop, tablet e mobile.'
+          : 'Do cabeçalho ao salvamento, cada página segue uma lógica familiar. Experimente os fluxos com os componentes reais.'}
+      </SectionIntro>
+      <Alert tone="info">
+        As alterações ficam apenas nesta prévia. Você pode criar e editar
+        exemplos sem alterar o CRM.
+      </Alert>
+      <PreviewStudio theme={theme} />
+      {responsive ? (
+        <>
+          <div className="ds-grid ds-grid-three">
+            <UsageNote title="Desktop · a partir de 1024 px">
+              Navegação lateral visível. Título à esquerda e ações à direita.
+              Tabelas mantêm suas colunas e indicadores compartilham a mesma
+              linha.
+            </UsageNote>
+            <UsageNote title="Tablet · 768 a 1023 px">
+              Navegação recolhida em menu. Ações podem passar para uma nova
+              linha. Formulários usam duas colunas quando há espaço suficiente.
+            </UsageNote>
+            <UsageNote title="Mobile · abaixo de 768 px">
+              Contatos viram cards com as mesmas informações. Formulários usam
+              uma coluna. Ações de salvar e cancelar dividem a largura
+              disponível.
+            </UsageNote>
+          </div>
+          <UsageNote title="Como comparar">
+            A prévia usa um documento próprio, com a largura real escolhida. Em
+            telas menores, deslize horizontalmente a área da prévia para
+            inspecionar desktop ou tablet. Use “Abrir exemplo” para testar
+            diretamente no seu dispositivo.
+          </UsageNote>
+        </>
+      ) : (
+        <>
+          <div className="ds-subheading">
+            <h2>A posição também comunica</h2>
+            <span>Convenções para as próximas telas</span>
+          </div>
+          <div className="ds-ux-rules">
+            {[
+              [
+                '01',
+                'Orientação antes da ação',
+                'Breadcrumb acima do título. Um título que explica a página, seguido de uma descrição curta. Navegação mantém a seção atual identificada.',
+              ],
+              [
+                '02',
+                'Uma ação principal',
+                'No cabeçalho, a ação principal fica à direita no desktop e abaixo do título em telas menores. Ações secundárias aparecem antes dela, com menor ênfase.',
+              ],
+              [
+                '03',
+                'Busca e filtros juntos',
+                'Abaixo do cabeçalho, busca à esquerda e filtros próximos. Mostre quantos resultados foram encontrados e ofereça uma forma explícita de limpar os filtros.',
+              ],
+              [
+                '04',
+                'Salvar tem um lugar',
+                'Ações no final do formulário: Cancelar antes de Salvar. Nomeie o resultado: “Criar contato” ou “Salvar alterações”. Durante o envio, evite ações duplicadas.',
+              ],
+              [
+                '05',
+                'Detalhes preservam o contexto',
+                'Agrupe informações relacionadas em seções. Use drawer para consulta rápida; página para trabalho contínuo; modal para uma tarefa curta ou confirmação.',
+              ],
+              [
+                '06',
+                'Estados explicam o próximo passo',
+                'Vazio orienta como começar; erro explica como recuperar; sucesso confirma uma ação concluída. Validação fica junto do campo e leva o foco ao primeiro erro.',
+              ],
+            ].map(([number, title, text]) => (
+              <article key={number}>
+                <span>{number}</span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <details className="ds-technical">
+            <summary>Blocos reutilizáveis destes layouts</summary>
+            <p>
+              PageContainer → Breadcrumb → PageHeader → FilterBar/Toolbar →
+              Card/Table/EmptyState → Pagination. Formulários: Field + controles
+              + FormActions. Sobreposições: Dialog/Drawer + cabeçalho + corpo +
+              ações. Navegação: NavigationList. Não há importação de
+              repositories ou consultas nestes exemplos.
+            </p>
+          </details>
+        </>
+      )}
+    </>
   );
 }

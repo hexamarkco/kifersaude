@@ -1899,3 +1899,47 @@
     transition: none;
   }
 }
+.painel-theme.kifer-ds .kds-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-5);
+}
+.painel-theme.kifer-ds .kds-form-actions-message {
+  flex: 1 1 12rem;
+  color: var(--text-secondary);
+  font: var(--type-body-sm);
+}
+.painel-theme.kifer-ds .kds-form-actions-buttons {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.painel-theme.kifer-ds .kds-navigation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.painel-theme.kifer-ds .kds-navigation-list a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font: var(--type-body);
+  text-decoration: none;
+  transition: background-color 150ms, color 150ms;
+}
+.painel-theme.kifer-ds .kds-navigation-list a:hover { background: var(--bg-hover); color: var(--text-primary); }
+.painel-theme.kifer-ds .kds-navigation-list a[aria-current] { background: var(--brand-primary-soft); color: var(--brand-primary-active); font-weight: var(--font-weight-semibold); }
+.painel-theme.kifer-ds .kds-navigation-list a:focus-visible { outline: 2px solid var(--focus-ring-strong); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .painel-theme.kifer-ds .kds-form-actions-buttons { width: 100%; }
+  .painel-theme.kifer-ds .kds-form-actions-buttons > button { flex: 1; }
+}

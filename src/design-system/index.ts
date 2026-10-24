@@ -1,4 +1,8 @@
 export { default as Alert } from './components/Alert';
+export { FormActions } from './components/FormActions';
+export type { FormActionsProps } from './components/FormActions';
+export { NavigationList } from './components/NavigationList';
+export type { NavigationItem, NavigationListProps } from './components/NavigationList';
 export type { AlertProps, AlertTone } from './components/Alert';
 export { Inline, Stack } from './components/LayoutPrimitives';
 export type { InlineProps, LayoutAlign, LayoutElement, LayoutGap, LayoutJustify, StackProps } from './components/LayoutPrimitives';

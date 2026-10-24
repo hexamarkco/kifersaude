@@ -2,8 +2,9 @@
 
 Migrations e três Edge Functions implantadas no projeto `eaxvvhamkmovkoqssahj`
 em 23/10/2026, após autorização. O receptor e o processamento periódico estão
-ativos; falta conceder `pages_manage_metadata` e inscrever a Página no aplicativo
-para comprovar a entrega automática pela Meta. A CAPI permanece desabilitada.
+ativos. Em 24/10, `pages_manage_metadata` foi concedida e a Página inscrita no
+aplicativo. Falta atribuir o getLeads no Gerenciador de Acesso a Leads para
+comprovar a entrega automática pela Meta. A CAPI permanece desabilitada.
 
 ## O que já existia e o que foi reutilizado
 
@@ -152,8 +153,10 @@ indefinido até a avaliação comercial.
 O callback configurado é
 `https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/meta-lead-webhook`.
 O desafio e a assinatura `leadgen` do aplicativo foram confirmados na versão
-`v26.0`. A inscrição da Página é uma etapa distinta e continua pendente da
-permissão `pages_manage_metadata`; o token atual já permite consultar o lead de teste.
+`v26.0`. A entrega automática ainda depende da atribuição do aplicativo no
+Gerenciador de Acesso a Leads. A permissão
+`pages_manage_metadata` e a inscrição da Página já foram confirmadas em 24/10;
+o token atual permite consultar o lead de teste.
 
 `settings.enabled=true` permite o teste controlado e o recebimento posterior.
 O cron `meta-ads-worker` (job 47), ativado depois do provisionamento da credencial,
@@ -246,8 +249,9 @@ o endpoint de push também foi conferido como não configurado nesse ambiente.
 Não usar outro lead de teste em produção: os demais IDs seguem o fluxo comercial
 normal e podem gerar comunicações reais.
 
-A inscrição da Página e uma entrega originada pela Meta ainda precisam ser
-comprovadas. Avaliação, contrato sintético e eventos `held` são cobertos pelos
+A inscrição da Página foi comprovada; a entrega originada pela Meta ainda depende
+da atribuição do getLeads no Gerenciador de Acesso a Leads. Avaliação, contrato
+sintético e eventos `held` são cobertos pelos
 testes locais; o teste remoto de rollback não valida essas etapas. Transporte
 CAPI/Test Events exige autorização própria e aprovação de dados e não foi executado.
 
@@ -341,3 +345,40 @@ schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
   Nenhuma migration histórica foi alterada.
 - `META_CAPI_ENABLED=false` permanece explícito. Não houve envio de conversão,
   mensagens WhatsApp/IA, cadastro persistido ou contrato de teste em produção.
+
+## Permissão concedida e Página inscrita em 24/10/2026
+
+- Após confirmação explícita do usuário, `pages_manage_metadata` foi habilitada
+  no caso de uso de captura de leads do aplicativo e concedida no login Meta.
+  A seleção foi limitada à Página `547836751743652`, sem acesso a Páginas futuras.
+- O getLeads aceitou o escopo somente por configuração explícita em produção.
+  Também foi corrigida a reconexão quando a troca de token não retorna
+  `expires_in`: o servidor consulta `debug_token`, confere validade, aplicativo,
+  tipo USER e os prazos informados pela Meta; usa o menor prazo positivo e
+  recusa validade desconhecida ou vencida. Não se inventa um prazo de 60 dias.
+  Os 12 testes do login, typecheck e lint passaram no projeto `meta-mcp`.
+  Commits `f8f0def` e `0bda011` publicados nesse repositório; serviço implantado.
+- A reconexão terminou em `result=connected`; validade conservadora registrada
+  até 22/01/2027, 00:34:51 BRT. A nova credencial da Página foi provisionada no
+  secret de servidor do CRM, sem exposição de valores.
+- `POST /547836751743652/subscribed_apps` confirmou sucesso; a consulta posterior
+  retornou o aplicativo `1213514694030711` com `subscribed_fields=[leadgen]`.
+  O callback do aplicativo continua ativo em `v26.0` no receptor implantado.
+- O teste sintético anterior foi conferido por ID, nome e telefone reservado
+  antes de substituí-lo na ferramenta oficial. Novo ID `1840662990291917`, criado
+  às 00:34:06 BRT, com os mesmos dados sintéticos. O worker ficou pausado durante
+  a criação; o novo ID foi fixado em `META_VALIDATION_LEAD_ID`, conferido por digest
+  e o worker republicado antes da retomada. O histórico do recibo anterior foi
+  preservado. Nenhuma notificação desse novo ID foi reproduzida localmente.
+- A ferramenta oficial agora mostra o getLeads associado à Página, mas informa
+  **App does not have leads permission — Add this app to Lead Access Manager**.
+  Os logs do receptor entre 00:30 e 00:40 BRT e a fila confirmaram ausência de
+  entrega desse teste, apesar de a consulta Graph funcionar. A entrega automática
+  não foi declarada validada.
+- A Meta exige confirmação de identidade para abrir as configurações do portfólio
+  empresarial. A tela ficou aberta para o usuário concluir essa verificação.
+  Depois, atribuir somente o getLeads à Página no Gerenciador de Acesso a Leads
+  e comprovar o recebimento original e o resultado `validation_passed` do ID protegido.
+  O cron 47 foi retomado e a chamada via pg_net recebeu HTTP 200, sem timeout
+  (request `710811`). Banco confirmou zero contatos e atribuições do teste e zero
+  eventos de conversão; CAPI continua explicitamente desativada.

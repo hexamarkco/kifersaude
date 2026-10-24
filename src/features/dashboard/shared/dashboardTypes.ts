@@ -39,7 +39,7 @@ export type DashboardProps = {
 
 export type DashboardReminder = Pick<
   Reminder,
-  'id' | 'lead_id' | 'contract_id' | 'tipo' | 'titulo' | 'data_lembrete' | 'lido' | 'concluido_em'
+  'id' | 'lead_id' | 'contract_id' | 'tipo' | 'titulo' | 'data_lembrete' | 'lido' | 'concluido_em' | 'cancelled_at'
 >;
 
 export type DashboardInteraction = Pick<Interaction, 'lead_id' | 'data_interacao'>;

@@ -8,10 +8,12 @@ type MockFunction<Args extends unknown[], Result> = {
   mockImplementation(implementation: (...args: Args) => Result): MockFunction<Args, Result>;
 };
 
-type Query = {
+type Query = PromiseLike<{ error: unknown | null }> & {
+  update: MockFunction<[Record<string, unknown>], Query>;
   select: MockFunction<[string], Query>;
   in: MockFunction<[string, string[]], Query>;
   eq: MockFunction<[string, unknown], Query>;
+  is: MockFunction<[string, unknown], Query>;
   order: MockFunction<[string, { ascending: boolean }], Query>;
   range: MockFunction<[number, number], Query>;
   overrideTypes: MockFunction<[], Promise<{ data: unknown[]; error: null }>>;
@@ -32,15 +34,20 @@ const mocks = vi.hoisted(() => {
     vi.fn() as unknown as MockFunction<Args, Result>
   );
   const query = {} as Query;
+  query.update = createMock<[Record<string, unknown>], Query>();
+  query.update.mockReturnValue(query);
+  query.then = (resolve, reject) => Promise.resolve({ error: null }).then(resolve, reject);
   query.select = createMock<[string], Query>();
   query.in = createMock<[string, string[]], Query>();
   query.eq = createMock<[string, unknown], Query>();
+  query.is = createMock<[string, unknown], Query>();
   query.order = createMock<[string, { ascending: boolean }], Query>();
   query.range = createMock<[number, number], Query>();
   query.overrideTypes = createMock<[], Promise<{ data: unknown[]; error: null }>>();
   query.select.mockReturnValue(query);
   query.in.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  query.is.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.range.mockReturnValue(query);
   query.overrideTypes.mockReturnValue(Promise.resolve({
@@ -90,6 +97,8 @@ vi.mock('../../../../infrastructure/supabase', () => ({
 }));
 
 import {
+  updateReminder,
+  updateReminders,
   listPendingRemindersForLead,
   listReminderContracts,
   listReminderLeads,
@@ -283,4 +292,39 @@ test('ignora eventos tardios depois do unsubscribe da agenda', () => {
   callback?.(payload);
   assert.equal(changes, 1);
   assert.equal(mocks.removeChannel.mock.calls.length, 1);
+});
+
+
+test('conclusão individual e em lote grava leitura e data na mesma operação e protege históricos', async () => {
+  mocks.query.update.mock.calls.length = 0;
+  mocks.query.eq.mock.calls.length = 0;
+  mocks.query.is.mock.calls.length = 0;
+  await updateReminder('reminder-1', { lido: true });
+  await updateReminders(['reminder-1', 'reminder-2'], { lido: true });
+  assert.equal(mocks.query.update.mock.calls.length, 2);
+  for (const [patch] of mocks.query.update.mock.calls) {
+    assert.equal(patch.lido, true);
+    assert.ok(typeof patch.concluido_em === 'string' && Number.isFinite(Date.parse(patch.concluido_em)));
+  }
+  assert.equal(mocks.query.eq.mock.calls.filter(([key, value]) => key === 'lido' && value === false).length, 2);
+  assert.deepEqual(mocks.query.is.mock.calls, [['cancelled_at', null], ['cancelled_at', null]]);
+});
+
+test('reabertura limpa a data e edição comum não inventa uma conclusão', async () => {
+  mocks.query.update.mock.calls.length = 0;
+  await updateReminder('legacy', { lido: false });
+  await updateReminder('legacy', { titulo: 'Novo título' });
+  assert.deepEqual(mocks.query.update.mock.calls, [
+    [{ lido: false, concluido_em: null }],
+    [{ titulo: 'Novo título' }],
+  ]);
+});
+
+test('agenda e seleção de pendências excluem cancelados', async () => {
+  mocks.query.is.mock.calls.length = 0;
+  mocks.query.eq.mock.calls.length = 0;
+  await listReminders();
+  await listPendingRemindersForLead('lead-1');
+  assert.deepEqual(mocks.query.is.mock.calls, [['cancelled_at', null], ['cancelled_at', null]]);
+  assert.ok(mocks.query.eq.mock.calls.some(([key, value]) => key === 'lido' && value === false));
 });

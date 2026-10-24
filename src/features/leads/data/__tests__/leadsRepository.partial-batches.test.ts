@@ -18,8 +18,10 @@ const mocks = vi.hoisted(() => {
     select: () => ({
       in: () => ({
         eq: () => ({
-          gte: () => ({
-            order: () => reminderResults.shift() ?? Promise.resolve({ data: [], error: null }),
+          is: () => ({
+            gte: () => ({
+              order: () => reminderResults.shift() ?? Promise.resolve({ data: [], error: null }),
+            }),
           }),
         }),
       }),

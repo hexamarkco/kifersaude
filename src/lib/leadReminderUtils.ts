@@ -27,6 +27,7 @@ export const getNextUpcomingUnreadReminderDate = async (
     .select('data_lembrete')
     .eq('lead_id', leadId)
     .eq('lido', false)
+    .is('cancelled_at', null)
     .gte('data_lembrete', nowIso)
     .order('data_lembrete', { ascending: true })
     .limit(1)

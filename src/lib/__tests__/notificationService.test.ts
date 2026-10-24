@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => {
   type Query = {
     select: TestMock<[], Query>;
     eq: TestMock<[], Query>;
+    is: TestMock<[string, null], Query>;
     order: TestMock<[], Promise<{ data: unknown[]; error: null }>>;
   };
   type ChatIdentity = {
@@ -53,10 +54,12 @@ const mocks = vi.hoisted(() => {
   const query: Query = {
     select: createMock<[], Query>(),
     eq: createMock<[], Query>(),
+    is: createMock<[string, null], Query>(),
     order: createMock<[], Promise<{ data: unknown[]; error: null }>>(),
   };
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  query.is.mockReturnValue(query);
   query.order.mockResolvedValue({ data: [], error: null });
 
   return {

@@ -107,7 +107,7 @@ export async function loadDashboardDecisionSnapshot(): Promise<DashboardDecision
   const results = await Promise.allSettled([
     fetchAllPages<DashboardReminder>(async (from, to) => databaseClient
       .from('reminders')
-      .select('id,lead_id,contract_id,tipo,titulo,data_lembrete,lido,concluido_em')
+      .select('id,lead_id,contract_id,tipo,titulo,data_lembrete,lido,concluido_em,cancelled_at')
       .order('data_lembrete', { ascending: false })
       .range(from, to)
       .overrideTypes<DashboardReminder[], { merge: false }>()),

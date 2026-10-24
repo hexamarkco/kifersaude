@@ -14,7 +14,8 @@ export type Reminder = {
   recorrencia_config?: unknown;
   tempo_estimado_minutos?: number;
   anexos?: unknown[];
-  concluido_em?: string;
+  concluido_em?: string | null;
+  cancelled_at?: string | null;
   snooze_count?: number;
   ultima_modificacao?: string;
   created_at: string;

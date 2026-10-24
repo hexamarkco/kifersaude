@@ -47,6 +47,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 - `leads.proximo_retorno` é uma projeção do primeiro lembrete pendente do lead ou dos seus contratos, incluindo atrasados. Sem pendência, o valor é nulo. Inserir, concluir, cancelar, reabrir, reagendar, excluir ou mover um lembrete recalcula essa projeção no banco; a lista, a ordenação e a exportação de leads usam o mesmo valor.
 - Um lembrete com `lido=true` está encerrado mesmo se `concluido_em` for nulo em registros antigos. Não inferir pendência pela ausência da data de conclusão nem preencher datas de conclusão desconhecidas. Cancelamento (`cancelled_at`) também exclui o item da agenda pendente.
+- Novas conclusões gravam `lido=true` e `concluido_em` na mesma operação; reabertura limpa a data junto com `lido=false`. Repetir uma conclusão não deve atribuir uma nova data a registros já encerrados. Relatórios de produção exigem data conhecida e atribuição válida, sem reconstruir crédito do histórico apenas pela leitura.
 - A edição em massa de próximo follow-up cria ou reagenda um lembrete real; não basta gravar uma data isolada no lead. A agenda do chat atualiza suas pendências ao receber alterações de lembretes.
 
 ## Contratos e documentos privados

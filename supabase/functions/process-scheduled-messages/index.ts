@@ -442,6 +442,7 @@ async function refreshLeadNextReturn(
     .select('data_lembrete')
     .eq('lead_id', leadId)
     .eq('lido', false)
+    .is('cancelled_at', null)
     .order('data_lembrete', { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -521,7 +522,9 @@ async function executeSequenceAction(
           .from('reminders')
           .update({ lido: true, concluido_em: new Date().toISOString() })
           .eq('id', reminderId)
-          .eq('lead_id', step.lead_id);
+          .eq('lead_id', step.lead_id)
+          .eq('lido', false)
+          .is('cancelled_at', null);
         if (error) throw new Error(`Não foi possível concluir o lembrete: ${error.message}`);
       }
       await refreshLeadNextReturn(admin, step.lead_id);

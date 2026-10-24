@@ -370,6 +370,7 @@ const countPendingRemindersForDay = async (
     .from('reminders')
     .select('id', { count: 'exact', head: true })
     .eq('lido', false)
+    .is('cancelled_at', null)
     .gte('data_lembrete', range.start.toISOString())
     .lt('data_lembrete', range.end.toISOString());
 

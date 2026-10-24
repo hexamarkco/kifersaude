@@ -62,6 +62,22 @@ test('reminder reading is not completion, reopening revokes the completion and c
   await db.query('UPDATE public.reminders SET concluido_em=NULL WHERE id=$1',[id]);
   expect(await count('reminder_completed')).toBe(0);
 });
+
+test('atomic reminder completion counts production once and preserves undated historical closures', async () => {
+  await context(nick);
+  const before = await count('reminder_completed');
+  const legacy = (await db.query('INSERT INTO public.reminders(lido) VALUES(true) RETURNING id')).rows[0].id;
+  const current = (await db.query('INSERT INTO public.reminders DEFAULT VALUES RETURNING id')).rows[0].id;
+  await db.query('UPDATE public.reminders SET lido=true,concluido_em=clock_timestamp() WHERE id=$1', [current]);
+  expect(await count('reminder_completed')).toBe(before + 1);
+  expect((await db.query('SELECT lido,concluido_em FROM public.reminders WHERE id=$1', [legacy])).rows[0]).toEqual({ lido: true, concluido_em: null });
+  await db.query('UPDATE public.reminders SET lido=false,concluido_em=NULL WHERE id=$1', [current]);
+  expect(await count('reminder_completed')).toBe(before);
+  await db.query('UPDATE public.reminders SET lido=true,concluido_em=clock_timestamp() WHERE id=$1', [current]);
+  expect(await count('reminder_completed')).toBe(before + 1);
+  await db.query('UPDATE public.reminders SET cancelled_at=clock_timestamp() WHERE id=$1', [current]);
+  expect(await count('reminder_completed')).toBe(before);
+});
 test('scheduled MCP sends preserve original operator, despite later edits and webhook races', async () => {
   await context(nick,'mcp',luiza);
   const schedule = (await db.query("INSERT INTO public.comm_whatsapp_scheduled_messages(status) VALUES('scheduled') RETURNING id")).rows[0].id;

@@ -388,6 +388,7 @@ const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => 
     .from('reminders')
     .select('id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, created_at')
     .eq('lido', false)
+    .is('cancelled_at', null)
     .order('data_lembrete', { ascending: true })
     .limit(MAX_CANDIDATES);
 
@@ -634,7 +635,8 @@ Deno.serve(async (req: Request) => {
           .from('reminders')
           .update({ data_lembrete: change.newDateTime, ultima_modificacao: new Date().toISOString() })
           .eq('id', change.reminderId)
-          .eq('lido', false);
+          .eq('lido', false)
+          .is('cancelled_at', null);
         if (updateError) throw new Error(`Falha ao reagendar follow-up: ${updateError.message}`);
       }
 
@@ -648,6 +650,7 @@ Deno.serve(async (req: Request) => {
           .select('data_lembrete')
           .eq('lead_id', leadId)
           .eq('lido', false)
+          .is('cancelled_at', null)
           .gte('data_lembrete', new Date().toISOString())
           .order('data_lembrete', { ascending: true })
           .limit(1)

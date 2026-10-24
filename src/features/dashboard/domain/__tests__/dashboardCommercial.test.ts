@@ -158,3 +158,23 @@ test('consolida a mesma origem quando a grafia muda apenas em caixa ou acento', 
     commissionExpected: 0,
   }]);
 });
+
+
+test('176 encerrados sem data e cancelados não aumentam os 17 vencidos nem alteram vendas', () => {
+  const reminder = {
+    lead_id: 'lead-1', tipo: 'Follow-up', titulo: 'Retornar',
+    data_lembrete: '2026-09-10T12:00:00Z', concluido_em: null,
+  };
+  const historical = Array.from({ length: 176 }, (_, i) => ({ ...reminder, id: `legacy-${i}`, lido: true }));
+  const pending = Array.from({ length: 17 }, (_, i) => ({ ...reminder, id: `pending-${i}`, lido: false }));
+  const cancelled = { ...reminder, id: 'cancelled', lido: false, cancelled_at: '2026-09-14T07:23:41Z' };
+  const baseline = buildDashboardCommercialAnalysis(input({ reminders: pending }));
+  const analysis = buildDashboardCommercialAnalysis(input({ reminders: [...historical, ...pending, cancelled] }));
+  assert.equal(analysis.agenda.overdue, 17);
+  assert.deepEqual(analysis.agenda, baseline.agenda);
+  assert.equal(analysis.salesCount, baseline.salesCount);
+  assert.equal(analysis.monthlyRevenue, baseline.monthlyRevenue);
+  assert.equal(analysis.commissionExpected, baseline.commissionExpected);
+  assert.equal(analysis.conversion, baseline.conversion);
+  assert.ok(historical.every((item) => item.lido && item.concluido_em === null));
+});

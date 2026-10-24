@@ -49,3 +49,5 @@ export {
   type NotificationSummarySource,
   type NotificationSummarySourceName,
 } from './data/notificationSummaryRepository';
+
+export { isReminderPending, normalizeReminderLifecyclePatch } from './domain/reminderLifecycle';

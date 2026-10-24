@@ -21,6 +21,7 @@ type Query = PromiseLike<QueryResult> & {
   insert: MockFunction<[unknown[]], Query>;
   select: MockFunction<[string], Query>;
   eq: MockFunction<[string, unknown], Query>;
+  is: MockFunction<[string, unknown], Query>;
   in: MockFunction<[string, string[]], Query>;
   order: MockFunction<[string, { ascending: boolean }], Query>;
   range: MockFunction<[number, number], Query>;
@@ -50,6 +51,7 @@ const mocks = vi.hoisted(() => {
   query.insert = createMock<[unknown[]], Query>();
   query.select = createMock<[string], Query>();
   query.eq = createMock<[string, unknown], Query>();
+  query.is = createMock<[string, unknown], Query>();
   query.in = createMock<[string, string[]], Query>();
   query.order = createMock<[string, { ascending: boolean }], Query>();
   query.range = createMock<[number, number], Query>();
@@ -59,6 +61,7 @@ const mocks = vi.hoisted(() => {
   query.update.mockReturnValue(query);
   query.insert.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  query.is.mockReturnValue(query);
   query.in.mockReturnValue(query);
   query.order.mockReturnValue(query);
   query.range.mockReturnValue(query);
@@ -128,6 +131,7 @@ const resetMocks = () => {
   mocks.query.insert.mock.calls.length = 0;
   mocks.query.select.mock.calls.length = 0;
   mocks.query.eq.mock.calls.length = 0;
+  mocks.query.is.mock.calls.length = 0;
   mocks.query.in.mock.calls.length = 0;
   mocks.query.order.mock.calls.length = 0;
   mocks.query.range.mock.calls.length = 0;
@@ -358,7 +362,11 @@ test('ignora lista vazia ao marcar lembretes e atualiza somente os IDs informado
   await markInboxRemindersRead(['reminder-1', 'reminder-2']);
 
   assert.deepEqual(mocks.from.mock.calls, [['reminders']]);
-  assert.deepEqual(mocks.query.update.mock.calls, [[{ lido: true }]]);
+  const patch = mocks.query.update.mock.calls[0]?.[0];
+  assert.equal(patch?.lido, true);
+  assert.ok(typeof patch?.concluido_em === 'string' && Number.isFinite(Date.parse(patch.concluido_em)));
+  assert.deepEqual(mocks.query.eq.mock.calls, [['lido', false]]);
+  assert.deepEqual(mocks.query.is.mock.calls, [['cancelled_at', null]]);
   assert.deepEqual(mocks.query.in.mock.calls, [['id', ['reminder-1', 'reminder-2']]]);
 });
 

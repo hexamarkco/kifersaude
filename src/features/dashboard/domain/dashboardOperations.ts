@@ -1,3 +1,4 @@
+import { isReminderPending } from '../../reminders';
 import type { Contract } from '../../contracts';
 import type { Lead } from '../../leads';
 import type {
@@ -166,7 +167,7 @@ export const buildDashboardOperationsAnalysis = ({
     })
     .sort((left, right) => (parseDashboardDateValue(left.proximo_retorno)?.getTime() ?? 0) - (parseDashboardDateValue(right.proximo_retorno)?.getTime() ?? 0));
   const missingNextStep = openLeads.filter((lead) => {
-    const pendingReminder = (remindersByLead.get(lead.id) ?? []).some((reminder) => !reminder.concluido_em && !reminder.lido && new Date(reminder.data_lembrete) >= startOfDay(now));
+    const pendingReminder = (remindersByLead.get(lead.id) ?? []).some((reminder) => isReminderPending(reminder) && new Date(reminder.data_lembrete) >= startOfDay(now));
     return !lead.proximo_retorno && !pendingReminder;
   });
   const noRecentActivity = openLeads.filter((lead) => {

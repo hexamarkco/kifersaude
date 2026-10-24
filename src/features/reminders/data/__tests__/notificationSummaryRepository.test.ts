@@ -17,6 +17,7 @@ type Query = {
   gte: MockFunction<[string, string], Query>;
   lte: MockFunction<[string, string], Query>;
   eq: MockFunction<[string, unknown], Query>;
+  is: MockFunction<[string, unknown], Query>;
   order: MockFunction<[string, { ascending: boolean }], Query>;
   in: MockFunction<[string, string[]], Query>;
   overrideTypes: MockFunction<[], Promise<QueryResult>>;
@@ -33,6 +34,7 @@ const mocks = vi.hoisted(() => {
     query.gte = createMock<[string, string], Query>();
     query.lte = createMock<[string, string], Query>();
     query.eq = createMock<[string, unknown], Query>();
+    query.is = createMock<[string, unknown], Query>();
     query.order = createMock<[string, { ascending: boolean }], Query>();
     query.in = createMock<[string, string[]], Query>();
     query.overrideTypes = createMock<[], Promise<QueryResult>>();
@@ -40,6 +42,7 @@ const mocks = vi.hoisted(() => {
     query.gte.mockReturnValue(query);
     query.lte.mockReturnValue(query);
     query.eq.mockReturnValue(query);
+    query.is.mockReturnValue(query);
     query.order.mockReturnValue(query);
     query.in.mockReturnValue(query);
     query.overrideTypes.mockReturnValue(Promise.resolve(result));

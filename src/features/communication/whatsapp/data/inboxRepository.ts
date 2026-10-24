@@ -7,6 +7,7 @@ import {
 } from '../../../../infrastructure/supabase';
 import type { Lead } from '../../../leads';
 import {
+  normalizeReminderLifecyclePatch,
   normalizeReminderTitle,
   normalizeReminderType,
   type Reminder,
@@ -300,7 +301,12 @@ export async function scheduleInboxFollowUp(input: {
 
 export async function markInboxRemindersRead(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const { error } = await databaseClient.from('reminders').update({ lido: true }).in('id', ids);
+  const { error } = await databaseClient
+    .from('reminders')
+    .update(normalizeReminderLifecyclePatch({ lido: true }))
+    .in('id', ids)
+    .eq('lido', false)
+    .is('cancelled_at', null);
   if (error) throw error;
 }
 

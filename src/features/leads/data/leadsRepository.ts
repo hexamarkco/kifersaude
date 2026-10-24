@@ -105,6 +105,7 @@ export async function listNextReminderByLeadId(
         .select('lead_id, data_lembrete')
         .in('lead_id', leadIdChunk)
         .eq('lido', false)
+        .is('cancelled_at', null)
         .gte('data_lembrete', nowIso)
         .order('data_lembrete', { ascending: true });
       if (error) {

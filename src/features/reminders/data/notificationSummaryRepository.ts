@@ -72,6 +72,7 @@ export async function loadNotificationSummarySource(
       .gte('data_lembrete', startAt)
       .lte('data_lembrete', endAt)
       .eq('lido', false)
+      .is('cancelled_at', null)
       .order('data_lembrete', { ascending: true })
       .overrideTypes<NotificationReminder[], { merge: false }>(),
     databaseClient

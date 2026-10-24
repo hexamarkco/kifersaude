@@ -339,6 +339,7 @@ export class NotificationService {
           .from('reminders')
           .select('id, titulo, descricao, data_lembrete, prioridade')
           .eq('lido', false)
+          .is('cancelled_at', null)
           .order('data_lembrete', { ascending: true }),
         whatsappConversationsRepository.getUnreadCount(),
       ]);

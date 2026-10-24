@@ -7,6 +7,7 @@ import {
 } from '../../../infrastructure/supabase';
 import type { Contract } from '../../contracts';
 import type { Lead } from '../../leads';
+import { normalizeReminderLifecyclePatch } from '../domain/reminderLifecycle';
 import type { Reminder } from '../domain/types';
 import { normalizeReminderTitle, normalizeReminderType } from '../shared/reminderTypes';
 
@@ -85,7 +86,7 @@ const normalizeReminderPending = (reminder: ReminderPendingItem): ReminderPendin
 });
 
 const normalizeReminderPatch = (patch: ReminderPatch) => ({
-  ...patch,
+  ...normalizeReminderLifecyclePatch(patch),
   ...(typeof patch.tipo === 'string' ? { tipo: normalizeReminderType(patch.tipo) } : {}),
   ...(typeof patch.titulo === 'string' ? { titulo: normalizeReminderTitle(patch.titulo) } : {}),
 });
@@ -111,6 +112,7 @@ export async function listReminders(): Promise<ReminderListItem[]> {
       .select(
         'id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, tags, tempo_estimado_minutos',
       )
+      .is('cancelled_at', null)
       .order('data_lembrete', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
@@ -187,6 +189,7 @@ export async function listPendingRemindersForLead(leadId: string): Promise<Remin
     .select('id, titulo')
     .eq('lead_id', leadId)
     .eq('lido', false)
+    .is('cancelled_at', null)
     .order('data_lembrete', { ascending: true })
     .order('id', { ascending: true })
     .overrideTypes<ReminderPendingItem[], { merge: false }>();
@@ -265,10 +268,9 @@ export async function updateReminder(
   patch: ReminderPatch,
 ): Promise<void> {
   const normalizedPatch = normalizeReminderPatch(patch);
-  const { error } = await databaseClient
-    .from('reminders')
-    .update(normalizedPatch)
-    .eq('id', reminderId);
+  let query = databaseClient.from('reminders').update(normalizedPatch).eq('id', reminderId);
+  if (patch.lido === true) query = query.eq('lido', false).is('cancelled_at', null);
+  const { error } = await query;
   if (error) {
     throw error;
   }
@@ -278,11 +280,11 @@ export async function updateReminders(
   reminderIds: string[],
   patch: ReminderPatch,
 ): Promise<void> {
+  if (reminderIds.length === 0) return;
   const normalizedPatch = normalizeReminderPatch(patch);
-  const { error } = await databaseClient
-    .from('reminders')
-    .update(normalizedPatch)
-    .in('id', reminderIds);
+  let query = databaseClient.from('reminders').update(normalizedPatch).in('id', reminderIds);
+  if (patch.lido === true) query = query.eq('lido', false).is('cancelled_at', null);
+  const { error } = await query;
   if (error) {
     throw error;
   }

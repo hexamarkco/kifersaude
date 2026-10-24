@@ -1,3 +1,4 @@
+import { isReminderPending } from '../../reminders';
 import type { Contract } from '../../contracts';
 import type { Lead } from '../../leads';
 import { normalizeOperadoraLabel } from '../../../lib/textNormalization';
@@ -80,7 +81,7 @@ const hasPendingNextStep = (
 
   return (remindersByLead.get(lead.id) ?? []).some((reminder) => {
     const date = parseDate(reminder.data_lembrete);
-    return Boolean(date && date >= startOfDay(now) && !reminder.lido);
+    return Boolean(date && date >= startOfDay(now) && isReminderPending(reminder));
   });
 };
 
@@ -265,10 +266,10 @@ export const buildDashboardCommercialAnalysis = ({
     ? commissionInstallments.filter((item) => isInside(item.date, currentRange)).reduce((sum, item) => sum + item.value, 0)
     : null;
 
-  const pendingReminders = reminders.filter((reminder) => !reminder.lido);
+  const pendingReminders = reminders.filter(isReminderPending);
   const overdueReminders = pendingReminders.filter((reminder) => isAgendaOverdue(reminder.data_lembrete, now));
   const pendingToday = pendingReminders.filter((reminder) => isSameAgendaDay(reminder.data_lembrete, now));
-  const completedToday = reminders.filter((reminder) => reminder.lido && isSameAgendaDay(reminder.data_lembrete, now));
+  const completedToday = reminders.filter((reminder) => reminder.lido && !reminder.cancelled_at && isSameAgendaDay(reminder.data_lembrete, now));
   const overdueReminderLeadIds = new Set(
     overdueReminders
       .map(resolveReminderLeadId)
@@ -288,7 +289,7 @@ export const buildDashboardCommercialAnalysis = ({
         leadId: leadId ?? null,
         leadName: leadId ? leadsById.get(leadId)?.nome_completo ?? null : null,
         overdue: overdueReminders.some((item) => item.id === reminder.id),
-        completed: Boolean(reminder.concluido_em),
+        completed: reminder.lido,
       };
     });
 

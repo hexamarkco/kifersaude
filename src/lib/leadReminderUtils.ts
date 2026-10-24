@@ -1,4 +1,5 @@
 import { supabase } from '../infrastructure/supabase';
+import { getLeadPendingReminderDate } from '../features/reminders';
 
 const stripDiacritics = (value: string) =>
   value
@@ -37,17 +38,9 @@ export const getNextUpcomingUnreadReminderDate = async (
 
 export const syncLeadNextReturnFromUpcomingReminder = async (
   leadId: string,
-  nowIso: string = new Date().toISOString(),
 ) => {
   if (!leadId) return null;
-
-  const nextReturnDate = await getNextUpcomingUnreadReminderDate(leadId, nowIso);
-
-  const { error } = await supabase
-    .from('leads')
-    .update({ proximo_retorno: nextReturnDate })
-    .eq('id', leadId);
-
-  if (error) throw error;
-  return nextReturnDate;
+  // Kept for existing consumers. The database now synchronizes the projection
+  // for every agenda mutation, including overdue and contract reminders.
+  return getLeadPendingReminderDate(leadId);
 };

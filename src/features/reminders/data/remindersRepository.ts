@@ -98,6 +98,12 @@ const batchesOf = <T>(items: T[], size = 100): T[][] => {
   return result;
 };
 
+export async function getLeadPendingReminderDate(leadId: string): Promise<string | null> {
+  const { data, error } = await databaseClient.rpc('get_lead_pending_reminder_date', { p_lead_id: leadId });
+  if (error) throw error;
+  return data ?? null;
+}
+
 export async function listReminders(): Promise<ReminderListItem[]> {
   const reminders = await fetchAllPages<ReminderListItem>(async (from, to) => {
     const result = await databaseClient
@@ -125,6 +131,7 @@ const listRemindersByRelation = (
       .select('id, tipo, titulo, descricao, data_lembrete, lido')
       .in(relation, ids)
       .eq('lido', false)
+      .is('cancelled_at', null)
       .order('data_lembrete', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)

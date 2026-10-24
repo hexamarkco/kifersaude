@@ -15,12 +15,12 @@ import {
   deleteLead,
   listContractLeadIds,
   listLeads,
-  listNextReminderByLeadId,
   persistLeadStatusChange,
   registerLeadContact,
   subscribeToLeadChanges,
   type LeadRealtimeChange,
   updateLeadDetails,
+  upsertLeadFollowUpReminder,
 } from "./data/leadsRepository";
 import {
   Search,
@@ -119,9 +119,6 @@ export default function LeadsManager({
     useConfig();
   const canEditLeads = getRoleModulePermission(role, "leads").can_edit;
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [nextReminderByLeadId, setNextReminderByLeadId] = useState<
-    Map<string, string>
-  >(new Map());
   const [loading, setLoading] = useState(true);
   const [leadsLoadError, setLeadsLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? "");
@@ -187,7 +184,6 @@ export default function LeadsManager({
   const hasAnimatedSectionsRef = useRef(false);
   const leadsRequestIdRef = useRef(0);
   const contractsRequestIdRef = useRef(0);
-  const remindersRequestIdRef = useRef(0);
   const leadStatusMutationLockRef = useRef(new LeadStatusMutationLock());
   const bulkMutationInFlightRef = useRef(false);
   const deletingLeadIdsRef = useRef(new Set<string>());
@@ -416,10 +412,7 @@ export default function LeadsManager({
 
       setLeads(visibleLeads);
       leadsLoaded = true;
-      // A lista principal já está pronta. Exiba-a sem esperar a consulta
-      // complementar dos próximos lembretes, que pode envolver muitos leads.
-      // Essa consulta continua protegida pelo requestId e atualiza os cartões
-      // quando terminar.
+      // Próximo retorno já vem da projeção da agenda, mantida pelo banco.
       setLoading(false);
     } catch (error) {
       if (requestId === leadsRequestIdRef.current) {
@@ -665,7 +658,7 @@ export default function LeadsManager({
           case "responsavel":
             return lead.responsavel || "";
           case "proximo_retorno": {
-            const nextReturn = nextReminderByLeadId.get(lead.id) ?? lead.proximo_retorno;
+            const nextReturn = lead.proximo_retorno;
             if (!nextReturn) return null;
             const timestamp = new Date(nextReturn).getTime();
             return Number.isNaN(timestamp) ? null : timestamp;
@@ -711,7 +704,6 @@ export default function LeadsManager({
     return sorted;
   }, [
     leads,
-    nextReminderByLeadId,
     deferredSearchQuery,
     filterStatus,
     filterResponsavel,
@@ -755,50 +747,6 @@ export default function LeadsManager({
     () => paginatedLeads.map((lead) => lead.id),
     [paginatedLeads],
   );
-
-  useEffect(() => {
-    const requestId = remindersRequestIdRef.current + 1;
-    remindersRequestIdRef.current = requestId;
-    const leadIds = paginatedLeadIds.filter(Boolean);
-
-    if (leadIds.length === 0) {
-      return () => {
-        if (remindersRequestIdRef.current === requestId) {
-          remindersRequestIdRef.current += 1;
-        }
-      };
-    }
-
-    void listNextReminderByLeadId(leadIds)
-      .then((nextReminders) => {
-        if (requestId !== remindersRequestIdRef.current) {
-          return;
-        }
-
-        setNextReminderByLeadId((current) => {
-          const next = new Map(current);
-          leadIds.forEach((leadId) => next.delete(leadId));
-          nextReminders.forEach((reminderDate, leadId) => next.set(leadId, reminderDate));
-          return next;
-        });
-      })
-      .catch((error) => {
-        if (requestId !== remindersRequestIdRef.current) {
-          return;
-        }
-
-        console.error("Erro ao carregar próximos retornos dos leads visíveis:", error);
-        setLeadsLoadError(
-          "Os leads foram carregados, mas não foi possível atualizar os próximos retornos.",
-        );
-      });
-
-    return () => {
-      if (remindersRequestIdRef.current === requestId) {
-        remindersRequestIdRef.current += 1;
-      }
-    };
-  }, [paginatedLeadIds]);
 
   useEffect(() => {
     void fetchContractsForLeads(paginatedLeadIds);
@@ -999,11 +947,7 @@ export default function LeadsManager({
       updates.responsavel = selectedResponsavel.label;
       updates.responsavel_id = selectedResponsavel.id;
     }
-    if (proximoRetorno !== undefined) {
-      updates.proximo_retorno = proximoRetorno;
-    }
-
-    if (Object.keys(updates).length === 0) return;
+    if (Object.keys(updates).length === 0 && !proximoRetorno) return;
 
     bulkMutationInFlightRef.current = true;
     setIsBulkUpdating(true);
@@ -1020,22 +964,22 @@ export default function LeadsManager({
     );
 
     try {
-      await updateLeadDetails(selectedLeadIds, {
-        ...(selectedResponsavel
-          ? { responsavel_id: selectedResponsavel.id }
-          : {}),
-        ...(proximoRetorno !== undefined
-          ? { proximo_retorno: proximoRetorno }
-          : {}),
-      });
+      if (selectedResponsavel) {
+        await updateLeadDetails(selectedLeadIds, { responsavel_id: selectedResponsavel.id });
+      }
+      if (proximoRetorno) {
+        for (const lead of leads.filter((item) => selectedLeadIds.includes(item.id))) {
+          await upsertLeadFollowUpReminder({ leadId: lead.id, leadName: lead.nome_completo, phone: lead.telefone, remindAt: proximoRetorno });
+        }
+      }
       toast.success("Dados aplicados com sucesso aos leads selecionados.");
     } catch (error) {
       console.error("Erro ao aplicar dados em massa:", error);
       toast.error(
-        "Não foi possível aplicar os dados. Tente novamente.",
+        "Não foi possível aplicar todos os dados. Confira a lista atualizada antes de tentar novamente.",
       );
-      loadLeads();
     } finally {
+      void loadLeads();
       bulkMutationInFlightRef.current = false;
       setIsBulkUpdating(false);
       clearSelection();
@@ -1341,11 +1285,12 @@ export default function LeadsManager({
         normalizedStatus === "convertido"
       ) {
         await clearLeadReminders(leadId);
+        const nextReturnDate = await syncLeadNextReturnFromUpcomingReminder(leadId);
 
         setLeads((current) =>
           current.map((leadItem) =>
             leadItem.id === leadId
-              ? { ...leadItem, proximo_retorno: null }
+              ? { ...leadItem, proximo_retorno: nextReturnDate }
               : leadItem,
           ),
         );
@@ -1963,7 +1908,7 @@ export default function LeadsManager({
                     </TableRow>
                   )}
                   {paginatedLeads.map((lead) => {
-                    const nextReminder = nextReminderByLeadId.get(lead.id);
+                    const nextReminder = lead.proximo_retorno;
 
                     return (
                       <TableRow
@@ -2139,13 +2084,13 @@ export default function LeadsManager({
                               {lead.cidade}
                             </div>
                           )}
-                          {nextReminderByLeadId.get(lead.id) && (
+                          {lead.proximo_retorno && (
                             <div className="kds-op-lead-accent mt-2.5 flex items-center space-x-2 text-sm">
                               <Calendar className="h-4 w-4" />
                               <span className="kds-op-lead-accent font-medium">
                                 Follow-up{" "}
                                 {formatDateTimeFullBR(
-                                  nextReminderByLeadId.get(lead.id) ?? "",
+                                  lead.proximo_retorno,
                                 )}
                               </span>
                             </div>
@@ -2285,12 +2230,6 @@ export default function LeadsManager({
                     : lead,
                 ),
               );
-
-              setNextReminderByLeadId((current) => {
-                const next = new Map(current);
-                next.set(reminderLead.id, _details.reminderDate);
-                return next;
-              });
 
               closeReminderScheduler();
             }}

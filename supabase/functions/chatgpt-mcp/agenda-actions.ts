@@ -10,6 +10,11 @@ const version = { type: ['string', 'null'], format: 'date-time', description: 'u
 const itemProperties = { reminder_id: { type: 'string', format: 'uuid' }, expected_ultima_modificacao: version };
 const reminderSelect = 'id,lead_id,contract_id,tipo,titulo,descricao,data_lembrete,prioridade,lido,concluido_em,cancelled_at,cancellation_reason,created_at,ultima_modificacao';
 
+export const withReminderState = <T extends { lido?: boolean | null; cancelled_at?: string | null }>(reminder: T) => ({
+  ...reminder,
+  status: reminder.cancelled_at ? 'cancelled' : reminder.lido === true ? 'completed' : reminder.lido === false ? 'pending' : 'unknown',
+});
+
 export const MCP_AGENDA_TOOLS: readonly McpToolDescriptor[] = [
   { name: 'kifer_get_reminder', description: 'Consulta um lembrete ou tarefa da agenda pelo ID, incluindo estado e ultima_modificacao para reagendar, reabrir ou excluir.', inputSchema: { type: 'object', required: ['reminder_id'], additionalProperties: false, properties: { reminder_id: itemProperties.reminder_id } }, annotations: { readOnlyHint: true } },
   { name: 'kifer_reschedule_reminders', description: 'Reagenda de 1 a 100 lembretes ou tarefas da agenda em uma transação. Informe uma data com fuso por item; para distribuir 20 a cada 3 minutos, envie as 20 datas calculadas. Use as versões da leitura. dry_run valida sem gravar; reopen=true também torna um item concluído/cancelado pendente. Lotes maiores podem ser divididos em chamadas.', inputSchema: { type: 'object', required: ['items'], additionalProperties: false, properties: { items: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', required: ['reminder_id', 'expected_ultima_modificacao', 'data_lembrete'], additionalProperties: false, properties: { ...itemProperties, data_lembrete: { type: 'string', format: 'date-time' }, reopen: { type: 'boolean', default: false } } } }, dry_run: { type: 'boolean', default: false } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
@@ -27,7 +32,7 @@ export async function executeMcpAgendaReadAction(params: { supabase: SupabaseCli
   if (!data) return fail('NOT_FOUND', 'Lembrete não encontrado.');
   const { error: auditError } = await params.supabase.from('chatgpt_mcp_audit_log').insert({ tool_name: params.toolName, actor: params.actor.actor, resource_name: 'reminders', request_summary: { reminder_id: id } });
   if (auditError) console.error('[chatgpt-mcp] falha ao auditar consulta da agenda:', auditError.message);
-  return { success: true, reminder: data };
+  return { success: true, reminder: withReminderState(data) };
 }
 
 export async function executeMcpAgendaWriteAction(params: { supabase: SupabaseClient; toolName: string; arguments: Record<string, unknown>; actor: McpWriteActor }): Promise<McpWriteResult | null> {

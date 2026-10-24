@@ -39,7 +39,7 @@ import { executeMcpWhatsAppAiWriteAction, MCP_WHATSAPP_AI_WRITE_TOOL_NAMES } fro
 import { executeMcpWhatsAppContactWriteAction, MCP_WHATSAPP_CONTACT_WRITE_TOOL_NAMES } from './whatsapp-contact-actions.ts';
 import { executeMcpWhatsAppQuickReplyWriteAction, MCP_WHATSAPP_QUICK_REPLY_WRITE_TOOL_NAMES } from './whatsapp-quick-reply-actions.ts';
 import { executeMcpTrackingConfigWriteAction, MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES } from './tracking-config-actions.ts';
-import { executeMcpAgendaWriteAction, MCP_AGENDA_WRITE_TOOL_NAMES } from './agenda-actions.ts';
+import { executeMcpAgendaWriteAction, MCP_AGENDA_WRITE_TOOL_NAMES, withReminderState } from './agenda-actions.ts';
 import { auditOpportunityFollowUps, normalizeOpportunityRecords } from './opportunity-followup-audit.ts';
 
 const MAX_MESSAGE_LENGTH = 4_096;
@@ -476,13 +476,9 @@ async function validateContract(supabase: SupabaseClient, leadId: string, contra
 }
 
 async function syncNextReturn(supabase: SupabaseClient, leadId: string) {
-  const now = new Date().toISOString();
-  const { data, error } = await supabase.from('reminders').select('data_lembrete').eq('lead_id', leadId).eq('lido', false).gte('data_lembrete', now).order('data_lembrete', { ascending: true }).limit(1).maybeSingle();
+  const { data, error } = await supabase.rpc('get_lead_pending_reminder_date', { p_lead_id: leadId });
   if (error) throw new Error(error.message);
-  const nextReturn = data?.data_lembrete ?? null;
-  const { error: updateError } = await supabase.from('leads').update({ proximo_retorno: nextReturn }).eq('id', leadId);
-  if (updateError) throw new Error(updateError.message);
-  return nextReturn;
+  return data ?? null;
 }
 
 async function createReminder(supabase: SupabaseClient, params: Record<string, unknown>, actor: McpWriteActor): Promise<McpWriteResult> {
@@ -2922,13 +2918,13 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
     if (start) query = query.gte('data_lembrete', start);
     if (end) query = query.lte('data_lembrete', end);
     const { data, error, count } = await query.order('data_lembrete', { ascending: true }).range(from, from + pageSize - 1);
-    return error ? errorResult('INTERNAL_ERROR', 'Não foi possível listar os lembretes.') : { success: true, page, page_size: pageSize, total: count ?? null, reminders: data ?? [] };
+    return error ? errorResult('INTERNAL_ERROR', 'Não foi possível listar os lembretes.') : { success: true, page, page_size: pageSize, total: count ?? null, reminders: (data ?? []).map(withReminderState) };
   }
   if (toolName === 'kifer_get_next_follow_up') {
     const leadId = text(args.lead_id);
     if (!safeUuid(leadId)) return errorResult('INVALID_INPUT', 'lead_id inválido.');
     if (!(await existingLead(supabase, leadId))) return errorResult('LEAD_NOT_FOUND', 'Lead não encontrado.');
-    const { data, error } = await supabase.from('reminders').select('id,lead_id,tipo,titulo,descricao,data_lembrete,prioridade').eq('lead_id', leadId).eq('lido', false).eq('tipo', 'Follow-up').gte('data_lembrete', new Date().toISOString()).order('data_lembrete', { ascending: true }).limit(1).maybeSingle();
+    const { data, error } = await supabase.from('reminders').select('id,lead_id,tipo,titulo,descricao,data_lembrete,prioridade').eq('lead_id', leadId).eq('lido', false).is('cancelled_at', null).in('tipo', ['Follow-up', 'Retorno']).order('data_lembrete', { ascending: true }).limit(1).maybeSingle();
     return error ? errorResult('INTERNAL_ERROR', 'Não foi possível consultar o próximo retorno.') : { success: true, follow_up: data ?? null };
   }
   return null;

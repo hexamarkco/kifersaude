@@ -23,6 +23,7 @@ import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadRemi
 import { getBadgeStyle } from '../../../../lib/colorUtils';
 import {
   listRemindersForLeadContext,
+  subscribeToReminderChanges,
   type ReminderContextItem,
   updateReminder,
 } from '../../../reminders';
@@ -268,6 +269,19 @@ export default function WhatsAppLeadDrawer({
 
     void loadAgendaReminders();
   }, [isOpen, loadAgendaReminders]);
+
+  useEffect(() => {
+    if (!isOpen || !linkedLead?.id || !canViewAgenda) return;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribeToReminderChanges(() => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => void loadAgendaReminders(), 150);
+    });
+    return () => {
+      clearTimeout(refreshTimer);
+      unsubscribe();
+    };
+  }, [canViewAgenda, isOpen, linkedLead?.id, loadAgendaReminders]);
 
   const handleAgendaToggleRead = useCallback(async (reminderId: string, currentStatus: boolean) => {
     try {

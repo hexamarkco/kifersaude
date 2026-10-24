@@ -379,6 +379,8 @@ export async function upsertLeadFollowUpReminder(input: {
     .eq('lead_id', input.leadId)
     .in('tipo', ['Follow-up', 'Retorno'])
     .eq('lido', false)
+    .is('cancelled_at', null)
+    .order('data_lembrete', { ascending: true })
     .limit(1)
     .maybeSingle();
   if (lookupError) throw lookupError;

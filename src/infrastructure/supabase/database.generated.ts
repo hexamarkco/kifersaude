@@ -7509,6 +7509,10 @@ export type Database = {
         Args: { p_channel: string; p_endpoint: string }
         Returns: string
       }
+      _refresh_lead_pending_reminder_dates: {
+        Args: { p_lead_ids: string[] }
+        Returns: undefined
+      }
       _resolve_contact_permission_lead: {
         Args: {
           p_channel: string
@@ -9357,6 +9361,10 @@ export type Database = {
         }
       }
       get_email_by_username: { Args: { p_username: string }; Returns: string }
+      get_lead_pending_reminder_date: {
+        Args: { p_lead_id: string }
+        Returns: string
+      }
       increment_public_link_click: {
         Args: { link_id: string }
         Returns: undefined

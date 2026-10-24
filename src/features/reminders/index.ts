@@ -6,6 +6,7 @@ export {
   deleteReminders,
   deleteRemindersForLead,
   getReminderLead,
+  getLeadPendingReminderDate,
   listReminderContracts,
   listReminderLeads,
   listPendingRemindersForLead,

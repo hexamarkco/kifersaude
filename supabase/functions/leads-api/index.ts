@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { persistRequestedLeadFollowUp } from './lead-follow-up.ts';
 import {
   assertContactPermissionForSend,
   ContactPermissionBlockedError,
@@ -5221,6 +5222,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      try {
+        data.proximo_retorno = await persistRequestedLeadFollowUp(supabase, data, validation.leadData.proximo_retorno);
+      } catch (agendaError) {
+        return new Response(JSON.stringify({ success: false, lead_saved: true, lead_id: data.id, error: 'Lead criado, mas não foi possível agendar o follow-up. Consulte o lead antes de repetir.', details: agendaError instanceof Error ? agendaError.message : 'Falha na agenda.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       logWithContext('Lead created successfully', { leadId: data.id });
 
       return new Response(
@@ -5389,6 +5395,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      try {
+        data.proximo_retorno = await persistRequestedLeadFollowUp(supabase, data, validation.updateData.proximo_retorno);
+      } catch (agendaError) {
+        return new Response(JSON.stringify({ success: false, lead_saved: true, lead_id: data.id, error: 'Lead atualizado, mas não foi possível agendar o follow-up. Consulte o lead antes de repetir.', details: agendaError instanceof Error ? agendaError.message : 'Falha na agenda.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
       logWithContext('Lead updated successfully', { leadId });
 
       return new Response(
@@ -5472,6 +5483,12 @@ Deno.serve(async (req: Request) => {
             error: error.message,
           });
         } else {
+          try {
+            data.proximo_retorno = await persistRequestedLeadFollowUp(supabase, data, validation.leadData.proximo_retorno);
+          } catch (agendaError) {
+            results.failed.push({ index, data: leadInput, lead_saved: true, lead_id: data.id, error: `Lead criado, mas o follow-up não foi agendado: ${agendaError instanceof Error ? agendaError.message : 'falha na agenda'}` });
+            continue;
+          }
           results.success.push({
             index,
             data: mapLeadRelationsForResponse(data, lookups),

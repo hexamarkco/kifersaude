@@ -17,6 +17,7 @@ import {
   upsertLeadFollowUpReminder,
   type Lead,
 } from '../features/leads';
+import { getLeadPendingReminderDate } from '../features/reminders';
 import {
   convertLocalToUTC,
   formatDateForInput,
@@ -427,7 +428,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
       if (formData.proximo_retorno && savedLeadId) {
         const localDate = new Date(formData.proximo_retorno);
-        localDate.setMinutes(localDate.getMinutes() - 1);
         const reminderDate = localDate.toISOString();
 
         await upsertLeadFollowUpReminder({
@@ -436,7 +436,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           phone: formData.telefone,
           remindAt: reminderDate,
         });
-
+        savedLead.proximo_retorno = await getLeadPendingReminderDate(savedLeadId);
       }
 
       onSave(savedLead, { created: isNewLead });

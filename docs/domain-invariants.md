@@ -43,6 +43,12 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Os status da oportunidade são `open`, `qualified`, `proposal`, `won` e `lost`; `archived` é um estado separado para manter a etapa comercial original.
 - O auditor de follow-up agrupa datas no fuso `America/Sao_Paulo`; ele apenas sinaliza lembretes/mensagens equivalentes entre membros, retornos coincidentes e mensagens dirigidas a não principais sem justificativa registrada. Não altera agenda automaticamente e marca cobertura parcial quando RPCs truncam membros/oportunidades.
 
+## Agenda e próximo follow-up
+
+- `leads.proximo_retorno` é uma projeção do primeiro lembrete pendente do lead ou dos seus contratos, incluindo atrasados. Sem pendência, o valor é nulo. Inserir, concluir, cancelar, reabrir, reagendar, excluir ou mover um lembrete recalcula essa projeção no banco; a lista, a ordenação e a exportação de leads usam o mesmo valor.
+- Um lembrete com `lido=true` está encerrado mesmo se `concluido_em` for nulo em registros antigos. Não inferir pendência pela ausência da data de conclusão nem preencher datas de conclusão desconhecidas. Cancelamento (`cancelled_at`) também exclui o item da agenda pendente.
+- A edição em massa de próximo follow-up cria ou reagenda um lembrete real; não basta gravar uma data isolada no lead. A agenda do chat atualiza suas pendências ao receber alterações de lembretes.
+
 ## Contratos e documentos privados
 
 - A importação JSON em massa cria somente contratos novos: não vincula leads nem importa titulares/dependentes, parcelas de comissão ou faixas de bônus. O lote inteiro é validado antes de um único insert; códigos repetidos no arquivo ou já existentes impedem a gravação de todos os itens.

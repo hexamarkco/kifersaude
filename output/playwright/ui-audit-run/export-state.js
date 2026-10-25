@@ -1,0 +1,1 @@
+async(page)=>({captures:page.__audit.captures,interactions:page.__audit.interactions,errors:page.__audit.errors,unknown:[...new Set(page.__audit.unknown)],blocked:page.__audit.blocked.map(r=>({host:r.host,path:r.path,method:r.method,kind:r.kind})),requestCount:page.__audit.requests.length})

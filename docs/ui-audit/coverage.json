@@ -1,0 +1,711 @@
+{
+  "summary": {
+    "pages_sections": 47,
+    "pages_complete": 47,
+    "route_declarations": 36,
+    "source_interface_occurrences": 192,
+    "modals_drawers_confirmations": 51,
+    "distinct_interaction_states": 141,
+    "captured_state_viewports": 415,
+    "screenshots": 1470,
+    "bytes": 157709688,
+    "pending_state_viewports": 7,
+    "pending_distinct_states": 3,
+    "by_device": {
+      "desktop": 470,
+      "mobile": 522,
+      "tablet": 478
+    },
+    "by_state_kind": {
+      "popover": 29,
+      "dropdown": 42,
+      "section": 18,
+      "modal": 122,
+      "drawer": 15,
+      "confirmation": 12,
+      "view": 18,
+      "menu": 18,
+      "form": 18,
+      "datepicker": 9,
+      "validation": 3,
+      "wizard": 12,
+      "detail": 3,
+      "interaction": 6,
+      "theme": 12,
+      "permission": 9,
+      "empty": 30,
+      "error": 21,
+      "loading": 18
+    },
+    "specialized_interfaces_pending": 4
+  },
+  "routes": [
+    {
+      "pattern": "/politica-de-privacidade",
+      "index": false,
+      "components": [
+        "Suspense",
+        "RouteLoading",
+        "PrivacyPolicyPage"
+      ],
+      "redirect": false,
+      "line": 49,
+      "pages": [
+        "public-privacy"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "*",
+      "index": false,
+      "components": [
+        "AuthProvider",
+        "VercelSpeedInsights",
+        "Suspense",
+        "RouteLoading",
+        "Routes",
+        "Route",
+        "HomePage",
+        "Navigate",
+        "OperatorLandingWrapper",
+        "NoIndex",
+        "LoginPage",
+        "LinksPage",
+        "FormPage",
+        "DesignSystemShowcase",
+        "ProtectedRoute",
+        "AiSandboxChatWrapper",
+        "ConfigProvider",
+        "PainelWrapper",
+        "DashboardWrapper",
+        "LeadsManagerWrapper",
+        "ApiDocsWrapper",
+        "ContractsManagerWrapper",
+        "FinanceiroComissoesTab",
+        "FinanceiroAgendaTab",
+        "WhatsAppInboxWrapper",
+        "WhatsAppCampaignsWrapper",
+        "WhatsAppCampaignDetailWrapper",
+        "BlogTab",
+        "ConfigPage",
+        "ToastViewport"
+      ],
+      "redirect": false,
+      "line": 50,
+      "status": "fallback"
+    },
+    {
+      "pattern": "/",
+      "index": false,
+      "components": [
+        "HomePage"
+      ],
+      "redirect": false,
+      "line": 55,
+      "pages": [
+        "public-home"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/planos",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 56,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/planos/:slug/:variant",
+      "index": false,
+      "components": [
+        "OperatorLandingWrapper"
+      ],
+      "redirect": false,
+      "line": 57,
+      "status": "no_configured_variants",
+      "note": "A base atual define dez operadoras sem variantSlug; não há uma variante adicional configurada."
+    },
+    {
+      "pattern": "/planos/:slug",
+      "index": false,
+      "components": [
+        "OperatorLandingWrapper"
+      ],
+      "redirect": false,
+      "line": 58,
+      "pages": [
+        "public-operator",
+        "public-operator-porto-saude",
+        "public-operator-bradesco-saude",
+        "public-operator-sulamerica",
+        "public-operator-unimed",
+        "public-operator-medsenior",
+        "public-operator-assim-saude",
+        "public-operator-hapvida-notredame",
+        "public-operator-leve-saude",
+        "public-operator-klini"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/lp",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 59,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/lp/*",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 60,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/cotacao",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 61,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/operadoras",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 62,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/como-funciona",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 63,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/depoimentos",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 64,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/faq",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 65,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/planos/*",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 66,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/login",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "LoginPage"
+      ],
+      "redirect": false,
+      "line": 67,
+      "pages": [
+        "login"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/links",
+      "index": false,
+      "components": [
+        "LinksPage"
+      ],
+      "redirect": false,
+      "line": 68,
+      "pages": [
+        "public-links"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/forms/:slug",
+      "index": false,
+      "components": [
+        "FormPage"
+      ],
+      "redirect": false,
+      "line": 69,
+      "pages": [
+        "public-form"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/design-system",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "DesignSystemShowcase"
+      ],
+      "redirect": false,
+      "line": 70,
+      "status": "reference_outside_scope"
+    },
+    {
+      "pattern": "/chat",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "ProtectedRoute",
+        "AiSandboxChatWrapper"
+      ],
+      "redirect": false,
+      "line": 71,
+      "pages": [
+        "chat-ia"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "ProtectedRoute",
+        "ConfigProvider",
+        "PainelWrapper"
+      ],
+      "redirect": false,
+      "line": 77,
+      "status": "container_documented",
+      "pages": [
+        "dashboard"
+      ]
+    },
+    {
+      "pattern": "/painel",
+      "index": true,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 83,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/painel/dashboard",
+      "index": false,
+      "components": [
+        "DashboardWrapper"
+      ],
+      "redirect": false,
+      "line": 84,
+      "pages": [
+        "dashboard"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/leads",
+      "index": false,
+      "components": [
+        "LeadsManagerWrapper"
+      ],
+      "redirect": false,
+      "line": 85,
+      "pages": [
+        "leads-listagem"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/api",
+      "index": false,
+      "components": [
+        "ApiDocsWrapper"
+      ],
+      "redirect": false,
+      "line": 86,
+      "pages": [
+        "api"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/contratos",
+      "index": false,
+      "components": [
+        "ContractsManagerWrapper"
+      ],
+      "redirect": false,
+      "line": 87,
+      "pages": [
+        "contratos-listagem"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/comissoes",
+      "index": false,
+      "components": [
+        "FinanceiroComissoesTab"
+      ],
+      "redirect": false,
+      "line": 88,
+      "pages": [
+        "comissoes"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/agenda",
+      "index": false,
+      "components": [
+        "FinanceiroAgendaTab"
+      ],
+      "redirect": false,
+      "line": 89,
+      "pages": [
+        "agenda"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/inbox",
+      "index": false,
+      "components": [
+        "WhatsAppInboxWrapper"
+      ],
+      "redirect": false,
+      "line": 90,
+      "pages": [
+        "inbox"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/disparos",
+      "index": false,
+      "components": [
+        "WhatsAppCampaignsWrapper"
+      ],
+      "redirect": false,
+      "line": 91,
+      "pages": [
+        "campanhas"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/disparos/:campaignId",
+      "index": false,
+      "components": [
+        "WhatsAppCampaignDetailWrapper"
+      ],
+      "redirect": false,
+      "line": 92,
+      "pages": [
+        "campanha-detalhes"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/tarefas",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 93,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/painel/lembretes",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 94,
+      "status": "redirect_mapped"
+    },
+    {
+      "pattern": "/painel/blog",
+      "index": false,
+      "components": [
+        "BlogTab"
+      ],
+      "redirect": false,
+      "line": 95,
+      "pages": [
+        "blog"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/config",
+      "index": false,
+      "components": [
+        "ConfigPage"
+      ],
+      "redirect": false,
+      "line": 96,
+      "pages": [
+        "config-system",
+        "config-users",
+        "config-links",
+        "config-forms",
+        "config-access",
+        "config-leads",
+        "config-contracts",
+        "config-leads-origins",
+        "config-leads-manager-lead_tipo_contratacao",
+        "config-leads-manager-lead_responsavel",
+        "config-contract_modalidade",
+        "config-contract_abrangencia",
+        "config-contract_acomodacao",
+        "config-contract_carencia"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "/painel/automacoes",
+      "index": false,
+      "components": [
+        "ConfigPage"
+      ],
+      "redirect": false,
+      "line": 97,
+      "pages": [
+        "config-automation",
+        "config-integrations",
+        "config-ai",
+        "integracao-whatsapp",
+        "integracao-meta",
+        "integracao-tracking",
+        "ia-global"
+      ],
+      "status": "captured"
+    },
+    {
+      "pattern": "*",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 99,
+      "status": "fallback"
+    }
+  ],
+  "pending": [
+    {
+      "id": "blog-visualizar",
+      "name": "Prévia do artigo",
+      "category": "conteudo",
+      "route": "/painel/blog",
+      "device": "desktop",
+      "kind": "modal",
+      "path": [
+        {
+          "role": "button",
+          "name": "^Visualizar$"
+        }
+      ],
+      "status": "pending",
+      "difficulty": "O botão abre /blog/guia-demonstracao em nova aba; /blog/:slug não está registrado em src/main.tsx e redireciona para o início.",
+      "origin": "interactions-7.log",
+      "screenshots": [],
+      "attempts": [
+        {
+          "status": "pending",
+          "origin": "interactions-7.log",
+          "difficulty": "locator.click: Timeout 6000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /^Visualizar$/i }).visible().first()\n"
+        }
+      ]
+    },
+    {
+      "id": "blog-visualizar",
+      "name": "Prévia do artigo",
+      "category": "conteudo",
+      "route": "/painel/blog",
+      "device": "tablet",
+      "kind": "modal",
+      "path": [
+        {
+          "role": "button",
+          "name": "^Visualizar$"
+        }
+      ],
+      "status": "pending",
+      "difficulty": "O botão abre /blog/guia-demonstracao em nova aba; /blog/:slug não está registrado em src/main.tsx e redireciona para o início.",
+      "origin": "interactions-7.log",
+      "screenshots": [],
+      "attempts": [
+        {
+          "status": "pending",
+          "origin": "interactions-7.log",
+          "difficulty": "locator.click: Timeout 6000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /^Visualizar$/i }).visible().first()\n"
+        }
+      ]
+    },
+    {
+      "id": "blog-visualizar",
+      "name": "Prévia do artigo",
+      "category": "conteudo",
+      "route": "/painel/blog",
+      "device": "mobile",
+      "kind": "modal",
+      "path": [
+        {
+          "role": "button",
+          "name": "^Visualizar$"
+        }
+      ],
+      "status": "pending",
+      "difficulty": "O botão abre /blog/guia-demonstracao em nova aba; /blog/:slug não está registrado em src/main.tsx e redireciona para o início.",
+      "origin": "interactions-7.log",
+      "screenshots": [],
+      "attempts": [
+        {
+          "status": "pending",
+          "origin": "interactions-7.log",
+          "difficulty": "locator.click: Timeout 6000ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: /^Visualizar$/i }).visible().first()\n"
+        }
+      ]
+    },
+    {
+      "id": "campanhas-estado-loading",
+      "name": "Carregamento em andamento",
+      "category": "campanhas",
+      "route": "/painel/disparos",
+      "device": "desktop",
+      "kind": "loading",
+      "status": "pending",
+      "difficulty": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n  - waiting for locator('main .kds-skeleton,main .kds-loading-state').first() to be visible\n",
+      "origin": "states-3.log",
+      "screenshots": [],
+      "attempts": [
+        {
+          "status": "pending",
+          "origin": "states-3.log",
+          "difficulty": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n  - waiting for locator('main .kds-skeleton,main .kds-loading-state').first() to be visible\n"
+        }
+      ]
+    },
+    {
+      "id": "campanhas-estado-loading",
+      "name": "Carregamento em andamento",
+      "category": "campanhas",
+      "route": "/painel/disparos",
+      "device": "tablet",
+      "kind": "loading",
+      "status": "pending",
+      "difficulty": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n  - waiting for locator('main .kds-skeleton,main .kds-loading-state').first() to be visible\n",
+      "origin": "states-3.log",
+      "screenshots": [],
+      "attempts": [
+        {
+          "status": "pending",
+          "origin": "states-3.log",
+          "difficulty": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n  - waiting for locator('main .kds-skeleton,main .kds-loading-state').first() to be visible\n"
+        }
+      ]
+    },
+    {
+      "id": "campanhas-estado-loading",
+      "name": "Carregamento em andamento",
+      "category": "campanhas",
+      "route": "/painel/disparos",
+      "device": "mobile",
+      "kind": "loading",
+      "status": "pending",
+      "difficulty": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n  - waiting for locator('main .kds-skeleton,main .kds-loading-state').first() to be visible\n",
+      "origin": "states-3.log",
+      "screenshots": [],
+      "attempts": [
+        {
+          "status": "pending",
+          "origin": "states-3.log",
+          "difficulty": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n  - waiting for locator('main .kds-skeleton,main .kds-loading-state').first() to be visible\n"
+        }
+      ]
+    },
+    {
+      "id": "inbox-mensagens-rapidas-gerenciar",
+      "name": "Gerenciar mensagens rápidas",
+      "category": "comunicacao",
+      "route": "/painel/inbox?chatId=00000000-0000-4000-8000-000000000810",
+      "kind": "modal",
+      "device": "mobile",
+      "status": "pending",
+      "screenshots": [],
+      "difficulty": "Variação sem captura específica nesta resolução."
+    }
+  ],
+  "specialized_interfaces_pending": [
+    {
+      "component": "WhatsAppComposerRewriteModal",
+      "source": "src/features/communication/whatsapp/components/WhatsAppComposerRewriteModal.tsx",
+      "reason": "Fluxo contextual de reescrita e resultado de IA não executados; menu de IA/formatação capturado."
+    },
+    {
+      "component": "WhatsAppFollowUpModal",
+      "source": "src/features/communication/whatsapp/components/WhatsAppFollowUpModal.tsx",
+      "reason": "Preparação e geração de follow-up por IA não executadas."
+    },
+    {
+      "component": "WhatsAppBatchFollowUpModal",
+      "source": "src/features/communication/whatsapp/components/WhatsAppBatchFollowUpModal.tsx",
+      "reason": "Fluxo coletivo condicionado a contatos elegíveis; os telefones demonstrativos foram deixados vazios."
+    },
+    {
+      "component": "WhatsAppScheduleMessageModal",
+      "source": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "reason": "Cadastro/edição de envio condicionado a destinatário válido; consulta de agendamentos foi capturada."
+    }
+  ],
+  "not_executed": [
+    "Confirmar exclusão ou alteração de registros reais",
+    "Enviar mensagens, campanhas, notificações ou e-mails",
+    "Executar testes de IA, chamadas da API ou recuperação de histórico externa",
+    "Uploads e publicação de conteúdo",
+    "Ativar, pausar ou disparar automações reais"
+  ],
+  "limitations": [
+    "Dados sintéticos reproduzem os componentes; não comprovam integrações nem regras de produção.",
+    "Resultados gerados por IA, status do provedor, mídia de áudio/vídeo e documentos de clientes não foram executados nem consultados.",
+    "O mapa estático registra ocorrências de componentes; evidências de uma tela não comprovam abertura de toda instância de Select, Popover ou validação de negócio.",
+    "As variantes de papéis capturadas são administrador e observador. Outros perfis personalizados exigem fixtures específicas."
+  ]
+}

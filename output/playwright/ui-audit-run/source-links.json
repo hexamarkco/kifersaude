@@ -1,0 +1,74 @@
+{
+  "leads-criar": [
+    "src/components/LeadForm.tsx"
+  ],
+  "leads-editar": [
+    "src/components/LeadForm.tsx"
+  ],
+  "leads-detalhes": [
+    "src/components/LeadDetails.tsx"
+  ],
+  "leads-agendar": [
+    "src/components/ReminderSchedulerModal.tsx"
+  ],
+  "contratos-criar": [
+    "src/components/ContractForm.tsx"
+  ],
+  "contratos-editar": [
+    "src/components/ContractForm.tsx"
+  ],
+  "contratos-detalhes": [
+    "src/components/ContractDetails.tsx"
+  ],
+  "contratos-titular": [
+    "src/components/HolderForm.tsx"
+  ],
+  "contratos-dependente": [
+    "src/components/DependentForm.tsx"
+  ],
+  "contratos-importacao": [
+    "src/features/contracts/components/ContractBulkJsonImportDialog.tsx"
+  ],
+  "ia-feature-editar": [
+    "src/features/config/ai/components/FeatureEditorDrawer.tsx"
+  ],
+  "formularios-pergunta": [
+    "src/features/config/forms/StepEditorDialog.tsx"
+  ],
+  "inbox-agenda": [
+    "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx"
+  ],
+  "inbox-painel": [
+    "src/features/communication/whatsapp/components/WhatsAppDashboardModal.tsx"
+  ],
+  "inbox-nova-conversa": [
+    "src/features/communication/whatsapp/components/WhatsAppStartChatModal.tsx"
+  ],
+  "agenda-organizar": [
+    "src/features/agenda/components/FollowUpAgendaOrganizerModal.tsx"
+  ],
+  "contratos-importacao-individual": [
+    "src/features/contracts/components/ContractJsonImportDialog.tsx"
+  ],
+  "inbox-mensagens-rapidas-gerenciar": [
+    "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx"
+  ],
+  "inbox-dados-mensagem": [
+    "src/features/communication/whatsapp/components/WhatsAppMessageDetailsModal.tsx"
+  ],
+  "inbox-editar-mensagem": [
+    "src/features/communication/whatsapp/components/WhatsAppEditMessageModal.tsx"
+  ],
+  "inbox-lead-drawer": [
+    "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx"
+  ],
+  "inbox-arquivos-drawer": [
+    "src/features/communication/whatsapp/components/WhatsAppChatFilesDrawer.tsx"
+  ],
+  "inbox-emojis": [
+    "src/features/communication/whatsapp/components/WhatsAppMediaDrawer.tsx"
+  ],
+  "inbox-menu-conversa": [
+    "src/features/communication/whatsapp/components/WhatsAppThreadActionsMenu.tsx"
+  ]
+}

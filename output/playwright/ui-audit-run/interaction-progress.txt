@@ -1,0 +1,9 @@
+### Page
+- Page URL: http://127.0.0.1:5177/painel/leads
+- Page Title: Planos de saúde no Rio de Janeiro com atendimento humano | Kifer Saúde
+### Snapshot
+```yaml
+
+```
+### Events
+- New console entries: .playwright-cli\console-2026-10-25T06-21-47-094Z.log#L768-L821

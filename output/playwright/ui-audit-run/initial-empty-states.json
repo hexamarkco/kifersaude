@@ -1,0 +1,128 @@
+[
+  {
+    "id": "inbox-sem-conversas",
+    "name": "Inbox sem conversas",
+    "category": "comunicacao",
+    "device": "desktop",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/desktop/comunicacao/inbox-sem-conversas-inicial.png",
+      "docs/ui-audit/desktop/comunicacao/inbox-sem-conversas-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/painel/inbox"
+  },
+  {
+    "id": "inbox-sem-conversas",
+    "name": "Inbox sem conversas",
+    "category": "comunicacao",
+    "device": "tablet",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/tablet/comunicacao/inbox-sem-conversas-inicial.png",
+      "docs/ui-audit/tablet/comunicacao/inbox-sem-conversas-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/painel/inbox"
+  },
+  {
+    "id": "inbox-sem-conversas",
+    "name": "Inbox sem conversas",
+    "category": "comunicacao",
+    "device": "mobile",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/mobile/comunicacao/inbox-sem-conversas-inicial.png",
+      "docs/ui-audit/mobile/comunicacao/inbox-sem-conversas-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/painel/inbox"
+  },
+  {
+    "id": "chat-ia-sem-simulacoes",
+    "name": "Chat de IA sem simulações",
+    "category": "ia",
+    "device": "desktop",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/desktop/ia/chat-ia-sem-simulacoes-inicial.png",
+      "docs/ui-audit/desktop/ia/chat-ia-sem-simulacoes-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/chat"
+  },
+  {
+    "id": "chat-ia-sem-simulacoes",
+    "name": "Chat de IA sem simulações",
+    "category": "ia",
+    "device": "tablet",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/tablet/ia/chat-ia-sem-simulacoes-inicial.png",
+      "docs/ui-audit/tablet/ia/chat-ia-sem-simulacoes-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/chat"
+  },
+  {
+    "id": "chat-ia-sem-simulacoes",
+    "name": "Chat de IA sem simulações",
+    "category": "ia",
+    "device": "mobile",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/mobile/ia/chat-ia-sem-simulacoes-inicial.png",
+      "docs/ui-audit/mobile/ia/chat-ia-sem-simulacoes-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/chat"
+  },
+  {
+    "id": "automacao-sem-configuracao",
+    "name": "Automação sem configuração",
+    "category": "automacoes",
+    "device": "desktop",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/desktop/automacoes/automacao-sem-configuracao-inicial.png",
+      "docs/ui-audit/desktop/automacoes/automacao-sem-configuracao-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/painel/automacoes?tab=automation"
+  },
+  {
+    "id": "automacao-sem-configuracao",
+    "name": "Automação sem configuração",
+    "category": "automacoes",
+    "device": "tablet",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/tablet/automacoes/automacao-sem-configuracao-inicial.png",
+      "docs/ui-audit/tablet/automacoes/automacao-sem-configuracao-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/painel/automacoes?tab=automation"
+  },
+  {
+    "id": "automacao-sem-configuracao",
+    "name": "Automação sem configuração",
+    "category": "automacoes",
+    "device": "mobile",
+    "kind": "empty",
+    "status": "captured",
+    "screenshots": [
+      "docs/ui-audit/mobile/automacoes/automacao-sem-configuracao-inicial.png",
+      "docs/ui-audit/mobile/automacoes/automacao-sem-configuracao-completa.png"
+    ],
+    "note": "Dados de demonstração ausentes na captura inicial.",
+    "route": "/painel/automacoes?tab=automation"
+  }
+]

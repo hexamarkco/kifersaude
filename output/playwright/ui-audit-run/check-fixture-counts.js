@@ -1,0 +1,1 @@
+async(page)=>({dbConversations:page.__audit.db.ai_sandbox_conversations?.length,dbIntegrations:page.__audit.db.integration_settings.length,mode:page.__audit.mode,reads:page.__audit.requests.filter(r=>r.path.includes('ai_sandbox')).slice(-5)})

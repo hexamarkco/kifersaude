@@ -1,0 +1,298 @@
+### Page
+- Page URL: http://127.0.0.1:5177/
+- Page Title: Plano de saúde no RJ para PF, MEI e empresas | Kifer Saúde
+- Console: 3 errors, 0 warnings
+### Snapshot
+```yaml
+- generic [ref=f101e4]:
+  - banner [ref=f101e5]:
+    - generic [ref=f101e6]:
+      - link "Kifer Saúde, início" [ref=f101e7] [cursor=pointer]:
+        - /url: "#topo"
+        - generic [ref=f101e10]: Kifer Saúde
+      - navigation "Navegação principal" [ref=f101e11]:
+        - link "Operadoras" [ref=f101e12] [cursor=pointer]:
+          - /url: "#prova-social"
+        - link "Para quem é" [ref=f101e13] [cursor=pointer]:
+          - /url: "#para-quem"
+        - link "Como funciona" [ref=f101e14] [cursor=pointer]:
+          - /url: "#como-funciona"
+        - link "Depoimentos" [ref=f101e15] [cursor=pointer]:
+          - /url: "#depoimentos"
+        - link "Dúvidas" [ref=f101e16] [cursor=pointer]:
+          - /url: "#faq"
+      - button "Cotação grátis" [ref=f101e18] [cursor=pointer]
+  - main [ref=f101e19]:
+    - generic [ref=f101e21]:
+      - generic [ref=f101e22]:
+        - generic [ref=f101e23]: Corretora de planos de saúde no Rio de Janeiro
+        - heading "Plano de saúde no Rio de Janeiro com orientação de verdade." [level=1] [ref=f101e26]:
+          - generic [ref=f101e27]: Plano de saúde
+          - generic [ref=f101e28]: no Rio de Janeiro
+          - generic [ref=f101e29]: com orientação
+          - generic [ref=f101e30]: de verdade.
+        - paragraph [ref=f101e31]: Compare operadoras e encontre um plano de saúde para sua cidade, sua família ou sua empresa. Conte com atendimento humano antes e depois da contratação.
+        - paragraph [ref=f101e33]: Seu cuidado é a nossa prioridade
+        - generic [ref=f101e34]:
+          - button "Quero minha cotação gratuita" [ref=f101e35] [cursor=pointer]
+          - button "Falar no WhatsApp" [ref=f101e39] [cursor=pointer]
+        - button "Já sou cliente e preciso de suporte" [ref=f101e43] [cursor=pointer]
+      - generic [ref=f101e48]:
+        - img "Luíza Kifer, especialista em planos de saúde, segurando um notebook" [ref=f101e52]
+        - generic [ref=f101e58]:
+          - text: Atendimento
+          - strong [ref=f101e59]: 100% gratuito
+    - generic [ref=f101e61]:
+      - generic [ref=f101e62]:
+        - paragraph [ref=f101e63]: confiança em números
+        - heading "Uma corretora de planos de saúde que explica antes de vender." [level=2] [ref=f101e64]
+        - paragraph [ref=f101e65]: A Kifer compara operadoras, custos, rede credenciada e regras com linguagem simples. O foco é ajudar você a escolher um plano de saúde coerente com sua rotina, sem pressão.
+      - generic [ref=f101e66]:
+        - article [ref=f101e67]:
+          - paragraph [ref=f101e79]: "+0"
+          - paragraph [ref=f101e80]: clientes atendidos
+          - paragraph [ref=f101e81]: histórico de atendimento da Kifer
+        - article [ref=f101e82]:
+          - paragraph [ref=f101e92]: "0"
+          - paragraph [ref=f101e93]: operadoras comparadas
+          - paragraph [ref=f101e94]: parceiras exibidas no site
+        - article [ref=f101e95]:
+          - paragraph [ref=f101e103]: 0,0
+          - paragraph [ref=f101e104]: avaliação média
+          - paragraph [ref=f101e105]: avaliações em atualização
+      - generic [ref=f101e106]:
+        - generic [ref=f101e107]:
+          - paragraph [ref=f101e108]: operadoras parceiras
+          - paragraph [ref=f101e109]: Comparamos planos de diferentes operadoras para encontrar opções adequadas à sua rotina no Rio de Janeiro.
+        - generic [ref=f101e111]:
+          - img "Amil" [ref=f101e113]
+          - img "Porto Seguro" [ref=f101e115]
+          - img "Assim Saúde" [ref=f101e117]
+          - img "SulAmérica Saúde" [ref=f101e119]
+          - img "Bradesco Saúde" [ref=f101e121]
+    - generic [ref=f101e133]:
+      - generic [ref=f101e134]:
+        - paragraph [ref=f101e135]: para quem é
+        - heading "Planos de saúde para pessoa física, MEI e empresas." [level=2] [ref=f101e136]
+        - paragraph [ref=f101e137]: Cada perfil tem necessidades diferentes de cobertura, custo e carência. Escolha o seu e conte com a Kifer para entender as opções.
+      - generic [ref=f101e138]:
+        - article [ref=f101e139]:
+          - paragraph [ref=f101e144]: Pessoa física
+          - heading "Plano de saúde para pessoa física e família." [level=3] [ref=f101e145]
+          - paragraph [ref=f101e146]: Compare operadoras, rede credenciada, carência e coparticipação para escolher uma cobertura compatível com sua rotina no RJ.
+          - list [ref=f101e147]:
+            - listitem [ref=f101e148]:
+              - generic [ref=f101e152]: Opções para solteiros, casais e famílias
+            - listitem [ref=f101e153]:
+              - generic [ref=f101e157]: Rede analisada para os locais que você usa
+            - listitem [ref=f101e158]:
+              - generic [ref=f101e162]: Cotação gratuita e sem compromisso
+          - button "Quero cotar como pessoa física" [ref=f101e163] [cursor=pointer]
+        - article [ref=f101e167]:
+          - paragraph [ref=f101e172]: MEI
+          - heading "Plano de saúde empresarial para MEI." [level=3] [ref=f101e173]
+          - paragraph [ref=f101e174]: Com CNPJ ativo, o MEI pode avaliar planos empresariais. A Kifer verifica os requisitos, a quantidade de pessoas e as condições antes de apresentar a proposta.
+          - list [ref=f101e175]:
+            - listitem [ref=f101e176]:
+              - generic [ref=f101e180]: Verificação dos requisitos para contratar com CNPJ
+            - listitem [ref=f101e181]:
+              - generic [ref=f101e185]: Comparação com planos individuais quando fizer sentido
+            - listitem [ref=f101e186]:
+              - generic [ref=f101e190]: Suporte com a documentação e a ativação
+          - button "Quero cotar como MEI" [ref=f101e191] [cursor=pointer]
+        - article [ref=f101e195]:
+          - paragraph [ref=f101e201]: Empresa
+          - heading "Plano de saúde empresarial para pequenas empresas." [level=3] [ref=f101e202]
+          - paragraph [ref=f101e203]: Compare operadoras e formatos de contratação para montar um benefício adequado ao tamanho do seu time, à rede desejada e ao orçamento.
+          - list [ref=f101e204]:
+            - listitem [ref=f101e205]:
+              - generic [ref=f101e209]: Proposta alinhada ao quadro de funcionários
+            - listitem [ref=f101e210]:
+              - generic [ref=f101e214]: Comparação entre operadoras parceiras
+            - listitem [ref=f101e215]:
+              - generic [ref=f101e219]: Suporte com a documentação e a ativação
+          - button "Quero cotar para minha empresa" [ref=f101e220] [cursor=pointer]
+    - generic [ref=f101e225]:
+      - generic [ref=f101e226]:
+        - paragraph [ref=f101e227]: como funciona
+        - heading "Como contratar um plano de saúde com mais clareza." [level=2] [ref=f101e228]
+        - paragraph [ref=f101e229]: Do primeiro contato até a ativação, você entende o que está sendo comparado e sabe exatamente em que etapa está.
+      - generic [ref=f101e230]:
+        - generic [ref=f101e231]:
+          - generic [ref=f101e232]: "1"
+          - heading "Você informa o seu perfil" [level=3] [ref=f101e236]
+          - paragraph [ref=f101e237]: Cidade, idade, rede desejada e tipo de contratação orientam a busca desde o primeiro contato.
+        - generic [ref=f101e238]:
+          - generic [ref=f101e239]: "2"
+          - heading "A Kifer compara as opções" [level=3] [ref=f101e244]
+          - paragraph [ref=f101e245]: A análise compara operadoras, custos, carências, coparticipação e a rede credenciada mais adequada à sua rotina.
+        - generic [ref=f101e246]:
+          - generic [ref=f101e247]: "3"
+          - heading "Você escolhe com segurança" [level=3] [ref=f101e252]
+          - paragraph [ref=f101e253]: Depois da sua escolha, a Kifer acompanha a documentação, a proposta e a ativação do plano de saúde.
+      - generic [ref=f101e254]:
+        - paragraph [ref=f101e255]: Pronto para começar a sua comparação?
+        - button "Quero minha cotação gratuita" [ref=f101e256] [cursor=pointer]
+    - generic [ref=f101e261]:
+      - generic [ref=f101e262]:
+        - paragraph [ref=f101e263]: depoimentos
+        - heading "Quem já contou com a Kifer compartilha sua experiência." [level=2] [ref=f101e264]
+      - generic [ref=f101e265]:
+        - article [ref=f101e266]:
+          - paragraph [ref=f101e278]: "\"Eu achava que plano bom era caro, mas com a Luíza consegui pagar menos e ainda ter Rede D'Or. Atendimento nota 10!\""
+          - generic [ref=f101e279]:
+            - generic [ref=f101e280]: R
+            - generic [ref=f101e281]:
+              - paragraph [ref=f101e282]: Regina
+              - paragraph [ref=f101e283]: 44 anos, Rio de Janeiro
+        - article [ref=f101e284]:
+          - paragraph [ref=f101e296]: "\"Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções.\""
+          - generic [ref=f101e297]:
+            - generic [ref=f101e298]: M
+            - generic [ref=f101e299]:
+              - paragraph [ref=f101e300]: Marcelo
+              - paragraph [ref=f101e301]: 38 anos, Niterói
+        - article [ref=f101e302]:
+          - paragraph [ref=f101e314]: "\"Excelente suporte durante todo o processo. A Kifer Saúde realmente se importa com o cliente!\""
+          - generic [ref=f101e315]:
+            - generic [ref=f101e316]: A
+            - generic [ref=f101e317]:
+              - paragraph [ref=f101e318]: Ana Paula
+              - paragraph [ref=f101e319]: 52 anos, Nova Iguaçu
+      - link "Ver mais avaliações no Google" [ref=f101e321] [cursor=pointer]:
+        - /url: https://www.google.com/search?q=kifer+saude
+    - generic [ref=f101e325]:
+      - img "Luíza Kifer, corretora independente de planos de saúde no Rio de Janeiro" [ref=f101e328]
+      - generic [ref=f101e329]:
+        - paragraph [ref=f101e330]: sobre a Luíza
+        - heading "Conte com a Luíza Kifer para escolher seu plano de saúde no Rio de Janeiro." [level=2] [ref=f101e331]
+        - paragraph [ref=f101e332]: Sou corretora independente de planos de saúde no Rio de Janeiro. Trabalho com diferentes operadoras e oriento cada cliente com a mesma atenção que dedicaria à minha família.
+        - paragraph [ref=f101e333]: Na Kifer, explicamos custos, rede credenciada e regras de contratação com linguagem simples para você escolher sem pressão e evitar surpresas depois.
+        - generic [ref=f101e334]:
+          - article [ref=f101e335]:
+            - heading "Corretora independente" [level=3] [ref=f101e338]
+            - paragraph [ref=f101e339]: Comparo diferentes operadoras e explico as opções de acordo com o que você precisa.
+          - article [ref=f101e340]:
+            - heading "Especialista no RJ" [level=3] [ref=f101e344]
+            - paragraph [ref=f101e345]: Considero sua cidade, os bairros que você frequenta e a rede credenciada disponível.
+          - article [ref=f101e346]:
+            - heading "Atendimento via WhatsApp" [level=3] [ref=f101e349]
+            - paragraph [ref=f101e350]: Esclareço suas dúvidas e acompanho a contratação pelo WhatsApp.
+          - article [ref=f101e351]:
+            - heading "Suporte após a contratação" [level=3] [ref=f101e354]
+            - paragraph [ref=f101e355]: Você conta com orientação durante a contratação, na ativação e depois de contratar o plano.
+    - generic [ref=f101e357]:
+      - generic [ref=f101e358]:
+        - paragraph [ref=f101e359]: perguntas frequentes
+        - heading "Dúvidas sobre plano de saúde no Rio de Janeiro." [level=2] [ref=f101e360]
+      - generic [ref=f101e361]:
+        - generic [ref=f101e362]:
+          - button "MEI pode contratar plano empresarial?" [ref=f101e363] [cursor=pointer]
+          - paragraph [ref=f101e367]: Sim. Com CNPJ ativo e enquadramento aceito pela operadora, o MEI pode avaliar planos empresariais. A Kifer verifica os requisitos, a quantidade de pessoas e as condições disponíveis antes de apresentar a proposta.
+        - generic [ref=f101e368]:
+          - button "Qual a diferença entre plano por adesão e empresarial?" [ref=f101e369] [cursor=pointer]
+          - paragraph [ref=f101e373]: O plano empresarial exige CNPJ e segue as regras de contratação da operadora. O plano por adesão exige vínculo com uma entidade de classe e pode ter condições diferentes de preço, carência e reajuste.
+        - generic [ref=f101e374]:
+          - button "Tem carência?" [ref=f101e375] [cursor=pointer]
+          - paragraph [ref=f101e379]: A carência varia conforme a operadora, o tipo de contratação e a regra do produto. Antes da contratação, a Kifer explica o que muda para consultas, exames, internações e urgência.
+        - generic [ref=f101e380]:
+          - button "Quais regiões do Rio de Janeiro o plano cobre?" [ref=f101e381] [cursor=pointer]
+          - paragraph [ref=f101e385]: A cobertura varia conforme o plano. A análise considera sua cidade, os bairros onde você precisa de atendimento e a rede credenciada disponível no Rio de Janeiro e na região metropolitana.
+        - generic [ref=f101e386]:
+          - button "Como faço para contratar?" [ref=f101e387] [cursor=pointer]
+          - paragraph [ref=f101e391]: Você envia seus dados pelo formulário ou WhatsApp, recebe opções de plano de saúde comparadas para o seu perfil e, depois da escolha, a Kifer acompanha documentação, proposta e ativação.
+    - generic [ref=f101e393]:
+      - generic [ref=f101e394]:
+        - paragraph [ref=f101e395]: cotação gratuita
+        - heading "Receba uma cotação de plano de saúde feita para o seu perfil." [level=2] [ref=f101e396]
+        - paragraph [ref=f101e397]: Preencha o formulário e receba orientação para pessoa física, MEI ou empresa com foco em rede credenciada, custo, carência e contratação sem complicação.
+        - generic [ref=f101e398]:
+          - generic [ref=f101e399]: Atendimento sem custo e sem compromisso.
+          - generic [ref=f101e404]: Análise da sua cidade, das idades e da quantidade de pessoas no plano.
+          - generic [ref=f101e409]: Contato direto pelo WhatsApp para agilizar a resposta.
+      - generic [ref=f101e415]:
+        - generic [ref=f101e416]:
+          - generic [ref=f101e417]:
+            - generic [ref=f101e418]: Nome completo *
+            - textbox "Nome completo *" [ref=f101e420]:
+              - /placeholder: Seu nome
+          - generic [ref=f101e421]:
+            - generic [ref=f101e422]: Telefone (WhatsApp) *
+            - textbox "Telefone (WhatsApp) *" [ref=f101e424]:
+              - /placeholder: (21) 99999-9999
+          - generic [ref=f101e425]:
+            - generic [ref=f101e426]: Cidade *
+            - combobox "Cidade *" [ref=f101e429]
+          - generic [ref=f101e430]:
+            - generic [ref=f101e431]: Tipo de contratação *
+            - combobox [aria-hidden] [ref=f101e432]
+            - button "Tipo de contratação *" [ref=f101e434] [cursor=pointer]:
+              - generic [ref=f101e435]: Pessoa física
+          - generic [ref=f101e438]:
+            - generic [ref=f101e439]: Quantas pessoas vão entrar no plano? *
+            - spinbutton "Quantas pessoas vão entrar no plano? *" [ref=f101e441]
+          - generic [aria-hidden]:
+            - text: Website
+            - generic:
+              - textbox
+        - button "Quero minha cotação personalizada agora" [ref=f101e442] [cursor=pointer]
+        - paragraph [ref=f101e447]:
+          - text: Ao enviar seus dados, você declara estar ciente de nossa
+          - link "Política de Privacidade (abre em nova aba)" [ref=f101e448] [cursor=pointer]:
+            - /url: /politica-de-privacidade
+          - text: e solicita contato sobre sua cotação.
+    - generic [ref=f101e451]:
+      - generic [ref=f101e452]:
+        - generic [ref=f101e453]:
+          - img "Luíza Kifer" [ref=f101e456]
+          - generic [ref=f101e459]:
+            - generic [ref=f101e460]: Online agora
+            - paragraph [ref=f101e462]: Luíza Kifer · Kifer Saúde
+        - paragraph [ref=f101e463]: fale agora
+        - heading "Quer resolver isso hoje pelo WhatsApp?" [level=2] [ref=f101e464]
+        - paragraph [ref=f101e465]: Se preferir, fale direto com a gente. A Kifer entende o que você precisa, compara as opções e acompanha você durante a contratação.
+        - generic [ref=f101e466]: Atendimento humano para esclarecer suas dúvidas.
+      - generic [ref=f101e470]:
+        - generic [ref=f101e471]:
+          - generic [ref=f101e474]:
+            - paragraph [ref=f101e475]: Luíza Kifer
+            - paragraph [ref=f101e476]: online
+          - generic [ref=f101e479]:
+            - text: Oi! 👋 Conte sua cidade e o tipo de plano que você procura. Vou comparar as opções para você.
+            - generic [ref=f101e480]: agora
+        - link "Falar no WhatsApp" [ref=f101e484] [cursor=pointer]:
+          - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20Quero%20uma%20cota%C3%A7%C3%A3o%20de%20plano%20de%20sa%C3%BAde%20com%20a%20Kifer.
+  - contentinfo [ref=f101e493]:
+    - generic [ref=f101e495]:
+      - generic [ref=f101e496]:
+        - generic [ref=f101e497]: Kifer Saúde
+        - paragraph [ref=f101e502]: Corretora especializada em planos de saúde no Rio de Janeiro. Conte com atendimento humano, comparação entre operadoras e suporte antes e depois da contratação.
+      - generic [ref=f101e503]:
+        - heading "Links rápidos" [level=3] [ref=f101e504]
+        - generic [ref=f101e505]:
+          - link "Para quem é" [ref=f101e506] [cursor=pointer]:
+            - /url: /#para-quem
+          - link "Como funciona" [ref=f101e507] [cursor=pointer]:
+            - /url: /#como-funciona
+          - link "Dúvidas" [ref=f101e508] [cursor=pointer]:
+            - /url: /#faq
+          - link "Cotação gratuita" [ref=f101e509] [cursor=pointer]:
+            - /url: /#cotacao
+      - generic [ref=f101e510]:
+        - heading "Contato" [level=3] [ref=f101e511]
+        - generic [ref=f101e512]:
+          - link "WhatsApp" [ref=f101e513] [cursor=pointer]:
+            - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20Quero%20uma%20cota%C3%A7%C3%A3o%20de%20plano%20de%20sa%C3%BAde%20com%20a%20Kifer.
+          - link "@souluizakifer" [ref=f101e516] [cursor=pointer]:
+            - /url: https://instagram.com/souluizakifer
+          - generic [ref=f101e520]: Rio de Janeiro, RJ
+      - generic [ref=f101e524]:
+        - heading "Legal" [level=3] [ref=f101e525]
+        - generic [ref=f101e526]:
+          - link "Política de Privacidade" [ref=f101e527] [cursor=pointer]:
+            - /url: /politica-de-privacidade
+          - paragraph [ref=f101e528]: CNPJ 46.423.078/0001-10
+          - paragraph [ref=f101e529]: Desenvolvido por Kifer Saúde
+```
+### Events
+- New console entries: .playwright-cli\console-2026-10-25T06-21-47-094Z.log#L576-L643

@@ -1,0 +1,317 @@
+### Page
+- Page URL: http://127.0.0.1:5177/painel/leads
+- Page Title: KS Workspace
+- Console: 1 errors, 1 warnings
+### Snapshot
+```yaml
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e7]:
+        - generic [ref=f1e8]: K
+        - generic [ref=f1e10]: Kifer Saúde
+      - navigation [ref=f1e11]:
+        - generic [ref=f1e12]:
+          - button "Dashboard" [ref=f1e13] [cursor=pointer]
+          - button "CRM" [ref=f1e22] [cursor=pointer]
+          - button "Comunicação" [ref=f1e32] [cursor=pointer]
+          - button "Financeiro" [ref=f1e41] [cursor=pointer]
+          - button "Automações e IA" [ref=f1e50] [cursor=pointer]
+          - button "Configurações" [ref=f1e57] [cursor=pointer]
+      - generic [ref=f1e63]:
+        - button "Recolher" [ref=f1e64] [cursor=pointer]
+        - button "Notificações" [ref=f1e69] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f1e77] [cursor=pointer]:
+          - generic [ref=f1e80]: Escuro
+        - button "Sair" [ref=f1e81] [cursor=pointer]
+  - main [ref=f1e87]:
+    - generic [ref=f1e89]:
+      - generic [ref=f1e90]:
+        - generic [ref=f1e91]:
+          - generic [ref=f1e92]:
+            - paragraph [ref=f1e93]: Operação comercial
+            - heading "Gestão de leads" [level=1] [ref=f1e96]
+            - paragraph [ref=f1e97]: Acompanhe a carteira, priorize follow-ups e mantenha o funil em ritmo constante.
+          - generic [ref=f1e98]:
+            - link "Documentação de integração" [ref=f1e99] [cursor=pointer]:
+              - /url: /painel/api
+            - button "Novo lead" [ref=f1e104] [cursor=pointer]
+        - tablist [ref=f1e110]:
+          - tab "Lista" [selected] [ref=f1e111] [cursor=pointer]
+          - tab "Kanban" [ref=f1e114] [cursor=pointer]
+      - generic [ref=f1e121]:
+        - generic [ref=f1e122]:
+          - textbox "Buscar por nome, telefone, e-mail ou use status:origem:responsável:tag:canal..." [ref=f1e125]
+          - generic [ref=f1e126]:
+            - button "Limpar filtros" [ref=f1e127] [cursor=pointer]:
+              - generic [ref=f1e128]: Limpar
+            - button "Opções de exportação" [ref=f1e133] [cursor=pointer]:
+              - generic [ref=f1e134]: Exportar
+            - generic [ref=f1e140]:
+              - generic [ref=f1e141]: "8"
+              - generic [ref=f1e142]: leads
+        - generic [ref=f1e143]:
+          - generic [ref=f1e144]:
+            - button "Todos os status" [ref=f1e146] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f1e154] [cursor=pointer]
+            - button "Todas as origens" [ref=f1e164] [cursor=pointer]
+            - button "Todos os tipos" [ref=f1e173] [cursor=pointer]
+          - generic [ref=f1e182]:
+            - group [ref=f1e183]:
+              - generic "Filtros avançados ▼" [ref=f1e184] [cursor=pointer]:
+                - generic [ref=f1e185]:
+                  - heading "Filtros avançados" [level=4] [ref=f1e186]
+                  - generic [ref=f1e189]: ▼
+            - group "Ordenação dos leads" [ref=f1e190]:
+              - generic [ref=f1e191]: Ordenar por
+              - generic [ref=f1e192]:
+                - button "Data de criação" [ref=f1e194] [cursor=pointer]
+                - button "Ordem decrescente" [ref=f1e201] [cursor=pointer]
+      - generic [ref=f1e205]:
+        - generic [ref=f1e206]:
+          - generic [ref=f1e207]:
+            - paragraph [ref=f1e208]: Carteira em foco
+            - heading "Leads em acompanhamento" [level=3] [ref=f1e209]
+            - paragraph [ref=f1e210]: Analise cada lead com contexto, próximos follow-ups e ações rápidas no mesmo fluxo.
+          - generic [ref=f1e211]:
+            - generic "8 resultados" [ref=f1e212]:
+              - generic [ref=f1e213]:
+                - generic [ref=f1e214]: "8"
+                - generic [ref=f1e215]: resultados
+            - generic "Página 1 de 1" [ref=f1e216]:
+              - generic [ref=f1e217]:
+                - generic [ref=f1e218]: 1/1
+                - generic [ref=f1e219]: páginas
+            - generic [ref=f1e220] [cursor=pointer]:
+              - checkbox "Selecionar página" [ref=f1e221]
+              - generic [ref=f1e222]: Selecionar página
+        - region "Tabela com rolagem horizontal" [ref=f1e224]:
+          - table [ref=f1e225]:
+            - rowgroup [ref=f1e235]:
+              - row [ref=f1e236]:
+                - columnheader "Selecionar" [ref=f1e237]
+                - columnheader [ref=f1e238]:
+                  - button "Ordenar por Lead" [ref=f1e239] [cursor=pointer]:
+                    - generic [ref=f1e240]: Lead
+                - columnheader [ref=f1e244]:
+                  - button "Ordenar por Status" [ref=f1e245] [cursor=pointer]:
+                    - generic [ref=f1e246]: Status
+                - columnheader [ref=f1e250]:
+                  - button "Ordenar por Origem e tipo" [ref=f1e251] [cursor=pointer]:
+                    - generic [ref=f1e252]: Origem e tipo
+                - columnheader [ref=f1e256]:
+                  - button "Ordenar por Responsável" [ref=f1e257] [cursor=pointer]:
+                    - generic [ref=f1e258]: Responsável
+                - columnheader [ref=f1e262]:
+                  - button "Ordenar por Próximo follow-up" [ref=f1e263] [cursor=pointer]:
+                    - generic [ref=f1e264]: Próximo follow-up
+                - columnheader [ref=f1e268]:
+                  - button "Ordenar por Criado em" [ref=f1e269] [cursor=pointer]:
+                    - generic [ref=f1e270]: Criado em
+                - columnheader "Ações" [ref=f1e273]
+            - rowgroup [ref=f1e274]:
+              - row [ref=f1e275]:
+                - cell [ref=f1e276]:
+                  - checkbox "Selecionar lead Contato Demonstração 01" [ref=f1e277] [cursor=pointer]
+                - cell [ref=f1e278]:
+                  - generic [ref=f1e279]:
+                    - button "Remover dos favoritos" [pressed] [ref=f1e280] [cursor=pointer]
+                    - button "Contato Demonstração 01 contato01@exemplo.invalid" [ref=f1e284] [cursor=pointer]:
+                      - generic [ref=f1e285]:
+                        - generic [ref=f1e286]: Contato Demonstração 01
+                        - generic [ref=f1e287]: contato01@exemplo.invalid
+                - cell [ref=f1e288]:
+                  - button "Contato inicial" [ref=f1e290] [cursor=pointer]
+                - cell "Site Individual" [ref=f1e294]:
+                  - generic [ref=f1e295]: Site
+                  - generic [ref=f1e296]: Individual
+                - cell "Operador Demonstração" [ref=f1e297]
+                - cell "26/10/2026 às 11:00" [ref=f1e298]
+                - cell "25/10/2026" [ref=f1e299]
+                - cell [ref=f1e300]:
+                  - generic [ref=f1e301]:
+                    - button "Ver detalhes do lead" [ref=f1e302] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e308] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e313] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e318] [cursor=pointer]
+              - row [ref=f1e323]:
+                - cell [ref=f1e324]:
+                  - checkbox "Selecionar lead Contato Demonstração 02" [ref=f1e325] [cursor=pointer]
+                - cell [ref=f1e326]:
+                  - generic [ref=f1e327]:
+                    - button "Marcar como favorito" [ref=f1e328] [cursor=pointer]
+                    - button "Contato Demonstração 02 contato02@exemplo.invalid" [ref=f1e332] [cursor=pointer]:
+                      - generic [ref=f1e333]:
+                        - generic [ref=f1e334]: Contato Demonstração 02
+                        - generic [ref=f1e335]: contato02@exemplo.invalid
+                - cell [ref=f1e336]:
+                  - button "Em atendimento" [ref=f1e338] [cursor=pointer]
+                - cell "Indicação Individual" [ref=f1e342]:
+                  - generic [ref=f1e343]: Indicação
+                  - generic [ref=f1e344]: Individual
+                - cell "Operador Demonstração" [ref=f1e345]
+                - cell "26/10/2026 às 11:00" [ref=f1e346]
+                - cell "25/10/2026" [ref=f1e347]
+                - cell [ref=f1e348]:
+                  - generic [ref=f1e349]:
+                    - button "Ver detalhes do lead" [ref=f1e350] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e356] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e361] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e366] [cursor=pointer]
+              - row [ref=f1e371]:
+                - cell [ref=f1e372]:
+                  - checkbox "Selecionar lead Contato Demonstração 03" [ref=f1e373] [cursor=pointer]
+                - cell [ref=f1e374]:
+                  - generic [ref=f1e375]:
+                    - button "Marcar como favorito" [ref=f1e376] [cursor=pointer]
+                    - button "Contato Demonstração 03 contato03@exemplo.invalid" [ref=f1e380] [cursor=pointer]:
+                      - generic [ref=f1e381]:
+                        - generic [ref=f1e382]: Contato Demonstração 03
+                        - generic [ref=f1e383]: contato03@exemplo.invalid
+                - cell [ref=f1e384]:
+                  - button "Proposta enviada" [ref=f1e386] [cursor=pointer]
+                - cell "Campanha de demonstração Individual" [ref=f1e390]:
+                  - generic [ref=f1e391]: Campanha de demonstração
+                  - generic [ref=f1e392]: Individual
+                - cell "Operador Demonstração" [ref=f1e393]
+                - cell "26/10/2026 às 11:00" [ref=f1e394]
+                - cell "25/10/2026" [ref=f1e395]
+                - cell [ref=f1e396]:
+                  - generic [ref=f1e397]:
+                    - button "Ver detalhes do lead" [ref=f1e398] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e404] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e409] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e414] [cursor=pointer]
+              - row [ref=f1e419]:
+                - cell [ref=f1e420]:
+                  - checkbox "Selecionar lead Contato Demonstração 04" [ref=f1e421] [cursor=pointer]
+                - cell [ref=f1e422]:
+                  - generic [ref=f1e423]:
+                    - button "Marcar como favorito" [ref=f1e424] [cursor=pointer]
+                    - button "Contato Demonstração 04 contato04@exemplo.invalid" [ref=f1e428] [cursor=pointer]:
+                      - generic [ref=f1e429]:
+                        - generic [ref=f1e430]: Contato Demonstração 04
+                        - generic [ref=f1e431]: contato04@exemplo.invalid
+                - cell [ref=f1e432]:
+                  - button "Contratado" [ref=f1e434] [cursor=pointer]
+                - cell "Site Individual" [ref=f1e438]:
+                  - generic [ref=f1e439]: Site
+                  - generic [ref=f1e440]: Individual
+                - cell "Operador Demonstração" [ref=f1e441]
+                - cell "26/10/2026 às 11:00" [ref=f1e442]
+                - cell "25/10/2026" [ref=f1e443]
+                - cell [ref=f1e444]:
+                  - generic [ref=f1e445]:
+                    - button "Ver detalhes do lead" [ref=f1e446] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e452] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e457] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e462] [cursor=pointer]
+              - row [ref=f1e467]:
+                - cell [ref=f1e468]:
+                  - checkbox "Selecionar lead Contato Demonstração 05" [ref=f1e469] [cursor=pointer]
+                - cell [ref=f1e470]:
+                  - generic [ref=f1e471]:
+                    - button "Marcar como favorito" [ref=f1e472] [cursor=pointer]
+                    - button "Contato Demonstração 05 contato05@exemplo.invalid" [ref=f1e476] [cursor=pointer]:
+                      - generic [ref=f1e477]:
+                        - generic [ref=f1e478]: Contato Demonstração 05
+                        - generic [ref=f1e479]: contato05@exemplo.invalid
+                - cell [ref=f1e480]:
+                  - button "Contato inicial" [ref=f1e482] [cursor=pointer]
+                - cell "Indicação Individual" [ref=f1e486]:
+                  - generic [ref=f1e487]: Indicação
+                  - generic [ref=f1e488]: Individual
+                - cell "Operador Demonstração" [ref=f1e489]
+                - cell "26/10/2026 às 11:00" [ref=f1e490]
+                - cell "25/10/2026" [ref=f1e491]
+                - cell [ref=f1e492]:
+                  - generic [ref=f1e493]:
+                    - button "Ver detalhes do lead" [ref=f1e494] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e500] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e505] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e510] [cursor=pointer]
+              - row [ref=f1e515]:
+                - cell [ref=f1e516]:
+                  - checkbox "Selecionar lead Contato Demonstração 06" [ref=f1e517] [cursor=pointer]
+                - cell [ref=f1e518]:
+                  - generic [ref=f1e519]:
+                    - button "Marcar como favorito" [ref=f1e520] [cursor=pointer]
+                    - button "Contato Demonstração 06 contato06@exemplo.invalid" [ref=f1e524] [cursor=pointer]:
+                      - generic [ref=f1e525]:
+                        - generic [ref=f1e526]: Contato Demonstração 06
+                        - generic [ref=f1e527]: contato06@exemplo.invalid
+                - cell [ref=f1e528]:
+                  - button "Em atendimento" [ref=f1e530] [cursor=pointer]
+                - cell "Campanha de demonstração Individual" [ref=f1e534]:
+                  - generic [ref=f1e535]: Campanha de demonstração
+                  - generic [ref=f1e536]: Individual
+                - cell "Operador Demonstração" [ref=f1e537]
+                - cell "26/10/2026 às 11:00" [ref=f1e538]
+                - cell "25/10/2026" [ref=f1e539]
+                - cell [ref=f1e540]:
+                  - generic [ref=f1e541]:
+                    - button "Ver detalhes do lead" [ref=f1e542] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e548] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e553] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e558] [cursor=pointer]
+              - row [ref=f1e563]:
+                - cell [ref=f1e564]:
+                  - checkbox "Selecionar lead Contato Demonstração 07" [ref=f1e565] [cursor=pointer]
+                - cell [ref=f1e566]:
+                  - generic [ref=f1e567]:
+                    - button "Marcar como favorito" [ref=f1e568] [cursor=pointer]
+                    - button "Contato Demonstração 07 contato07@exemplo.invalid" [ref=f1e572] [cursor=pointer]:
+                      - generic [ref=f1e573]:
+                        - generic [ref=f1e574]: Contato Demonstração 07
+                        - generic [ref=f1e575]: contato07@exemplo.invalid
+                - cell [ref=f1e576]:
+                  - button "Proposta enviada" [ref=f1e578] [cursor=pointer]
+                - cell "Site Individual" [ref=f1e582]:
+                  - generic [ref=f1e583]: Site
+                  - generic [ref=f1e584]: Individual
+                - cell "Operador Demonstração" [ref=f1e585]
+                - cell "26/10/2026 às 11:00" [ref=f1e586]
+                - cell "25/10/2026" [ref=f1e587]
+                - cell [ref=f1e588]:
+                  - generic [ref=f1e589]:
+                    - button "Ver detalhes do lead" [ref=f1e590] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e596] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e601] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e606] [cursor=pointer]
+              - row [ref=f1e611]:
+                - cell [ref=f1e612]:
+                  - checkbox "Selecionar lead Contato Demonstração 08" [ref=f1e613] [cursor=pointer]
+                - cell [ref=f1e614]:
+                  - generic [ref=f1e615]:
+                    - button "Marcar como favorito" [ref=f1e616] [cursor=pointer]
+                    - button "Contato Demonstração 08 contato08@exemplo.invalid" [ref=f1e620] [cursor=pointer]:
+                      - generic [ref=f1e621]:
+                        - generic [ref=f1e622]: Contato Demonstração 08
+                        - generic [ref=f1e623]: contato08@exemplo.invalid
+                - cell [ref=f1e624]:
+                  - button "Contratado" [ref=f1e626] [cursor=pointer]
+                - cell "Indicação Individual" [ref=f1e630]:
+                  - generic [ref=f1e631]: Indicação
+                  - generic [ref=f1e632]: Individual
+                - cell "Operador Demonstração" [ref=f1e633]
+                - cell "26/10/2026 às 11:00" [ref=f1e634]
+                - cell "25/10/2026" [ref=f1e635]
+                - cell [ref=f1e636]:
+                  - generic [ref=f1e637]:
+                    - button "Ver detalhes do lead" [ref=f1e638] [cursor=pointer]
+                    - button "Agendar lembrete" [ref=f1e644] [cursor=pointer]
+                    - button "Converter em contrato" [ref=f1e649] [cursor=pointer]
+                    - button "Excluir lead" [ref=f1e654] [cursor=pointer]
+        - navigation "Paginação" [ref=f1e659]:
+          - generic [ref=f1e660]:
+            - generic [ref=f1e661]:
+              - generic [ref=f1e662]: Itens por página
+              - combobox [aria-hidden] [ref=f1e663]
+              - button "Itens por página" [ref=f1e665] [cursor=pointer]:
+                - generic [ref=f1e666]: "25"
+            - generic [ref=f1e669]: 1–8 de 8
+          - generic [ref=f1e670]:
+            - button "Pagina anterior" [disabled] [ref=f1e671]
+            - button "1" [ref=f1e675] [cursor=pointer]
+            - button "Próxima página" [disabled] [ref=f1e676]
+```

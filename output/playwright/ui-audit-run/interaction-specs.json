@@ -1,0 +1,942 @@
+[
+  {
+    "page": "dashboard",
+    "id": "dashboard-filtros",
+    "name": "Filtros avançados",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Filtros avançados$"
+      }
+    ],
+    "kind": "popover"
+  },
+  {
+    "page": "dashboard",
+    "id": "dashboard-periodo",
+    "name": "Período do dashboard",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Este mês$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "dashboard",
+    "id": "dashboard-analises",
+    "name": "Análises comerciais expandidas",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Abrir análises$"
+      }
+    ],
+    "kind": "section"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-criar",
+    "name": "Criar lead",
+    "steps": [
+      {
+        "role": "button",
+        "name": "Novo lead|Criar novo lead"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-detalhes",
+    "name": "Detalhes do lead",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Ver detalhes do lead$|^Ver e editar lead$"
+      }
+    ],
+    "kind": "drawer"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-agendar",
+    "name": "Agendar lembrete",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Agendar lembrete$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-excluir-confirmacao",
+    "name": "Confirmação de exclusão",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Excluir lead$"
+      }
+    ],
+    "kind": "confirmation"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-kanban",
+    "name": "Funil Kanban",
+    "steps": [
+      {
+        "role": "tab",
+        "name": "^Kanban$"
+      }
+    ],
+    "kind": "view"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-filtros-avancados",
+    "name": "Filtros avançados",
+    "steps": [
+      {
+        "selector": "summary",
+        "name": "Filtros avançados"
+      }
+    ],
+    "kind": "section"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-exportar-menu",
+    "name": "Menu de exportação",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Opções de exportação$"
+      }
+    ],
+    "kind": "menu"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-status-menu",
+    "name": "Filtro de status",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todos os status$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-responsavel-menu",
+    "name": "Filtro de responsável",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todos os responsáveis$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-origem-menu",
+    "name": "Filtro de origem",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todas as origens$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-tipo-menu",
+    "name": "Filtro de contratação",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todos os tipos$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-ordenacao-menu",
+    "name": "Ordenação",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Data de criação$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-status-contextual",
+    "name": "Alterar status",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Contato inicial$"
+      }
+    ],
+    "kind": "popover"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-criar",
+    "name": "Novo contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo contrato$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-detalhes",
+    "name": "Detalhes do contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Abrir contrato$|^Abrir$"
+      }
+    ],
+    "kind": "drawer"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-importacao",
+    "name": "Importação em massa",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Importar em massa$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-excluir-confirmacao",
+    "name": "Confirmar exclusão",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Excluir contrato$|^Excluir$"
+      }
+    ],
+    "kind": "confirmation"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-status-menu",
+    "name": "Status do contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "Alterar status do contrato DEMO-001"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-operadoras-menu",
+    "name": "Filtro de operadora",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todas as operadoras$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-datas-menu",
+    "name": "Filtro de datas",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todas as datas$"
+      }
+    ],
+    "kind": "popover"
+  },
+  {
+    "page": "comissoes",
+    "id": "comissoes-dia",
+    "name": "Comissões do dia",
+    "steps": [
+      {
+        "selector": "button.kds-calendar-day",
+        "name": "^28"
+      }
+    ],
+    "kind": "section"
+  },
+  {
+    "page": "agenda",
+    "id": "agenda-criar",
+    "name": "Nova tarefa",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Nova tarefa$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "agenda",
+    "id": "agenda-organizar",
+    "name": "Organização da agenda",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Organizar agenda$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "agenda",
+    "id": "agenda-reagendar",
+    "name": "Reagendar item",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Reagendar item$"
+      }
+    ],
+    "kind": "popover"
+  },
+  {
+    "page": "agenda",
+    "id": "agenda-concluidos",
+    "name": "Tarefas concluídas",
+    "steps": [
+      {
+        "role": "tab",
+        "name": "^Concluídos"
+      }
+    ],
+    "kind": "view"
+  },
+  {
+    "page": "agenda",
+    "id": "agenda-tipos",
+    "name": "Filtro de tipo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Todos os tipos$"
+      }
+    ],
+    "kind": "dropdown"
+  },
+  {
+    "page": "inbox",
+    "id": "inbox-arquivados",
+    "name": "Chats arquivados",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Chats arquivados$"
+      }
+    ],
+    "kind": "view"
+  },
+  {
+    "page": "inbox",
+    "id": "inbox-agenda",
+    "name": "Agenda do WhatsApp",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Agenda do WhatsApp$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "inbox",
+    "id": "inbox-agendadas",
+    "name": "Mensagens agendadas",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Mensagens agendadas$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "inbox",
+    "id": "inbox-painel",
+    "name": "Indicadores do WhatsApp",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Painel WhatsApp$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "inbox",
+    "id": "inbox-nova-conversa",
+    "name": "Novo chat",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo chat$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "inbox",
+    "id": "inbox-filtros",
+    "name": "Filtros de conversa",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Filtros$"
+      }
+    ],
+    "kind": "popover"
+  },
+  {
+    "page": "campanhas",
+    "id": "campanhas-criar",
+    "name": "Novo disparo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo disparo$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "campanhas",
+    "id": "campanhas-editar",
+    "name": "Editar disparo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Editar$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "campanhas",
+    "id": "campanhas-excluir",
+    "name": "Confirmar exclusão de campanha",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Excluir$"
+      }
+    ],
+    "kind": "confirmation"
+  },
+  {
+    "page": "blog",
+    "id": "blog-criar",
+    "name": "Novo artigo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo post$"
+      }
+    ],
+    "kind": "form"
+  },
+  {
+    "page": "blog",
+    "id": "blog-editar",
+    "name": "Editar artigo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Editar$"
+      }
+    ],
+    "kind": "form"
+  },
+  {
+    "page": "blog",
+    "id": "blog-visualizar",
+    "name": "Prévia do artigo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Visualizar$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "blog",
+    "id": "blog-excluir",
+    "name": "Confirmação de exclusão de artigo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Excluir$"
+      }
+    ],
+    "kind": "confirmation"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-editar",
+    "name": "Editar lead",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Ver detalhes do lead$|^Ver e editar lead$"
+      },
+      {
+        "selector": "[role=dialog] .kds-dialog-body button.kds-button-secondary",
+        "name": ""
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "leads-listagem",
+    "id": "leads-converter",
+    "name": "Conversão em contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Converter em contrato$"
+      }
+    ],
+    "kind": "form"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-editar",
+    "name": "Editar contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Abrir contrato$|^Abrir$"
+      },
+      {
+        "role": "button",
+        "name": "^Editar contrato$|^Editar$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-titular",
+    "name": "Adicionar titular",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Abrir contrato$|^Abrir$"
+      },
+      {
+        "role": "button",
+        "name": "Adicionar titular|Novo titular"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-dependente",
+    "name": "Adicionar dependente",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Abrir contrato$|^Abrir$"
+      },
+      {
+        "role": "button",
+        "name": "Adicionar dependente|Novo dependente"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "contratos-listagem",
+    "id": "contratos-interacao",
+    "name": "Interação do contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Abrir contrato$|^Abrir$"
+      },
+      {
+        "role": "button",
+        "name": "Nova interação|Adicionar interação"
+      }
+    ],
+    "kind": "section"
+  },
+  {
+    "page": "config-users",
+    "id": "usuarios-criar",
+    "name": "Novo usuário",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo usuário$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-users",
+    "id": "usuarios-editar",
+    "name": "Editar usuário",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Editar Operador Demonstração$|^Editar usuário$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-links",
+    "id": "links-criar",
+    "name": "Novo link",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo link$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-links",
+    "id": "links-editar",
+    "name": "Editar link",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Editar$"
+      }
+    ],
+    "kind": "form"
+  },
+  {
+    "page": "config-forms",
+    "id": "formularios-criar",
+    "name": "Novo formulário",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo formulário$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-forms",
+    "id": "formularios-editar",
+    "name": "Editor de formulário",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Editar$"
+      }
+    ],
+    "kind": "form"
+  },
+  {
+    "page": "config-forms",
+    "id": "formularios-pergunta",
+    "name": "Criar pergunta",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Editar$"
+      },
+      {
+        "role": "button",
+        "name": "Adicionar pergunta|Nova pergunta|Adicionar etapa"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-access",
+    "id": "perfis-criar",
+    "name": "Novo perfil de acesso",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Novo perfil$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-access",
+    "id": "perfis-permissoes",
+    "name": "Permissões do administrador",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Administrador"
+      }
+    ],
+    "kind": "section"
+  },
+  {
+    "page": "config-leads",
+    "id": "config-etapa-criar",
+    "name": "Nova etapa",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar etapa$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-leads-origins",
+    "id": "config-origem-criar",
+    "name": "Nova origem",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar origem$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-leads-manager-lead_tipo_contratacao",
+    "id": "config-tipo-criar",
+    "name": "Novo tipo de contratação",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar opção$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-leads-manager-lead_responsavel",
+    "id": "config-responsavel-criar",
+    "name": "Novo responsável",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar opção$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-contracts",
+    "id": "config-status-contrato-criar",
+    "name": "Novo status do contrato",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar status$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-contract_modalidade",
+    "id": "config-modalidade-criar",
+    "name": "Nova modalidade",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar modalidade$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-contract_abrangencia",
+    "id": "config-abrangencia-criar",
+    "name": "Nova abrangência",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar abrangência$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-contract_acomodacao",
+    "id": "config-acomodacao-criar",
+    "name": "Nova acomodação",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar acomodação$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-contract_carencia",
+    "id": "config-carencia-criar",
+    "name": "Nova carência",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Adicionar carência$"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "config-ai",
+    "id": "ia-feature-editar",
+    "name": "Configurar funcionalidade de IA",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Configurar"
+      }
+    ],
+    "kind": "drawer"
+  },
+  {
+    "page": "chat-ia",
+    "id": "ia-conversa",
+    "name": "Simulação com histórico",
+    "steps": [
+      {
+        "role": "button",
+        "name": "Atendimento de demonstração"
+      }
+    ],
+    "kind": "view"
+  },
+  {
+    "page": "config-automation",
+    "id": "automacao-templates",
+    "name": "Templates de mensagens",
+    "steps": [
+      {
+        "role": "tab",
+        "name": "^Templates$"
+      }
+    ],
+    "kind": "view"
+  },
+  {
+    "page": "config-automation",
+    "id": "automacao-operacao",
+    "name": "Operação das automações",
+    "steps": [
+      {
+        "role": "tab",
+        "name": "^Operação$"
+      }
+    ],
+    "kind": "view"
+  },
+  {
+    "page": "config-automation",
+    "id": "automacao-novo-fluxo",
+    "name": "Novo fluxo",
+    "steps": [
+      {
+        "role": "button",
+        "name": "Novo fluxo|Criar fluxo"
+      }
+    ],
+    "kind": "form"
+  },
+  {
+    "page": "config-automation",
+    "id": "automacao-novo-template",
+    "name": "Novo template",
+    "steps": [
+      {
+        "role": "tab",
+        "name": "^Templates$"
+      },
+      {
+        "role": "button",
+        "name": "Novo modelo"
+      }
+    ],
+    "kind": "modal"
+  },
+  {
+    "page": "dashboard",
+    "id": "nav-notificacoes",
+    "name": "Central de notificações",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Notificações$"
+      }
+    ],
+    "kind": "popover"
+  },
+  {
+    "page": "dashboard",
+    "id": "nav-crm",
+    "name": "Submenu CRM",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^CRM$"
+      }
+    ],
+    "kind": "menu"
+  },
+  {
+    "page": "dashboard",
+    "id": "nav-comunicacao",
+    "name": "Submenu Comunicação",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Comunicação$"
+      }
+    ],
+    "kind": "menu"
+  },
+  {
+    "page": "dashboard",
+    "id": "nav-financeiro",
+    "name": "Submenu Financeiro",
+    "steps": [
+      {
+        "role": "button",
+        "name": "^Financeiro$"
+      }
+    ],
+    "kind": "menu"
+  }
+]

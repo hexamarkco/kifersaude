@@ -1,0 +1,1773 @@
+{
+  "generated_at": "2026-10-25",
+  "route_source": "src/main.tsx",
+  "routes": [
+    {
+      "pattern": "/politica-de-privacidade",
+      "index": false,
+      "components": [
+        "Suspense",
+        "RouteLoading",
+        "PrivacyPolicyPage"
+      ],
+      "redirect": false,
+      "line": 49
+    },
+    {
+      "pattern": "*",
+      "index": false,
+      "components": [
+        "AuthProvider",
+        "VercelSpeedInsights",
+        "Suspense",
+        "RouteLoading",
+        "Routes",
+        "Route",
+        "HomePage",
+        "Navigate",
+        "OperatorLandingWrapper",
+        "NoIndex",
+        "LoginPage",
+        "LinksPage",
+        "FormPage",
+        "DesignSystemShowcase",
+        "ProtectedRoute",
+        "AiSandboxChatWrapper",
+        "ConfigProvider",
+        "PainelWrapper",
+        "DashboardWrapper",
+        "LeadsManagerWrapper",
+        "ApiDocsWrapper",
+        "ContractsManagerWrapper",
+        "FinanceiroComissoesTab",
+        "FinanceiroAgendaTab",
+        "WhatsAppInboxWrapper",
+        "WhatsAppCampaignsWrapper",
+        "WhatsAppCampaignDetailWrapper",
+        "BlogTab",
+        "ConfigPage",
+        "ToastViewport"
+      ],
+      "redirect": false,
+      "line": 50
+    },
+    {
+      "pattern": "/",
+      "index": false,
+      "components": [
+        "HomePage"
+      ],
+      "redirect": false,
+      "line": 55
+    },
+    {
+      "pattern": "/planos",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 56
+    },
+    {
+      "pattern": "/planos/:slug/:variant",
+      "index": false,
+      "components": [
+        "OperatorLandingWrapper"
+      ],
+      "redirect": false,
+      "line": 57
+    },
+    {
+      "pattern": "/planos/:slug",
+      "index": false,
+      "components": [
+        "OperatorLandingWrapper"
+      ],
+      "redirect": false,
+      "line": 58
+    },
+    {
+      "pattern": "/lp",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 59
+    },
+    {
+      "pattern": "/lp/*",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 60
+    },
+    {
+      "pattern": "/cotacao",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 61
+    },
+    {
+      "pattern": "/operadoras",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 62
+    },
+    {
+      "pattern": "/como-funciona",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 63
+    },
+    {
+      "pattern": "/depoimentos",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 64
+    },
+    {
+      "pattern": "/faq",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 65
+    },
+    {
+      "pattern": "/planos/*",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 66
+    },
+    {
+      "pattern": "/login",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "LoginPage"
+      ],
+      "redirect": false,
+      "line": 67
+    },
+    {
+      "pattern": "/links",
+      "index": false,
+      "components": [
+        "LinksPage"
+      ],
+      "redirect": false,
+      "line": 68
+    },
+    {
+      "pattern": "/forms/:slug",
+      "index": false,
+      "components": [
+        "FormPage"
+      ],
+      "redirect": false,
+      "line": 69
+    },
+    {
+      "pattern": "/design-system",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "DesignSystemShowcase"
+      ],
+      "redirect": false,
+      "line": 70
+    },
+    {
+      "pattern": "/chat",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "ProtectedRoute",
+        "AiSandboxChatWrapper"
+      ],
+      "redirect": false,
+      "line": 71
+    },
+    {
+      "pattern": "/painel",
+      "index": false,
+      "components": [
+        "NoIndex",
+        "ProtectedRoute",
+        "ConfigProvider",
+        "PainelWrapper"
+      ],
+      "redirect": false,
+      "line": 77
+    },
+    {
+      "pattern": "/painel",
+      "index": true,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 83
+    },
+    {
+      "pattern": "/painel/dashboard",
+      "index": false,
+      "components": [
+        "DashboardWrapper"
+      ],
+      "redirect": false,
+      "line": 84
+    },
+    {
+      "pattern": "/painel/leads",
+      "index": false,
+      "components": [
+        "LeadsManagerWrapper"
+      ],
+      "redirect": false,
+      "line": 85
+    },
+    {
+      "pattern": "/painel/api",
+      "index": false,
+      "components": [
+        "ApiDocsWrapper"
+      ],
+      "redirect": false,
+      "line": 86
+    },
+    {
+      "pattern": "/painel/contratos",
+      "index": false,
+      "components": [
+        "ContractsManagerWrapper"
+      ],
+      "redirect": false,
+      "line": 87
+    },
+    {
+      "pattern": "/painel/comissoes",
+      "index": false,
+      "components": [
+        "FinanceiroComissoesTab"
+      ],
+      "redirect": false,
+      "line": 88
+    },
+    {
+      "pattern": "/painel/agenda",
+      "index": false,
+      "components": [
+        "FinanceiroAgendaTab"
+      ],
+      "redirect": false,
+      "line": 89
+    },
+    {
+      "pattern": "/painel/inbox",
+      "index": false,
+      "components": [
+        "WhatsAppInboxWrapper"
+      ],
+      "redirect": false,
+      "line": 90
+    },
+    {
+      "pattern": "/painel/disparos",
+      "index": false,
+      "components": [
+        "WhatsAppCampaignsWrapper"
+      ],
+      "redirect": false,
+      "line": 91
+    },
+    {
+      "pattern": "/painel/disparos/:campaignId",
+      "index": false,
+      "components": [
+        "WhatsAppCampaignDetailWrapper"
+      ],
+      "redirect": false,
+      "line": 92
+    },
+    {
+      "pattern": "/painel/tarefas",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 93
+    },
+    {
+      "pattern": "/painel/lembretes",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 94
+    },
+    {
+      "pattern": "/painel/blog",
+      "index": false,
+      "components": [
+        "BlogTab"
+      ],
+      "redirect": false,
+      "line": 95
+    },
+    {
+      "pattern": "/painel/config",
+      "index": false,
+      "components": [
+        "ConfigPage"
+      ],
+      "redirect": false,
+      "line": 96
+    },
+    {
+      "pattern": "/painel/automacoes",
+      "index": false,
+      "components": [
+        "ConfigPage"
+      ],
+      "redirect": false,
+      "line": 97
+    },
+    {
+      "pattern": "*",
+      "index": false,
+      "components": [
+        "Navigate"
+      ],
+      "redirect": true,
+      "line": 99
+    }
+  ],
+  "menu_source": "src/components/Layout.tsx",
+  "menu_items": [
+    {
+      "id": "leads",
+      "label": "Leads"
+    },
+    {
+      "id": "contracts",
+      "label": "Contratos"
+    },
+    {
+      "id": "agenda",
+      "label": "Agenda"
+    },
+    {
+      "id": "whatsapp-inbox",
+      "label": "WhatsApp"
+    },
+    {
+      "id": "whatsapp-campaigns",
+      "label": "Disparos"
+    },
+    {
+      "id": "blog",
+      "label": "Blog"
+    },
+    {
+      "id": "financeiro-comissoes",
+      "label": "Comissões"
+    },
+    {
+      "id": "dashboard",
+      "label": "Dashboard"
+    },
+    {
+      "id": "crm",
+      "label": "CRM"
+    },
+    {
+      "id": "comunicacao",
+      "label": "Comunicação"
+    },
+    {
+      "id": "financeiro",
+      "label": "Financeiro"
+    },
+    {
+      "id": "automation-hub",
+      "label": "Automações e IA"
+    },
+    {
+      "id": "config",
+      "label": "Configurações"
+    },
+    {
+      "id": "dashboard",
+      "label": "Início"
+    }
+  ],
+  "interfaces": [
+    {
+      "component": "Dialog",
+      "file": "src/components/ContractDetails.tsx",
+      "line": 779,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/ContractDetails.tsx",
+      "line": 793,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/ContractDetails.tsx",
+      "line": 824,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "HolderForm",
+      "file": "src/components/ContractDetails.tsx",
+      "line": 1829,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DependentForm",
+      "file": "src/components/ContractDetails.tsx",
+      "line": 1849,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractForm",
+      "file": "src/components/ContractDetails.tsx",
+      "line": 1880,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "HolderForm",
+      "file": "src/components/ContractForm.tsx",
+      "line": 1184,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/ContractForm.tsx",
+      "line": 1197,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/ContractForm.tsx",
+      "line": 1492,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/ContractForm.tsx",
+      "line": 1854,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/ContractForm.tsx",
+      "line": 1971,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/ContractForm.tsx",
+      "line": 2229,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/components/ContractForm.tsx",
+      "line": 2270,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractJsonImportDialog",
+      "file": "src/components/ContractForm.tsx",
+      "line": 2306,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ValueAdjustmentForm",
+      "file": "src/components/ContractForm.tsx",
+      "line": 2313,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/DependentForm.tsx",
+      "line": 263,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/DependentForm.tsx",
+      "line": 319,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/HolderForm.tsx",
+      "line": 521,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/HolderForm.tsx",
+      "line": 578,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/HolderForm.tsx",
+      "line": 788,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DependentForm",
+      "file": "src/components/HolderForm.tsx",
+      "line": 848,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Menu",
+      "file": "src/components/Layout.tsx",
+      "line": 985,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Menu",
+      "file": "src/components/Layout.tsx",
+      "line": 1224,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/LeadDetails.tsx",
+      "line": 186,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "StatusDropdown",
+      "file": "src/components/LeadDetailsPanel.tsx",
+      "line": 259,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/LeadForm.tsx",
+      "line": 273,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/LeadForm.tsx",
+      "line": 455,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/LeadForm.tsx",
+      "line": 765,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/LeadForm.tsx",
+      "line": 776,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/ReminderSchedulerModal.tsx",
+      "line": 190,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/components/ReminderSchedulerModal.tsx",
+      "line": 251,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/components/StatusDropdown.tsx",
+      "line": 30,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/components/ValueAdjustmentForm.tsx",
+      "line": 85,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1398,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1567,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1735,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1766,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ReminderSchedulerModal",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1815,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1832,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadForm",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1856,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "FollowUpAgendaOrganizerModal",
+      "file": "src/features/agenda/AgendaScreen.tsx",
+      "line": 1857,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/agenda/components/FollowUpAgendaOrganizerModal.tsx",
+      "line": 136,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/agenda/components/FollowUpAgendaOrganizerModal.tsx",
+      "line": 169,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/agenda/components/FollowUpAgendaOrganizerModal.tsx",
+      "line": 177,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/agenda/components/FollowUpAgendaOrganizerModal.tsx",
+      "line": 185,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 1572,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 1631,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 1813,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ReminderSchedulerModal",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 1864,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ReminderSchedulerModal",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 1880,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 1897,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppBatchFollowUpModal",
+      "file": "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx",
+      "line": 2000,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppBatchFollowUpModal.tsx",
+      "line": 538,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppBatchFollowUpModal.tsx",
+      "line": 631,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppBatchFollowUpModal.tsx",
+      "line": 646,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Drawer",
+      "file": "src/features/communication/whatsapp/components/WhatsAppChatFilesDrawer.tsx",
+      "line": 571,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/communication/whatsapp/components/WhatsAppChatFilesDrawer.tsx",
+      "line": 578,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/features/communication/whatsapp/components/WhatsAppComposer.tsx",
+      "line": 567,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/features/communication/whatsapp/components/WhatsAppComposer.tsx",
+      "line": 637,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppComposerRewriteModal.tsx",
+      "line": 76,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppDashboardModal.tsx",
+      "line": 433,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/communication/whatsapp/components/WhatsAppDashboardModal.tsx",
+      "line": 527,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppEditMessageModal.tsx",
+      "line": 29,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppFollowUpModal.tsx",
+      "line": 312,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppInboxDialogs.tsx",
+      "line": 91,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppInboxDialogs.tsx",
+      "line": 116,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppInboxDialogs.tsx",
+      "line": 117,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppInboxDialogs.tsx",
+      "line": 118,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppInboxDialogs.tsx",
+      "line": 120,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx",
+      "line": 431,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Drawer",
+      "file": "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx",
+      "line": 459,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Tabs",
+      "file": "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx",
+      "line": 472,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadDetailsPanel",
+      "file": "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx",
+      "line": 531,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ReminderSchedulerModal",
+      "file": "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx",
+      "line": 771,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/communication/whatsapp/components/WhatsAppMediaDrawer.tsx",
+      "line": 578,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppMessageDetailsModal.tsx",
+      "line": 91,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx",
+      "line": 130,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "line": 614,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Tabs",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "line": 686,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "line": 730,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "line": 743,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppScheduleMessageModal",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "line": 828,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppScheduleMessageModal",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "line": 846,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 546,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 567,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 701,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 736,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 763,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 778,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 811,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "line": 867,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WorkspaceDialog",
+      "file": "src/features/communication/whatsapp/components/WhatsAppStartChatModal.tsx",
+      "line": 110,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/communication/whatsapp/components/WhatsAppStartChatModal.tsx",
+      "line": 120,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "StatusDropdown",
+      "file": "src/features/communication/whatsapp/components/WhatsAppThreadHeader.tsx",
+      "line": 120,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppQuickRepliesModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2096,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppEditMessageModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2106,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppMessageDetailsModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2121,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppComposerRewriteModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2161,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppAgendaModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2179,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppDashboardModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2192,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppMediaDrawer",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2199,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppChatFilesDrawer",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2213,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppFollowUpModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2223,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ReminderSchedulerModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2250,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppLeadDrawer",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2273,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadForm",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2310,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppStartChatModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2319,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppScheduleMessageModal",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2345,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "WhatsAppThreadActionsMenu",
+      "file": "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+      "line": 2492,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp-campaigns/components/CampaignSequenceFlow.tsx",
+      "line": 165,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1059,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1166,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1245,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1267,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1282,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1434,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1446,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1480,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1490,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1493,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1554,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx",
+      "line": 1752,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/config/ai/AiConfigScreen.tsx",
+      "line": 290,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "FeatureEditorDrawer",
+      "file": "src/features/config/ai/AiConfigScreen.tsx",
+      "line": 343,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/config/ai/AiConfigScreen.tsx",
+      "line": 350,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Drawer",
+      "file": "src/features/config/ai/components/FeatureEditorDrawer.tsx",
+      "line": 306,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/ai/components/FeatureEditorDrawer.tsx",
+      "line": 401,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/ai/components/FeatureEditorDrawer.tsx",
+      "line": 426,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/config/ai/components/FeatureListCard.tsx",
+      "line": 117,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/config/automation/AutoContactFlowSettingsScreen.tsx",
+      "line": 1712,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/config/automation/AutoContactFlowSettingsScreen.tsx",
+      "line": 2132,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Tabs",
+      "file": "src/features/config/ConfigPageScreen.tsx",
+      "line": 65,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "StepEditorDialog",
+      "file": "src/features/config/forms/FormEditorScreen.tsx",
+      "line": 551,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/forms/FormsScreen.tsx",
+      "line": 364,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/forms/StepEditorDialog.tsx",
+      "line": 163,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/forms/StepEditorDialog.tsx",
+      "line": 176,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/forms/StepEditorDialog.tsx",
+      "line": 194,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/forms/StepEditorDialog.tsx",
+      "line": 215,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Combobox",
+      "file": "src/features/config/general/AccessControlManagerScreen.tsx",
+      "line": 210,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/general/AccessControlManagerScreen.tsx",
+      "line": 260,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/general/AccessControlManagerScreen.tsx",
+      "line": 281,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/general/components/ConfigOptionManager.tsx",
+      "line": 225,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/general/components/LeadOriginsManager.tsx",
+      "line": 185,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/general/components/LeadStatusManager.tsx",
+      "line": 240,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/general/components/SettingsCatalogList.tsx",
+      "line": 43,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/config/general/SystemSettingsScreen.tsx",
+      "line": 356,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/general/SystemSettingsScreen.tsx",
+      "line": 415,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/general/SystemSettingsScreen.tsx",
+      "line": 432,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Tabs",
+      "file": "src/features/config/general/SystemSettingsScreen.tsx",
+      "line": 654,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Tabs",
+      "file": "src/features/config/general/SystemSettingsScreen.tsx",
+      "line": 719,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/integrations/api-docs/ApiDocsScreen.tsx",
+      "line": 52,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/features/config/integrations/api-docs/ApiDocsScreen.tsx",
+      "line": 181,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/integrations/components/MetaAdsPanel.tsx",
+      "line": 49,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/integrations/components/MetaAdsPanel.tsx",
+      "line": 53,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/integrations/components/MetaAdsPanel.tsx",
+      "line": 102,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/config/integrations/IntegrationsScreen.tsx",
+      "line": 791,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/links/LinksScreen.tsx",
+      "line": 596,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/links/LinksScreen.tsx",
+      "line": 683,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/config/links/LinksScreen.tsx",
+      "line": 725,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/users/UsersScreen.tsx",
+      "line": 508,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/config/users/UsersScreen.tsx",
+      "line": 581,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/contracts/components/ContractBulkJsonImportDialog.tsx",
+      "line": 98,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/contracts/components/ContractJsonImportDialog.tsx",
+      "line": 89,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/features/contracts/components/ContractStatusDropdown.tsx",
+      "line": 28,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/contracts/components/ContractStatusDropdown.tsx",
+      "line": 47,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/features/contracts/components/HolderImportPreparation.tsx",
+      "line": 227,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractStatusDropdown",
+      "file": "src/features/contracts/ContractsManagerScreen.tsx",
+      "line": 798,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractStatusDropdown",
+      "file": "src/features/contracts/ContractsManagerScreen.tsx",
+      "line": 853,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractForm",
+      "file": "src/features/contracts/ContractsManagerScreen.tsx",
+      "line": 1029,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractBulkJsonImportDialog",
+      "file": "src/features/contracts/ContractsManagerScreen.tsx",
+      "line": 1048,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractDetails",
+      "file": "src/features/contracts/ContractsManagerScreen.tsx",
+      "line": 1055,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/features/dashboard/components/DashboardDistributionSection.tsx",
+      "line": 94,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/dashboard/components/DashboardDistributionSection.tsx",
+      "line": 139,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/dashboard/components/DashboardTrendSection.tsx",
+      "line": 121,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ContractDetails",
+      "file": "src/features/dashboard/DashboardScreen.tsx",
+      "line": 2442,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadDetails",
+      "file": "src/features/dashboard/DashboardScreen.tsx",
+      "line": 2450,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadForm",
+      "file": "src/features/dashboard/DashboardScreen.tsx",
+      "line": 2462,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "SegmentedControl",
+      "file": "src/features/leads/components/LeadsHeader.tsx",
+      "line": 59,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Popover",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 1549,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "DateTimePicker",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 1835,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "StatusDropdown",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 1951,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "StatusDropdown",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 2016,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadForm",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 2189,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "LeadDetails",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 2204,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ReminderSchedulerModal",
+      "file": "src/features/leads/LeadsManagerScreen.tsx",
+      "line": 2218,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/features/production/components/TeamProduction.tsx",
+      "line": 43,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Menu",
+      "file": "src/features/public-content/components/PublicHomeHeader.tsx",
+      "line": 82,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Drawer",
+      "file": "src/features/public-content/components/PublicHomeHeader.tsx",
+      "line": 89,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "ConfirmDialog",
+      "file": "src/hooks/useConfirmationModal.tsx",
+      "line": 54,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Dialog",
+      "file": "src/pages/public/HomePage.tsx",
+      "line": 288,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "Select",
+      "file": "src/pages/public/HomePage.tsx",
+      "line": 839,
+      "status": "mapped",
+      "screenshots": []
+    },
+    {
+      "component": "OverlayModal",
+      "file": "src/pages/public/HomePage.tsx",
+      "line": 1444,
+      "status": "mapped",
+      "screenshots": []
+    }
+  ]
+}

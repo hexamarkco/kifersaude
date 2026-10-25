@@ -1,3 +1,4 @@
+import { Text, Heading } from '../design-system';
 import { useEffect, useMemo, useState } from 'react';
 import type { Contract } from '../features/contracts';
 import type { ConfigOption } from '../features/config';
@@ -92,10 +93,10 @@ export default function LeadDetailsPanel({
       <aside className={rootClassName}>
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center text-[var(--text-muted)]">
           <UserCircle className="mb-3 h-10 w-10 text-[var(--text-subtle)]" />
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Nenhum lead vinculado</p>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <Text className="text-sm font-semibold text-[var(--text-primary)]">Nenhum lead vinculado</Text>
+          <Text className="mt-1 text-xs text-[var(--text-muted)]">
             Relacione um lead a esta conversa para visualizar status, responsável e contratos.
-          </p>
+          </Text>
         </div>
       </aside>
     );
@@ -135,15 +136,15 @@ export default function LeadDetailsPanel({
           <div className="flex items-start gap-2">
             <AlertCircle className="h-4 w-4 mt-[2px]" />
             <div className="space-y-2">
-              <p>{contractsError}</p>
+              <Text>{contractsError}</Text>
               {onRefreshContracts && (
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={onRefreshContracts}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--warning-border)] px-3 py-1 text-xs font-semibold text-[var(--warning-text)] transition-colors hover:bg-[var(--warning-soft)]"
+                  className="inline-flex items-center border font-semibold transition-colors"
                 >
                   Tentar novamente
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -154,10 +155,10 @@ export default function LeadDetailsPanel({
     if (!contracts || contracts.length === 0) {
       return (
         <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 text-sm text-[var(--text-secondary)]">
-          <p className="font-medium text-[var(--text-primary)]">Nenhum contrato registrado.</p>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <Text className="font-medium text-[var(--text-primary)]">Nenhum contrato registrado.</Text>
+          <Text className="mt-1 text-xs text-[var(--text-muted)]">
             Converta este lead em contrato para acompanhar os detalhes por aqui.
-          </p>
+          </Text>
         </div>
       );
     }
@@ -173,15 +174,15 @@ export default function LeadDetailsPanel({
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  <Text className="text-sm font-semibold text-[var(--text-primary)]">
                     {contract.codigo_contrato || 'Contrato sem código'}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  </Text>
+                  <Text className="text-xs text-[var(--text-muted)]">
                     {contract.operadora || 'Operadora não informada'}
                     {contract.modalidade ? ` • ${contract.modalidade}` : ''}
-                  </p>
+                  </Text>
                   {contract.produto_plano && (
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">{contract.produto_plano}</p>
+                    <Text className="mt-1 text-xs text-[var(--text-muted)]">{contract.produto_plano}</Text>
                   )}
                 </div>
                 <span className="rounded-full border border-[var(--success-border)] bg-[var(--success-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--success-text)] uppercase">
@@ -189,10 +190,10 @@ export default function LeadDetailsPanel({
                 </span>
               </div>
               {mensalidade && (
-                <p className="mt-3 text-xs text-[var(--text-muted)]">
+                <Text className="mt-3 text-xs text-[var(--text-muted)]">
                   Mensalidade total:{' '}
                   <span className="font-semibold text-[var(--text-primary)]">{mensalidade}</span>
-                </p>
+                </Text>
               )}
             </div>
           );
@@ -207,15 +208,15 @@ export default function LeadDetailsPanel({
         <div className="flex min-w-0 items-center gap-3">
           <Avatar name={lead.nome_completo || lead.telefone || 'Lead'} size="lg" className="shrink-0" />
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Lead vinculado
-            </p>
-            <h3 className="mt-0.5 flex min-w-0 items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
+            </Text>
+            <Heading level={3} className="mt-0.5 flex min-w-0 items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
               <LeadFavoriteToggle leadId={lead.id} favorito={favorito} size="sm" onToggled={setFavorito} />
               <span className="truncate">{lead.nome_completo || 'Lead sem nome'}</span>
-            </h3>
+            </Heading>
             {lead.telefone && (
-              <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
+              <Text className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</Text>
             )}
           </div>
         </div>
@@ -248,11 +249,11 @@ export default function LeadDetailsPanel({
         <section>
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <ClipboardList className="h-4 w-4" />
-            <h4>Status e responsável</h4>
+            <Heading level={4}>Status e responsável</Heading>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-[var(--text-muted)]">Status</p>
+              <Text className="text-xs font-medium text-[var(--text-muted)]">Status</Text>
               <div className="mt-1 flex min-h-[var(--control-height-md)] items-center">
                 {statusOptions.length > 0 ? (
                   <StatusDropdown
@@ -270,7 +271,7 @@ export default function LeadDetailsPanel({
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium text-[var(--text-muted)]">Responsável</p>
+              <Text className="text-xs font-medium text-[var(--text-muted)]">Responsável</Text>
               {responsavelOptions.length > 0 ? (
                 <div className="mt-1">
                   <FilterSelect
@@ -304,7 +305,7 @@ export default function LeadDetailsPanel({
         <section>
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <StickyNote className="h-4 w-4" />
-            <h4>Observações</h4>
+            <Heading level={4}>Observações</Heading>
           </div>
           <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 text-sm text-[var(--text-secondary)]">
             {observations || 'Nenhuma observação registrada para este lead.'}
@@ -314,7 +315,7 @@ export default function LeadDetailsPanel({
         <section>
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <FileText className="h-4 w-4" />
-            <h4>Contratos</h4>
+            <Heading level={4}>Contratos</Heading>
           </div>
           {renderContracts()}
         </section>

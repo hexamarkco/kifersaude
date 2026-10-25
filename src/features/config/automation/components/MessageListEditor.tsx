@@ -8,7 +8,7 @@ import {
   type AutoContactTemplate,
 } from "../../../../lib/autoContactService";
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from "../../../../lib/templateVariableSuggestions";
-import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
+import { VariableAutocompleteTextarea } from '../../../../design-system';
 import {
   Button,
   FilterSelect,

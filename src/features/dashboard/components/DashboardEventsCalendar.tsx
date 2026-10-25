@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../design-system';
 import { Calendar, Cake, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 import {
@@ -97,22 +98,22 @@ export function DashboardEventsCalendar({
     const isSelected = selectedCalendarKey === dateKey;
 
     return (
-      <button
+      <Button variant="ghost"
         key={dateKey}
         type="button"
         onClick={() => onSelectedCalendarDateChange(date)}
         aria-pressed={isSelected}
         aria-label={`${day} de ${calendarMonthLabel}, ${dayEvents.length} evento${dayEvents.length === 1 ? '' : 's'}`}
         className={[
-          'group kds-action-surface kds-calendar-day border text-[var(--text-secondary)] transition',
+          "group kds-action-surface kds-calendar-day border transition",
           isSelected
-            ? 'kds-calendar-day-selected'
+            ? "kds-calendar-day-selected"
             : isToday
-              ? 'kds-calendar-day-today'
+              ? "kds-calendar-day-today"
               : dayEvents.length > 0
-                ? 'kds-surface-muted text-[var(--text-primary)]'
-                : '',
-        ].join(' ')}
+                ? "kds-surface-muted"
+                : "",
+        ].join("")}
       >
         <span className="text-sm font-semibold leading-none tabular-nums">{day}</span>
         {dayEvents.length > 0 && (
@@ -125,7 +126,7 @@ export function DashboardEventsCalendar({
             {dayEvents.length}
           </span>
         )}
-      </button>
+      </Button>
     );
   });
 
@@ -191,11 +192,11 @@ export function DashboardEventsCalendar({
             </IconButton>
 
             <div className="min-w-0 text-center">
-              <h4 className="flex items-center justify-center gap-2 text-sm font-semibold capitalize leading-tight text-[var(--text-primary)]">
+              <Heading level={4} className="flex items-center justify-center gap-2 text-sm font-semibold capitalize leading-tight text-[var(--text-primary)]">
                 <Calendar className="h-4 w-4 text-[var(--brand-primary)]" strokeWidth={1.75} />
                 {calendarMonthLabel}
-              </h4>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visão operacional do mês</p>
+              </Heading>
+              <Text className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visão operacional do mês</Text>
             </div>
 
             <IconButton
@@ -211,18 +212,18 @@ export function DashboardEventsCalendar({
 
           <div className="mb-3 grid grid-cols-3 gap-1 rounded-full bg-[var(--bg-surface)] p-1">
             {viewTabs.map((tab) => (
-              <button
+              <Button variant="ghost"
                 key={tab.id}
                 type="button"
                 onClick={tab.onClick}
                 className={
                   calendarView === tab.id
-                    ? 'rounded-full bg-[var(--text-primary)] px-3 py-2 text-xs font-semibold text-[var(--text-inverse)] transition'
-                    : 'rounded-full px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                    ? "font-semibold transition"
+                    : "font-semibold transition"
                 }
               >
                 {tab.label}
-              </button>
+              </Button>
             ))}
           </div>
 
@@ -242,8 +243,8 @@ export function DashboardEventsCalendar({
         <div className="flex min-h-[28rem] flex-col rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--kds-radius-md)] bg-[var(--bg-surface)] px-3 py-2.5">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{calendarViewLabel}</p>
-              <p className="text-xs text-[var(--text-muted)]">Agenda comercial e relacional</p>
+              <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{calendarViewLabel}</Text>
+              <Text className="text-xs text-[var(--text-muted)]">Agenda comercial e relacional</Text>
             </div>
             <Badge tone={calendarViewEvents.length > 0 ? 'accent' : 'neutral'} size="sm">
               {calendarViewEvents.length} evento{calendarViewEvents.length === 1 ? '' : 's'}
@@ -325,17 +326,17 @@ function CalendarEventRow({
                 <span className="text-xs font-semibold text-[var(--text-secondary)]">{adjustment.contract.codigo_contrato}</span>
               )}
             </div>
-            <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">{title}</p>
+            <Text className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">{title}</Text>
             {currentAgeBand && previousAgeBand && (
-              <p className="truncate text-xs text-[var(--text-muted)]">
+              <Text className="truncate text-xs text-[var(--text-muted)]">
                 {adjustment.role} - faixa {formatAgeBandLabel(previousAgeBand)} para {formatAgeBandLabel(currentAgeBand)}
-              </p>
+              </Text>
             )}
             {contractInfoParts.length > 0 && (
-              <p className="truncate text-xs text-[var(--text-muted)]">{contractInfoParts.join(' - ')}</p>
+              <Text className="truncate text-xs text-[var(--text-muted)]">{contractInfoParts.join(' - ')}</Text>
             )}
             {adjustment.contract?.operadora && (
-              <p className="truncate text-xs text-[var(--text-muted)]">{adjustment.contract.operadora}</p>
+              <Text className="truncate text-xs text-[var(--text-muted)]">{adjustment.contract.operadora}</Text>
             )}
           </div>
         </div>
@@ -385,19 +386,19 @@ function CalendarEventRow({
             <Badge tone="neutral" size="sm" icon={Cake}>Aniversário</Badge>
             <span className="text-xs font-semibold text-[var(--text-secondary)]">{birthday.tipo}</span>
           </div>
-          <p className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">{birthday.nome}</p>
-          <p className="truncate text-xs text-[var(--text-muted)]">
+          <Text className="mt-1 truncate text-sm font-semibold text-[var(--text-primary)]">{birthday.nome}</Text>
+          <Text className="truncate text-xs text-[var(--text-muted)]">
             {birthday.tipo === 'Dependente' && birthday.holder ? `Titular: ${birthday.holder.nome_completo}` : 'Titular do contrato'}
-          </p>
+          </Text>
           {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
-            <p className="truncate text-xs font-medium text-[var(--brand-primary)]">
+            <Text className="truncate text-xs font-medium text-[var(--brand-primary)]">
               {birthday.holder.razao_social || birthday.holder.nome_fantasia}
-            </p>
+            </Text>
           )}
           {birthday.contract && (
-            <p className="truncate text-xs text-[var(--text-muted)]">
+            <Text className="truncate text-xs text-[var(--text-muted)]">
               {birthday.contract.codigo_contrato} - {birthday.contract.operadora}
-            </p>
+            </Text>
           )}
         </div>
       </div>

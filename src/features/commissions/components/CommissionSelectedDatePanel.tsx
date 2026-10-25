@@ -1,3 +1,4 @@
+import { Text } from '../../../design-system';
 import {
   Surface,
 } from "../../../design-system";
@@ -41,7 +42,7 @@ export default function CommissionSelectedDatePanel({
           <Surface key={event.id} padding="sm" className="p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className={cx(
+                <Text className={cx(
                   "text-sm font-semibold",
                   isCommission
                     ? "text-[var(--accent-gold-hover)]"
@@ -50,17 +51,17 @@ export default function CommissionSelectedDatePanel({
                   {isCommission
                     ? "Recebimento de comissão"
                     : "Pagamento de bonificação"}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                </Text>
+                <Text className="mt-1 text-xs text-[var(--text-secondary)]">
                   Contrato{" "}
                   {event.contract.codigo_contrato || "Sem código"} -{" "}
                   {event.contract.operadora || "Operadora não informada"}
-                </p>
+                </Text>
                 {event.installmentCount && event.installmentIndex && (
-                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                  <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                     Parcela {event.installmentIndex} de{" "}
                     {event.installmentCount}
-                  </p>
+                  </Text>
                 )}
               </div>
 

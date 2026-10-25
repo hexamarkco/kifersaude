@@ -1,3 +1,5 @@
+import { Heading, Text, Image, FieldLabel } from '../../../design-system';
+import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   Check,
@@ -399,8 +401,8 @@ export default function LinksScreen() {
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="kds-card-title">Perfil da página</h3>
-            <p className="kds-card-subtitle">Título, biografia e foto exibidos no topo de {PUBLIC_LINKS_PATH}.</p>
+            <Heading level={3} className="kds-card-title">Perfil da página</Heading>
+            <Text className="kds-card-subtitle">Título, biografia e foto exibidos no topo de {PUBLIC_LINKS_PATH}.</Text>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyPublicUrl()}>
@@ -423,7 +425,7 @@ export default function LinksScreen() {
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20 shrink-0">
                 {profileForm.avatar_url ? (
-                  <img
+                  <Image
                     src={profileForm.avatar_url}
                     alt="Preview da foto"
                     className="h-20 w-20 rounded-full border border-[var(--border-subtle)] object-cover"
@@ -434,9 +436,9 @@ export default function LinksScreen() {
                   </div>
                 )}
 
-                <label className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm transition-colors hover:bg-[var(--bg-hover)]">
-                  <input
-                    type="file"
+                <FieldLabel className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm transition-colors hover:bg-[var(--bg-hover)]">
+                  <FileInput
+
                     accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                     onChange={(event) => void handleAvatarUpload(event)}
                     className="hidden"
@@ -447,7 +449,7 @@ export default function LinksScreen() {
                   ) : (
                     <Upload className="h-4 w-4" />
                   )}
-                </label>
+                </FieldLabel>
               </div>
 
               <div className="flex-1 space-y-1.5">
@@ -457,7 +459,7 @@ export default function LinksScreen() {
                   placeholder="Cole a URL de uma imagem ou envie um arquivo"
                   size="md"
                 />
-                <p className="text-xs text-[var(--text-muted)]">JPG, PNG, WEBP ou GIF — máx 5MB.</p>
+                <Text className="text-xs text-[var(--text-muted)]">JPG, PNG, WEBP ou GIF — máx 5MB.</Text>
               </div>
             </div>
           </Field>
@@ -511,10 +513,10 @@ export default function LinksScreen() {
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="kds-card-title">Links</h3>
-            <p className="kds-card-subtitle">
+            <Heading level={3} className="kds-card-title">Links</Heading>
+            <Text className="kds-card-subtitle">
               Adicione WhatsApp, redes sociais ou qualquer outra URL. Use as setas para reordenar.
-            </p>
+            </Text>
           </div>
           <Button
             onClick={() => {
@@ -528,9 +530,9 @@ export default function LinksScreen() {
         </div>
 
         {links.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">
+          <Text className="text-sm text-[var(--text-muted)]">
             Nenhum link cadastrado ainda. Clique em "Novo link" para começar.
-          </p>
+          </Text>
         ) : (
           <div className="space-y-3">
             {links.map((link, index) => {
@@ -605,14 +607,14 @@ export default function LinksScreen() {
                         </div>
                       ) : (
                         <>
-                          <p className="truncate text-sm font-medium text-[var(--text-primary)]">{link.title}</p>
-                          <p className="truncate text-xs text-[var(--text-secondary)]" title={link.url}>
+                          <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{link.title}</Text>
+                          <Text className="truncate text-xs text-[var(--text-secondary)]" title={link.url}>
                             {link.url}
-                          </p>
-                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                          </Text>
+                          <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                             {link.is_active ? "Ativo" : "Inativo"} · {link.click_count} clique
                             {link.click_count === 1 ? "" : "s"}
-                          </p>
+                          </Text>
                         </>
                       )}
                     </div>

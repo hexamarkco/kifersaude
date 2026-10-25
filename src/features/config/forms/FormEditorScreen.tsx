@@ -1,3 +1,4 @@
+import { Heading, Text, TextLink } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -337,7 +338,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="kds-card-title">Configurações</h3>
+          <Heading level={3} className="kds-card-title">Configurações</Heading>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyLink()}>
               <Copy className="kds-control-icon" />
@@ -414,8 +415,8 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="kds-card-title">Perguntas</h3>
-            <p className="kds-card-subtitle">Uma pergunta por tela. A última etapa (contato) é sempre fixa.</p>
+            <Heading level={3} className="kds-card-title">Perguntas</Heading>
+            <Text className="kds-card-subtitle">Uma pergunta por tela. A última etapa (contato) é sempre fixa.</Text>
           </div>
           <Button onClick={() => setStepDialog({ step: null })} disabled={stepMutationInFlight}>
             <Plus className="kds-control-icon" />
@@ -427,15 +428,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           <LoadingState compact label="Carregando perguntas..." />
         ) : stepsLoadError && steps.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--danger)] p-5 text-center" role="alert">
-            <p className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as perguntas.</p>
-            <p className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</p>
+            <Text className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as perguntas.</Text>
+            <Text className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</Text>
             <Button variant="secondary" size="sm" onClick={() => void loadSteps()}>
               <RefreshCw className="kds-control-icon" />
               <span>Tentar novamente</span>
             </Button>
           </div>
         ) : questionSteps.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">Nenhuma pergunta ainda. Adicione a primeira acima.</p>
+          <Text className="text-sm text-[var(--text-muted)]">Nenhuma pergunta ainda. Adicione a primeira acima.</Text>
         ) : (
           <div className="space-y-3">
             {questionSteps.map((step, index) => {
@@ -454,7 +455,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                       <ListChecks className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-[var(--text-primary)]">{step.title}</p>
+                      <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{step.title}</Text>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         <Badge tone="neutral" size="sm">{STEP_TYPE_LABELS[step.step_type]}</Badge>
                         {step.is_required && <Badge tone="gold" size="sm">Obrigatória</Badge>}
@@ -479,13 +480,13 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
         {contactStep && (
           <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Etapa final (fixa)</p>
+            <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Etapa final (fixa)</Text>
             <ContactStepEditor step={contactStep} busy={stepMutationInFlight} onSave={handleSaveContactStep} />
             {form.request_geolocation && (
-              <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <Text className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                 <MapPin className="h-3.5 w-3.5" />
                 A etapa de localização aparece automaticamente antes desta.
-              </p>
+              </Text>
             )}
           </div>
         )}
@@ -494,8 +495,8 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="kds-card-title">Respostas recentes</h3>
-            <p className="kds-card-subtitle">{form.submission_count} envio{form.submission_count === 1 ? "" : "s"} no total. Cada envio já criou um lead.</p>
+            <Heading level={3} className="kds-card-title">Respostas recentes</Heading>
+            <Text className="kds-card-subtitle">{form.submission_count} envio{form.submission_count === 1 ? "" : "s"} no total. Cada envio já criou um lead.</Text>
           </div>
           <Users className="h-5 w-5 text-[var(--text-muted)]" />
         </div>
@@ -504,28 +505,28 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           <LoadingState compact label="Carregando respostas..." />
         ) : submissionsLoadError && submissions.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--danger)] p-5 text-center" role="alert">
-            <p className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as respostas.</p>
-            <p className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</p>
+            <Text className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as respostas.</Text>
+            <Text className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</Text>
             <Button variant="secondary" size="sm" onClick={() => void loadSubmissions()}>
               <RefreshCw className="kds-control-icon" />
               <span>Tentar novamente</span>
             </Button>
           </div>
         ) : submissions.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">Nenhuma resposta recebida ainda.</p>
+          <Text className="text-sm text-[var(--text-muted)]">Nenhuma resposta recebida ainda.</Text>
         ) : (
           <div className="space-y-2">
             {submissions.map((submission) => (
               <Card key={submission.id} variant="muted" padding="sm" className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{submission.contact_name}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">
+                  <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{submission.contact_name}</Text>
+                  <Text className="text-xs text-[var(--text-secondary)]">
                     {submission.contact_phone} · {new Date(submission.created_at).toLocaleString("pt-BR")}
-                  </p>
+                  </Text>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {submission.geo_permission === "granted" && (
-                    <a
+                    <TextLink
                       href={`https://maps.google.com/?q=${submission.latitude},${submission.longitude}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -533,7 +534,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                     >
                       <MapPin className="h-3.5 w-3.5" />
                       Localização
-                    </a>
+                    </TextLink>
                   )}
                   {submission.lead_id && (
                     <Badge tone="success" size="sm">

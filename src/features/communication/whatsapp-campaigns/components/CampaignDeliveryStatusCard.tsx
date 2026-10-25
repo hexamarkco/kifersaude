@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../../design-system';
 import { useEffect, useState } from 'react';
 import { Activity, AlertCircle, Send } from 'lucide-react';
 import { Badge, Card, OperationalMetricChip, Surface } from '../../../../design-system';
@@ -59,12 +60,12 @@ export function CampaignDeliveryStatusCard(props: Props) {
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Activity className="h-5 w-5 text-[color:var(--panel-accent-strong)]" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Envios automáticos</h2>
+            <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Envios automáticos</Heading>
             <Badge tone={status.tone}>{status.label}</Badge>
           </div>
-          <p className="max-w-2xl text-sm text-[color:var(--panel-text-soft)]">{status.description}</p>
+          <Text className="max-w-2xl text-sm text-[color:var(--panel-text-soft)]">{status.description}</Text>
           {health.latestRun && available && (
-            <p className="text-xs text-[color:var(--panel-text-muted)]">Última verificação: {formatCheckTime(health.latestRun.finished_at || health.latestRun.started_at, now)}.</p>
+            <Text className="text-xs text-[color:var(--panel-text-muted)]">Última verificação: {formatCheckTime(health.latestRun.finished_at || health.latestRun.started_at, now)}.</Text>
           )}
         </div>
         {health.latestRun && available && (
@@ -85,15 +86,15 @@ export function CampaignDeliveryStatusCard(props: Props) {
                   <span>{sourceLabels[run.source] || 'Verificação registrada'}</span>
                   <Badge tone={run.status === 'failed' || run.failed > 0 ? 'danger' : run.status === 'running' ? 'accent' : 'neutral'} size="sm">{statusLabels[run.status] || 'Situação não confirmada'}</Badge>
                 </div>
-                <p className="text-xs text-[color:var(--panel-text-muted)]">{run.action === 'activate' ? 'Início de campanha' : 'Verificação de envios'} · {formatCheckTime(run.finished_at || run.started_at, now)}</p>
-                <p className="text-xs text-[color:var(--panel-text-soft)]">{run.processed} contato(s) analisado(s) · {run.sent} com envio concluído · {run.failed} com falha</p>
+                <Text className="text-xs text-[color:var(--panel-text-muted)]">{run.action === 'activate' ? 'Início de campanha' : 'Verificação de envios'} · {formatCheckTime(run.finished_at || run.started_at, now)}</Text>
+                <Text className="text-xs text-[color:var(--panel-text-soft)]">{run.processed} contato(s) analisado(s) · {run.sent} com envio concluído · {run.failed} com falha</Text>
               </Surface>
             ))}
           </div>
           {health.latestFailure && (
             <details className="mt-3 text-sm">
               <summary className="cursor-pointer font-medium text-[color:var(--panel-text-soft)]">Informações do último problema para o suporte</summary>
-              <p className="mt-2 break-words text-xs text-[color:var(--panel-text-muted)]">Registrado {formatCheckTime(health.latestFailure.finished_at || health.latestFailure.started_at, now)}. {health.latestFailure.error_message || 'Nenhum detalhe adicional foi registrado.'}</p>
+              <Text className="mt-2 break-words text-xs text-[color:var(--panel-text-muted)]">Registrado {formatCheckTime(health.latestFailure.finished_at || health.latestFailure.started_at, now)}. {health.latestFailure.error_message || 'Nenhum detalhe adicional foi registrado.'}</Text>
             </details>
           )}
         </details>

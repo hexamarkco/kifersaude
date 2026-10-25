@@ -1,3 +1,4 @@
+import { Text } from '../../../design-system';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowLeft,
@@ -776,7 +777,7 @@ export default function WorkspacePreview({
                       <CalendarDays size={18} />
                       <div>
                         <strong>Conversa inicial</strong>
-                        <p>Interesse em cobertura para a família.</p>
+                        <Text>Interesse em cobertura para a família.</Text>
                       </div>
                     </div>
                   </div>
@@ -906,7 +907,7 @@ function Dashboard({
           <SectionHeader title="Contatos em destaque" as="h2" />
           <div className="ds-stack">
             {contacts.slice(0, 3).map((row) => (
-              <button
+              <Button variant="ghost"
                 className="ds-contact-link"
                 key={row.id}
                 onClick={() => onOpen(row)}
@@ -917,7 +918,7 @@ function Dashboard({
                   <small>{row.operator}</small>
                 </span>
                 <ArrowUpRight size={18} />
-              </button>
+              </Button>
             ))}
           </div>
         </PageSection>

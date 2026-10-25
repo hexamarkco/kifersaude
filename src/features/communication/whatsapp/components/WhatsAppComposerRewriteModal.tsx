@@ -1,3 +1,5 @@
+import { Heading, Text } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import {
   Button,
   Surface,
@@ -94,15 +96,15 @@ export default function WhatsAppComposerRewriteModal({
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
         <div className="space-y-4">
           <Surface variant="muted" padding="sm">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Objetivo da reescrita</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+            <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Objetivo da reescrita</Heading>
+            <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Escolha o ajuste principal. A IA preserva a intenção da mensagem e dados confirmados.
-            </p>
+            </Text>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
               {TONE_OPTIONS.map((option) => {
                 const active = tone === option.value;
                 return (
-                  <button
+                  <ActionSurface variant="plain" padding="none"
                     key={option.value}
                     type="button"
                     onClick={() => onChangeTone(option.value)}
@@ -110,19 +112,19 @@ export default function WhatsAppComposerRewriteModal({
                       ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--text-primary)]'
                       : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]'}`}
                   >
-                    <p className="text-sm font-semibold">{option.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{option.description}</p>
-                  </button>
+                    <Text className="text-sm font-semibold">{option.label}</Text>
+                    <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{option.description}</Text>
+                  </ActionSurface>
                 );
               })}
             </div>
           </Surface>
 
           <Surface padding="sm">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Instruções extras</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+            <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Instruções extras</Heading>
+            <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Opcional. Ex.: não use emoji, termine com pergunta objetiva, mantenha linguagem simples.
-            </p>
+            </Text>
             <Textarea
               value={customInstructions}
               onChange={(event) => onChangeCustomInstructions(event.target.value)}
@@ -134,10 +136,10 @@ export default function WhatsAppComposerRewriteModal({
           </Surface>
 
           <Surface padding="sm">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Texto base</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+            <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Texto base</Heading>
+            <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Você pode ajustar o texto aqui antes de pedir uma nova reescrita.
-            </p>
+            </Text>
             <Textarea
               value={sourceValue}
               onChange={(event) => onChangeSourceValue(event.target.value)}
@@ -153,10 +155,10 @@ export default function WhatsAppComposerRewriteModal({
           <Surface padding="sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sugestão da IA</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Sugestão da IA</Heading>
+                <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                   Revise e edite livremente antes de aplicar no composer.
-                </p>
+                </Text>
               </div>
             </div>
             <Textarea

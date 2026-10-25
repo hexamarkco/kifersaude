@@ -1,0 +1,1391 @@
+[
+  {
+    "file": "src\\components\\AppErrorBoundary.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 49,
+        "attrs": "type=\"button\"\n            className=\"mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--text-on-brand)] transition hover:bg-[var(--brand-primary-hover)] focus:outline-none focus:ring-2 focus:rin"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\charts\\DonutChart.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 132,
+        "attrs": "key={`${segment.label}-${index}`}\n            type=\"button\"\n            className=\"kds-donut-legend-item flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-r"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\ContractForm.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"range\"",
+        "line": 1695,
+        "attrs": "type=\"range\"\r\n                    min=\"0\"\r\n                    max=\"10\"\r\n                    step=\"0.1\"\r\n                    value={formData.comissao_multiplicador}\r\n                    onChange={(e) =>\r\n                      setFormData({\r\n                        ...formData,\r\n "
+      },
+      {
+        "tag": "select",
+        "line": 2268,
+        "attrs": "className=\"kds-input w-full\" value={saleOperator} disabled={Boolean(contract?.sale_operator_user_id)} onChange={(event) => setSaleOperator(event.target.value)}"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\Layout.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "line": 818,
+        "attrs": "ref={(el) => { menuItemRefs.current[tab.id] = el; }}\r\n            onClick={(event) => handleTabClick(tab, event.currentTarget)}\r\n            data-sidebar-item\r\n            className={cx(\r\n              'kds-sidebar-item relative flex items-center text-left text-sm font-medium tra"
+      },
+      {
+        "tag": "button",
+        "line": 862,
+        "attrs": "key={child.id}\r\n                    onClick={() => {\r\n                      onTabChange(child.id);\r\n                      setExpandedParent(null);\r\n                      setIsMobileMenuOpen(false);\r\n                    }}\r\n                    className={cx(\r\n                     "
+      },
+      {
+        "tag": "button",
+        "line": 895,
+        "attrs": "key={tab.id}\r\n        onClick={() => handleTabClick(tab)}\r\n        data-sidebar-item\r\n        className={cx(\r\n          'kds-sidebar-item relative flex items-center text-left text-sm font-medium transition-colors',\r\n          isActive && 'is-active',\r\n          isSidebarCollapsed"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 972,
+        "attrs": "ref={mobileMenuTriggerRef}\r\n        type=\"button\"\r\n        className=\"terracota-mobile-menu-trigger\"\r\n        onClick={() => setIsMobileMenuOpen((current) => !current)}\r\n        aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}\r\n        aria-expanded={isMobileMenuOpen}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 984,
+        "attrs": "type=\"button\"\r\n          className=\"terracota-mobile-menu-backdrop\"\r\n          onClick={() => setIsMobileMenuOpen(false)}\r\n          aria-label=\"Fechar menu\""
+      },
+      {
+        "tag": "button",
+        "line": 1022,
+        "attrs": "onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}\r\n              data-sidebar-item\r\n              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${\r\n                isSidebarCollapsed ? 'mx-auto "
+      },
+      {
+        "tag": "button",
+        "line": 1034,
+        "attrs": "ref={notificationsButtonRef}\r\n                onClick={() => setShowNotificationsDropdown((current) => !current)}\r\n                data-sidebar-item\r\n                className={`kds-sidebar-item relative flex items-center text-sm font-medium transition-all duration-200 ${\n       "
+      },
+      {
+        "tag": "button",
+        "line": 1070,
+        "attrs": "onClick={() => {\r\n                          onTabChange('agenda');\r\n                          setShowNotificationsDropdown(false);\r\n                          setIsMobileMenuOpen(false);\r\n                        }}\r\n                        className=\"text-xs font-semibold text-[va"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1160,
+        "attrs": "type=\"button\"\r\n              onClick={toggleThemeMode}\r\n              data-sidebar-item\r\n              className={`kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${\r\n                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' "
+      },
+      {
+        "tag": "button",
+        "line": 1173,
+        "attrs": "onClick={handleLogout}\r\n              data-sidebar-item\r\n              className={`kds-sidebar-item kds-sidebar-item-danger flex items-center text-sm font-medium transition-all duration-200 ${\r\n                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-ful"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1197,
+        "attrs": "key={item.id}\n              type=\"button\"\n              onClick={() => {\n                setIsMobileMoreOpen(false);\n                onTabChange(item.id);\n              }}\n              className={cx('terracota-mobile-bottom-nav-item', isActive && 'is-active')}\n              aria"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1212,
+        "attrs": "type=\"button\"\n          onClick={() => setIsMobileMoreOpen((current) => !current)}\n          className={cx('terracota-mobile-bottom-nav-item', isMobileMoreOpen && 'is-active')}\n          aria-label=\"Abrir mais opções\"\n          aria-expanded={isMobileMoreOpen}\n          aria-cont"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1227,
+        "attrs": "type=\"button\"\n            className=\"terracota-mobile-more-backdrop\"\n            onClick={() => setIsMobileMoreOpen(false)}\n            aria-label=\"Fechar mais opções\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1238,
+        "attrs": "key={item.id}\n                  type=\"button\"\n                  role=\"menuitem\"\n                  onClick={() => {\n                    setIsMobileMoreOpen(false);\n                    onTabChange(item.id);\n                  }}\n                  className={cx('terracota-mobile-more"
+      },
+      {
+        "tag": "button",
+        "line": 1286,
+        "attrs": "key={child.id}\r\n                  onClick={() => {\r\n                    onTabChange(child.id);\r\n                    setActiveDropdownTab(null);\r\n                    setCollapsedDropdownPosition(null);\r\n                    setIsMobileMenuOpen(false);\r\n                  }}\n        "
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\LeadDetailsPanel.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 140,
+        "attrs": "type=\"button\"\r\n                  onClick={onRefreshContracts}\r\n                  className=\"inline-flex items-center gap-2 rounded-full border border-[var(--warning-border)] px-3 py-1 text-xs font-semibold text-[var(--warning-text)] transition-colors hover:bg-[var(--warning-soft)"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\LeadFavoriteStar.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 45,
+        "attrs": "type=\"button\"\r\n      onClick={(event) => void handleClick(event)}\r\n      disabled={pending}\r\n      aria-pressed={favorito}\r\n      title={favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}\r\n      className={cx(\n        'kds-favorite-toggle inline-flex shrink-0 items-cent"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\LeadForm.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 518,
+        "attrs": "type=\"button\"\n                    onClick={() => void handleCepSearch()}\n                    className=\"transition-colors hover:text-[var(--brand-primary)]\"\n                    aria-label=\"Buscar CEP\""
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\StatusDropdown.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 31,
+        "attrs": "type=\"button\" disabled={disabled || isUpdating} style={{ ...(statusColor ? { '--op-status-color': statusColor } : {}) } as CSSProperties} aria-haspopup=\"listbox\" aria-expanded={isOpen} aria-busy={isUpdating} className={cx('kds-op-status-badge kds-op-status-trigger', (disabled || "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 36,
+        "attrs": "type=\"button\" key={status.id} onClick={() => void selectStatus(status.nome)} className={cx('kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm', status.nome === currentStatus && 'is-selected font-medium')}"
+      }
+    ]
+  },
+  {
+    "file": "src\\components\\ui\\VariableAutocompleteTextarea.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 141,
+        "attrs": "key={suggestion.key}\r\n                  type=\"button\"\r\n                  className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left ${\r\n                    isActive\r\n                      ? 'bg-[var(--brand-primary-muted)] text-[var(--text-primary)]'\r\n         "
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\agenda\\AgendaScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1215,
+        "attrs": "key={day}\r\n          type=\"button\"\r\n          onClick={() => {\r\n            void handleDayClick(cellDate);\r\n          }}\r\n          disabled={Boolean(reschedulingInFlightId)}\r\n          className={`kds-action-surface kds-calendar-day border transition-colors ${stateClass}`}\n     "
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\ai-sandbox\\AiSandboxChatScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 588,
+        "attrs": "type=\"button\"\r\n            className=\"flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface-muted)]\"\n            onClick={() => setShowScenarioPicker(!showScenarioPicker)}"
+      },
+      {
+        "tag": "input",
+        "type": "\"text\"",
+        "line": 602,
+        "attrs": "type=\"text\"\r\n                  value={scenarioSearch}\r\n                  onChange={(e) => setScenarioSearch(e.target.value)}\r\n                  placeholder=\"Buscar cenário...\"\r\n                  className=\"w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 621,
+        "attrs": "key={s.key}\r\n                        type=\"button\"\r\n                        className=\"flex w-full items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)] disabled:opacity-50\"\n                  "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 665,
+        "attrs": "type=\"button\"\n                      onClick={() => handleSelectConversation(conversation.id)}\n                      className=\"flex min-w-0 flex-1 items-center gap-1.5 text-left\"\n                      title={conversation.title}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 678,
+        "attrs": "type=\"button\"\r\n                      onClick={() => handleDeleteConversation(conversation.id)}\r\n                      className=\"shrink-0 text-[var(--text-muted)] opacity-0 transition-colors hover:text-[var(--danger)] group-hover:opacity-100\"\r\n                      title=\"Apagar "
+      },
+      {
+        "tag": "textarea",
+        "line": 869,
+        "attrs": "value={draft}\r\n              onChange={(event) => setDraft(event.target.value)}\r\n              onKeyDown={handleKeyDown}\r\n              placeholder=\"Digite como se fosse o lead...\"\r\n              rows={1}\r\n              disabled={sendingDraft}\r\n              className=\"kds-textar"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\blog\\components\\BlogEditor.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 154,
+        "attrs": "type=\"file\"\n                  accept=\"image/jpeg,image/jpg,image/png,image/webp,image/gif\"\n                  onChange={onCoverImageUpload}\n                  className=\"hidden\"\n                  disabled={uploadingCover}"
+      },
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 211,
+        "attrs": "type=\"file\"\n                accept=\"image/jpeg,image/jpg,image/png,image/webp,image/gif\"\n                onChange={onContentImageUpload}\n                className=\"hidden\"\n                disabled={uploadingContent}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\commissions\\components\\CommissionMonthGrid.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 61,
+        "attrs": "key={day}\r\n        type=\"button\"\r\n        aria-pressed={isSelected}\n        onClick={() => onSelectDate(cellDate)}\n        className={cx(\n          \"kds-action-surface kds-calendar-day border text-[var(--text-secondary)] transition-colors\",\n          stateClass,\n        )}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\followUpModalUi.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 124,
+        "attrs": "key={`${variation.label}:${index}`}\r\n          type=\"button\"\r\n          onClick={() => onSelect(variation.text)}\r\n          disabled={disabled}\r\n          className=\"min-w-[12rem] max-w-[16rem] shrink-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 206,
+        "attrs": "type=\"button\"\r\n      onClick={onClick}\r\n      disabled={disabled}\r\n      title={description}\r\n      className=\"flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] "
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppAgendaModal.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1453,
+        "attrs": "key={days}\r\n                            type=\"button\"\r\n                            onClick={() => {\r\n                              setQuickScheduleDropdown(null);\r\n                              void handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);\r\n                      "
+      },
+      {
+        "tag": "input",
+        "type": "\"radio\"",
+        "line": 1967,
+        "attrs": "type=\"radio\"\r\n                            name={`duplicate-keep-${group.key}`}\r\n                            checked={keepId === reminder.id}\r\n                            onChange={() => handleSelectDuplicateKeep(group.key, reminder.id)}\r\n                            disabled={!can"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppAttendanceCritiquePanel.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 231,
+        "attrs": "type=\"button\"\r\n                onClick={() => setShowHistory((prev) => !prev)}\r\n                className=\"flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 242,
+        "attrs": "key={item.id}\r\n                      type=\"button\"\r\n                      onClick={() => setSelectedId(item.id)}\r\n                      className=\"flex items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-left text-xs hover:bg-[var(--b"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppBatchFollowUpModal.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 748,
+        "attrs": "type=\"button\"\r\n                onClick={handleToggleSelectAll}\r\n                className=\"text-[11px] font-semibold text-[var(--brand-primary)] transition hover:opacity-70\"\r\n                disabled={phase === 'sending'}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 787,
+        "attrs": "type=\"button\"\r\n                      onClick={() => setActiveItemIndex(index)}\r\n                      className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs transition ${\r\n                        isActive ? 'border border-[var(--brand-primary-"
+      },
+      {
+        "tag": "input",
+        "type": "\"checkbox\"",
+        "line": 893,
+        "attrs": "type=\"checkbox\"\n                        className=\"mt-0.5\"\n                        checked={activeItem.approvedScheduleAction === 'schedule'}\n                        onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {\n                          appro"
+      },
+      {
+        "tag": "input",
+        "type": "\"datetime-local\"",
+        "line": 919,
+        "attrs": "type=\"datetime-local\"\n                        className=\"mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1.5 text-xs text-[var(--text-primary)]\"\n                        value={activeItem.approvedScheduleDate ? new Date(activeItem.approv"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppChatFilesDrawer.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 258,
+        "attrs": "type=\"button\"\n        onClick={onOpen}\n        className=\"comm-whatsapp-chat-files-visual-preview\"\n        aria-label={`Abrir ${isVideo ? 'vídeo' : 'imagem'}: ${getMediaTitle(message)}`}"
+      },
+      {
+        "tag": "input",
+        "type": "\"range\"",
+        "line": 372,
+        "attrs": "type=\"range\"\n          min=\"0\"\n          max={duration || 0}\n          step=\"0.1\"\n          value={Math.min(currentTime, duration || 0)}\n          disabled={!url || !duration}\n          onChange={(event) => {\n            const next = Number(event.target.value);\n            if (au"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppChatMessageSearch.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 66,
+        "attrs": "type=\"button\" className=\"mt-2 font-medium text-[var(--text-link)] hover:underline\" onClick={onRetry}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 79,
+        "attrs": "key={result.message.id} type=\"button\" onClick={() => onSelect(result)} className=\"flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppComposer.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 180,
+        "attrs": "ref={fileInputRef}\n                    type=\"file\"\n                    multiple\n                    accept={attachmentInputAccept}\n                    className=\"hidden\"\n                    onChange={handleAttachmentInputChange}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 212,
+        "attrs": "type=\"button\"\n                        onClick={() => setReplyTargetMessage(null)}\n                        className=\"inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)]\"\n                        aria-"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 237,
+        "attrs": "type=\"button\"\n                            onClick={() => handleClearAttachment()}\n                            className=\"whatsapp-inbox-media-composer-close inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition\"\n                            aria-label=\"R"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 279,
+        "attrs": "type=\"button\"\n                            onClick={handleToggleMediaDrawer}\n                            disabled={!selectedChat}\n                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition"
+      },
+      {
+        "tag": "textarea",
+        "line": 290,
+        "attrs": "ref={composerTextareaRef}\n                            rows={1}\n                            value={messageDraft}\n                            onChange={handleComposerChange}\n                            onPaste={handleComposerPaste}\n                            onKeyDown={handleCompo"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 309,
+        "attrs": "type=\"button\"\n                            onClick={handleComposerSubmit}\n                            disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}\n                            className=\"whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrin"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 328,
+        "attrs": "type=\"button\"\n                                    onClick={() => setSelectedDocumentComposerAttachmentId(attachment.id)}\n                                    className=\"flex min-w-0 flex-1 items-center gap-2 text-left\"\n                                    aria-label=\"Selecionar doc"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 342,
+        "attrs": "type=\"button\"\n                                    onClick={() => handleClearAttachment(attachment.id)}\n                                    className=\"inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 353,
+        "attrs": "type=\"button\"\n                              onClick={() => handleAttachmentMenuAction('document')}\n                              disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}\n                              className=\"whatsapp-inbox-media-composer-add i"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 372,
+        "attrs": "type=\"button\"\n                          onClick={() => handleClearAttachment()}\n                          className=\"whatsapp-inbox-media-composer-close absolute left-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full transition\"\n                          aria-l"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 413,
+        "attrs": "type=\"button\"\n                          onClick={handleToggleMediaDrawer}\n                          disabled={!selectedChat}\n                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${med"
+      },
+      {
+        "tag": "textarea",
+        "line": 424,
+        "attrs": "ref={composerTextareaRef}\n                          rows={1}\n                          value={messageDraft}\n                          onChange={handleComposerChange}\n                          onPaste={handleComposerPaste}\n                          onKeyDown={handleComposerKeyDown"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 443,
+        "attrs": "type=\"button\"\n                          onClick={handleComposerSubmit}\n                          disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}\n                          className=\"whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 it"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 464,
+        "attrs": "type=\"button\"\n                                  onClick={() => setSelectedMediaComposerAttachmentId(attachment.id)}\n                                  className=\"flex h-full w-full items-center justify-center overflow-hidden\"\n                                  aria-label={`Selecion"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 480,
+        "attrs": "type=\"button\"\n                                  onClick={() => handleClearAttachment(attachment.id)}\n                                  className=\"absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 491,
+        "attrs": "type=\"button\"\n                            onClick={() => handleAttachmentMenuAction('media')}\n                            disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}\n                            className=\"whatsapp-inbox-media-composer-add inline-fle"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 589,
+        "attrs": "type=\"button\"\n                            onClick={() => handleAttachmentMenuAction('document')}\n                            className=\"whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 599,
+        "attrs": "type=\"button\"\n                            onClick={() => handleAttachmentMenuAction('media')}\n                            className=\"whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 609,
+        "attrs": "type=\"button\"\n                            onClick={() => handleAttachmentMenuAction('audio')}\n                            className=\"whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 661,
+        "attrs": "type=\"button\"\n                            onClick={() => {\n                              setComposerAiMenuOpen(false);\n                              handleQuickRewriteComposerText('grammar');\n                            }}\n                            disabled={Boolean(composerRew"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 676,
+        "attrs": "type=\"button\"\n                            onClick={() => {\n                              setComposerAiMenuOpen(false);\n                              handleQuickRewriteComposerText('adapt_context');\n                            }}\n                            disabled={Boolean(compo"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 691,
+        "attrs": "type=\"button\"\n                            onClick={() => {\n                              setComposerAiMenuOpen(false);\n                              handleOpenComposerRewriteModal();\n                            }}\n                            disabled={Boolean(composerRewriteDisab"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 706,
+        "attrs": "type=\"button\"\n                            onClick={() => {\n                              setComposerAiMenuOpen(false);\n                              void handleGenerateReplySuggestion(true);\n                            }}\n                            disabled={Boolean(replySuggest"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 723,
+        "attrs": "type=\"button\"\n                              onMouseDown={(event) => event.preventDefault()}\n                              onClick={() => {\n                                setComposerAiMenuOpen(false);\n                                handleApplyComposerTextFormat('bold');\n        "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 737,
+        "attrs": "type=\"button\"\n                              onMouseDown={(event) => event.preventDefault()}\n                              onClick={() => {\n                                setComposerAiMenuOpen(false);\n                                handleApplyComposerTextFormat('italic');\n      "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 751,
+        "attrs": "type=\"button\"\n                              onMouseDown={(event) => event.preventDefault()}\n                              onClick={() => {\n                                setComposerAiMenuOpen(false);\n                                handleApplyComposerTextFormat('strike');\n      "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 795,
+        "attrs": "key={option.id}\n                                    type=\"button\"\n                                    className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--brand-primary-soft)] text-[var(--text-primary)]' : 'text-[var(-"
+      },
+      {
+        "tag": "textarea",
+        "line": 847,
+        "attrs": "ref={composerTextareaRef}\n                        rows={1}\n                        value={messageDraft}\n                        onChange={handleComposerChange}\n                        onPaste={handleComposerPaste}\n                        onKeyDown={handleComposerKeyDown}\n        "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 869,
+        "attrs": "type=\"button\"\n                        onClick={handleComposerSubmit}\n                        disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}\n                        className={`whatsapp-inbox-composer-action inline-flex h-10 w-"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppComposerRewriteModal.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 105,
+        "attrs": "key={option.value}\n                    type=\"button\"\n                    onClick={() => onChangeTone(option.value)}\n                    className={`rounded-2xl border px-3 py-3 text-left transition ${active\n                      ? 'border-[var(--brand-primary)] bg-[var(--brand-pr"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxConversationPane.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 60,
+        "attrs": "type=\"button\"\n              onClick={conversation.removedAttachment.onUndo}\n              className=\"shrink-0 text-xs font-semibold text-[var(--brand-primary)] hover:underline\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxDialogs.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 99,
+        "attrs": "key={chat.id} type=\"button\" onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[va"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxList.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 182,
+        "attrs": "type=\"button\"\n              onClick={() => onChange([])}\n              className=\"text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary)] transition hover:text-[var(--brand-primary-hover)]\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 254,
+        "attrs": "type=\"button\"\n            onClick={() => onOpenImage(message.id)}\n            className=\"relative block h-full w-full overflow-hidden\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 283,
+        "attrs": "type=\"button\" onClick={() => onOpenImage(message.id)} className=\"relative block h-full w-full overflow-hidden\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 389,
+        "attrs": "type=\"button\" onClick={() => onSelect(chat.id)} className=\"min-w-0 w-full text-left\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 441,
+        "attrs": "ref={menuTriggerRef}\n        type=\"button\"\n        onClick={(event) => {\n          event.stopPropagation();\n          onToggleMenu(chat.id);\n        }}\n        className={cx(\n          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-full te"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 488,
+        "attrs": "type=\"button\" onClick={() => onSelect(result.chat.id)} className=\"min-w-0 w-full text-left\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMediaDrawer.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 402,
+        "attrs": "key={tab.id}\r\n                type=\"button\"\r\n                className={`comm-emoji-picker-tab ${isActive ? 'is-active' : ''}`}\r\n                aria-label={tab.label}\r\n                title={tab.label}\r\n                onClick={() => handleScrollToCategory(tab.id)}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 422,
+        "attrs": "key={shortcut.id}\r\n                type=\"button\"\r\n                className={`comm-media-picker-shortcut ${isActive ? 'is-active' : ''}`}\r\n                onClick={() => setActiveShortcutId(shortcut.id)}"
+      },
+      {
+        "tag": "input",
+        "type": "\"text\"",
+        "line": 439,
+        "attrs": "type=\"text\"\r\n            value={searchQuery}\r\n            onChange={(event) => setSearchQuery(event.target.value)}\r\n            placeholder={mode === 'emoji' ? emojiPlaceholder : mediaPlaceholder}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 446,
+        "attrs": "type=\"button\" className=\"comm-emoji-search-clear\" onClick={() => setSearchQuery('')}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 464,
+        "attrs": "key={`${item.emoji}-${item.label}`}\r\n                      type=\"button\"\r\n                      className=\"comm-emoji-picker-item text-[1.6rem]\"\r\n                      title={item.label}\r\n                      onClick={() => handleSelectEmoji(item.emoji)}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 491,
+        "attrs": "key={`recent-${item.emoji}`}\r\n                        type=\"button\"\r\n                        className=\"comm-emoji-picker-item text-[1.6rem]\"\r\n                        title={item.label}\r\n                        onClick={() => handleSelectEmoji(item.emoji)}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 519,
+        "attrs": "key={`${category.id}-${item.emoji}`}\r\n                        type=\"button\"\r\n                        className=\"comm-emoji-picker-item text-[1.6rem]\"\r\n                        title={item.label}\r\n                        onClick={() => handleSelectEmoji(item.emoji)}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 552,
+        "attrs": "key={item.id}\r\n                type=\"button\"\r\n                disabled={!canSendMedia || sendingMedia}\r\n                title={item.title}\r\n                onClick={() => void handleSendSelectedMedia(item)}\r\n                className={mode === 'gif' ? 'comm-media-picker-gif-card'"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMediaViewer.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 24,
+        "attrs": "type=\"button\"\n      onClick={() => onSelect(message.id)}\n      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${active ? 'is-active scale-110 ring-2 ring-[var(--success)] ring-offset-2 ring-o"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 133,
+        "attrs": "type=\"button\"\n                onClick={() => changeZoom(zoom - 0.5)}\n                disabled={zoom === 1}\n                className=\"inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var("
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 143,
+        "attrs": "type=\"button\"\n                onClick={() => changeZoom(1)}\n                className=\"inline-flex h-10 min-w-12 items-center justify-center rounded-lg px-1 text-xs font-semibold tabular-nums text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--tex"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 152,
+        "attrs": "type=\"button\"\n                onClick={() => changeZoom(zoom + 0.5)}\n                disabled={zoom === 4}\n                className=\"inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var("
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 162,
+        "attrs": "type=\"button\"\n                onClick={rotate}\n                className=\"inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]\"\n                aria-label=\"Rotacionar ima"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 184,
+        "attrs": "type=\"button\"\n            onClick={onClose}\n            className=\"inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]\"\n            aria-label=\"Fechar\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 197,
+        "attrs": "type=\"button\"\n            onClick={() => goToIndex(selectedIndex - 1)}\n            className=\"whatsapp-inbox-media-viewer-nav left-4\"\n            aria-label=\"Mídia anterior\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 246,
+        "attrs": "type=\"button\"\n            onClick={() => goToIndex(selectedIndex + 1)}\n            className=\"whatsapp-inbox-media-viewer-nav right-4\"\n            aria-label=\"Próxima mídia\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 259,
+        "attrs": "type=\"button\"\n            onClick={() => scrollThumbnails('previous')}\n            className=\"whatsapp-inbox-media-viewer-strip-nav left-4\"\n            aria-label=\"Rolar miniaturas para trás\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 277,
+        "attrs": "type=\"button\"\n            onClick={() => scrollThumbnails('next')}\n            className=\"whatsapp-inbox-media-viewer-strip-nav right-4\"\n            aria-label=\"Rolar miniaturas para frente\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMessageContent.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 54,
+        "attrs": "type=\"button\"\n            onClick={onCancel}\n            className=\"ml-1 text-[var(--text-secondary)] underline decoration-current/40 underline-offset-2 transition hover:text-[var(--text-primary)]\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 192,
+        "attrs": "type=\"button\"\n        onClick={onTranscribe}\n        className=\"whatsapp-inbox-transcribe-button whatsapp-inbox-audio-transcribe-button\"\n        aria-label={transcriptionStatus === 'failed' ? 'Tentar transcrever novamente' : transcriptionStatus === 'completed' ? 'Retranscrever áu"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 228,
+        "attrs": "type=\"button\"\n            onClick={handleTogglePlayback}\n            className=\"whatsapp-inbox-audio-native-play\"\n            aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 244,
+        "attrs": "type=\"button\"\n                  onClick={handleCyclePlaybackRate}\n                  className=\"whatsapp-inbox-audio-speed-trigger\"\n                  aria-label={`Velocidade de reprodução: ${formatPlaybackRate(playbackRate)}. Clique para mudar`}\n                  title=\"Clique par"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 258,
+        "attrs": "type=\"button\"\n              className=\"whatsapp-inbox-audio-native-waveform\"\n              onClick={handleSeek}\n              aria-label={`Reproduzir áudio a partir de uma posição. Posição atual: ${formatDurationLabel(Math.round(currentTime))} de ${formatDurationLabel(Math.round("
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 405,
+        "attrs": "type=\"button\"\n      onClick={() => onOpenQuotedMessage(quotedExternalMessageId)}\n      className=\"w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] focus-vis"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 445,
+        "attrs": "type=\"button\"\n                        onClick={() => onOpenSharedContactChat(item)}\n                        disabled={sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}\n                        className={inboxInlineActi"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 453,
+        "attrs": "type=\"button\"\n                        onClick={() => onSaveSharedContact(item)}\n                        disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}\n                        className={inbox"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 507,
+        "attrs": "type=\"button\"\n                key={button.id ?? `${button.title}-${index}`}\n                onClick={() => onSelectInteractiveReply(message, button)}\n                disabled={message.direction !== 'inbound' || (!button.title && !button.id)}\n                className={cx(\n       "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 531,
+        "attrs": "type=\"button\"\n                      key={row.id ?? `${section.title}-row-${rowIndex}`}\n                      onClick={() => onSelectInteractiveReply(message, row)}\n                      disabled={message.direction !== 'inbound' || (!row.title && !row.id)}\n                      cl"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 650,
+        "attrs": "type=\"button\"\n                onClick={() => onOpenImage(message.id)}\n                className={isSticker\n                  ? 'whatsapp-inbox-media-content block w-fit max-w-[180px] overflow-hidden rounded-2xl bg-transparent text-left transition'\n                  : `whatsapp-in"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 693,
+        "attrs": "type=\"button\"\n              onClick={() => onOpenImage(message.id)}\n              className={`whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}\n              ar"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 777,
+        "attrs": "type=\"button\" onClick={retry} disabled={loading} className={inboxInlineActionClassName}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 834,
+        "attrs": "type=\"button\" onClick={retry} disabled={loading} className={inboxInlineActionClassName}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMessagePopovers.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 68,
+        "attrs": "key={`${openReactionPickerMessage.id}:${emoji}`}\n            type=\"button\"\n            onClick={() => onReactToMessage(openReactionPickerMessage, emoji)}\n            disabled={reactingMessageIds.has(openReactionPickerMessage.id)}\n            className={`message-bubble-emoji-butto"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 115,
+        "attrs": "type=\"button\" onClick={onClick} disabled={disabled} className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm transition disabled:pointer-events-none disabled:opacity-60 ${destructive ? 'text-[var(--danger-text)] hover:bg-[var(--danger-soft)]' : 'text-[var(--"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMessageThread.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 258,
+        "attrs": "ref={(node) => {\n                              if (node) {\n                                messageActionTriggerRefs.current[message.id] = node;\n                              } else {\n                                delete messageActionTriggerRefs.current[message.id];\n            "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 282,
+        "attrs": "type=\"button\"\n                            onClick={() => void handleToggleStarMessage(message)}\n                            disabled={starringMessageIds.has(message.id)}\n                            aria-busy={starringMessageIds.has(message.id)}\n                            classNa"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 330,
+        "attrs": "ref={(node) => {\n                                    if (node) {\n                                      reactionTriggerRefs.current[message.id] = node;\n                                    } else {\n                                      delete reactionTriggerRefs.current[message.id]"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppQuickRepliesModal.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 178,
+        "attrs": "key={quickReply.id}\n                  type=\"button\"\n                  onClick={() => setSelectedQuickReplyId(quickReply.id)}\n                  disabled={saving}\n                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${isSelected ? 'border-[var(--bra"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppScheduleMessageModal.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 556,
+        "attrs": "ref={attachmentInputRef}\n          type=\"file\"\n          className=\"hidden\"\n          accept=\"image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv\"\n          disabled={submitting || uploadingAttachment}\n          onChange={(event) => void handleAttachmentChange(event)}"
+      },
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 715,
+        "attrs": "ref={(element) => { sequenceAttachmentRefs.current[step.id] = element; }}\n                    type=\"file\"\n                    className=\"hidden\"\n                    accept=\"image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv\"\n                    disabled={submitting || B"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 842,
+        "attrs": "key={option.value}\n                type=\"button\"\n                onClick={() => setRecurrence(option.value)}\n                className={`p-3 rounded-lg border text-left transition-colors ${\n                  recurrence === option.value\n                    ? 'border-[var(--brand-p"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppThreadActionsMenu.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 66,
+        "attrs": "type=\"button\"\n            role=\"menuitem\"\n            onClick={() => {\n              setOpen(false);\n              if (isSelectedChatWaitingForQuote) {\n                return;\n              }\n              onToggleAutonomousAttendance(selectedChat);\n            }}\n            dis"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 85,
+        "attrs": "type=\"button\"\n          role=\"menuitem\"\n          onClick={() => {\n            setOpen(false);\n            onOpenChatFiles();\n          }}\n          className=\"kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 97,
+        "attrs": "type=\"button\"\n          role=\"menuitem\"\n          onClick={() => {\n            setOpen(false);\n            onToggleChatMessageSearch();\n          }}\n          className=\"kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 109,
+        "attrs": "type=\"button\"\n          role=\"menuitem\"\n          onClick={() => {\n            setOpen(false);\n            onOpenScheduledMessages();\n          }}\n          className=\"kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 121,
+        "attrs": "type=\"button\"\n          role=\"menuitem\"\n          onClick={() => {\n            setOpen(false);\n            onCopyTranscript();\n          }}\n          disabled={copyingTranscript}\n          className=\"kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 134,
+        "attrs": "type=\"button\"\n          role=\"menuitem\"\n          onClick={() => {\n            setOpen(false);\n            onRecoverHistory();\n          }}\n          disabled={Boolean(historyRecoveryDisabledReason) || syncingHistoryChatId === selectedChat.id}\n          className=\"kds-dropdown-op"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 149,
+        "attrs": "type=\"button\"\n            role=\"menuitem\"\n            onClick={() => {\n              setOpen(false);\n              onOpenFollowUp();\n            }}\n            disabled={Boolean(followUpGenerationDisabledReason)}\n            className=\"kds-dropdown-option flex w-full items-center"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 165,
+        "attrs": "type=\"button\"\n            role=\"menuitem\"\n            onClick={() => {\n              setOpen(false);\n              onOpenLeadDrawer();\n            }}\n            className=\"kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppThreadHeader.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 106,
+        "attrs": "type=\"button\" onClick={onBack} className=\"mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] lg:hidden\" aria-label=\"Voltar para a lista de conversas\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 141,
+        "attrs": "type=\"button\" onClick={() => onSaveContact(selectedChatDisplayName)} className=\"text-xs font-semibold text-[var(--brand-primary)] hover:underline\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 143,
+        "attrs": "type=\"button\" onClick={() => onSaveContact(selectedChatForPresentation.saved_contact_name || selectedChatDisplayName)} className=\"inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppVoiceComposer.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 64,
+        "attrs": "type=\"button\"\n                          onClick={() => handleClearAttachment()}\n                          className=\"whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition\"\n                          aria-label=\"Descartar nota de voz\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 73,
+        "attrs": "type=\"button\"\n                            onClick={handleToggleVoicePreviewPlayback}\n                            className=\"whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition\"\n                            aria-label={voicePreviewPlaying ? 'Pa"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 98,
+        "attrs": "type=\"button\"\n                          onClick={() => {\n                            handleClearAttachment();\n                            void handleStartVoiceRecording();\n                          }}\n                          className=\"whatsapp-inbox-voice-side-action is-accent"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 110,
+        "attrs": "type=\"button\"\n                            onClick={handleSendCurrentVoiceRecording}\n                            disabled={Boolean(sendDisabledReason)}\n                            className=\"whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 123,
+        "attrs": "type=\"button\"\n                        onClick={handleCancelVoiceRecording}\n                        className=\"whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition\"\n                        aria-label=\"Descartar gravação\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 143,
+        "attrs": "type=\"button\"\n                        onClick={() => handleStopVoiceRecording()}\n                        className=\"whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition\"\n                        aria-label=\"Parar gravação\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 152,
+        "attrs": "type=\"button\"\n                        onClick={handleSendCurrentVoiceRecording}\n                        disabled={Boolean(sendDisabledReason)}\n                        className=\"whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition\"\n           "
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\WhatsAppInboxScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 2422,
+        "attrs": "type=\"button\"\r\n                  onClick={() => {\r\n                    setChatMenuPointerAnchor(null);\r\n                    setOpenChatMenuChatId(null);\r\n                    void handleUpdateChatInboxState(openChatMenuChat, { isArchived: !openChatMenuChat.is_archived });\r\n       "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 2435,
+        "attrs": "type=\"button\"\r\n                  onClick={() => {\r\n                    setChatMenuPointerAnchor(null);\r\n                    setOpenChatMenuChatId(null);\r\n                    void handleUpdateChatInboxState(openChatMenuChat, { isMuted: !openChatMenuChat.is_muted });\r\n             "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 2448,
+        "attrs": "type=\"button\"\r\n                  onClick={() => {\r\n                    setChatMenuPointerAnchor(null);\r\n                    setOpenChatMenuChatId(null);\r\n                    void handleUpdateChatInboxState(openChatMenuChat, { isPinned: !openChatMenuChat.is_pinned });\r\n           "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 2461,
+        "attrs": "type=\"button\"\r\n                  onClick={() => {\r\n                    setChatMenuPointerAnchor(null);\r\n                    setOpenChatMenuChatId(null);\r\n                    void handleUpdateChatInboxState(openChatMenuChat, { markAsUnread: !openChatMenuChat.manual_unread && openC"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 2474,
+        "attrs": "type=\"button\"\r\n                onClick={() => {\r\n                  setChatMenuPointerAnchor(null);\r\n                  setOpenChatMenuChatId(null);\r\n                  setChatPendingDeletion(openChatMenuChat);\r\n                }}\r\n                disabled={deletingChatId === openCh"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\components\\CampaignSequenceFlow.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 64,
+        "attrs": "type=\"button\"\n        onClick={data.onSelect}\n        aria-pressed={data.active}\n        aria-label={`Editar ${data.title}. ${data.waitLabel}. ${data.description}`}\n        className={`nodrag nopan w-full rounded-[var(--kds-radius-lg)] border bg-[color:var(--panel-surface)] p-4 t"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\WhatsAppCampaignsScreen.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 1122,
+        "attrs": "type=\"file\" accept=\".csv,text/csv\" className=\"sr-only\" onChange={(event) => void handleCsvFile(event)}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1188,
+        "attrs": "type=\"button\"\r\n                      className=\"ml-1 rounded-full p-1 hover:bg-[color:var(--panel-surface-soft)]\"\r\n                      onClick={() => void handleDeleteTemplate(template.id)}\r\n                      title=\"Remover modelo\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1336,
+        "attrs": "key={suggestion.key}\r\n                                          type=\"button\"\r\n                                          className=\"flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]\"\r\n                                          "
+      },
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 1357,
+        "attrs": "ref={(element) => { mediaFileInputRefs.current[refKey] = element; }}\r\n                                    type=\"file\"\r\n                                    accept=\"image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx\"\r\n                                    className=\"sr-only\"\r\n    "
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\ai\\AiConfigScreen.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 266,
+        "attrs": "ref={fileInputRef}\n              type=\"file\"\n              accept=\".json\"\n              className=\"hidden\"\n              onChange={handleImportFile}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\ai\\components\\FeatureEditorDrawer.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"radio\"",
+        "line": 357,
+        "attrs": "type=\"radio\"\r\n                  name={`model-mode-${feature.key}`}\r\n                  checked={!modelOverrideEnabled}\r\n                  onChange={() => {\r\n                    setModelOverrideEnabled(false);\r\n                    if (effectiveModel?.source === \"feature\") setReason"
+      },
+      {
+        "tag": "input",
+        "type": "\"radio\"",
+        "line": 370,
+        "attrs": "type=\"radio\"\r\n                  name={`model-mode-${feature.key}`}\r\n                  checked={modelOverrideEnabled}\r\n                  onChange={() => setModelOverrideEnabled(true)}\r\n                  className=\"accent-[var(--brand-primary)]\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\general\\AccessControlManagerScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 192,
+        "attrs": "key={profile.id} type=\"button\" aria-pressed={selected} onClick={() => selectProfile(profile.id)}\n                  className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(-"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\general\\components\\SettingsCatalogList.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 58,
+        "attrs": "key={column.key} type=\"button\" onClick={() => sortBy(column.key)} aria-label={`Ordenar por ${column.label}`} aria-pressed={selected}\n            title={selected ? `${column.label}: ordem ${sorting.direction === 'asc' ? 'crescente' : 'decrescente'}` : `Ordenar por ${column.label}`"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\integrations\\api-docs\\ApiDocsScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 62,
+        "attrs": "key={item.id} type=\"button\" className={`kds-api-endpoint ${item.id === endpoint.id ? 'is-active' : ''}`}\n                      aria-current={item.id === endpoint.id ? 'true' : undefined} disabled={running}\n                      onClick={() => { explorer.selectEndpoint(item.id); s"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\integrations\\components\\MetaAdsPanel.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"checkbox\"",
+        "line": 42,
+        "attrs": "type=\"checkbox\" checked={eligible} onChange={(e) => setEligible(e.target.checked)}"
+      },
+      {
+        "tag": "input",
+        "type": "\"checkbox\"",
+        "line": 44,
+        "attrs": "type=\"checkbox\" checked={region} onChange={(e) => setRegion(e.target.checked)}"
+      },
+      {
+        "tag": "input",
+        "type": "\"checkbox\"",
+        "line": 45,
+        "attrs": "type=\"checkbox\" checked={interest} onChange={(e) => setInterest(e.target.checked)}"
+      },
+      {
+        "tag": "input",
+        "type": "\"checkbox\"",
+        "line": 55,
+        "attrs": "type=\"checkbox\" disabled={!contract} checked={completed} onChange={(e) => setCompleted(e.target.checked)}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\config\\links\\LinksScreen.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 438,
+        "attrs": "type=\"file\"\r\n                    accept=\"image/jpeg,image/jpg,image/png,image/webp,image/gif\"\r\n                    onChange={(event) => void handleAvatarUpload(event)}\r\n                    className=\"hidden\"\r\n                    disabled={uploadingAvatar}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\contracts\\components\\ContractBulkJsonImportDialog.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 129,
+        "attrs": "ref={inputRef}\n            type=\"file\"\n            accept=\"application/json,.json\"\n            className=\"sr-only\"\n            disabled={loading || importing}\n            onChange={(event) => {\n              selectFile(event.target.files?.[0]);\n              event.target.value = "
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\contracts\\components\\ContractJsonImportDialog.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"file\"",
+        "line": 124,
+        "attrs": "ref={inputRef}\n            type=\"file\"\n            accept=\"application/json,.json\"\n            className=\"sr-only\"\n            disabled={loading}\n        onChange={(event) => {\n          selectFile(event.target.files?.[0]);\n          event.target.value = '';\n        }}"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\contracts\\components\\ContractStatusDropdown.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 28,
+        "attrs": "type=\"button\"\n          disabled={saving || options.length === 0}\n          aria-label={`Alterar status do contrato ${code}: ${label}`}\n          aria-expanded={open && !saving}\n          aria-busy={saving}\n          className=\"rounded-full focus-visible:outline focus-visible:out"
+      },
+      {
+        "tag": "select",
+        "line": 45,
+        "attrs": "className=\"kds-input mt-1 w-full\" value={saleOperator} onChange={(event) => setSaleOperator(event.target.value)}"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 51,
+        "attrs": "key={option.value}\n            type=\"button\"\n            disabled={saving}\n            aria-pressed={option.value === status}\n            className={`kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm ${option.value === status ? 'is-selected font-medium' : '"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\contracts\\ContractsManagerScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 785,
+        "attrs": "type=\"button\"\r\n                        onClick={() => setSelectedContract(contract)}\r\n                        className=\"block w-full min-w-0 overflow-hidden text-left transition-colors hover:text-[var(--brand-primary)]\"\r\n                        title={getContractDisplayName(cont"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardCommercialSections.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 273,
+        "attrs": "key={stage.status} type=\"button\" onClick={() => onNavigateToStatus(stage.status)} className=\"rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outline-none focus-visible:ring-2 "
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 310,
+        "attrs": "key={item.id} type=\"button\" onClick={() => item.leadId ? onNavigateToLead(item.leadId) : openAgenda()} className=\"flex w-full items-start gap-3 rounded-xl border border-[var(--border-subtle)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outlin"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 326,
+        "attrs": "key={stage.status} type=\"button\" onClick={() => onNavigateToStatus(stage.status)} className=\"flex w-full items-center gap-3 text-left\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 365,
+        "attrs": "key={bucket.label} type=\"button\" onClick={() => bucket.leadIds[0] && onNavigateToLead(bucket.leadIds[0])} className=\"flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-[var(--surface-hover)]\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 436,
+        "attrs": "type=\"button\"\r\n                    onClick={() => onNavigateToLead(opportunity.leadId)}\r\n                    className=\"flex w-full flex-col gap-3 rounded-xl px-4 py-4 text-left transition-colors hover:border-[var(--brand-primary-border)] hover:bg-[var(--surface-hover)] focus-vis"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardDistributionSection.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 58,
+        "attrs": "key={item.label}\r\n          type=\"button\"\r\n          onClick={() => onSegmentClick(item.label)}\r\n          className=\"flex w-full items-center gap-2.5 rounded-full px-2 py-1.5 text-left transition hover:bg-[var(--bg-hover)]\""
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardEventsCalendar.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 100,
+        "attrs": "key={dateKey}\n        type=\"button\"\n        onClick={() => onSelectedCalendarDateChange(date)}\n        aria-pressed={isSelected}\n        aria-label={`${day} de ${calendarMonthLabel}, ${dayEvents.length} evento${dayEvents.length === 1 ? '' : 's'}`}\n        className={[\n          '"
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 214,
+        "attrs": "key={tab.id}\n                type=\"button\"\n                onClick={tab.onClick}\n                className={\n                  calendarView === tab.id\n                    ? 'rounded-full bg-[var(--text-primary)] px-3 py-2 text-xs font-semibold text-[var(--text-inverse)] transitio"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardOperationsSections.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 86,
+        "attrs": "key={stage.status}\n              type=\"button\"\n              onClick={() => onNavigateToStatus(stage.status)}\n              className=\"group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[var(--su"
+      }
+    ]
+  },
+  {
+    "file": "src\\features\\leads\\LeadsManagerScreen.tsx",
+    "nodes": [
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1556,
+        "attrs": "type=\"button\" onClick={handleExportCurrentPage} className=\"kds-popover-menu-item\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1557,
+        "attrs": "type=\"button\" onClick={handleExportFilteredLeads} className=\"kds-popover-menu-item\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1786,
+        "attrs": "type=\"button\"\n                      onClick={clearSelection}\n                      disabled={isBulkUpdating}\n                      className=\"kds-leads-bulk-clear\""
+      },
+      {
+        "tag": "button",
+        "type": "\"button\"",
+        "line": 1937,
+        "attrs": "type=\"button\"\r\n                              onClick={() => setSelectedLead(lead)}\r\n                              className=\"block max-w-72 text-left transition-colors hover:text-[var(--brand-primary)]\""
+      }
+    ]
+  },
+  {
+    "file": "src\\pages\\public\\FormPage.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"text\"",
+        "line": 416,
+        "attrs": "type=\"text\"\r\n                name=\"website\"\r\n                value={honeypot}\r\n                onChange={(event) => setHoneypot(event.target.value)}\r\n                autoComplete=\"off\"\r\n                tabIndex={-1}\r\n                aria-hidden=\"true\"\r\n                className=\""
+      }
+    ]
+  },
+  {
+    "file": "src\\pages\\public\\HomePage.tsx",
+    "nodes": [
+      {
+        "tag": "input",
+        "type": "\"text\"",
+        "line": 918,
+        "attrs": "id=\"quote-website\" name=\"website\" type=\"text\" tabIndex={-1} autoComplete=\"off\""
+      }
+    ]
+  }
+]

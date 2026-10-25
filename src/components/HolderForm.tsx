@@ -1,3 +1,4 @@
+import { Heading, FieldLabel } from '../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
@@ -528,7 +529,7 @@ export default function HolderForm({
         <form id="holder-form" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
             <Surface variant="muted" padding="sm">
-              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informações Pessoais</h4>
+              <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informações Pessoais</Heading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CPF *" error={cpfLookupError || undefined}>
                   <div className="relative">
@@ -583,7 +584,7 @@ export default function HolderForm({
                 </Field>
 
                 <Surface padding="sm" className="md:col-span-3">
-                  <label className="flex items-start gap-3">
+                  <FieldLabel className="flex items-start gap-3">
                     <Checkbox
                       size="md"
                       checked={formData.bonus_por_vida_aplicado}
@@ -599,7 +600,7 @@ export default function HolderForm({
                         Marque se este titular e elegivel ao bonus por vida deste contrato.
                       </span>
                     </span>
-                  </label>
+                  </FieldLabel>
                 </Surface>
 
                 <Field label="Sexo">
@@ -657,7 +658,7 @@ export default function HolderForm({
             </Surface>
 
             <Surface variant="muted" padding="sm">
-              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Endereço</h4>
+              <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">Endereço</Heading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CEP">
                   <div className="relative">
@@ -759,9 +760,9 @@ export default function HolderForm({
 
             {isCNPJModalidade && (
               <Surface variant="muted" padding="sm">
-                <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">
+                <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">
                   Informações Empresariais
-                </h4>
+                </Heading>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label="CNPJ" error={cnpjLookupError || undefined}>
                     <div className="flex gap-2">

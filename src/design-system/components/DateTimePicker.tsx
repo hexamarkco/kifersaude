@@ -1,6 +1,8 @@
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 
+import Button from './Button';
+import Input from './Input';
 import { cx } from '../../lib/cx';
 import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 import { panelInputBaseClass, panelInputSizeClasses, type PanelInputSize } from '../tokens';
@@ -11,7 +13,6 @@ import {
   formatDateValue,
   formatTimeValue,
   HOURS,
-  MINUTES,
   MONTH_LABELS_PT,
   WEEKDAY_LABELS_PT,
   isSameDate,
@@ -92,59 +93,64 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
     return false;
   };
 
-  const activeDay = selectedDate ?? todayParts();
-  const isHourDisabled = (hour: number) => {
-    if (minDate && minTime && isSameDate(activeDay, minDate) && hour < minTime.hour) return true;
-    if (maxDate && maxTime && isSameDate(activeDay, maxDate) && hour > maxTime.hour) return true;
-    return false;
-  };
-  const isMinuteDisabled = (hour: number | undefined, minute: number) => {
-    if (hour === undefined) return false;
-    if (minDate && minTime && isSameDate(activeDay, minDate) && hour === minTime.hour && minute < minTime.minute) return true;
-    if (maxDate && maxTime && isSameDate(activeDay, maxDate) && hour === maxTime.hour && minute > maxTime.minute) return true;
-    return false;
-  };
+  const [step, setStep] = useState<'date' | 'hour' | 'minute'>('date');
+  const [draftDate, setDraftDate] = useState<DateParts>(todayParts);
+  const [draftHour, setDraftHour] = useState(0);
+  const [draftMinute, setDraftMinute] = useState('00');
+  const activeDay = draftDate;
+  const timeBoundary = (boundary: string | undefined) => type === 'time'
+    ? parseTimeParts(boundary ?? '') : null;
+  const lowerTime = type === 'time' ? timeBoundary(min) : minDate && isSameDate(activeDay, minDate) ? minTime : null;
+  const upperTime = type === 'time' ? timeBoundary(max) : maxDate && isSameDate(activeDay, maxDate) ? maxTime : null;
+  const isHourDisabled = (hour: number) => Boolean(
+    (lowerTime && hour < lowerTime.hour) || (upperTime && hour > upperTime.hour),
+  );
+  const isMinuteDisabled = (hour: number, minute: number) => Boolean(
+    (lowerTime && hour === lowerTime.hour && minute < lowerTime.minute)
+    || (upperTime && hour === upperTime.hour && minute > upperTime.minute),
+  );
+  const minute = Number(draftMinute);
+  const validTime = (type === 'time' || !isDateDisabled(draftDate)) && draftMinute !== '' && Number.isInteger(minute) && minute >= 0 && minute <= 59
+    && !isHourDisabled(draftHour) && !isMinuteDisabled(draftHour, minute);
 
-  useEffect(() => {
-    if (!open) return;
-    const base = selectedDate ?? todayParts();
-    setViewYear(base.year);
-    setViewMonth(base.month);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
+  const changeOpen = (nextOpen: boolean) => {
+    if (nextOpen) {
+      const base = selectedDate ?? todayParts();
+      setDraftDate(base);
+      setViewYear(base.year);
+      setViewMonth(base.month);
+      setDraftHour(selectedTime?.hour ?? 0);
+      setDraftMinute(String(selectedTime?.minute ?? 0).padStart(2, '0'));
+      setStep(type === 'time' ? 'hour' : 'date');
+    }
+    setOpen(nextOpen);
+  };
   const commit = (nextValue: string) => {
     if (!isControlled) setInternalValue(nextValue);
     onChange?.({ target: { value: nextValue, name } });
   };
-
-  const commitDate = (parts: DateParts, closeAfter: boolean) => {
-    const datePartValue = formatDateValue(parts);
+  const commitDate = (parts: DateParts) => {
     if (type === 'date') {
-      commit(datePartValue);
+      commit(formatDateValue(parts));
+      setOpen(false);
     } else {
-      const timeValue = selectedTime ? formatTimeValue(selectedTime) : '00:00';
-      commit(`${datePartValue}T${timeValue}`);
-    }
-    if (closeAfter) setOpen(false);
-  };
-
-  const commitTime = (hour: number, minute: number) => {
-    if (type === 'time') {
-      commit(formatTimeValue({ hour, minute }));
-    } else {
-      const dateValue = selectedDate ?? todayParts();
-      commit(`${formatDateValue(dateValue)}T${formatTimeValue({ hour, minute })}`);
+      setDraftDate(parts);
+      setStep('hour');
     }
   };
-
-  const handleClear = () => {
-    commit('');
+  const confirmTime = () => {
+    if (!validTime) return;
+    const time = formatTimeValue({ hour: draftHour, minute });
+    commit(type === 'time' ? time : `${formatDateValue(draftDate)}T${time}`);
     setOpen(false);
   };
-
+  const handleClear = () => { commit(''); setOpen(false); };
   const handleToday = () => {
-    commitDate(todayParts(), type === 'date');
+    if (type !== 'time') { commitDate(todayParts()); return; }
+    const now = new Date();
+    setDraftHour(now.getHours());
+    setDraftMinute(String(now.getMinutes()).padStart(2, '0'));
+    setStep('minute');
   };
 
   const goToPrevMonth = () => {
@@ -174,14 +180,14 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
     displayLabel = `${formatDateDisplay(selectedDate)} ${formatTimeValue(selectedTime)}`;
   }
 
-  const showCalendar = type === 'date' || type === 'datetime-local';
-  const showTime = type === 'time' || type === 'datetime-local';
+  const showCalendar = step === 'date';
+  const showTime = step !== 'date';
   const TriggerIcon = type === 'time' ? Clock : Calendar;
   const monthMatrix = buildMonthMatrix(viewYear, viewMonth);
   const today = todayParts();
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger className="kds-dp-trigger-wrap block w-full">
         <button
           ref={ref}
@@ -206,7 +212,14 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
         </button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="kds-dp-popover" aria-label="Selecionar data">
+      <PopoverContent align="start" className="kds-dp-popover" aria-label={type === 'time' ? 'Selecionar horário' : 'Selecionar data'}>
+        {type !== 'date' && (
+          <div className="kds-dp-steps" aria-label="Etapas da seleção">
+            {type !== 'time' && <button type="button" aria-current={step === 'date' ? 'step' : undefined} onClick={() => setStep('date')}>Data</button>}
+            <button type="button" aria-current={step === 'hour' ? 'step' : undefined} onClick={() => setStep('hour')}>Hora</button>
+            <button type="button" aria-current={step === 'minute' ? 'step' : undefined} onClick={() => setStep('minute')}>Minutos</button>
+          </div>
+        )}
         {showCalendar && (
           <div className="kds-dp-calendar">
             <div className="kds-dp-calendar-header">
@@ -230,7 +243,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
             <div className="kds-dp-days">
               {monthMatrix.map((cell) => {
                 const cellParts: DateParts = { year: cell.year, month: cell.month, day: cell.day };
-                const isSelected = isSameDate(selectedDate, cellParts);
+                const isSelected = isSameDate(type === 'date' ? selectedDate : draftDate, cellParts);
                 const isToday = isSameDate(today, cellParts);
                 const isDisabled = isDateDisabled(cellParts);
 
@@ -239,7 +252,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
                     key={`${cell.year}-${cell.month}-${cell.day}-${cell.inCurrentMonth}`}
                     type="button"
                     disabled={isDisabled}
-                    onClick={() => commitDate(cellParts, type === 'date')}
+                    onClick={() => commitDate(cellParts)}
                     className={cx(
                       'kds-dp-day',
                       !cell.inCurrentMonth && 'kds-dp-day-outside',
@@ -257,23 +270,42 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
         )}
 
         {showTime && (
-          <div className={cx('kds-dp-time', showCalendar && 'kds-dp-time-divider')}>
-            <TimeColumn
-              values={HOURS}
-              selected={selectedTime?.hour}
-              isDisabled={isHourDisabled}
-              onSelect={(hour) => commitTime(hour, selectedTime?.minute ?? 0)}
-            />
-            <span className="kds-dp-time-sep">:</span>
-            <TimeColumn
-              values={MINUTES}
-              selected={selectedTime?.minute}
-              isDisabled={(minute) => isMinuteDisabled(selectedTime?.hour ?? 0, minute)}
-              onSelect={(minute) => {
-                commitTime(selectedTime?.hour ?? 0, minute);
-                if (type === 'time') setOpen(false);
-              }}
-            />
+          <div className="kds-dp-time-step">
+            <p className="kds-dp-step-title" aria-live="polite">
+              {step === 'hour' ? 'Escolha a hora' : `Minutos para ${String(draftHour).padStart(2, '0')}h`}
+              {type !== 'time' && <span>{formatDateDisplay(draftDate)}</span>}
+            </p>
+            {step === 'hour' ? (
+              <div className="kds-dp-time-grid" aria-label="Horas">
+                {HOURS.map((hour) => <button key={hour} type="button" disabled={isHourDisabled(hour)}
+                  aria-label={`${String(hour).padStart(2, '0')} horas`} aria-pressed={draftHour === hour}
+                  className={cx('kds-dp-time-option', draftHour === hour && 'kds-dp-time-option-selected')}
+                  onClick={() => { setDraftHour(hour); setStep('minute'); }}>
+                  {String(hour).padStart(2, '0')}
+                </button>)}
+              </div>
+            ) : (
+              <>
+                <Input type="number" aria-label="Minuto exato" min={0} max={59} step={1}
+                  value={draftMinute} onChange={(event) => setDraftMinute(event.target.value)}
+                  aria-invalid={!validTime} />
+                <div className="kds-dp-time-grid" aria-label="Sugestões de minutos">
+                  {Array.from({ length: 12 }, (_, i) => i * 5).map((value) => (
+                    <button key={value} type="button" disabled={isMinuteDisabled(draftHour, value)}
+                      aria-label={`${String(value).padStart(2, '0')} minutos`} aria-pressed={minute === value}
+                      className={cx('kds-dp-time-option', minute === value && 'kds-dp-time-option-selected')}
+                      onClick={() => setDraftMinute(String(value).padStart(2, '0'))}>
+                      {String(value).padStart(2, '0')}
+                    </button>
+                  ))}
+                </div>
+                {!validTime && <p role="alert">Informe um minuto permitido, de 00 a 59.</p>}
+                <div className="kds-dp-step-actions">
+                  <Button variant="tertiary" size="sm" onClick={() => setStep('hour')}>Voltar</Button>
+                  <Button size="sm" disabled={!validTime} onClick={confirmTime}>Confirmar horário</Button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -281,7 +313,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
           <button type="button" onClick={handleClear} className="kds-dp-footer-button">
             Limpar
           </button>
-          <button type="button" onClick={handleToday} className="kds-dp-footer-button kds-dp-footer-button-accent">
+          <button type="button" disabled={type !== 'time' && isDateDisabled(today)} onClick={handleToday} className="kds-dp-footer-button kds-dp-footer-button-accent">
             {type === 'time' ? 'Agora' : 'Hoje'}
           </button>
         </div>
@@ -289,49 +321,5 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
     </Popover>
   );
 });
-
-function TimeColumn({
-  values,
-  selected,
-  isDisabled,
-  onSelect,
-}: {
-  values: number[];
-  selected: number | undefined;
-  isDisabled?: (value: number) => boolean;
-  onSelect: (value: number) => void;
-}) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const selectedRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    selectedRef.current?.scrollIntoView({ block: 'center' });
-  }, []);
-
-  return (
-    <div ref={listRef} className="kds-dp-time-column">
-      {values.map((value) => {
-        const isSelected = value === selected;
-        const disabled = isDisabled?.(value) ?? false;
-        return (
-          <button
-            key={value}
-            ref={isSelected ? selectedRef : undefined}
-            type="button"
-            disabled={disabled}
-            onClick={() => onSelect(value)}
-            className={cx(
-              'kds-dp-time-option',
-              isSelected && 'kds-dp-time-option-selected',
-              disabled && 'kds-dp-time-option-disabled',
-            )}
-          >
-            {String(value).padStart(2, '0')}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export default DateTimePicker;

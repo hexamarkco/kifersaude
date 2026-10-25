@@ -1,8 +1,9 @@
+import { Heading, Text, FieldLabel as DsFieldLabel } from '../../../design-system';
+import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import '../communicationTerracotta.css';
 import {
   ActionSurface,
   Alert,
@@ -989,8 +990,8 @@ export default function WhatsAppCampaignsScreen() {
         <Card className="space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</h2>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confira respostas que podem indicar um pedido para parar as mensagens, número errado ou reclamação. A IA sugere a revisão; você confirma a decisão.</p>
+              <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</Heading>
+              <Text className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confira respostas que podem indicar um pedido para parar as mensagens, número errado ou reclamação. A IA sugere a revisão; você confirma a decisão.</Text>
             </div>
             <Badge tone="warning">{aiSuggestions.length} pendente(s)</Badge>
           </div>
@@ -1012,8 +1013,8 @@ export default function WhatsAppCampaignsScreen() {
                         <Bot className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{getSafeChatDisplayName({ ...suggestion.chat, phone_digits: suggestion.phone_digits })}</h3>
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
+                        <Heading level={3} className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{getSafeChatDisplayName({ ...suggestion.chat, phone_digits: suggestion.phone_digits })}</Heading>
+                        <Text className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</Text>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -1027,7 +1028,7 @@ export default function WhatsAppCampaignsScreen() {
                       )}
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</p>
+                  <Text className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</Text>
                   {suggestion.evidence && (
                     <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent-strong)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
                       {suggestion.evidence}
@@ -1039,9 +1040,9 @@ export default function WhatsAppCampaignsScreen() {
                         Parar mensagens comerciais
                       </Button>
                     ) : suggestion.intent === 'wrong_number' ? (
-                      <p className="self-center text-xs text-[color:var(--panel-text-muted)]">
+                      <Text className="self-center text-xs text-[color:var(--panel-text-muted)]">
                         Se o número ou a pessoa estiver incorreta, confira os dados do contato antes de registrar um pedido para parar as mensagens.
-                      </p>
+                      </Text>
                     ) : null}
                     <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
                       Dispensar
@@ -1094,10 +1095,10 @@ export default function WhatsAppCampaignsScreen() {
               <Field label={<FieldLabel text="Responsável" hint="Filtra o público pelo responsável atribuído ao lead no CRM." />}>
                 <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </Field>
-              <label className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+              <DsFieldLabel className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox checked={reactivationMode} onChange={(event) => setReactivationMode(event.target.checked)} />
                 <span><span className="font-medium text-[color:var(--panel-text)]">Modo reativação segura</span><br />Exige último contato antigo e suprime quem recebeu outra campanha recentemente.</span>
-              </label>
+              </DsFieldLabel>
               {reactivationMode && (
                 <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
                   <Field label={<FieldLabel text="Sem contato há pelo menos (dias)" hint="Só inclui leads cujo último contato registrado foi há pelo menos esse número de dias." />}>
@@ -1108,30 +1109,30 @@ export default function WhatsAppCampaignsScreen() {
                   </Field>
                 </div>
               )}
-              <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O sistema vai processar os alvos no momento de ativar a campanha, removendo contatos arquivados, duplicados, números inválidos e pessoas que pediram para não receber mensagens.</p>
+              <Text className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O sistema vai processar os alvos no momento de ativar a campanha, removendo contatos arquivados, duplicados, números inválidos e pessoas que pediram para não receber mensagens.</Text>
             </Surface>
           ) : (
             <Surface variant="muted" padding="sm" className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">CSV com nome e telefone</p>
-                  <p className="text-xs text-[color:var(--panel-text-muted)]">Aceita cabecalhos como nome, telefone, phone, celular ou whatsapp.</p>
+                  <Text className="text-sm font-semibold text-[color:var(--panel-text)]">CSV com nome e telefone</Text>
+                  <Text className="text-xs text-[color:var(--panel-text-muted)]">Aceita cabecalhos como nome, telefone, phone, celular ou whatsapp.</Text>
                 </div>
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 py-2 text-sm font-medium text-[color:var(--panel-text)] transition hover:border-[color:var(--panel-accent-strong)]">
+                <DsFieldLabel className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 py-2 text-sm font-medium text-[color:var(--panel-text)] transition hover:border-[color:var(--panel-accent-strong)]">
                   <FileSpreadsheet className="h-4 w-4" />
                   Escolher arquivo
-                  <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => void handleCsvFile(event)} />
-                </label>
+                  <FileInput  accept=".csv,text/csv" className="sr-only" onChange={(event) => void handleCsvFile(event)} />
+                </DsFieldLabel>
               </div>
               <Textarea value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder={'nome;telefone\nMaria Silva;(11) 99999-9999'} />
-              <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+              <DsFieldLabel className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
                 Criar leads no CRM para os contatos do CSV (origem "Disparo"); contatos cujo telefone já existir no CRM são vinculados ao lead existente em vez de duplicados.
-              </label>
-              <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+              </DsFieldLabel>
+              <DsFieldLabel className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox className="mt-1" checked={validateWhatsappNumbers} onChange={(event) => setValidateWhatsappNumbers(event.target.checked)} />
                 Validar no WhatsApp antes de enviar: após salvar, cada número é checado em segundo plano (pode levar horas em listas grandes) e números sem WhatsApp são excluídos do envio automaticamente, sem precisar revisar a lista manualmente.
-              </label>
+              </DsFieldLabel>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>
                 <Badge tone={csvValidTargets.length > 0 ? 'success' : 'warning'}>{csvValidTargets.length} telefone(s) válidos</Badge>
@@ -1151,7 +1152,7 @@ export default function WhatsAppCampaignsScreen() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Sequência do disparo</span>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Monte o caminho de cada contato: envie mensagens, aguarde e mude o status. Selecione uma etapa no mapa para editar os detalhes.</p>
+                <Text className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Monte o caminho de cada contato: envie mensagens, aguarde e mude o status. Selecione uma etapa no mapa para editar os detalhes.</Text>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
                   <Badge tone="neutral">{stages.length} etapa(s)</Badge>
                   <Badge tone="neutral">{flatMessages.length} mensagem(ns)</Badge>
@@ -1186,20 +1187,20 @@ export default function WhatsAppCampaignsScreen() {
                   <span key={template.id} className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-surface-soft)] py-1 pl-3 pr-1 text-xs text-[color:var(--panel-text-muted)]">
                     <FolderOpen className="h-3 w-3" />
                     {template.name}
-                    <button
+                    <IconButton variant="ghost" size="sm" aria-label="Remover modelo"
                       type="button"
-                      className="ml-1 rounded-full p-1 hover:bg-[color:var(--panel-surface-soft)]"
+                      className="ml-1"
                       onClick={() => void handleDeleteTemplate(template.id)}
                       title="Remover modelo"
                     >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                      <Trash2 className="" />
+                    </IconButton>
                   </span>
                 ))}
               </div>
             )}
 
-            <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+            <DsFieldLabel className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
               <Checkbox checked={abTestEnabled} onChange={(event) => setAbTestEnabled(event.target.checked)} />
               <span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-[color:var(--panel-text)]">
@@ -1209,7 +1210,7 @@ export default function WhatsAppCampaignsScreen() {
                 <br />
                 Sorteia entre duas versões da primeira mensagem (primeira etapa) e permite comparar a taxa de resposta de cada uma.
               </span>
-            </label>
+            </DsFieldLabel>
             {abTestEnabled && (
               <Field label={<FieldLabel text={`Percentual para a variante B (${abSplitPercent}%)`} hint="Chance de um contato receber a variante B em vez da A. Ex: 50% divide igualmente entre as duas versões." />}>
                 <Input
@@ -1236,8 +1237,8 @@ export default function WhatsAppCampaignsScreen() {
                       <div className="flex items-center gap-2">
                         <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent-strong)]">{stageIndex + 1}</span>
                         <div>
-                          <p className="text-sm font-semibold text-[color:var(--panel-text)]">{isFirstStage ? 'Etapa inicial' : `Etapa ${stageIndex + 1}`}</p>
-                          <p className="text-xs text-[color:var(--panel-text-muted)]">{isFirstStage ? 'Dispara ao ativar ou no horário agendado.' : 'Dispara após o intervalo abaixo, se não houver resposta.'}</p>
+                          <Text className="text-sm font-semibold text-[color:var(--panel-text)]">{isFirstStage ? 'Etapa inicial' : `Etapa ${stageIndex + 1}`}</Text>
+                          <Text className="text-xs text-[color:var(--panel-text-muted)]">{isFirstStage ? 'Dispara ao ativar ou no horário agendado.' : 'Dispara após o intervalo abaixo, se não houver resposta.'}</Text>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -1287,7 +1288,7 @@ export default function WhatsAppCampaignsScreen() {
                             <option key={option.value} value={option.value}>{option.label}</option>
                           ))}
                         </Select>
-                        <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Alvos de CSV sem lead vinculado (checkbox "Criar leads no CRM" desmarcado, ou falha ao criar) pulam esta etapa.</p>
+                        <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Alvos de CSV sem lead vinculado (checkbox "Criar leads no CRM" desmarcado, ou falha ao criar) pulam esta etapa.</Text>
                       </Field>
                     ) : (
                       <div className="space-y-2">
@@ -1334,7 +1335,7 @@ export default function WhatsAppCampaignsScreen() {
                                     </div>
                                     <div className="max-h-56 overflow-y-auto py-1">
                                       {visibleVariableSuggestions.map((suggestion) => (
-                                        <button
+                                        <ActionSurface variant="plain" padding="none"
                                           key={suggestion.key}
                                           type="button"
                                           className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]"
@@ -1348,16 +1349,16 @@ export default function WhatsAppCampaignsScreen() {
                                             <span className="block text-sm font-medium text-[color:var(--panel-text)]">{suggestion.label}</span>
                                             <span className="block text-xs text-[color:var(--panel-text-muted)]">{suggestion.description}</span>
                                           </span>
-                                        </button>
+                                        </ActionSurface>
                                       ))}
                                     </div>
                                   </div>
                                 )}
 
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                  <input
+                                  <FileInput
                                     ref={(element) => { mediaFileInputRefs.current[refKey] = element; }}
-                                    type="file"
+
                                     accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
                                     className="sr-only"
                                     onChange={(event) => void handleStepMediaUpload(stageIndex, messageIndex, event)}
@@ -1409,7 +1410,7 @@ export default function WhatsAppCampaignsScreen() {
                         >
                           <Plus /> Adicionar mensagem nesta etapa
                         </Button>
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">Cada mensagem aparece em um balão separado no WhatsApp.</p>
+                        <Text className="text-xs text-[color:var(--panel-text-muted)]">Cada mensagem aparece em um balão separado no WhatsApp.</Text>
                       </div>
                     )}
                   </div>
@@ -1448,9 +1449,9 @@ export default function WhatsAppCampaignsScreen() {
                 )}
               </div>
               {recurrenceRule !== 'none' && (
-                <p className="text-xs text-[color:var(--panel-text-muted)]">
+                <Text className="text-xs text-[color:var(--panel-text-muted)]">
                   Quando esta campanha terminar, o sistema prepara novamente a lista de contatos do CRM e inicia outra rodada. Pessoas que pediram para não receber mensagens continuam excluídas; as regras de reativação também são respeitadas.
-                </p>
+                </Text>
               )}
             </Surface>
           )}
@@ -1470,7 +1471,7 @@ export default function WhatsAppCampaignsScreen() {
                   Enviar mensagem inicial de teste
                 </Button>
               </div>
-              <p className="text-xs text-[color:var(--panel-text-muted)]">Envia a mensagem inicial (variante A) com variáveis preenchidas por dados de exemplo, sem afetar contatos reais nem contadores da campanha.</p>
+              <Text className="text-xs text-[color:var(--panel-text-muted)]">Envia a mensagem inicial (variante A) com variáveis preenchidas por dados de exemplo, sem afetar contatos reais nem contadores da campanha.</Text>
             </Surface>
           )}
 
@@ -1480,7 +1481,7 @@ export default function WhatsAppCampaignsScreen() {
             </Field>
             <Field label={<FieldLabel text="Intervalo entre contatos (minutos)" hint="Deixe vazio para distribuir automaticamente os contatos elegíveis pela janela do dia. Um valor definido vira o intervalo mínimo entre novos contatos; o limite diário continua valendo." />}>
               <Input type="number" min={1} max={1440} value={contactIntervalMinutes ?? ''} placeholder="Automático pela janela" onChange={(event) => { const value = Number(event.target.value); setContactIntervalMinutes(event.target.value.trim() && Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 1440) : null); }} />
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Cadência prevista: {formatContactInterval(admissionIntervalMinutes)}</p>
+              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Cadência prevista: {formatContactInterval(admissionIntervalMinutes)}</Text>
             </Field>
             <Field label={<FieldLabel text="Novos contatos por 24h" hint="Teto móvel de pessoas que iniciam a campanha em qualquer período de 24 horas. Cada pessoa conta uma vez; as mensagens seguintes do mesmo contato não consomem novas vagas." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
@@ -1568,7 +1569,7 @@ export default function WhatsAppCampaignsScreen() {
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Configuração operacional</h3>
+                  <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Configuração operacional</Heading>
                   <div className="space-y-2 text-sm text-[color:var(--panel-text-soft)]">
                     <PreviewRow label="Campanha" value={activationPreview.campaign.name} />
                     <PreviewRow label="Agendamento" value={formatDateTime(activationPreview.campaign.scheduled_at)} />
@@ -1581,15 +1582,15 @@ export default function WhatsAppCampaignsScreen() {
                 </Card>
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Regras de envio</h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">A lista importada pode seguir para a fila sem autorização comercial cadastrada. Ficam de fora os telefones inválidos, quem pediu para não receber mensagens e os contatos que já receberam outra campanha nas últimas 24 horas.</p>
+                  <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Regras de envio</Heading>
+                  <Text className="text-sm text-[color:var(--panel-text-soft)]">A lista importada pode seguir para a fila sem autorização comercial cadastrada. Ficam de fora os telefones inválidos, quem pediu para não receber mensagens e os contatos que já receberam outra campanha nas últimas 24 horas.</Text>
                   {getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled) && (
-                    <p className="text-sm text-[color:var(--danger-text)]">{getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled)}</p>
+                    <Text className="text-sm text-[color:var(--danger-text)]">{getCampaignMediaReadinessBlocker(activationPreview.campaign.id, activationPreview.steps, activationPreview.campaign.ab_test_enabled)}</Text>
                   )}
                 </Card>
 
                 <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Variáveis detectadas</h3>
+                  <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Variáveis detectadas</Heading>
                   {activationPreview.variables.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {activationPreview.variables.map((variable) => (
@@ -1597,16 +1598,16 @@ export default function WhatsAppCampaignsScreen() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma variável foi usada nas mensagens.</p>
+                    <Text className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma variável foi usada nas mensagens.</Text>
                   )}
                   {activationPreview.unknownVariables.length > 0 && (
-                    <p className="text-xs text-[color:var(--danger-text)]">Há variáveis não reconhecidas. Elas podem ser enviadas vazias ou sem substituição.</p>
+                    <Text className="text-xs text-[color:var(--danger-text)]">Há variáveis não reconhecidas. Elas podem ser enviadas vazias ou sem substituição.</Text>
                   )}
                 </Card>
               </div>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequência da campanha</h3>
+                <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Sequência da campanha</Heading>
                 <div className="space-y-2">
                   {activationPreview.steps.map((step, index) => (
                     <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
@@ -1618,9 +1619,9 @@ export default function WhatsAppCampaignsScreen() {
                         {step.delay_amount > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Após {step.delay_amount} {step.delay_unit}</span>}
                       </div>
                       {step.step_kind === 'status_change' ? (
-                        <p className="text-sm text-[color:var(--panel-text-soft)]">Status do lead passa a ser: <strong>{step.status_to_set}</strong></p>
+                        <Text className="text-sm text-[color:var(--panel-text-soft)]">Status do lead passa a ser: <strong>{step.status_to_set}</strong></Text>
                       ) : (
-                        <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text || '(mensagem só com mídia)'}</p>
+                        <Text className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text || '(mensagem só com mídia)'}</Text>
                       )}
                     </div>
                   ))}
@@ -1628,28 +1629,28 @@ export default function WhatsAppCampaignsScreen() {
               </Card>
 
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do público (com a mensagem já resolvida por lead)</h3>
+                <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do público (com a mensagem já resolvida por lead)</Heading>
                 {activationPreview.sample.length > 0 ? (
                   <div className="grid gap-2 md:grid-cols-2">
                     {activationPreview.sample.map((sample, index) => (
                       <div key={`${sample.phone}-${index}`} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
-                        <p className="text-sm font-medium text-[color:var(--panel-text)]">{sample.name}</p>
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">{sample.phone}</p>
-                        {(sample.status || sample.responsavel) && <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">{[sample.status, sample.responsavel].filter(Boolean).join(' · ')}</p>}
+                        <Text className="text-sm font-medium text-[color:var(--panel-text)]">{sample.name}</Text>
+                        <Text className="text-xs text-[color:var(--panel-text-muted)]">{sample.phone}</Text>
+                        {(sample.status || sample.responsavel) && <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">{[sample.status, sample.responsavel].filter(Boolean).join(' · ')}</Text>}
                         {sample.resolvedMessage && (
-                          <p className="mt-2 whitespace-pre-wrap rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-xs text-[color:var(--panel-text-soft)]">{sample.resolvedMessage}</p>
+                          <Text className="mt-2 whitespace-pre-wrap rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-xs text-[color:var(--panel-text-soft)]">{sample.resolvedMessage}</Text>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuração.</p>
+                  <Text className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuração.</Text>
                 )}
               </Card>
             </DialogBody>
 
             <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha será processada automaticamente, mesmo com o navegador fechado.</p>
+              <Text className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha será processada automaticamente, mesmo com o navegador fechado.</Text>
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={closeActivationPreview}>Cancelar</Button>
                 <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0 || Boolean(getCampaignActivationBlocker(activationPreview.campaign, activationPreview.steps))} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
@@ -1664,8 +1665,8 @@ export default function WhatsAppCampaignsScreen() {
       <Card className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</h2>
-              <p className="text-sm text-[color:var(--panel-text-soft)]">Base criada para processamento automático.</p>
+              <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</Heading>
+              <Text className="text-sm text-[color:var(--panel-text-soft)]">Base criada para processamento automático.</Text>
             </div>
             <MessageCircle className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
           </div>
@@ -1690,13 +1691,13 @@ export default function WhatsAppCampaignsScreen() {
             </div>
           ) : loadError === 'all' && campaigns.length === 0 ? (
             <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">
-              <p className="text-sm font-medium text-[color:var(--panel-text)]">Não foi possível carregar as campanhas.</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Tente atualizar novamente. Nenhuma campanha foi excluída.</p>
+              <Text className="text-sm font-medium text-[color:var(--panel-text)]">Não foi possível carregar as campanhas.</Text>
+              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Tente atualizar novamente. Nenhuma campanha foi excluída.</Text>
             </div>
           ) : campaigns.length === 0 ? (
             <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">
-              <p className="text-sm font-medium text-[color:var(--panel-text)]">Nenhum disparo criado ainda.</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Crie o primeiro rascunho para validar público e mensagem.</p>
+              <Text className="text-sm font-medium text-[color:var(--panel-text)]">Nenhum disparo criado ainda.</Text>
+              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Crie o primeiro rascunho para validar público e mensagem.</Text>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -1708,8 +1709,8 @@ export default function WhatsAppCampaignsScreen() {
                         <Send className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{campaign.name}</h3>
-                        <p className="mt-1 line-clamp-2 text-xs text-[color:var(--panel-text-soft)]">{campaign.message_text || 'Sem mensagem definida.'}</p>
+                        <Heading level={3} className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{campaign.name}</Heading>
+                        <Text className="mt-1 line-clamp-2 text-xs text-[color:var(--panel-text-soft)]">{campaign.message_text || 'Sem mensagem definida.'}</Text>
                       </div>
                     </div>
                     <Badge tone={statusTones[campaign.status]} size="sm" className="shrink-0">{statusLabels[campaign.status]}</Badge>
@@ -1792,8 +1793,8 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 function PreviewMetric({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-[color:var(--panel-text)]">{value}</p>
+      <Text className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</Text>
+      <Text className="mt-2 text-xl font-semibold text-[color:var(--panel-text)]">{value}</Text>
     </div>
   );
 }

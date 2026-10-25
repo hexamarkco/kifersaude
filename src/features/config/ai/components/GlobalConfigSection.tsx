@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../../design-system';
 import { useCallback, useState } from "react";
 import { Save } from "lucide-react";
 
@@ -58,12 +59,12 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
         return (
           <Card key={key} className="p-5 space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
                 {info.label}
-              </h3>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+              </Heading>
+              <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
                 {info.description}
-              </p>
+              </Text>
             </div>
 
             {info.type === "textarea" ? (
@@ -94,9 +95,9 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
             </div>
 
             {existing && (
-              <p className="text-xs text-[var(--text-muted)]">
+              <Text className="text-xs text-[var(--text-muted)]">
                 Última atualização: {new Date(existing.updated_at).toLocaleString("pt-BR")}
-              </p>
+              </Text>
             )}
           </Card>
         );
@@ -104,9 +105,9 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
 
       {Object.keys(meta).length === 0 && (
         <Card className="p-8 text-center">
-          <p className="text-sm text-[var(--text-secondary)]">
+          <Text className="text-sm text-[var(--text-secondary)]">
             Nenhuma configuração global disponível.
-          </p>
+          </Text>
         </Card>
       )}
     </div>

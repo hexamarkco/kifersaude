@@ -1,3 +1,5 @@
+import { Audio } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import type { RefObject } from 'react';
 import { Mic, Pause, Play, SendHorizontal, Trash2 } from 'lucide-react';
 
@@ -59,25 +61,25 @@ export function WhatsAppVoiceComposer({
     <>
                   {voiceAttachment ? (
                     <>
-                      <audio ref={voicePreviewAudioRef} src={voiceAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
+                      <Audio ref={voicePreviewAudioRef} src={voiceAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
                       <div className="whatsapp-inbox-voice-composer flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
-                        <button
+                        <ActionSurface variant="plain" padding="none"
                           type="button"
                           onClick={() => handleClearAttachment()}
                           className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                           aria-label="Descartar nota de voz"
                         >
                           <Trash2 className="h-5 w-5" />
-                        </button>
+                        </ActionSurface>
 
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={handleToggleVoicePreviewPlayback}
                             className="whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition"
                             aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
                           >
                             {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-                          </button>
+                          </ActionSurface>
 
                         <div className="min-w-0 flex-1">
                           <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -95,7 +97,7 @@ export function WhatsAppVoiceComposer({
                           />
                         </div>
 
-                        <button
+                        <ActionSurface variant="plain" padding="none"
                           type="button"
                           onClick={() => {
                             handleClearAttachment();
@@ -105,9 +107,9 @@ export function WhatsAppVoiceComposer({
                           aria-label="Regravar nota de voz"
                         >
                           <Mic className="h-4 w-4" />
-                        </button>
+                        </ActionSurface>
 
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={handleSendCurrentVoiceRecording}
                             disabled={Boolean(sendDisabledReason)}
@@ -115,19 +117,19 @@ export function WhatsAppVoiceComposer({
                             aria-label="Enviar nota de voz"
                           >
                             <SendHorizontal className="h-5 w-5" />
-                          </button>
+                          </ActionSurface>
                       </div>
                     </>
                   ) : voiceRecordingState === 'recording' ? (
                     <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
-                      <button
+                      <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={handleCancelVoiceRecording}
                         className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                         aria-label="Descartar gravação"
                       >
                         <Trash2 className="h-5 w-5" />
-                      </button>
+                      </ActionSurface>
 
                       <div className="min-w-0 flex-1">
                         <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -140,16 +142,16 @@ export function WhatsAppVoiceComposer({
                         <VoiceComposerTimeline recording />
                       </div>
 
-                      <button
+                      <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={() => handleStopVoiceRecording()}
                         className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                         aria-label="Parar gravação"
                       >
                         <Pause className="h-4 w-4 fill-current" />
-                      </button>
+                      </ActionSurface>
 
-                      <button
+                      <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={handleSendCurrentVoiceRecording}
                         disabled={Boolean(sendDisabledReason)}
@@ -157,7 +159,7 @@ export function WhatsAppVoiceComposer({
                         aria-label="Parar e enviar nota de voz"
                       >
                         <SendHorizontal className="h-5 w-5" />
-                      </button>
+                      </ActionSurface>
                     </div>
                   ) : null}
     </>

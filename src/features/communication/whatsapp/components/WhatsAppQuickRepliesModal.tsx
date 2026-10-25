@@ -1,3 +1,5 @@
+import { Heading, Text, FieldLabel } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Plus, Trash2 } from 'lucide-react';
 
@@ -8,7 +10,7 @@ import {
   Surface,
   WorkspaceDialog,
 } from '../../../../design-system';
-import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
+import { VariableAutocompleteTextarea } from '../../../../design-system';
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { sanitizeWhatsAppQuickReplyShortcut, type WhatsAppQuickReply } from '../domain/quickReplies';
 
@@ -154,10 +156,10 @@ export default function WhatsAppQuickRepliesModal({
         <Surface variant="muted" padding="sm" className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Atalhos</h3>
-              <p className="text-xs text-[var(--text-muted)]">
+              <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Atalhos</Heading>
+              <Text className="text-xs text-[var(--text-muted)]">
                 {draftQuickReplies.length} cadastrada(s)
-              </p>
+              </Text>
             </div>
             <Button variant="secondary" size="sm" onClick={handleAddQuickReply} disabled={saving}>
               <Plus className="kds-control-icon" />
@@ -175,7 +177,7 @@ export default function WhatsAppQuickRepliesModal({
               const shortcutPreview = sanitizeWhatsAppQuickReplyShortcut(quickReply.shortcut || quickReply.name) || 'sem-atalho';
 
               return (
-                <button
+                <ActionSurface variant="plain" padding="none"
                   key={quickReply.id}
                   type="button"
                   onClick={() => setSelectedQuickReplyId(quickReply.id)}
@@ -190,10 +192,10 @@ export default function WhatsAppQuickRepliesModal({
                       /{shortcutPreview}
                     </code>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                  <Text className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
                     {summarizePreview(quickReply.text)}
-                  </p>
-                </button>
+                  </Text>
+                </ActionSurface>
               );
             })}
           </div>
@@ -204,13 +206,13 @@ export default function WhatsAppQuickRepliesModal({
             <>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                  <Heading level={3} className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                     <MessageCircle className="h-4 w-4" />
                     Editor da mensagem rápida
-                  </h3>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  </Heading>
+                  <Text className="mt-1 text-xs text-[var(--text-muted)]">
                     O atalho e a mensagem ficam disponíveis imediatamente ao escrever uma resposta no WhatsApp.
-                  </p>
+                  </Text>
                 </div>
                 <Button
                   variant="danger"
@@ -231,9 +233,9 @@ export default function WhatsAppQuickRepliesModal({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  <FieldLabel className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Nome interno
-                  </label>
+                  </FieldLabel>
                   <Input
                     value={selectedQuickReply.name}
                     onChange={(event) => handleUpdateQuickReply(selectedQuickReply.id, { name: event.target.value })}
@@ -243,9 +245,9 @@ export default function WhatsAppQuickRepliesModal({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  <FieldLabel className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Atalho
-                  </label>
+                  </FieldLabel>
                   <Input
                     value={selectedQuickReply.shortcut}
                     onChange={(event) => handleUpdateQuickReply(selectedQuickReply.id, { shortcut: sanitizeWhatsAppQuickReplyShortcut(event.target.value) })}
@@ -255,16 +257,16 @@ export default function WhatsAppQuickRepliesModal({
                     leftIcon={undefined}
                     rightSlot={<span className="font-semibold">/{sanitizeWhatsAppQuickReplyShortcut(selectedQuickReply.shortcut || selectedQuickReply.name) || 'atalho'}</span>}
                   />
-                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                  <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                     Use letras, números e hífens. Se ficar vazio, o sistema gera a partir do nome.
-                  </p>
+                  </Text>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                <FieldLabel className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Mensagem
-                </label>
+                </FieldLabel>
                 <VariableAutocompleteTextarea
                   value={selectedQuickReply.text}
                   onChange={(value) => handleUpdateQuickReply(selectedQuickReply.id, { text: value })}

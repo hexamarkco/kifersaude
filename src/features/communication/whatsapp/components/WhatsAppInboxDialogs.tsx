@@ -1,3 +1,5 @@
+import { Text, FieldLabel } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import { Check } from 'lucide-react';
 
 import {
@@ -88,7 +90,7 @@ export function WhatsAppInboxDialogs({
       {forwardingMessage ? (
         <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagem" className="comm-whatsapp-overlay">
           <DialogHeader onClose={onCloseForwardMessage}>
-            <div><DialogTitle>Encaminhar mensagem</DialogTitle><p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</p></div>
+            <div><DialogTitle>Encaminhar mensagem</DialogTitle><Text className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</Text></div>
           </DialogHeader>
           <DialogBody className="space-y-3">
             <SearchInput value={forwardSearch} onChange={(event) => onForwardSearchChange(event.target.value)} placeholder="Buscar conversa" />
@@ -96,10 +98,10 @@ export function WhatsAppInboxDialogs({
               {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => {
                 const isSelected = forwardingTargetIds.includes(chat.id);
                 return (
-                  <button key={chat.id} type="button" onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
-                    <div className="min-w-0"><p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</p><p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p></div>
+                  <ActionSurface variant="plain" padding="none" key={chat.id} type="button" onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
+                    <div className="min-w-0"><Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</Text><Text className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</Text></div>
                     {isSelected ? <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"><Check className="h-3 w-3" /></span> : <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />}
-                  </button>
+                  </ActionSurface>
                 );
               }) : <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-5 text-center text-sm text-[var(--text-secondary)]">Nenhuma conversa encontrada.</div>}
             </div>
@@ -119,7 +121,7 @@ export function WhatsAppInboxDialogs({
         <DialogHeader onClose={onCloseSaveContact} showCloseButton><DialogTitle>{savedContactNameExists ? 'Renomear contato' : 'Salvar contato'}</DialogTitle></DialogHeader>
         <DialogBody className="space-y-4">
           <DialogDescription>{savedContactNameExists ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.' : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}</DialogDescription>
-          <div><label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">Nome do contato</label><Input id="save-contact-name" type="text" value={saveContactName} onChange={(event) => onSaveContactNameChange(event.target.value)} placeholder="Nome do contato" autoFocus disabled={savingContact} onKeyDown={(event) => { if (event.key === 'Enter' && !savingContact) onSaveContact(); }} /></div>
+          <div><FieldLabel className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">Nome do contato</FieldLabel><Input id="save-contact-name" type="text" value={saveContactName} onChange={(event) => onSaveContactNameChange(event.target.value)} placeholder="Nome do contato" autoFocus disabled={savingContact} onKeyDown={(event) => { if (event.key === 'Enter' && !savingContact) onSaveContact(); }} /></div>
           <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onCloseSaveContact} disabled={savingContact}>Cancelar</Button><Button variant="primary" onClick={onSaveContact} loading={savingContact} disabled={savingContact}>{savedContactNameExists ? 'Renomear' : 'Salvar'}</Button></div>
         </DialogBody>
       </Dialog>

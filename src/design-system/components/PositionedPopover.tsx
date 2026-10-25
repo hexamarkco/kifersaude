@@ -2,6 +2,7 @@ import { forwardRef, useEffect, type AriaRole, type CSSProperties, type ReactNod
 import { createPortal } from 'react-dom';
 
 import { cx } from '../../lib/cx';
+import { useDesignSystemAppearance } from '../appearanceContext';
 
 type PanelPopoverPosition = {
   top: number;
@@ -10,7 +11,7 @@ type PanelPopoverPosition = {
   maxHeight?: number;
 };
 
-type PanelPopoverShellProps = {
+type PositionedPopoverProps = {
   isOpen: boolean;
   position: PanelPopoverPosition | null;
   children: ReactNode;
@@ -21,15 +22,16 @@ type PanelPopoverShellProps = {
   style?: CSSProperties;
 };
 
-const PanelPopoverShell = forwardRef<HTMLDivElement, PanelPopoverShellProps>(function PanelPopoverShell(
+const PositionedPopover = forwardRef<HTMLDivElement, PositionedPopoverProps>(function PositionedPopover(
   { isOpen, position, children, onClose, ariaLabel, role = 'dialog', className, style },
   ref,
 ) {
+  const appearance = useDesignSystemAppearance();
   const portalTarget = typeof document === 'undefined' ? null : document.body;
   const themedAncestor = typeof document === 'undefined' ? null : document.querySelector('.painel-theme');
   const themeScopeClassName = cx(
     'modal-theme-host painel-theme kifer-ds',
-    themedAncestor?.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light',
+    (appearance ? appearance.theme === 'dark' : themedAncestor?.classList.contains('theme-dark')) ? 'theme-dark' : 'theme-light',
   );
 
   useEffect(() => {
@@ -78,4 +80,4 @@ const PanelPopoverShell = forwardRef<HTMLDivElement, PanelPopoverShellProps>(fun
   );
 });
 
-export default PanelPopoverShell;
+export default PositionedPopover;

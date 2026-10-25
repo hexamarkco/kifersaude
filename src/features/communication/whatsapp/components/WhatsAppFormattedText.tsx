@@ -1,3 +1,4 @@
+import { Text, TextLink } from '../../../../design-system';
 import type { ReactNode } from 'react';
 
 import { cx } from '../../../../lib/cx';
@@ -111,7 +112,7 @@ export default function WhatsAppFormattedText({
   const matches = extractRenderableUrls(text);
 
   if (matches.length === 0) {
-    return <p className={className}>{renderWhatsAppFormattedText(text, 'text')}</p>;
+    return <Text className={className}>{renderWhatsAppFormattedText(text, 'text')}</Text>;
   }
 
   const parts: ReactNode[] = [];
@@ -123,7 +124,7 @@ export default function WhatsAppFormattedText({
     }
 
     parts.push(
-      <a
+      <TextLink
         key={`${match.url}-${index}`}
         href={match.url}
         target="_blank"
@@ -131,7 +132,7 @@ export default function WhatsAppFormattedText({
         className={cx('underline underline-offset-2 decoration-current/40 hover:decoration-current break-all', linkClassName)}
       >
         {match.url}
-      </a>,
+      </TextLink>,
     );
     cursor = match.index + match.raw.length;
   });
@@ -140,5 +141,5 @@ export default function WhatsAppFormattedText({
     parts.push(...renderWhatsAppFormattedText(text.slice(cursor), 'text-tail'));
   }
 
-  return <p className={className}>{parts}</p>;
+  return <Text className={className}>{parts}</Text>;
 }

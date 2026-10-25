@@ -1,3 +1,4 @@
+import { FieldLabel } from '../../../design-system';
 import { useState } from 'react';
 import {
   ArrowLeft,
@@ -119,6 +120,7 @@ import { componentGroups, type ComponentGroup } from './catalog';
 import { ContactForm, ContactList } from './WorkspacePreview';
 import { demoContacts, operatorOptions, statusOptions } from './demoData';
 import { SectionIntro, Specimen, UsageNote } from './ShowcaseParts';
+import ApplicationComponents from './ApplicationComponents';
 
 export default function ComponentCatalog() {
   const [group, setGroup] = useState<ComponentGroup>('actions');
@@ -145,6 +147,7 @@ export default function ComponentCatalog() {
       {group === 'data' && <Data />}
       {group === 'feedback' && <Feedback />}
       {group === 'overlays' && <Overlays />}
+      {group === 'application' && <ApplicationComponents />}
     </>
   );
 }
@@ -480,12 +483,12 @@ function Forms() {
           source="InputGroup / InputAddon / Textarea"
         >
           <div className="kds-field">
-            <label
+            <FieldLabel
               className="kds-field-label"
               htmlFor="ds-showcase-monthly-amount"
             >
               Valor mensal
-            </label>
+            </FieldLabel>
             <InputGroup>
               <InputAddon>R$</InputAddon>
               <Input
@@ -608,14 +611,14 @@ function Forms() {
           description="Checkbox para múltiplas escolhas, radio para uma escolha e switch para ativação."
           source="Checkbox / RadioGroup / Radio / Switch"
         >
-          <label className="ds-choice">
+          <FieldLabel className="ds-choice">
             <Checkbox
               checked={checked}
               onChange={(event) => setChecked(event.target.checked)}
             />
             Receber resumo do atendimento
-          </label>
-          <label className="ds-choice">
+          </FieldLabel>
+          <FieldLabel className="ds-choice">
             <Checkbox
               ref={(element) => {
                 if (element) element.indeterminate = mixed;
@@ -628,11 +631,11 @@ function Forms() {
               }}
             />
             Seleção parcial — clique para selecionar
-          </label>
-          <label className="ds-choice">
+          </FieldLabel>
+          <FieldLabel className="ds-choice">
             <Checkbox disabled />
             Opção indisponível
-          </label>
+          </FieldLabel>
           <fieldset>
             <legend className="ds-caption">Tipo de contratação</legend>
             <RadioGroup
@@ -667,7 +670,7 @@ function Forms() {
         </Specimen>
         <Specimen
           title="Data e horário"
-          description="Calendário em português, com seleção de dia e horário."
+          description="Seleção compacta em etapas: data, hora e minutos. Use os atalhos ou informe o minuto exato; confirme para aplicar."
           source="DateTimePicker type=date | time | datetime-local"
         >
           <Field label="Data">

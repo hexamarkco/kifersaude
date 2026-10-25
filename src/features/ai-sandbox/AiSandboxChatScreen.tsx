@@ -1,3 +1,5 @@
+import { Text, DesignSystemProvider } from '../../design-system';
+import { ActionSurface, Textarea } from '../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Download, FlaskConical, Lightbulb, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
 import {
@@ -565,12 +567,12 @@ export default function AiSandboxChatScreen() {
   };
 
   return (
-    <div className="painel-theme kifer-ds flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] md:flex-row">
+    <DesignSystemProvider className="painel-theme kifer-ds flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] md:flex-row">
       <aside className="flex h-[34dvh] w-full shrink-0 flex-col border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] md:h-auto md:w-72 md:border-b-0 md:border-r">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-4">
           <div>
-            <p className="text-sm font-semibold">Chat de testes — IA</p>
-            <p className="text-xs text-[var(--text-secondary)]">Simulações de atendimento</p>
+            <Text className="text-sm font-semibold">Chat de testes — IA</Text>
+            <Text className="text-xs text-[var(--text-secondary)]">Simulações de atendimento</Text>
           </div>
           <Button variant="text" size="sm" onClick={() => signOut()}>
             Sair
@@ -585,7 +587,7 @@ export default function AiSandboxChatScreen() {
         </div>
 
         <div className="border-b border-[var(--border-subtle)] px-3 pt-3 pb-3">
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface-muted)]"
             onClick={() => setShowScenarioPicker(!showScenarioPicker)}
@@ -593,32 +595,32 @@ export default function AiSandboxChatScreen() {
             <FlaskConical className="h-3.5 w-3.5 shrink-0" />
             Cenários de teste
             <span className="ml-auto text-[10px] text-[var(--text-muted)]">{ALL_SCENARIOS.length}</span>
-          </button>
+          </ActionSurface>
 
           {showScenarioPicker && (
             <div className="mt-2">
               <div className="relative mb-2">
                 <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--text-muted)]" />
-                <input
+                <Input
                   type="text"
                   value={scenarioSearch}
                   onChange={(e) => setScenarioSearch(e.target.value)}
                   placeholder="Buscar cenário..."
-                  className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface)] py-1.5 pl-7 pr-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                  className="w-full border placeholder:text-[var(--text-muted)]"
                   autoFocus
                 />
               </div>
               <div className="max-h-60 space-y-1 overflow-y-auto pr-1">
                 {filteredScenarioGroups.length === 0 && (
-                  <p className="py-2 text-center text-[10px] text-[var(--text-muted)]">Nenhum cenário encontrado.</p>
+                  <Text className="py-2 text-center text-[10px] text-[var(--text-muted)]">Nenhum cenário encontrado.</Text>
                 )}
                 {filteredScenarioGroups.map((group) => (
                   <div key={group.cat}>
-                    <p className="px-1 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    <Text className="px-1 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                       {group.cat}
-                    </p>
+                    </Text>
                     {group.scenarios.map((s) => (
-                      <button
+                      <ActionSurface variant="plain" padding="none"
                         key={s.key}
                         type="button"
                         className="flex w-full items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)] disabled:opacity-50"
@@ -635,7 +637,7 @@ export default function AiSandboxChatScreen() {
                       >
                         <FlaskConical className="h-2.5 w-2.5 shrink-0 text-[var(--text-muted)]" />
                         {s.label}
-                      </button>
+                      </ActionSurface>
                     ))}
                   </div>
                 ))}
@@ -648,9 +650,9 @@ export default function AiSandboxChatScreen() {
           {conversationsLoading ? (
             <LoadingState compact label="Carregando..." />
           ) : conversations.length === 0 ? (
-            <p className="px-2 py-6 text-center text-xs text-[var(--text-secondary)]">
+            <Text className="px-2 py-6 text-center text-xs text-[var(--text-secondary)]">
               Nenhuma simulação ainda. Comece uma conversa como se fosse um lead ou rode um cenário automatizado.
-            </p>
+            </Text>
           ) : (
             <ul className="flex flex-col gap-1">
               {conversations.map((conversation) => (
@@ -662,10 +664,10 @@ export default function AiSandboxChatScreen() {
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                     }`}
                   >
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       onClick={() => handleSelectConversation(conversation.id)}
-                      className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                      className="flex min-w-0 flex-1 items-center text-left"
                       title={conversation.title}
                     >
                       <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
@@ -674,15 +676,15 @@ export default function AiSandboxChatScreen() {
                           Automatizado
                         </Badge>
                       )}
-                    </button>
-                    <button
+                    </Button>
+                    <IconButton variant="ghost" size="sm" aria-label="Apagar simulação"
                       type="button"
                       onClick={() => handleDeleteConversation(conversation.id)}
-                      className="shrink-0 text-[var(--text-muted)] opacity-0 transition-colors hover:text-[var(--danger)] group-hover:opacity-100"
+                      className="shrink-0 opacity-0 transition-colors group-hover:opacity-100"
                       title="Apagar simulação"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      <Trash2 className="" />
+                    </IconButton>
                   </div>
                 </li>
               ))}
@@ -694,7 +696,7 @@ export default function AiSandboxChatScreen() {
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         {activeConversation && (
           <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-3 sm:px-6">
-            <p className="truncate text-sm font-medium">{activeConversation.title}</p>
+            <Text className="truncate text-sm font-medium">{activeConversation.title}</Text>
             {messages.length > 0 && (
               <IconButton
                 variant="ghost"
@@ -717,7 +719,7 @@ export default function AiSandboxChatScreen() {
                 description="A abordagem inicial usa o mesmo fluxo cadastrado no atendimento. Depois, você pode responder como lead e a IA continua a conversa."
               />
               <div className="mt-4 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
-                <p className="text-xs font-medium text-[var(--text-secondary)]">IA aborda o lead primeiro</p>
+                <Text className="text-xs font-medium text-[var(--text-secondary)]">IA aborda o lead primeiro</Text>
                 <Input
                   value={leadNameForApproach}
                   onChange={(event) => setLeadNameForApproach(event.target.value)}
@@ -795,21 +797,21 @@ export default function AiSandboxChatScreen() {
                     ) : (
                       <AlertTriangle className="h-4 w-4 text-[var(--warning-text)]" />
                     )}
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    <Text className="text-sm font-semibold text-[var(--text-primary)]">
                       Avaliação do juiz: {activeTestRun.passed ? 'aprovado' : 'precisa de ajuste'}
-                    </p>
+                    </Text>
                     <Badge tone={activeTestRun.passed ? 'success' : 'warning'} size="sm">
                       {activeTestRun.turns} turno{activeTestRun.turns === 1 ? '' : 's'}
                     </Badge>
                   </div>
 
                   {verdict.notes && (
-                    <p className="mt-2 text-sm text-[var(--text-secondary)]">{verdict.notes}</p>
+                    <Text className="mt-2 text-sm text-[var(--text-secondary)]">{verdict.notes}</Text>
                   )}
 
                   {verdict.violations.length > 0 && (
                     <div className="mt-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Pontos reprovados</p>
+                      <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Pontos reprovados</Text>
                       <ul className="mt-1.5 space-y-1 text-sm text-[var(--text-secondary)]">
                         {verdict.violations.map((violation) => <li key={violation}>• {violation}</li>)}
                       </ul>
@@ -818,9 +820,9 @@ export default function AiSandboxChatScreen() {
 
                   {verdict.playbookImprovements.length > 0 && (
                     <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
-                      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                      <Text className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                         <Lightbulb className="h-3.5 w-3.5" /> Sugestões para o playbook
-                      </p>
+                      </Text>
                       <ul className="mt-1.5 space-y-1 text-sm text-[var(--text-secondary)]">
                         {verdict.playbookImprovements.map((improvement) => <li key={improvement}>• {improvement}</li>)}
                       </ul>
@@ -866,14 +868,14 @@ export default function AiSandboxChatScreen() {
 
         <div className="border-t border-[var(--border-subtle)] px-3 py-3 sm:px-6 sm:py-4">
           <div className="mx-auto flex max-w-2xl items-end gap-2">
-            <textarea
+            <Textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Digite como se fosse o lead..."
               rows={1}
               disabled={sendingDraft}
-              className="kds-textarea min-h-[42px] flex-1 resize-none px-4 py-2.5 text-sm"
+              className="kds-textarea flex-1 resize-none"
             />
             <IconButton
               variant="primary"
@@ -888,6 +890,6 @@ export default function AiSandboxChatScreen() {
           </div>
         </div>
       </main>
-    </div>
+    </DesignSystemProvider>
   );
 }

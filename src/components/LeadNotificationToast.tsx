@@ -1,3 +1,4 @@
+import { Text } from '../design-system';
 import { useEffect, useRef, useState } from 'react';
 import { UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import type { Lead } from '../features/leads';
@@ -85,13 +86,13 @@ export default function LeadNotificationToast({
       >
         <div className="mt-3 space-y-3">
           <div>
-            <p className="flex items-center gap-1.5 text-base font-bold text-[var(--text-primary)]">
+            <Text className="flex items-center gap-1.5 text-base font-bold text-[var(--text-primary)]">
               <LeadFavoriteBadge favorito={lead.favorito} />
               {lead.nome_completo}
-            </p>
-            <p className="text-sm text-[var(--text-secondary)]">
+            </Text>
+            <Text className="text-sm text-[var(--text-secondary)]">
               Status: <span className="font-medium text-[var(--info-text)]">{statusLabel}</span>
-            </p>
+            </Text>
           </div>
 
           <div className="space-y-2 text-sm text-[var(--text-secondary)]">
@@ -116,13 +117,13 @@ export default function LeadNotificationToast({
           </div>
 
           <div className="border-t border-[var(--border-subtle)] pt-2">
-            <p className="mb-2 text-xs text-[var(--text-muted)]">
+            <Text className="mb-2 text-xs text-[var(--text-muted)]">
               <span className="font-medium">Origem:</span> {origemLabel} |
               <span className="ml-2 font-medium">Tipo:</span> {tipoContratacaoLabel}
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">
+            </Text>
+            <Text className="text-xs text-[var(--text-muted)]">
               <span className="font-medium">Responsável:</span> {responsavelLabel}
-            </p>
+            </Text>
           </div>
         </div>
       </Toast>

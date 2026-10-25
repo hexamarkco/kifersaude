@@ -1,6 +1,6 @@
 # Design system do Kifer Saúde
 
-A rota `/design-system` documenta a biblioteca real de `src/design-system`. É uma referência para evolução futura do CRM; as outras telas não foram migradas por este showcase.
+A rota `/design-system` documenta a biblioteca real de `src/design-system`. É o contrato visual da aplicação: páginas públicas, CRM, modais, menus e conteúdo compartilhado consomem a mesma API e os mesmos tokens.
 
 ## Organização
 
@@ -27,7 +27,7 @@ Links diretos: `/design-system#foundations`, `#components`, `#states`, `#pattern
 
 ## Reutilização e adoção
 
-Importe a API pública de `src/design-system/index.ts`. Não copie HTML/CSS de uma amostra para criar uma variante desconectada. `DesignSystemProvider` é a fronteira explícita da aparência operacional refinada: fornece tema aos componentes e portais. A rota já o utiliza; migrar as demais telas será uma etapa própria.
+Importe a API pública de `src/design-system/index.ts`. Não copie HTML/CSS de uma amostra para criar uma variante desconectada. `DesignSystemProvider` fornece o tema aos componentes e portais. A aparência oficial é o padrão global de `.painel-theme.kifer-ds`; não há ativação visual exclusiva do showcase. O shell do CRM e as páginas públicas compartilham essa biblioteca.
 
 ```tsx
 import {
@@ -76,7 +76,7 @@ O código acima ilustra composição; handlers, estado, validação e breadcrumb
 - **Toque:** controles operacionais têm mínimo de 44px no mobile; dias do calendário têm 36px para caber em sete colunas a 320px. `Checkbox touchTarget` amplia a área clicável sem aumentar o desenho do checkbox.
 - **Sobreposições:** popovers e tooltips compartilham posicionamento que inverte o lado quando necessário e respeita a área visível, inclusive ao mudar o viewport. Escape fecha a camada interna antes da externa; foco volta ao acionador. Diálogos têm corpo rolável e ações separadas. Use modais para confirmações/tarefas rápidas; criação e edição completas ficam em páginas.
 
-O entrypoint continua `src/design-system/styles.css`: `foundation.css` contém tokens; `components.css` os primitivos; `operational.css` os padrões; `themes.css` as variantes de tema. CSS particular do catálogo fica em `src/pages/dev/design-system-showcase.css`, carregado apenas na rota lazy. As mudanças de aparência ficam opt-in para não redesenhar as telas atuais.
+O único entrypoint visual é `src/design-system/styles.css`: tokens em `foundation.css`, primitivos em `components.css`, padrões em `operational.css`, temas em `themes.css`, composição da aplicação em `application.css` e comunicação em `communication.css`. `showcase.css` documenta a composição do catálogo. Os estilos de fornecedores também entram por esse entrypoint. `tailwind.preset.js` conecta as utilidades de layout aos tokens da mesma biblioteca.
 
 ## Limites dos exemplos
 
@@ -88,6 +88,7 @@ Os exemplos não importam repositories, cliente Supabase ou integrações. Não 
 
 ```bash
 npm test -- src/design-system/components/__tests__ src/pages/dev/showcase/WorkspacePreview.test.tsx
+npm run audit:design-system
 npm run typecheck
 npm run lint
 npm run architecture:check
@@ -99,3 +100,11 @@ O formulário curto da prévia mantém as ações no fluxo normal. A opção `st
 Evidências desta revisão: [relatório de validação](design-system-refinement.md). As capturas anteriores na raiz de `docs/design-system/screenshots/` são históricas; as atuais ficam na subpasta `refinement-20261024/`.
 
 Ao adotar os padrões em uma feature, mantenha hooks, regras e repositories no domínio proprietário. Migrar sua apresentação não autoriza alterar regras comerciais ou dados.
+
+## Contrato obrigatório da aplicação
+
+Componentes visuais devem ser importados pela API pública de `src/design-system`. Não criar controles HTML, componentes básicos paralelos, CSS local, editor ou canvas de fornecedor diretamente nas features. Tags estruturais como `main`, `section`, `div` e listas continuam servindo à composição sem recriar controles. Medidas de dados (posição de menu, progresso, zoom e valores de gráficos) permanecem dinâmicas.
+
+Um novo componente precisa primeiro existir na biblioteca e ter exemplo funcional no showcase. `npm run audit:design-system` verifica esse contrato e a cobertura da API consumida pelas telas; o build executa o gate. Isso complementa a auditoria visual de tokens e os testes, sem substituir a revisão visual dos estados.
+
+A migração e suas evidências estão em [design-system-adoption.md](design-system-adoption.md).

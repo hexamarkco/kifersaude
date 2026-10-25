@@ -1,3 +1,4 @@
+import { Heading, Text, FieldLabel } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Save,
@@ -11,9 +12,9 @@ import {
 import { configService } from "../data/configService";
 import type { IntegrationSetting } from "../domain/types";
 import { toast } from "../../../lib/toast";
-import { IntegrationsSkeleton } from "../../../components/ui/panelSkeletons";
+import { IntegrationsSkeleton } from '../../../design-system';
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Alert,
   Button,
@@ -824,12 +825,12 @@ export default function IntegrationsScreen() {
                 <Card key={provider}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
+                      <Heading level={3} className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                         {providerMeta.name}
-                      </h3>
-                      <p className="text-sm text-[var(--text-muted)]">
+                      </Heading>
+                      <Text className="text-sm text-[var(--text-muted)]">
                         {providerMeta.description}
-                      </p>
+                      </Text>
                     </div>
                     <Switch
                         checked={formState.enabled}
@@ -847,12 +848,12 @@ export default function IntegrationsScreen() {
                   </div>
 
                   <div className="mt-4 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-2">
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                    <Text className="text-sm font-medium text-[var(--text-primary)]">
                       Credencial protegida por Edge Secret
-                    </p>
-                    <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    </Text>
+                    <Text className="mt-2 text-xs text-[var(--text-muted)]">
                       {providerModelsHint}
-                    </p>
+                    </Text>
                   </div>
 
                   <div className="kds-ai-integration-action mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
@@ -878,13 +879,13 @@ export default function IntegrationsScreen() {
           <div className="space-y-4">
             <Card>
               <div className="mb-3">
-                <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
+                <Heading level={3} className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                   Roteamento por funcionalidade
-                </h3>
-                <p className="text-sm text-[var(--text-muted)]">
+                </Heading>
+                <Text className="text-sm text-[var(--text-muted)]">
                   Escolha qual modelo OpenAI cada funcionalidade de IA deve usar.
                   Em caso de incompatibilidade, o backend pode usar o modelo OpenAI padrão.
-                </p>
+                </Text>
               </div>
 
               <div className="space-y-4">
@@ -936,19 +937,19 @@ export default function IntegrationsScreen() {
                       padding="sm"
                     >
                       <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">
                           {task.label}
-                        </p>
-                        <p className="text-xs text-[var(--text-muted)]">
+                        </Text>
+                        <Text className="text-xs text-[var(--text-muted)]">
                           {task.description}
-                        </p>
+                        </Text>
                       </div>
 
                       <div className="grid grid-cols-1 gap-3">
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                          <FieldLabel className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
                             Modelo
-                          </label>
+                          </FieldLabel>
                           <FilterSelect
                             icon={Tag}
                             value={routeState.model}
@@ -970,7 +971,7 @@ export default function IntegrationsScreen() {
                               modelOptions.length === 0
                             }
                           />
-                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                          <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                             {routeError
                               ? routeError
                               : providerModelsState.loading
@@ -982,7 +983,7 @@ export default function IntegrationsScreen() {
                                   : providerModelOptions.length > 0
                                     ? `${providerModelOptions.length} modelos disponíveis.`
                                     : "Nenhum modelo OpenAI disponível."}
-                          </p>
+                          </Text>
                         </div>
                       </div>
                     </Card>
@@ -1024,12 +1025,12 @@ export default function IntegrationsScreen() {
                   <Facebook className="w-5 h-5" />
                 </CardIcon>
                 <div>
-                  <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
+                  <Heading level={3} className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                     Meta Pixel
-                  </h3>
-                  <p className="text-sm text-[var(--text-muted)]">
+                  </Heading>
+                  <Text className="text-sm text-[var(--text-muted)]">
                     Código de rastreamento do Facebook/Instagram
-                  </p>
+                  </Text>
                 </div>
               </div>
 
@@ -1050,9 +1051,9 @@ export default function IntegrationsScreen() {
                     O valor anterior foi preservado. Verifique sua conexão ou sessão antes de editar.
                   </Alert>
                 ) : null}
-                <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                <FieldLabel className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                   Pixel ID
-                </label>
+                </FieldLabel>
                 <Input
                   type="text"
                   value={metaPixelId}
@@ -1060,9 +1061,9 @@ export default function IntegrationsScreen() {
                   onChange={(event) => setMetaPixelId(event.target.value)}
                   placeholder="1234567890"
                 />
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <Text className="mt-2 text-xs text-[var(--text-muted)]">
                   Ex: 1234567890 (somente números)
-                </p>
+                </Text>
               </div>
 
               <Button
@@ -1085,12 +1086,12 @@ export default function IntegrationsScreen() {
                   <Tag className="w-5 h-5" />
                 </CardIcon>
                 <div>
-                  <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
+                  <Heading level={3} className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                     Google Tag Manager
-                  </h3>
-                  <p className="text-sm text-[var(--text-muted)]">
+                  </Heading>
+                  <Text className="text-sm text-[var(--text-muted)]">
                     Container do GTM para a landing page
-                  </p>
+                  </Text>
                 </div>
               </div>
 
@@ -1110,9 +1111,9 @@ export default function IntegrationsScreen() {
                     O valor anterior foi preservado. Verifique sua conexão ou sessão antes de editar.
                   </Alert>
                 ) : null}
-                <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                <FieldLabel className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                   GTM ID
-                </label>
+                </FieldLabel>
                 <Input
                   type="text"
                   value={gtmId}
@@ -1120,9 +1121,9 @@ export default function IntegrationsScreen() {
                   onChange={(event) => setGtmId(event.target.value)}
                   placeholder="GTM-XXXXXXX"
                 />
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <Text className="mt-2 text-xs text-[var(--text-muted)]">
                   Ex: GTM-ABC123D
-                </p>
+                </Text>
               </div>
 
               <Button

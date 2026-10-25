@@ -1,3 +1,4 @@
+import { Text } from '../../../../design-system';
 import { useMemo } from 'react';
 import { AlertCircle, Check, CheckCheck, Clock3, Info, Volume2 } from 'lucide-react';
 
@@ -99,7 +100,7 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
       <DialogHeader onClose={onClose} showCloseButton>
         <div className="min-w-0">
           <DialogTitle>Dados da mensagem</DialogTitle>
-          <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{preview}</p>
+          <Text className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{preview}</Text>
         </div>
       </DialogHeader>
       <DialogBody className="space-y-4">
@@ -111,25 +112,25 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
 
             <div className="grid grid-cols-2 gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Tipo</p>
-                <p className="mt-1 truncate text-sm font-medium text-[var(--text-primary)]">{formatMessageType(message.message_type)}</p>
+                <Text className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Tipo</Text>
+                <Text className="mt-1 truncate text-sm font-medium text-[var(--text-primary)]">{formatMessageType(message.message_type)}</Text>
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Status atual</p>
-                <p className="mt-1 truncate text-sm font-medium text-[var(--text-primary)]">
+                <Text className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Status atual</Text>
+                <Text className="mt-1 truncate text-sm font-medium text-[var(--text-primary)]">
                   {getStatusPresentation(message.delivery_status.trim().toLowerCase(), message.message_type.trim().toLowerCase()).label}
-                </p>
+                </Text>
               </div>
               {message.external_message_id ? (
                 <div className="col-span-2 min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">ID externo</p>
-                  <p className="mt-1 break-all font-mono text-xs text-[var(--text-secondary)]">{message.external_message_id}</p>
+                  <Text className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">ID externo</Text>
+                  <Text className="mt-1 break-all font-mono text-xs text-[var(--text-secondary)]">{message.external_message_id}</Text>
                 </div>
               ) : null}
             </div>
 
             <div>
-              <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">Linha do tempo</p>
+              <Text className="mb-2 text-sm font-semibold text-[var(--text-primary)]">Linha do tempo</Text>
               <div className="space-y-1">
                 {timeline.length > 0 ? timeline.map((event, index) => {
                   const Icon = event.icon;
@@ -147,31 +148,31 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-3">
-                          <p className="text-sm font-medium text-[var(--text-primary)]">{event.label}</p>
+                          <Text className="text-sm font-medium text-[var(--text-primary)]">{event.label}</Text>
                           <time className="shrink-0 text-xs font-medium text-[var(--text-muted)]" dateTime={event.at} title={formatDateTimeFullBR(event.at)}>
                             {formatMessageTime(event.at)}
                           </time>
                         </div>
-                        {event.error ? <p className="mt-0.5 text-xs text-[var(--danger-text)]">{event.error}</p> : null}
+                        {event.error ? <Text className="mt-0.5 text-xs text-[var(--danger-text)]">{event.error}</Text> : null}
                       </div>
                     </div>
                   );
                 }) : (
-                  <p className="rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-4 text-sm text-[var(--text-secondary)]">
+                  <Text className="rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-4 text-sm text-[var(--text-secondary)]">
                     Ainda não há confirmações de entrega para esta mensagem.
-                  </p>
+                  </Text>
                 )}
               </div>
             </div>
 
             {message.error_message ? (
               <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2.5 text-sm text-[var(--danger-text)]">
-                <p className="font-semibold">Detalhe do erro</p>
-                <p className="mt-1">{message.error_message}</p>
+                <Text className="font-semibold">Detalhe do erro</Text>
+                <Text className="mt-1">{message.error_message}</Text>
               </div>
             ) : null}
 
-            <p className="text-xs text-[var(--text-muted)]">Horários exibidos no fuso de São Paulo.</p>
+            <Text className="text-xs text-[var(--text-muted)]">Horários exibidos no fuso de São Paulo.</Text>
           </>
         ) : null}
       </DialogBody>

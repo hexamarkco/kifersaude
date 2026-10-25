@@ -1,3 +1,5 @@
+import { Text, FieldLabel } from '../design-system';
+import { IconButton } from '../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -272,7 +274,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         <DialogHeader showCloseButton={false}><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
         <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
           <div className="kds-loading-spinner" role="status" aria-label="Carregando configurações" />
-          <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">Carregando configurações...</p>
+          <Text className="mt-4 text-center text-sm text-[var(--text-secondary)]">Carregando configurações...</Text>
         </DialogBody>
       </Dialog>
     );
@@ -515,14 +517,14 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 action={loadingCep ? (
                   <span className="w-5 animate-spin border-2 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Consultando CEP" />
                 ) : (
-                  <button
+                  <IconButton variant="ghost" size="sm"
                     type="button"
                     onClick={() => void handleCepSearch()}
-                    className="transition-colors hover:text-[var(--brand-primary)]"
+                    className="transition-colors"
                     aria-label="Buscar CEP"
                   >
-                    <Search className="w-5" />
-                  </button>
+                    <Search className="" />
+                  </IconButton>
                 )}
               />
           </Field>
@@ -704,7 +706,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
           {isNewLead && (
             <Surface variant="muted" padding="sm" className="md:col-span-2">
-              <label className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+              <FieldLabel className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
                 <Checkbox
                   checked={skipAutomationOnCreate}
                   onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
@@ -713,7 +715,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 <span>
                   Não disparar automações ao criar este lead (ex.: já abordado manualmente).
                 </span>
-              </label>
+              </FieldLabel>
             </Surface>
           )}
 

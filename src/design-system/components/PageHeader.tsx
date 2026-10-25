@@ -22,7 +22,7 @@ export default function PageHeader({
   breadcrumbs,
   identity,
   status,
-  appearance = 'default',
+  appearance = 'operational',
   children,
   className,
   ...props

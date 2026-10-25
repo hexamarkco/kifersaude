@@ -1,3 +1,5 @@
+import { Video, Image, Text, TextLink } from '../../../../design-system';
+import { ActionSurface, IconButton, Button } from '../../../../design-system';
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Download, Loader2, Play, RotateCw, X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -21,7 +23,7 @@ function WhatsAppMediaViewerThumb({
   const isVideo = isVideoLikeMessageType(message.message_type);
 
   return (
-    <button
+    <ActionSurface variant="plain" padding="none"
       type="button"
       onClick={() => onSelect(message.id)}
       className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${active ? 'is-active scale-110 ring-2 ring-[var(--success)] ring-offset-2 ring-offset-[var(--bg-canvas)]' : 'opacity-60 hover:opacity-90'}`}
@@ -30,11 +32,11 @@ function WhatsAppMediaViewerThumb({
     >
       {mediaUrl ? (
         isVideo ? (
-          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
+          <Video muted playsInline preload="metadata" className="h-full w-full object-cover">
             <source src={mediaUrl} type={message.media_mime_type || undefined} />
-          </video>
+          </Video>
         ) : (
-          <img src={mediaUrl} alt={message.media_file_name || 'Imagem'} className="h-full w-full object-cover" loading="lazy" />
+          <Image src={mediaUrl} alt={message.media_file_name || 'Imagem'} className="h-full w-full object-cover" loading="lazy" />
         )
       ) : (
         <span className="flex h-full w-full items-center justify-center bg-[var(--bg-elevated)] text-[10px] text-[var(--text-muted)]">
@@ -46,7 +48,7 @@ function WhatsAppMediaViewerThumb({
           <Play className="h-4 w-4 fill-current" />
         </span>
       ) : null}
-    </button>
+    </ActionSurface>
   );
 }
 export function WhatsAppMediaViewer({
@@ -124,54 +126,54 @@ export function WhatsAppMediaViewer({
     <div className={`whatsapp-inbox-media-viewer comm-whatsapp-media-viewer modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'} fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]`} role="dialog" aria-modal="true">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-4 py-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
-          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
+          <Text className="truncate text-sm font-semibold">{selectedAuthor}</Text>
+          <Text className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</Text>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {mediaUrl && !isVideo ? (
             <>
-              <button
+              <IconButton variant="ghost" size="sm"
                 type="button"
                 onClick={() => changeZoom(zoom - 0.5)}
                 disabled={zoom === 1}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label="Reduzir zoom"
                 title="Reduzir zoom"
               >
-                <ZoomOut className="h-5 w-5" />
-              </button>
-              <button
+                <ZoomOut className="" />
+              </IconButton>
+              <Button variant="ghost"
                 type="button"
                 onClick={() => changeZoom(1)}
-                className="inline-flex h-10 min-w-12 items-center justify-center rounded-lg px-1 text-xs font-semibold tabular-nums text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                className="inline-flex min-w-12 items-center justify-center font-semibold tabular-nums transition"
                 aria-label="Ajustar imagem à tela"
                 title="Ajustar à tela"
               >
                 {Math.round(zoom * 100)}%
-              </button>
-              <button
+              </Button>
+              <IconButton variant="ghost" size="sm"
                 type="button"
                 onClick={() => changeZoom(zoom + 0.5)}
                 disabled={zoom === 4}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label="Ampliar imagem"
                 title="Ampliar imagem"
               >
-                <ZoomIn className="h-5 w-5" />
-              </button>
-              <button
+                <ZoomIn className="" />
+              </IconButton>
+              <IconButton variant="ghost" size="sm"
                 type="button"
                 onClick={rotate}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                className="inline-flex items-center justify-center transition"
                 aria-label="Rotacionar imagem"
                 title={`Rotacionar (${rotation * 90}°)`}
               >
-                <RotateCw className="h-5 w-5" />
-              </button>
+                <RotateCw className="" />
+              </IconButton>
             </>
           ) : null}
           {mediaUrl ? (
-            <a
+            <TextLink
               href={mediaUrl}
               download={selectedName}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
@@ -179,29 +181,29 @@ export function WhatsAppMediaViewer({
               title="Baixar"
             >
               <Download className="h-5 w-5" />
-            </a>
+            </TextLink>
           ) : null}
-          <button
+          <IconButton variant="ghost" size="sm"
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+            className="inline-flex items-center justify-center transition"
             aria-label="Fechar"
           >
-            <X className="h-6 w-6" />
-          </button>
+            <X className="" />
+          </IconButton>
         </div>
       </header>
 
       <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-5">
         {canGoPrevious ? (
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             onClick={() => goToIndex(selectedIndex - 1)}
             className="whatsapp-inbox-media-viewer-nav left-4"
             aria-label="Mídia anterior"
           >
             <ChevronLeft className="h-7 w-7" />
-          </button>
+          </ActionSurface>
         ) : null}
 
         <div className="flex h-full w-full items-center justify-center">
@@ -212,9 +214,9 @@ export function WhatsAppMediaViewer({
             </div>
           ) : mediaUrl ? (
             isVideo ? (
-              <video controls autoPlay className="max-h-full max-w-full bg-[var(--overlay)] object-contain">
+              <Video controls autoPlay className="max-h-full max-w-full bg-[var(--overlay)] object-contain">
                 <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
-              </video>
+              </Video>
             ) : (
               <div
                 className={`flex h-full w-full items-center justify-center overflow-hidden ${zoom > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
@@ -225,7 +227,7 @@ export function WhatsAppMediaViewer({
                 onPointerCancel={imageControls.onPointerEnd}
                 onLostPointerCapture={imageControls.onPointerEnd}
               >
-                <img
+                <Image
                   src={mediaUrl}
                   alt={selectedName}
                   draggable={false}
@@ -243,27 +245,27 @@ export function WhatsAppMediaViewer({
         </div>
 
         {canGoNext ? (
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             onClick={() => goToIndex(selectedIndex + 1)}
             className="whatsapp-inbox-media-viewer-nav right-4"
             aria-label="Próxima mídia"
           >
             <ChevronRight className="h-7 w-7" />
-          </button>
+          </ActionSurface>
         ) : null}
       </main>
 
       {messages.length > 1 ? (
         <footer className="whatsapp-inbox-media-viewer-strip relative shrink-0 border-t border-[var(--border-subtle)] px-16 py-2">
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             onClick={() => scrollThumbnails('previous')}
             className="whatsapp-inbox-media-viewer-strip-nav left-4"
             aria-label="Rolar miniaturas para trás"
           >
             <ChevronLeft className="h-5 w-5" />
-          </button>
+          </ActionSurface>
           <div ref={thumbnailStripRef} className="flex gap-3 overflow-x-auto p-3">
             {messages.map((message) => (
               <WhatsAppMediaViewerThumb
@@ -274,14 +276,14 @@ export function WhatsAppMediaViewer({
               />
             ))}
           </div>
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             onClick={() => scrollThumbnails('next')}
             className="whatsapp-inbox-media-viewer-strip-nav right-4"
             aria-label="Rolar miniaturas para frente"
           >
             <ChevronRight className="h-5 w-5" />
-          </button>
+          </ActionSurface>
         </footer>
       ) : null}
     </div>

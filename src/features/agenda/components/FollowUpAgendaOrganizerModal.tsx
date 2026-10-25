@@ -1,3 +1,4 @@
+import { FieldLabel, Text } from '../../../design-system';
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { CalendarClock, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 
@@ -195,7 +196,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                 ['includeOverdue', 'Incluir atrasados'],
                 ['preserveToday', 'Preservar follow-ups de hoje'],
               ].map(([key, label]) => (
-                <label
+                <FieldLabel
                   key={key}
                   className="kds-surface kds-surface-default flex min-h-10 cursor-pointer items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors"
                 >
@@ -204,7 +205,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                     onChange={(event) => updateOption(key as keyof FollowUpAgendaOrganizerOptions, event.target.checked as never)}
                   />
                   <span>{label}</span>
-                </label>
+                </FieldLabel>
               ))}
             </div>
           </Surface>
@@ -252,7 +253,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                                   <LeadFavoriteBadge favorito={change.leadId ? favoritedLeadIds.has(change.leadId) : false} />
                                   {change.leadName}
                                 </strong>
-                                <p className="truncate text-[var(--text-muted)]">{change.title}</p>
+                                <Text className="truncate text-[var(--text-muted)]">{change.title}</Text>
                               </div>
                               <Badge tone={change.changed ? 'accent' : 'neutral'} className="max-w-full whitespace-normal text-right">
                                 {change.changed
@@ -260,7 +261,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                                   : 'mantém horário'}
                               </Badge>
                             </div>
-                            <p className="mt-2 text-xs text-[var(--text-muted)]">{change.reasons.join(' ')}</p>
+                            <Text className="mt-2 text-xs text-[var(--text-muted)]">{change.reasons.join(' ')}</Text>
                           </Surface>
                         ))}
                       </div>

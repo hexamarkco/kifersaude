@@ -1,7 +1,8 @@
+import { ActionSurface } from '../../../design-system';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-import DonutChart from '../../../components/charts/DonutChart';
+import { DonutChart } from '../../../design-system';
 import {
   Badge,
   Popover,
@@ -55,7 +56,7 @@ export function DashboardDistributionSection({
       const percentage = total > 0 ? (item.value / total) * 100 : 0;
 
       return (
-        <button
+        <ActionSurface variant="plain" padding="none"
           key={item.label}
           type="button"
           onClick={() => onSegmentClick(item.label)}
@@ -66,7 +67,7 @@ export function DashboardDistributionSection({
           <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--text-muted)]">
             {percentage.toFixed(0)}%
           </span>
-        </button>
+        </ActionSurface>
       );
     };
 

@@ -1,3 +1,4 @@
+import DropdownOption from './DropdownOption';
 import { useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -34,9 +35,9 @@ export function FilterSelect({ icon, options, placeholder, value, onChange, incl
       </PopoverTrigger>
       <PopoverContent className="kds-dropdown-menu w-[min(20rem,calc(100vw-1rem))] p-1" role="listbox" aria-label={placeholder}>
         {items.map((option) => (
-          <button key={option.value} type="button" role="option" aria-selected={option.value === value} disabled={option.disabled} onClick={() => { onChange(option.value); setOpen(false); }} className={`kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm ${option.value === value ? 'is-selected font-medium' : ''}`}>
+          <DropdownOption key={option.value} type="button" role="option" aria-selected={option.value === value} disabled={option.disabled} onClick={() => { onChange(option.value); setOpen(false); }} className={`kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm ${option.value === value ? 'is-selected font-medium' : ''}`}>
             <span className="truncate">{option.label}</span>
-          </button>
+          </DropdownOption>
         ))}
       </PopoverContent>
     </Popover>

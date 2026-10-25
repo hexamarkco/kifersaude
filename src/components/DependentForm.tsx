@@ -1,3 +1,4 @@
+import { FieldLabel } from '../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
 import {
@@ -324,7 +325,7 @@ export default function DependentForm({
           </Field>
 
           <Surface variant="muted" padding="sm" className="md:col-span-2">
-            <label className="flex items-start gap-3">
+            <FieldLabel className="flex items-start gap-3">
               <Checkbox
                 size="md"
                 checked={formData.bonus_por_vida_aplicado}
@@ -340,7 +341,7 @@ export default function DependentForm({
                   Marque se este dependente e elegivel ao bonus por vida deste contrato.
                 </span>
               </span>
-            </label>
+            </FieldLabel>
           </Surface>
 
           <Field label="Relação com titular *">

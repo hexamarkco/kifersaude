@@ -1,0 +1,402 @@
+[
+  {
+    "file": "src\\components\\AppErrorBoundary.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\components\\ContractDetails.tsx",
+    "count": 41
+  },
+  {
+    "file": "src\\components\\ContractForm.tsx",
+    "count": 30
+  },
+  {
+    "file": "src\\components\\DependentForm.tsx",
+    "count": 1
+  },
+  {
+    "file": "src\\components\\HolderForm.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\components\\Layout.tsx",
+    "count": 14
+  },
+  {
+    "file": "src\\components\\LeadDetails.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\components\\LeadDetailsPanel.tsx",
+    "count": 17
+  },
+  {
+    "file": "src\\components\\LeadForm.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\components\\LeadNotificationToast.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\components\\NextStepSuggestion.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\components\\NotificationToast.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\components\\ObserverRestriction.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\components\\ReminderSchedulerModal.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\components\\WhatsAppInboxNotificationToast.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\agenda\\AgendaScreen.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\features\\agenda\\components\\FollowUpAgendaOrganizerModal.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\ai-sandbox\\AiSandboxChatScreen.tsx",
+    "count": 11
+  },
+  {
+    "file": "src\\features\\blog\\components\\BlogEditor.tsx",
+    "count": 7
+  },
+  {
+    "file": "src\\features\\blog\\components\\BlogPostsList.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\features\\commissions\\CommissionCalendarScreen.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\commissions\\components\\CommissionSelectedDatePanel.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\followUpModalUi.tsx",
+    "count": 8
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\ScheduledItemsSection.tsx",
+    "count": 1
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppAgendaModal.tsx",
+    "count": 18
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppAttendanceCritiquePanel.tsx",
+    "count": 10
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppBatchFollowUpModal.tsx",
+    "count": 31
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppChatFilesDrawer.tsx",
+    "count": 16
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppChatMessageSearch.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppComposer.tsx",
+    "count": 18
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppComposerRewriteModal.tsx",
+    "count": 10
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppDashboardModal.tsx",
+    "count": 13
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppFollowUpModal.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppFormattedText.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxConversationPane.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxDialogs.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxList.tsx",
+    "count": 11
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppInboxSidebar.tsx",
+    "count": 9
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppLeadDrawer.tsx",
+    "count": 24
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMediaDrawer.tsx",
+    "count": 10
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMediaViewer.tsx",
+    "count": 7
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMessageContent.tsx",
+    "count": 54
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMessageDetailsModal.tsx",
+    "count": 14
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppMessageThread.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppQuickRepliesModal.tsx",
+    "count": 9
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppScheduledMessagesPanel.tsx",
+    "count": 14
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppScheduleMessageModal.tsx",
+    "count": 14
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppStartChatModal.tsx",
+    "count": 8
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppThreadHeader.tsx",
+    "count": 1
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\components\\WhatsAppVoiceComposer.tsx",
+    "count": 1
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp\\WhatsAppInboxScreen.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\components\\CampaignDeliveryStatusCard.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\components\\CampaignIssueNotice.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\components\\CampaignSequenceFlow.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\WhatsAppCampaignDetailScreen.tsx",
+    "count": 17
+  },
+  {
+    "file": "src\\features\\communication\\whatsapp-campaigns\\WhatsAppCampaignsScreen.tsx",
+    "count": 49
+  },
+  {
+    "file": "src\\features\\config\\ai\\AiConfigScreen.tsx",
+    "count": 8
+  },
+  {
+    "file": "src\\features\\config\\ai\\components\\FeatureEditorDrawer.tsx",
+    "count": 13
+  },
+  {
+    "file": "src\\features\\config\\ai\\components\\FeatureListCard.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\config\\ai\\components\\GlobalConfigSection.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\features\\config\\automation\\AutoContactFlowSettingsScreen.tsx",
+    "count": 93
+  },
+  {
+    "file": "src\\features\\config\\automation\\components\\FlowBuilder.tsx",
+    "count": 19
+  },
+  {
+    "file": "src\\features\\config\\forms\\FormEditorScreen.tsx",
+    "count": 17
+  },
+  {
+    "file": "src\\features\\config\\forms\\FormsScreen.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\features\\config\\general\\AccessControlManagerScreen.tsx",
+    "count": 10
+  },
+  {
+    "file": "src\\features\\config\\general\\components\\SettingsCatalogList.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\config\\general\\SystemSettingsScreen.tsx",
+    "count": 12
+  },
+  {
+    "file": "src\\features\\config\\integrations\\api-docs\\ApiDocsScreen.tsx",
+    "count": 20
+  },
+  {
+    "file": "src\\features\\config\\integrations\\api-docs\\components\\ApiCodeBlock.tsx",
+    "count": 1
+  },
+  {
+    "file": "src\\features\\config\\integrations\\components\\MetaAdsPanel.tsx",
+    "count": 37
+  },
+  {
+    "file": "src\\features\\config\\integrations\\components\\WhatsAppApiSettingsPanel.tsx",
+    "count": 24
+  },
+  {
+    "file": "src\\features\\config\\integrations\\IntegrationsScreen.tsx",
+    "count": 18
+  },
+  {
+    "file": "src\\features\\config\\links\\LinksScreen.tsx",
+    "count": 11
+  },
+  {
+    "file": "src\\features\\config\\users\\UsersScreen.tsx",
+    "count": 5
+  },
+  {
+    "file": "src\\features\\contracts\\components\\ContractBulkJsonImportDialog.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\features\\contracts\\components\\ContractJsonImportDialog.tsx",
+    "count": 5
+  },
+  {
+    "file": "src\\features\\contracts\\components\\ContractStatusDropdown.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\contracts\\components\\HolderImportPreparation.tsx",
+    "count": 7
+  },
+  {
+    "file": "src\\features\\contracts\\ContractsManagerScreen.tsx",
+    "count": 5
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardAlerts.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardCommercialSections.tsx",
+    "count": 32
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardEventsCalendar.tsx",
+    "count": 12
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardHeroCard.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardOperationsSections.tsx",
+    "count": 18
+  },
+  {
+    "file": "src\\features\\dashboard\\components\\DashboardTrendSection.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\features\\leads\\components\\LeadKanbanBoard.tsx",
+    "count": 8
+  },
+  {
+    "file": "src\\features\\leads\\LeadsManagerScreen.tsx",
+    "count": 7
+  },
+  {
+    "file": "src\\features\\operator-landings\\OperatorLandingScreen.tsx",
+    "count": 32
+  },
+  {
+    "file": "src\\features\\production\\components\\TeamProduction.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\features\\public-content\\components\\PrivacyNotice.tsx",
+    "count": 2
+  },
+  {
+    "file": "src\\features\\public-content\\components\\PublicFooter.tsx",
+    "count": 9
+  },
+  {
+    "file": "src\\features\\public-content\\components\\PublicHomeHeader.tsx",
+    "count": 3
+  },
+  {
+    "file": "src\\features\\public-content\\PrivacyPolicyPage.tsx",
+    "count": 43
+  },
+  {
+    "file": "src\\pages\\dev\\DesignSystemShowcase.tsx",
+    "count": 17
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\ComponentCatalog.tsx",
+    "count": 4
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\Foundations.tsx",
+    "count": 5
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\ShowcaseParts.tsx",
+    "count": 5
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\States.tsx",
+    "count": 6
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\WorkspacePreview.tsx",
+    "count": 1
+  },
+  {
+    "file": "src\\pages\\public\\HomePage.tsx",
+    "count": 14
+  }
+]

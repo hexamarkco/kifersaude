@@ -413,7 +413,7 @@ export default function FormPage() {
                 />
               )}
 
-              <input
+              <Input
                 type="text"
                 name="website"
                 value={honeypot}
@@ -421,7 +421,7 @@ export default function FormPage() {
                 autoComplete="off"
                 tabIndex={-1}
                 aria-hidden="true"
-                className="pointer-events-none absolute h-0 w-0 opacity-0"
+                className="pointer-events-none absolute w-0 opacity-0"
               />
 
               {stepIndex > 0 && current?.kind !== 'contact' && (

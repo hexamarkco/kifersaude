@@ -1,3 +1,4 @@
+import { Text, Heading, FieldLabel } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Mail, Phone, Users } from "lucide-react";
 
@@ -276,16 +277,16 @@ export default function LeadKanbanBoard({
       )}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="kds-op-section-label">
+          <Text className="kds-op-section-label">
             Funil visual
-          </p>
-          <h3 className="kds-op-panel-title mt-2">
+          </Text>
+          <Heading level={3} className="kds-op-panel-title mt-2">
             Contatos por etapa do atendimento
-          </h3>
-          <p className="kds-op-lead-muted mt-1 text-sm">
+          </Heading>
+          <Text className="kds-op-lead-muted mt-1 text-sm">
             Arraste cards entre colunas para atualizar o status sem sair da
             visão do funil.
-          </p>
+          </Text>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -318,16 +319,16 @@ export default function LeadKanbanBoard({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <OperationalStatusDot statusColor={chipColor} />
-                        <h4
+                        <Heading level={4}
                           className="kds-kanban-column-title truncate"
                         >
                           {column.nome}
-                        </h4>
+                        </Heading>
                       </div>
                       {wipLimit > 0 && (
-                        <p className={isOverLimit ? "kds-op-lead-danger mt-1 text-xs font-medium" : "kds-op-lead-muted mt-1 text-xs font-medium"}>
+                        <Text className={isOverLimit ? "kds-op-lead-danger mt-1 text-xs font-medium" : "kds-op-lead-muted mt-1 text-xs font-medium"}>
                           Limite WIP: {wipLimit}
-                        </p>
+                        </Text>
                       )}
                     </div>
 
@@ -335,7 +336,7 @@ export default function LeadKanbanBoard({
                   </div>
 
                   <div className="mb-4 rounded-xl bg-[var(--bg-hover)]">
-                    <label className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium">
+                    <FieldLabel className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium">
                       <span className="kds-op-lead-muted">
                         Limite WIP
                       </span>
@@ -351,14 +352,14 @@ export default function LeadKanbanBoard({
                           className="text-right"
                         />
                       </div>
-                    </label>
+                    </FieldLabel>
                   </div>
 
                   <div className="kds-kanban-column-body space-y-3 overflow-y-auto pr-1">
                     {columnLeads.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] px-4 py-8 text-center">
                         <Users className="mx-auto mb-2 h-8 w-8 opacity-70" />
-                        <p className="text-sm font-medium">Nenhum lead</p>
+                        <Text className="text-sm font-medium">Nenhum lead</Text>
                       </div>
                     ) : (
                       columnLeads.map((lead) => {
@@ -384,11 +385,11 @@ export default function LeadKanbanBoard({
                                   setLocalLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)));
                                 }}
                               />
-                              <h5
+                              <Heading level={5}
                                 className="kds-op-lead-title truncate"
                               >
                                 {lead.nome_completo}
-                              </h5>
+                              </Heading>
                             </div>
 
                             <div

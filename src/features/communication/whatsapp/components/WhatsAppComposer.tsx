@@ -1,3 +1,5 @@
+import { Text, Image, Video } from '../../../../design-system';
+import { FileInput, ActionSurface, Textarea } from '../../../../design-system';
 import type {
   ChangeEventHandler,
   ClipboardEventHandler,
@@ -177,9 +179,9 @@ export function WhatsAppComposer({
   return (
               <div className="whatsapp-inbox-composer-area relative z-10 min-h-0 overflow-visible border-t p-2.5 sm:p-3">
                 <div className={`whatsapp-inbox-composer rounded-xl border transition-shadow ${composerFocused ? 'is-focused' : ''} ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
-                  <input
+                  <FileInput
                     ref={fileInputRef}
-                    type="file"
+
                     multiple
                     accept={attachmentInputAccept}
                     className="hidden"
@@ -206,17 +208,17 @@ export function WhatsAppComposer({
                     <div className="mb-3 flex items-start gap-3 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2.5">
                       <Reply className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]">Respondendo</p>
-                        <p className="truncate text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(replyTargetMessage)}</p>
+                        <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]">Respondendo</Text>
+                        <Text className="truncate text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(replyTargetMessage)}</Text>
                       </div>
-                      <button
+                      <IconButton variant="ghost" size="sm"
                         type="button"
                         onClick={() => setReplyTargetMessage(null)}
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)]"
+                        className="inline-flex shrink-0 items-center justify-center transition"
                         aria-label="Cancelar resposta"
                       >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                        <X className="" />
+                      </IconButton>
                     </div>
                   ) : null}
 
@@ -229,12 +231,12 @@ export function WhatsAppComposer({
                       <div className="whatsapp-inbox-document-composer mb-3 overflow-hidden rounded-2xl border">
                         <div className="whatsapp-inbox-document-composer-header flex items-center justify-between gap-3 border-b px-3 py-2.5">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{selectedDocumentComposerAttachment.file.name}</p>
-                            <p className="text-xs text-[var(--text-muted)]">
+                            <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{selectedDocumentComposerAttachment.file.name}</Text>
+                            <Text className="text-xs text-[var(--text-muted)]">
                               {formatFileSize(selectedDocumentComposerAttachment.file.size) || 'Documento'} · {selectedExtension}
-                            </p>
+                            </Text>
                           </div>
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => handleClearAttachment()}
                             className="whatsapp-inbox-media-composer-close inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition"
@@ -242,7 +244,7 @@ export function WhatsAppComposer({
                             title="Remover documentos"
                           >
                             <X className="h-5 w-5" />
-                          </button>
+                          </ActionSurface>
                         </div>
 
                         <div className="whatsapp-inbox-document-composer-stage relative flex min-h-[min(48vh,30rem)] items-center justify-center p-3 sm:p-4">
@@ -258,10 +260,10 @@ export function WhatsAppComposer({
                                 {selectedExtension.slice(0, 4)}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Preview indisponível para este formato</p>
-                                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                                <Text className="text-sm font-semibold text-[var(--text-primary)]">Preview indisponível para este formato</Text>
+                                <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                                   O arquivo será enviado normalmente. PDFs podem ser visualizados antes do envio.
-                                </p>
+                                </Text>
                               </div>
                             </div>
                           )}
@@ -276,7 +278,7 @@ export function WhatsAppComposer({
                         </div>
 
                         <div className="whatsapp-inbox-document-composer-caption flex items-center gap-2 border-t px-3 py-2.5">
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={handleToggleMediaDrawer}
                             disabled={!selectedChat}
@@ -286,8 +288,8 @@ export function WhatsAppComposer({
                             title="Emoji, GIF e figurinha"
                           >
                             <Smile className="h-5 w-5" />
-                          </button>
-                          <textarea
+                          </ActionSurface>
+                          <Textarea
                             ref={composerTextareaRef}
                             rows={1}
                             value={messageDraft}
@@ -304,9 +306,9 @@ export function WhatsAppComposer({
                             onBlur={() => setComposerFocused(false)}
                             placeholder="Digite uma mensagem"
                             disabled={generatingFollowUp || sending}
-                            className="whatsapp-inbox-composer-input min-h-10 flex-1 resize-none border-none bg-transparent px-0 py-2 text-sm leading-6 focus:outline-none"
+                            className="whatsapp-inbox-composer-input flex-1 resize-none leading-6 focus:outline-none"
                           />
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={handleComposerSubmit}
                             disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
@@ -315,7 +317,7 @@ export function WhatsAppComposer({
                             title={sendDisabledReason ?? undefined}
                           >
                             {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
-                          </button>
+                          </ActionSurface>
                         </div>
 
                         <div className="whatsapp-inbox-document-composer-strip flex items-center justify-center gap-2 border-t px-3 py-3">
@@ -325,10 +327,10 @@ export function WhatsAppComposer({
                               const selected = attachment.id === selectedDocumentComposerAttachment.id;
                               return (
                                 <div key={attachment.id} className={`whatsapp-inbox-document-composer-item relative flex h-14 min-w-[12rem] max-w-[16rem] shrink-0 items-center gap-2 overflow-hidden rounded-xl border px-2.5 transition ${selected ? 'is-selected' : ''}`}>
-                                  <button
+                                  <Button variant="ghost"
                                     type="button"
                                     onClick={() => setSelectedDocumentComposerAttachmentId(attachment.id)}
-                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                    className="flex min-w-0 flex-1 items-center text-left"
                                     aria-label="Selecionar documento"
                                   >
                                     <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 items-center justify-center rounded-full border px-1 text-[10px] font-bold tracking-[0.08em]">
@@ -338,19 +340,19 @@ export function WhatsAppComposer({
                                       <span className="block truncate text-xs font-semibold">{attachment.file.name}</span>
                                       <span className="block truncate text-[11px] opacity-70">{formatFileSize(attachment.file.size) || extension}</span>
                                     </span>
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <IconButton variant="ghost" size="sm"
                                     type="button"
                                     onClick={() => handleClearAttachment(attachment.id)}
-                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                                    className="inline-flex shrink-0 items-center justify-center transition"
                                     aria-label="Remover documento"
                                   >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
+                                    <X className="" />
+                                  </IconButton>
                                 </div>
                               );
                             })}
-                            <button
+                            <ActionSurface variant="plain" padding="none"
                               type="button"
                               onClick={() => handleAttachmentMenuAction('document')}
                               disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
@@ -359,7 +361,7 @@ export function WhatsAppComposer({
                               title="Adicionar documento"
                             >
                               <Plus className="h-5 w-5" />
-                            </button>
+                            </ActionSurface>
                           </div>
                         </div>
                       </div>
@@ -369,7 +371,7 @@ export function WhatsAppComposer({
                   {visualComposerAttachments.length > 0 && selectedMediaComposerAttachment ? (
                     <div className="whatsapp-inbox-media-composer mb-3 overflow-hidden rounded-2xl border">
                       <div className="whatsapp-inbox-media-composer-stage relative flex min-h-[min(48vh,30rem)] items-center justify-center px-4 py-5 sm:px-8">
-                        <button
+                        <ActionSurface variant="plain" padding="none"
                           type="button"
                           onClick={() => handleClearAttachment()}
                           className="whatsapp-inbox-media-composer-close absolute left-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full transition"
@@ -377,22 +379,22 @@ export function WhatsAppComposer({
                           title="Remover mídias"
                         >
                           <X className="h-5 w-5" />
-                        </button>
+                        </ActionSurface>
 
                         {selectedMediaComposerAttachment.kind === 'image' && selectedMediaComposerAttachment.previewUrl ? (
-                          <img
+                          <Image
                             src={selectedMediaComposerAttachment.previewUrl}
                             alt={selectedMediaComposerAttachment.file.name}
                             className="whatsapp-inbox-media-composer-preview max-h-[min(44vh,28rem)] max-w-full object-contain"
                           />
                         ) : selectedMediaComposerAttachment.kind === 'video' && selectedMediaComposerAttachment.previewUrl ? (
-                          <video
+                          <Video
                             controls
                             preload="metadata"
                             className="whatsapp-inbox-media-composer-preview max-h-[min(44vh,28rem)] max-w-full object-contain"
                           >
                             <source src={selectedMediaComposerAttachment.previewUrl} type={selectedMediaComposerAttachment.file.type || undefined} />
-                          </video>
+                          </Video>
                         ) : (
                           <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
                             <Images className="h-10 w-10" />
@@ -410,7 +412,7 @@ export function WhatsAppComposer({
                       </div>
 
                       <div className="whatsapp-inbox-media-composer-caption flex items-center gap-2 border-t px-3 py-2.5">
-                        <button
+                        <ActionSurface variant="plain" padding="none"
                           type="button"
                           onClick={handleToggleMediaDrawer}
                           disabled={!selectedChat}
@@ -420,8 +422,8 @@ export function WhatsAppComposer({
                           title="Emoji, GIF e figurinha"
                         >
                           <Smile className="h-5 w-5" />
-                        </button>
-                        <textarea
+                        </ActionSurface>
+                        <Textarea
                           ref={composerTextareaRef}
                           rows={1}
                           value={messageDraft}
@@ -438,9 +440,9 @@ export function WhatsAppComposer({
                           onBlur={() => setComposerFocused(false)}
                           placeholder="Digite uma mensagem"
                           disabled={generatingFollowUp || sending}
-                          className="whatsapp-inbox-composer-input min-h-10 flex-1 resize-none border-none bg-transparent px-0 py-2 text-sm leading-6 focus:outline-none"
+                          className="whatsapp-inbox-composer-input flex-1 resize-none leading-6 focus:outline-none"
                         />
-                        <button
+                        <ActionSurface variant="plain" padding="none"
                           type="button"
                           onClick={handleComposerSubmit}
                           disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
@@ -449,7 +451,7 @@ export function WhatsAppComposer({
                           title={sendDisabledReason ?? undefined}
                         >
                           {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
-                        </button>
+                        </ActionSurface>
                       </div>
 
                       <div className="whatsapp-inbox-media-composer-strip flex items-center justify-center gap-2 border-t px-3 py-3">
@@ -461,34 +463,34 @@ export function WhatsAppComposer({
                                 key={attachment.id}
                                 className={`whatsapp-inbox-media-composer-thumb relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border transition ${selected ? 'is-selected' : ''}`}
                               >
-                                <button
+                                <ActionSurface variant="plain" padding="none"
                                   type="button"
                                   onClick={() => setSelectedMediaComposerAttachmentId(attachment.id)}
                                   className="flex h-full w-full items-center justify-center overflow-hidden"
                                   aria-label={`Selecionar ${attachment.kind === 'image' ? 'imagem' : 'vídeo'}`}
                                 >
                                   {attachment.kind === 'image' && attachment.previewUrl ? (
-                                    <img src={attachment.previewUrl} alt="" className="h-full w-full object-cover" />
+                                    <Image src={attachment.previewUrl} alt="" className="h-full w-full object-cover" />
                                   ) : attachment.kind === 'video' && attachment.previewUrl ? (
-                                    <video preload="metadata" className="h-full w-full object-cover">
+                                    <Video preload="metadata" className="h-full w-full object-cover">
                                       <source src={attachment.previewUrl} type={attachment.file.type || undefined} />
-                                    </video>
+                                    </Video>
                                   ) : (
                                     <Images className="h-5 w-5" />
                                   )}
-                                </button>
-                                <button
+                                </ActionSurface>
+                                <IconButton variant="ghost" size="sm"
                                   type="button"
                                   onClick={() => handleClearAttachment(attachment.id)}
-                                  className="absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                                  className="absolute right-0.5 top-0.5 inline-flex items-center justify-center transition"
                                   aria-label="Remover mídia"
                                 >
-                                  <X className="h-3 w-3" />
-                                </button>
+                                  <X className="" />
+                                </IconButton>
                               </div>
                             );
                           })}
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('media')}
                             disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
@@ -497,7 +499,7 @@ export function WhatsAppComposer({
                             title="Adicionar foto ou vídeo"
                           >
                             <Plus className="h-5 w-5" />
-                          </button>
+                          </ActionSurface>
                         </div>
                       </div>
                     </div>
@@ -513,19 +515,19 @@ export function WhatsAppComposer({
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                            <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                               Sugestão da IA
-                            </p>
+                            </Text>
                             {replySuggestionText ? (
                               <span className="hidden text-[11px] text-[var(--text-muted)] sm:inline">Tab para aplicar</span>
                             ) : null}
                           </div>
                           {replySuggestionText ? (
-                            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">{replySuggestionText}</p>
+                            <Text className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">{replySuggestionText}</Text>
                           ) : replySuggestionError ? (
-                            <p className="mt-1 text-sm leading-6 text-[var(--danger-text)]">{replySuggestionError}</p>
+                            <Text className="mt-1 text-sm leading-6 text-[var(--danger-text)]">{replySuggestionError}</Text>
                           ) : (
-                            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Analisando histórico e padrão de atendimento...</p>
+                            <Text className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Analisando histórico e padrão de atendimento...</Text>
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (
@@ -586,7 +588,7 @@ export function WhatsAppComposer({
                           className="whatsapp-inbox-attach-menu min-w-[208px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
                           aria-label="Anexar arquivo"
                         >
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('document')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
@@ -595,8 +597,8 @@ export function WhatsAppComposer({
                               <FileText className="h-4 w-4" />
                             </span>
                             <span>Documento</span>
-                          </button>
-                          <button
+                          </ActionSurface>
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('media')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
@@ -605,8 +607,8 @@ export function WhatsAppComposer({
                               <Images className="h-4 w-4" />
                             </span>
                             <span>Fotos e vídeos</span>
-                          </button>
-                          <button
+                          </ActionSurface>
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('audio')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
@@ -615,7 +617,7 @@ export function WhatsAppComposer({
                               <FileAudio className="h-4 w-4" />
                             </span>
                             <span>Áudio</span>
-                          </button>
+                          </ActionSurface>
                         </PopoverContent>
                       </Popover>
                         <IconButton
@@ -658,7 +660,7 @@ export function WhatsAppComposer({
                           className="whatsapp-inbox-attach-menu min-w-[216px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
                           aria-label="Ações de inteligência artificial"
                         >
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -672,8 +674,8 @@ export function WhatsAppComposer({
                               {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
                             </span>
                             <span>Corrigir texto</span>
-                          </button>
-                          <button
+                          </ActionSurface>
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -687,8 +689,8 @@ export function WhatsAppComposer({
                               {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </span>
                             <span>Adaptar ao contexto</span>
-                          </button>
-                          <button
+                          </ActionSurface>
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -702,8 +704,8 @@ export function WhatsAppComposer({
                               <SlidersHorizontal className="h-4 w-4" />
                             </span>
                             <span>Mais opções</span>
-                          </button>
-                          <button
+                          </ActionSurface>
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -717,10 +719,10 @@ export function WhatsAppComposer({
                               {replySuggestionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
                             </span>
                             <span>Sugerir resposta</span>
-                          </button>
+                          </ActionSurface>
                           <div className="my-1 border-t border-[var(--border-subtle)]" />
                           <div className="grid grid-cols-3 gap-1 px-1 pb-1" aria-label="Formatacao do texto">
-                            <button
+                            <ActionSurface variant="plain" padding="none"
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
@@ -733,8 +735,8 @@ export function WhatsAppComposer({
                               title="Negrito"
                             >
                               B
-                            </button>
-                            <button
+                            </ActionSurface>
+                            <ActionSurface variant="plain" padding="none"
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
@@ -747,8 +749,8 @@ export function WhatsAppComposer({
                               title="Italico"
                             >
                               I
-                            </button>
-                            <button
+                            </ActionSurface>
+                            <ActionSurface variant="plain" padding="none"
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
@@ -761,7 +763,7 @@ export function WhatsAppComposer({
                               title="Riscado"
                             >
                               S
-                            </button>
+                            </ActionSurface>
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -792,7 +794,7 @@ export function WhatsAppComposer({
                                 const isActive = index === quickReplyActiveIndex;
 
                                 return (
-                                  <button
+                                  <ActionSurface variant="plain" padding="none"
                                     key={option.id}
                                     type="button"
                                     className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--brand-primary-soft)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
@@ -808,21 +810,21 @@ export function WhatsAppComposer({
                                           /{option.shortcut}
                                         </code>
                                       </div>
-                                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">
+                                      <Text className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">
                                         {option.preview}
-                                      </p>
+                                      </Text>
                                     </div>
-                                  </button>
+                                  </ActionSurface>
                                 );
                               })
                             ) : (
                               <div className="px-4 py-4 text-sm text-[var(--text-secondary)]">
-                                <p className="font-medium">{quickReplyEmptyStateMessage}</p>
+                                <Text className="font-medium">{quickReplyEmptyStateMessage}</Text>
                                 {quickRepliesLoadError ? (
                                   <div className="mt-2 flex items-center justify-between gap-3">
-                                    <p className="text-xs leading-5 text-[var(--text-muted)]">
+                                    <Text className="text-xs leading-5 text-[var(--text-muted)]">
                                       Tente novamente ou use <strong>Gerenciar</strong> para conferir as mensagens salvas.
-                                    </p>
+                                    </Text>
                                     <Button
                                       type="button"
                                       variant="secondary"
@@ -834,9 +836,9 @@ export function WhatsAppComposer({
                                     </Button>
                                   </div>
                                 ) : (
-                                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                                  <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                                     Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair da conversa.
-                                  </p>
+                                  </Text>
                                 )}
                               </div>
                             )}
@@ -844,7 +846,7 @@ export function WhatsAppComposer({
                         </div>
                       )}
 
-                      <textarea
+                      <Textarea
                         ref={composerTextareaRef}
                         rows={1}
                         value={messageDraft}
@@ -861,12 +863,12 @@ export function WhatsAppComposer({
                         onBlur={() => setComposerFocused(false)}
                         placeholder="Digite uma mensagem"
                         disabled={generatingFollowUp}
-                        className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 focus:outline-none"
+                        className="whatsapp-inbox-composer-input block w-full resize-none leading-6 focus:outline-none"
                       />
                     </div>
 
                     <div className={`flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
-                      <button
+                      <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={handleComposerSubmit}
                         disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
@@ -881,7 +883,7 @@ export function WhatsAppComposer({
                         ) : (
                           <Mic className="h-5 w-5" />
                         )}
-                      </button>
+                      </ActionSurface>
                     </div>
                   </div>
                   </>

@@ -1,3 +1,5 @@
+import { Text } from '../../../design-system';
+import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Brain,
@@ -263,9 +265,9 @@ export default function AiConfigScreen() {
               <Upload className="kds-control-icon" />
               Importar
             </Button>
-            <input
+            <FileInput
               ref={fileInputRef}
-              type="file"
+
               accept=".json"
               className="hidden"
               onChange={handleImportFile}
@@ -322,9 +324,9 @@ export default function AiConfigScreen() {
           {filteredFeatures.length === 0 && !loading && (
             <Card className="p-8 text-center">
               <Brain className="mx-auto mb-3 h-10 w-10 text-[var(--text-muted)]" />
-              <p className="text-sm text-[var(--text-secondary)]">
+              <Text className="text-sm text-[var(--text-secondary)]">
                 Nenhuma funcionalidade encontrada.
-              </p>
+              </Text>
             </Card>
           )}
         </div>
@@ -358,16 +360,16 @@ export default function AiConfigScreen() {
         {importConfirm && (
           <div className="max-h-80 space-y-4 overflow-y-auto text-sm">
             <div className="rounded-lg border border-[var(--border-subtle)] p-3 text-[var(--text-secondary)]">
-              <p>{importConfirm.features.length} Feature(s) e {importConfirm.globalConfigs.length} configuração(ões) global(is) prontas para importar.</p>
+              <Text>{importConfirm.features.length} Feature(s) e {importConfirm.globalConfigs.length} configuração(ões) global(is) prontas para importar.</Text>
               {importConfirm.skippedFeatures > 0 && (
-                <p className="mt-1">{importConfirm.skippedFeatures} Feature(s) sem configuração aplicável serão ignoradas.</p>
+                <Text className="mt-1">{importConfirm.skippedFeatures} Feature(s) sem configuração aplicável serão ignoradas.</Text>
               )}
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
+              <Text className="mt-1 text-xs text-[var(--text-muted)]">
                 Exemplos, catálogo de modelos e snapshots de roteamento do arquivo são somente informativos e nunca são aplicados.
-              </p>
+              </Text>
             </div>
             <div>
-              <p className="font-medium text-[var(--text-primary)]">Modelos personalizados</p>
+              <Text className="font-medium text-[var(--text-primary)]">Modelos personalizados</Text>
               <ul className="mt-1 space-y-1 text-[var(--text-secondary)]">
                 {importConfirm.features.filter((feature) => feature.modelMode === "custom").map((feature) => (
                   <li key={feature.key}>{feature.name} → {feature.modelLabel}</li>
@@ -376,7 +378,7 @@ export default function AiConfigScreen() {
               </ul>
             </div>
             <div>
-              <p className="font-medium text-[var(--text-primary)]">Roteamento padrão</p>
+              <Text className="font-medium text-[var(--text-primary)]">Roteamento padrão</Text>
               <ul className="mt-1 space-y-1 text-[var(--text-secondary)]">
                 {importConfirm.features.filter((feature) => feature.modelMode !== "custom").map((feature) => (
                   <li key={feature.key}>
@@ -387,13 +389,13 @@ export default function AiConfigScreen() {
             </div>
             {importConfirm.warnings.length > 0 && (
             <div className="rounded-[var(--radius-lg)] border border-[var(--warning-border)] bg-[var(--warning-soft)] p-3">
-                <p className="font-medium text-[var(--warning-text)]">Avisos</p>
+                <Text className="font-medium text-[var(--warning-text)]">Avisos</Text>
                 <ul className="mt-1 space-y-1 text-xs text-[var(--text-secondary)]">
                   {importConfirm.warnings.map((warning) => <li key={warning}>• {warning}</li>)}
                 </ul>
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <Text className="mt-2 text-xs text-[var(--text-muted)]">
                   O valor importado será preservado; nenhum modelo alternativo será escolhido silenciosamente.
-                </p>
+                </Text>
               </div>
             )}
           </div>

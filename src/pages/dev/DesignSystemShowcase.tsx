@@ -1,3 +1,5 @@
+import { TextLink, Text, Heading } from '../../design-system';
+import { ActionSurface } from '../../design-system';
 import { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import {
@@ -55,7 +57,6 @@ import {
   SectionIntro,
   UsageNote,
 } from './showcase/ShowcaseParts';
-import './design-system-showcase.css';
 
 const storageKey = 'kifer-ds-showcase-theme';
 function readTheme(): ShowcaseTheme {
@@ -145,11 +146,11 @@ function Showcase({
   );
   return (
     <>
-      <a href="#ds-main" className="ds-skip-link">
+      <TextLink href="#ds-main" className="ds-skip-link">
         Pular para o conteúdo
-      </a>
+      </TextLink>
       <aside className="ds-sidebar">
-        <a
+        <TextLink
           className="ds-brand ds-main-brand"
           href="#overview"
           onClick={(event) => {
@@ -162,7 +163,7 @@ function Showcase({
           <strong>
             Kifer Saúde<span>DESIGN SYSTEM</span>
           </strong>
-        </a>
+        </TextLink>
         <div className="ds-sidebar-section">
           <span className="ds-eyebrow">BIBLIOTECA DO CRM</span>
         </div>
@@ -175,15 +176,15 @@ function Showcase({
         <div className="ds-sidebar-bottom">
           <span className="ds-live-dot" />
           <span>Componentes reais do CRM</span>
-          <p>
+          <Text>
             Uma base compartilhada.
             <br />
             Cada experiência conectada.
-          </p>
-          <a className="ds-text-link" href="/painel">
+          </Text>
+          <TextLink className="ds-text-link" href="/painel">
             Acessar o CRM
             <ArrowRight size={14} aria-hidden="true" />
-          </a>
+          </TextLink>
         </div>
       </aside>
       <Drawer
@@ -267,7 +268,7 @@ function Showcase({
               <div className="ds-search-results">
                 {results.length ? (
                   results.map((item) => (
-                    <button
+                    <ActionSurface variant="plain" padding="none"
                       key={item.id}
                       className="ds-search-result"
                       onClick={() => navigate(item.id)}
@@ -275,10 +276,10 @@ function Showcase({
                       <item.icon size={22} />
                       <div>
                         <strong>{item.label}</strong>
-                        <p>{item.description}</p>
+                        <Text>{item.description}</Text>
                       </div>
                       <ChevronRight size={18} />
-                    </button>
+                    </ActionSurface>
                   ))
                 ) : (
                   <EmptyState
@@ -336,17 +337,17 @@ function Overview({
             <span className="ds-live-dot" />
             TERRACOTA CRM
           </Badge>
-          <h1>
+          <Heading level={1}>
             Uma base comum.
             <br />
             Mais clareza em
             <br />
             <em>cada experiência.</em>
-          </h1>
-          <p>
+          </Heading>
+          <Text>
             O design system do Kifer Saúde reúne os fundamentos, componentes e
             padrões que dão forma ao nosso CRM.
-          </p>
+          </Text>
           <div className="ds-row ds-hero-actions">
             <Button onClick={() => navigate('components')}>
               Explorar componentes
@@ -411,8 +412,8 @@ function Overview({
           <div key={item.number}>
             <span>{item.number}</span>
             <div>
-              <h2>{item.title}</h2>
-              <p>{item.text}</p>
+              <Heading level={2}>{item.title}</Heading>
+              <Text>{item.text}</Text>
             </div>
           </div>
         ))}
@@ -421,11 +422,11 @@ function Overview({
         <div className="ds-section-heading">
           <div>
             <span className="ds-eyebrow">DO COMPONENTE À EXPERIÊNCIA</span>
-            <h2>O sistema, em uso.</h2>
-            <p>
+            <Heading level={2}>O sistema, em uso.</Heading>
+            <Text>
               Explore uma listagem real de componentes. Busque, filtre, edite e
               experimente.
-            </p>
+            </Text>
           </div>
           <ExploreButton onClick={() => navigate('patterns')}>
             Todos os padrões
@@ -436,14 +437,14 @@ function Overview({
       <div className="ds-section-heading">
         <div>
           <span className="ds-eyebrow">COMECE POR AQUI</span>
-          <h2>Uma linguagem. Cinco perspectivas.</h2>
+          <Heading level={2}>Uma linguagem. Cinco perspectivas.</Heading>
         </div>
       </div>
       <div className="ds-overview-links">
         {sections
           .filter((item) => item.id !== 'overview')
           .map((item, index) => (
-            <button onClick={() => navigate(item.id)} key={item.id}>
+            <Button variant="ghost" onClick={() => navigate(item.id)} key={item.id}>
               <item.icon size={22} />
               <span className="ds-eyebrow">0{index + 1}</span>
               <strong>{item.label}</strong>
@@ -459,18 +460,18 @@ function Overview({
                 }
               </span>
               <ArrowRight size={18} />
-            </button>
+            </Button>
           ))}
       </div>
       <details className="ds-technical">
         <summary>Como esta biblioteca se conecta ao projeto</summary>
-        <p>
+        <Text>
           React 18, TypeScript e Vite. Componentes em src/design-system; estilos
           em styles.css, foundation.css, components.css, operational.css,
           primitives.css e themes.css. Tailwind compõe o layout; Lucide fornece
           os ícones. Os exemplos importam a API pública usada pelo CRM. As
           interações usam dados locais e não chamam integrações comerciais.
-        </p>
+        </Text>
       </details>
     </>
   );
@@ -637,7 +638,7 @@ function PatternSection({
       ) : (
         <>
           <div className="ds-subheading">
-            <h2>A posição também comunica</h2>
+            <Heading level={2}>A posição também comunica</Heading>
             <span>Convenções para as próximas telas</span>
           </div>
           <div className="ds-ux-rules">
@@ -676,15 +677,15 @@ function PatternSection({
               <article key={number}>
                 <span>{number}</span>
                 <div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
+                  <Heading level={3}>{title}</Heading>
+                  <Text>{text}</Text>
                 </div>
               </article>
             ))}
           </div>
           <details className="ds-technical">
             <summary>Blocos reutilizáveis destes layouts</summary>
-            <p>
+            <Text>
               ListPage reúne PageHeader, PageActions, busca, filtros e
               paginação. DetailPage organiza identificação, status e seções;
               FormPage usa FormSection e FormActions; DashboardPage agrupa
@@ -693,7 +694,7 @@ function PatternSection({
               Sobreposições: Dialog/Drawer + cabeçalho + corpo + ações.
               Navegação: NavigationList. Não há importação de repositories ou
               consultas nestes exemplos.
-            </p>
+            </Text>
           </details>
         </>
       )}

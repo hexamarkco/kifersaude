@@ -1,3 +1,4 @@
+import DropdownOption from './DropdownOption';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 
@@ -101,7 +102,7 @@ export default function Combobox({
         </div>
         <div className="max-h-72 overflow-y-auto p-1">
           {filtered.map((option, index) => (
-            <button
+            <DropdownOption
               key={option.value}
               ref={(element) => { optionRefs.current[index] = element; }}
               type="button"
@@ -115,7 +116,7 @@ export default function Combobox({
             >
               <span className="min-w-0 flex-1 truncate">{option.label}</span>
               {option.value === value && <Check className="kds-control-icon shrink-0" aria-hidden="true" />}
-            </button>
+            </DropdownOption>
           ))}
           {filtered.length === 0 && <p className="px-3 py-4 text-sm text-[var(--text-muted)]">{emptyMessage}</p>}
         </div>

@@ -1,3 +1,5 @@
+import { Text, Heading } from '../../../design-system';
+import { ActionSurface } from '../../../design-system';
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Filter, ListTodo, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { Badge, Button, Card, EmptyState, SectionHeader, Surface } from '../../../design-system';
@@ -42,23 +44,23 @@ export function DashboardPerformanceOverview({ analysis }: Pick<OperationsProps,
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card padding="sm" className="space-y-2">
-          <p className="kds-card-subtitle">Novas oportunidades</p>
-          <p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.leadsCreated.toLocaleString('pt-BR')}</p>
+          <Text className="kds-card-subtitle">Novas oportunidades</Text>
+          <Text className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.leadsCreated.toLocaleString('pt-BR')}</Text>
           <Delta current={analysis.leadsCreated} previous={analysis.leadsCreatedPrevious} />
         </Card>
         <Card padding="sm" className="space-y-2">
-          <p className="kds-card-subtitle">Contratos iniciados</p>
-          <p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.contractsCreated.toLocaleString('pt-BR')}</p>
+          <Text className="kds-card-subtitle">Contratos iniciados</Text>
+          <Text className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.contractsCreated.toLocaleString('pt-BR')}</Text>
           <Delta current={analysis.contractsCreated} previous={analysis.contractsCreatedPrevious} />
         </Card>
         <Card padding="sm" className="space-y-2">
-          <p className="kds-card-subtitle">Ganhos × perdas</p>
-          <p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.won} <span className="text-base font-medium text-[var(--text-muted)]">/ {analysis.lost}</span></p>
+          <Text className="kds-card-subtitle">Ganhos × perdas</Text>
+          <Text className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.won} <span className="text-base font-medium text-[var(--text-muted)]">/ {analysis.lost}</span></Text>
           <Delta current={analysis.lost} previous={analysis.lostPrevious} inverse />
         </Card>
         <Card padding="sm" className="space-y-2">
-          <p className="kds-card-subtitle">Conversão decidida</p>
-          <p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.conversion === null ? '—' : `${analysis.conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%`}</p>
+          <Text className="kds-card-subtitle">Conversão decidida</Text>
+          <Text className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.conversion === null ? '—' : `${analysis.conversion.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%`}</Text>
           {analysis.conversion === null ? <span className="text-xs text-[var(--text-muted)]">Ainda não há decisões no período</span> : <Delta current={analysis.conversion} previous={analysis.conversionPrevious} suffix=" p.p." />}
         </Card>
       </div>
@@ -83,7 +85,7 @@ export function DashboardPipelineHealth({ analysis, onNavigateToStatus }: Pick<O
       {analysis.stageHealth.some((stage) => stage.count > 0) ? (
         <div className="space-y-2">
           {analysis.stageHealth.filter((stage) => stage.count > 0).map((stage) => (
-            <button
+            <ActionSurface variant="plain" padding="none"
               key={stage.status}
               type="button"
               onClick={() => onNavigateToStatus(stage.status)}
@@ -94,7 +96,7 @@ export function DashboardPipelineHealth({ analysis, onNavigateToStatus }: Pick<O
                 <span className="mt-1 block h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]"><span className="block h-full rounded-full bg-[var(--accent-primary)]" style={{ width: `${Math.max(stage.share, stage.count ? 3 : 0)}%` }} /></span>
               </span>
               <span className="text-right text-xs text-[var(--text-muted)]"><strong className="block font-medium text-[var(--text-secondary)]">{Math.round(stage.averageDays)} dias</strong>na etapa</span>
-            </button>
+            </ActionSurface>
           ))}
         </div>
       ) : (
@@ -116,7 +118,7 @@ export function DashboardAttentionQueue({ analysis, leadsById, onNavigateToLead 
               <Card key={item.kind} padding="sm" className="space-y-3 border-l-2 border-l-[var(--border-strong)]">
                 <div className="flex items-start gap-3">
                   <Icon className="mt-0.5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</h3><Badge tone={item.tone} size="sm">{item.count}</Badge></div><p className="mt-1 text-sm text-[var(--text-secondary)]">{item.description}</p></div>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</Heading><Badge tone={item.tone} size="sm">{item.count}</Badge></div><Text className="mt-1 text-sm text-[var(--text-secondary)]">{item.description}</Text></div>
                 </div>
                 {item.leadIds.length > 0 && <div className="flex flex-wrap gap-2">{item.leadIds.map((leadId) => {
                   const lead = leadsById.get(leadId);
@@ -130,7 +132,7 @@ export function DashboardAttentionQueue({ analysis, leadsById, onNavigateToLead 
         <EmptyState icon={<CheckCircle2 aria-hidden="true" />} title="Nenhuma prioridade crítica" description="Não encontramos follow-ups vencidos, leads sem próximo passo ou atividade parada na base atual." className="py-8" />
       )}
       {(!analysis.dataCoverage.interactions || !analysis.dataCoverage.reminders) && (
-        <p className="text-xs text-[var(--text-muted)]">A leitura usa os registros disponíveis. Itens sem interação ou lembrete histórico aparecem como prioridade até que a operação registre esses dados.</p>
+        <Text className="text-xs text-[var(--text-muted)]">A leitura usa os registros disponíveis. Itens sem interação ou lembrete histórico aparecem como prioridade até que a operação registre esses dados.</Text>
       )}
     </Surface>
   );
@@ -158,15 +160,15 @@ export function DashboardAutomationCommand({ leads, onNavigate }: AutomationComm
     <Surface padding="md" data-panel-animate className="space-y-5" aria-labelledby="dashboard-automation-title">
       <SectionHeader eyebrow="Orquestração" title="Automações e atendimento que exigem gestão" description="Ação segura: a seleção do fluxo e qualquer agendamento continuam no espaço de Automação." as="h2" />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Card padding="sm" className="space-y-1"><p className="kds-card-subtitle">Contato Inicial elegível</p><p className="text-2xl font-semibold tabular-nums">{initialContactCandidates.length}</p><p className="text-xs text-[var(--text-muted)]">sem bloqueio de automação</p></Card>
-        <Card padding="sm" className="space-y-1"><p className="kds-card-subtitle">Excluídos de automação</p><p className="text-2xl font-semibold tabular-nums">{blockedCandidates.length}</p><p className="text-xs text-[var(--text-muted)]">requerem tratamento humano</p></Card>
+        <Card padding="sm" className="space-y-1"><Text className="kds-card-subtitle">Contato Inicial elegível</Text><Text className="text-2xl font-semibold tabular-nums">{initialContactCandidates.length}</Text><Text className="text-xs text-[var(--text-muted)]">sem bloqueio de automação</Text></Card>
+        <Card padding="sm" className="space-y-1"><Text className="kds-card-subtitle">Excluídos de automação</Text><Text className="text-2xl font-semibold tabular-nums">{blockedCandidates.length}</Text><Text className="text-xs text-[var(--text-muted)]">requerem tratamento humano</Text></Card>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={() => onNavigate('leads', 'Contato Inicial')}>Revisar elegíveis <ArrowRight aria-hidden="true" /></Button>
         <Button variant="secondary" size="sm" onClick={() => onNavigate('agenda')}>Organizar follow-ups <ArrowRight aria-hidden="true" /></Button>
         <Button variant="secondary" size="sm" onClick={() => onNavigate('config')}>Revisar fluxos e IA <ArrowRight aria-hidden="true" /></Button>
       </div>
-      <p className="text-xs text-[var(--text-muted)]">O acompanhamento detalhado das automações ainda não está disponível neste painel. Para investigar uma falha, peça ajuda ao responsável pelas automações.</p>
+      <Text className="text-xs text-[var(--text-muted)]">O acompanhamento detalhado das automações ainda não está disponível neste painel. Para investigar uma falha, peça ajuda ao responsável pelas automações.</Text>
     </Surface>
   );
 }

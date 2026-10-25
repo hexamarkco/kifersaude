@@ -1,3 +1,5 @@
+import { Text } from '../../../../design-system';
+import { Button, ActionSurface } from '../../../../design-system';
 import type { RefObject } from 'react';
 import { AlertCircle, Loader2, X } from 'lucide-react';
 
@@ -63,7 +65,7 @@ export function WhatsAppChatMessageSearch({
             {error ? (
               <div className="flex items-start gap-2 px-3 py-3 text-sm text-[var(--text-secondary)]" role="alert">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-warning)]" aria-hidden="true" />
-                <div className="min-w-0"><p>{error}</p><button type="button" className="mt-2 font-medium text-[var(--text-link)] hover:underline" onClick={onRetry}>Tentar novamente</button></div>
+                <div className="min-w-0"><Text>{error}</Text><Button variant="ghost" type="button" className="mt-2 font-medium hover:underline" onClick={onRetry}>Tentar novamente</Button></div>
               </div>
             ) : !searching && results.length === 0 ? (
               <div className="px-3 py-3 text-sm text-[var(--text-secondary)]">Nenhuma mensagem encontrada neste chat.</div>
@@ -76,17 +78,17 @@ export function WhatsAppChatMessageSearch({
                     return null;
                   }
                   return (
-                    <button key={result.message.id} type="button" onClick={() => onSelect(result)} className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none">
+                    <ActionSurface variant="plain" padding="none" key={result.message.id} type="button" onClick={() => onSelect(result)} className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none">
                       <span className="min-w-0"><span className="block truncate text-sm font-medium text-[var(--text-primary)]">{previewIconType ? <ChatPreviewIcon type={previewIconType} /> : previewText}</span><span className="mt-0.5 block text-xs text-[var(--text-muted)]">{result.message.direction === 'outbound' ? 'Você' : 'Contato'}</span></span>
                       <span className="shrink-0 pt-0.5 text-[11px] font-medium text-[var(--text-muted)]">{formatMessageTime(result.message.message_at)}</span>
-                    </button>
+                    </ActionSurface>
                   );
                 })}
               </div>
             )}
           </div>
         ) : (
-          <p className="text-xs text-[var(--text-muted)]">Digite um trecho da mensagem, legenda ou transcrição para localizar no histórico deste chat.</p>
+          <Text className="text-xs text-[var(--text-muted)]">Digite um trecho da mensagem, legenda ou transcrição para localizar no histórico deste chat.</Text>
         )}
       </div>
     </div>

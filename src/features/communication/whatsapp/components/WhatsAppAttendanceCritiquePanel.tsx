@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../../design-system';
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Sparkles, XCircle } from 'lucide-react';
 
@@ -127,10 +128,10 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Análise do atendimento</h3>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Análise do atendimento</Heading>
+          <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
             A IA avalia como este atendimento foi conduzido, apontando acertos, pontos de atenção e erros.
-          </p>
+          </Text>
         </div>
         <Button variant="primary" size="sm" onClick={() => void handleGenerate()} loading={generating} disabled={!chatId || generating}>
           {!generating && <Sparkles className="kds-control-icon" />}
@@ -170,14 +171,14 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
               <Badge tone={AVALIACAO_TONE[selected.avaliacaoGeral]}>{AVALIACAO_LABEL[selected.avaliacaoGeral]}</Badge>
               <span className="text-xs text-[var(--text-muted)]">{formatDateTime(selected.generatedAt)}</span>
             </div>
-            <p className="text-sm text-[var(--text-primary)]">{selected.resumo}</p>
+            <Text className="text-sm text-[var(--text-primary)]">{selected.resumo}</Text>
           </Surface>
 
           <Alert tone="success">
-            <p className="mb-2 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+            <Text className="mb-2 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
               Pontos fortes
-            </p>
+            </Text>
             {selected.pontosFortes.length > 0 ? (
               <ul className="space-y-1.5 text-sm">
                 {selected.pontosFortes.map((item, index) => (
@@ -185,15 +186,15 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">Nenhum ponto forte destacado.</p>
+              <Text className="text-sm text-[var(--text-muted)]">Nenhum ponto forte destacado.</Text>
             )}
           </Alert>
 
           <Alert tone="warning">
-            <p className="mb-2 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+            <Text className="mb-2 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               Pontos de atenção
-            </p>
+            </Text>
             {selected.pontosDeAtencao.length > 0 ? (
               <ul className="space-y-1.5 text-sm">
                 {selected.pontosDeAtencao.map((item, index) => (
@@ -201,15 +202,15 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">Nenhum ponto de atenção identificado.</p>
+              <Text className="text-sm text-[var(--text-muted)]">Nenhum ponto de atenção identificado.</Text>
             )}
           </Alert>
 
           <Alert tone="danger">
-            <p className="mb-2 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
+            <Text className="mb-2 flex items-center gap-2 font-semibold text-[var(--text-primary)]">
               <XCircle className="h-4 w-4" aria-hidden="true" />
               Erros
-            </p>
+            </Text>
             {selected.erros.length > 0 ? (
               <ul className="space-y-1.5 text-sm">
                 {selected.erros.map((item, index) => (
@@ -217,37 +218,37 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">Nenhum erro identificado.</p>
+              <Text className="text-sm text-[var(--text-muted)]">Nenhum erro identificado.</Text>
             )}
           </Alert>
 
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text className="text-xs text-[var(--text-muted)]">
             Sessão de {formatDateTime(selected.sessionStartedAt)} até {formatDateTime(selected.sessionEndedAt)} ·{' '}
             {selected.messageCount} mensagens · {selected.provider}/{selected.model}
-          </p>
+          </Text>
 
           {previousCritiques.length > 0 ? (
             <div>
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={() => setShowHistory((prev) => !prev)}
-                className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                className="flex items-center font-medium"
               >
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showHistory ? 'rotate-180' : ''}`} aria-hidden="true" />
                 Análises anteriores ({previousCritiques.length})
-              </button>
+              </Button>
               {showHistory ? (
                 <div className="mt-2 flex flex-col gap-1.5">
                   {previousCritiques.map((item) => (
-                    <button
+                    <Button variant="ghost"
                       key={item.id}
                       type="button"
                       onClick={() => setSelectedId(item.id)}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-left text-xs hover:bg-[var(--bg-hover)]"
+                      className="flex items-center justify-between border text-left"
                     >
                       <span className="text-[var(--text-muted)]">{formatDateTime(item.generatedAt)}</span>
                       <Badge tone={AVALIACAO_TONE[item.avaliacaoGeral]} size="sm">{AVALIACAO_LABEL[item.avaliacaoGeral]}</Badge>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               ) : null}

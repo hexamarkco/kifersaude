@@ -1,3 +1,4 @@
+import { Text, TextLink, Heading } from '../design-system';
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from "react";
 import {
   Contract,
@@ -453,7 +454,7 @@ export default function ContractDetails({
   const renderDocumentList = (entityId: string) => {
     const docs = documentsByEntity.get(entityId) || [];
     if (docs.length === 0) {
-      return <p className={detailBodyTextClass}>Sem documentos enviados.</p>;
+      return <Text className={detailBodyTextClass}>Sem documentos enviados.</Text>;
     }
 
     return (
@@ -464,21 +465,21 @@ export default function ContractDetails({
             className={`${detailPanelClass} flex items-center justify-between px-3 py-2 text-sm`}
           >
             <div className="min-w-0">
-              <p className={`${detailHeadingTextClass} truncate`}>
+              <Text className={`${detailHeadingTextClass} truncate`}>
                 {doc.tipo_documento}
-              </p>
-              <p className={`${detailMutedTextClass} truncate`}>
+              </Text>
+              <Text className={`${detailMutedTextClass} truncate`}>
                 {doc.nome_arquivo}
-              </p>
+              </Text>
             </div>
-            <a
+            <TextLink
               href={doc.url_arquivo}
               target="_blank"
               rel="noreferrer"
               className={detailAccentLinkClass}
             >
               Abrir
-            </a>
+            </TextLink>
           </div>
         ))}
       </div>
@@ -799,8 +800,8 @@ export default function ContractDetails({
             <div className="flex items-start gap-2">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className="font-medium">Não foi possível carregar este contrato.</p>
-                <p className="mt-1 text-sm">Nenhum dado foi considerado vazio. Tente novamente para buscar as informações mais recentes.</p>
+                <Text className="font-medium">Não foi possível carregar este contrato.</Text>
+                <Text className="mt-1 text-sm">Nenhum dado foi considerado vazio. Tente novamente para buscar as informações mais recentes.</Text>
                 <Button
                   type="button"
                   variant="secondary"
@@ -856,8 +857,8 @@ export default function ContractDetails({
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">Bônus por vida precisa de atualização.</p>
-                  <p className="mt-1 text-sm">{eligibleLivesUpdateError}</p>
+                  <Text className="font-medium">Bônus por vida precisa de atualização.</Text>
+                  <Text className="mt-1 text-sm">{eligibleLivesUpdateError}</Text>
                   <Button
                     type="button"
                     variant="secondary"
@@ -906,52 +907,52 @@ export default function ContractDetails({
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className={`${detailPanelClass} p-3`}>
-              <p className={detailMutedTextClass}>Comissão prevista</p>
-              <p className={detailTitleClass}>
+              <Text className={detailMutedTextClass}>Comissão prevista</Text>
+              <Text className={detailTitleClass}>
                 {contract.comissao_prevista
                   ? `R$ ${contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                   : "Não informado"}
-              </p>
+              </Text>
               {contract.previsao_recebimento_comissao && (
-                <p className={detailMutedTextClass}>
+                <Text className={detailMutedTextClass}>
                   Previsto{" "}
                   {new Date(
                     contract.previsao_recebimento_comissao,
                   ).toLocaleDateString("pt-BR")}
-                </p>
+                </Text>
               )}
             </div>
             <div className={`${detailPanelClass} p-3`}>
-              <p className={detailMutedTextClass}>Bônus total</p>
-              <p className={detailTitleClass}>
+              <Text className={detailMutedTextClass}>Bônus total</Text>
+              <Text className={detailTitleClass}>
                 {bonusTotal
                   ? `R$ ${bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                   : "Não aplicado"}
-              </p>
+              </Text>
               {contract.previsao_pagamento_bonificacao && (
-                <p className={detailMutedTextClass}>
+                <Text className={detailMutedTextClass}>
                   Previsto{" "}
                   {new Date(
                     contract.previsao_pagamento_bonificacao,
                   ).toLocaleDateString("pt-BR")}
-                </p>
+                </Text>
               )}
             </div>
             <div className={`${detailPanelClass} p-3`}>
-              <p className={detailMutedTextClass}>Reajuste anual</p>
-              <p className={detailTitleClass}>
+              <Text className={detailMutedTextClass}>Reajuste anual</Text>
+              <Text className={detailTitleClass}>
                 {getNextAdjustmentDate(contract.mes_reajuste)
                   ? getNextAdjustmentDate(
                       contract.mes_reajuste,
                     )?.toLocaleDateString("pt-BR")
                   : "Não definido"}
-              </p>
-              <p className={detailMutedTextClass}>
+              </Text>
+              <Text className={detailMutedTextClass}>
                 Mês de reajuste{" "}
                 {contract.mes_reajuste
                   ? String(contract.mes_reajuste).padStart(2, "0")
                   : "--"}
-              </p>
+              </Text>
             </div>
           </div>
 
@@ -1028,14 +1029,14 @@ export default function ContractDetails({
                   ))}
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                <Text className="mt-2 text-xs text-[var(--text-secondary)]">
                   Nenhum reajuste por idade previsto nos próximos 120 dias.
-                </p>
+                </Text>
               )}
-              <p className="mt-2 text-xs text-[var(--text-secondary)]">
+              <Text className="mt-2 text-xs text-[var(--text-secondary)]">
                 Os planos reajustam por idade quando um titular ou dependente
                 completa 19, 24, 29, 34, 39, 44, 49, 54 ou 59 anos.
-              </p>
+              </Text>
             </div>
           )}
 
@@ -1167,10 +1168,10 @@ export default function ContractDetails({
                       </div>
                     </Surface>
                   ) : (
-                    <p className={detailMutedTextClass}>
+                    <Text className={detailMutedTextClass}>
                       Defina os percentuais e datas para acompanhar o
                       recebimento parcelado desta comissão.
-                    </p>
+                    </Text>
                   )}
                 </div>
               ) : contract.comissao_recebimento_adiantado ? (
@@ -1275,20 +1276,20 @@ export default function ContractDetails({
                   </div>
                 )}
               </Surface>
-              <p className="mt-2 text-xs text-[var(--text-secondary)]">
+              <Text className="mt-2 text-xs text-[var(--text-secondary)]">
                 Pagamento por vida do contrato, previsto conforme a data de
                 bonificação.
-              </p>
+              </Text>
             </div>
           )}
         </div>
 
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className={detailSectionHeadingClass}>
+            <Heading level={4} className={detailSectionHeadingClass}>
               <User className={detailSectionIconClass} />
               <span>Titulares ({holders.length})</span>
-            </h4>
+            </Heading>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {holderSectionAction}
               {canEditContracts && (
@@ -1312,9 +1313,9 @@ export default function ContractDetails({
                 <div key={holderItem.id} className={`${detailPanelClass} p-4`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h5 className={`mb-3 ${detailHeadingTextClass}`}>
+                      <Heading level={5} className={`mb-3 ${detailHeadingTextClass}`}>
                         {holderItem.nome_completo}
-                      </h5>
+                      </Heading>
                       <div
                         className={`grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
                       >
@@ -1386,9 +1387,9 @@ export default function ContractDetails({
           ) : (
             <div className={detailEmptyStateClass}>
               <User className={detailEmptyIconClass} />
-              <p className={`${detailBodyTextClass} mb-3`}>
+              <Text className={`${detailBodyTextClass} mb-3`}>
                 Nenhum titular cadastrado
-              </p>
+              </Text>
               {canEditContracts && (
                 <Button
                   onClick={() => {
@@ -1405,10 +1406,10 @@ export default function ContractDetails({
         </div>
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className={detailSectionHeadingClass}>
+            <Heading level={4} className={detailSectionHeadingClass}>
               <Users className={detailSectionIconClass} />
               <span>Dependentes ({dependents.length})</span>
-            </h4>
+            </Heading>
             {canEditContracts && (
               <Button
                 onClick={() => {
@@ -1440,10 +1441,10 @@ export default function ContractDetails({
                   <div key={holderItem.id} className={detailPanelClass}>
                     <div className="flex flex-col gap-3 border-b border-[var(--border-subtle)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className={detailBodyTextClass}>Titular</p>
-                        <p className={detailHeadingTextClass}>
+                        <Text className={detailBodyTextClass}>Titular</Text>
+                        <Text className={detailHeadingTextClass}>
                           {holderItem.nome_completo}
-                        </p>
+                        </Text>
                       </div>
                       {canEditContracts && (
                         <Button
@@ -1469,9 +1470,9 @@ export default function ContractDetails({
                             className={`${detailNestedPanelClass} flex items-start justify-between gap-4 p-3`}
                           >
                             <div className="flex-1">
-                              <h5 className={`mb-1 ${detailHeadingTextClass}`}>
+                              <Heading level={5} className={`mb-1 ${detailHeadingTextClass}`}>
                                 {dependent.nome_completo}
-                              </h5>
+                              </Heading>
                               <div
                                 className={`grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
                               >
@@ -1536,9 +1537,9 @@ export default function ContractDetails({
                           </div>
                         ))
                       ) : (
-                        <p className={detailBodyTextClass}>
+                        <Text className={detailBodyTextClass}>
                           Nenhum dependente para este titular.
-                        </p>
+                        </Text>
                       )}
                     </div>
                   </div>
@@ -1548,16 +1549,16 @@ export default function ContractDetails({
           ) : (
             <div className={detailEmptyStateClass}>
               <Users className={detailEmptyIconClass} />
-              <p className={detailBodyTextClass}>
+              <Text className={detailBodyTextClass}>
                 Cadastre um titular para incluir dependentes.
-              </p>
+              </Text>
             </div>
           )}
         </div>
 
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className={detailTitleClass}>Documentos</h4>
+            <Heading level={4} className={detailTitleClass}>Documentos</Heading>
             <span className={detailMutedTextClass}>
               {documents.length} arquivo(s)
             </span>
@@ -1567,8 +1568,8 @@ export default function ContractDetails({
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">Não foi possível carregar os documentos.</p>
-                  <p className="mt-1 text-sm">Os documentos não foram considerados ausentes.</p>
+                  <Text className="font-medium">Não foi possível carregar os documentos.</Text>
+                  <Text className="mt-1 text-sm">Os documentos não foram considerados ausentes.</Text>
                   <Button
                     type="button"
                     variant="secondary"
@@ -1589,9 +1590,9 @@ export default function ContractDetails({
                 key={`docs-holder-${holderItem.id}`}
                 className={`${detailPanelSoftClass} p-4`}
               >
-                <p className={`mb-2 ${detailBodyStrongClass}`}>
+                <Text className={`mb-2 ${detailBodyStrongClass}`}>
                   Titular: {holderItem.nome_completo}
-                </p>
+                </Text>
                 {renderDocumentList(holderItem.id)}
               </div>
             ))}
@@ -1600,9 +1601,9 @@ export default function ContractDetails({
                 key={`docs-dependent-${dependent.id}`}
                 className={`${detailPanelSoftClass} p-4`}
               >
-                <p className={`mb-2 ${detailBodyStrongClass}`}>
+                <Text className={`mb-2 ${detailBodyStrongClass}`}>
                   Dependente: {dependent.nome_completo}
-                </p>
+                </Text>
                 {renderDocumentList(dependent.id)}
               </div>
             ))}
@@ -1617,7 +1618,7 @@ export default function ContractDetails({
 
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className={detailTitleClass}>Auditoria</h4>
+            <Heading level={4} className={detailTitleClass}>Auditoria</Heading>
             <span className={detailMutedTextClass}>
               {auditEvents.length} evento(s)
             </span>
@@ -1636,11 +1637,11 @@ export default function ContractDetails({
                   className={`${detailNestedPanelClass} flex items-start justify-between gap-3 px-3 py-2 text-sm`}
                 >
                   <div className="min-w-0">
-                    <p className={detailBodyStrongClass}>{event.label}</p>
+                    <Text className={detailBodyStrongClass}>{event.label}</Text>
                     {event.description && (
-                      <p className={`truncate ${detailMutedTextClass}`}>
+                      <Text className={`truncate ${detailMutedTextClass}`}>
                         {event.description}
-                      </p>
+                      </Text>
                     )}
                   </div>
                   <span className={`whitespace-nowrap ${detailMutedTextClass}`}>
@@ -1653,7 +1654,7 @@ export default function ContractDetails({
         </div>
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h4 className={detailTitleClass}>Histórico de interações</h4>
+            <Heading level={4} className={detailTitleClass}>Histórico de interações</Heading>
             {canEditContracts && (
               <Button
                 onClick={() => {
@@ -1757,9 +1758,9 @@ export default function ContractDetails({
           {interactions.length === 0 ? (
             <div className={detailEmptyStateClass}>
               <MessageCircle className={detailEmptyIconClass} />
-              <p className={detailBodyTextClass}>
+              <Text className={detailBodyTextClass}>
                 Nenhuma interação registrada
-              </p>
+              </Text>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1814,9 +1815,9 @@ export default function ContractDetails({
                       )}
                     </div>
                   </div>
-                  <p className={detailBodyStrongClass}>
+                  <Text className={detailBodyStrongClass}>
                     {interaction.descricao}
-                  </p>
+                  </Text>
                 </div>
               ))}
             </div>

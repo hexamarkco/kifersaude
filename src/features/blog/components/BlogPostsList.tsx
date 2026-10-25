@@ -1,3 +1,4 @@
+import { Text, Image, Heading } from '../../../design-system';
 import {
   Edit2,
   Eye,
@@ -8,8 +9,8 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { BlogTabSkeletonList } from "../../../components/ui/panelSkeletons";
-import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
+import { BlogTabSkeletonList } from '../../../design-system';
+import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Badge,
   Button,
@@ -82,7 +83,7 @@ export default function BlogPostsList({
           {posts.length === 0 ? (
             <Surface variant="muted" className="py-12 text-center">
               <FileText className="mx-auto mb-3 h-12 w-12 text-[var(--text-muted)]" />
-              <p className="text-[var(--text-secondary)]">Nenhum post encontrado</p>
+              <Text className="text-[var(--text-secondary)]">Nenhum post encontrado</Text>
             </Surface>
           ) : (
             <div className="space-y-4">
@@ -95,7 +96,7 @@ export default function BlogPostsList({
                     <div className="flex items-start gap-4">
                     {post.cover_image_url ? (
                       <Surface padding="none" className="h-20 w-32 flex-shrink-0 overflow-hidden">
-                        <img
+                        <Image
                           src={post.cover_image_url}
                           alt={post.title}
                           className="h-full w-full object-cover"
@@ -122,12 +123,12 @@ export default function BlogPostsList({
                             </span>
                           </div>
 
-                          <h3 className="mb-1 truncate text-lg font-bold text-[var(--text-primary)]">
+                          <Heading level={3} className="mb-1 truncate text-lg font-bold text-[var(--text-primary)]">
                             {post.title}
-                          </h3>
-                          <p className="mb-2 line-clamp-2 text-sm text-[var(--text-secondary)]">
+                          </Heading>
+                          <Text className="mb-2 line-clamp-2 text-sm text-[var(--text-secondary)]">
                             {post.excerpt}
-                          </p>
+                          </Text>
 
                           <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
                             <span>Visualizações: {post.views_count}</span>

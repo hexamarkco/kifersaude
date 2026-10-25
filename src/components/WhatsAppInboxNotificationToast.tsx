@@ -1,3 +1,4 @@
+import { Text } from '../design-system';
 import { useEffect, useRef, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 
@@ -109,13 +110,13 @@ export default function WhatsAppInboxNotificationToast({
       >
         <div className="mt-3 space-y-3">
           <div>
-            <p className="truncate text-base font-bold text-[var(--text-primary)]">{notification.displayName}</p>
-            <p className="text-xs text-[var(--text-muted)]">{notification.phoneNumber}</p>
+            <Text className="truncate text-base font-bold text-[var(--text-primary)]">{notification.displayName}</Text>
+            <Text className="text-xs text-[var(--text-muted)]">{notification.phoneNumber}</Text>
           </div>
 
-          <p className="text-sm leading-5 text-[var(--text-secondary)]">
+          <Text className="text-sm leading-5 text-[var(--text-secondary)]">
             {truncatePreview(notification.messagePreview)}
-          </p>
+          </Text>
         </div>
       </Toast>
     </div>

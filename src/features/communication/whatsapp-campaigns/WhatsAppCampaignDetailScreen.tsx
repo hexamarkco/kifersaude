@@ -1,8 +1,8 @@
+import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Ban, BarChart3, Filter, PauseCircle, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import '../communicationTerracotta.css';
 import {
   Alert,
   Badge,
@@ -683,17 +683,17 @@ export default function WhatsAppCampaignDetailScreen() {
           {pendingWhatsAppValidation > 0 && (
             <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">
               <Badge tone="info">Validando</Badge>
-              <p className="text-sm text-[color:var(--panel-text-soft)]">
+              <Text className="text-sm text-[color:var(--panel-text-soft)]">
                 {pendingWhatsAppValidation.toLocaleString('pt-BR')} contato(s) aguardando confirmação de que o número tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; números sem WhatsApp são marcados como inválidos automaticamente.
-              </p>
+              </Text>
             </Card>
           )}
 
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Relatório</h2>
-                <p className="text-sm text-[color:var(--panel-text-soft)]">Veja os resultados e o que precisa ser conferido antes de continuar os envios.</p>
+                <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Relatório</Heading>
+                <Text className="text-sm text-[color:var(--panel-text-soft)]">Veja os resultados e o que precisa ser conferido antes de continuar os envios.</Text>
               </div>
               <BarChart3 className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
@@ -703,9 +703,9 @@ export default function WhatsAppCampaignDetailScreen() {
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
-                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">O que precisa de atenção</h3>
+                <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">O que precisa de atenção</Heading>
                 {groupedFailureReasons.length > 5 && (
-                  <p className="text-xs text-[color:var(--panel-text-muted)]">Mostrando os 5 mais comuns de {groupedFailureReasons.length} motivo(s) distintos.</p>
+                  <Text className="text-xs text-[color:var(--panel-text-muted)]">Mostrando os 5 mais comuns de {groupedFailureReasons.length} motivo(s) distintos.</Text>
                 )}
                 {topFailureReasons.length > 0 ? (
                   <ul className="mt-2 space-y-2">
@@ -717,12 +717,12 @@ export default function WhatsAppCampaignDetailScreen() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-sm text-[color:var(--panel-text-muted)]">Nenhuma falha registrada.</p>
+                  <Text className="mt-2 text-sm text-[color:var(--panel-text-muted)]">Nenhuma falha registrada.</Text>
                 )}
               </div>
               {campaign.ab_test_enabled && (
                 <div>
-                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Teste A/B - resposta por variante</h3>
+                  <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Teste A/B - resposta por variante</Heading>
                   <div className="mt-2 space-y-2">
                     {variantBreakdown.map((row) => (
                       <div key={row.variant} className="flex items-center justify-between gap-3 rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-sm">
@@ -740,12 +740,12 @@ export default function WhatsAppCampaignDetailScreen() {
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Contatos da campanha</h2>
-                <p className="text-sm text-[color:var(--panel-text-soft)]">
+                <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Contatos da campanha</Heading>
+                <Text className="text-sm text-[color:var(--panel-text-soft)]">
                   {targetsTotal > 0
                     ? `Mostrando ${(targetsPage - 1) * targetsPageSize + 1}-${Math.min(targetsPage * targetsPageSize, targetsTotal)} de ${targetsTotal.toLocaleString('pt-BR')} contato(s).`
                     : 'Nenhum contato nesta lista.'}
-                </p>
+                </Text>
               </div>
               <Users className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
             </div>
@@ -774,8 +774,8 @@ export default function WhatsAppCampaignDetailScreen() {
                 <Card key={target.id} className="space-y-3 bg-[color:var(--panel-surface-soft)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</p>
+                      <Text className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</Text>
+                      <Text className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</Text>
                     </div>
                     <Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge>
                   </div>
@@ -805,8 +805,8 @@ export default function WhatsAppCampaignDetailScreen() {
                   {targets.map((target) => (
                     <TableRow key={target.id} className="align-top">
                       <TableCell>
-                        <p className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</p>
+                        <Text className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</Text>
+                        <Text className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</Text>
                       </TableCell>
                       <TableCell><Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge></TableCell>
                       <TableCell className="text-[var(--text-secondary)]">{target.current_step_index + 1}</TableCell>
@@ -845,8 +845,8 @@ export default function WhatsAppCampaignDetailScreen() {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>
-      <p className="mt-1 text-sm text-[color:var(--panel-text)]">{value}</p>
+      <Text className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</Text>
+      <Text className="mt-1 text-sm text-[color:var(--panel-text)]">{value}</Text>
     </div>
   );
 }
@@ -854,8 +854,8 @@ function Info({ label, value }: { label: string; value: string }) {
 function Metric({ label, value }: { label: string; value: number | string }) {
   return (
     <Card className="p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text)]">{value}</p>
+      <Text className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</Text>
+      <Text className="mt-2 text-2xl font-semibold text-[color:var(--panel-text)]">{value}</Text>
     </Card>
   );
 }

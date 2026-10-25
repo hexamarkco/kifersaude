@@ -1,3 +1,5 @@
+import { Text, FieldLabel } from '../../../design-system';
+import { IconButton, DropdownOption, Select } from '../../../design-system';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Badge, Popover, PopoverContent, PopoverTrigger, type PanelTone } from '../../../design-system';
@@ -25,30 +27,27 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
   return (
     <Popover open={open && !saving} onOpenChange={setOpen}>
       <PopoverTrigger>
-        <button
+        <IconButton variant="ghost" size="sm"
           type="button"
           disabled={saving || options.length === 0}
           aria-label={`Alterar status do contrato ${code}: ${label}`}
           aria-expanded={open && !saving}
           aria-busy={saving}
-          className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Badge tone={tone} size="sm" className="gap-1">
             {saving ? 'Atualizando...' : label}
-            <ChevronDown className="h-3 w-3" aria-hidden="true" />
+            <ChevronDown className="" aria-hidden="true" />
           </Badge>
-        </button>
+        </IconButton>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" aria-label={`Status do contrato ${code}`}>
-        {operatorError && <p role="alert" className="p-2 text-xs">{operatorError}</p>}
-        {operators.length > 0 && <label className="block p-2 text-xs">Responsável pela venda
-          <select className="kds-input mt-1 w-full" value={saleOperator} onChange={(event) => setSaleOperator(event.target.value)}>
-            <option value="">Escolha no fechamento</option>
-            {operators.map((operator) => <option key={operator.user_id} value={operator.user_id}>{operator.display_name}</option>)}
-          </select>
-        </label>}
+        {operatorError && <Text role="alert" className="p-2 text-xs">{operatorError}</Text>}
+        {operators.length > 0 && <FieldLabel className="block p-2 text-xs">Responsável pela venda
+          <Select value={saleOperator} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolha no fechamento' }, ...operators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
+        </FieldLabel>}
         {options.map((option) => (
-          <button
+          <DropdownOption
             key={option.value}
             type="button"
             disabled={saving}
@@ -60,7 +59,7 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
             }}
           >
             {option.label}
-          </button>
+          </DropdownOption>
         ))}
       </PopoverContent>
     </Popover>

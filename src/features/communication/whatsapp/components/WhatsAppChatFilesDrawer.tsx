@@ -1,3 +1,5 @@
+import { Image as DsImage, Video as DsVideo, Audio, Text, TextLink, Heading } from '../../../../design-system';
+import { ActionSurface, Slider } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Download,
@@ -255,16 +257,16 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
 
   return (
     <article className="comm-whatsapp-chat-files-visual">
-      <button
+      <ActionSurface variant="plain" padding="none"
         type="button"
         onClick={onOpen}
         className="comm-whatsapp-chat-files-visual-preview"
         aria-label={`Abrir ${isVideo ? 'vídeo' : 'imagem'}: ${getMediaTitle(message)}`}
       >
         {url && !isVideo ? (
-          <img src={url} alt={message.media_caption || getMediaTitle(message)} className="comm-whatsapp-chat-files-visual-image" loading="lazy" />
+          <DsImage src={url} alt={message.media_caption || getMediaTitle(message)} className="comm-whatsapp-chat-files-visual-image" loading="lazy" />
         ) : url && isVideo ? (
-          <video src={url} className="comm-whatsapp-chat-files-visual-image" muted preload="metadata" />
+          <DsVideo src={url} className="comm-whatsapp-chat-files-visual-image" muted preload="metadata" />
         ) : (
           <span className="comm-whatsapp-chat-files-visual-placeholder"><Icon className="kds-control-icon" /></span>
         )}
@@ -273,7 +275,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
           {isVideo ? 'Vídeo' : 'Imagem'}
         </span>
         {isVideo && <span className="comm-whatsapp-chat-files-play"><Play className="kds-control-icon fill-current" /></span>}
-      </button>
+      </ActionSurface>
       <div className="comm-whatsapp-chat-files-visual-footer">
         <span>{getMediaMeta(message)}</span>
         <IconButton
@@ -342,7 +344,7 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
 
   return (
     <Surface variant="muted" padding="sm" className="comm-whatsapp-chat-files-audio">
-      <audio
+      <Audio
         ref={audioRef}
         src={url ?? undefined}
         preload="metadata"
@@ -353,8 +355,8 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
       <div className="comm-whatsapp-chat-files-audio-main">
         <MediaIcon><FileAudio className="kds-control-icon" /></MediaIcon>
         <div className="min-w-0 flex-1">
-          <p className="comm-whatsapp-chat-files-item-title">{getMediaTitle(message)}</p>
-          <p className="comm-whatsapp-chat-files-item-meta">{getMediaMeta(message)}</p>
+          <Text className="comm-whatsapp-chat-files-item-title">{getMediaTitle(message)}</Text>
+          <Text className="comm-whatsapp-chat-files-item-meta">{getMediaMeta(message)}</Text>
         </div>
         <IconButton
           variant="secondary"
@@ -369,8 +371,8 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
       </div>
       <div className="comm-whatsapp-chat-files-audio-timeline">
         <span>{formatDuration(currentTime)}</span>
-        <input
-          type="range"
+        <Slider
+
           min="0"
           max={duration || 0}
           step="0.1"
@@ -404,9 +406,9 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
             <ExternalLink className="kds-control-icon" />
           </IconButton>
           {url && (
-            <a href={url} download={getMediaTitle(message)} className="comm-whatsapp-chat-files-download-link">
+            <TextLink href={url} download={getMediaTitle(message)} className="comm-whatsapp-chat-files-download-link">
               Baixar
-            </a>
+            </TextLink>
           )}
         </div>
       </div>
@@ -419,9 +421,9 @@ function DocumentFileRow({ message, onOpen }: { message: CommWhatsAppMessage; on
     <Surface variant="muted" padding="sm" className="comm-whatsapp-chat-files-document">
       <MediaIcon><FileText className="kds-control-icon" /></MediaIcon>
       <div className="min-w-0 flex-1">
-        <p className="comm-whatsapp-chat-files-item-title">{getMediaTitle(message)}</p>
-        <p className="comm-whatsapp-chat-files-item-meta">{getMediaMeta(message)}</p>
-        {message.media_caption?.trim() && <p className="comm-whatsapp-chat-files-caption">{message.media_caption}</p>}
+        <Text className="comm-whatsapp-chat-files-item-title">{getMediaTitle(message)}</Text>
+        <Text className="comm-whatsapp-chat-files-item-meta">{getMediaMeta(message)}</Text>
+        {message.media_caption?.trim() && <Text className="comm-whatsapp-chat-files-caption">{message.media_caption}</Text>}
       </div>
       <IconButton
         variant="secondary"
@@ -447,13 +449,13 @@ function LinkFileRow({ message }: { message: CommWhatsAppMessage }) {
     <Surface variant="muted" padding="sm" className="comm-whatsapp-chat-files-link">
       <MediaIcon><Link2 className="kds-control-icon" /></MediaIcon>
       <div className="comm-whatsapp-chat-files-link-content">
-        <a href={link.url} target="_blank" rel="noreferrer" className="comm-whatsapp-chat-files-link-title">
+        <TextLink href={link.url} target="_blank" rel="noreferrer" className="comm-whatsapp-chat-files-link-title">
           {title}
-        </a>
-        <p className="comm-whatsapp-chat-files-item-meta">{link.domain || link.url}</p>
-        {description ? <p className="comm-whatsapp-chat-files-link-description">{description}</p> : null}
+        </TextLink>
+        <Text className="comm-whatsapp-chat-files-item-meta">{link.domain || link.url}</Text>
+        {description ? <Text className="comm-whatsapp-chat-files-link-description">{description}</Text> : null}
       </div>
-      <a
+      <TextLink
         href={link.url}
         target="_blank"
         rel="noreferrer"
@@ -462,7 +464,7 @@ function LinkFileRow({ message }: { message: CommWhatsAppMessage }) {
         title="Abrir link"
       >
         <ExternalLink className="kds-control-icon" />
-      </a>
+      </TextLink>
     </Surface>
   );
 }
@@ -568,9 +570,9 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" size="lg" className="comm-whatsapp-chat-files-drawer">
       <DrawerHeader onClose={onClose} className="comm-whatsapp-chat-files-header">
-        <p className="comm-whatsapp-chat-files-eyebrow">Arquivos da conversa</p>
+        <Text className="comm-whatsapp-chat-files-eyebrow">Arquivos da conversa</Text>
         <DialogTitle>{chatDisplayName}</DialogTitle>
-        <p className="comm-whatsapp-chat-files-description">Fotos, vídeos, documentos, áudios e links compartilhados neste atendimento.</p>
+        <Text className="comm-whatsapp-chat-files-description">Fotos, vídeos, documentos, áudios e links compartilhados neste atendimento.</Text>
       </DrawerHeader>
       <DrawerBody className="comm-whatsapp-chat-files-body">
         <SegmentedControl
@@ -616,7 +618,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
               return (
                 <section key={group.id} className="comm-whatsapp-chat-files-day" aria-labelledby={`chat-files-day-${group.id}`}>
                   <div className="comm-whatsapp-chat-files-day-header">
-                    <h4 id={`chat-files-day-${group.id}`}>{group.label}</h4>
+                    <Heading level={4} id={`chat-files-day-${group.id}`}>{group.label}</Heading>
                     <span>{group.messages.length} {group.messages.length === 1 ? 'item' : 'itens'}</span>
                   </div>
 

@@ -1,3 +1,5 @@
+import { Heading, Text, FieldLabel } from '../../../../design-system';
+import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, RotateCcw, Save } from "lucide-react";
 
@@ -312,13 +314,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         {/* Header */}
         <DrawerHeader onClose={onClose}>
           <div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            <Heading level={2} className="text-base font-semibold text-[var(--text-primary)]">
               {label}
-            </h2>
-            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            </Heading>
+            <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
               {feature.key}
               {(feature.active_config ?? feature.latest_config) && ` · v${(feature.active_config ?? feature.latest_config)!.version}`}
-            </p>
+            </Text>
           </div>
         </DrawerHeader>
 
@@ -327,9 +329,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           {/* Variables info */}
           {feature.available_variables && feature.available_variables.length > 0 && (
             <div className="rounded-[var(--radius-lg)] bg-[var(--bg-surface-muted)] p-3">
-              <p className="text-xs font-medium text-[var(--text-secondary)] mb-1.5">
+              <Text className="text-xs font-medium text-[var(--text-secondary)] mb-1.5">
                 Variáveis disponíveis:
-              </p>
+              </Text>
               <div className="flex flex-wrap gap-1.5">
                 {feature.available_variables.map((v) => (
                   <code
@@ -346,16 +348,16 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           {/* Model Configuration */}
           <div className="rounded-lg border border-[var(--border-subtle)] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-[var(--text-primary)]">Modelo</p>
+              <Text className="text-sm font-medium text-[var(--text-primary)]">Modelo</Text>
               <span className="text-xs text-[var(--text-muted)]">
                 Tipo: {taskType}
               </span>
             </div>
 
             <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
+              <FieldLabel className="flex items-center gap-2 cursor-pointer">
+                <Radio
+
                   name={`model-mode-${feature.key}`}
                   checked={!modelOverrideEnabled}
                   onChange={() => {
@@ -365,17 +367,17 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   className="accent-[var(--brand-primary)]"
                 />
                 <span className="text-sm text-[var(--text-primary)]">Usar roteamento padrão</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
+              </FieldLabel>
+              <FieldLabel className="flex items-center gap-2 cursor-pointer">
+                <Radio
+
                   name={`model-mode-${feature.key}`}
                   checked={modelOverrideEnabled}
                   onChange={() => setModelOverrideEnabled(true)}
                   className="accent-[var(--brand-primary)]"
                 />
                 <span className="text-sm text-[var(--text-primary)]">Personalizado</span>
-              </label>
+              </FieldLabel>
             </div>
 
             {modelOverrideEnabled && (
@@ -445,13 +447,13 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {modelOverrideEnabled && isSelectedModelDeprecated && (
               <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] p-2.5 text-xs text-[var(--warning-text)]">
                 <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
-                <p>Este modelo foi descontinuado pelo provedor. Considere trocar para uma versão mais recente.</p>
+                <Text>Este modelo foi descontinuado pelo provedor. Considere trocar para uma versão mais recente.</Text>
               </div>
             )}
             {modelOverrideEnabled && isSelectedModelWithoutPricing && !isSelectedModelDeprecated && (
               <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--info-border)] bg-[var(--info-soft)] p-2.5 text-xs text-[var(--info-text)]">
                 <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
-                <p>O uso de texto deste modelo será registrado, mas o custo estimado só ficará disponível quando o preço for cadastrado.</p>
+                <Text>O uso de texto deste modelo será registrado, mas o custo estimado só ficará disponível quando o preço for cadastrado.</Text>
               </div>
             )}
 
@@ -471,9 +473,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   </span>
                 </div>
                 {effectiveModel.source === "ai_routing" && (
-                  <p className="text-[var(--text-muted)]">
+                  <Text className="text-[var(--text-muted)]">
                     Funcionalidade: {feature.key.replace(".", "_")}
-                  </p>
+                  </Text>
                 )}
               </div>
             )}
@@ -533,9 +535,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           {/* History */}
           {history.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">
+              <Text className="text-xs font-medium text-[var(--text-secondary)] mb-2">
                 Versões anteriores
-              </p>
+              </Text>
               <div className="space-y-1">
                 {history.slice(0, 5).map((h) => (
                   <div
@@ -559,12 +561,12 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
           {/* Defaults reference */}
           <div className="rounded-lg border border-[var(--border-subtle)] p-3">
-            <p className="text-xs font-medium text-[var(--text-secondary)] mb-1">
+            <Text className="text-xs font-medium text-[var(--text-secondary)] mb-1">
               Valores padrão do sistema:
-            </p>
+            </Text>
             <div className="text-xs text-[var(--text-muted)] space-y-0.5">
-              <p>Variação das respostas: {feature.default_temperature}</p>
-              <p>Limite de texto (tokens): {feature.default_max_output_tokens}</p>
+              <Text>Variação das respostas: {feature.default_temperature}</Text>
+              <Text>Limite de texto (tokens): {feature.default_max_output_tokens}</Text>
             </div>
           </div>
         </DrawerBody>

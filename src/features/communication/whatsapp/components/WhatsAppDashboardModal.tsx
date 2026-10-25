@@ -1,3 +1,4 @@
+import { Text, Heading } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
@@ -486,23 +487,23 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-surface)]">
                 <ChannelHealthIcon className="h-6 w-6" />
               </div>
-              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] opacity-75">Saúde do canal</p>
-              <h3 className="mt-1 text-base font-semibold">{channelHealth.title}</h3>
-              <p className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</p>
+              <Text className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] opacity-75">Saúde do canal</Text>
+              <Heading level={3} className="mt-1 text-base font-semibold">{channelHealth.title}</Heading>
+              <Text className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</Text>
               {metrics?.channel?.last_error && (
                 <details className="mt-3 text-xs">
                   <summary className="cursor-pointer">Informações para o suporte</summary>
-                  <p className="mt-2 break-words">{metrics.channel.last_error}</p>
+                  <Text className="mt-2 break-words">{metrics.channel.last_error}</Text>
                 </details>
               )}
               <div className="mt-3 border-t border-[color:var(--border-subtle)] pt-3 text-xs font-medium">
-                <p>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</p>
-                <p className="mt-0.5 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</p>
+                <Text>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</Text>
+                <Text className="mt-0.5 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</Text>
               </div>
             </Surface>
 
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Atividade</p>
+              <Text className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Atividade</Text>
               <div className="flex flex-wrap gap-2">
                 <OperationalMetricChip icon={<Inbox className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.activeChats)} label="Fila ativa" />
                 <OperationalMetricChip icon={<MessageCircle className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.unreadChats)} label="Não lidas" tone={metrics.chatMetrics.unreadChats > 0 ? 'warning' : 'neutral'} />
@@ -512,7 +513,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
             </div>
 
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Saúde operacional</p>
+              <Text className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Saúde operacional</Text>
               <div className="flex flex-wrap gap-2">
                 <OperationalMetricChip icon={<Link2 className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.linkedLeadChats)} label="Com lead" />
                 <OperationalMetricChip icon={<Archive className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.archivedChats)} label="Arquivadas" />
@@ -538,8 +539,8 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                     >
                       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        <p className="mt-1 text-sm leading-6 opacity-90">{item.description}</p>
+                        <Text className="text-sm font-semibold">{item.title}</Text>
+                        <Text className="mt-1 text-sm leading-6 opacity-90">{item.description}</Text>
                       </div>
                     </Surface>
                   );
@@ -555,8 +556,8 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                           {(chat.displayName || chat.phoneNumber || '?').trim().charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</p>
-                          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatDashboardRecentChatMeta(formatCommWhatsAppPhoneLabel(chat.phoneNumber), formatDateTime(chat.lastMessageAt))}</p>
+                          <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</Text>
+                          <Text className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatDashboardRecentChatMeta(formatCommWhatsAppPhoneLabel(chat.phoneNumber), formatDateTime(chat.lastMessageAt))}</Text>
                         </div>
                       </div>
                       {chat.unreadCount > 0 || chat.manualUnread ? (
@@ -565,7 +566,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                         </Badge>
                       ) : null}
                     </div>
-                    <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{getChatPreview(chat)}</p>
+                    <Text className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{getChatPreview(chat)}</Text>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {chat.leadId ? <Badge tone="info" size="sm" icon={Link2}>Lead vinculado</Badge> : <Badge tone="neutral" size="sm">Sem lead</Badge>}
                       {chat.isPinned ? <Badge tone="neutral" size="sm">Fixado</Badge> : null}

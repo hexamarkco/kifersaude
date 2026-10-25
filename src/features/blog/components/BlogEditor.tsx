@@ -1,6 +1,8 @@
+import { FieldLabel, Image, Text, Heading } from '../../../design-system';
+import { FileInput } from '../../../design-system';
 import { Image as ImageIcon, Loader, Save, Tag, Upload, X } from "lucide-react";
 import { useMemo, type ChangeEvent } from "react";
-import ReactQuill from "react-quill";
+import { RichTextEditor } from '../../../design-system';
 
 import {
   Button,
@@ -150,9 +152,9 @@ export default function BlogEditor({
             </div>
 
             <div>
-              <label className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center border-dashed px-4 py-3 transition-colors">
-                <input
-                  type="file"
+              <FieldLabel className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center border-dashed px-4 py-3 transition-colors">
+                <FileInput
+
                   accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                   onChange={onCoverImageUpload}
                   className="hidden"
@@ -174,12 +176,12 @@ export default function BlogEditor({
                     </span>
                   </div>
                 )}
-              </label>
+              </FieldLabel>
             </div>
 
             {formData.cover_image_url && (
               <Surface padding="none" className="mt-2 overflow-hidden">
-                <img
+                <Image
                   src={formData.cover_image_url}
                   alt="Preview"
                   className="h-48 w-full object-cover"
@@ -207,9 +209,9 @@ export default function BlogEditor({
 
         <Field label="Conteúdo do artigo *">
           <div className="mb-3">
-            <label className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors">
-              <input
-                type="file"
+            <FieldLabel className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors">
+              <FileInput
+
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 onChange={onContentImageUpload}
                 className="hidden"
@@ -230,15 +232,15 @@ export default function BlogEditor({
                   </span>
                 </div>
               )}
-            </label>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
+            </FieldLabel>
+            <Text className="mt-1 text-xs text-[var(--text-muted)]">
               Faça upload de imagens que serão inseridas no final do editor.
               Você pode movê-las depois.
-            </p>
+            </Text>
           </div>
 
           <Surface variant="default" padding="none" className="overflow-hidden">
-            <ReactQuill
+            <RichTextEditor
               theme="snow"
               value={formData.content}
               onChange={onContentChange}
@@ -248,16 +250,16 @@ export default function BlogEditor({
               className="kds-blog-editor"
             />
           </Surface>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <Text className="mt-1 text-xs text-[var(--text-muted)]">
             Use o editor para formatar o texto. Adicione títulos (H2, H3),
             listas, links e imagens.
-          </p>
+          </Text>
         </Field>
 
         <Surface variant="muted" className="pt-6">
-          <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
+          <Heading level={3} className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
             SEO (otimização para Google)
-          </h3>
+          </Heading>
 
           <div className="space-y-4">
             <Field label="Meta título (Google)" description={`${formData.meta_title.length}/60 caracteres`}>
@@ -300,12 +302,12 @@ export default function BlogEditor({
               onFormDataChange({ ...formData, published: event.target.checked })
             }
           />
-          <label
+          <FieldLabel
             htmlFor="published"
             className="text-sm font-medium text-[var(--text-secondary)]"
           >
             Publicar imediatamente (visível no site e no Google)
-          </label>
+          </FieldLabel>
         </div>
 
         <div className="flex gap-3 border-t border-[var(--border-subtle)] pt-4">

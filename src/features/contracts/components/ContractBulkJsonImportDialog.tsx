@@ -1,3 +1,5 @@
+import { Text } from '../../../design-system';
+import { FileInput } from '../../../design-system';
 import { useRef, useState } from 'react';
 import { CheckCircle2, Download, FileUp, Loader2 } from 'lucide-react';
 
@@ -109,8 +111,8 @@ export function ContractBulkJsonImportDialog({
       <DialogBody className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3">
           <div className="min-w-0 text-sm text-[var(--text-secondary)]">
-            <p className="font-medium text-[var(--text-primary)]">Formato do arquivo</p>
-            <p className="mt-1">Objeto com uma lista <code>contratos</code>; até {MAX_CONTRACTS_PER_JSON_IMPORT} contratos em um arquivo.</p>
+            <Text className="font-medium text-[var(--text-primary)]">Formato do arquivo</Text>
+            <Text className="mt-1">Objeto com uma lista <code>contratos</code>; até {MAX_CONTRACTS_PER_JSON_IMPORT} contratos em um arquivo.</Text>
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={downloadTemplate}>
             <Download className="kds-control-icon" />
@@ -120,15 +122,15 @@ export function ContractBulkJsonImportDialog({
 
         <div className="rounded-[var(--kds-radius-sm)] border border-dashed border-[var(--border-default)] bg-[var(--surface-primary)] p-5 text-center">
           <FileUp className="mx-auto h-7 w-7 text-[var(--brand-primary)]" />
-          <p className="mt-2 break-all font-medium text-[var(--text-primary)]">
+          <Text className="mt-2 break-all font-medium text-[var(--text-primary)]">
             {file ? file.name : 'Escolha o arquivo JSON com os contratos'}
-          </p>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          </Text>
+          <Text className="mt-1 text-sm text-[var(--text-secondary)]">
             Campos obrigatórios por item: código, status, modalidade, operadora, produto/plano e responsável. Datas em AAAA-MM-DD, renovação em AAAA-MM. Máximo de 5 MB.
-          </p>
-          <input
+          </Text>
+          <FileInput
             ref={inputRef}
-            type="file"
+
             accept="application/json,.json"
             className="sr-only"
             disabled={loading || importing}
@@ -153,10 +155,10 @@ export function ContractBulkJsonImportDialog({
                 ))}
               </ul>
               {payload.contracts.length > 8 && (
-                <p className="mt-1">e mais {payload.contracts.length - 8} contrato(s).</p>
+                <Text className="mt-1">e mais {payload.contracts.length - 8} contrato(s).</Text>
               )}
             </div>
-            <p className="mt-2">O lote é enviado em uma única operação. Se houver erro ou código já cadastrado, nenhum item do lote será incluído.</p>
+            <Text className="mt-2">O lote é enviado em uma única operação. Se houver erro ou código já cadastrado, nenhum item do lote será incluído.</Text>
           </Alert>
         )}
         {error && <Alert tone="danger" title="Não foi possível importar o arquivo">{error}</Alert>}

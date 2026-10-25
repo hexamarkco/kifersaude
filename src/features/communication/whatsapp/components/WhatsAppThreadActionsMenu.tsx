@@ -1,7 +1,8 @@
+import { DropdownOption } from '../../../../design-system';
 import type { Dispatch, Ref, SetStateAction } from 'react';
 import { Bot, CalendarClock, Copy, Download, FolderOpen, Info, Loader2, Search, Sparkles } from 'lucide-react';
 
-import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
+import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import type { CommWhatsAppChat } from '../domain/types';
 import type { InboxOverlayPosition } from '../hooks/useInboxOverlayPositions';
 
@@ -63,7 +64,7 @@ export const WhatsAppThreadActionsMenu = ({
     {selectedChat ? (
       <div className="flex flex-col gap-1">
         {!selectedChat.is_group && selectedChat.lead_id ? (
-          <button
+          <DropdownOption
             type="button"
             role="menuitem"
             onClick={() => {
@@ -80,9 +81,9 @@ export const WhatsAppThreadActionsMenu = ({
             <span>{isSelectedChatWaitingForQuote
               ? 'IA encerrada enquanto aguarda cotação'
               : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
-          </button>
+          </DropdownOption>
         ) : null}
-        <button
+        <DropdownOption
           type="button"
           role="menuitem"
           onClick={() => {
@@ -93,8 +94,8 @@ export const WhatsAppThreadActionsMenu = ({
         >
           <FolderOpen className="h-4 w-4 shrink-0" />
           <span>Arquivos da conversa</span>
-        </button>
-        <button
+        </DropdownOption>
+        <DropdownOption
           type="button"
           role="menuitem"
           onClick={() => {
@@ -105,8 +106,8 @@ export const WhatsAppThreadActionsMenu = ({
         >
           <Search className="h-4 w-4 shrink-0" />
           <span>Pesquisar neste chat</span>
-        </button>
-        <button
+        </DropdownOption>
+        <DropdownOption
           type="button"
           role="menuitem"
           onClick={() => {
@@ -117,8 +118,8 @@ export const WhatsAppThreadActionsMenu = ({
         >
           <CalendarClock className="h-4 w-4 shrink-0" />
           <span>Mensagens agendadas desta conversa</span>
-        </button>
-        <button
+        </DropdownOption>
+        <DropdownOption
           type="button"
           role="menuitem"
           onClick={() => {
@@ -130,8 +131,8 @@ export const WhatsAppThreadActionsMenu = ({
         >
           {copyingTranscript ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Copy className="h-4 w-4 shrink-0" />}
           <span>Copiar conversa formatada</span>
-        </button>
-        <button
+        </DropdownOption>
+        <DropdownOption
           type="button"
           role="menuitem"
           onClick={() => {
@@ -144,9 +145,9 @@ export const WhatsAppThreadActionsMenu = ({
         >
           {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Download className="h-4 w-4 shrink-0" />}
           <span>Recuperar histórico antigo</span>
-        </button>
+        </DropdownOption>
         {!selectedChat.is_group ? (
-          <button
+          <DropdownOption
             type="button"
             role="menuitem"
             onClick={() => {
@@ -159,10 +160,10 @@ export const WhatsAppThreadActionsMenu = ({
           >
             {generatingFollowUp ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Sparkles className="h-4 w-4 shrink-0" />}
             <span>Gerar follow-up com IA</span>
-          </button>
+          </DropdownOption>
         ) : null}
         {!selectedChat.is_group ? (
-          <button
+          <DropdownOption
             type="button"
             role="menuitem"
             onClick={() => {
@@ -173,7 +174,7 @@ export const WhatsAppThreadActionsMenu = ({
           >
             <Info className="h-4 w-4 shrink-0" />
             <span>{selectedChat.lead_id ? 'Informações do lead' : 'Vincular lead do CRM'}</span>
-          </button>
+          </DropdownOption>
         ) : null}
       </div>
     ) : null}

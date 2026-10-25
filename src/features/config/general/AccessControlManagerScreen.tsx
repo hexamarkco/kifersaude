@@ -1,3 +1,5 @@
+import { Heading, Text, FieldLabel } from '../../../design-system';
+import { ActionSurface } from '../../../design-system';
 import { useMemo, useState, type FormEvent } from "react";
 import { Check, Pencil, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { useConfig } from "../../../contexts/ConfigContext";
@@ -182,23 +184,23 @@ export default function AccessControlManagerScreen() {
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
           <Card padding="md" className="hidden min-w-0 lg:block">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h4 className="font-semibold text-[var(--text-primary)]">Perfis</h4>
+              <Heading level={4} className="font-semibold text-[var(--text-primary)]">Perfis</Heading>
               <Badge tone="neutral" size="sm">{profiles.length}</Badge>
             </div>
             <Input leftIcon={Search} value={profileSearch} onChange={(event) => setProfileSearch(event.target.value)} placeholder="Buscar perfil" aria-label="Buscar perfil" />
             <nav aria-label="Perfis de acesso" className="mt-3 max-h-[32rem] space-y-1 overflow-y-auto pr-1">
               {visibleProfiles.map((profile) => {
                 const selected = profile.id === selectedProfile.id;
-                return <button key={profile.id} type="button" aria-pressed={selected} onClick={() => selectProfile(profile.id)}
+                return <ActionSurface variant="plain" padding="none" key={profile.id} type="button" aria-pressed={selected} onClick={() => selectProfile(profile.id)}
                   className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] ${selected ? "border-[var(--border-accent)] bg-[var(--brand-primary-soft)]" : "border-transparent hover:bg-[var(--surface-secondary)]"}`}>
                   <span className="min-w-0 flex-1">
                     <span className="block break-words text-sm font-semibold text-[var(--text-primary)]">{formatProfileLabel(profile.slug, profile.name)}</span>
                     <span className="mt-1 block text-xs text-[var(--text-muted)]">{profile.is_admin ? "Acesso total" : profile.is_system ? "Perfil padrão" : "Acesso personalizado"}</span>
                   </span>
                   {selected && <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-hidden="true" />}
-                </button>;
+                </ActionSurface>;
               })}
-              {visibleProfiles.length === 0 && <p role="status" className="px-3 py-6 text-sm text-[var(--text-muted)]">Nenhum perfil encontrado. Tente outro nome.</p>}
+              {visibleProfiles.length === 0 && <Text role="status" className="px-3 py-6 text-sm text-[var(--text-muted)]">Nenhum perfil encontrado. Tente outro nome.</Text>}
             </nav>
           </Card>
 
@@ -216,8 +218,8 @@ export default function AccessControlManagerScreen() {
                     {selectedProfile.is_system && <Badge tone="neutral" size="sm">Perfil padrão</Badge>}
                     <Badge tone={selectedProfile.is_admin ? "gold" : "neutral"} size="sm">{selectedProfile.is_admin ? "Acesso total" : "Acesso personalizado"}</Badge>
                   </div>
-                  <h4 id="selected-profile-title" className="break-words font-[var(--font-display)] text-xl text-[var(--text-primary)]">{formatProfileLabel(selectedProfile.slug, selectedProfile.name)}</h4>
-                  {selectedProfile.description && <p className="mt-2 break-words text-sm leading-6 text-[var(--text-secondary)]">{selectedProfile.description}</p>}
+                  <Heading level={4} id="selected-profile-title" className="break-words font-[var(--font-display)] text-xl text-[var(--text-primary)]">{formatProfileLabel(selectedProfile.slug, selectedProfile.name)}</Heading>
+                  {selectedProfile.description && <Text className="mt-2 break-words text-sm leading-6 text-[var(--text-secondary)]">{selectedProfile.description}</Text>}
                 </div>
                 {!selectedProfile.is_system && <div className="flex flex-wrap gap-2">
                   <Button variant="secondary" size="sm" onClick={handleStartEdit} disabled={Boolean(updatingKey || deletingProfileId) || loading || loadError}><Pencil className="kds-control-icon" aria-hidden="true" />Editar perfil</Button>
@@ -232,8 +234,8 @@ export default function AccessControlManagerScreen() {
               <div className="border-t border-[var(--border-subtle)] pt-5">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h5 className="font-semibold text-[var(--text-primary)]">Acesso por área</h5>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">{visibleAreaCount} de {ACCESS_MODULES.length} áreas com acesso · alterações salvas automaticamente.</p>
+                    <Heading level={5} className="font-semibold text-[var(--text-primary)]">Acesso por área</Heading>
+                    <Text className="mt-1 text-sm text-[var(--text-muted)]">{visibleAreaCount} de {ACCESS_MODULES.length} áreas com acesso · alterações salvas automaticamente.</Text>
                   </div>
                   <div className="w-full sm:w-64"><Input leftIcon={Search} value={moduleSearch} onChange={(event) => setModuleSearch(event.target.value)} placeholder="Buscar área" aria-label="Buscar área" /></div>
                 </div>
@@ -243,7 +245,7 @@ export default function AccessControlManagerScreen() {
                     const modules = visibleModules.filter((module) => module.group === group.id);
                     if (modules.length === 0) return null;
                     return <section key={group.id} aria-labelledby={`access-group-${group.id}`}>
-                      <h6 id={`access-group-${group.id}`} className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{group.label}</h6>
+                      <Heading level={6} id={`access-group-${group.id}`} className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{group.label}</Heading>
                       <ul className="divide-y divide-[var(--border-subtle)]">
                         {modules.map((module) => {
                           const permission = getPermission(selectedProfile.slug, module.id, selectedProfile.is_admin);
@@ -251,8 +253,8 @@ export default function AccessControlManagerScreen() {
                           const isUpdating = updatingKey === `${selectedProfile.slug}:${module.id}`;
                           return <li key={module.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" aria-busy={isUpdating}>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-[var(--text-primary)]">{module.label}</p>
-                              <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{module.description}</p>
+                              <Text className="text-sm font-medium text-[var(--text-primary)]">{module.label}</Text>
+                              <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{module.description}</Text>
                             </div>
                             <div className="w-full shrink-0 sm:w-52">
                               <Select aria-label={`Acesso a ${module.label}`} value={level} disabled={selectedProfile.is_admin || Boolean(updatingKey || deletingProfileId) || loading || loadError}
@@ -285,10 +287,10 @@ export default function AccessControlManagerScreen() {
           <DialogBody className="space-y-4">
             <Field label="Nome do perfil"><Input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Ex.: Equipe comercial" required disabled={savingProfile} /></Field>
             <Field label="Descrição (opcional)"><Textarea value={profileDescription} onChange={(event) => setProfileDescription(event.target.value)} placeholder="Para quem é este perfil?" rows={3} disabled={savingProfile} /></Field>
-            <label className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] p-4">
+            <FieldLabel className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] p-4">
               <Checkbox checked={profileIsAdmin} onChange={(event) => setProfileIsAdmin(event.target.checked)} disabled={savingProfile} />
               <span className="text-sm text-[var(--text-primary)]">Conceder acesso total<span className="mt-1 block text-xs leading-5 text-[var(--text-muted)]">Permite visualizar e editar todas as áreas, incluindo usuários e permissões.</span></span>
-            </label>
+            </FieldLabel>
           </DialogBody>
           <DialogFooter><Button type="button" variant="secondary" onClick={resetProfileForm} disabled={savingProfile}>Cancelar</Button><Button type="submit" disabled={savingProfile}>{savingProfile ? "Salvando…" : editingProfileId ? "Salvar perfil" : "Criar perfil"}</Button></DialogFooter>
         </form>

@@ -1,3 +1,4 @@
+import { FieldLabel, Image, TextLink } from '../../design-system';
 import { type FormEvent, type KeyboardEvent, type MouseEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
@@ -786,9 +787,9 @@ export default function HomePage() {
   const renderQuoteFields = () => (
     <>
       <div>
-        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-name">
+        <FieldLabel className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-name">
           Nome completo *
-        </label>
+        </FieldLabel>
         <Input
           id="quote-name"
           type="text"
@@ -801,9 +802,9 @@ export default function HomePage() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-phone">
+        <FieldLabel className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-phone">
           Telefone (WhatsApp) *
-        </label>
+        </FieldLabel>
         <Input
           id="quote-phone"
           type="tel"
@@ -821,9 +822,9 @@ export default function HomePage() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-city">
+        <FieldLabel className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-city">
           Cidade *
-        </label>
+        </FieldLabel>
         <CityAutocompleteField
           id="quote-city"
           value={formData.cidade}
@@ -832,9 +833,9 @@ export default function HomePage() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-contract-type">
+        <FieldLabel className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-contract-type">
           Tipo de contratação *
-        </label>
+        </FieldLabel>
         <Select
           id="quote-contract-type"
           value={formData.tipoContratacao}
@@ -854,9 +855,9 @@ export default function HomePage() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-lives">
+        <FieldLabel className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-lives">
           Quantas pessoas vão entrar no plano? *
-        </label>
+        </FieldLabel>
         <Input
           id="quote-lives"
           type="number"
@@ -872,7 +873,7 @@ export default function HomePage() {
       {totalLives > 1 ? (
         <div className="md:col-span-2">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <label className="block text-sm font-semibold text-[color:var(--text-primary)]">Pessoas por faixa etária *</label>
+            <FieldLabel className="block text-sm font-semibold text-[color:var(--text-primary)]">Pessoas por faixa etária *</FieldLabel>
             <span className={`text-xs font-semibold ${ageRangeTotal === totalLives ? 'text-[color:var(--success-text)]' : 'text-[color:var(--text-muted)]'}`}>
               {ageRangeTotal} de {totalLives} pessoas distribuídas
             </span>
@@ -897,9 +898,9 @@ export default function HomePage() {
         </div>
       ) : totalLives === 1 ? (
         <div>
-          <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-age">
+          <FieldLabel className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-age">
             Idade da pessoa *
-          </label>
+          </FieldLabel>
           <Input
             id="quote-age"
             type="number"
@@ -914,8 +915,8 @@ export default function HomePage() {
       ) : null}
 
       <div className="absolute h-px w-px overflow-hidden whitespace-nowrap opacity-0 pointer-events-none" aria-hidden="true">
-        <label htmlFor="quote-website">Website</label>
-        <input id="quote-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+        <FieldLabel htmlFor="quote-website">Website</FieldLabel>
+        <Input id="quote-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
     </>
   );
@@ -944,7 +945,7 @@ export default function HomePage() {
                 Corretora de planos de saúde no Rio de Janeiro
               </div>
 
-              <Heading level={1} className="mt-8">
+              <Heading family="display" level={1} className="mt-8">
                 <span className="lg:block">Plano de saúde</span>{' '}
                 <span className="lg:block">no Rio de Janeiro</span>{' '}
                 <span className="lg:block">com <span className="text-[color:var(--brand-primary)]">orientação</span></span>{' '}
@@ -997,7 +998,7 @@ export default function HomePage() {
               <div aria-hidden="true" className="kds-public-home-hero-disc absolute left-1/2 aspect-square -translate-x-1/2 rounded-full bg-[var(--brand-primary-muted)]" />
               <div aria-hidden="true" className="kds-public-home-hero-ring absolute rounded-[50%] border border-[color:var(--brand-primary-border)]" />
               <div aria-hidden="true" className="kds-public-home-hero-dot absolute aspect-square rounded-full" />
-              <img
+              <Image
                 src="/luiza-kifer-hero.png"
                 alt="Luíza Kifer, especialista em planos de saúde, segurando um notebook"
                 width="1728"
@@ -1064,7 +1065,7 @@ export default function HomePage() {
                       className="partner-logos-card group flex h-20 items-center justify-center"
                       aria-hidden={index >= partnerLogos.length}
                     >
-                      <img
+                      <Image
                         src={logo.src}
                         alt={logo.alt}
                         className="max-h-9 w-auto max-w-full object-contain grayscale opacity-65 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:max-h-11"
@@ -1195,7 +1196,7 @@ export default function HomePage() {
             </Reveal>
 
             <div className="mt-10 text-center">
-              <a
+              <TextLink
                 href={GOOGLE_REVIEWS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -1203,7 +1204,7 @@ export default function HomePage() {
               >
                 Ver mais avaliações no Google
                 <ChevronRight className="ml-1 h-4 w-4" />
-              </a>
+              </TextLink>
             </div>
           </div>
         </section>
@@ -1212,7 +1213,7 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <Reveal className="relative overflow-hidden rounded-[var(--kds-radius-xl)] [background:var(--surface-hero-bg)] p-4 shadow-[var(--shadow-card)]">
               <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)]">
-                <img
+                <Image
                   src="/image.png"
                   alt="Luíza Kifer, corretora independente de planos de saúde no Rio de Janeiro"
                   width="1024"
@@ -1365,7 +1366,7 @@ export default function HomePage() {
                 <div className="mb-6 flex items-center gap-4">
                   <div className="relative h-20 w-20 shrink-0">
                     <div className="h-full w-full overflow-hidden rounded-full border-4 border-[color:color-mix(in_srgb,var(--text-inverse)_16%,transparent)]">
-                      <img src="/image.png" alt="Luíza Kifer" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
+                      <Image src="/image.png" alt="Luíza Kifer" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[color:var(--text-primary)] bg-[var(--success)]">
                       <span className="h-2 w-2 rounded-full bg-[var(--text-on-brand)]" />
@@ -1396,7 +1397,7 @@ export default function HomePage() {
                 <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow-modal)]">
                   <div className="flex items-center gap-3 border-b border-[color:var(--border-subtle)] pb-3">
                     <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full">
-                      <img src="/image.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
+                      <Image src="/image.png" alt="" width="1024" height="1536" loading="lazy" decoding="async" className="h-full w-full object-cover object-[center_20%]" />
                     </div>
                     <div>
                       <Text tone="primary" weight="semibold">Luíza Kifer</Text>

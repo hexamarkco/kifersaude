@@ -119,3 +119,51 @@ test('forwards min/max constraints by disabling out-of-range days', () => {
 
   unmount();
 });
+
+
+test('datetime selection advances through compact steps and commits only on confirmation', () => {
+  const { container, getValue, unmount } = renderControlledPicker('2026-03-12T10:17', 'datetime-local');
+  click(container.querySelector('.kds-dp-trigger'));
+  click(findByText(document.body, '18'));
+  assert.equal(document.querySelector('.kds-dp-days'), null);
+  assert.equal(getValue(), '2026-03-12T10:17');
+  click(document.querySelector('[aria-label="14 horas"]'));
+  assert.equal(document.querySelector('[aria-label="Horas"]'), null);
+  const input = document.querySelector('[aria-label="Minuto exato"]');
+  assert.ok(input instanceof HTMLInputElement);
+  changeMinute(input, '23');
+  click(findByText(document.body, 'Confirmar horário'));
+  assert.equal(getValue(), '2026-03-18T14:23');
+  unmount();
+});
+
+test('time boundaries reject invalid minutes and clearing a draft does not commit', () => {
+  const { container, getValue, unmount } = renderControlledPicker('10:17', 'time', { min: '10:15', max: '11:30' });
+  click(container.querySelector('.kds-dp-trigger'));
+  const earlyHour = document.querySelector('[aria-label="09 horas"]');
+  assert.ok(earlyHour instanceof HTMLButtonElement && earlyHour.disabled);
+  click(document.querySelector('[aria-label="10 horas"]'));
+  const earlyMinute = document.querySelector('[aria-label="10 minutos"]');
+  assert.ok(earlyMinute instanceof HTMLButtonElement && earlyMinute.disabled);
+  const input = document.querySelector('[aria-label="Minuto exato"]');
+  assert.ok(input instanceof HTMLInputElement);
+  changeMinute(input, '60');
+  const confirm = findByText(document.body, 'Confirmar horário')?.closest('button');
+  assert.ok(confirm?.disabled);
+  act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  assert.equal(getValue(), '10:17');
+  click(container.querySelector('.kds-dp-trigger'));
+  click(document.querySelector('[aria-label="11 horas"]'));
+  changeMinute(document.querySelector('[aria-label="Minuto exato"]')!, '29');
+  click(findByText(document.body, 'Confirmar horário'));
+  assert.equal(getValue(), '11:29');
+  unmount();
+});
+
+function changeMinute(element: Element, value: string) {
+  assert.ok(element instanceof HTMLInputElement);
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(element, value);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}

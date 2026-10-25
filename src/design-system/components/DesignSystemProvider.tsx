@@ -9,7 +9,7 @@ export type DesignSystemProviderProps = HTMLAttributes<HTMLDivElement> & {
   theme?: DesignSystemTheme;
 };
 
-/** Explicit adoption boundary: the established screens retain their current presentation. */
+/** Shared theme boundary for application screens and their portal content. */
 export function DesignSystemProvider({
   theme = 'light',
   className,

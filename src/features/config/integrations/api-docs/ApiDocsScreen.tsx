@@ -1,3 +1,4 @@
+import { Text, Heading } from '../../../../design-system';
 import { useState } from 'react';
 import { ArrowLeft, BookOpen, LockKeyhole, Play, RotateCcw, Search, Terminal, Unplug } from 'lucide-react';
 import { Alert, Badge, Button, Card, ConfirmDialog, Field, Input, LinkButton, PageContainer, PageHeader, SectionHeader, Select, Textarea } from '../../../../design-system';
@@ -11,7 +12,7 @@ function ParameterTable({ fields }: { fields: ApiParameter[] }) {
       {fields.map((field) => (
         <div key={field.name}>
           <div><code>{field.name}</code>{field.required && <Badge tone="warning" size="sm">Obrigatório</Badge>}</div>
-          <p>{field.description}</p>
+          <Text>{field.description}</Text>
         </div>
       ))}
     </div>
@@ -38,9 +39,9 @@ export default function ApiDocsScreen() {
       />
 
       <div className="kds-api-overview">
-        <Card><BookOpen size={20} /><div><strong>{apiEndpoints.length} operações documentadas</strong><p>Consultas, cadastros e automações</p></div></Card>
-        <Card><LockKeyhole size={20} /><div><strong>Acesso pela sua sessão</strong><p>As mesmas permissões do CRM</p></div></Card>
-        <Card><Terminal size={20} /><div><strong>Teste e acompanhe</strong><p>Resposta, tempo e código HTTP</p></div></Card>
+        <Card><BookOpen size={20} /><div><strong>{apiEndpoints.length} operações documentadas</strong><Text>Consultas, cadastros e automações</Text></div></Card>
+        <Card><LockKeyhole size={20} /><div><strong>Acesso pela sua sessão</strong><Text>As mesmas permissões do CRM</Text></div></Card>
+        <Card><Terminal size={20} /><div><strong>Teste e acompanhe</strong><Text>Resposta, tempo e código HTTP</Text></div></Card>
       </div>
 
       <div className="kds-api-layout">
@@ -52,24 +53,24 @@ export default function ApiDocsScreen() {
               { value: 'ALL', label: 'Todos os métodos' }, { value: 'GET', label: 'GET · Consultar' },
               { value: 'POST', label: 'POST · Executar ou criar' }, { value: 'PUT', label: 'PUT · Atualizar' },
             ]} /></Field>
-            <p className="kds-api-muted">{filtered.length} de {apiEndpoints.length} operações</p>
+            <Text className="kds-api-muted">{filtered.length} de {apiEndpoints.length} operações</Text>
             <nav aria-label="Endpoints da API" className="space-y-4">
               {groups.map((group) => {
                 const items = filtered.filter((item) => item.group === group);
                 return items.length > 0 && <div key={group}>
-                  <h3 className="kds-api-nav-heading">{group}</h3>
+                  <Heading level={3} className="kds-api-nav-heading">{group}</Heading>
                   <div className="space-y-1">{items.map((item) => (
-                    <button key={item.id} type="button" className={`kds-api-endpoint ${item.id === endpoint.id ? 'is-active' : ''}`}
+                    <Button variant="ghost" key={item.id} type="button" className={`kds-api-endpoint ${item.id === endpoint.id ? "is-active" : ""}`}
                       aria-current={item.id === endpoint.id ? 'true' : undefined} disabled={running}
                       onClick={() => { explorer.selectEndpoint(item.id); setResponseTab('body'); }}>
                       <span><Badge tone={item.method === 'GET' ? 'info' : item.method === 'PUT' ? 'warning' : 'primary'} size="sm">{item.method}</Badge>
                         {item.access === 'server' && <LockKeyhole size={13} aria-label="Somente servidor" />}</span>
                       <strong>{item.title}</strong><code>{endpointPath(item)}</code>
-                    </button>
+                    </Button>
                   ))}</div>
                 </div>;
               })}
-              {filtered.length === 0 && <p className="kds-api-muted" role="status">Nenhuma operação encontrada. Ajuste a busca ou o método.</p>}
+              {filtered.length === 0 && <Text className="kds-api-muted" role="status">Nenhuma operação encontrada. Ajuste a busca ou o método.</Text>}
             </nav>
           </Card>
         </aside>
@@ -90,9 +91,9 @@ export default function ApiDocsScreen() {
             {endpoint.notes && <ul className="kds-api-notes">{endpoint.notes.map((note) => <li key={note}>{note}</li>)}</ul>}
             <details className="kds-api-details">
               <summary>Campos e contrato da operação</summary>
-              {endpoint.parameters.length > 0 && <><h3>Parâmetros de consulta</h3><ParameterTable fields={endpoint.parameters} /></>}
-              {endpoint.fields.length > 0 && <><h3>Campos do corpo JSON</h3><ParameterTable fields={endpoint.fields} /></>}
-              {!endpoint.parameters.length && !endpoint.fields.length && <p>Esta operação não precisa de campos adicionais.</p>}
+              {endpoint.parameters.length > 0 && <><Heading level={3}>Parâmetros de consulta</Heading><ParameterTable fields={endpoint.parameters} /></>}
+              {endpoint.fields.length > 0 && <><Heading level={3}>Campos do corpo JSON</Heading><ParameterTable fields={endpoint.fields} /></>}
+              {!endpoint.parameters.length && !endpoint.fields.length && <Text>Esta operação não precisa de campos adicionais.</Text>}
               <ApiCodeBlock title="Exemplo de resposta · dados ilustrativos" value={JSON.stringify(endpoint.response, null, 2)} />
             </details>
           </Card>
@@ -123,12 +124,12 @@ export default function ApiDocsScreen() {
                 </div>}
                 <details className="kds-api-details">
                   <summary>Endereço, autenticação e código cURL</summary>
-                  <p>Serviço deste ambiente: <code className="kds-api-path">{explorer.baseUrl}</code></p>
-                  <p>Chamadas no navegador usam a sessão atual e a chave pública do projeto. Nenhuma chave de servidor é necessária ou armazenada aqui.</p>
+                  <Text>Serviço deste ambiente: <code className="kds-api-path">{explorer.baseUrl}</code></Text>
+                  <Text>Chamadas no navegador usam a sessão atual e a chave pública do projeto. Nenhuma chave de servidor é necessária ou armazenada aqui.</Text>
                   {endpoint.parameters.length > 0 && <Field label="Parâmetros de consulta completos" hint="Permite usar também os filtros por ID, como origem_id e status_id.">
                     <Input value={draft.query} onChange={(event) => explorer.updateDraft({ query: event.target.value })} />
                   </Field>}
-                  <p>O cURL usa variáveis de ambiente: SUPABASE_ANON_KEY e {endpoint.access === 'server' ? 'SUPABASE_SERVICE_ROLE_KEY (somente no servidor)' : 'ACCESS_TOKEN (token de acesso do usuário, quando exigido)'}.</p>
+                  <Text>O cURL usa variáveis de ambiente: SUPABASE_ANON_KEY e {endpoint.access === 'server' ? 'SUPABASE_SERVICE_ROLE_KEY (somente no servidor)' : 'ACCESS_TOKEN (token de acesso do usuário, quando exigido)'}.</Text>
                   <ApiCodeBlock title="cURL" value={explorer.curl} />
                 </details>
               </fieldset>
@@ -136,8 +137,8 @@ export default function ApiDocsScreen() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" disabled={!explorer.canExecute || running} loading={running}><Play size={16} />{running ? 'Aguardando resposta' : 'Executar chamada'}</Button>
                 {running && <Button variant="secondary" onClick={explorer.cancel}><Unplug size={16} />Cancelar espera</Button>}
-                {!explorer.canExecute && endpoint.access !== 'server' && <p className="kds-api-muted">Seu perfil não permite esta operação. Acesso necessário: {endpointAccessLabels[endpoint.access]}.</p>}
-                {endpoint.access === 'server' && <p className="kds-api-muted">Disponível para execução por cURL no servidor.</p>}
+                {!explorer.canExecute && endpoint.access !== 'server' && <Text className="kds-api-muted">Seu perfil não permite esta operação. Acesso necessário: {endpointAccessLabels[endpoint.access]}.</Text>}
+                {endpoint.access === 'server' && <Text className="kds-api-muted">Disponível para execução por cURL no servidor.</Text>}
               </div>
             </form>
           </Card>
@@ -145,17 +146,17 @@ export default function ApiDocsScreen() {
           <Card className="space-y-4" aria-busy={running}>
             <SectionHeader title="Resposta da chamada" description="O resultado real da última execução aparece aqui." />
             <div aria-live="polite" role="status">
-              {running ? <p className="kds-api-muted">Aguardando resposta do serviço…</p>
+              {running ? <Text className="kds-api-muted">Aguardando resposta do serviço…</Text>
                 : result ? <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2"><Badge tone={resultTone || 'neutral'}>HTTP {result.status} {result.statusText}</Badge><Badge tone="neutral">{result.durationMs} ms</Badge></div>
-                  <p className="kds-api-muted">{!result.ok ? 'O serviço recusou a chamada. Confira a resposta para corrigir os dados ou o acesso.'
+                  <Text className="kds-api-muted">{!result.ok ? 'O serviço recusou a chamada. Confira a resposta para corrigir os dados ou o acesso.'
                     : result.applicationIssue ? 'A resposta informa falhas ou uma operação não executada. Confira o corpo antes de continuar.'
-                      : 'Resposta recebida. Confira o corpo para verificar os dados e o resultado da operação.'}</p>
+                      : 'Resposta recebida. Confira o corpo para verificar os dados e o resultado da operação.'}</Text>
                 </div>
-                  : <p className="kds-api-empty"><Terminal size={24} />Nenhuma chamada executada. Escolha uma operação e clique em Executar chamada.</p>}
+                  : <Text className="kds-api-empty"><Terminal size={24} />Nenhuma chamada executada. Escolha uma operação e clique em Executar chamada.</Text>}
             </div>
             {result && <>
-              <p className="kds-api-path">{result.url}</p>
+              <Text className="kds-api-path">{result.url}</Text>
               <div className="flex gap-2" role="group" aria-label="Visualização da resposta">
                 <Button size="sm" variant={responseTab === 'body' ? 'secondary' : 'ghost'} aria-pressed={responseTab === 'body'} onClick={() => setResponseTab('body')}>Corpo</Button>
                 <Button size="sm" variant={responseTab === 'headers' ? 'secondary' : 'ghost'} aria-pressed={responseTab === 'headers'} onClick={() => setResponseTab('headers')}>Cabeçalhos</Button>
@@ -180,7 +181,7 @@ export default function ApiDocsScreen() {
       <ConfirmDialog open={Boolean(explorer.pending)} onOpenChange={(open) => { if (!open) explorer.setPending(null); }}
         title={`Executar: ${endpoint.title}?`} description={endpoint.impact} confirmLabel="Confirmar e executar" cancelLabel="Revisar dados"
         onConfirm={async () => { if (explorer.pending) await explorer.execute(explorer.pending); }}>
-        <p>A chamada será enviada ao ambiente atual. Confira os dados e o destinatário antes de continuar.</p>
+        <Text>A chamada será enviada ao ambiente atual. Confira os dados e o destinatário antes de continuar.</Text>
         {explorer.pending && <ApiCodeBlock title="Chamada a executar" value={`${explorer.pending.method} ${explorer.pending.url}\n${explorer.pending.body ?? ''}`} />}
       </ConfirmDialog>
     </PageContainer>

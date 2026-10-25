@@ -1,3 +1,4 @@
+import { ActionSurface, DropdownOption } from '../design-system';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ChevronDown } from 'lucide-react';
 
@@ -28,14 +29,14 @@ export default function StatusDropdown({ currentStatus, leadId, onStatusChange, 
 
   return <Popover open={isOpen} onOpenChange={setIsOpen}>
     <PopoverTrigger className="inline-block">
-      <button type="button" disabled={disabled || isUpdating} style={{ ...(statusColor ? { '--op-status-color': statusColor } : {}) } as CSSProperties} aria-haspopup="listbox" aria-expanded={isOpen} aria-busy={isUpdating} className={cx('kds-op-status-badge kds-op-status-trigger', (disabled || isUpdating) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}>
+      <ActionSurface variant="plain" padding="none" type="button" disabled={disabled || isUpdating} style={{ ...(statusColor ? { '--op-status-color': statusColor } : {}) } as CSSProperties} aria-haspopup="listbox" aria-expanded={isOpen} aria-busy={isUpdating} className={cx('kds-op-status-badge kds-op-status-trigger', (disabled || isUpdating) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}>
         <span>{isUpdating ? 'Atualizando...' : displayStatus}</span>{!disabled && !isUpdating && <ChevronDown className="h-3 w-3" />}
-      </button>
+      </ActionSurface>
     </PopoverTrigger>
     <PopoverContent className="w-52 p-1" role="listbox" aria-label="Alterar status do lead">
-      {statusOptions.map((status) => <button type="button" key={status.id} onClick={() => void selectStatus(status.nome)} className={cx('kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm', status.nome === currentStatus && 'is-selected font-medium')}>
+      {statusOptions.map((status) => <DropdownOption type="button" key={status.id} onClick={() => void selectStatus(status.nome)} className={cx('kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm', status.nome === currentStatus && 'is-selected font-medium')}>
         <OperationalStatusDot statusColor={status.cor} className="mr-2" />{status.nome}
-      </button>)}
+      </DropdownOption>)}
     </PopoverContent>
   </Popover>;
 }

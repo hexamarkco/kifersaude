@@ -1,3 +1,4 @@
+import { Text } from '../../../design-system';
 import { Calendar } from 'lucide-react';
 
 import {
@@ -35,9 +36,9 @@ export function DashboardAlerts({
             <div
               className="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--danger-text)]"
             />
-            <p className="text-sm text-[var(--danger-text)]">
+            <Text className="text-sm text-[var(--danger-text)]">
               {error}
-            </p>
+            </Text>
           </div>
         </Alert>
       )}
@@ -55,9 +56,9 @@ export function DashboardAlerts({
             <div
               className="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--accent-gold-hover)]"
             />
-            <p className="text-sm text-[var(--accent-gold-hover)]">
+            <Text className="text-sm text-[var(--accent-gold-hover)]">
               {supportingError}
-            </p>
+            </Text>
           </div>
         </Alert>
       )}
@@ -66,9 +67,9 @@ export function DashboardAlerts({
         <Alert tone="warning" className="items-start sm:items-center">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 flex-shrink-0 text-[var(--accent-gold-hover)]" />
-            <p className="text-sm text-[var(--accent-gold-hover)]">
+            <Text className="text-sm text-[var(--accent-gold-hover)]">
               Por favor, preencha as datas de início e fim no formato DD/MM/AAAA para visualizar o período personalizado.
-            </p>
+            </Text>
           </div>
         </Alert>
       )}

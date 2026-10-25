@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../design-system';
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { UserProfile } from "../domain/types";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -18,9 +19,9 @@ import {
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
 import { toast } from "../../../lib/toast";
-import { UsersSkeleton } from "../../../components/ui/panelSkeletons";
+import { UsersSkeleton } from '../../../design-system';
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Alert,
   Badge,
@@ -316,10 +317,10 @@ export default function UsersScreen() {
     return (
       <Alert tone="danger" className="p-6 text-center">
         <AlertCircle className="mx-auto mb-3 h-10 w-10" />
-        <h3 className="text-lg font-semibold">Acesso restrito</h3>
-        <p className="mt-2 text-sm">
+        <Heading level={3} className="text-lg font-semibold">Acesso restrito</Heading>
+        <Text className="mt-2 text-sm">
           Seu perfil não possui permissão para gerenciar usuários do sistema.
-        </p>
+        </Text>
       </Alert>
     );
   }
@@ -433,9 +434,9 @@ export default function UsersScreen() {
             {filteredUsers.length === 0 ? (
               <Card variant="muted" padding="md" className="py-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-muted)] opacity-40" />
-                <p className="text-[color:var(--text-muted)]">
+                <Text className="text-[color:var(--text-muted)]">
                   {usersLoadError ? "A lista de usuários não pôde ser carregada." : "Nenhum usuário cadastrado"}
-                </p>
+                </Text>
               </Card>
             ) : (
               sortedUsers.map((userProfile) => {
@@ -457,12 +458,12 @@ export default function UsersScreen() {
                         <UserIcon className="h-5 w-5" />
                       </CardIcon>
                       <div>
-                        <p className="font-medium text-[color:var(--text-primary)]">
+                        <Text className="font-medium text-[color:var(--text-primary)]">
                           @{userProfile.username}
-                        </p>
-                        <p className="text-sm text-[color:var(--text-muted)]">
+                        </Text>
+                        <Text className="text-sm text-[color:var(--text-muted)]">
                           {userProfile.email}
-                        </p>
+                        </Text>
                         <div className="mt-1">
                           <Badge tone={isCurrentUser ? "gold" : "neutral"}>
                             {profileLabel || userProfile.role}

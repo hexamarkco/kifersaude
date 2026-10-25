@@ -1,3 +1,5 @@
+import { Heading, Text } from '../../design-system';
+import { ActionSurface } from '../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import type { Contract } from "./domain/types";
@@ -58,9 +60,9 @@ import {
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { ContractsPageSkeleton } from "../../components/ui/panelSkeletons";
+import { ContractsPageSkeleton } from '../../design-system';
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { toast } from "../../lib/toast";
 import { getContractBonusSummary } from "../../lib/contractBonus";
 import {
@@ -770,8 +772,8 @@ export default function ContractsManager({
                     <TableCell colSpan={7}>
                       <Surface variant="muted" className="py-12 text-center">
                         <FileText className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
-                        <h3 className="mb-2 text-lg font-medium text-[var(--text-primary)]">Nenhum contrato encontrado</h3>
-                        <p className="text-[var(--text-secondary)]">Tente ajustar os filtros ou adicione um novo contrato.</p>
+                        <Heading level={3} className="mb-2 text-lg font-medium text-[var(--text-primary)]">Nenhum contrato encontrado</Heading>
+                        <Text className="text-[var(--text-secondary)]">Tente ajustar os filtros ou adicione um novo contrato.</Text>
                       </Surface>
                     </TableCell>
                   </TableRow>
@@ -782,7 +784,7 @@ export default function ContractsManager({
                   return (
                     <TableRow key={contract.id} className="align-middle">
                     <TableCell className="overflow-hidden">
-                      <button
+                      <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={() => setSelectedContract(contract)}
                         className="block w-full min-w-0 overflow-hidden text-left transition-colors hover:text-[var(--brand-primary)]"
@@ -790,7 +792,7 @@ export default function ContractsManager({
                       >
                         <span className="block max-w-full truncate font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
                         <span className="mt-1 block max-w-full truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
-                      </button>
+                      </ActionSurface>
                     </TableCell>
                     <TableCell>
                       <ContractStatusDropdown
@@ -845,9 +847,9 @@ export default function ContractsManager({
                   <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                        <Heading level={3} className="text-lg font-semibold text-[var(--text-primary)]">
                           {contract.codigo_contrato}
-                        </h3>
+                        </Heading>
                         <ContractStatusDropdown
                           status={contract.status}
                           code={contract.codigo_contrato}
@@ -1001,12 +1003,12 @@ export default function ContractsManager({
             {filteredContracts.length === 0 && (
               <Surface variant="muted" className="py-12 text-center" data-panel-animate>
                 <FileText className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
-                <h3 className="mb-2 text-lg font-medium text-[var(--text-primary)]">
+                <Heading level={3} className="mb-2 text-lg font-medium text-[var(--text-primary)]">
                   Nenhum contrato encontrado
-                </h3>
-                <p className="text-[var(--text-secondary)]">
+                </Heading>
+                <Text className="text-[var(--text-secondary)]">
                   Tente ajustar os filtros ou adicione um novo contrato.
-                </p>
+                </Text>
               </Surface>
             )}
           </div>

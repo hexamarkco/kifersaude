@@ -1,21 +1,4 @@
-/* Compact desktop density follows the available viewport, not the device model.
-   Scale rem-based controls, spacing and portal dialogs together while keeping
-   the user's default font size and browser zoom effective. */
-@media (min-width: 1024px) and (max-width: 1440px) {
-  html:has(.kds-app-shell) {
-    font-size: 87.5%;
-  }
-}
-
-/* 1920px at 150% display scaling leaves a 1280px desktop viewport.
-   Match the rem density of a 1536px viewport (1920px at 125%) without
-   shrinking that larger layout or depending on the viewport height. */
-@media (min-width: 1024px) and (max-width: 1280px) {
-  html:has(.kds-app-shell) {
-    font-size: 83.333333%;
-  }
-}
-
+/* One density scale for application screens and the showcase; browser zoom remains authoritative. */
 .painel-theme.kifer-ds,
 .modal-theme-host.painel-theme.kifer-ds {
   /* Operational scale, shared by pages and portal content. Editorial headings remain available. */
@@ -23,6 +6,9 @@
   --type-ui-section: 600 1.125rem / 1.4 var(--font-sans);
   --type-ui-heading: 600 1rem / 1.4 var(--font-sans);
   --layout-gap: var(--space-6);
+  --space-unit: 0.25rem;
+  --border-width: 1px;
+  --control-line-height: 1.2;
   --section-gap: var(--space-4);
   --page-gutter: clamp(1rem, 2.5vw, 2rem);
   --touch-target: 2.75rem;
@@ -758,7 +744,7 @@
 .kds-skeleton-sm { --kds-skeleton-size: var(--control-height-sm); }
 .kds-skeleton-md { --kds-skeleton-size: var(--control-height-md); }
 .kds-skeleton-lg { --kds-skeleton-size: var(--control-height-lg); }
-.kds-skeleton-control { height: var(--kds-skeleton-size); border-radius: var(--radius-full); }
+.kds-skeleton-control { height: var(--kds-skeleton-size); border-radius: var(--radius-control); }
 .kds-skeleton-avatar { width: var(--kds-skeleton-size); height: var(--kds-skeleton-size); border-radius: var(--radius-full); }
 .kds-skeleton-card { min-height: 10rem; border-radius: var(--radius-xl); }
 .kds-skeleton-table-row { min-height: 3rem; border-radius: var(--radius-lg); }
@@ -805,11 +791,11 @@
 .kds-button {
   min-width: 0;
   max-width: 100%;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   font: var(--type-button);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0;
-  line-height: 1.2;
+  line-height: var(--control-line-height);
   white-space: nowrap;
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
 }
@@ -931,8 +917,6 @@
 .kds-button-text:hover:not(:disabled) {
   background: color-mix(in srgb, var(--brand-primary-muted) 64%, transparent);
   color: var(--accent-gold-hover);
-  text-decoration: underline;
-  text-underline-offset: 0.25rem;
 }
 
 .kds-button-ghost,
@@ -985,7 +969,7 @@
   display: inline-flex;
   overflow: visible;
   border: 1px solid var(--brand-primary-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--bg-inset);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -1011,14 +995,14 @@
 
 .kds-button-group > .kds-button:first-child,
 .kds-button-group > .kds-popover-trigger:first-child > .kds-button {
-  border-top-left-radius: var(--radius-full);
-  border-bottom-left-radius: var(--radius-full);
+  border-top-left-radius: var(--radius-control);
+  border-bottom-left-radius: var(--radius-control);
 }
 
 .kds-button-group > .kds-button:last-child,
 .kds-button-group > .kds-popover-trigger:last-child > .kds-button {
-  border-top-right-radius: var(--radius-full);
-  border-bottom-right-radius: var(--radius-full);
+  border-top-right-radius: var(--radius-control);
+  border-bottom-right-radius: var(--radius-control);
 }
 
 .kds-button-group .kds-button:focus-visible {
@@ -1037,7 +1021,7 @@
   width: 100%;
   min-width: 0;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--control-bg);
   color: var(--text-primary);
   font: 500 0.875rem / 1.4 var(--font-sans);
@@ -1099,7 +1083,7 @@
 
 .kds-dropdown-option {
   border: 1px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -1180,7 +1164,7 @@
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: transparent;
   color: inherit;
 }
@@ -1205,7 +1189,7 @@
   height: 100%;
   align-items: center;
   border-color: var(--border-strong);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--control-addon-bg);
   color: var(--text-secondary);
   font: 600 0.8125rem / 1.4 var(--font-sans);
@@ -1341,7 +1325,7 @@
   appearance: none;
   -webkit-appearance: none;
   border-color: var(--border-strong);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background: var(--bg-inset);
   color: var(--brand-primary-hover);
   cursor: pointer;
@@ -1409,7 +1393,7 @@
   color: var(--text-muted);
   font: var(--type-button);
   border: 1px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   letter-spacing: 0.01em;
 }
 
@@ -1447,8 +1431,8 @@
 
 .kds-tab-underline:hover:not(:disabled) {
   border: 0;
-  border-radius: var(--radius-full);
-  background: var(--brand-primary-muted);
+  border-radius: 0;
+  background: transparent;
   color: var(--brand-primary-hover);
 }
 
@@ -1466,7 +1450,7 @@
   bottom: -1px;
   left: 0.75rem;
   height: 2px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--brand-primary);
   content: '';
 }
@@ -1474,7 +1458,7 @@
 .kds-tabs-list-pill .kds-tab {
   flex: 1 1 0%;
   border-color: transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-secondary);
 }
@@ -1499,7 +1483,7 @@
 
 .kds-tab-rail {
   border: 0;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-secondary);
 }

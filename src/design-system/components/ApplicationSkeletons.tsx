@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Skeleton } from './Skeleton';
+import { Skeleton } from './LoadingState';
 
 type PanelCardProps = {
   children: ReactNode;

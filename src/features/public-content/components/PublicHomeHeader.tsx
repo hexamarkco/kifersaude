@@ -1,3 +1,4 @@
+import { TextLink } from '../../../design-system';
 import { useEffect, useId, useState, type MouseEvent } from 'react';
 import { Menu } from 'lucide-react';
 
@@ -45,7 +46,7 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
     <>
       <header className="kds-public-header">
         <div className="kds-public-header-inner">
-          <a
+          <TextLink
             href="#topo"
             onClick={(event) => navigate(event, 'topo')}
             aria-label="Kifer Saúde, início"
@@ -53,13 +54,13 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
           >
             <PublicBrandMark className="kds-public-header-mark" />
             <span className="kds-public-header-wordmark">Kifer Saúde</span>
-          </a>
+          </TextLink>
 
           <nav aria-label="Navegação principal" className="kds-public-header-navigation">
             {navigationItems.map(({ section, label }) => (
-              <a key={section} href={`#${section}`} onClick={(event) => navigate(event, section)}>
+              <TextLink key={section} href={`#${section}`} onClick={(event) => navigate(event, section)}>
                 {label}
-              </a>
+              </TextLink>
             ))}
           </nav>
 
@@ -92,9 +93,9 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
         <DrawerBody>
           <nav aria-label="Navegação móvel" className="kds-public-mobile-navigation">
             {navigationItems.map(({ section, label }) => (
-              <a key={section} href={`#${section}`} onClick={(event) => navigate(event, section)}>
+              <TextLink key={section} href={`#${section}`} onClick={(event) => navigate(event, section)}>
                 {label}
-              </a>
+              </TextLink>
             ))}
           </nav>
         </DrawerBody>

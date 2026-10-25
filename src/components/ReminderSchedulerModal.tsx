@@ -1,3 +1,4 @@
+import { Text } from '../design-system';
 import { useMemo, useRef, useState } from 'react';
 import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import type { Lead } from '../features/leads';
@@ -196,12 +197,12 @@ export default function ReminderSchedulerModal({
           <div className="flex items-start gap-3">
             <Clock className="h-5 w-5 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-semibold">
+              <Text className="font-semibold">
                 {promptMessage ?? 'Defina o próximo lembrete para continuar o acompanhamento manual do lead.'}
-              </p>
-              <p className="mt-1 text-xs">
+              </Text>
+              <Text className="mt-1 text-xs">
                 Escolha o melhor momento e personalize as informações conforme necessário.
-              </p>
+              </Text>
             </div>
           </div>
         </Alert>

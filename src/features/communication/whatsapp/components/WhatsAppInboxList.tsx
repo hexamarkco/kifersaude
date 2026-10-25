@@ -1,3 +1,5 @@
+import { Text, FieldLabel, Image, Video } from '../../../../design-system';
+import { ActionSurface, IconButton } from '../../../../design-system';
 import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Loader2, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
 import { Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
@@ -138,7 +140,7 @@ export function InboxFilterGroup<T extends string>({
 }) {
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+      <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {options.map((option) => (
           <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
@@ -177,31 +179,31 @@ export function InboxMultiFilterGroup({
     return (
       <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+          <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
           {values.length > 0 ? (
-            <button
+            <Button variant="ghost"
               type="button"
               onClick={() => onChange([])}
-              className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary)] transition hover:text-[var(--brand-primary-hover)]"
+              className="font-semibold uppercase tracking-[0.08em] transition"
             >
               Limpar
-            </button>
+            </Button>
           ) : null}
         </div>
         <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-1">
           {options.map((option) => {
             const selected = normalizedValues.includes(option.value.toLowerCase());
             return (
-              <label
+              <FieldLabel
                 key={option.value}
                 className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)]"
               >
                 <Checkbox checked={selected} onChange={() => toggleValue(option.value)} />
                 <span className="truncate">{option.label}</span>
-              </label>
+              </FieldLabel>
             );
           })}
-          {options.length === 0 ? <p className="px-2 py-3 text-xs text-[var(--text-muted)]">Nenhuma opção disponível</p> : null}
+          {options.length === 0 ? <Text className="px-2 py-3 text-xs text-[var(--text-muted)]">Nenhuma opção disponível</Text> : null}
         </div>
       </div>
     );
@@ -209,7 +211,7 @@ export function InboxMultiFilterGroup({
 
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+      <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
         {options.map((option) => (
@@ -251,18 +253,18 @@ export function WhatsAppGalleryMediaTile({
     return (
       <div className={baseClassName}>
         {mediaUrl ? (
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             onClick={() => onOpenImage(message.id)}
             className="relative block h-full w-full overflow-hidden"
           >
-            <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
+            <Image src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
             {overlayLabel ? (
               <span className="absolute inset-0 flex items-center justify-center bg-[var(--overlay)] text-base font-semibold text-[var(--text-on-brand)]">
                 {overlayLabel}
               </span>
             ) : null}
-          </button>
+          </ActionSurface>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
             {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
@@ -280,10 +282,10 @@ export function WhatsAppGalleryMediaTile({
   return (
     <div className={baseClassName}>
       {mediaUrl ? (
-        <button type="button" onClick={() => onOpenImage(message.id)} className="relative block h-full w-full overflow-hidden">
-          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
+        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onOpenImage(message.id)} className="relative block h-full w-full overflow-hidden">
+          <Video muted playsInline preload="metadata" className="h-full w-full object-cover">
             <source src={mediaUrl} type={message.media_mime_type || undefined} />
-          </video>
+          </Video>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-[var(--overlay)] px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
             <span className="inline-flex items-center gap-1.5 truncate">
               <Play className="h-3.5 w-3.5 fill-current" />
@@ -291,7 +293,7 @@ export function WhatsAppGalleryMediaTile({
             </span>
             {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
           </div>
-        </button>
+        </ActionSurface>
       ) : (
         <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
           {loading ? 'Carregando video...' : error || 'Video indisponivel'}
@@ -386,15 +388,15 @@ export function InboxChatListItem({
       }}
     >
       <div className="px-4 py-3">
-        <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
+        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <LeadFavoriteBadge favorito={favorito} />
-                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
+                <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
                   {chat.is_group ? <Users className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
                   {getSafeChatDisplayName(chat, connectedUserName)}
-                </p>
+                </Text>
                 {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
                   <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
                     <span className="min-w-0 truncate">{chat.lead_status}</span>
@@ -409,7 +411,7 @@ export function InboxChatListItem({
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
             </div>
           </div>
-          <p className={`mt-px truncate text-sm text-[var(--text-secondary)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
+          <Text className={`mt-px truncate text-sm text-[var(--text-secondary)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
             <WhatsAppPresenceIndicator chat={chat} fallback={draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
@@ -429,16 +431,16 @@ export function InboxChatListItem({
                 )}
               </>
             ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'} />
-          </p>
+          </Text>
           {hasUnreadBadge ? (
             <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
               {chat.unread_count > 0 ? chat.unread_count : '•'}
             </span>
           ) : null}
-        </button>
+        </ActionSurface>
       </div>
 
-      <button
+      <IconButton variant="ghost" size="sm"
         ref={menuTriggerRef}
         type="button"
         onClick={(event) => {
@@ -446,16 +448,16 @@ export function InboxChatListItem({
           onToggleMenu(chat.id);
         }}
         className={cx(
-          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
-          menuOpen ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
-          selected ? 'opacity-100' : '',
+          "absolute right-3 top-2.5 z-[2] inline-flex w-6 items-center justify-center transition",
+          menuOpen ? "opacity-100" : "opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100",
+          selected ? "opacity-100" : "",
         )}
         aria-label="Abrir menu da conversa"
         aria-expanded={menuOpen}
         disabled={menuBusy}
       >
-        {menuBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />}
-      </button>
+        {menuBusy ? <Loader2 className="animate-spin" /> : <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />}
+      </IconButton>
     </div>
   );
 }
@@ -485,14 +487,14 @@ export function InboxMessageSearchListItem({
   return (
     <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
       <div className="px-4 py-3">
-        <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
+        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
                 <LeadFavoriteBadge favorito={favorito} />
-                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
+                <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
                   {getSafeChatDisplayName(result.chat, connectedUserName)}
-                </p>
+                </Text>
                 {!result.chat.is_group && result.chat.lead_id && result.chat.lead_status?.trim() ? (
                   <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${result.chat.lead_status}`} aria-label={`Status do lead: ${result.chat.lead_status}`}>
                     <span className="min-w-0 truncate">{result.chat.lead_status}</span>
@@ -500,20 +502,20 @@ export function InboxMessageSearchListItem({
                 ) : null}
               </div>
               {messagePreviewText ? (
-                <p className="mt-px truncate text-sm text-[var(--text-secondary)]">
+                <Text className="mt-px truncate text-sm text-[var(--text-secondary)]">
                   {messagePreviewIconType ? (
                     <ChatPreviewIcon type={messagePreviewIconType} />
                   ) : (
                     messagePreviewText
                   )}
-                </p>
+                </Text>
               ) : null}
             </div>
             <span className="whatsapp-inbox-chat-meta shrink-0 pt-0.5 text-[11px] font-medium leading-none">
               {formatMessageTime(result.message.message_at)}
             </span>
           </div>
-        </button>
+        </ActionSurface>
       </div>
     </div>
   );

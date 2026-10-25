@@ -1,3 +1,4 @@
+import { Text } from '../design-system';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   addLeadInteraction,
@@ -275,8 +276,8 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">Não foi possível carregar o histórico deste lead.</p>
-                  <p className="mt-1 text-sm">Os dados não estão disponíveis no momento. Tente novamente.</p>
+                  <Text className="font-medium">Não foi possível carregar o histórico deste lead.</Text>
+                  <Text className="mt-1 text-sm">Os dados não estão disponíveis no momento. Tente novamente.</Text>
                   <Button
                     type="button"
                     variant="secondary"
@@ -308,13 +309,13 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</p>
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</Text>
                         {event.meta && (
                           <Badge tone="neutral" size="sm">{event.meta}</Badge>
                         )}
                       </div>
                       {event.description && (
-                        <p className="mt-1 break-words text-sm text-[var(--text-secondary)]">{event.description}</p>
+                        <Text className="mt-1 break-words text-sm text-[var(--text-secondary)]">{event.description}</Text>
                       )}
                       <time
                         dateTime={event.date}
@@ -415,9 +416,9 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
         {loading ? (
           <LoadingState compact label="Carregando interações" className="py-12" />
         ) : timelineLoadError ? (
-          <p className="py-8 text-sm text-[var(--text-muted)]">
+          <Text className="py-8 text-sm text-[var(--text-muted)]">
             As interações não estão disponíveis enquanto o histórico não for carregado.
-          </p>
+          </Text>
         ) : interactions.length === 0 ? (
           <EmptyState
             icon={<MessageCircle className="h-10 w-10" />}
@@ -439,7 +440,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                     {formatDateTimeFullBR(interaction.data_interacao)}
                   </time>
                 </div>
-                <p className="break-words text-sm text-[var(--text-secondary)] sm:text-base">{interaction.descricao}</p>
+                <Text className="break-words text-sm text-[var(--text-secondary)] sm:text-base">{interaction.descricao}</Text>
               </Surface>
             ))}
           </div>

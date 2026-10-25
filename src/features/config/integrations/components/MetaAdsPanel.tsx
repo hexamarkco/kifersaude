@@ -1,3 +1,5 @@
+import { Heading, Text, FieldLabel } from '../../../../design-system';
+import { Checkbox } from '../../../../design-system';
 import { useState } from 'react';
 import { Alert, Button, Card, Field, Select, Input, SectionHeader } from '../../../../design-system';
 import { isMetaQualified, metaConnectionLabel, type MetaAttribution, type MetaReviewInput } from '../domain/metaAds';
@@ -37,13 +39,13 @@ function CommercialReview({ attribution, saving, save }: {
     interestConfirmed: interest, opportunityId: opportunity || null, contractId: contract || null, contractCompleted: completed,
   };
   return <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void save(input); }}>
-    <h3 className="font-[var(--font-display)] text-lg">Avaliação comercial</h3>
-    <p className="text-sm text-[var(--text-muted)]">Confirme cada critério com o cliente. Atendimento e proposta enviada não comprovam qualificação. Esta avaliação registra o administrador, a data e os critérios utilizados.</p>
-    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={eligible} onChange={(e) => setEligible(e.target.checked)} />Empresário ou MEI com elegibilidade confirmada</label>
+    <Heading level={3} className="font-[var(--font-display)] text-lg">Avaliação comercial</Heading>
+    <Text className="text-sm text-[var(--text-muted)]">Confirme cada critério com o cliente. Atendimento e proposta enviada não comprovam qualificação. Esta avaliação registra o administrador, a data e os critérios utilizados.</Text>
+    <FieldLabel className="flex items-center gap-2 text-sm"><Checkbox  checked={eligible} onChange={(e) => setEligible(e.target.checked)} />Empresário ou MEI com elegibilidade confirmada</FieldLabel>
     <Field label="Quantidade de vidas confirmada"><Input type="number" min={1} max={100000} step={1} required value={lives} onChange={(e) => setLives(e.target.value)} /></Field>
-    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={region} onChange={(e) => setRegion(e.target.checked)} />Região atendida confirmada</label>
-    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={interest} onChange={(e) => setInterest(e.target.checked)} />Interesse em contratar confirmado com o cliente</label>
-    <p className="text-sm font-medium">{isMetaQualified(input) ? 'Critérios de qualificação atendidos' : 'Qualificação ainda não confirmada'}</p>
+    <FieldLabel className="flex items-center gap-2 text-sm"><Checkbox  checked={region} onChange={(e) => setRegion(e.target.checked)} />Região atendida confirmada</FieldLabel>
+    <FieldLabel className="flex items-center gap-2 text-sm"><Checkbox  checked={interest} onChange={(e) => setInterest(e.target.checked)} />Interesse em contratar confirmado com o cliente</FieldLabel>
+    <Text className="text-sm font-medium">{isMetaQualified(input) ? 'Critérios de qualificação atendidos' : 'Qualificação ainda não confirmada'}</Text>
     <Field label="Oportunidade ou proposta vinculada"><Select value={opportunity} onChange={(e) => setOpportunity(e.target.value)}>
       <option value="">Sem vínculo selecionado</option>
       {attribution.opportunities.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
@@ -52,9 +54,9 @@ function CommercialReview({ attribution, saving, save }: {
       <option value="">Sem contrato selecionado</option>
       {attribution.contracts.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
     </Select></Field>
-    <label className="flex items-start gap-2 text-sm"><input type="checkbox" disabled={!contract} checked={completed} onChange={(e) => setCompleted(e.target.checked)} />Conferi o contrato selecionado e confirmo que a contratação foi efetivamente concluída.</label>
-    <p className="text-sm text-[var(--text-muted)]">Selecione somente o contrato relacionado a esta entrada da Meta. O cadastro do contrato ou a mudança de status do lead, isoladamente, não confirma uma venda.</p>
-    {previous && <p className="text-sm">Última avaliação: {date(previous.reviewed_at)} · {previous.qualified ? 'Qualificado' : 'Não qualificado'}{previous.contract_completed ? ' · Contratação confirmada' : ''}</p>}
+    <FieldLabel className="flex items-start gap-2 text-sm"><Checkbox  disabled={!contract} checked={completed} onChange={(e) => setCompleted(e.target.checked)} />Conferi o contrato selecionado e confirmo que a contratação foi efetivamente concluída.</FieldLabel>
+    <Text className="text-sm text-[var(--text-muted)]">Selecione somente o contrato relacionado a esta entrada da Meta. O cadastro do contrato ou a mudança de status do lead, isoladamente, não confirma uma venda.</Text>
+    {previous && <Text className="text-sm">Última avaliação: {date(previous.reviewed_at)} · {previous.qualified ? 'Qualificado' : 'Não qualificado'}{previous.contract_completed ? ' · Contratação confirmada' : ''}</Text>}
     <Button type="submit" loading={saving} disabled={!Number.isInteger(Number(lives)) || Number(lives) < 1}>Registrar avaliação</Button>
   </form>;
 }
@@ -72,31 +74,31 @@ export default function MetaAdsPanel() {
     {state.message && <Alert>{state.message}</Alert>}
     {snapshot && <>
       <Card>
-        <h3 className="font-[var(--font-display)] text-lg">{metaConnectionLabel(snapshot)}</h3>
-        <p className="mt-2 text-sm">Formulário configurado: {snapshot.settings.formId || 'Pendente'}</p>
-        <p className="text-sm text-[var(--text-muted)]">A configuração do formulário não comprova a assinatura da página. O primeiro recebimento confirma o caminho até o CRM.</p>
+        <Heading level={3} className="font-[var(--font-display)] text-lg">{metaConnectionLabel(snapshot)}</Heading>
+        <Text className="mt-2 text-sm">Formulário configurado: {snapshot.settings.formId || 'Pendente'}</Text>
+        <Text className="text-sm text-[var(--text-muted)]">A configuração do formulário não comprova a assinatura da página. O primeiro recebimento confirma o caminho até o CRM.</Text>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <p>Recebimentos: <strong>{snapshot.received}</strong></p>
-          <p>Importados: <strong>{snapshot.imported}</strong></p>
-          <p>Aguardando processamento: <strong>{snapshot.pending}</strong></p>
-          <p>Falhas de recebimento: <strong>{snapshot.failed}</strong></p>
-          <p>Sinais aguardando liberação: <strong>{snapshot.eventsHeld}</strong></p>
-          <p>Sinais na fila de envio: <strong>{snapshot.eventsPending}</strong></p>
-          <p>Falhas nos sinais: <strong>{snapshot.eventsFailed}</strong></p>
+          <Text>Recebimentos: <strong>{snapshot.received}</strong></Text>
+          <Text>Importados: <strong>{snapshot.imported}</strong></Text>
+          <Text>Aguardando processamento: <strong>{snapshot.pending}</strong></Text>
+          <Text>Falhas de recebimento: <strong>{snapshot.failed}</strong></Text>
+          <Text>Sinais aguardando liberação: <strong>{snapshot.eventsHeld}</strong></Text>
+          <Text>Sinais na fila de envio: <strong>{snapshot.eventsPending}</strong></Text>
+          <Text>Falhas nos sinais: <strong>{snapshot.eventsFailed}</strong></Text>
         </div>
-        <p className="mt-4 text-sm">Último recebimento: {date(snapshot.lastReceivedAt)}</p>
-        <p className="text-sm">Última importação concluída: {date(snapshot.lastImportedAt)}</p>
+        <Text className="mt-4 text-sm">Último recebimento: {date(snapshot.lastReceivedAt)}</Text>
+        <Text className="text-sm">Última importação concluída: {date(snapshot.lastImportedAt)}</Text>
       </Card>
       <Alert tone="warning" title={snapshot.capiEnabled ? 'Envio comercial liberado no servidor' : 'Envio à Meta desabilitado'}>
         {snapshot.capiEnabled ? 'Somente sinais liberados individualmente podem ser enviados.' : 'As avaliações ficam registradas no CRM. O envio exige revisão das restrições de dados de saúde, aprovação da configuração e autorização explícita.'}
       </Alert>
       <Card>
-        <h3 className="font-[var(--font-display)] text-lg">Origem e progresso comercial</h3>
+        <Heading level={3} className="font-[var(--font-display)] text-lg">Origem e progresso comercial</Heading>
         <form className="my-3 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); state.search(search); setSelected(''); }}>
           <Field label="Buscar lead por nome ou identificação da Meta"><Input value={search} maxLength={100} onChange={(e) => setSearch(e.target.value)} /></Field>
           <Button variant="secondary" type="submit" disabled={state.loading}>Buscar</Button>
         </form>
-        {snapshot.attributions.length === 0 ? <p className="mt-2 text-sm">{snapshot.imported===0 ? 'Nenhum lead da Meta foi importado. Após configurar e ativar o recebimento, acompanhe o primeiro formulário enviado.' : 'Nenhum lead encontrado nesta busca. Confira o nome ou a identificação informada.'}</p> : <>
+        {snapshot.attributions.length === 0 ? <Text className="mt-2 text-sm">{snapshot.imported===0 ? 'Nenhum lead da Meta foi importado. Após configurar e ativar o recebimento, acompanhe o primeiro formulário enviado.' : 'Nenhum lead encontrado nesta busca. Confira o nome ou a identificação informada.'}</Text> : <>
           <Field label="Lead recebido pela Meta"><Select value={selected} onChange={(e) => setSelected(e.target.value)}>
             <option value="">Selecione um lead para conferir</option>
             {snapshot.attributions.map((item) => <option key={item.id} value={item.id}>{item.lead_name} · {date(item.received_at)}</option>)}
@@ -114,39 +116,39 @@ export default function MetaAdsPanel() {
             <CommercialReview key={`${attribution.id}:${attribution.latest_review?.reviewed_at ?? ''}`} attribution={attribution} saving={state.saving} save={state.review} />
           </div>}
         </>}
-        <p className="mt-3 text-xs text-[var(--text-muted)]">Exibindo até 50 entradas recentes. O histórico completo permanece armazenado.</p>
+        <Text className="mt-3 text-xs text-[var(--text-muted)]">Exibindo até 50 entradas recentes. O histórico completo permanece armazenado.</Text>
       </Card>
       {snapshot.failed > 0 && <Card>
-        <h3 className="font-[var(--font-display)] text-lg">Recebimentos que precisam de correção</h3>
+        <Heading level={3} className="font-[var(--font-display)] text-lg">Recebimentos que precisam de correção</Heading>
         {snapshot.receipts.filter((receipt) => receipt.status === 'dead').map((receipt) => <div key={receipt.leadgen_id} className="mt-3 space-y-2">
-          <p className="text-sm">{date(receipt.received_at)} · {failure[receipt.last_error_code ?? ''] || 'Confira a configuração e as permissões antes de tentar novamente.'}</p>
+          <Text className="text-sm">{date(receipt.received_at)} · {failure[receipt.last_error_code ?? ''] || 'Confira a configuração e as permissões antes de tentar novamente.'}</Text>
           <Button variant="secondary" loading={state.saving} onClick={() => void state.requeue(receipt.leadgen_id)}>Tentar receber novamente</Button>
         </div>)}
       </Card>}
       {snapshot.eventsFailed > 0 && <Card>
-        <h3 className="font-[var(--font-display)] text-lg">Sinais comerciais com falha</h3>
+        <Heading level={3} className="font-[var(--font-display)] text-lg">Sinais comerciais com falha</Heading>
         {snapshot.events.filter((event) => event.status === 'dead').map((event) => <div key={event.event_id} className="mt-3 space-y-2">
-          <p className="text-sm">{date(event.occurred_at)} · {event.kind === 'qualified_lead' ? 'Qualificação' : 'Contratação'} · {failure[event.last_error_code ?? ''] || 'Confira as permissões e a configuração antes de liberar este sinal.'}</p>
+          <Text className="text-sm">{date(event.occurred_at)} · {event.kind === 'qualified_lead' ? 'Qualificação' : 'Contratação'} · {failure[event.last_error_code ?? ''] || 'Confira as permissões e a configuração antes de liberar este sinal.'}</Text>
           <Button variant="secondary" loading={state.saving} onClick={() => void state.requeueEvent(event.event_id)}>Reter para revisão do envio</Button>
         </div>)}
-        <p className="mt-3 text-sm text-[var(--text-muted)]">A revisão mantém a data original e não envia o sinal. Sinais expirados ou invalidados pela avaliação comercial não podem ser reenviados.</p>
+        <Text className="mt-3 text-sm text-[var(--text-muted)]">A revisão mantém a data original e não envia o sinal. Sinais expirados ou invalidados pela avaliação comercial não podem ser reenviados.</Text>
       </Card>}
       <Card>
-        <h3 className="font-[var(--font-display)] text-lg">Histórico da integração</h3>
-        {snapshot.history.length === 0 ? <p className="text-sm">Nenhuma tentativa registrada.</p> : <ul className="mt-3 space-y-2 text-sm">
+        <Heading level={3} className="font-[var(--font-display)] text-lg">Histórico da integração</Heading>
+        {snapshot.history.length === 0 ? <Text className="text-sm">Nenhuma tentativa registrada.</Text> : <ul className="mt-3 space-y-2 text-sm">
           {snapshot.history.map((item, index) => <li key={`${item.created_at}:${index}`}>
             {date(item.created_at)} · {item.direction === 'inbound' ? 'Recebimento' : 'Sinal comercial'} · {outcome[item.outcome] || 'Aguardando verificação'}
-            {item.error_code && <p className="text-[var(--text-muted)]">{failure[item.error_code] || 'Falha de processamento. Verifique a configuração ou aguarde a próxima tentativa.'}</p>}
+            {item.error_code && <Text className="text-[var(--text-muted)]">{failure[item.error_code] || 'Falha de processamento. Verifique a configuração ou aguarde a próxima tentativa.'}</Text>}
           </li>)}
         </ul>}
         {snapshot.history.length>=50 && !state.historyEnd && <Button className="mt-3" variant="secondary" loading={state.historyLoading} onClick={() => void state.loadHistory()}>Carregar histórico anterior</Button>}
         <details className="mt-4 text-xs text-[var(--text-muted)]">
           <summary>Informações para suporte</summary>
-          <p className="mt-2 break-all">Recebimento: {snapshot.webhookUrl}</p>
-          <p>Página: {snapshot.settings.pageId} · Formulário: {snapshot.settings.formId}</p>
-          {attribution && <p>Lead Meta: {attribution.leadgen_id} · CRM: {attribution.lead_id} · Anúncio: {attribution.ad_id || 'Ausente'}</p>}
-          {snapshot.history.filter((item) => item.error_code).slice(0,20).map((item) => <p key={item.id}>{item.entity_id} · tentativa {item.attempt} · {item.error_code}</p>)}
-          <p>As credenciais são configuradas exclusivamente no servidor.</p>
+          <Text className="mt-2 break-all">Recebimento: {snapshot.webhookUrl}</Text>
+          <Text>Página: {snapshot.settings.pageId} · Formulário: {snapshot.settings.formId}</Text>
+          {attribution && <Text>Lead Meta: {attribution.leadgen_id} · CRM: {attribution.lead_id} · Anúncio: {attribution.ad_id || 'Ausente'}</Text>}
+          {snapshot.history.filter((item) => item.error_code).slice(0,20).map((item) => <Text key={item.id}>{item.entity_id} · tentativa {item.attempt} · {item.error_code}</Text>)}
+          <Text>As credenciais são configuradas exclusivamente no servidor.</Text>
         </details>
       </Card>
     </>}

@@ -1,11 +1,9 @@
+import { ActionSurface } from './Surface';
 import { useEffect, useMemo, useRef, useState, type FocusEventHandler, type KeyboardEvent } from 'react';
-import {
-  Textarea,
-  type TextareaSize,
-} from '../../design-system';
+import Textarea, { type TextareaProps, type TextareaSize } from './Textarea';
 import type { TemplateVariableSuggestion } from '../../lib/templateVariableSuggestions';
 
-type VariableAutocompleteTextareaProps = {
+type VariableAutocompleteTextareaProps = Pick<TextareaProps, 'id' | 'required' | 'aria-describedby' | 'aria-invalid' | 'aria-label'> & {
   value: string;
   onChange: (value: string) => void;
   suggestions: TemplateVariableSuggestion[];
@@ -27,6 +25,7 @@ export default function VariableAutocompleteTextarea({
   className,
   disabled = false,
   onBlur,
+  ...controlProps
 }: VariableAutocompleteTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -115,6 +114,7 @@ export default function VariableAutocompleteTextarea({
   return (
     <div className="relative">
       <Textarea
+        {...controlProps}
         ref={textareaRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -138,7 +138,7 @@ export default function VariableAutocompleteTextarea({
               const isActive = index === activeIndex;
 
               return (
-                <button
+                <ActionSurface variant="plain" padding="none"
                   key={suggestion.key}
                   type="button"
                   className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left ${
@@ -158,7 +158,7 @@ export default function VariableAutocompleteTextarea({
                   <code className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-2 py-1 text-[11px] text-[var(--brand-primary)]">
                     {`{{${suggestion.key}}}`}
                   </code>
-                </button>
+                </ActionSurface>
               );
             })}
           </div>

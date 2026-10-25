@@ -1,3 +1,4 @@
+import { Text } from '../../../../design-system';
 import { useId, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 
@@ -37,7 +38,7 @@ export default function ScheduledItemsSection<T>({ title, icon: Icon, items, ren
       <div id={contentId} hidden={!expanded} className="space-y-2">
         {items.slice(start, start + PAGE_SIZE).map(renderItem)}
         {items.length === 0 ? (
-          <p className="px-3 py-4 text-sm text-[var(--text-muted)]">Nenhum agendamento nesta seção.</p>
+          <Text className="px-3 py-4 text-sm text-[var(--text-muted)]">Nenhum agendamento nesta seção.</Text>
         ) : (
           <nav aria-label={`Paginação de ${title}`} className="flex flex-wrap items-center justify-between gap-2 pt-2">
             <span className="text-xs text-[var(--text-muted)]" aria-live="polite">

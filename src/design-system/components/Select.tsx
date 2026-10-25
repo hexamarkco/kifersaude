@@ -1,3 +1,4 @@
+import DropdownOption from './DropdownOption';
 import { Children, forwardRef, isValidElement, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -198,7 +199,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
       </PopoverTrigger>
       <PopoverContent id={listboxId} className="kds-dropdown-menu max-h-72 w-[min(20rem,calc(100vw-1rem))] overflow-y-auto p-1" role="listbox" aria-label={ariaLabel || placeholder || 'Selecionar opção'}>
         {optionItems.map((option, index) => (
-          <button
+          <DropdownOption
             key={option.value}
             ref={(element) => { optionRefs.current[index] = element; }}
             type="button"
@@ -214,7 +215,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
           >
             <span className="min-w-0 flex-1 truncate">{option.label}</span>
             {option.value === resolvedValue ? <Check className="kds-control-icon shrink-0" aria-hidden="true" /> : null}
-          </button>
+          </DropdownOption>
         ))}
         {optionItems.length === 0 ? <p className="px-3 py-4 text-sm text-[var(--text-muted)]">Nenhuma opção disponível.</p> : null}
       </PopoverContent>

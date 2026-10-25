@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -12,10 +12,10 @@ type SurfaceProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 type ActionSurfaceProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: SurfaceVariant;
+  variant?: SurfaceVariant | 'plain';
   padding?: SurfacePadding;
   selected?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 const paddingClasses: Record<SurfacePadding, string> = {
@@ -33,7 +33,7 @@ export function Surface({ variant = 'default', padding = 'md', className, childr
   );
 }
 
-export function ActionSurface({
+export const ActionSurface = forwardRef<HTMLButtonElement, ActionSurfaceProps>(function ActionSurface({
   variant = 'default',
   padding = 'md',
   selected = false,
@@ -41,9 +41,10 @@ export function ActionSurface({
   children,
   type,
   ...props
-}: ActionSurfaceProps) {
+}: ActionSurfaceProps, ref) {
   return (
     <button
+      ref={ref}
       type={type ?? 'button'}
       className={cx(
         'kds-surface kds-action-surface',
@@ -57,4 +58,4 @@ export function ActionSurface({
       {children}
     </button>
   );
-}
+});

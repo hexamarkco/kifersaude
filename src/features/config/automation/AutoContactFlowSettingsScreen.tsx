@@ -1,3 +1,4 @@
+import { Text, Heading, FieldLabel } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -64,10 +65,10 @@ import type { Lead, LeadStatusConfig } from "../../leads";
 import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
 import { MessageListEditor } from "./components/MessageListEditor";
-import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocompleteTextarea";
-import { AutomationFlowsSkeleton } from "../../../components/ui/panelSkeletons";
+import { VariableAutocompleteTextarea } from '../../../design-system';
+import { AutomationFlowsSkeleton } from '../../../design-system';
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   countDailyAutomationInteractions,
   previewAutomationFlowMessage,
@@ -1673,13 +1674,13 @@ export default function AutoContactFlowSettingsScreen() {
       <Alert tone="warning" className="items-start">
         <Info className="w-5 h-5 text-[var(--text-secondary)] mt-1" />
         <div className="space-y-1 text-sm text-[var(--text-primary)]">
-          <p className="font-semibold">
+          <Text className="font-semibold">
             Integração de automação não encontrada.
-          </p>
-          <p>
+          </Text>
+          <Text>
             Execute as migrações mais recentes e configure o serviço antes de
             definir os templates de automação.
-          </p>
+          </Text>
         </div>
       </Alert>
     );
@@ -1699,9 +1700,9 @@ export default function AutoContactFlowSettingsScreen() {
           <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="kds-op-section-label">Automação comercial</p>
-                <h2 className="kds-section-title kds-section-title-h2 mt-1">Fluxos e mensagens</h2>
-                <p className="kds-section-description mt-1">Organize os fluxos, a biblioteca de templates e os parâmetros operacionais por tarefa.</p>
+                <Text className="kds-op-section-label">Automação comercial</Text>
+                <Heading level={2} className="kds-section-title kds-section-title-h2 mt-1">Fluxos e mensagens</Heading>
+                <Text className="kds-section-description mt-1">Organize os fluxos, a biblioteca de templates e os parâmetros operacionais por tarefa.</Text>
               </div>
               <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
                 {autoSaveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} />}
@@ -1730,9 +1731,9 @@ export default function AutoContactFlowSettingsScreen() {
                       <Activity className="h-5 w-5" aria-hidden="true" />
                     </CardIcon>
                     <div className="min-w-0">
-                      <p className="kds-card-subtitle uppercase tracking-[0.12em]">Resumo operacional</p>
-                      <h3 id="automation-operation-heading" className="kds-card-title mt-1">Visão geral da operação</h3>
-                      <p className="kds-card-subtitle mt-1">Volume dos fluxos e atividade recente das automações.</p>
+                      <Text className="kds-card-subtitle uppercase tracking-[0.12em]">Resumo operacional</Text>
+                      <Heading level={3} id="automation-operation-heading" className="kds-card-title mt-1">Visão geral da operação</Heading>
+                      <Text className="kds-card-subtitle mt-1">Volume dos fluxos e atividade recente das automações.</Text>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -1766,9 +1767,9 @@ export default function AutoContactFlowSettingsScreen() {
 
               <section className="space-y-4" aria-labelledby="automation-global-settings-heading">
                 <div>
-                  <p className="kds-op-section-label">Preferências da operação</p>
-                  <h3 id="automation-global-settings-heading" className="kds-section-title kds-section-title-h3 mt-1">Configurações globais</h3>
-                  <p className="kds-section-description mt-1">Ajuste o envio automático, a agenda e a observabilidade sem alterar as regras individuais dos fluxos.</p>
+                  <Text className="kds-op-section-label">Preferências da operação</Text>
+                  <Heading level={3} id="automation-global-settings-heading" className="kds-section-title kds-section-title-h3 mt-1">Configurações globais</Heading>
+                  <Text className="kds-section-description mt-1">Ajuste o envio automático, a agenda e a observabilidade sem alterar as regras individuais dos fluxos.</Text>
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-2">
@@ -1778,14 +1779,14 @@ export default function AutoContactFlowSettingsScreen() {
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
                       <div>
-                        <h4 className="kds-card-title">Envio automático</h4>
-                        <p className="kds-card-subtitle mt-1">Pausa ou libera o processamento dos fluxos ativos.</p>
+                        <Heading level={4} className="kds-card-title">Envio automático</Heading>
+                        <Text className="kds-card-subtitle mt-1">Pausa ou libera o processamento dos fluxos ativos.</Text>
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Ativar automação</p>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">A alteração é salva automaticamente.</p>
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">Ativar automação</Text>
+                        <Text className="mt-1 text-xs text-[var(--text-muted)]">A alteração é salva automaticamente.</Text>
                       </div>
                       <Switch
                         checked={autoSendEnabled}
@@ -1801,13 +1802,13 @@ export default function AutoContactFlowSettingsScreen() {
                         <AlarmClock className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
                       <div>
-                        <h4 className="kds-card-title">Agendamento avançado</h4>
-                        <p className="kds-card-subtitle mt-1">Fuso horário e regras globais para dias não úteis.</p>
+                        <Heading level={4} className="kds-card-title">Agendamento avançado</Heading>
+                        <Text className="kds-card-subtitle mt-1">Fuso horário e regras globais para dias não úteis.</Text>
                       </div>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="min-w-0">
-                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Fuso horário</label>
+                        <FieldLabel className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Fuso horário</FieldLabel>
                         <FilterSelect
                           icon={Globe2}
                           value={schedulingDraft.timezone}
@@ -1820,8 +1821,8 @@ export default function AutoContactFlowSettingsScreen() {
                       </div>
                       <div className="flex min-w-0 items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-[var(--text-primary)]">Pausar em feriados</p>
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">Feriados oficiais e datas extras.</p>
+                          <Text className="text-sm font-medium text-[var(--text-primary)]">Pausar em feriados</Text>
+                          <Text className="mt-1 text-xs text-[var(--text-muted)]">Feriados oficiais e datas extras.</Text>
                         </div>
                         <Switch
                           checked={schedulingDraft.skipHolidays}
@@ -1830,7 +1831,7 @@ export default function AutoContactFlowSettingsScreen() {
                         />
                       </div>
                     </div>
-                    <p className="text-xs leading-5 text-[var(--text-muted)]">A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.</p>
+                    <Text className="text-xs leading-5 text-[var(--text-muted)]">A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.</Text>
                   </Card>
                 </div>
               </section>
@@ -1841,8 +1842,8 @@ export default function AutoContactFlowSettingsScreen() {
                     <ClipboardList className="h-5 w-5" aria-hidden="true" />
                   </CardIcon>
                   <div>
-                    <h4 className="kds-card-title">Observabilidade e auditoria</h4>
-                    <p className="kds-card-subtitle mt-1">Defina a frequência do monitoramento e a retenção dos registros.</p>
+                    <Heading level={4} className="kds-card-title">Observabilidade e auditoria</Heading>
+                    <Text className="kds-card-subtitle mt-1">Defina a frequência do monitoramento e a retenção dos registros.</Text>
                   </div>
                 </div>
 
@@ -1850,8 +1851,8 @@ export default function AutoContactFlowSettingsScreen() {
                   <section className="space-y-4 xl:border-r xl:border-[var(--border-subtle)] xl:pr-6" aria-labelledby="automation-monitoring-heading">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <h5 id="automation-monitoring-heading" className="text-sm font-semibold text-[var(--text-primary)]">Monitoramento em tempo real</h5>
-                        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Atualiza o painel com o status das execuções.</p>
+                        <Heading level={5} id="automation-monitoring-heading" className="text-sm font-semibold text-[var(--text-primary)]">Monitoramento em tempo real</Heading>
+                        <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Atualiza o painel com o status das execuções.</Text>
                       </div>
                       <Switch
                         checked={monitoringDraft.realtimeEnabled}
@@ -1861,7 +1862,7 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="min-w-0">
-                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Atualização (segundos)</label>
+                        <FieldLabel className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Atualização (segundos)</FieldLabel>
                         <Input
                           type="number"
                           min={5}
@@ -1872,7 +1873,7 @@ export default function AutoContactFlowSettingsScreen() {
                         />
                       </div>
                       <div className="min-w-0">
-                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Última atualização</label>
+                        <FieldLabel className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Última atualização</FieldLabel>
                         <output className="flex min-h-[var(--control-height-md)] items-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 text-sm text-[var(--text-secondary)]">
                           {lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </output>
@@ -1883,8 +1884,8 @@ export default function AutoContactFlowSettingsScreen() {
                   <section className="space-y-4" aria-labelledby="automation-logging-heading">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <h5 id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Histórico de atividades</h5>
-                        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Guarde as ações realizadas para consultar o que aconteceu.</p>
+                        <Heading level={5} id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Histórico de atividades</Heading>
+                        <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Guarde as ações realizadas para consultar o que aconteceu.</Text>
                       </div>
                       <Switch
                         checked={loggingDraft.enabled}
@@ -1894,7 +1895,7 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="min-w-0">
-                        <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Retenção (dias)</label>
+                        <FieldLabel className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">Retenção (dias)</FieldLabel>
                         <Input
                           type="number"
                           min={7}
@@ -1912,7 +1913,7 @@ export default function AutoContactFlowSettingsScreen() {
                             label="Salvar conteúdo completo"
                             aria-label="Salvar conteúdo completo no histórico"
                           />
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">Inclui o conteúdo integral dos eventos.</p>
+                          <Text className="mt-1 text-xs text-[var(--text-muted)]">Inclui o conteúdo integral dos eventos.</Text>
                         </div>
                       </div>
                     </div>
@@ -1924,13 +1925,13 @@ export default function AutoContactFlowSettingsScreen() {
 
           {activeWorkspace === "flows" && <>
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
                 Fluxos e templates
-              </h3>
-              <p className="text-xs text-[var(--text-muted)]">
+              </Heading>
+              <Text className="text-xs text-[var(--text-muted)]">
                 Crie, organize e acompanhe os fluxos e templates usados na
                 automação.
-              </p>
+              </Text>
             </div>
             {autoContactSettings?.enabled === false && (
               <Alert tone="warning" className="mt-4 flex-row items-center gap-2">
@@ -1945,14 +1946,14 @@ export default function AutoContactFlowSettingsScreen() {
             <Card variant="muted" padding="sm" className="mt-6 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
                     Fluxos de automação
-                  </h3>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                  </Heading>
+                  <Text className="text-xs text-[var(--text-muted)] mt-1">
                     Monte sequências com espera configurável (segundos, minutos,
                     horas ou dias), envio de templates e condição de
                     encerramento.
-                  </p>
+                  </Text>
                 </div>
                 <Button onClick={handleAddFlow} variant="secondary" size="sm">
                   <Plus className="kds-control-icon" />
@@ -2075,17 +2076,17 @@ export default function AutoContactFlowSettingsScreen() {
                       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
                         Fluxo {activeFlowIndex + 1}
                       </div>
-                      <h4 className="mt-1 font-[var(--font-display)] text-2xl font-semibold text-[var(--text-primary)]">
+                      <Heading level={4} className="mt-1 font-[var(--font-display)] text-2xl font-semibold text-[var(--text-primary)]">
                         {activeFlow.name || "Novo fluxo"}
-                      </h4>
+                      </Heading>
                       {activeFlow.ativo === false && (
                         <span className="mt-1 inline-flex items-center rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--danger-text)]">
                           Desativado
                         </span>
                       )}
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      <Text className="mt-1 text-sm text-[var(--text-muted)]">
                         Organize a jornada, as regras operacionais e os testes em um só lugar.
-                      </p>
+                      </Text>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <Button
@@ -2152,9 +2153,9 @@ export default function AutoContactFlowSettingsScreen() {
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                             Nome do fluxo
-                          </label>
+                          </FieldLabel>
                           <Input
                             type="text"
                             value={activeFlow.name}
@@ -2216,19 +2217,19 @@ export default function AutoContactFlowSettingsScreen() {
 
                     <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div>
-                        <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                        <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                           Agendamento do fluxo
-                        </h4>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                        </Heading>
+                        <Text className="text-xs text-[var(--text-muted)] mt-1">
                           Defina a janela diária, os dias permitidos e o limite
                           de envios deste fluxo.
-                        </p>
+                        </Text>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                             Janela diária
-                          </label>
+                          </FieldLabel>
                           <div className="flex items-center gap-2">
                             <DesignSystemDateTimePicker
                               type="time"
@@ -2256,9 +2257,9 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-2">
+                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-2">
                             Dias permitidos
-                          </label>
+                          </FieldLabel>
                           <div className="flex flex-wrap gap-2">
                             {weekdayLabels.map((day) => {
                               const isActive =
@@ -2291,9 +2292,9 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                             Limite diário deste fluxo
-                          </label>
+                          </FieldLabel>
                           <Input
                             type="number"
                             min={1}
@@ -2309,10 +2310,10 @@ export default function AutoContactFlowSettingsScreen() {
                             }}
                             placeholder="Sem limite"
                           />
-                          <p className="text-[11px] text-[var(--text-subtle)] mt-1">
+                          <Text className="text-[11px] text-[var(--text-subtle)] mt-1">
                             Conta apenas os envios automáticos deste fluxo por
                             dia.
-                          </p>
+                          </Text>
                         </div>
                       </div>
                     </div>
@@ -2322,8 +2323,8 @@ export default function AutoContactFlowSettingsScreen() {
                     {flowDetailTab === "journey" && <>
                     <div className="flex flex-wrap items-end justify-between gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
                       <div>
-                        <h5 className="text-sm font-semibold text-[var(--text-primary)]">Jornada do lead</h5>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">Clique em um bloco para editar o gatilho, condições e ações. O canvas ocupa a área principal para facilitar a leitura da sequência.</p>
+                        <Heading level={5} className="text-sm font-semibold text-[var(--text-primary)]">Jornada do lead</Heading>
+                        <Text className="mt-1 text-xs text-[var(--text-muted)]">Clique em um bloco para editar o gatilho, condições e ações. O canvas ocupa a área principal para facilitar a leitura da sequência.</Text>
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                         <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-1">{activeFlow.steps.length} etapas</span>
@@ -2364,13 +2365,13 @@ export default function AutoContactFlowSettingsScreen() {
                     <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                          <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                             Condições de saída
-                          </h4>
-                          <p className="text-xs text-[var(--text-muted)] mt-1">
+                          </Heading>
+                          <Text className="text-xs text-[var(--text-muted)] mt-1">
                             Defina quando este fluxo deve ser encerrado
                             automaticamente.
-                          </p>
+                          </Text>
                         </div>
                         <Button
                           onClick={() =>
@@ -2561,13 +2562,13 @@ export default function AutoContactFlowSettingsScreen() {
 
                     <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div>
-                        <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                        <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                           Tags e categorização
-                        </h4>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                        </Heading>
+                        <Text className="text-xs text-[var(--text-muted)] mt-1">
                           Organize e encontre fluxos rapidamente com etiquetas
                           personalizadas.
-                        </p>
+                        </Text>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {(activeFlow.tags ?? []).length > 0 ? (
@@ -2619,9 +2620,9 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-[var(--text-muted)]">
+                      <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)]">
                         Status final se não houver resposta
-                      </label>
+                      </FieldLabel>
                       {showStatusSelect ? (
                         <FilterSelect
                           icon={Tag}
@@ -2659,14 +2660,14 @@ export default function AutoContactFlowSettingsScreen() {
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                            <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                               Sequência de ações
-                            </h4>
-                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                            </Heading>
+                            <Text className="text-xs text-[var(--text-muted)] mt-1">
                               Cada etapa representa uma ação. Configure o
                               intervalo, o tipo de ação e, se necessário, o
                               conteúdo da mensagem.
-                            </p>
+                            </Text>
                           </div>
                           <Button
                             onClick={() => handleAddFlowStep(activeFlow.id)}
@@ -2685,9 +2686,9 @@ export default function AutoContactFlowSettingsScreen() {
                           >
                             <div className="grid gap-3 md:grid-cols-[160px_160px_1fr_auto]">
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Esperar
-                                </label>
+                                </FieldLabel>
                                 <Input
                                   type="number"
                                   min={0}
@@ -2705,9 +2706,9 @@ export default function AutoContactFlowSettingsScreen() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Unidade
-                                </label>
+                                </FieldLabel>
                                 <FilterSelect
                                   icon={Timer}
                                   value={step.delayUnit ?? "hours"}
@@ -2732,9 +2733,9 @@ export default function AutoContactFlowSettingsScreen() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Tipo de ação
-                                </label>
+                                </FieldLabel>
                                 <FilterSelect
                                   icon={Activity}
                                   value={step.actionType ?? "send_message"}
@@ -2796,9 +2797,9 @@ export default function AutoContactFlowSettingsScreen() {
                             {step.actionType === "create_task" && (
                               <div className="grid gap-3 md:grid-cols-2">
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Título da tarefa
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.taskTitle ?? ""}
@@ -2813,9 +2814,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Descrição
-                                  </label>
+                                  </FieldLabel>
                                   <VariableAutocompleteTextarea
                                     value={step.taskDescription ?? ""}
                                     onChange={(value) =>
@@ -2834,9 +2835,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Vencimento (horas)
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="number"
                                     min={0}
@@ -2856,9 +2857,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Prioridade
-                                  </label>
+                                  </FieldLabel>
                                   <FilterSelect
                                     icon={AlertCircle}
                                     value={step.taskPriority ?? "normal"}
@@ -2891,9 +2892,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   Integrações de e-mail.
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Para
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.emailTo ?? ""}
@@ -2908,9 +2909,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     CC
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.emailCc ?? ""}
@@ -2924,9 +2925,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     BCC
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.emailBcc ?? ""}
@@ -2940,9 +2941,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Assunto
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.emailSubject ?? ""}
@@ -2956,9 +2957,9 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Corpo do e-mail
-                                  </label>
+                                  </FieldLabel>
                                   <VariableAutocompleteTextarea
                                     value={step.emailBody ?? ""}
                                     onChange={(value) =>
@@ -2974,21 +2975,21 @@ export default function AutoContactFlowSettingsScreen() {
                                       AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                                     }
                                   />
-                                  <p className="text-[11px] text-[var(--text-subtle)] mt-1">
+                                  <Text className="text-[11px] text-[var(--text-subtle)] mt-1">
 Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                      {"{{= ... }}"} para fórmulas.
-                                  </p>
+                                  </Text>
                                 </div>
                               </div>
                             )}
 
                             {step.actionType === "webhook" && (
                               <div className="grid gap-3 md:grid-cols-2">
-                                <p className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</p>
+                                <Text className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</Text>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Endereço do serviço
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.webhookUrl ?? ""}
@@ -3003,9 +3004,9 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Método
-                                  </label>
+                                  </FieldLabel>
                                   <FilterSelect
                                     icon={Activity}
                                     value={step.webhookMethod ?? "POST"}
@@ -3030,9 +3031,9 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Cabeçalhos da conexão (JSON)
-                                  </label>
+                                  </FieldLabel>
                                   <Input
                                     type="text"
                                     value={step.webhookHeaders ?? ""}
@@ -3047,9 +3048,9 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Dados enviados
-                                  </label>
+                                  </FieldLabel>
                                   <VariableAutocompleteTextarea
                                     value={step.webhookBody ?? ""}
                                     onChange={(value) =>
@@ -3066,19 +3067,19 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                     }
                                     placeholder='{"lead_id":"{{= lead.id }}"}'
                                   />
-                                  <p className="text-[11px] text-[var(--text-subtle)] mt-1">
+                                  <Text className="text-[11px] text-[var(--text-subtle)] mt-1">
                                     Se vazio, envia JSON padrão com dados do
                                     lead.
-                                  </p>
+                                  </Text>
                                 </div>
                               </div>
                             )}
 
                             {step.actionType === "update_status" && (
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Novo status do lead
-                                </label>
+                                </FieldLabel>
                                 {showStatusSelect ? (
                                   <FilterSelect
                                     icon={Tag}
@@ -3160,10 +3161,10 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                               <Timer className="w-4 h-4" />
                               Simulação operacional
                             </div>
-                            <p className="text-xs text-[var(--text-primary)]">
+                            <Text className="text-xs text-[var(--text-primary)]">
                               Dry run do fluxo. Nenhuma mensagem é enviada;
                               mostramos somente a previsão de execução.
-                            </p>
+                            </Text>
                           </div>
                           <div className="kds-config-token border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                             Lead de exemplo + agenda do fluxo
@@ -3174,9 +3175,9 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                           <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:color-mix(in_srgb,var(--bg-surface)_90%,transparent)] p-4">
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div>
-                                <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
+                                <FieldLabel className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                   Início da simulação
-                                </label>
+                                </FieldLabel>
                                 <DesignSystemDateTimePicker
                                   type="datetime-local"
                                   value={simulationInputValue}
@@ -3277,9 +3278,9 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 <MessageCircle className="h-4 w-4" />
                                 Envio de teste
                               </div>
-                              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              <Text className="mt-1 text-xs text-[var(--text-muted)]">
                                 Envia somente as mensagens da etapa escolhida para o seu número. Não agenda novas ações nem altera os dados ou o status do contato.
-                              </p>
+                              </Text>
                             </div>
                             <span className="kds-config-token border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-1 text-[11px] text-[var(--text-primary)]">
                               Envio real pelo WhatsApp
@@ -3287,15 +3288,15 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                           </div>
 
                           <div className="mt-4 grid gap-3 md:grid-cols-3">
-                            <label className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
+                            <FieldLabel className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
                               Nome de teste
                               <Input
                                 value={testName}
                                 onChange={(event) => setTestName(event.target.value)}
                                 size="sm"
                               />
-                            </label>
-                            <label className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
+                            </FieldLabel>
+                            <FieldLabel className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
                               WhatsApp de teste
                               <Input
                                 type="tel"
@@ -3304,7 +3305,7 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 onChange={(event) => setTestPhone(event.target.value)}
                                 size="sm"
                               />
-                            </label>
+                            </FieldLabel>
                             <FilterSelect
                               icon={MessageCircle}
                               size="sm"
@@ -3319,9 +3320,9 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                           </div>
 
                           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-xs text-[var(--text-muted)]">
+                            <Text className="text-xs text-[var(--text-muted)]">
                               Salve o fluxo antes do teste para garantir que a etapa selecionada seja a versão publicada.
-                            </p>
+                            </Text>
                             <Button
                               size="sm"
                               onClick={() => void handleSendFlowTest()}
@@ -3478,19 +3479,19 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 Como ler
                               </div>
                               <div className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]">
-                                <p>
+                                <Text>
 Os horários já consideram a janela do fluxo,
                                    os dias permitidos e pulos automáticos da
                                   agenda.
-                                </p>
-                                <p>
+                                </Text>
+                                <Text>
                                   Quando uma etapa não pode rodar no horário
                                   original, ela aparece com o motivo do ajuste.
-                                </p>
-                                <p>
+                                </Text>
+                                <Text>
                                   Se houver pendências de configuração, a
                                   simulação mostra os alertas antes da timeline.
-                                </p>
+                                </Text>
                               </div>
                             </div>
                           </div>
@@ -3543,13 +3544,13 @@ Os horários já consideram a janela do fluxo,
           {activeWorkspace === "templates" && <div className="border-t border-[var(--border-subtle)] pt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
                     Biblioteca de templates
-                  </h3>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                  </Heading>
+                  <Text className="text-xs text-[var(--text-muted)] mt-1">
                     Crie e edite templates pré-fabricados para usar na automação
                     ou em disparos manuais.
-                  </p>
+                  </Text>
                 </div>
                 <Button
                   onClick={handleAddTemplate}
@@ -3582,14 +3583,14 @@ Os horários já consideram a janela do fluxo,
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                              <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                                 {template.name?.trim() || `Modelo ${index + 1}`}
-                              </h4>
+                              </Heading>
                             </div>
-                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                            <Text className="text-xs text-[var(--text-muted)] mt-1">
                               {getTemplateMessages(template).length} mensagens
                               configuradas
-                            </p>
+                            </Text>
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
@@ -3633,18 +3634,18 @@ Os horários já consideram a janela do fluxo,
                                       {messageTypeLabels[message.type]}{" "}
                                       {messageIndex + 1}
                                     </div>
-                                    <p className="text-xs text-[var(--text-secondary)] whitespace-pre-wrap">
+                                    <Text className="text-xs text-[var(--text-secondary)] whitespace-pre-wrap">
                                       {content || "Sem conteúdo"}
-                                    </p>
+                                    </Text>
                                   </div>
                                 </Surface>
                               );
                             })
                           ) : (
-                            <p className="text-xs text-[var(--text-muted)]">
+                            <Text className="text-xs text-[var(--text-muted)]">
                               Nenhuma mensagem configurada ainda. Abra para
                               editar.
-                            </p>
+                            </Text>
                           )}
                         </div>
                       </Card>
@@ -3686,9 +3687,9 @@ Os horários já consideram a janela do fluxo,
             >
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                     Nome do template
-                  </label>
+                  </FieldLabel>
                   <Input
                     type="text"
                     value={templateDraft.name}
@@ -3702,13 +3703,13 @@ Os horários já consideram a janela do fluxo,
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                      <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                         Mensagens do template
-                      </h4>
-                      <p className="text-xs text-[var(--text-muted)] mt-1">
+                      </Heading>
+                      <Text className="text-xs text-[var(--text-muted)] mt-1">
                         Combine textos, mídias, áudios e documentos em uma
                         sequência completa.
-                      </p>
+                      </Text>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -3828,9 +3829,9 @@ Os horários já consideram a janela do fluxo,
                           ) : (
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   {mediaLabel}
-                                </label>
+                                </FieldLabel>
                                 <Input
                                   type="text"
                                   value={message.mediaUrl ?? ""}
@@ -3844,9 +3845,9 @@ Os horários já consideram a janela do fluxo,
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Legenda ou descrição
-                                </label>
+                                </FieldLabel>
                                 <Input
                                   type="text"
                                   value={message.caption ?? ""}

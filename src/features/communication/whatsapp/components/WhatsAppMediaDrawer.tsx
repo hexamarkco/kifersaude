@@ -1,3 +1,5 @@
+import { Heading, Text, Image } from '../../../../design-system';
+import { IconButton, ActionSurface, Input } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Clock3,
@@ -21,7 +23,7 @@ import {
   type TabItem,
   SegmentedControl,
 } from '../../../../design-system';
-import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
+import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import { tenorMediaRepository, type TenorMediaItem } from '../data';
 
 type DrawerMode = 'emoji' | 'gif' | 'sticker';
@@ -399,16 +401,16 @@ export default function WhatsAppMediaDrawer({
             const isActive = activeEmojiCategoryId === tab.id;
 
             return (
-              <button
+              <IconButton variant="ghost" size="sm"
                 key={tab.id}
                 type="button"
-                className={`comm-emoji-picker-tab ${isActive ? 'is-active' : ''}`}
+                className={`comm-emoji-picker-tab ${isActive ? "is-active" : ""}`}
                 aria-label={tab.label}
                 title={tab.label}
                 onClick={() => handleScrollToCategory(tab.id)}
               >
-                <Icon className="h-4 w-4" />
-              </button>
+                <Icon className="" />
+              </IconButton>
             );
           })}
         </div>
@@ -419,7 +421,7 @@ export default function WhatsAppMediaDrawer({
             const isActive = activeShortcutId === shortcut.id;
 
             return (
-              <button
+              <ActionSurface variant="plain" padding="none"
                 key={shortcut.id}
                 type="button"
                 className={`comm-media-picker-shortcut ${isActive ? 'is-active' : ''}`}
@@ -427,7 +429,7 @@ export default function WhatsAppMediaDrawer({
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span>{shortcut.label}</span>
-              </button>
+              </ActionSurface>
             );
           })}
         </div>
@@ -436,16 +438,16 @@ export default function WhatsAppMediaDrawer({
       <div className="px-3 pt-3">
         <div className="comm-emoji-search">
           <Search className="comm-emoji-search-icon h-4 w-4" />
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder={mode === 'emoji' ? emojiPlaceholder : mediaPlaceholder}
           />
           {searchQuery ? (
-            <button type="button" className="comm-emoji-search-clear" onClick={() => setSearchQuery('')}>
-              <X className="h-4 w-4" />
-            </button>
+            <IconButton aria-label="Limpar busca por emoji" variant="ghost" type="button" className="comm-emoji-search-clear" onClick={() => setSearchQuery('')}>
+              <X className="" />
+            </IconButton>
           ) : null}
         </div>
       </div>
@@ -456,20 +458,20 @@ export default function WhatsAppMediaDrawer({
             emojiSearchResults && emojiSearchResults.length > 0 ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="comm-emoji-picker-section-title">Resultados</h3>
+                  <Heading level={3} className="comm-emoji-picker-section-title">Resultados</Heading>
                   <span className="comm-emoji-picker-section-meta">{emojiSearchResults.length}</span>
                 </div>
                 <div className="grid grid-cols-6 gap-1">
                   {emojiSearchResults.map((item) => (
-                    <button
+                    <IconButton variant="ghost" size="sm" aria-label={item.label}
                       key={`${item.emoji}-${item.label}`}
                       type="button"
-                      className="comm-emoji-picker-item text-[1.6rem]"
+                      className="comm-emoji-picker-item"
                       title={item.label}
                       onClick={() => handleSelectEmoji(item.emoji)}
                     >
                       {item.emoji}
-                    </button>
+                    </IconButton>
                   ))}
                 </div>
               </div>
@@ -483,20 +485,20 @@ export default function WhatsAppMediaDrawer({
               {recentEmojiItems.length > 0 ? (
                 <section ref={(element) => { sectionRefs.current.recent = element; }} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="comm-emoji-picker-section-title">Recentes</h3>
+                    <Heading level={3} className="comm-emoji-picker-section-title">Recentes</Heading>
                     <span className="comm-emoji-picker-section-meta">{recentEmojiItems.length}</span>
                   </div>
                   <div className="grid grid-cols-6 gap-1">
                     {recentEmojiItems.map((item) => (
-                      <button
+                      <IconButton variant="ghost" size="sm" aria-label={item.label}
                         key={`recent-${item.emoji}`}
                         type="button"
-                        className="comm-emoji-picker-item text-[1.6rem]"
+                        className="comm-emoji-picker-item"
                         title={item.label}
                         onClick={() => handleSelectEmoji(item.emoji)}
                       >
                         {item.emoji}
-                      </button>
+                      </IconButton>
                     ))}
                   </div>
                 </section>
@@ -511,20 +513,20 @@ export default function WhatsAppMediaDrawer({
                   className="space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="comm-emoji-picker-section-title">{category.label}</h3>
+                    <Heading level={3} className="comm-emoji-picker-section-title">{category.label}</Heading>
                     <span className="comm-emoji-picker-section-meta">{category.items.length}</span>
                   </div>
                   <div className="grid grid-cols-6 gap-1">
                     {category.items.map((item) => (
-                      <button
+                      <IconButton variant="ghost" size="sm" aria-label={item.label}
                         key={`${category.id}-${item.emoji}`}
                         type="button"
-                        className="comm-emoji-picker-item text-[1.6rem]"
+                        className="comm-emoji-picker-item"
                         title={item.label}
                         onClick={() => handleSelectEmoji(item.emoji)}
                       >
                         {item.emoji}
-                      </button>
+                      </IconButton>
                     ))}
                   </div>
                 </section>
@@ -534,22 +536,22 @@ export default function WhatsAppMediaDrawer({
         ) : mediaLoading ? (
           <div className="comm-media-picker-empty-state">
             <Loader2 className="h-6 w-6 animate-spin text-[var(--text-secondary)]" />
-            <h3 className="comm-media-picker-empty-title">Carregando {mode === 'gif' ? 'GIFs' : 'figurinhas'}</h3>
+            <Heading level={3} className="comm-media-picker-empty-title">Carregando {mode === 'gif' ? 'GIFs' : 'figurinhas'}</Heading>
           </div>
         ) : mediaError ? (
           <div className="comm-media-picker-empty-state">
-            <h3 className="comm-media-picker-empty-title">Falha ao carregar</h3>
-            <p className="comm-media-picker-empty-copy">{mediaError}</p>
+            <Heading level={3} className="comm-media-picker-empty-title">Falha ao carregar</Heading>
+            <Text className="comm-media-picker-empty-copy">{mediaError}</Text>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="comm-media-picker-empty-state">
-            <h3 className="comm-media-picker-empty-title">Nenhum resultado</h3>
-            <p className="comm-media-picker-empty-copy">Tente outra busca ou um atalho acima.</p>
+            <Heading level={3} className="comm-media-picker-empty-title">Nenhum resultado</Heading>
+            <Text className="comm-media-picker-empty-copy">Tente outra busca ou um atalho acima.</Text>
           </div>
         ) : (
           <div className={mode === 'gif' ? 'grid grid-cols-3 gap-3' : 'grid grid-cols-4 gap-3'}>
             {mediaItems.map((item) => (
-              <button
+              <ActionSurface variant="plain" padding="none"
                 key={item.id}
                 type="button"
                 disabled={!canSendMedia || sendingMedia}
@@ -559,15 +561,15 @@ export default function WhatsAppMediaDrawer({
               >
                 {mode === 'gif' ? (
                   <>
-                    <img src={item.previewUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                    <Image src={item.previewUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
                     <div className="comm-media-picker-gif-overlay">
                       <span>{item.title}</span>
                     </div>
                   </>
                 ) : (
-                  <img src={item.previewUrl} alt={item.title} className="h-full w-full object-contain p-2" loading="lazy" />
+                  <Image src={item.previewUrl} alt={item.title} className="h-full w-full object-contain p-2" loading="lazy" />
                 )}
-              </button>
+              </ActionSurface>
             ))}
           </div>
         )}

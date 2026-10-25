@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../design-system';
 import { useRef, useState, type FormEvent } from 'react';
 import { Clipboard, ClipboardCheck, FilePlus2 } from 'lucide-react';
 
@@ -243,10 +244,10 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
         <DialogBody>
           {result ? (
             <Surface variant="muted" padding="md">
-              <h3 className="font-semibold text-[var(--text-primary)]">Dados preparados</h3>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              <Heading level={3} className="font-semibold text-[var(--text-primary)]">Dados preparados</Heading>
+              <Text className="mt-1 text-sm text-[var(--text-secondary)]">
                 Copie o identificador e use-o na action <code>kifer_create_contract_holder_from_import</code>.
-              </p>
+              </Text>
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <code className="rounded border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-3 py-2 text-sm text-[var(--text-primary)]">
                   {result.import_id}
@@ -256,31 +257,31 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
                   {copied ? 'Copiado' : 'Copiar ID'}
                 </Button>
               </div>
-              <p className="mt-3 text-xs text-[var(--text-muted)]">
+              <Text className="mt-3 text-xs text-[var(--text-muted)]">
                 Expira em {formatExpiration(result.expires_at)}. Nenhum dado pessoal é incluído na resposta ao MCP.
-              </p>
+              </Text>
             </Surface>
           ) : (
             <form id="holder-import-form" className="space-y-5" onSubmit={(event) => void submit(event)}>
               <Surface variant="muted" padding="sm">
-                <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Dados do titular</h3>
+                <Heading level={3} className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Dados do titular</Heading>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {renderFields(personalFields)}
                 </div>
               </Surface>
               <Surface variant="muted" padding="sm">
-                <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Endereço</h3>
+                <Heading level={3} className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Endereço</Heading>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {renderFields(addressFields)}
                 </div>
               </Surface>
               <Surface variant="muted" padding="sm">
-                <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Dados empresariais (se aplicável)</h3>
+                <Heading level={3} className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Dados empresariais (se aplicável)</Heading>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {renderFields(companyFields)}
                 </div>
               </Surface>
-              {errorMessage && <p className="text-sm text-[var(--danger-text)]" role="alert">{errorMessage}</p>}
+              {errorMessage && <Text className="text-sm text-[var(--danger-text)]" role="alert">{errorMessage}</Text>}
             </form>
           )}
         </DialogBody>

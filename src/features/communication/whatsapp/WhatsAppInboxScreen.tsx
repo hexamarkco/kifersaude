@@ -1,14 +1,14 @@
+import { Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import '../communicationTerracotta.css';
 import {
   Alert,
   Button,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
-import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
+import { PositionedPopover as PanelPopoverShell } from '../../../design-system';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import {
@@ -2013,8 +2013,8 @@ export default function WhatsAppInboxScreen() {
           <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3.5`}>
             <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0 space-y-1">
-              <p className="whatsapp-inbox-heading text-sm font-semibold">{operationalBanner.title}</p>
-              <p className="text-sm leading-6 opacity-90">{operationalBanner.description}</p>
+              <Text className="whatsapp-inbox-heading text-sm font-semibold">{operationalBanner.title}</Text>
+              <Text className="text-sm leading-6 opacity-90">{operationalBanner.description}</Text>
             </div>
           </section>
         )}
@@ -2420,7 +2420,7 @@ export default function WhatsAppInboxScreen() {
         >
           {openChatMenuChat ? (
             <div className="flex flex-col gap-1">
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2428,12 +2428,12 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isArchived: !openChatMenuChat.is_archived });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center text-left transition disabled:opacity-60"
               >
-                {openChatMenuChat.is_archived ? <ArchiveRestore className="h-4 w-4 shrink-0" /> : <Archive className="h-4 w-4 shrink-0" />}
+                {openChatMenuChat.is_archived ? <ArchiveRestore className="shrink-0" /> : <Archive className="shrink-0" />}
                 <span>{openChatMenuChat.is_archived ? 'Remover dos arquivados' : 'Arquivar conversa'}</span>
-              </button>
-                <button
+              </Button>
+                <Button variant="ghost"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2441,12 +2441,12 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isMuted: !openChatMenuChat.is_muted });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center text-left transition disabled:opacity-60"
               >
-                {openChatMenuChat.is_muted ? <Bell className="h-4 w-4 shrink-0" /> : <BellOff className="h-4 w-4 shrink-0" />}
+                {openChatMenuChat.is_muted ? <Bell className="shrink-0" /> : <BellOff className="shrink-0" />}
                 <span>{openChatMenuChat.is_muted ? 'Ativar notificacoes' : 'Silenciar notificacoes'}</span>
-              </button>
-                <button
+              </Button>
+                <Button variant="ghost"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2454,12 +2454,12 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isPinned: !openChatMenuChat.is_pinned });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center text-left transition disabled:opacity-60"
               >
-                <Pin className="h-4 w-4 shrink-0" />
+                <Pin className="shrink-0" />
                 <span>{openChatMenuChat.is_pinned ? 'Desafixar conversa' : 'Fixar conversa'}</span>
-              </button>
-                <button
+              </Button>
+                <Button variant="ghost"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2467,12 +2467,12 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { markAsUnread: !openChatMenuChat.manual_unread && openChatMenuChat.unread_count <= 0 });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                className="flex items-center text-left transition disabled:opacity-60"
               >
-                <MessageCircle className="h-4 w-4 shrink-0" />
+                <MessageCircle className="shrink-0" />
                 <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como não lida'}</span>
-              </button>
-              <button
+              </Button>
+              <Button variant="destructive"
                 type="button"
                 onClick={() => {
                   setChatMenuPointerAnchor(null);
@@ -2480,11 +2480,11 @@ export default function WhatsAppInboxScreen() {
                   setChatPendingDeletion(openChatMenuChat);
                 }}
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
+                className="flex items-center text-left transition disabled:opacity-60"
               >
-                {deletingChatId === openChatMenuChat.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
+                {deletingChatId === openChatMenuChat.id ? <Loader2 className="animate-spin shrink-0" /> : <Trash2 className="shrink-0" />}
                 <span>Excluir conversa</span>
-              </button>
+              </Button>
             </div>
           ) : null}
         </PanelPopoverShell>

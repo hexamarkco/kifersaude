@@ -1,18 +1,9 @@
+import { Text } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
-import ReactFlow, {
-  Background,
-  Handle,
-  MarkerType,
-  Panel,
-  Position,
-  useReactFlow,
-  type Edge,
-  type Node,
-  type NodeProps,
-  type ReactFlowInstance,
-} from 'reactflow';
+import { WorkflowCanvas as ReactFlow, WorkflowBackground as Background, WorkflowHandle as Handle, WorkflowPanel as Panel } from '../../../../design-system';
+import { MarkerType, Position, useReactFlow, type Edge, type Node, type NodeProps, type ReactFlowInstance } from 'reactflow';
 import { Check, Clock3, Flag, Maximize2, MessageCircle, Paperclip, Play, Plus, ZoomIn, ZoomOut } from 'lucide-react';
-import 'reactflow/dist/style.css';
 
 import { Button, IconButton, Select } from '../../../../design-system';
 import type { CommWhatsAppCampaignStageDraft, CommWhatsAppCampaignStepKind } from '../commWhatsAppCampaignService';
@@ -61,7 +52,7 @@ function StageNode({ data }: NodeProps<StageNodeData>) {
   return (
     <div className="relative w-[264px]">
       <Handle type="target" position={Position.Left} isConnectable={false} className="!border-[color:var(--panel-surface)] !bg-[color:var(--panel-accent-strong)]" />
-      <button
+      <ActionSurface variant="plain" padding="none"
         type="button"
         onClick={data.onSelect}
         aria-pressed={data.active}
@@ -84,7 +75,7 @@ function StageNode({ data }: NodeProps<StageNodeData>) {
           </span>
         )}
         <span className="mt-3 block text-xs font-medium text-[color:var(--panel-accent-strong)]">{data.active ? 'Em edição' : 'Selecionar para editar'}</span>
-      </button>
+      </ActionSurface>
       <Handle type="source" position={Position.Right} isConnectable={false} className="!border-[color:var(--panel-surface)] !bg-[color:var(--panel-accent-strong)]" />
     </div>
   );
@@ -95,8 +86,8 @@ function BoundaryNode({ data }: NodeProps<BoundaryNodeData>) {
   return (
     <div className="relative w-[180px] rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] p-4">
       {data.end && <Handle type="target" position={Position.Left} isConnectable={false} className="!bg-[color:var(--panel-accent-strong)]" />}
-      <p className="flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text)]"><Icon className="h-4 w-4 text-[color:var(--panel-accent-strong)]" aria-hidden="true" />{data.label}</p>
-      <p className="mt-2 text-xs text-[color:var(--panel-text-muted)]">{data.description}</p>
+      <Text className="flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text)]"><Icon className="h-4 w-4 text-[color:var(--panel-accent-strong)]" aria-hidden="true" />{data.label}</Text>
+      <Text className="mt-2 text-xs text-[color:var(--panel-text-muted)]">{data.description}</Text>
       {!data.end && <Handle type="source" position={Position.Right} isConnectable={false} className="!bg-[color:var(--panel-accent-strong)]" />}
     </div>
   );
@@ -179,7 +170,7 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
           <Button size="sm" variant="secondary" onClick={() => addStage('status_change')}><Flag className="kds-control-icon" />Adicionar mudança de status</Button>
         </div>
       </div>
-      <p className="text-xs text-[color:var(--panel-text-muted)]">Siga as setas para ver a ordem do envio. Selecione uma etapa para editar. Arraste o fundo para navegar pela sequência.</p>
+      <Text className="text-xs text-[color:var(--panel-text-muted)]">Siga as setas para ver a ordem do envio. Selecione uma etapa para editar. Arraste o fundo para navegar pela sequência.</Text>
       <div className="grid min-w-0 gap-3 lg:grid-cols-2">
         <div className="h-[360px] min-w-0 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-soft)] lg:h-[560px]" role="region" aria-label="Mapa da sequência de envio">
           <ReactFlow
@@ -209,7 +200,7 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
           {stages[activeIndex] && renderStageEditor(stages[activeIndex], activeIndex)}
         </div>
       </div>
-      <p className="text-xs text-[color:var(--panel-text-muted)]">Entre as mensagens da mesma etapa: {interMessageIntervalSeconds > 0 ? `espera mínima de ${interMessageIntervalSeconds} segundos` : 'cerca de 3 segundos'}. As etapas seguintes respeitam a espera indicada e podem parar se o contato responder.</p>
+      <Text className="text-xs text-[color:var(--panel-text-muted)]">Entre as mensagens da mesma etapa: {interMessageIntervalSeconds > 0 ? `espera mínima de ${interMessageIntervalSeconds} segundos` : 'cerca de 3 segundos'}. As etapas seguintes respeitam a espera indicada e podem parar se o contato responder.</Text>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-/* Local communication skin. It deliberately uses the shared DS tokens so the inbox stays consistent in both themes. */
+/* Shared communication compositions; all dimensions and colors derive from the design system. */
 .comm-terracotta {
   background: var(--bg-canvas);
   color: var(--text-primary);

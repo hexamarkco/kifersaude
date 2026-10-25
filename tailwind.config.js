@@ -1,17 +1,8 @@
+import designSystem from './src/design-system/tailwind.preset.js';
+
 /** @type {import('tailwindcss').Config} */
 export default {
+  presets: [designSystem],
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        serif: ['Playfair Display', 'serif'],
-      },
-      zIndex: {
-        '60': '60',
-        '70': '70',
-      },
-    },
-  },
   plugins: [],
 };

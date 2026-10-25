@@ -1,4 +1,17 @@
 export { default as Alert } from './components/Alert';
+export { default as FieldLabel } from './components/FieldLabel';
+export type { FieldLabelProps } from './components/FieldLabel';
+export { Image, Video, Audio } from './components/Media';
+export type { ImageProps } from './components/Media';
+export { default as WorkflowCanvas, WorkflowBackground, WorkflowControls, WorkflowHandle, WorkflowMiniMap, WorkflowPanel } from './components/WorkflowCanvas';
+export { default as RichTextEditor } from './components/RichTextEditor';
+export type { RichTextEditorProps } from './components/RichTextEditor';
+export { default as FileInput } from './components/FileInput';
+export type { FileInputProps } from './components/FileInput';
+export { default as Slider } from './components/Slider';
+export type { SliderProps } from './components/Slider';
+export { default as DropdownOption } from './components/DropdownOption';
+export type { DropdownOptionProps } from './components/DropdownOption';
 export { DesignSystemProvider } from './components/DesignSystemProvider';
 export type { DesignSystemProviderProps } from './components/DesignSystemProvider';
 export type { DesignSystemTheme } from './appearanceContext';
@@ -134,3 +147,13 @@ export { useToast } from './components/toastContext';
 export type { ToastAction, ToastInput, ToastProps, ToastProviderProps, ToastVariant, ToastPosition } from './components/Toast';
 export * from './panelStyles';
 export * from './tokens';
+
+export { default as DonutChart } from './components/DonutChart';
+export type { DonutChartProps } from './components/DonutChart';
+export { default as MonthlyTrendChart } from './components/MonthlyTrendChart';
+export type { MonthlyTrendChartProps } from './components/MonthlyTrendChart';
+
+export * from './components/ApplicationSkeletons';
+export * from './components/AsyncContent';
+export { default as VariableAutocompleteTextarea } from './components/VariableAutocompleteTextarea';
+export { default as PositionedPopover } from './components/PositionedPopover';

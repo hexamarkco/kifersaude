@@ -1,3 +1,4 @@
+import { Text, Heading } from '../../../design-system';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GitBranch, Share2 } from "lucide-react";
 import {
@@ -22,9 +23,9 @@ import { toast } from "../../../lib/toast";
 import ConfigOptionManager from "./components/ConfigOptionManager";
 import LeadOriginsManager from "./components/LeadOriginsManager";
 import LeadStatusManager from "./components/LeadStatusManager";
-import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
-import { Skeleton } from "../../../components/ui/Skeleton";
-import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
+import { PanelAdaptiveLoadingFrame } from '../../../design-system';
+import { Skeleton } from '../../../design-system';
+import { SystemSettingsSkeleton } from '../../../design-system';
 import {
   Alert,
   Badge,
@@ -319,7 +320,7 @@ export default function SystemSettingsScreen() {
         }
       >
         <AlertCircle className="mx-auto mb-4 h-12 w-12" />
-        <p>Verifique sua conexão ou sessão e tente novamente.</p>
+        <Text>Verifique sua conexão ou sessão e tente novamente.</Text>
       </Alert>
     );
   }
@@ -368,9 +369,9 @@ export default function SystemSettingsScreen() {
 
         {!hasVisibleSections && (
           <Surface variant="muted" padding="md" className="border-dashed text-center">
-            <p className="text-sm text-[color:var(--text-secondary)]">
+            <Text className="text-sm text-[color:var(--text-secondary)]">
               Nenhum bloco encontrado para "{searchTerm}".
-            </p>
+            </Text>
           </Surface>
         )}
 
@@ -402,10 +403,10 @@ export default function SystemSettingsScreen() {
                     <Globe2 className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-[var(--text-primary)]">Localização e formato</h3>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">Localização e formato</Heading>
+                    <Text className="mt-1 text-sm text-[var(--text-secondary)]">
                       Escolha a forma de exibir datas e o horário de referência do sistema.
-                    </p>
+                    </Text>
                   </div>
                 </div>
 
@@ -445,10 +446,10 @@ export default function SystemSettingsScreen() {
                     <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-[var(--text-primary)]">Sessão e acesso</h3>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">Sessão e acesso</Heading>
+                    <Text className="mt-1 text-sm text-[var(--text-secondary)]">
                       Ajuste o período de sessão para este ambiente.
-                    </p>
+                    </Text>
                   </div>
                 </div>
 
@@ -478,10 +479,10 @@ export default function SystemSettingsScreen() {
                     <BellRing className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-[var(--text-primary)]">Notificações</h3>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">Notificações</Heading>
+                    <Text className="mt-1 text-sm text-[var(--text-secondary)]">
                       Controle o som e a frequência de verificação.
-                    </p>
+                    </Text>
                   </div>
                 </div>
 
@@ -495,12 +496,12 @@ export default function SystemSettingsScreen() {
                       )}
                     </span>
                     <div className="min-w-0">
-                      <p id="notification-sound-title" className="text-sm font-semibold text-[var(--text-primary)]">
+                      <Text id="notification-sound-title" className="text-sm font-semibold text-[var(--text-primary)]">
                         Sons de notificação
-                      </p>
-                      <p id="notification-sound-description" className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                      </Text>
+                      <Text id="notification-sound-description" className="mt-0.5 text-sm text-[var(--text-secondary)]">
                         Reproduzir um alerta sonoro quando houver notificações.
-                      </p>
+                      </Text>
                     </div>
                   </div>
                   <Switch
@@ -578,11 +579,11 @@ export default function SystemSettingsScreen() {
                 <Badge tone={hasPendingGeneralChanges ? "gold" : "success"}>
                   {hasPendingGeneralChanges ? "Não salvo" : "Salvo"}
                 </Badge>
-                <p className="text-sm text-[var(--text-secondary)]">
+                <Text className="text-sm text-[var(--text-secondary)]">
                   {hasPendingGeneralChanges
                     ? "Salve para aplicar suas alterações."
                     : "Suas preferências estão atualizadas."}
-                </p>
+                </Text>
               </div>
               <Button
                 onClick={handleSave}
@@ -711,9 +712,9 @@ export default function SystemSettingsScreen() {
                     <div className="space-y-4">
                       <Surface variant="muted" padding="sm" className="flex items-start gap-3">
                         <Info className="kds-control-icon mt-0.5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-                        <p className="text-sm text-[var(--text-secondary)]">
+                        <Text className="text-sm text-[var(--text-secondary)]">
                           As opções ativas aparecem nos seletores de contratos. Desative uma opção para ocultá-la sem removê-la desta lista.
-                        </p>
+                        </Text>
                       </Surface>
                       <Tabs
                         items={contractConfigurationTabs}

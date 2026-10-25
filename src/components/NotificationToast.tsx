@@ -1,3 +1,4 @@
+import { Heading, Text } from '../design-system';
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
@@ -71,9 +72,9 @@ export default function NotificationToast({ reminder, onClose, onViewReminders }
         actions={[{ label: 'Ver Lembretes', onClick: handleViewReminders, fullWidth: true }]}
       >
         <div className="mt-3">
-          <h3 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</h3>
+          <Heading level={3} className="mb-2 text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</Heading>
           {reminder.descricao && (
-            <p className="mb-3 text-sm text-[var(--text-secondary)]">{reminder.descricao}</p>
+            <Text className="mb-3 text-sm text-[var(--text-secondary)]">{reminder.descricao}</Text>
           )}
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-[var(--text-muted)]">{formatDateTimeFullBR(reminder.data_lembrete)}</span>

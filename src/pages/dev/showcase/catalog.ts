@@ -60,6 +60,7 @@ export const componentGroups = [
   { id: 'data', label: 'Dados' },
   { id: 'feedback', label: 'Feedback' },
   { id: 'overlays', label: 'Interações' },
+  { id: 'application', label: 'Aplicação' },
 ] as const;
 export type ComponentGroup = (typeof componentGroups)[number]['id'];
 export const patterns = [

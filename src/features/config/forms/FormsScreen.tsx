@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, ExternalLink, FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
 
@@ -261,8 +262,8 @@ export default function FormsScreen() {
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="kds-card-title">Seus formulários</h3>
-            <p className="kds-card-subtitle">Cada formulário publicado cria um lead automaticamente ao ser enviado.</p>
+            <Heading level={3} className="kds-card-title">Seus formulários</Heading>
+            <Text className="kds-card-subtitle">Cada formulário publicado cria um lead automaticamente ao ser enviado.</Text>
           </div>
           <Button
             onClick={() => {
@@ -278,9 +279,9 @@ export default function FormsScreen() {
         </div>
 
         {forms.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">
+          <Text className="text-sm text-[var(--text-muted)]">
             Nenhum formulário cadastrado ainda. Clique em "Novo formulário" para começar.
-          </p>
+          </Text>
         ) : (
           <div className="space-y-3">
             {forms.map((form) => {
@@ -300,17 +301,17 @@ export default function FormsScreen() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-medium text-[var(--text-primary)]">{form.title}</p>
+                        <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{form.title}</Text>
                         <Badge tone={form.is_published ? "success" : "neutral"} size="sm">
                           {form.is_published ? "Publicado" : "Rascunho"}
                         </Badge>
                       </div>
-                      <p className="truncate text-xs text-[var(--text-secondary)]" title={publicUrl}>
+                      <Text className="truncate text-xs text-[var(--text-secondary)]" title={publicUrl}>
                         /forms/{form.slug}
-                      </p>
-                      <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                      </Text>
+                      <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                         {form.submission_count} envio{form.submission_count === 1 ? "" : "s"}
-                      </p>
+                      </Text>
                     </div>
                   </div>
 

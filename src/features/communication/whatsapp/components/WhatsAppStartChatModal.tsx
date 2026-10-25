@@ -1,3 +1,4 @@
+import { Text } from '../../../../design-system';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Loader2, MessageSquarePlus, Phone, RefreshCw, Search, UserCircle2, UserRound } from 'lucide-react';
 
@@ -125,10 +126,10 @@ export default function WhatsAppStartChatModal({
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
                   <Phone className="h-6 w-6" />
                 </div>
-                <p className="mt-4 text-base font-semibold text-[var(--text-primary)]">Iniciar por número</p>
-                <p className="mt-1 max-w-xs text-sm leading-6 text-[var(--text-muted)]">
+                <Text className="mt-4 text-base font-semibold text-[var(--text-primary)]">Iniciar por número</Text>
+                <Text className="mt-1 max-w-xs text-sm leading-6 text-[var(--text-muted)]">
                   Digite um número com DDD. O sistema confere se ele tem WhatsApp antes de abrir a conversa.
-                </p>
+                </Text>
                 <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
                   <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
                   <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting} className="w-full sm:w-auto sm:shrink-0">
@@ -153,8 +154,8 @@ export default function WhatsAppStartChatModal({
                 <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
                   <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[var(--text-primary)]">Não foi possível carregar as opções.</p>
-                    <p className="mt-1 text-sm leading-6">A lista vazia não confirma que não existem contatos ou leads.</p>
+                    <Text className="font-semibold text-[var(--text-primary)]">Não foi possível carregar as opções.</Text>
+                    <Text className="mt-1 text-sm leading-6">A lista vazia não confirma que não existem contatos ou leads.</Text>
                     <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry} disabled={starting}>
                       <RefreshCw className="kds-control-icon" aria-hidden="true" />
                       Tentar novamente
@@ -183,8 +184,8 @@ export default function WhatsAppStartChatModal({
                       >
                         <ContactAvatar label={contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</p>
-                          <p className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</p>
+                          <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</Text>
+                          <Text className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</Text>
                         </div>
                         {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}
                       </ActionSurface>
@@ -215,11 +216,11 @@ export default function WhatsAppStartChatModal({
                     >
                       <ContactAvatar label={lead.nome_completo || lead.telefone || '?'} tone="gold" />
                       <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                        <Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                           <LeadFavoriteBadge favorito={lead.favorito} />
                           {lead.nome_completo || 'Lead sem nome'}
-                        </p>
-                        <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
+                        </Text>
+                        <Text className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</Text>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <Badge
                             tone="neutral"

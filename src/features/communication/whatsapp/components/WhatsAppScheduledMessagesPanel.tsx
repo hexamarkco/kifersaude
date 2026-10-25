@@ -1,3 +1,4 @@
+import { Heading, Text, FieldLabel } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
@@ -622,10 +623,10 @@ export default function WhatsAppScheduledMessagesPanel({
           <div className="flex items-center gap-3">
             <CalendarClock className="kds-control-icon text-[var(--brand-primary)]" />
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+              <Heading level={2} className="text-lg font-semibold text-[var(--text-primary)]">
                 {isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
-              </h2>
-              <p className="text-sm text-[var(--text-muted)]">{headerSummary}</p>
+              </Heading>
+              <Text className="text-sm text-[var(--text-muted)]">{headerSummary}</Text>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -695,10 +696,10 @@ export default function WhatsAppScheduledMessagesPanel({
               {messages.length === 0 && sequences.length === 0 ? (
                 <div className="text-center py-12">
                   <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
-                  <p className="text-[var(--text-muted)]">Nenhum agendamento nesta aba</p>
-                  <p className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
+                  <Text className="text-[var(--text-muted)]">Nenhum agendamento nesta aba</Text>
+                  <Text className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
                     Consulte outra aba para ver agendamentos em outras situações, incluindo o histórico.
-                  </p>
+                  </Text>
                   {onScheduleNew && (
                     <Button onClick={onScheduleNew} size="sm">
                       <Plus className="kds-control-icon" />
@@ -710,9 +711,9 @@ export default function WhatsAppScheduledMessagesPanel({
                 <>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
                 <div className="space-y-1">
-                  <label htmlFor="scheduled-messages-search" className="text-xs font-medium text-[var(--text-muted)]">
+                  <FieldLabel htmlFor="scheduled-messages-search" className="text-xs font-medium text-[var(--text-muted)]">
                     Buscar
-                  </label>
+                  </FieldLabel>
                   <Input
                     id="scheduled-messages-search"
                     type="search"
@@ -723,9 +724,9 @@ export default function WhatsAppScheduledMessagesPanel({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor="scheduled-messages-start-date" className="text-xs font-medium text-[var(--text-muted)]">
+                  <FieldLabel htmlFor="scheduled-messages-start-date" className="text-xs font-medium text-[var(--text-muted)]">
                     A partir de
-                  </label>
+                  </FieldLabel>
                   <DateTimePicker
                     id="scheduled-messages-start-date"
                     type="date"
@@ -736,9 +737,9 @@ export default function WhatsAppScheduledMessagesPanel({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor="scheduled-messages-end-date" className="text-xs font-medium text-[var(--text-muted)]">
+                  <FieldLabel htmlFor="scheduled-messages-end-date" className="text-xs font-medium text-[var(--text-muted)]">
                     Até
-                  </label>
+                  </FieldLabel>
                   <DateTimePicker
                     id="scheduled-messages-end-date"
                     type="date"
@@ -789,14 +790,14 @@ export default function WhatsAppScheduledMessagesPanel({
 
               {visibleMessages.length === 0 && visibleSequences.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-[var(--border-subtle)] px-4 py-10 text-center">
-                  <p className="text-sm font-medium text-[var(--text-secondary)]">
+                  <Text className="text-sm font-medium text-[var(--text-secondary)]">
                     Nenhuma mensagem nesta visão
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  </Text>
+                  <Text className="mt-1 text-xs text-[var(--text-muted)]">
                     {hasListFilters
                       ? 'Tente outro termo de busca ou consulte outra aba.'
                       : 'Quando houver mensagens nesta situação, elas aparecerão aqui.'}
-                  </p>
+                  </Text>
                 </div>
               ) : null}
               <ScheduledItemsSection
@@ -891,9 +892,9 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
             )}
           </div>
 
-          <p className="text-sm text-[var(--text-primary)] truncate">
+          <Text className="text-sm text-[var(--text-primary)] truncate">
             {message.text_content ?? '(Mídia)'}
-          </p>
+          </Text>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
             <span className="flex items-center gap-1 font-medium text-[var(--text-secondary)]">
@@ -908,11 +909,11 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
           </div>
 
           {message.label && (
-            <p className="text-xs text-[var(--text-subtle)] mt-1">{message.label}</p>
+            <Text className="text-xs text-[var(--text-subtle)] mt-1">{message.label}</Text>
           )}
 
           {message.error_message && (
-            <p className="text-xs text-[var(--danger-text)] mt-1 truncate">{message.error_message}</p>
+            <Text className="text-xs text-[var(--danger-text)] mt-1 truncate">{message.error_message}</Text>
           )}
         </div>
 
@@ -984,9 +985,9 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
               Etapa {sequence.current_step_index + 1}{stepCount ? ` de ${stepCount}` : ''}
             </span>
           </div>
-          <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+          <Text className="truncate text-sm font-medium text-[var(--text-primary)]">
             {sequence.label || 'Sequência de mensagens'}
-          </p>
+          </Text>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
             <span className="flex items-center gap-1 font-medium text-[var(--text-secondary)]">
               <Clock className="kds-control-icon" />
@@ -999,7 +1000,7 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
             )}
           </div>
           {sequence.last_error && (
-            <p className="mt-1 truncate text-xs text-[var(--danger-text)]">{sequence.last_error}</p>
+            <Text className="mt-1 truncate text-xs text-[var(--danger-text)]">{sequence.last_error}</Text>
           )}
         </div>
 

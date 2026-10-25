@@ -5,7 +5,7 @@ type MonthlyTrendPoint = {
   value: number;
 };
 
-type MonthlyTrendChartProps = {
+export type MonthlyTrendChartProps = {
   data: MonthlyTrendPoint[];
   color?: string;
   height?: number;

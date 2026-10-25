@@ -51,8 +51,8 @@ function reactQuillInterop(): Plugin {
   // helper. Vite's production React namespace needs a small ESM bridge so
   // the lazy blog chunk receives React and ReactDOM through `.default`.
   const reactQuillRoot = '/node_modules/react-quill/';
-  const reactShim = path.resolve(__dirname, 'src/features/blog/components/reactQuillReactShim.ts');
-  const reactDomShim = path.resolve(__dirname, 'src/features/blog/components/reactQuillReactDomShim.ts');
+  const reactShim = path.resolve(__dirname, 'src/design-system/components/reactQuillReactShim.ts');
+  const reactDomShim = path.resolve(__dirname, 'src/design-system/components/reactQuillReactDomShim.ts');
 
   return {
     name: 'kifer-react-quill-interop',
@@ -136,7 +136,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      exclude: ['lucide-react', 'react-quill'],
+      exclude: ['lucide-react'],
+      include: ['react-quill'],
     },
     resolve: {
       alias: {

@@ -1,3 +1,4 @@
+import { IconButton } from '../design-system';
 import { useState } from 'react';
 import { Star } from 'lucide-react';
 
@@ -42,20 +43,20 @@ export function LeadFavoriteToggle({
   };
 
   return (
-    <button
+    <IconButton variant="ghost" size="sm" aria-label={favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}
       type="button"
       onClick={(event) => void handleClick(event)}
       disabled={pending}
       aria-pressed={favorito}
       title={favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}
       className={cx(
-        'kds-favorite-toggle inline-flex shrink-0 items-center justify-center rounded-full p-1 transition hover:bg-[var(--bg-hover)] disabled:cursor-not-allowed disabled:opacity-60',
-        favorito ? 'kds-favorite-active' : 'kds-favorite-inactive',
+        "kds-favorite-toggle inline-flex shrink-0 items-center justify-center transition disabled:cursor-not-allowed disabled:opacity-60",
+        favorito ? "kds-favorite-active" : "kds-favorite-inactive",
         className,
       )}
     >
       <Star className={iconSize} fill={favorito ? 'currentColor' : 'none'} />
-    </button>
+    </IconButton>
   );
 }
 

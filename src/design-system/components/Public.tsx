@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import { DesignSystemProvider } from './DesignSystemProvider';
 
 export type PublicTheme = 'light' | 'dark';
 export type PublicWidth = 'narrow' | 'default' | 'wide' | 'full';
@@ -19,12 +20,13 @@ export function PublicShell({
   ...props
 }: PublicShellProps) {
   return (
-    <div
-      className={cx('painel-theme kifer-ds kds-public-shell', theme === 'dark' && 'theme-dark', className)}
+    <DesignSystemProvider
+      theme={theme}
+      className={cx('kds-public-shell', className)}
       {...props}
     >
       <div className={cx('kds-public-shell-inner', `kds-public-width-${width}`)}>{children}</div>
-    </div>
+    </DesignSystemProvider>
   );
 }
 

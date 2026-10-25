@@ -1,3 +1,4 @@
+import { Text } from '../../../design-system';
 import {
   AlertTriangle,
   ArrowRight,
@@ -270,7 +271,7 @@ export function DashboardCommercialSections({
           {analysis.stageMetrics.some((stage) => stage.count > 0) ? (
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {analysis.stageMetrics.filter((stage) => stage.count > 0).map((stage) => (
-                <button key={stage.status} type="button" onClick={() => onNavigateToStatus(stage.status)} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
+                <ActionSurface variant="plain" padding="none" key={stage.status} type="button" onClick={() => onNavigateToStatus(stage.status)} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
                   <div className="flex items-start justify-between gap-2">
                     <OperationalStatusBadge statusColor={stage.color}>{stage.status}</OperationalStatusBadge>
                     <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">{stage.count}</span>
@@ -280,8 +281,8 @@ export function DashboardCommercialSections({
                     <span>{Math.round(stage.averageDays)}d médios</span>
                     <span>{stage.nextStageConversion === null ? 'Sem base de avanço' : `${percent(stage.nextStageConversion)} avançam`}</span>
                   </div>
-                  {showFinancialMetrics && <p className="mt-2 text-xs font-medium text-[var(--text-secondary)]">{stage.monthlyValue === null ? 'Valor mensal não registrado' : `${compactCurrency(stage.monthlyValue)}/mês vinculado`}</p>}
-                </button>
+                  {showFinancialMetrics && <Text className="mt-2 text-xs font-medium text-[var(--text-secondary)]">{stage.monthlyValue === null ? 'Valor mensal não registrado' : `${compactCurrency(stage.monthlyValue)}/mês vinculado`}</Text>}
+                </ActionSurface>
               ))}
             </div>
           ) : (
@@ -301,17 +302,17 @@ export function DashboardCommercialSections({
           <Surface padding="md" className="h-full">
             <SectionHeader eyebrow="Agenda comercial" title="Hoje" description="Lembretes pendentes, atrasados e concluídos." action={<Button variant="secondary" size="sm" onClick={openAgenda}>Abrir agenda <ArrowRight aria-hidden="true" /></Button>} as="h2" />
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <Card padding="sm" className="text-center"><p className="text-xl font-semibold tabular-nums">{analysis.agenda.pending}</p><p className="text-xs text-[var(--text-muted)]">Pendentes</p></Card>
-              <Card padding="sm" className="text-center"><p className="text-xl font-semibold tabular-nums text-[var(--danger-text)]">{analysis.agenda.overdue}</p><p className="text-xs text-[var(--text-muted)]">Atrasados</p></Card>
-              <Card padding="sm" className="text-center"><p className="text-xl font-semibold tabular-nums text-[var(--success-text)]">{analysis.agenda.completed}</p><p className="text-xs text-[var(--text-muted)]">Concluídos</p></Card>
+              <Card padding="sm" className="text-center"><Text className="text-xl font-semibold tabular-nums">{analysis.agenda.pending}</Text><Text className="text-xs text-[var(--text-muted)]">Pendentes</Text></Card>
+              <Card padding="sm" className="text-center"><Text className="text-xl font-semibold tabular-nums text-[var(--danger-text)]">{analysis.agenda.overdue}</Text><Text className="text-xs text-[var(--text-muted)]">Atrasados</Text></Card>
+              <Card padding="sm" className="text-center"><Text className="text-xl font-semibold tabular-nums text-[var(--success-text)]">{analysis.agenda.completed}</Text><Text className="text-xs text-[var(--text-muted)]">Concluídos</Text></Card>
             </div>
             <div className="mt-4 space-y-2">
               {analysis.agenda.items.length > 0 ? analysis.agenda.items.slice(0, 5).map((item) => (
-                <button key={item.id} type="button" onClick={() => item.leadId ? onNavigateToLead(item.leadId) : openAgenda()} className="flex w-full items-start gap-3 rounded-xl border border-[var(--border-subtle)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
+                <ActionSurface variant="plain" padding="none" key={item.id} type="button" onClick={() => item.leadId ? onNavigateToLead(item.leadId) : openAgenda()} className="flex w-full items-start gap-3 rounded-xl border border-[var(--border-subtle)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
                   <span className={`mt-0.5 rounded-full p-1.5 ${item.overdue ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]' : 'bg-[var(--info-soft)] text-[var(--info-text)]'}`}><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /></span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-[var(--text-primary)]">{item.title}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{item.leadName || item.type} · {dateTime(item.date)}</span></span>
                   {item.overdue && <Badge tone="danger" size="sm">Atrasado</Badge>}
-                </button>
+                </ActionSurface>
               )) : <EmptyState icon={<CalendarClock aria-hidden="true" />} title="Agenda livre" description="Não há lembretes pendentes para hoje." className="py-8" />}
             </div>
           </Surface>
@@ -322,8 +323,8 @@ export function DashboardCommercialSections({
         <section data-panel-animate aria-labelledby="dashboard-pipeline-value-title">
           <Surface padding="md" className="h-full">
             <SectionHeader eyebrow="Valor em aberto" title="Funil de vendas" description="Valor mensal registrado em contratos vinculados às oportunidades abertas." as="h2" />
-            <div className="mt-4 flex items-end justify-between gap-4"><p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && analysis.pipelineValueAvailable ? currency(analysis.pipelineValue) : '—'}</p><Badge tone={analysis.pipelineValueAvailable ? 'info' : 'neutral'}>{analysis.pipelineValueAvailable ? 'R$/mês' : 'Sem valor cadastrado'}</Badge></div>
-            <div className="mt-5 space-y-3">{analysis.pipelineStages.length > 0 ? analysis.pipelineStages.map((stage) => <button key={stage.status} type="button" onClick={() => onNavigateToStatus(stage.status)} className="flex w-full items-center gap-3 text-left"><span className="min-w-0 flex-1 truncate text-sm text-[var(--text-secondary)]">{stage.status}</span><span className="text-xs tabular-nums text-[var(--text-muted)]">{stage.count}</span><span className="w-28 text-right text-sm font-medium tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && stage.monthlyValue !== null ? compactCurrency(stage.monthlyValue) : '—'}</span></button>) : <EmptyState icon={<DollarSign aria-hidden="true" />} title="Sem valores em aberto" description="O modelo atual não registra valor potencial diretamente no lead." className="py-8" />}</div>
+            <div className="mt-4 flex items-end justify-between gap-4"><Text className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && analysis.pipelineValueAvailable ? currency(analysis.pipelineValue) : '—'}</Text><Badge tone={analysis.pipelineValueAvailable ? 'info' : 'neutral'}>{analysis.pipelineValueAvailable ? 'R$/mês' : 'Sem valor cadastrado'}</Badge></div>
+            <div className="mt-5 space-y-3">{analysis.pipelineStages.length > 0 ? analysis.pipelineStages.map((stage) => <ActionSurface variant="plain" padding="none" key={stage.status} type="button" onClick={() => onNavigateToStatus(stage.status)} className="flex w-full items-center gap-3 text-left"><span className="min-w-0 flex-1 truncate text-sm text-[var(--text-secondary)]">{stage.status}</span><span className="text-xs tabular-nums text-[var(--text-muted)]">{stage.count}</span><span className="w-28 text-right text-sm font-medium tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && stage.monthlyValue !== null ? compactCurrency(stage.monthlyValue) : '—'}</span></ActionSurface>) : <EmptyState icon={<DollarSign aria-hidden="true" />} title="Sem valores em aberto" description="O modelo atual não registra valor potencial diretamente no lead." className="py-8" />}</div>
           </Surface>
         </section>
         <section data-panel-animate aria-labelledby="dashboard-conversion-title">
@@ -338,15 +339,15 @@ export function DashboardCommercialSections({
         <section data-panel-animate aria-labelledby="dashboard-follow-up-title">
           <Surface padding="md" className="h-full">
             <SectionHeader eyebrow="Disciplina comercial" title="Saúde do follow-up" description="Cobertura de próximo passo para as oportunidades abertas no recorte." as="h2" />
-            <div className="mt-5 flex items-end justify-between gap-4"><div><p className="text-4xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.followUp.coverage)}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">Cobertura de próximo passo</p></div><Badge tone={analysis.followUp.coverage !== null && analysis.followUp.coverage >= 80 ? 'success' : 'warning'}>{analysis.followUp.withNextStep} de {analysis.followUp.openOpportunities}</Badge></div>
+            <div className="mt-5 flex items-end justify-between gap-4"><div><Text className="text-4xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.followUp.coverage)}</Text><Text className="mt-1 text-sm text-[var(--text-secondary)]">Cobertura de próximo passo</Text></div><Badge tone={analysis.followUp.coverage !== null && analysis.followUp.coverage >= 80 ? 'success' : 'warning'}>{analysis.followUp.withNextStep} de {analysis.followUp.openOpportunities}</Badge></div>
             <Progress value={analysis.followUp.coverage ?? 0} size="md" className="mt-4" />
-            <div className="mt-5 grid grid-cols-2 gap-3"><ActionSurface variant="warning" padding="sm" onClick={openLeads} className="text-left"><p className="text-2xl font-semibold tabular-nums">{analysis.followUp.withoutNextStep}</p><p className="text-xs text-[var(--text-secondary)]">Oportunidades sem próximo movimento</p></ActionSurface><Card padding="sm"><p className="text-2xl font-semibold tabular-nums text-[var(--danger-text)]">{analysis.followUp.overdue}</p><p className="text-xs text-[var(--text-secondary)]">Follow-ups vencidos</p></Card></div>
+            <div className="mt-5 grid grid-cols-2 gap-3"><ActionSurface variant="warning" padding="sm" onClick={openLeads} className="text-left"><Text className="text-2xl font-semibold tabular-nums">{analysis.followUp.withoutNextStep}</Text><Text className="text-xs text-[var(--text-secondary)]">Oportunidades sem próximo movimento</Text></ActionSurface><Card padding="sm"><Text className="text-2xl font-semibold tabular-nums text-[var(--danger-text)]">{analysis.followUp.overdue}</Text><Text className="text-xs text-[var(--text-secondary)]">Follow-ups vencidos</Text></Card></div>
           </Surface>
         </section>
         <section data-panel-animate aria-labelledby="dashboard-stuck-title">
           <Surface padding="md" variant={analysis.stuck.count > 0 ? 'warning' : 'default'} className="h-full">
             <SectionHeader eyebrow="Risco de receita" title="Dinheiro parado" description={`Oportunidades avançadas sem interação há mais de ${analysis.stuck.thresholdHours}h.`} as="h2" />
-            <div className="mt-5 flex items-end justify-between gap-4"><div><p className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && analysis.stuck.valueAvailable ? currency(analysis.stuck.amount) : '—'}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{analysis.stuck.count} oportunidade(s) avançada(s)</p></div><Hourglass className="h-7 w-7 text-[var(--warning-text)]" aria-hidden="true" /></div>
+            <div className="mt-5 flex items-end justify-between gap-4"><div><Text className="text-3xl font-semibold tabular-nums text-[var(--text-primary)]">{showFinancialMetrics && analysis.stuck.valueAvailable ? currency(analysis.stuck.amount) : '—'}</Text><Text className="mt-1 text-sm text-[var(--text-secondary)]">{analysis.stuck.count} oportunidade(s) avançada(s)</Text></div><Hourglass className="h-7 w-7 text-[var(--warning-text)]" aria-hidden="true" /></div>
             <Button variant="secondary" size="sm" className="mt-5" onClick={analysis.stuck.leadIds[0] ? () => onNavigateToLead(analysis.stuck.leadIds[0]) : openLeads}>Abrir oportunidades <ArrowRight aria-hidden="true" /></Button>
           </Surface>
         </section>
@@ -361,8 +362,8 @@ export function DashboardCommercialSections({
               ['Proposta → decisão', analysis.velocity.proposalToDecisionDays],
               ['Decisão → fechado', analysis.velocity.decisionToClosedDays],
               ['Lead → fechado', analysis.velocity.leadToClosedDays],
-            ].map(([label, value]) => <Card key={String(label)} padding="sm"><p className="text-xs text-[var(--text-muted)]">{label}</p><p className="mt-2 text-xl font-semibold tabular-nums">{value === null ? '—' : `${Math.round(Number(value))}d`}</p></Card>)}</div>
-            <div className="mt-5 space-y-2">{analysis.velocity.ageBuckets.map((bucket) => <button key={bucket.label} type="button" onClick={() => bucket.leadIds[0] && onNavigateToLead(bucket.leadIds[0])} className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-[var(--surface-hover)]"><span className="w-20 text-xs text-[var(--text-muted)]">{bucket.label}</span><Progress value={bucket.count} max={Math.max(...analysis.velocity.ageBuckets.map((item) => item.count), 1)} size="sm" className="flex-1" /><span className="w-8 text-right text-sm font-medium tabular-nums">{bucket.count}</span></button>)}</div>
+            ].map(([label, value]) => <Card key={String(label)} padding="sm"><Text className="text-xs text-[var(--text-muted)]">{label}</Text><Text className="mt-2 text-xl font-semibold tabular-nums">{value === null ? '—' : `${Math.round(Number(value))}d`}</Text></Card>)}</div>
+            <div className="mt-5 space-y-2">{analysis.velocity.ageBuckets.map((bucket) => <ActionSurface variant="plain" padding="none" key={bucket.label} type="button" onClick={() => bucket.leadIds[0] && onNavigateToLead(bucket.leadIds[0])} className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-[var(--surface-hover)]"><span className="w-20 text-xs text-[var(--text-muted)]">{bucket.label}</span><Progress value={bucket.count} max={Math.max(...analysis.velocity.ageBuckets.map((item) => item.count), 1)} size="sm" className="flex-1" /><span className="w-8 text-right text-sm font-medium tabular-nums">{bucket.count}</span></ActionSurface>)}</div>
           </Surface>
         </section>
         <section data-panel-animate aria-labelledby="dashboard-loss-title">
@@ -421,8 +422,8 @@ export function DashboardDailyOverview({
         <Surface padding="md" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Prioridades da carteira</p>
-              <p className="mt-1 text-xs text-[var(--text-muted)]">Sinais de follow-up, próxima etapa e atividade recente.</p>
+              <Text className="text-sm font-semibold text-[var(--text-primary)]">Prioridades da carteira</Text>
+              <Text className="mt-1 text-xs text-[var(--text-muted)]">Sinais de follow-up, próxima etapa e atividade recente.</Text>
             </div>
             <Button type="button" variant="text" size="sm" onClick={openLeads}>
               Abrir leads <ArrowRight aria-hidden="true" />
@@ -433,7 +434,7 @@ export function DashboardDailyOverview({
             <ul className="space-y-2.5">
               {opportunities.map((opportunity) => (
                 <li key={opportunity.leadId} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)]">
-                  <button
+                  <ActionSurface variant="plain" padding="none"
                     type="button"
                     onClick={() => onNavigateToLead(opportunity.leadId)}
                     className="flex w-full flex-col gap-3 rounded-xl px-4 py-4 text-left transition-colors hover:border-[var(--brand-primary-border)] hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:flex-row sm:items-center sm:justify-between"
@@ -446,7 +447,7 @@ export function DashboardDailyOverview({
                       <OpportunitySignal opportunity={opportunity} />
                       <OperationalStatusBadge statusColor={opportunity.statusColor}>{opportunity.status}</OperationalStatusBadge>
                     </span>
-                  </button>
+                  </ActionSurface>
                 </li>
               ))}
             </ul>
@@ -464,8 +465,8 @@ export function DashboardDailyOverview({
           <Surface padding="md" className="space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Agenda</p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">Itens que precisam de acompanhamento.</p>
+                <Text className="text-sm font-semibold text-[var(--text-primary)]">Agenda</Text>
+                <Text className="mt-1 text-xs text-[var(--text-muted)]">Itens que precisam de acompanhamento.</Text>
               </div>
               <Button type="button" variant="secondary" size="sm" onClick={openAgenda}>
                 Abrir agenda <ArrowRight aria-hidden="true" />
@@ -473,12 +474,12 @@ export function DashboardDailyOverview({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <ActionSurface variant={analysis.agenda.overdue > 0 ? 'danger' : 'muted'} padding="sm" onClick={openAgenda} className="text-left">
-                <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</p>
-                <p className="text-xs font-medium text-[var(--text-secondary)]">Atrasados</p>
+                <Text className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</Text>
+                <Text className="text-xs font-medium text-[var(--text-secondary)]">Atrasados</Text>
               </ActionSurface>
               <ActionSurface variant="info" padding="sm" onClick={openAgenda} className="text-left">
-                <p className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</p>
-                <p className="text-xs font-medium text-[var(--text-secondary)]">Pendentes</p>
+                <Text className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</Text>
+                <Text className="text-xs font-medium text-[var(--text-secondary)]">Pendentes</Text>
               </ActionSurface>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
@@ -491,20 +492,20 @@ export function DashboardDailyOverview({
 
           <Surface variant="strong" padding="sm" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
             <div>
-              <p className="text-xs text-[var(--text-muted)]">Vendas no período</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.salesCount}</p>
+              <Text className="text-xs text-[var(--text-muted)]">Vendas no período</Text>
+              <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.salesCount}</Text>
             </div>
             <div>
-              <p className="text-xs text-[var(--text-muted)]">Conversão</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.conversion)}</p>
+              <Text className="text-xs text-[var(--text-muted)]">Conversão</Text>
+              <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.conversion)}</Text>
             </div>
             <div className="col-span-2 sm:col-span-1 xl:col-span-2 2xl:col-span-1">
-              <p className="text-xs text-[var(--text-muted)]">{showFinancialMetrics ? 'Valor mensal vendido' : 'Leads recebidos'}</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+              <Text className="text-xs text-[var(--text-muted)]">{showFinancialMetrics ? 'Valor mensal vendido' : 'Leads recebidos'}</Text>
+              <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">
                 {showFinancialMetrics
                   ? analysis.dataCoverage.monthlyRevenue ? compactCurrency(analysis.monthlyRevenue) : '—'
                   : analysis.leadsReceived}
-              </p>
+              </Text>
             </div>
           </Surface>
         </div>

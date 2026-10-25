@@ -1,3 +1,4 @@
+import { Text, Heading } from '../../../../design-system';
 import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
@@ -389,15 +390,15 @@ export default function WhatsAppLeadDrawer({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</p>
+              <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</Text>
               {overdue ? <Badge tone="danger" size="sm">Atrasado</Badge> : null}
             </div>
-            <p className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
+            <Text className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
               <Clock3 className="h-3.5 w-3.5" />
               {formatDateTimeFullBR(reminder.data_lembrete)}
-            </p>
+            </Text>
             {reminder.descricao ? (
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">{reminder.descricao}</p>
+              <Text className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">{reminder.descricao}</Text>
             ) : null}
           </div>
 
@@ -426,7 +427,7 @@ export default function WhatsAppLeadDrawer({
 
         {isOpen && canEditAgenda ? (
           <Surface variant="muted" padding="sm" className="mt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Novo horário</p>
+            <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Novo horário</Text>
             <DateTimePicker
               type="datetime-local"
               value={agendaRescheduleValue}
@@ -463,9 +464,9 @@ export default function WhatsAppLeadDrawer({
         className="comm-whatsapp-lead-drawer"
       >
         <DrawerHeader onClose={onClose} className="comm-whatsapp-lead-drawer-header">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">Info do chat</p>
+          <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">Info do chat</Text>
           <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">Lead, contratos e próximos acompanhamentos</p>
+          <Text className="mt-1 text-sm text-[var(--text-muted)]">Lead, contratos e próximos acompanhamentos</Text>
         </DrawerHeader>
         <DrawerBody className="overflow-y-auto">
           <Tabs
@@ -489,8 +490,8 @@ export default function WhatsAppLeadDrawer({
             <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-[var(--text-primary)]">Não foi possível carregar o lead.</p>
-                <p className="mt-1 text-sm leading-6">O lead pode continuar vinculado a esta conversa. Tente novamente antes de criar ou vincular outro lead.</p>
+                <Text className="font-semibold text-[var(--text-primary)]">Não foi possível carregar o lead.</Text>
+                <Text className="mt-1 text-sm leading-6">O lead pode continuar vinculado a esta conversa. Tente novamente antes de criar ou vincular outro lead.</Text>
                 <Button variant="secondary" size="sm" className="mt-3" onClick={onRetryLeadPanel}>
                   <RefreshCw className="kds-control-icon" aria-hidden="true" />
                   Tentar novamente
@@ -505,8 +506,8 @@ export default function WhatsAppLeadDrawer({
                     <Link2 className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">Lead vinculado</p>
-                    <p className="text-xs text-[var(--text-muted)]">Informações comerciais desta conversa</p>
+                    <Text className="text-sm font-semibold text-[var(--text-primary)]">Lead vinculado</Text>
+                    <Text className="text-xs text-[var(--text-muted)]">Informações comerciais desta conversa</Text>
                   </div>
                   {autoLinked && (
                     <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge>
@@ -546,15 +547,15 @@ export default function WhatsAppLeadDrawer({
                 <Surface variant="muted" padding="sm" className="sm:p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                      <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                         Agenda do chat
-                      </p>
-                      <h3 className="mt-2 text-lg font-semibold leading-tight text-[var(--text-primary)]">
+                      </Text>
+                      <Heading level={3} className="mt-2 text-lg font-semibold leading-tight text-[var(--text-primary)]">
                         Acompanhamento contextual
-                      </h3>
-                      <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                      </Heading>
+                      <Text className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                         Lembretes do lead e dos contratos ligados a esta conversa, com foco no próximo passo operacional.
-                      </p>
+                      </Text>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -621,8 +622,8 @@ export default function WhatsAppLeadDrawer({
                         <div key={section.id} className="space-y-3">
                           <div className="flex items-center justify-between gap-3 px-1">
                             <div>
-                              <p className={`text-sm font-semibold ${section.toneClassName}`}>{section.title}</p>
-                              <p className="text-xs text-[var(--text-muted)]">{section.subtitle}</p>
+                              <Text className={`text-sm font-semibold ${section.toneClassName}`}>{section.title}</Text>
+                              <Text className="text-xs text-[var(--text-muted)]">{section.subtitle}</Text>
                             </div>
                             <Badge tone="neutral" size="sm">{section.items.length}</Badge>
                           </div>
@@ -646,10 +647,10 @@ export default function WhatsAppLeadDrawer({
               <Surface variant="muted" padding="sm" className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
                 <Info className="mt-0.5 h-5 w-5 shrink-0 text-[var(--brand-primary)]" />
                 <div>
-                  <p className="font-semibold text-[var(--text-primary)]">Nenhum lead vinculado</p>
-                  <p className="mt-1 leading-6 text-[var(--text-muted)]">
+                  <Text className="font-semibold text-[var(--text-primary)]">Nenhum lead vinculado</Text>
+                  <Text className="mt-1 leading-6 text-[var(--text-muted)]">
                     Procure um contato já cadastrado para vincular esta conversa e atualizar o atendimento sem sair daqui.
-                  </p>
+                  </Text>
                 </div>
               </Surface>
 
@@ -672,14 +673,14 @@ export default function WhatsAppLeadDrawer({
                     <div className="flex items-start gap-3">
                       <LeadAvatar label={suggestedLead.nome_completo || suggestedLead.telefone || '?'} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
+                        <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
                           Sugestão para esta conversa
-                        </p>
-                        <p className="mt-1 flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                        </Text>
+                        <Text className="mt-1 flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                           <LeadFavoriteBadge favorito={suggestedLead.favorito} />
                           {suggestedLead.nome_completo || 'Lead sem nome'}
-                        </p>
-                        <p className="truncate text-xs text-[var(--text-muted)]">{suggestedLead.telefone}</p>
+                        </Text>
+                        <Text className="truncate text-xs text-[var(--text-muted)]">{suggestedLead.telefone}</Text>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <Badge
                             tone="neutral"
@@ -708,8 +709,8 @@ export default function WhatsAppLeadDrawer({
                   <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-[var(--text-primary)]">Não foi possível buscar leads.</p>
-                      <p className="mt-1 text-sm leading-6">O resultado vazio não confirma que não existem leads. Tente novamente.</p>
+                      <Text className="font-semibold text-[var(--text-primary)]">Não foi possível buscar leads.</Text>
+                      <Text className="mt-1 text-sm leading-6">O resultado vazio não confirma que não existem leads. Tente novamente.</Text>
                       <Button variant="secondary" size="sm" className="mt-3" onClick={onRetrySearch}>
                         <RefreshCw className="kds-control-icon" aria-hidden="true" />
                         Tentar novamente
@@ -731,11 +732,11 @@ export default function WhatsAppLeadDrawer({
                       <Surface key={lead.id} variant="muted" padding="sm" className="flex items-center gap-3">
                         <LeadAvatar label={lead.nome_completo || lead.telefone || '?'} />
                         <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+                          <Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                             <LeadFavoriteBadge favorito={lead.favorito} />
                             {lead.nome_completo || 'Lead sem nome'}
-                          </p>
-                          <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
+                          </Text>
+                          <Text className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</Text>
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
                             <Badge
                               tone="neutral"

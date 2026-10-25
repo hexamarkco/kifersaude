@@ -1,3 +1,5 @@
+import { Text } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import type { MutableRefObject, ReactNode, UIEventHandler } from 'react';
 import { ChevronDown, ChevronUp, Forward, Loader2, Smile, Star } from 'lucide-react';
 
@@ -204,7 +206,7 @@ export function WhatsAppMessageThread({
                         >
                           <div className="relative max-w-[82%] pb-2">
                             {isGroupChatMessage(selectedChat, lastMessage) && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
-                              <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</p>
+                              <Text className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{lastMessage.sender_name}</Text>
                             ) : null}
                             <div className={`whatsapp-inbox-media-message ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
                               <WhatsAppMediaGroupBody
@@ -255,7 +257,7 @@ export function WhatsAppMessageThread({
                           {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
                         </span>
                         {message.direction === 'outbound' || showEditAction || showDeleteAction || showReplyForwardActions ? (
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             ref={(node) => {
                               if (node) {
                                 messageActionTriggerRefs.current[message.id] = node;
@@ -276,10 +278,10 @@ export function WhatsAppMessageThread({
                             title="Mais acoes"
                           >
                             <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
-                          </button>
+                          </ActionSurface>
                         ) : null}
                         {showReplyForwardActions ? (
-                          <button
+                          <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => void handleToggleStarMessage(message)}
                             disabled={starringMessageIds.has(message.id)}
@@ -294,7 +296,7 @@ export function WhatsAppMessageThread({
                             title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
                           >
                             {starringMessageIds.has(message.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />}
-                        </button>
+                        </ActionSurface>
                         ) : null}
                         {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
                           <span className="order-4 inline-flex">
@@ -327,7 +329,7 @@ export function WhatsAppMessageThread({
                           <div className="relative">
                             {message.direction !== 'system' && message.external_message_id ? (
                               <>
-                                <button
+                                <ActionSurface variant="plain" padding="none"
                                   ref={(node) => {
                                     if (node) {
                                       reactionTriggerRefs.current[message.id] = node;
@@ -342,19 +344,19 @@ export function WhatsAppMessageThread({
                                   title="Reagir"
                                 >
                                   <Smile className="h-4 w-4" />
-                                </button>
+                                </ActionSurface>
 
                               </>
                             ) : null}
 
                             {isGroupMessage && message.sender_name ? (
-                              <p className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</p>
+                              <Text className="mb-1 px-1 text-xs font-semibold text-[var(--brand-primary)]">{message.sender_name}</Text>
                             ) : null}
                             {isMessageForwarded(message) ? (
-                              <p className="mb-1 flex items-center gap-1 px-1 text-xs italic text-[var(--text-secondary)]">
+                              <Text className="mb-1 flex items-center gap-1 px-1 text-xs italic text-[var(--text-secondary)]">
                                 <Forward className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                 Encaminhada
-                              </p>
+                              </Text>
                             ) : null}
                             <div
                               className={cx(

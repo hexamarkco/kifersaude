@@ -1,3 +1,4 @@
+import { Heading, Text, FieldLabel, TextLink } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -91,9 +92,9 @@ import {
 } from "../../lib/leadReminderUtils";
 import { downloadXlsx } from "../../lib/xlsxExport";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { LeadsPageSkeleton } from "../../components/ui/panelSkeletons";
+import { LeadsPageSkeleton } from '../../design-system';
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import { LeadStatusMutationLock } from "./shared/leadStatusMutationLock";
 import LeadKanbanBoard from "./components/LeadKanbanBoard";
@@ -1553,8 +1554,8 @@ export default function LeadsManager({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-56 space-y-1 p-2" aria-label="Opções de exportação">
-                  <button type="button" onClick={handleExportCurrentPage} className="kds-popover-menu-item">Exportar página atual</button>
-                  <button type="button" onClick={handleExportFilteredLeads} className="kds-popover-menu-item">Exportar todos os resultados</button>
+                  <Button variant="ghost" type="button" onClick={handleExportCurrentPage} className="kds-popover-menu-item">Exportar página atual</Button>
+                  <Button variant="ghost" type="button" onClick={handleExportFilteredLeads} className="kds-popover-menu-item">Exportar todos os resultados</Button>
                 </PopoverContent>
               </Popover>
               <OperationalMetricChip
@@ -1610,13 +1611,13 @@ export default function LeadsManager({
               <details className="kds-leads-advanced-filters group">
                 <summary className="kds-leads-advanced-summary cursor-pointer list-none">
                   <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between gap-3 px-4 py-2 transition-colors sm:inline-flex sm:justify-start">
-                    <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                    <Heading level={4} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                       <Filter className="w-4 h-4" />
                       Filtros avançados
                       {advancedFilterCount > 0 && (
                         <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>
                       )}
-                    </h4>
+                    </Heading>
                     <span className="text-xs transition-transform group-open:rotate-180">
                       ▼
                     </span>
@@ -1731,15 +1732,15 @@ export default function LeadsManager({
           <Surface data-panel-animate>
             <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="kds-op-section-label">
+                <Text className="kds-op-section-label">
                   Carteira em foco
-                </p>
-                <h3 className="kds-op-panel-title mt-2">
+                </Text>
+                <Heading level={3} className="kds-op-panel-title mt-2">
                   {contentSectionTitle}
-                </h3>
-                <p className="kds-op-lead-muted mt-1 max-w-3xl text-sm">
+                </Heading>
+                <Text className="kds-op-lead-muted mt-1 max-w-3xl text-sm">
                   {contentSectionDescription}
-                </p>
+                </Text>
               </div>
 
               <div className="kds-leads-list-summary flex flex-wrap gap-2">
@@ -1756,7 +1757,7 @@ export default function LeadsManager({
                   title={`Página ${currentPage} de ${totalPages}`}
                 />
                 {canSelectLeads && paginatedLeads.length > 0 && (
-                  <label
+                  <FieldLabel
                     className="kds-op-chip kds-leads-select-page cursor-pointer"
                   >
                     <Checkbox
@@ -1769,7 +1770,7 @@ export default function LeadsManager({
                         ? "Página selecionada"
                         : "Selecionar página"}
                     </span>
-                  </label>
+                  </FieldLabel>
                 )}
                 {selectedLeadIds.length > 0 && (
                   <OperationalMetricChip value={selectedLeadIds.length} label="selecionados" active />
@@ -1783,14 +1784,14 @@ export default function LeadsManager({
                     <span className="kds-op-bulk-title">
                       {selectedLeadIds.length} lead(s) selecionado(s)
                     </span>
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       onClick={clearSelection}
                       disabled={isBulkUpdating}
                       className="kds-leads-bulk-clear"
                     >
                       Limpar seleção
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="kds-leads-bulk-body">
@@ -1934,14 +1935,14 @@ export default function LeadsManager({
                               className="mt-0.5"
                               onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
                             />
-                            <button
+                            <Button variant="ghost"
                               type="button"
                               onClick={() => setSelectedLead(lead)}
-                              className="block max-w-72 text-left transition-colors hover:text-[var(--brand-primary)]"
+                              className="block max-w-72 text-left transition-colors"
                             >
                               <span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span>
                               <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span>
-                            </button>
+                            </Button>
                           </div>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
                         </TableCell>
@@ -2002,9 +2003,9 @@ export default function LeadsManager({
                               size="sm"
                               onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
                             />
-                            <h3 className="kds-op-lead-title">
+                            <Heading level={3} className="kds-op-lead-title">
                               {lead.nome_completo}
-                            </h3>
+                            </Heading>
                             {leadContractIds.has(lead.id) && (
                               <Badge tone="info" title="Contrato cadastrado para este lead">
                                 <FileText className="h-3.5 w-3.5" />
@@ -2028,7 +2029,7 @@ export default function LeadsManager({
                           <div className="kds-op-lead-meta grid grid-cols-2 gap-x-3 gap-y-2.5">
                             <div className="col-span-2 min-[480px]:col-span-1 flex items-center gap-2 break-words">
                               {lead.telefone && (
-                                <a
+                                <TextLink
                                   href={
                                     getWhatsappLink(lead.telefone) || undefined
                                   }
@@ -2038,7 +2039,7 @@ export default function LeadsManager({
                                   aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
                                 >
                                   <MessageCircle className="w-4 h-4" />
-                                </a>
+                                </TextLink>
                               )}
                               <span>{lead.telefone}</span>
                             </div>

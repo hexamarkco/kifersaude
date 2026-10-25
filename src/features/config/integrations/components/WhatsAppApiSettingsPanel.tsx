@@ -1,3 +1,4 @@
+import { Text, Heading, TextLink } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Copy,
@@ -13,9 +14,9 @@ import {
   type AutoContactSettings,
 } from "../../../../lib/autoContactService";
 import type { IntegrationSetting } from "../../domain/types";
-import { WhatsAppApiSkeleton } from "../../../../components/ui/panelSkeletons";
+import { WhatsAppApiSkeleton } from '../../../../design-system';
 import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../../../design-system';
 import { toast } from "../../../../lib/toast";
 import { formatConnectionStatusLabel } from '../../../communication/whatsapp';
 import {
@@ -252,10 +253,10 @@ export default function WhatsAppApiSettingsPanel() {
         <div className="flex items-start gap-3">
         <Info className="mt-1 h-5 w-5" />
         <div className="space-y-1 text-sm">
-          <p className="font-semibold">
+          <Text className="font-semibold">
             Integração de automação não encontrada.
-          </p>
-          <p>Peça ao responsável pelo sistema para concluir a configuração do WhatsApp.</p>
+          </Text>
+          <Text>Peça ao responsável pelo sistema para concluir a configuração do WhatsApp.</Text>
         </div>
         </div>
       </Alert>
@@ -275,10 +276,10 @@ export default function WhatsAppApiSettingsPanel() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="lg:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] p-4">
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Conexão do WhatsApp</h3>
-              <p className="text-sm text-[var(--text-secondary)]">{formatConnectionStatusLabel(channelStatus)}{channelPhone ? ` · ${channelPhone}` : ''}</p>
-              <p className="text-xs text-[var(--text-muted)]">Confira a conexão antes de ativar as mensagens automáticas.</p>
-              <p className="text-xs text-[var(--text-secondary)]">{webhookDiagnostics.status === "receiving_messages" ? "As mensagens estão chegando ao sistema." : webhookDiagnostics.status === "error" ? "Houve um problema ao receber a última atualização. Peça ajuda ao suporte." : "Ainda não há recebimento de mensagens confirmado. Confira a conexão antes de usar as automações."}</p>
+              <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Conexão do WhatsApp</Heading>
+              <Text className="text-sm text-[var(--text-secondary)]">{formatConnectionStatusLabel(channelStatus)}{channelPhone ? ` · ${channelPhone}` : ''}</Text>
+              <Text className="text-xs text-[var(--text-muted)]">Confira a conexão antes de ativar as mensagens automáticas.</Text>
+              <Text className="text-xs text-[var(--text-secondary)]">{webhookDiagnostics.status === "receiving_messages" ? "As mensagens estão chegando ao sistema." : webhookDiagnostics.status === "error" ? "Houve um problema ao receber a última atualização. Peça ajuda ao suporte." : "Ainda não há recebimento de mensagens confirmado. Confira a conexão antes de usar as automações."}</Text>
             </div>
             <Button variant="secondary" onClick={handleRefreshHealth} loading={refreshingHealth}>Atualizar conexão</Button>
           </div>
@@ -288,10 +289,10 @@ export default function WhatsAppApiSettingsPanel() {
                 <div className="text-sm font-medium text-[var(--text-primary)]">
                   Ativar canal para automações
                 </div>
-                <p className="text-xs text-[var(--text-muted)]">
+                <Text className="text-xs text-[var(--text-muted)]">
                   Quando desligado, nenhum lead entra nos fluxos mesmo com a
                   automação marcada como ativa.
-                </p>
+                </Text>
               </div>
               <Switch
                 checked={enabled}
@@ -299,22 +300,22 @@ export default function WhatsAppApiSettingsPanel() {
                 aria-label="Ativar canal para automações"
               />
             </div>
-            <p className="mt-3 text-xs text-[var(--text-muted)]">
+            <Text className="mt-3 text-xs text-[var(--text-muted)]">
               O disparo automático dos fluxos continua sendo controlado em
               Configurações &gt; Automações.
-            </p>
+            </Text>
           </Card>
           <Alert
             className="h-full"
             tone={tokenConfigured ? "success" : "warning"}
           >
             <div className="space-y-1 text-sm">
-              <p className="font-semibold">Acesso ao serviço de WhatsApp</p>
-              <p>
+              <Text className="font-semibold">Acesso ao serviço de WhatsApp</Text>
+              <Text>
                 {tokenConfigured
                   ? "A chave de acesso está configurada e protegida no sistema."
                   : "Peça ao responsável pelo sistema para configurar a chave de acesso e concluir a conexão."}
-              </p>
+              </Text>
             </div>
           </Alert>
           <details className="lg:col-span-2 space-y-3">
@@ -327,20 +328,20 @@ export default function WhatsAppApiSettingsPanel() {
                 <div className="flex items-start gap-3">
                   <Info className="mt-0.5 h-5 w-5 shrink-0" />
                   <div className="space-y-2 text-sm">
-                    <p className="font-semibold">
+                    <Text className="font-semibold">
                       Como obter seu token da Whapi Cloud:
-                    </p>
+                    </Text>
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li>
                         Acesse{" "}
-                        <a
+                        <TextLink
                           href="https://whapi.cloud"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="underline"
                         >
                           whapi.cloud
-                        </a>{" "}
+                        </TextLink>{" "}
                         e crie uma conta
                       </li>
                       <li>Após o login, vá para o painel de controle</li>
@@ -358,15 +359,15 @@ export default function WhatsAppApiSettingsPanel() {
                   <div className="text-sm font-medium text-[var(--text-primary)]">
                     Configuração de recebimento (webhook)
                   </div>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <Text className="text-xs text-[var(--text-muted)]">
                     {webhookAuthentication === "header"
                       ? `Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header ${webhookHeaderName || "X-Kifer-Webhook-Secret"}.`
                       : "Cole esta URL exatamente como está no campo URL da Whapi (modo Body, eventos messages, statuses e channel). O segredo já vem embutido nela — não precisa configurar header."}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  </Text>
+                  <Text className="text-xs text-[var(--text-muted)]">
                     Status atual: <span className="font-semibold text-[var(--text-secondary)]">{formatConnectionStatusLabel(channelStatus)}</span>
                     {channelPhone ? ` · ${channelPhone}` : ""}
-                  </p>
+                  </Text>
                 </div>
                 <IconButton
                   variant="secondary"
@@ -401,50 +402,50 @@ export default function WhatsAppApiSettingsPanel() {
                 />
               </div>
               {webhookAuthentication === "header" ? (
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <Text className="mt-2 text-xs text-[var(--text-muted)]">
                   O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
-                </p>
+                </Text>
               ) : (
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                <Text className="mt-2 text-xs text-[var(--text-muted)]">
                   Se ao salvar essa URL na Whapi ela oferecer um campo de header customizado, prefira configurar {webhookHeaderName || "X-Kifer-Webhook-Secret"} lá e remover o `secret` da URL — mas se não houver esse campo (comum no plano/tela padrão), pode colar a URL como está.
-                </p>
+                </Text>
               )}
               <div className="mt-3">
                 {webhookDiagnostics.status === "message_event_missing" ? (
                   <Alert tone="warning">
                     <div className="space-y-1 text-xs">
-                      <p className="font-semibold">O webhook responde, mas nenhuma mensagem chegou</p>
-                      <p>
+                      <Text className="font-semibold">O webhook responde, mas nenhuma mensagem chegou</Text>
+                      <Text>
                         Na Whapi, edite este webhook e habilite o evento <strong>messages</strong>,
                         ação <strong>post</strong>, método <strong>POST</strong> e modo <strong>Body</strong>.
                         O evento de canal sozinho atualiza QR/AUTH, mas não entrega mensagens ao Inbox.
-                      </p>
+                      </Text>
                       {webhookDiagnostics.lastWebhookAt ? (
-                        <p>Último evento geral: {formatDiagnosticDate(webhookDiagnostics.lastWebhookAt)}.</p>
+                        <Text>Último evento geral: {formatDiagnosticDate(webhookDiagnostics.lastWebhookAt)}.</Text>
                       ) : null}
                     </div>
                   </Alert>
                 ) : webhookDiagnostics.status === "error" ? (
                   <Alert tone="danger">
                     <div className="space-y-1 text-xs">
-                      <p className="font-semibold">O último webhook falhou</p>
-                      <p>{webhookDiagnostics.lastError || "Consulte os logs da Edge Function."}</p>
+                      <Text className="font-semibold">O último webhook falhou</Text>
+                      <Text>{webhookDiagnostics.lastError || "Consulte os logs da Edge Function."}</Text>
                     </div>
                   </Alert>
                 ) : webhookDiagnostics.status === "receiving_messages" ? (
                   <Alert tone="success">
                     <div className="space-y-1 text-xs">
-                      <p className="font-semibold">Eventos de mensagem estão chegando</p>
+                      <Text className="font-semibold">Eventos de mensagem estão chegando</Text>
                       {webhookDiagnostics.lastMessageWebhookAt ? (
-                        <p>Último evento persistido: {formatDiagnosticDate(webhookDiagnostics.lastMessageWebhookAt)}.</p>
+                        <Text>Último evento persistido: {formatDiagnosticDate(webhookDiagnostics.lastMessageWebhookAt)}.</Text>
                       ) : null}
                     </div>
                   </Alert>
                 ) : (
                   <Alert tone="info">
-                    <p className="text-xs">
+                    <Text className="text-xs">
                       Aguardando a primeira mensagem real. O botão de check da Whapi não testa o evento messages.post.
-                    </p>
+                    </Text>
                   </Alert>
                 )}
               </div>

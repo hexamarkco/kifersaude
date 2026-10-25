@@ -1,3 +1,4 @@
+import { Text } from '../design-system';
 import { ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -41,8 +42,8 @@ export default function ObserverRestriction({
         <Surface variant="warning" padding="sm" className="flex items-center gap-3">
           <Lock className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
           <div>
-            <p className="text-sm font-medium text-[var(--text-primary)]">Acesso Restrito</p>
-            <p className="text-xs">Seu perfil nao possui permissao para {action}</p>
+            <Text className="text-sm font-medium text-[var(--text-primary)]">Acesso Restrito</Text>
+            <Text className="text-xs">Seu perfil nao possui permissao para {action}</Text>
           </div>
         </Surface>
       </div>
@@ -64,8 +65,8 @@ export function ObserverBanner() {
       <div className="flex items-center gap-3">
         <Eye className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
         <div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">Modo somente leitura</p>
-          <p className="text-xs">Seu perfil pode consultar os dados, mas nao possui permissao de edicao neste modulo.</p>
+          <Text className="text-sm font-medium text-[var(--text-primary)]">Modo somente leitura</Text>
+          <Text className="text-xs">Seu perfil pode consultar os dados, mas nao possui permissao de edicao neste modulo.</Text>
         </div>
       </div>
     </Alert>

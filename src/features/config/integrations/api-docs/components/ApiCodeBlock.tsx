@@ -1,3 +1,4 @@
+import { Text } from '../../../../../design-system';
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { Button } from '../../../../../design-system';
@@ -16,7 +17,7 @@ export function ApiCodeBlock({ title, value }: { title: string; value: string })
           {message === 'Copiado' ? <Check size={14} /> : <Copy size={14} />} Copiar
         </Button>
       </div>
-      {message && <p className="kds-api-copy-message" role="status">{message}</p>}
+      {message && <Text className="kds-api-copy-message" role="status">{message}</Text>}
       <pre tabIndex={0} aria-label={title}>{value}</pre>
     </div>
   );

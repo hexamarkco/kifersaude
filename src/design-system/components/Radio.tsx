@@ -1,4 +1,4 @@
-import { forwardRef, createContext, useContext, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, createContext, useContext, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -50,21 +50,24 @@ export function RadioGroup({
 }
 
 export type RadioProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
-  value: string;
+  value?: string;
   label?: ReactNode;
   description?: string;
 };
 
 const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
-  { value: radioValue, label, description, className, disabled: radioDisabled, ...props },
+  { value: radioValue, label, description, className, disabled: radioDisabled, checked, defaultChecked, onChange, ...props },
   ref,
 ) {
   const ctx = useContext(RadioGroupContext);
   const isDisabled = radioDisabled || ctx.disabled;
-  const isChecked = ctx.value === radioValue;
+  const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked ?? false);
+  const grouped = Boolean(ctx.name);
+  const isChecked = grouped ? ctx.value === radioValue : (checked ?? uncontrolledChecked);
+  const Element = label || description ? 'label' : 'span';
 
   return (
-    <label
+    <Element
       className={cx(
         'kds-radio',
         isDisabled && 'kds-radio-disabled',
@@ -79,7 +82,11 @@ const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
         value={radioValue}
         checked={isChecked}
         disabled={isDisabled}
-        onChange={() => ctx.onValueChange?.(radioValue)}
+        onChange={(event) => {
+          if (grouped && radioValue !== undefined) ctx.onValueChange?.(radioValue);
+          if (!grouped) setUncontrolledChecked(event.target.checked);
+          onChange?.(event);
+        }}
         className="kds-radio-input"
         {...props}
       />
@@ -90,7 +97,7 @@ const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
           {description && <span className="kds-radio-description">{description}</span>}
         </span>
       )}
-    </label>
+    </Element>
   );
 });
 

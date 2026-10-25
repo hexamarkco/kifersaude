@@ -1,3 +1,4 @@
+import { Text } from '../../../design-system';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -7,7 +8,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
+import { MonthlyTrendChart } from '../../../design-system';
 import {
   FilterSelect,
   SectionHeader,
@@ -143,8 +144,8 @@ export function DashboardTrendSection({
         <div className="min-w-0">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{selectedMetricContent.label}</p>
-              <p className="mt-1 text-xs text-[var(--text-muted)]">{selectedMetricContent.description}</p>
+              <Text className="text-sm font-semibold text-[var(--text-primary)]">{selectedMetricContent.label}</Text>
+              <Text className="mt-1 text-xs text-[var(--text-muted)]">{selectedMetricContent.description}</Text>
             </div>
             {latestMonthlyPoint && (
               <div className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-1.5">
@@ -195,16 +196,16 @@ export function DashboardTrendSection({
                     <ActionIcon className={`h-4 w-4 ${card.captionClassName}`} aria-hidden="true" />
                   )}
                 </div>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                <Text className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   {card.label}
-                </p>
-                <p className="mt-1 truncate text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+                </Text>
+                <Text className="mt-1 truncate text-xl font-semibold tabular-nums text-[var(--text-primary)]">
                   {card.value}
-                </p>
-                <p className={`mt-1 text-xs font-medium ${card.captionClassName}`}>{card.caption}</p>
-                <p className="mt-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
+                </Text>
+                <Text className={`mt-1 text-xs font-medium ${card.captionClassName}`}>{card.caption}</Text>
+                <Text className="mt-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
                   {card.meta}
-                </p>
+                </Text>
               </div>
             );
           })}

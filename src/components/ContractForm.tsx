@@ -1,3 +1,5 @@
+import { Heading, Text, FieldLabel } from '../design-system';
+import { Slider, Select } from '../design-system';
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Contract,
@@ -1230,10 +1232,10 @@ export default function ContractForm({
           onSubmit={handleSubmit}
         >
           <Surface variant="muted" padding="sm" className="mb-4">
-            <h4 className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">
+            <Heading level={4} className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">
               <Building2 className="mr-2 h-5 w-5 text-[var(--brand-primary)]" />
               Informações do Contrato
-            </h4>
+            </Heading>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Código do Contrato *">
                 <Input
@@ -1631,15 +1633,15 @@ export default function ContractForm({
                                   })}
                                 </Badge>
                               </div>
-                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                              <Text className="mt-1 text-sm text-[var(--text-secondary)]">
                                 {adj.motivo}
-                              </p>
-                              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              </Text>
+                              <Text className="mt-1 text-xs text-[var(--text-muted)]">
                                 {adj.created_by} -{" "}
                                 {new Date(adj.created_at).toLocaleDateString(
                                   "pt-BR",
                                 )}
-                              </p>
+                              </Text>
                             </div>
                           </div>
                           <IconButton
@@ -1654,9 +1656,9 @@ export default function ContractForm({
                       ))}
                     </div>
                   ) : (
-                    <p className="mb-3 text-sm italic text-[var(--text-muted)]">
+                    <Text className="mb-3 text-sm italic text-[var(--text-muted)]">
                       Nenhum ajuste aplicado
-                    </p>
+                    </Text>
                   )}
 
                   {formData.mensalidade_total && (
@@ -1692,8 +1694,8 @@ export default function ContractForm({
                       )}
                     </div>
                   </div>
-                  <input
-                    type="range"
+                  <Slider
+
                     min="0"
                     max="10"
                     step="0.1"
@@ -1704,7 +1706,7 @@ export default function ContractForm({
                         comissao_multiplicador: e.target.value,
                       })
                     }
-                    className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--bg-inset)] accent-[var(--brand-primary)]"
+                    className="w-full cursor-pointer appearance-none accent-[var(--brand-primary)]"
                   />
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <span className="text-xs text-[var(--text-muted)]">
@@ -1759,24 +1761,24 @@ export default function ContractForm({
                 <Surface variant="warning" padding="sm" className="md:col-span-2">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      <Text className="text-sm font-semibold text-[var(--text-primary)]">
                         Taxa de adesão
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      </Text>
+                      <Text className="mt-1 text-xs text-[var(--text-muted)]">
                         Nos contratos coletivos por adesão, os 100% iniciais
                         podem ser tratados à parte da mensalidade.
-                      </p>
+                      </Text>
                     </div>
                     <Surface padding="none" className="px-3 py-2 text-right">
-                      <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                      <Text className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Prévia
-                      </p>
-                      <p className="text-lg font-semibold text-[var(--warning-text)]">
+                      </Text>
+                      <Text className="text-lg font-semibold text-[var(--warning-text)]">
                         R${" "}
                         {signupFeePreview.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
-                      </p>
+                      </Text>
                     </Surface>
                   </div>
 
@@ -1867,7 +1869,7 @@ export default function ContractForm({
                   Forma de recebimento da comissão
                 </span>
                 <Surface variant="muted" padding="sm">
-                  <label className="flex items-start gap-3">
+                  <FieldLabel className="flex items-start gap-3">
                   <Checkbox
                     checked={formData.comissao_recebimento_adiantado}
                     onChange={(e) =>
@@ -1879,29 +1881,29 @@ export default function ContractForm({
                     className="mt-1"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    <Text className="text-sm font-semibold text-[var(--text-primary)]">
                       Receber comissão adiantada (pagamento único)
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    </Text>
+                    <Text className="mt-1 text-xs text-[var(--text-secondary)]">
                       Quando marcado, todo o valor previsto será considerado no
                       primeiro mês. Desmarque para distribuir a comissão em
                       parcelas com percentuais e datas específicas.
-                    </p>
+                    </Text>
                   </div>
-                  </label>
+                  </FieldLabel>
                 </Surface>
 
                 {!formData.comissao_recebimento_adiantado && (
                   <div className="mt-3 space-y-3">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">
                           Parcelas personalizadas
-                        </p>
-                        <p className="text-xs text-[var(--text-secondary)]">
+                        </Text>
+                        <Text className="text-xs text-[var(--text-secondary)]">
                           Divida a comissão em 2 ou mais pagamentos, iguais ou
                           não, sempre respeitando o total da comissão prevista.
-                        </p>
+                        </Text>
                       </div>
                       <Button
                         type="button"
@@ -1958,12 +1960,12 @@ export default function ContractForm({
                                     }
                                     placeholder="0,00"
                                   />
-                                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                                  <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                                     Valor informado: R${" "}
                                     {value.toLocaleString("pt-BR", {
                                       minimumFractionDigits: 2,
                                     })}
-                                  </p>
+                                  </Text>
                                 </Field>
                                 <Field label="Data de pagamento">
                                   <DateTimePicker
@@ -1978,9 +1980,9 @@ export default function ContractForm({
                                     }
                                     placeholder="Selecionar data"
                                   />
-                                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                                  <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
                                     Defina o dia previsto para esta parcela.
-                                  </p>
+                                  </Text>
                                 </Field>
                                 <Surface variant="warning" padding="sm" className="flex flex-col justify-center">
                                   <span className="text-[11px] text-[var(--warning-text)]">
@@ -2010,10 +2012,10 @@ export default function ContractForm({
 
                     <Surface variant="muted" padding="sm" className="flex flex-col text-sm sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-medium text-[var(--text-secondary)]">
+                        <Text className="font-medium text-[var(--text-secondary)]">
                           Total das parcelas
-                        </p>
-                        <p className="text-xs text-[var(--text-muted)]">
+                        </Text>
+                        <Text className="text-xs text-[var(--text-muted)]">
                           {totalCommissionFromInstallments.toLocaleString(
                             "pt-BR",
                             {
@@ -2021,14 +2023,14 @@ export default function ContractForm({
                               currency: "BRL",
                             },
                           )}
-                        </p>
-                        <p className="text-xs text-[var(--text-muted)]">
+                        </Text>
+                        <Text className="text-xs text-[var(--text-muted)]">
                           Restante disponível:{" "}
                           {remainingCommissionValue.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           })}
-                        </p>
+                        </Text>
                       </div>
                       {totalInstallmentValue > commissionExpectedValue && (
                         <div className="mt-2 flex items-center space-x-2 text-[var(--warning-text)] sm:mt-0">
@@ -2059,7 +2061,7 @@ export default function ContractForm({
               </Field>
 
               <div>
-                <label className="mt-4 flex items-center space-x-2 cursor-pointer">
+                <FieldLabel className="mt-4 flex items-center space-x-2 cursor-pointer">
                   <Checkbox
                     checked={formData.bonus_por_vida_aplicado}
                     onChange={(e) => handleToggleBonus(e.target.checked)}
@@ -2067,23 +2069,23 @@ export default function ContractForm({
                    <span className="text-sm font-medium text-[var(--text-secondary)]">
                     Aplicar Bônus por Vida
                   </span>
-                </label>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                </FieldLabel>
+                <Text className="mt-1 text-xs text-[var(--text-muted)]">
                   Pagamento único por vida do contrato
-                </p>
+                </Text>
               </div>
 
               {formData.bonus_por_vida_aplicado && (
                 <Surface variant="strong" padding="sm" className="xl:col-span-2">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      <Text className="text-sm font-semibold text-[var(--text-primary)]">
                         Distribuição do bônus
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      </Text>
+                      <Text className="mt-1 text-xs text-[var(--text-muted)]">
                         Cadastre uma faixa por valor. Exemplo: 1 vida com R$
                         200,00 e outra com R$ 120,00.
-                      </p>
+                      </Text>
                     </div>
                     <Button
                       type="button"
@@ -2179,31 +2181,31 @@ export default function ContractForm({
 
                   <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                     <Surface padding="sm">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Vidas com bônus
-                      </p>
-                      <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
+                      </Text>
+                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
                         {distributedBonusLives}
-                      </p>
+                      </Text>
                     </Surface>
                     <Surface padding="sm">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Vidas sem bônus
-                      </p>
-                      <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
+                      </Text>
+                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
                         {livesWithoutBonus}
-                      </p>
+                      </Text>
                     </Surface>
                     <Surface padding="sm">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Total previsto
-                      </p>
-                      <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
+                      </Text>
+                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
                         R${" "}
                         {distributedBonusTotal.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
-                      </p>
+                      </Text>
                     </Surface>
                   </div>
 
@@ -2265,12 +2267,9 @@ export default function ContractForm({
               </Field>
 
               <Field label="Responsável pela venda (produção)">
-                <select className="kds-input w-full" value={saleOperator} disabled={Boolean(contract?.sale_operator_user_id)} onChange={(event) => setSaleOperator(event.target.value)}>
-                  <option value="">Escolha no fechamento</option>
-                  {productionOperators.map((operator) => <option key={operator.user_id} value={operator.user_id}>{operator.display_name}</option>)}
-                </select>
-                {productionOperatorsError && <p role="alert">{productionOperatorsError}</p>}
-                <p className="text-xs text-[var(--text-muted)]">O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.</p>
+                <Select value={saleOperator} disabled={Boolean(contract?.sale_operator_user_id)} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolha no fechamento' }, ...productionOperators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
+                {productionOperatorsError && <Text role="alert">{productionOperatorsError}</Text>}
+                <Text className="text-xs text-[var(--text-muted)]">O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.</Text>
               </Field>
 
               <Field label="Observações Internas" className="md:col-span-2">

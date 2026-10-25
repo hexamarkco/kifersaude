@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../../design-system';
 import { useState } from "react";
 import { Brain, Pencil, Power, PowerOff } from "lucide-react";
 
@@ -25,9 +26,9 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
     <>
     <Card className="overflow-hidden">
       <div className="border-b border-[var(--border-subtle)] px-4 py-2.5">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+        <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
           {category.label}
-        </h3>
+        </Heading>
       </div>
       <div className="divide-y divide-[var(--border-subtle)]">
         {category.features.map((feature) => {
@@ -60,9 +61,9 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                   )}
                 </div>
                 {feature.description && (
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)] truncate">
+                  <Text className="mt-0.5 text-xs text-[var(--text-muted)] truncate">
                     {feature.description}
-                  </p>
+                  </Text>
                 )}
               </div>
 

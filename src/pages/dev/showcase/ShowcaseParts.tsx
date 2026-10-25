@@ -1,3 +1,4 @@
+import { Heading, Text, TextLink } from '../../../design-system';
 import { useState, type ReactNode } from 'react';
 import { ArrowRight, Check, Copy, ExternalLink } from 'lucide-react';
 import { Button, IconButton, useToast } from '../../../design-system';
@@ -18,10 +19,10 @@ export function Specimen({
   return (
     <article className={`ds-specimen${wide ? ' ds-specimen-wide' : ''}`}>
       <div className="ds-specimen-heading">
-        <h3>{title}</h3>
+        <Heading level={3}>{title}</Heading>
         <span className="ds-live-dot" title="Componente real do projeto" />
       </div>
-      <p className="ds-description">{description}</p>
+      <Text className="ds-description">{description}</Text>
       <div className="ds-specimen-body">{children}</div>
       <details className="ds-source">
         <summary>Implementação no projeto</summary>
@@ -43,8 +44,8 @@ export function SectionIntro({
   return (
     <div className="ds-section-intro">
       <span className="ds-eyebrow">{number} / KIFER SAÚDE</span>
-      <h1>{title}</h1>
-      <p>{children}</p>
+      <Heading level={1}>{title}</Heading>
+      <Text>{children}</Text>
     </div>
   );
 }
@@ -114,7 +115,7 @@ export function PreviewLink({
   theme: string;
 }) {
   return (
-    <a
+    <TextLink
       className="ds-text-link"
       href={`/design-system?preview=1&pattern=${pattern}&theme=${theme}`}
       target="_blank"
@@ -122,6 +123,6 @@ export function PreviewLink({
     >
       Abrir exemplo
       <ExternalLink size={14} aria-hidden="true" />
-    </a>
+    </TextLink>
   );
 }

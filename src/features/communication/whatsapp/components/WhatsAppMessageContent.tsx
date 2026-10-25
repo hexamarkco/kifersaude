@@ -1,7 +1,9 @@
+import { Text, Audio, Image, TextLink, Video } from '../../../../design-system';
+import { ActionSurface, IconButton } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, Loader2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { Button } from '../../../../design-system';
-import { getPanelButtonClass } from '../../../../components/ui/standards';
+import { getPanelButtonClass } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppMessage } from '../domain/types';
 import { getMessageLocationInfo } from '../domain/messageLocation';
@@ -51,13 +53,13 @@ export function MediaSendingOverlay({
         <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-primary)]" />
         <span>{progress === null ? 'Enviando' : `${progress}%`}</span>
         {onCancel ? (
-          <button
+          <Button variant="ghost"
             type="button"
             onClick={onCancel}
-            className="ml-1 text-[var(--text-secondary)] underline decoration-current/40 underline-offset-2 transition hover:text-[var(--text-primary)]"
+            className="ml-1 underline decoration-current/40 underline-offset-2 transition"
           >
             Cancelar
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>
@@ -189,7 +191,7 @@ export function WhatsAppAudioPlayerCard({
       <span>Transcrevendo...</span>
     </span>
   ) : canTranscribe ? (
-      <button
+      <ActionSurface variant="plain" padding="none"
         type="button"
         onClick={onTranscribe}
         className="whatsapp-inbox-transcribe-button whatsapp-inbox-audio-transcribe-button"
@@ -198,7 +200,7 @@ export function WhatsAppAudioPlayerCard({
       >
         <FileText className="h-3 w-3" aria-hidden="true" />
         <span>{transcriptionStatus === 'failed' ? 'Tentar novamente' : hasTranscription ? 'Retranscrever' : 'Transcrever'}</span>
-      </button>
+      </ActionSurface>
   ) : null;
 
   if (!mediaUrl) {
@@ -208,8 +210,8 @@ export function WhatsAppAudioPlayerCard({
           {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
         </div>
         <div className="min-w-0 flex-1 space-y-1">
-          {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p> : null}
-          <p className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</p>
+          {kind !== 'voice' ? <Text className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</Text> : null}
+          <Text className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
         </div>
         {transcriptionAction ? <div className="shrink-0 self-center">{transcriptionAction}</div> : null}
         {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
@@ -219,29 +221,29 @@ export function WhatsAppAudioPlayerCard({
 
   return (
     <div className={`whatsapp-inbox-audio-native-card relative ${kind === 'voice' ? 'is-voice' : 'is-audio'} ${isPlaying ? 'is-playing' : ''}`}>
-      <audio ref={audioRef} preload="metadata">
+      <Audio ref={audioRef} preload="metadata">
         <source src={mediaUrl} type={mediaMimeType || undefined} />
-      </audio>
+      </Audio>
 
       <div className="min-w-0 flex-1">
         <div className="whatsapp-inbox-audio-native-content">
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             onClick={handleTogglePlayback}
             className="whatsapp-inbox-audio-native-play"
             aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
           >
             {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
-          </button>
+          </ActionSurface>
 
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center justify-between gap-3">
-              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+              <Text className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
-              </p>
+              </Text>
               <div className="flex shrink-0 items-center gap-2">
                 {transcriptionAction}
-                <button
+                <ActionSurface variant="plain" padding="none"
                   type="button"
                   onClick={handleCyclePlaybackRate}
                   className="whatsapp-inbox-audio-speed-trigger"
@@ -249,13 +251,13 @@ export function WhatsAppAudioPlayerCard({
                   title="Clique para mudar a velocidade"
                 >
                   {formatPlaybackRate(playbackRate)}
-                </button>
+                </ActionSurface>
                 <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
                   {formatDurationLabel(Math.round(duration))}
                 </span>
               </div>
             </div>
-            <button
+            <ActionSurface variant="plain" padding="none"
               type="button"
               className="whatsapp-inbox-audio-native-waveform"
               onClick={handleSeek}
@@ -268,10 +270,10 @@ export function WhatsAppAudioPlayerCard({
                   style={{ height: `${Math.max(9, Math.round(bar * 20))}px` }}
                 />
               ))}
-            </button>
-            <p className="mt-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
+            </ActionSurface>
+            <Text className="mt-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
               {formatDurationLabel(Math.round(currentTime))} reproduzidos
-            </p>
+            </Text>
           </div>
         </div>
       </div>
@@ -346,12 +348,12 @@ export function WhatsAppMessageBody({
       {showOriginalText && editInfo.previousText ? (
         <div className="mt-2 grid gap-2">
           <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Antes</p>
+            <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Antes</Text>
             <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-muted)] line-through opacity-85" text={editInfo.previousText} />
           </div>
           {editInfo.currentText ? (
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Depois</p>
+              <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Depois</Text>
               <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]" text={editInfo.currentText} />
             </div>
           ) : null}
@@ -363,27 +365,27 @@ export function WhatsAppMessageBody({
     <>
       {linkPreview.previewImage ? (
         <div className="h-40 w-full overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-inset)]">
-          <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="h-full w-full object-cover" loading="lazy" />
+          <Image src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="h-full w-full object-cover" loading="lazy" />
         </div>
       ) : null}
       <div className="space-y-1.5 px-3 py-3">
-        {linkPreview.title ? <p className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">{linkPreview.title}</p> : null}
-        {linkPreview.description ? <p className="line-clamp-3 text-sm leading-5 text-[var(--text-secondary)]">{linkPreview.description}</p> : null}
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">{linkPreview.domain || 'Link'}</p>
+        {linkPreview.title ? <Text className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">{linkPreview.title}</Text> : null}
+        {linkPreview.description ? <Text className="line-clamp-3 text-sm leading-5 text-[var(--text-secondary)]">{linkPreview.description}</Text> : null}
+        <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">{linkPreview.domain || 'Link'}</Text>
       </div>
     </>
   ) : null;
   const linkPreviewNode = linkPreviewContent
     ? linkPreview?.url
       ? (
-        <a
+        <TextLink
           href={linkPreview.url}
           target="_blank"
           rel="noreferrer"
           className="block w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] transition hover:border-[var(--border-strong)]"
         >
           {linkPreviewContent}
-        </a>
+        </TextLink>
       )
       : (
         <div className="w-[280px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
@@ -396,13 +398,13 @@ export function WhatsAppMessageBody({
     <div className="flex items-start gap-3">
       <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</p>
-        <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</p>
+        <Text className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</Text>
+        <Text className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</Text>
       </div>
     </div>
   ) : null;
   const quotePreviewNode = quoteInfo ? quotedExternalMessageId ? (
-    <button
+    <ActionSurface variant="plain" padding="none"
       type="button"
       onClick={() => onOpenQuotedMessage(quotedExternalMessageId)}
       className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
@@ -410,7 +412,7 @@ export function WhatsAppMessageBody({
       aria-label={`Ir para a mensagem respondida: ${quoteInfo.previewText}`}
     >
       {quotePreviewContent}
-    </button>
+    </ActionSurface>
   ) : (
     <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
       {quotePreviewContent}
@@ -425,32 +427,32 @@ export function WhatsAppMessageBody({
           <UserRound className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
             {contactCardInfo.kind === 'contact'
               ? 'Contato compartilhado'
               : contactCardInfo.count > 0
                 ? `${contactCardInfo.count} contatos compartilhados`
                 : 'Contatos compartilhados'}
-          </p>
+          </Text>
           {visibleContactItems.length > 0 ? (
             <div className="space-y-2">
               {visibleContactItems.map((item, index) => (
                 <div key={`${item.name ?? 'contact'}:${item.phoneNumber ?? index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5">
-                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{item.name || 'Contato sem nome'}</p>
+                  <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{item.name || 'Contato sem nome'}</Text>
                   {item.phoneNumber ? (
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
+                    <Text className="mt-1 text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</Text>
                   ) : null}
                   {item.phoneNumber ? (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <button
+                      <Button variant="ghost"
                         type="button"
                         onClick={() => onOpenSharedContactChat(item)}
                         disabled={sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
                         className={inboxInlineActionClassName}
                       >
                         {sharedContactActionKey === `open:${item.phoneNumber}` ? 'Abrindo...' : 'Abrir chat'}
-                      </button>
-                      <button
+                      </Button>
+                      <IconButton variant="ghost" size="sm" aria-label={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
                         type="button"
                         onClick={() => onSaveSharedContact(item)}
                         disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
@@ -458,17 +460,17 @@ export function WhatsAppMessageBody({
                         title={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
                       >
                         {sharedContactActionKey === `save:${item.phoneNumber}` ? 'Salvando...' : 'Salvar contato'}
-                      </button>
+                      </IconButton>
                     </div>
                   ) : null}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">{message.text_content || '[Contato]'}</p>
+            <Text className="text-sm leading-6 text-[var(--text-secondary)]">{message.text_content || '[Contato]'}</Text>
           )}
           {hiddenContactCount > 0 ? (
-            <p className="text-xs text-[var(--text-secondary)]">+{hiddenContactCount} contato(s)</p>
+            <Text className="text-xs text-[var(--text-secondary)]">+{hiddenContactCount} contato(s)</Text>
           ) : null}
         </div>
       </div>
@@ -480,31 +482,31 @@ export function WhatsAppMessageBody({
       <div className="flex items-start gap-2">
         <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-70" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Opção selecionada</p>
-          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">
+          <Text className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Opção selecionada</Text>
+          <Text className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">
             {interactiveInfo.selectedReply?.title || interactiveInfo.selectedReply?.id || '[Resposta interativa]'}
-          </p>
+          </Text>
         </div>
       </div>
     ) : (
       <div className="w-[280px] max-w-full overflow-hidden">
         {interactiveInfo.header ? (
-          <p className="border-b border-[var(--border-subtle)] py-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">
+          <Text className="border-b border-[var(--border-subtle)] py-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">
             {interactiveInfo.header}
-          </p>
+          </Text>
         ) : null}
         <div className="space-y-1.5 py-1">
           {interactiveInfo.body ? (
             <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={interactiveInfo.body} />
           ) : null}
           {interactiveInfo.footer ? (
-            <p className="text-xs text-[var(--text-muted)]">{interactiveInfo.footer}</p>
+            <Text className="text-xs text-[var(--text-muted)]">{interactiveInfo.footer}</Text>
           ) : null}
         </div>
         {interactiveInfo.buttons.length > 0 ? (
           <div className="border-t border-[var(--border-subtle)]">
             {interactiveInfo.buttons.map((button, index) => (
-              <button
+              <ActionSurface variant="plain" padding="none"
                 type="button"
                 key={button.id ?? `${button.title}-${index}`}
                 onClick={() => onSelectInteractiveReply(message, button)}
@@ -515,7 +517,7 @@ export function WhatsAppMessageBody({
                 )}
               >
                 {button.title || button.id}
-              </button>
+              </ActionSurface>
             ))}
           </div>
         ) : null}
@@ -524,22 +526,22 @@ export function WhatsAppMessageBody({
             {interactiveInfo.sections.map((section, sectionIndex) => (
               <div key={section.title ?? `section-${sectionIndex}`} className="py-2.5">
                 {section.title ? (
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{section.title}</p>
+                  <Text className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{section.title}</Text>
                 ) : null}
                 <div className="mt-1.5 space-y-1.5">
                   {section.rows.map((row, rowIndex) => (
-                    <button
+                    <ActionSurface variant="plain" padding="none"
                       type="button"
                       key={row.id ?? `${section.title}-row-${rowIndex}`}
                       onClick={() => onSelectInteractiveReply(message, row)}
                       disabled={message.direction !== 'inbound' || (!row.title && !row.id)}
                       className="w-full rounded-md py-1 text-left transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent"
                     >
-                      <p className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</p>
+                      <Text className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</Text>
                       {row.description ? (
-                        <p className="text-xs leading-5 text-[var(--text-secondary)]">{row.description}</p>
+                        <Text className="text-xs leading-5 text-[var(--text-secondary)]">{row.description}</Text>
                       ) : null}
-                    </button>
+                    </ActionSurface>
                   ))}
                 </div>
               </div>
@@ -567,7 +569,7 @@ export function WhatsAppMessageBody({
     <div className="w-[320px] max-w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
       {inviteInfo.preview ? (
         <div className="h-36 w-full overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
-          <img src={inviteInfo.preview} alt="Prévia do convite" className="h-full w-full object-cover" loading="lazy" />
+          <Image src={inviteInfo.preview} alt="Prévia do convite" className="h-full w-full object-cover" loading="lazy" />
         </div>
       ) : null}
       <div className="space-y-3 px-3 py-3">
@@ -576,16 +578,16 @@ export function WhatsAppMessageBody({
             {inviteIcon}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{inviteLabel}</p>
-            <p className="mt-1 text-sm font-semibold leading-5 text-[var(--text-primary)]">{inviteInfo.title}</p>
-            {inviteInfo.newsletterName ? <p className="mt-1 text-xs text-[var(--text-secondary)]">{inviteInfo.newsletterName}</p> : null}
+            <Text className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{inviteLabel}</Text>
+            <Text className="mt-1 text-sm font-semibold leading-5 text-[var(--text-primary)]">{inviteInfo.title}</Text>
+            {inviteInfo.newsletterName ? <Text className="mt-1 text-xs text-[var(--text-secondary)]">{inviteInfo.newsletterName}</Text> : null}
           </div>
         </div>
-        {inviteInfo.description ? <p className="text-sm leading-6 text-[var(--text-secondary)]">{inviteInfo.description}</p> : null}
+        {inviteInfo.description ? <Text className="text-sm leading-6 text-[var(--text-secondary)]">{inviteInfo.description}</Text> : null}
         {inviteInfo.body ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={inviteInfo.body} /> : null}
-        {inviteExpirationLabel ? <p className="text-xs text-[var(--text-muted)]">Validade: {inviteExpirationLabel}</p> : null}
+        {inviteExpirationLabel ? <Text className="text-xs text-[var(--text-muted)]">Validade: {inviteExpirationLabel}</Text> : null}
         {inviteInfo.url ? (
-          <a
+          <TextLink
             href={inviteInfo.url}
             target="_blank"
             rel="noreferrer"
@@ -594,9 +596,9 @@ export function WhatsAppMessageBody({
             <Link2 className="h-3.5 w-3.5" />
             Abrir convite
             <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          </TextLink>
         ) : (
-          <p className="text-xs font-medium text-[var(--text-muted)]">Convite recebido sem link disponível.</p>
+          <Text className="text-xs font-medium text-[var(--text-muted)]">Convite recebido sem link disponível.</Text>
         )}
       </div>
     </div>
@@ -612,14 +614,14 @@ export function WhatsAppMessageBody({
         <AlertTriangle className="h-3.5 w-3.5" />
         <span>Mensagem apagada</span>
       </div>
-      <p className="mt-2 text-xs text-[var(--text-muted)]">
+      <Text className="mt-2 text-xs text-[var(--text-muted)]">
         {deletedInfo.deletedBy === 'self'
           ? 'Você apagou esta mensagem no WhatsApp.'
           : deletedInfo.deletedBy === 'contact'
             ? 'O contato apagou esta mensagem no WhatsApp.'
             : 'Mensagem apagada no WhatsApp.'}
         {hasPreservableDeletedMedia ? ' O arquivo continua disponível abaixo.' : ''}
-      </p>
+      </Text>
       {!hasPreservableDeletedMedia ? (
         <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)] line-through opacity-85" text={deletedInfo.preservedText} />
       ) : null}
@@ -647,20 +649,20 @@ export function WhatsAppMessageBody({
         )}>
           <div className="relative">
             {mediaUrl ? (
-              <button
+              <ActionSurface variant="plain" padding="none"
                 type="button"
                 onClick={() => onOpenImage(message.id)}
                 className={isSticker
                   ? 'whatsapp-inbox-media-content block w-fit max-w-[180px] overflow-hidden rounded-2xl bg-transparent text-left transition'
                   : `whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
               >
-                <img
+                <Image
                   src={mediaUrl}
                   alt={altLabel}
                   className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'block h-[11rem] w-full object-cover'}
                   loading="lazy"
                 />
-              </button>
+              </ActionSurface>
             ) : (
               <div className={isSticker
                 ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
@@ -690,22 +692,22 @@ export function WhatsAppMessageBody({
           caption ? 'overflow-hidden rounded-[var(--kds-radius-lg)]' : null,
         )}>
           <div className="relative">
-            <button
+            <ActionSurface variant="plain" padding="none"
               type="button"
               onClick={() => onOpenImage(message.id)}
               className={`whatsapp-inbox-media-content block w-[13.75rem] max-w-full overflow-hidden text-left ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
               aria-label={`Abrir ${message.media_file_name || 'vídeo'}`}
             >
               {mediaUrl ? (
-                <video muted playsInline preload="metadata" className="block h-[11rem] w-full bg-[var(--overlay)] object-cover">
+                <Video muted playsInline preload="metadata" className="block h-[11rem] w-full bg-[var(--overlay)] object-cover">
                   <source src={mediaUrl} type={message.media_mime_type || undefined} />
-                </video>
+                </Video>
               ) : (
                 <div className={`flex h-[11rem] items-center justify-center bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
                   {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
                 </div>
               )}
-            </button>
+            </ActionSurface>
             {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
           </div>
           {caption ? (
@@ -753,30 +755,30 @@ export function WhatsAppMessageBody({
                 PDF
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[var(--text-primary)]" title={pdfFileName}>{pdfFileName}</p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                <Text className="truncate text-sm font-semibold text-[var(--text-primary)]" title={pdfFileName}>{pdfFileName}</Text>
+                <Text className="mt-1 text-xs text-[var(--text-muted)]">
                   {formatFileSize(message.media_size_bytes) || 'Documento'} · PDF
-                </p>
+                </Text>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {mediaUrl ? (
                 <>
-                  <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
+                  <TextLink href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
                     Abrir
-                  </a>
-                  <a href={mediaUrl} download={pdfFileName} className={inboxInlineActionClassName}>
+                  </TextLink>
+                  <TextLink href={mediaUrl} download={pdfFileName} className={inboxInlineActionClassName}>
                     <Download className="h-3.5 w-3.5" />
                     Baixar
-                  </a>
+                  </TextLink>
                 </>
               ) : (
                 <>
                   <span className="text-xs text-[var(--text-muted)]">{loading ? 'Carregando arquivo...' : error || 'Arquivo indisponível'}</span>
                   {error ? (
-                    <button type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
+                    <Button variant="ghost" type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
                       Tentar novamente
-                    </button>
+                    </Button>
                   ) : null}
                 </>
               )}
@@ -809,31 +811,31 @@ export function WhatsAppMessageBody({
             {extension.slice(0, 4)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</p>
-            <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes) || 'Documento anexo'}</p>
+            <Text className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</Text>
+            <Text className="text-xs opacity-75">{formatFileSize(message.media_size_bytes) || 'Documento anexo'}</Text>
           </div>
           <div className="flex items-center gap-2">
             {mediaUrl ? (
               <>
-                <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
+                <TextLink href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
                   Abrir
-                </a>
-                <a
+                </TextLink>
+                <TextLink
                   href={mediaUrl}
                   download={message.media_file_name || 'documento'}
                   className={inboxInlineActionClassName}
                 >
                   <Download className="h-3.5 w-3.5" />
                   Baixar
-                </a>
+                </TextLink>
               </>
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
                 {error ? (
-                  <button type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
+                  <Button variant="ghost" type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
                     Tentar novamente
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             )}
@@ -875,16 +877,16 @@ export function WhatsAppMessageBody({
           {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Transcrição</p>
+                <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Transcrição</Text>
                 {message.transcription_provider ? (
                   <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
                     {message.transcription_provider}
                   </span>
                 ) : null}
               </div>
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">
+              <Text className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">
                 {message.transcription_text}
-              </p>
+              </Text>
             </div>
           ) : null}
 
@@ -921,18 +923,18 @@ export function WhatsAppMessageBody({
             <MapPin className="h-5 w-5 shrink-0 text-[var(--brand-primary)]" />
             {locationInfo.live ? 'Localização em tempo real' : 'Localização compartilhada'}
           </div>
-          {locationInfo.name ? <p className="break-words text-sm font-medium">{locationInfo.name}</p> : null}
-          {locationInfo.address ? <p className="whitespace-pre-wrap break-words text-sm text-[var(--text-secondary)]">{locationInfo.address}</p> : null}
-          {locationInfo.comment ? <p className="whitespace-pre-wrap break-words text-sm">{locationInfo.comment}</p> : null}
+          {locationInfo.name ? <Text className="break-words text-sm font-medium">{locationInfo.name}</Text> : null}
+          {locationInfo.address ? <Text className="whitespace-pre-wrap break-words text-sm text-[var(--text-secondary)]">{locationInfo.address}</Text> : null}
+          {locationInfo.comment ? <Text className="whitespace-pre-wrap break-words text-sm">{locationInfo.comment}</Text> : null}
           {locationInfo.mapUrl ? (
             <>
-              <p className="text-xs text-[var(--text-muted)]">{locationInfo.latitude}, {locationInfo.longitude}</p>
-              {locationInfo.live ? <p className="text-xs text-[var(--text-muted)]">Última posição recebida.</p> : null}
-              <a href={locationInfo.mapUrl} target="_blank" rel="noopener noreferrer" className={cx(inboxInlineActionClassName, 'inline-flex items-center gap-2')}>
+              <Text className="text-xs text-[var(--text-muted)]">{locationInfo.latitude}, {locationInfo.longitude}</Text>
+              {locationInfo.live ? <Text className="text-xs text-[var(--text-muted)]">Última posição recebida.</Text> : null}
+              <TextLink href={locationInfo.mapUrl} target="_blank" rel="noopener noreferrer" className={cx(inboxInlineActionClassName, 'inline-flex items-center gap-2')}>
                 Abrir no mapa <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              </TextLink>
             </>
-          ) : <p className="text-xs text-[var(--text-muted)]">Coordenadas indisponíveis nesta mensagem.</p>}
+          ) : <Text className="text-xs text-[var(--text-muted)]">Coordenadas indisponíveis nesta mensagem.</Text>}
         </div>
       </div>
     );

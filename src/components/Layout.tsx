@@ -1,3 +1,6 @@
+import { Text } from '../design-system';
+import { ActionSurface, Button } from '../design-system';
+import { DesignSystemProvider } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import {
@@ -815,7 +818,7 @@ export default function Layout({
     if (tab.children && tab.children.length > 0) {
       return (
         <div key={tab.id} className="flex flex-col relative">
-          <button
+          <ActionSurface variant="plain" padding="none"
             ref={(el) => { menuItemRefs.current[tab.id] = el; }}
             onClick={(event) => handleTabClick(tab, event.currentTarget)}
             data-sidebar-item
@@ -851,7 +854,7 @@ export default function Layout({
                   Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
               })
             )}
-          </button>
+          </ActionSurface>
 
           {isExpanded && !isSidebarCollapsed && (
             <div className="mt-1 space-y-1 pl-4">
@@ -859,7 +862,7 @@ export default function Layout({
                 const ChildIcon = child.icon;
                 const isChildActive = activeTab === child.id;
                 return (
-                  <button
+                  <ActionSurface variant="plain" padding="none"
                     key={child.id}
                     onClick={() => {
                       onTabChange(child.id);
@@ -882,7 +885,7 @@ export default function Layout({
                           Boolean((child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0),
                       })
                     )}
-                  </button>
+                  </ActionSurface>
                 );
               })}
             </div>
@@ -892,7 +895,7 @@ export default function Layout({
     }
 
     return (
-      <button
+      <ActionSurface variant="plain" padding="none"
         key={tab.id}
         onClick={() => handleTabClick(tab)}
         data-sidebar-item
@@ -914,7 +917,7 @@ export default function Layout({
               Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
           })
         )}
-      </button>
+      </ActionSurface>
     );
   };
 
@@ -966,10 +969,11 @@ export default function Layout({
   }, [isMobileMenuOpen]);
 
   return (
-    <div
+    <DesignSystemProvider
+      theme={themeMode}
       className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell terracota-shell theme-${themeMode} relative isolate flex ${useFullBleedContent ? 'h-[100dvh] max-h-[100dvh]' : 'min-h-screen'} ${activeTab === 'whatsapp-inbox' ? 'is-whatsapp-inbox-active' : ''}`}
     >
-      <button
+      <ActionSurface variant="plain" padding="none"
         ref={mobileMenuTriggerRef}
         type="button"
         className="terracota-mobile-menu-trigger"
@@ -979,9 +983,9 @@ export default function Layout({
         aria-controls="painel-navigation"
       >
         {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
+      </ActionSurface>
       {isMobileMenuOpen && (
-        <button
+        <ActionSurface variant="plain" padding="none"
           type="button"
           className="terracota-mobile-menu-backdrop"
           onClick={() => setIsMobileMenuOpen(false)}
@@ -1019,7 +1023,7 @@ export default function Layout({
           </nav>
 
           <div className={`kds-sidebar-divider terracota-sidebar-footer space-y-1 border-t p-2 ${isSidebarCollapsed ? 'px-1' : ''}`}>
-            <button
+            <ActionSurface variant="plain" padding="none"
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
               data-sidebar-item
               className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
@@ -1029,9 +1033,9 @@ export default function Layout({
             >
               {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
               <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{isSidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
-            </button>
+            </ActionSurface>
             <div className="relative">
-              <button
+              <ActionSurface variant="plain" padding="none"
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
                 data-sidebar-item
@@ -1052,7 +1056,7 @@ export default function Layout({
                   })
                 )}
                 <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
-              </button>
+              </ActionSurface>
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
@@ -1064,19 +1068,19 @@ export default function Layout({
                   >
                     <div className="kds-popover-section flex items-center justify-between border-b px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Central do dia</p>
-                        <p className="text-xs text-[var(--text-muted)]">Resumo de hoje</p>
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">Central do dia</Text>
+                        <Text className="text-xs text-[var(--text-muted)]">Resumo de hoje</Text>
                       </div>
-                      <button
+                      <Button variant="ghost"
                         onClick={() => {
                           onTabChange('agenda');
                           setShowNotificationsDropdown(false);
                           setIsMobileMenuOpen(false);
                         }}
-                        className="text-xs font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]"
+                        className="font-semibold"
                       >
                         Ver tudo
-                      </button>
+                      </Button>
                     </div>
 
                     {notificationsLoading ? (
@@ -1092,17 +1096,17 @@ export default function Layout({
                         )}
                         <div className="px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lembretes do dia</p>
+                            <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lembretes do dia</Text>
                             <span className="text-xs text-[var(--text-muted)]">{todayReminders.length}</span>
                           </div>
                           {todayReminders.length === 0 ? (
-                            <p className="mt-2 text-sm text-[var(--text-muted)]">Nenhum lembrete para hoje.</p>
+                            <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum lembrete para hoje.</Text>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayReminders.slice(0, 5).map((reminder) => (
                                 <div key={reminder.id} className="kds-list-item">
-                                  <p className="text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</p>
-                                  <p className="text-xs text-[var(--text-muted)]">{formatDateTimeFullBR(reminder.data_lembrete)}</p>
+                                  <Text className="text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</Text>
+                                  <Text className="text-xs text-[var(--text-muted)]">{formatDateTimeFullBR(reminder.data_lembrete)}</Text>
                                 </div>
                               ))}
                             </div>
@@ -1111,20 +1115,20 @@ export default function Layout({
 
                         <div className="kds-popover-section border-t px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Pagamentos do dia</p>
+                            <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Pagamentos do dia</Text>
                             <span className="text-xs text-[var(--text-muted)]">{todayPayments.length}</span>
                           </div>
                           {todayPayments.length === 0 ? (
-                            <p className="mt-2 text-sm text-[var(--text-muted)]">Nenhum pagamento previsto para hoje.</p>
+                            <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum pagamento previsto para hoje.</Text>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayPayments.slice(0, 5).map((payment) => (
                                 <div key={payment.id} className="kds-list-item kds-list-item-success">
-                                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                  <Text className="text-sm font-semibold text-[var(--text-primary)]">
                                     {payment.type === 'comissao' ? 'Comissão' : 'Bonificação'}
                                     {payment.installmentLabel ? ` (${payment.installmentLabel})` : ''}
-                                  </p>
-                                  <p className="text-xs text-[var(--text-secondary)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</p>
+                                  </Text>
+                                  <Text className="text-xs text-[var(--text-secondary)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</Text>
                                 </div>
                               ))}
                             </div>
@@ -1133,20 +1137,20 @@ export default function Layout({
 
                         <div className="kds-popover-section border-t px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Aniversariantes</p>
+                            <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Aniversariantes</Text>
                             <span className="text-xs text-[var(--text-muted)]">{todayBirthdays.length}</span>
                           </div>
                           {todayBirthdays.length === 0 ? (
-                            <p className="mt-2 text-sm text-[var(--text-muted)]">Nenhum aniversariante hoje.</p>
+                            <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum aniversariante hoje.</Text>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayBirthdays.slice(0, 5).map((birthday) => (
                                 <div key={birthday.id} className="kds-list-item kds-list-item-warning">
-                                  <p className="text-sm font-semibold text-[var(--text-primary)]">{birthday.name}</p>
-                                  <p className="text-xs text-[var(--text-secondary)]">
+                                  <Text className="text-sm font-semibold text-[var(--text-primary)]">{birthday.name}</Text>
+                                  <Text className="text-xs text-[var(--text-secondary)]">
                                     {birthday.role}
                                     {birthday.holderName ? ` • Titular: ${birthday.holderName}` : ''}
-                                  </p>
+                                  </Text>
                                 </div>
                               ))}
                             </div>
@@ -1157,7 +1161,7 @@ export default function Layout({
                   </div>
                 )}
               </div>
-            <button
+            <ActionSurface variant="plain" padding="none"
               type="button"
               onClick={toggleThemeMode}
               data-sidebar-item
@@ -1169,8 +1173,8 @@ export default function Layout({
             >
               {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>
-            </button>
-            <button
+            </ActionSurface>
+            <ActionSurface variant="plain" padding="none"
               onClick={handleLogout}
               data-sidebar-item
               className={`kds-sidebar-item kds-sidebar-item-danger flex items-center text-sm font-medium transition-all duration-200 ${
@@ -1180,7 +1184,7 @@ export default function Layout({
             >
               <LogOut className="h-5 w-5" />
               <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Sair</span>
-            </button>
+            </ActionSurface>
           </div>
         </div>
       </aside>
@@ -1194,7 +1198,7 @@ export default function Layout({
           const ItemIcon = item.icon;
           const isActive = activeTab === item.id;
           return (
-            <button
+            <ActionSurface variant="plain" padding="none"
               key={item.id}
               type="button"
               onClick={() => {
@@ -1206,10 +1210,10 @@ export default function Layout({
             >
               <ItemIcon className="h-5 w-5" aria-hidden="true" />
               <span>{item.label}</span>
-            </button>
+            </ActionSurface>
           );
         })}
-        <button
+        <ActionSurface variant="plain" padding="none"
           type="button"
           onClick={() => setIsMobileMoreOpen((current) => !current)}
           className={cx('terracota-mobile-bottom-nav-item', isMobileMoreOpen && 'is-active')}
@@ -1219,12 +1223,12 @@ export default function Layout({
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
           <span>Mais</span>
-        </button>
+        </ActionSurface>
       </nav>
 
       {isMobileMoreOpen && (
         <>
-          <button
+          <ActionSurface variant="plain" padding="none"
             type="button"
             className="terracota-mobile-more-backdrop"
             onClick={() => setIsMobileMoreOpen(false)}
@@ -1235,7 +1239,7 @@ export default function Layout({
               const ItemIcon = item.icon;
               const isActive = activeTab === item.id;
               return (
-                <button
+                <ActionSurface variant="plain" padding="none"
                   key={item.id}
                   type="button"
                   role="menuitem"
@@ -1251,7 +1255,7 @@ export default function Layout({
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="terracota-mobile-more-badge">{item.badge > 99 ? '99+' : item.badge}</span>
                   )}
-                </button>
+                </ActionSurface>
               );
             })}
           </div>
@@ -1283,7 +1287,7 @@ export default function Layout({
               const isChildActive = activeTab === child.id;
 
               return (
-                <button
+                <ActionSurface variant="plain" padding="none"
                   key={child.id}
                   onClick={() => {
                     onTabChange(child.id);
@@ -1307,7 +1311,7 @@ export default function Layout({
                         Boolean((child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0),
                     })
                   )}
-                </button>
+                </ActionSurface>
               );
             })}
           </div>
@@ -1331,6 +1335,6 @@ export default function Layout({
           </div>
         </main>
       </div>
-    </div>
+    </DesignSystemProvider>
   );
 }

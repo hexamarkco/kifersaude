@@ -516,7 +516,7 @@
   justify-content: center;
   height: var(--control-height-sm);
   width: var(--control-height-sm);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   border: 1px solid var(--border-default);
   background: color-mix(in srgb, var(--bg-inset) 74%, transparent);
   color: var(--text-secondary);
@@ -547,7 +547,7 @@
   min-width: var(--control-height-sm);
   height: var(--control-height-sm);
   padding: 0 0.5rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   border: 1px solid var(--border-default);
   background: color-mix(in srgb, var(--bg-inset) 74%, transparent);
   color: var(--text-secondary);
@@ -1316,13 +1316,15 @@
 }
 
 .kds-button {
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   cursor: pointer;
   letter-spacing: 0;
 }
 
 .kds-button:focus-visible {
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: none;
+  outline: 1px solid var(--control-focus-color);
+  outline-offset: 2px;
 }
 
 .kds-button-primary {
@@ -1378,8 +1380,7 @@
   color: var(--brand-primary-active);
 }
 
-.kds-button-tertiary:hover:not(:disabled),
-.kds-button-text:hover:not(:disabled) {
+.kds-button-tertiary:hover:not(:disabled) {
   background: var(--brand-primary-muted);
   color: var(--brand-primary-active);
 }
@@ -1426,7 +1427,7 @@
 
 .kds-button-group {
   border-color: var(--border-default);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--bg-surface-muted);
   box-shadow: none;
 }
@@ -1435,7 +1436,7 @@
 .kds-select,
 .kds-textarea {
   border-color: var(--border-strong);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--bg-surface);
   color: var(--text-primary);
   box-shadow: none;
@@ -1490,7 +1491,7 @@
   appearance: none;
   -webkit-appearance: none;
   border-color: var(--border-strong);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--brand-primary);
   cursor: pointer;
@@ -1638,7 +1639,7 @@
 .kds-pagination-button,
 .kds-pagination-page {
   border-color: var(--border-default);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--bg-surface);
   color: var(--text-secondary);
 }
@@ -1959,3 +1960,12 @@
   pointer-events: none;
 }
 .kds-floating-tooltip-sm { padding: var(--space-1) var(--space-2); }
+
+.kds-button-tertiary { text-decoration: none; }
+.kds-button-text,
+.kds-button-text:hover:not(:disabled),
+.kds-button-text:active:not(:disabled) {
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

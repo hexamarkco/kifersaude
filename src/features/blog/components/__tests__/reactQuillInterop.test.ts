@@ -3,10 +3,10 @@ import ReactDOM from 'react-dom';
 import React from 'react';
 import { test } from 'vitest';
 
-import ReactDomShim from '../reactQuillReactDomShim';
-import * as ReactDomShimModule from '../reactQuillReactDomShim';
-import ReactShim from '../reactQuillReactShim';
-import * as ReactShimModule from '../reactQuillReactShim';
+import ReactDomShim from '../../../../design-system/components/reactQuillReactDomShim';
+import * as ReactDomShimModule from '../../../../design-system/components/reactQuillReactDomShim';
+import ReactShim from '../../../../design-system/components/reactQuillReactShim';
+import * as ReactShimModule from '../../../../design-system/components/reactQuillReactShim';
 
 test('mantém o contrato de default esperado pelo ReactQuill', () => {
   assert.equal(ReactShimModule.__esModule, true);

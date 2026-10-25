@@ -1,3 +1,4 @@
+import { Button } from '../../../design-system';
 import { cx } from "../../../lib/cx";
 import { COMMISSION_WEEK_DAYS } from "../shared/commissionCalendarConstants";
 import {
@@ -58,13 +59,13 @@ export default function CommissionMonthGrid({
           : "";
 
     days.push(
-      <button
+      <Button variant="ghost"
         key={day}
         type="button"
         aria-pressed={isSelected}
         onClick={() => onSelectDate(cellDate)}
         className={cx(
-          "kds-action-surface kds-calendar-day border text-[var(--text-secondary)] transition-colors",
+          "kds-action-surface kds-calendar-day border transition-colors",
           stateClass,
         )}
       >
@@ -82,7 +83,7 @@ export default function CommissionMonthGrid({
             {dayEvents.length}
           </span>
         )}
-      </button>,
+      </Button>,
     );
   }
 

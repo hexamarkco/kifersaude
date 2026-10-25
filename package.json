@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run secrets:check && npm run audit:visual && vite build && npm run verify:editor-bundle",
+    "build": "npm run secrets:check && npm run audit:design-system && npm run audit:visual && vite build && npm run verify:editor-bundle",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
+    "audit:design-system": "node scripts/audit-design-system.mjs",
     "audit:visual": "node scripts/audit-visual-hardcodes.mjs",
     "secrets:check": "node scripts/check-secrets.mjs",
     "architecture:check": "node scripts/check-architecture.mjs",

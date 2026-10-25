@@ -23,9 +23,9 @@ import {
 import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { DashboardPageSkeleton } from "../../components/ui/panelSkeletons";
+import { DashboardPageSkeleton } from '../../design-system';
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
-import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { Alert, Button, SectionHeader, Surface } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";

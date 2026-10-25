@@ -1,3 +1,4 @@
+import { IconButton } from '../../../design-system';
 import {
   Bell,
   CalendarDays,
@@ -109,7 +110,7 @@ export default function Foundations() {
         conectam cada detalhe do CRM.
       </SectionIntro>
       <div className="ds-subheading">
-        <h2>Cor com propósito</h2>
+        <Heading level={2}>Cor com propósito</Heading>
         <span>Tokens ativos no tema selecionado</span>
       </div>
       <div className="ds-colors">
@@ -127,7 +128,7 @@ export default function Foundations() {
             </div>
             <div className="ds-color-copy">
               <strong>{color.label}</strong>
-              <p>{color.use}</p>
+              <Text>{color.use}</Text>
               <div>
                 <code>{color.token}</code>
                 <CopyValue value={`var(${color.token})`} label={color.label} />
@@ -252,10 +253,10 @@ export default function Foundations() {
               </div>
             ))}
           </div>
-          <p className="ds-caption">
+          <Text className="ds-caption">
             Controles e badges usam também --radius-full, conforme os
             componentes atuais.
-          </p>
+          </Text>
         </Specimen>
         <Specimen
           title="Elevação e foco"
@@ -278,29 +279,29 @@ export default function Foundations() {
           <div className="ds-icon-grid">
             {icons.map((Icon, index) => (
               <Tooltip key={iconLabels[index]} content={iconLabels[index]}>
-                <button
+                <IconButton variant="ghost" size="sm"
                   className="ds-icon-sample"
                   type="button"
                   aria-label={iconLabels[index]}
                 >
                   <Icon size={20} aria-hidden="true" />
-                </button>
+                </IconButton>
               </Tooltip>
             ))}
           </div>
-          <p className="ds-caption">
+          <Text className="ds-caption">
             Ícones complementam os rótulos. Ações somente com ícone precisam de
             nome e tooltip.
-          </p>
+          </Text>
         </Specimen>
       </div>
       <details className="ds-technical">
         <summary>Referência técnica dos fundamentos</summary>
-        <p>
+        <Text>
           Origem: src/design-system/foundation.css, themes.css e tokens.ts. O
           showcase lê as variáveis do tema; não mantém uma segunda paleta.
           styles.css continua sendo o único entrypoint global.
-        </p>
+        </Text>
         <code>
           import {'{ Button, Field, PageHeader }'} from '…/design-system';
         </code>

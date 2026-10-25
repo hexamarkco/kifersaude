@@ -1,3 +1,5 @@
+import { FieldLabel, Text } from '../../../../design-system';
+import { FileInput, ActionSurface } from '../../../../design-system';
 import { useState, useMemo, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { Calendar, Clock, MessageSquare, Plus, Repeat, Trash2, Upload, X } from 'lucide-react';
 
@@ -553,9 +555,9 @@ export default function WhatsAppScheduleMessageModal({
       size="md"
     >
       <div className="space-y-4">
-        <input
+        <FileInput
           ref={attachmentInputRef}
-          type="file"
+
           className="hidden"
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
           disabled={submitting || uploadingAttachment}
@@ -586,9 +588,9 @@ export default function WhatsAppScheduleMessageModal({
         )}
 
         {mode === 'single' ? <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Mensagem
-          </label>
+          </FieldLabel>
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -644,9 +646,9 @@ export default function WhatsAppScheduleMessageModal({
                   <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[10px] font-bold text-[var(--text-muted)]">
                     {index + 1}
                   </span>
-                  <p className="min-w-0 flex-1 text-xs leading-5 text-[var(--text-secondary)] line-clamp-2">
+                  <Text className="min-w-0 flex-1 text-xs leading-5 text-[var(--text-secondary)] line-clamp-2">
                     {segment}
-                  </p>
+                  </Text>
                 </div>
               ))}
             </div>
@@ -655,8 +657,8 @@ export default function WhatsAppScheduleMessageModal({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Etapas da sequência</p>
-                <p className="text-xs text-[var(--text-muted)]">Cada etapa pode enviar uma mensagem, executar ações ou fazer os dois.</p>
+                <Text className="text-sm font-semibold text-[var(--text-primary)]">Etapas da sequência</Text>
+                <Text className="text-xs text-[var(--text-muted)]">Cada etapa pode enviar uma mensagem, executar ações ou fazer os dois.</Text>
               </div>
               <Button type="button" variant="secondary" size="sm" onClick={addSequenceStep}>
                 <Plus className="kds-control-icon" /> Adicionar etapa
@@ -684,7 +686,7 @@ export default function WhatsAppScheduleMessageModal({
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">{stepIndex === 0 ? 'Primeira etapa' : 'Aguardar após etapa anterior (horas)'}</label>
+                      <FieldLabel className="mb-1 block text-xs font-medium text-[var(--text-muted)]">{stepIndex === 0 ? 'Primeira etapa' : 'Aguardar após etapa anterior (horas)'}</FieldLabel>
                       <Input
                         type="number"
                         min={0}
@@ -695,7 +697,7 @@ export default function WhatsAppScheduleMessageModal({
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Lembrete relacionado</label>
+                      <FieldLabel className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Lembrete relacionado</FieldLabel>
                       <Select
                         size="sm"
                         value={step.reminderId}
@@ -710,11 +712,11 @@ export default function WhatsAppScheduleMessageModal({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Mensagem (opcional)</label>
+                  <FieldLabel className="mb-1 block text-xs font-medium text-[var(--text-muted)]">Mensagem (opcional)</FieldLabel>
                   <Textarea value={step.text} onChange={(event) => updateSequenceStep(step.id, { text: event.target.value })} rows={3} placeholder="Deixe vazio se esta etapa for somente operacional." />
-                  <input
+                  <FileInput
                     ref={(element) => { sequenceAttachmentRefs.current[step.id] = element; }}
-                    type="file"
+
                     className="hidden"
                     accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                     disabled={submitting || Boolean(uploadingSequenceStepIds[step.id])}
@@ -791,10 +793,10 @@ export default function WhatsAppScheduleMessageModal({
                           <Textarea className="sm:col-span-2" rows={2} value={action.description} placeholder="Descrição opcional" onChange={(event) => updateSequenceAction(step.id, action.id, { description: event.target.value })} />
                         </div>
                       )}
-                      {action.type === 'cancel_sequence' && <p className="text-xs text-[var(--text-muted)]">As etapas futuras serão canceladas depois que esta ação for executada.</p>}
+                      {action.type === 'cancel_sequence' && <Text className="text-xs text-[var(--text-muted)]">As etapas futuras serão canceladas depois que esta ação for executada.</Text>}
                     </div>
                   ))}
-                  {step.actions.length === 0 && <p className="text-xs text-[var(--text-muted)]">Nenhuma ação configurada.</p>}
+                  {step.actions.length === 0 && <Text className="text-xs text-[var(--text-muted)]">Nenhuma ação configurada.</Text>}
                 </div>
               </div>
             ))}
@@ -802,10 +804,10 @@ export default function WhatsAppScheduleMessageModal({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             <Calendar className="inline-block w-4 h-4 mr-1" />
             Data e hora do envio
-          </label>
+          </FieldLabel>
           <DateTimePicker
             type="datetime-local"
             value={scheduledAt}
@@ -815,7 +817,7 @@ export default function WhatsAppScheduleMessageModal({
           />
         </div>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+        <FieldLabel className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
           <Checkbox
             checked={cancelOnInboundMessage}
             onChange={(event) => setCancelOnInboundMessage(event.target.checked)}
@@ -830,16 +832,16 @@ export default function WhatsAppScheduleMessageModal({
               A mensagem não será enviada caso o contato responda enquanto ela estiver aguardando.
             </span>
           </span>
-        </label>
+        </FieldLabel>
 
         {mode === 'single' && <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
             <Repeat className="inline-block w-4 h-4 mr-1" />
             Recorrência
-          </label>
+          </FieldLabel>
           <div className="grid grid-cols-2 gap-2">
             {RECURRENCE_OPTIONS.map((option) => (
-              <button
+              <ActionSurface variant="plain" padding="none"
                 key={option.value}
                 type="button"
                 onClick={() => setRecurrence(option.value)}
@@ -851,17 +853,17 @@ export default function WhatsAppScheduleMessageModal({
               >
                 <div className="text-sm font-medium">{option.label}</div>
                 <div className="text-xs text-[var(--text-muted)] mt-0.5">{option.description}</div>
-              </button>
+              </ActionSurface>
             ))}
           </div>
         </div>}
 
         {recurrence !== 'none' && mode === 'single' && (
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
               <Clock className="inline-block w-4 h-4 mr-1" />
               Repetir até
-            </label>
+            </FieldLabel>
             <DateTimePicker
               type="datetime-local"
               value={recurrenceEndsAt}
@@ -874,9 +876,9 @@ export default function WhatsAppScheduleMessageModal({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Etiqueta (opcional)
-          </label>
+          </FieldLabel>
           <Input
             type="text"
             value={label}

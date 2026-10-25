@@ -1,0 +1,24 @@
+[
+  {
+    "file": "src\\pages\\dev\\DesignSystemShowcase.tsx",
+    "count": 2,
+    "components": [
+      "ActionSurface",
+      "Button"
+    ]
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\Foundations.tsx",
+    "count": 1,
+    "components": [
+      "IconButton"
+    ]
+  },
+  {
+    "file": "src\\pages\\dev\\showcase\\WorkspacePreview.tsx",
+    "count": 1,
+    "components": [
+      "Button"
+    ]
+  }
+]

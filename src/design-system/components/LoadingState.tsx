@@ -8,7 +8,7 @@ import Button from './Button';
 export type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
   /** Hides the decorative placeholder from assistive technologies by default. */
   label?: string;
-  variant?: 'line' | 'control' | 'avatar' | 'card' | 'table-row';
+  variant?: 'block' | 'line' | 'control' | 'avatar' | 'card' | 'table-row';
   size?: ControlSize;
 };
 

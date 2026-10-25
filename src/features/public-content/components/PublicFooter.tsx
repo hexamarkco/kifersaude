@@ -1,3 +1,4 @@
+import { TextLink } from '../../../design-system';
 import type { MouseEvent } from 'react';
 import { Instagram, MapPin, MessageCircle } from 'lucide-react';
 import PublicBrandMark from '../../../components/public/PublicBrandMark';
@@ -26,48 +27,48 @@ export default function PublicFooter({ onNavigate }: Props) {
           <div>
             <Heading level={3} size="sm" tone="inverse" className="uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Links rápidos</Heading>
             <div className="mt-5 space-y-3 text-sm opacity-70">
-              <a
+              <TextLink
                 href="/#para-quem"
                 onClick={onNavigate ? (event) => onNavigate(event, 'para-quem') : undefined}
                 className="block transition-colors hover:text-[color:var(--text-inverse)]"
               >
                 Para quem é
-              </a>
-              <a
+              </TextLink>
+              <TextLink
                 href="/#como-funciona"
                 onClick={onNavigate ? (event) => onNavigate(event, 'como-funciona') : undefined}
                 className="block transition-colors hover:text-[color:var(--text-inverse)]"
               >
                 Como funciona
-              </a>
-              <a
+              </TextLink>
+              <TextLink
                 href="/#faq"
                 onClick={onNavigate ? (event) => onNavigate(event, 'faq') : undefined}
                 className="block transition-colors hover:text-[color:var(--text-inverse)]"
               >
                 Dúvidas
-              </a>
-              <a
+              </TextLink>
+              <TextLink
                 href="/#cotacao"
                 onClick={onNavigate ? (event) => onNavigate(event, 'cotacao') : undefined}
                 className="block transition-colors hover:text-[color:var(--text-inverse)]"
               >
                 Cotação gratuita
-              </a>
+              </TextLink>
             </div>
           </div>
 
           <div>
             <Heading level={3} size="sm" tone="inverse" className="uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Contato</Heading>
             <div className="mt-5 space-y-3 text-sm opacity-70">
-              <a href={`${siteConfig.whatsappUrl}?text=${encodeURIComponent('Olá! Quero uma cotação de plano de saúde com a Kifer.')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
+              <TextLink href={`${siteConfig.whatsappUrl}?text=${encodeURIComponent('Olá! Quero uma cotação de plano de saúde com a Kifer.')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
                 <MessageCircle className="h-4 w-4 text-[color:var(--success)]" />
                 WhatsApp
-              </a>
-              <a href={siteConfig.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
+              </TextLink>
+              <TextLink href={siteConfig.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
                 <Instagram className="h-4 w-4 text-[color:var(--accent-gold)]" />
                 @souluizakifer
-              </a>
+              </TextLink>
               <span className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[color:var(--accent-gold)]" />
                 Rio de Janeiro, RJ
@@ -78,9 +79,9 @@ export default function PublicFooter({ onNavigate }: Props) {
           <div>
             <Heading level={3} size="sm" tone="inverse" className="uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Legal</Heading>
             <div className="mt-5 space-y-3 text-sm opacity-70">
-              <a href="/politica-de-privacidade" className="block underline underline-offset-4">Política de Privacidade</a>
-              <p>CNPJ {siteConfig.cnpj}</p>
-              <p>Desenvolvido por Kifer Saúde</p>
+              <TextLink href="/politica-de-privacidade" className="block underline underline-offset-4">Política de Privacidade</TextLink>
+              <Text>CNPJ {siteConfig.cnpj}</Text>
+              <Text>Desenvolvido por Kifer Saúde</Text>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { Text, FieldLabel } from '../../../design-system';
 import { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle2,
@@ -111,10 +112,10 @@ export default function States() {
                 aria-label="Campo para testar foco"
                 placeholder="O foco virá para cá"
               />
-              <p className="ds-caption">
+              <Text className="ds-caption">
                 O contorno acompanha o elemento ativo. Continue com Tab para
                 percorrer a interface.
-              </p>
+              </Text>
             </div>
             <div className="ds-state-cell">
               <span>Indisponível</span>
@@ -129,10 +130,10 @@ export default function States() {
                 disabled
                 options={[{ value: 'locked', label: 'Opção indisponível' }]}
               />
-              <label className="ds-choice">
+              <FieldLabel className="ds-choice">
                 <Checkbox disabled />
                 Seleção indisponível
-              </label>
+              </FieldLabel>
               <Switch
                 disabled
                 label="Preferência indisponível"
@@ -213,10 +214,10 @@ export default function States() {
               Carregando
             </Button>
           </div>
-          <p className="ds-caption">
+          <Text className="ds-caption">
             Os dois botões acima são amostras permanentes do estado de
             carregamento.
-          </p>
+          </Text>
         </Specimen>
         <Specimen
           title="Dados: carregando, vazio e erro"
@@ -247,14 +248,14 @@ export default function States() {
                   <CheckCircle2 size={18} />
                   <div>
                     <strong>Ana Paula Ribeiro</strong>
-                    <p>Em atendimento · Amil</p>
+                    <Text>Em atendimento · Amil</Text>
                   </div>
                 </div>
                 <div className="ds-timeline">
                   <CheckCircle2 size={18} />
                   <div>
                     <strong>Bruno Costa</strong>
-                    <p>Proposta enviada · Bradesco Saúde</p>
+                    <Text>Proposta enviada · Bradesco Saúde</Text>
                   </div>
                 </div>
               </div>
@@ -333,7 +334,7 @@ export default function States() {
                   <Users size={18} />
                   <div>
                     <strong>{contact.name}</strong>
-                    <p>{contact.operator}</p>
+                    <Text>{contact.operator}</Text>
                   </div>
                 </div>
               ))}

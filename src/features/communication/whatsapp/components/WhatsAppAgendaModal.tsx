@@ -1,3 +1,5 @@
+import { Heading, Text, FieldLabel } from '../../../../design-system';
+import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
@@ -39,7 +41,7 @@ import {
   FilterSelect,
   WorkspaceDialog,
 } from '../../../../design-system';
-import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
+import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import type { PanelTone } from '../../../../design-system';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
 import { formatDateTimeFullBR, getDateKey, isOverdue } from '../../../../lib/dateUtils';
@@ -1325,9 +1327,9 @@ export default function WhatsAppAgendaModal({
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                    <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">
                       {reminder.titulo}
-                    </h3>
+                    </Heading>
                     {overdue ? (
                       <Badge tone="danger">Atrasado</Badge>
                     ) : null}
@@ -1361,9 +1363,9 @@ export default function WhatsAppAgendaModal({
                   </div>
 
                   {reminder.descricao ? (
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    <Text className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                       {reminder.descricao}
-                    </p>
+                    </Text>
                   ) : null}
                 </div>
 
@@ -1450,7 +1452,7 @@ export default function WhatsAppAgendaModal({
                     >
                       <div className="flex flex-col gap-1">
                         {[1, 2, 3, 4, 5].map((days) => (
-                          <button
+                          <Button variant="ghost"
                             key={days}
                             type="button"
                             onClick={() => {
@@ -1458,11 +1460,11 @@ export default function WhatsAppAgendaModal({
                               void handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
                             }}
                             disabled={isQuickSchedulingCurrentReminder}
-                            className="flex items-center gap-2 rounded-full px-3 py-2 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
+                            className="flex items-center text-left transition disabled:opacity-60"
                           >
-                            <CalendarPlus className="h-4 w-4" />
+                            <CalendarPlus className="" />
                             <span>+{days} dia{days > 1 ? 's' : ''}</span>
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </PanelPopoverShell>
@@ -1596,17 +1598,17 @@ export default function WhatsAppAgendaModal({
             <Surface padding="sm" className="sm:p-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                  <Text className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
                     Dia em foco
-                  </p>
-                  <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
+                  </Text>
+                  <Heading level={3} className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
                     {selectedDateLabel}
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  </Heading>
+                  <Text className="mt-1 text-sm text-[var(--text-muted)]">
                     {visiblePendingReminders.length > 0
                       ? `${visiblePendingReminders.length} pendência(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
                       : `Sem pendências abertas para ${selectedDateLabel.toLowerCase()}.`}
-                  </p>
+                  </Text>
                 </div>
 
                 <div className="grid w-full grid-cols-[2.75rem_2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 sm:flex sm:flex-wrap sm:justify-end xl:w-auto">
@@ -1734,12 +1736,12 @@ export default function WhatsAppAgendaModal({
                   <Surface padding="sm" className="sm:p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--danger-text)]">
+                        <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--danger-text)]">
                           Atrasados
-                        </p>
-                        <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                        </Text>
+                        <Heading level={4} className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                           Pendências de dias anteriores
-                        </h4>
+                        </Heading>
                       </div>
                       <Badge tone="danger">{overdueReminders.length}</Badge>
                     </div>
@@ -1750,12 +1752,12 @@ export default function WhatsAppAgendaModal({
                 <Surface padding="sm" className="sm:p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                      <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
                         Rotina do dia
-                      </p>
-                      <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                      </Text>
+                      <Heading level={4} className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                         {selectedDateLabel}
-                      </h4>
+                      </Heading>
                     </div>
                     <Badge tone="accent">{pendingSelectedReminders.length} pendente(s)</Badge>
                   </div>
@@ -1772,12 +1774,12 @@ export default function WhatsAppAgendaModal({
                 <Surface padding="sm" className="sm:p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                      <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
                         Concluídos no dia
-                      </p>
-                      <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                      </Text>
+                      <Heading level={4} className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                         {completedSelectedReminders.length > 0 ? 'Histórico do dia em foco' : 'Nada concluído ainda'}
-                      </h4>
+                      </Heading>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge tone="success">{completedSelectedReminders.length}</Badge>
@@ -1817,9 +1819,9 @@ export default function WhatsAppAgendaModal({
         >
           <form onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
             <div className="space-y-1">
-              <label htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium text-[var(--text-secondary)]">
+              <FieldLabel htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium text-[var(--text-secondary)]">
                 Tarefa
-              </label>
+              </FieldLabel>
               <Input
                 id="whatsapp-agenda-task-title"
                 type="text"
@@ -1832,9 +1834,9 @@ export default function WhatsAppAgendaModal({
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium text-[var(--text-secondary)]">
+              <FieldLabel htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium text-[var(--text-secondary)]">
                 Descrição (opcional)
-              </label>
+              </FieldLabel>
               <Textarea
                 id="whatsapp-agenda-task-description"
                 value={newTaskDescription}
@@ -1939,8 +1941,8 @@ export default function WhatsAppAgendaModal({
                   <Surface key={group.key} variant="warning" padding="sm">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{group.leadName}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{group.tipo} - {group.dateLabel}</p>
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">{group.leadName}</Text>
+                        <Text className="text-xs text-[var(--text-muted)]">{group.tipo} - {group.dateLabel}</Text>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge tone="warning">{group.reminders.length} duplicados</Badge>
@@ -1960,12 +1962,12 @@ export default function WhatsAppAgendaModal({
 
                     <div className="space-y-2">
                       {group.reminders.map((reminder) => (
-                        <label
+                        <FieldLabel
                           key={reminder.id}
                           className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 text-sm"
                         >
-                          <input
-                            type="radio"
+                          <Radio
+
                             name={`duplicate-keep-${group.key}`}
                             checked={keepId === reminder.id}
                             onChange={() => handleSelectDuplicateKeep(group.key, reminder.id)}
@@ -1977,14 +1979,14 @@ export default function WhatsAppAgendaModal({
                               <span className="font-medium text-[var(--text-primary)]">{reminder.titulo}</span>
                               {keepId === reminder.id ? <Badge tone="success">Manter</Badge> : null}
                             </div>
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            <Text className="mt-1 text-xs text-[var(--text-muted)]">
                               {formatDateTimeFullBR(reminder.data_lembrete)}
-                            </p>
+                            </Text>
                             {reminder.descricao ? (
-                              <p className="mt-1 text-xs text-[var(--text-secondary)]">{reminder.descricao}</p>
+                              <Text className="mt-1 text-xs text-[var(--text-secondary)]">{reminder.descricao}</Text>
                             ) : null}
                           </div>
-                        </label>
+                        </FieldLabel>
                       ))}
                     </div>
                   </Surface>

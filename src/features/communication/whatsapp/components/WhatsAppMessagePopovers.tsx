@@ -1,7 +1,8 @@
+import { ActionSurface, Button } from '../../../../design-system';
 import { Forward, Info, Loader2, Pencil, Reply, Star, Trash2 } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
-import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
+import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import type { CommWhatsAppMessage } from '../domain/types';
 import {
   canDeleteOutboundMessage,
@@ -65,7 +66,7 @@ export function WhatsAppMessagePopovers({
         className="before:hidden comm-whatsapp-reaction-picker"
       >
         {openReactionPickerMessage ? reactionOptions.map((emoji) => (
-          <button
+          <ActionSurface variant="plain" padding="none"
             key={`${openReactionPickerMessage.id}:${emoji}`}
             type="button"
             onClick={() => onReactToMessage(openReactionPickerMessage, emoji)}
@@ -74,7 +75,7 @@ export function WhatsAppMessagePopovers({
             aria-label={`Reagir com ${emoji}`}
           >
             {emoji}
-          </button>
+          </ActionSurface>
         )) : null}
       </PanelPopoverShell>
 
@@ -112,5 +113,5 @@ export function WhatsAppMessagePopovers({
 }
 
 function ActionButton({ icon, label, onClick, disabled = false, destructive = false }: { icon: ReactNode; label: string; onClick: () => void; disabled?: boolean; destructive?: boolean }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm transition disabled:pointer-events-none disabled:opacity-60 ${destructive ? 'text-[var(--danger-text)] hover:bg-[var(--danger-soft)]' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{icon}<span>{label}</span></button>;
+  return <Button variant="destructive" type="button" onClick={onClick} disabled={disabled} className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm transition disabled:pointer-events-none disabled:opacity-60 ${destructive ? "" : ""}`}>{icon}<span>{label}</span></Button>;
 }

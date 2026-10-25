@@ -1,3 +1,5 @@
+import { Text, Heading, FieldLabel } from '../../../../design-system';
+import { Checkbox, Input } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
@@ -8,7 +10,7 @@ import {
   Textarea,
   WorkspaceDialog,
 } from '../../../../design-system';
-import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
+import { VariableAutocompleteTextarea } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
@@ -541,23 +543,23 @@ export default function WhatsAppBatchFollowUpModal({
             <CheckCircle2 className="h-10 w-10 text-[var(--success-text)]" />
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold text-[var(--text-primary)]">Follow-ups enviados</p>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">Resumo do disparo em lote</p>
+            <Text className="text-xl font-bold text-[var(--text-primary)]">Follow-ups enviados</Text>
+            <Text className="mt-1 text-sm text-[var(--text-muted)]">Resumo do disparo em lote</Text>
           </div>
           <div className="flex flex-wrap justify-center gap-4">
             <div className="flex items-center gap-2.5 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] px-5 py-3 shadow-sm">
               <CheckCircle2 className="h-5 w-5 text-[var(--success-text)]" />
               <div>
-                <p className="text-lg font-bold text-[var(--success-text)]">{sentSummary.sentCount}</p>
-                <p className="text-xs font-medium text-[var(--success-text)]">enviado(s)</p>
+                <Text className="text-lg font-bold text-[var(--success-text)]">{sentSummary.sentCount}</Text>
+                <Text className="text-xs font-medium text-[var(--success-text)]">enviado(s)</Text>
               </div>
             </div>
             {sentSummary.scheduledCount > 0 ? (
               <div className="flex items-center gap-2.5 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-5 py-3 shadow-sm">
                 <CalendarPlus className="h-5 w-5 text-[var(--info-text)]" />
                 <div>
-                  <p className="text-lg font-bold text-[var(--info-text)]">{sentSummary.scheduledCount}</p>
-                  <p className="text-xs font-medium text-[var(--info-text)]">agendado(s)</p>
+                  <Text className="text-lg font-bold text-[var(--info-text)]">{sentSummary.scheduledCount}</Text>
+                  <Text className="text-xs font-medium text-[var(--info-text)]">agendado(s)</Text>
                 </div>
               </div>
             ) : null}
@@ -565,21 +567,21 @@ export default function WhatsAppBatchFollowUpModal({
               <div className="flex items-center gap-2.5 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-5 py-3 shadow-sm">
                 <AlertCircle className="h-5 w-5 text-[var(--danger-text)]" />
                 <div>
-                  <p className="text-lg font-bold text-[var(--danger-text)]">{sentSummary.failedCount}</p>
-                  <p className="text-xs font-medium text-[var(--danger-text)]">falha(s)</p>
+                  <Text className="text-lg font-bold text-[var(--danger-text)]">{sentSummary.failedCount}</Text>
+                  <Text className="text-xs font-medium text-[var(--danger-text)]">falha(s)</Text>
                 </div>
               </div>
             ) : null}
           </div>
           {sentSummary.errorMessage ? (
-            <p className="max-w-md text-center text-sm text-[var(--danger-text)]">{sentSummary.errorMessage}</p>
+            <Text className="max-w-md text-center text-sm text-[var(--danger-text)]">{sentSummary.errorMessage}</Text>
           ) : null}
 
           {/* Detalhe por lead: quem foi enviado, quem foi reagendado e para quando, quem falhou */}
           <div className="w-full max-w-xl">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            <Text className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
               Detalhamento por lead
-            </p>
+            </Text>
             <div className="max-h-[320px] space-y-1.5 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2">
               {items.filter((item) => item.selected && item.sendStatus !== 'idle').map((item) => {
                 const willReschedule = item.sendStatus === 'sent' && item.approvedScheduleAction === 'schedule' && Boolean(item.approvedScheduleDate);
@@ -587,24 +589,24 @@ export default function WhatsAppBatchFollowUpModal({
                 return (
                   <div key={item.reminderId} className="comm-follow-up-detail-item flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs">
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 truncate font-semibold text-[var(--text-primary)]">
+                      <Text className="flex items-center gap-1.5 truncate font-semibold text-[var(--text-primary)]">
                         <LeadFavoriteBadge favorito={item.leadFavorito} />
                         {item.leadName || 'Sem nome'}
-                      </p>
+                      </Text>
                       {willReschedule ? (
-                        <p className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
+                        <Text className="mt-0.5 flex items-center gap-1 text-[var(--info-text)]">
                           <CalendarPlus className="h-3 w-3 shrink-0" />
                           {isWaitReschedule ? 'Follow-up agendado' : 'Reagendado'} para {new Date(item.approvedScheduleDate!).toLocaleString('pt-BR')}
-                        </p>
+                        </Text>
                       ) : item.finalStatus ? (
-                        <p className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">
+                        <Text className="mt-0.5 flex items-center gap-1 text-[var(--warning-text)]">
                           <AlertCircle className="h-3 w-3 shrink-0" />
                           Movido para {item.finalStatus}
-                        </p>
+                        </Text>
                       ) : item.sendStatus === 'sent' ? (
-                        <p className="mt-0.5 text-[var(--text-muted)]">Sem novo reagendamento</p>
+                        <Text className="mt-0.5 text-[var(--text-muted)]">Sem novo reagendamento</Text>
                       ) : item.sendStatus === 'failed' ? (
-                        <p className="mt-0.5 text-[var(--danger-text)]">{item.sendError || 'Falha ao enviar'}</p>
+                        <Text className="mt-0.5 text-[var(--danger-text)]">{item.sendError || 'Falha ao enviar'}</Text>
                       ) : null}
                     </div>
                     {item.sendStatus === 'sent' ? (
@@ -630,8 +632,8 @@ export default function WhatsAppBatchFollowUpModal({
         <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
           <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
           <div className="text-center">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Buscando follow-ups pendentes...</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Aguarde enquanto carregamos os leads com follow-up atrasado.</p>
+            <Text className="text-sm font-semibold text-[var(--text-primary)]">Buscando follow-ups pendentes...</Text>
+            <Text className="mt-1 text-xs text-[var(--text-muted)]">Aguarde enquanto carregamos os leads com follow-up atrasado.</Text>
           </div>
         </div>
       </WorkspaceDialog>
@@ -745,14 +747,14 @@ export default function WhatsAppBatchFollowUpModal({
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                 Leads
               </span>
-              <button
+              <Button variant="ghost"
                 type="button"
                 onClick={handleToggleSelectAll}
-                className="text-[11px] font-semibold text-[var(--brand-primary)] transition hover:opacity-70"
+                className="font-semibold transition hover:opacity-70"
                 disabled={phase === 'sending'}
               >
                 {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
-              </button>
+              </Button>
             </div>
             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1.5">
               {items.map((item, index) => {
@@ -784,16 +786,16 @@ export default function WhatsAppBatchFollowUpModal({
                     >
                       {item.selected && <Check className="h-3 w-3 text-[var(--text-on-brand)]" />}
                     </div>
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       onClick={() => setActiveItemIndex(index)}
                       className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs transition ${
-                        isActive ? 'border border-[var(--brand-primary-border)] bg-[var(--bg-elevated)] shadow-sm' : 'border border-transparent hover:bg-[var(--bg-elevated)]'
+                        isActive ? "border" : "border"
                       }`}
                     >
                       <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
                         {statusDot === 'generating' || statusDot === 'sending' ? (
-                          <Loader2 className="h-3 w-3 animate-spin" style={{ color: dotColor }} />
+                          <Loader2 className="animate-spin" style={{ color: dotColor }} />
                         ) : (
                           <span className="block h-2 w-2 rounded-full" style={{ background: dotColor }} />
                         )}
@@ -807,7 +809,7 @@ export default function WhatsAppBatchFollowUpModal({
                           {item.sendSegmentsSent}/{item.sendSegmentsTotal}
                         </span>
                       ) : null}
-                    </button>
+                    </Button>
                   </div>
                 );
               })}
@@ -826,10 +828,10 @@ export default function WhatsAppBatchFollowUpModal({
                     <div className="flex min-w-0 items-center gap-2.5">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="flex items-center gap-1.5 truncate text-sm font-bold text-[var(--text-primary)]">
+                          <Heading level={3} className="flex items-center gap-1.5 truncate text-sm font-bold text-[var(--text-primary)]">
                             <LeadFavoriteBadge favorito={activeItem.leadFavorito} />
                             {activeItem.leadName || 'Sem nome'}
-                          </h3>
+                          </Heading>
                           {activeItem.status === 'ready' ? (
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--success)]" />
                           ) : activeItem.status === 'failed' ? (
@@ -837,7 +839,7 @@ export default function WhatsAppBatchFollowUpModal({
                           ) : null}
                         </div>
                         {activeItem.leadPhone ? (
-                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{activeItem.leadPhone}</p>
+                          <Text className="mt-0.5 text-xs text-[var(--text-muted)]">{activeItem.leadPhone}</Text>
                         ) : null}
                       </div>
                     </div>
@@ -871,27 +873,27 @@ export default function WhatsAppBatchFollowUpModal({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-bold text-[var(--text-primary)]">Próximo passo comercial</p>
+                          <Text className="text-sm font-bold text-[var(--text-primary)]">Próximo passo comercial</Text>
                           <Pill tone={aiRecommendsSchedule ? 'accent' : 'neutral'}>
                             IA: {aiRecommendsSchedule ? 'agendar lembrete' : 'não agendar'}
                           </Pill>
                         </div>
-                        <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                        <Text className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
                           {aiRecommendsSchedule
                             ? `A IA recomenda manter a oportunidade ativa e retomar em ${new Date(activeItem.scheduleRecommendation!.suggestedDate!).toLocaleString('pt-BR')}.`
                             : 'A IA não identificou um próximo passo que justifique novo lembrete agora.'}
-                        </p>
+                        </Text>
                         {activeItem.scheduleRecommendation?.reason ? (
-                          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                          <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                             Motivo: {activeItem.scheduleRecommendation.reason}
-                          </p>
+                          </Text>
                         ) : null}
                       </div>
                     </div>
 
-                    <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 text-xs text-[var(--text-secondary)]">
-                      <input
-                        type="checkbox"
+                    <FieldLabel className="mt-3 flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 text-xs text-[var(--text-secondary)]">
+                      <Checkbox
+
                         className="mt-0.5"
                         checked={activeItem.approvedScheduleAction === 'schedule'}
                         onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
@@ -913,12 +915,12 @@ export default function WhatsAppBatchFollowUpModal({
                             : 'Sem próximo lembrete, o lead será movido para Reativação ou Perdido conforme a decisão comercial.'}
                         </span>
                       </span>
-                    </label>
+                    </FieldLabel>
 
                     {activeItem.approvedScheduleAction === 'schedule' ? (
-                      <input
+                      <Input
                         type="datetime-local"
-                        className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1.5 text-xs text-[var(--text-primary)]"
+                        className="mt-3 w-full border"
                         value={activeItem.approvedScheduleDate ? new Date(activeItem.approvedScheduleDate).toISOString().slice(0, 16) : ''}
                         onChange={(event) => setItems((prev) => updateItemInList(prev, activeItemIndex!, {
                           approvedScheduleDate: event.target.value ? new Date(event.target.value).toISOString() : null,
@@ -932,9 +934,9 @@ export default function WhatsAppBatchFollowUpModal({
                   {/* Variations carousel */}
                   {activeItem.variations.length > 0 ? (
                     <div className="mb-4">
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      <Text className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                         Variações disponíveis
-                      </p>
+                      </Text>
                       <VariationCarousel
                         variations={activeItem.variations}
                         onSelect={(text) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: text }))}
@@ -945,9 +947,9 @@ export default function WhatsAppBatchFollowUpModal({
 
                   {/* Textarea with word count */}
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                    <FieldLabel className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                       Mensagem
-                    </label>
+                    </FieldLabel>
                     <div className="flex items-center gap-2">
                       <Pill tone="accent">{activeMessageSegments.length || 1} blocos</Pill>
                       {activeItem.generatedText.trim() ? (
@@ -958,10 +960,10 @@ export default function WhatsAppBatchFollowUpModal({
                   {activeItem.currentAction === 'wait' && !activeItem.generatedText.trim() ? (
                     <div className="flex min-h-[160px] flex-col items-center justify-center rounded-xl border border-dashed border-[var(--warning-border)] bg-[var(--warning-soft)] px-6 py-8 text-center">
                       <Clock className="mb-2 h-6 w-6 text-[var(--warning-text)]" />
-                      <p className="text-sm font-semibold text-[var(--warning-text)]">A IA recomenda aguardar</p>
-                      <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                      <Text className="text-sm font-semibold text-[var(--warning-text)]">A IA recomenda aguardar</Text>
+                      <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                         {activeItem.currentActionReason || 'A análise comercial indica que não é o momento ideal para enviar um follow-up.'}
-                      </p>
+                      </Text>
                     </div>
                   ) : (
                     <Textarea
@@ -1037,10 +1039,10 @@ export default function WhatsAppBatchFollowUpModal({
                     <div className="flex items-center gap-2">
                       <Settings className="h-4 w-4 text-[var(--text-secondary)]" />
                       <div>
-                        <h3 className="text-sm font-bold text-[var(--text-primary)]">Ajustes extras</h3>
-                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                        <Heading level={3} className="text-sm font-bold text-[var(--text-primary)]">Ajustes extras</Heading>
+                        <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
                           A IA decide sozinha estágio, tom e estratégia — use aqui só o que ela precisa saber.
-                        </p>
+                        </Text>
                       </div>
                     </div>
                     <span
@@ -1069,12 +1071,12 @@ export default function WhatsAppBatchFollowUpModal({
             <div className="flex min-w-0 flex-1 items-center justify-center">
               <div className="text-center">
                 <MessageSquare className="mx-auto mb-3 h-10 w-10 text-[var(--text-muted)]" />
-                <p className="font-semibold text-[var(--text-secondary)]">
+                <Text className="font-semibold text-[var(--text-secondary)]">
                   Nenhum lead carregado
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                </Text>
+                <Text className="mt-1 text-xs text-[var(--text-muted)]">
                   Selecione um lead na lista ao lado para começar.
-                </p>
+                </Text>
               </div>
             </div>
           )}

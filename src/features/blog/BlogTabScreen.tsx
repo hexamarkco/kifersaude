@@ -29,7 +29,6 @@ import {
   saveBlogPost,
   setBlogPostPublished,
 } from "./data/blogRepository";
-import "react-quill/dist/quill.snow.css";
 
 export default function BlogTabScreen() {
   const { user } = useAuth();

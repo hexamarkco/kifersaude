@@ -1,3 +1,5 @@
+import { Text } from '../../../../design-system';
+import { Button } from '../../../../design-system';
 import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, Loader2, MapPin, MoreHorizontal, Pause, Pencil, Search, Sparkles, Users } from 'lucide-react';
 import type { RefObject } from 'react';
 
@@ -103,17 +105,17 @@ export function WhatsAppThreadHeader({
   return (
     <div className="whatsapp-inbox-thread-header flex flex-col gap-3 border-b p-3 sm:p-4 lg:flex-row lg:items-start lg:justify-between lg:p-5">
       <div className="flex min-w-0 items-start gap-2">
-        <button type="button" onClick={onBack} className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] lg:hidden" aria-label="Voltar para a lista de conversas">
-          <ChevronLeft className="h-5 w-5" />
-        </button>
+        <IconButton variant="ghost" size="sm" type="button" onClick={onBack} className="mt-0.5 flex shrink-0 items-center justify-center transition lg:hidden" aria-label="Voltar para a lista de conversas">
+          <ChevronLeft className="" />
+        </IconButton>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <p className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
+              <Text className="whatsapp-inbox-heading flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
                 {selectedChat.is_group ? <Users className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
                 {!selectedChat.is_group && leadPanel?.id ? <LeadFavoriteToggle leadId={leadPanel.id} favorito={favoritedLeadIds.has(leadPanel.id)} size="sm" /> : null}
                 <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
-              </p>
+              </Text>
               {!selectedChat.is_group && selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                 <StatusDropdown currentStatus={leadPanel.status_nome} leadId={leadPanel.id} onStatusChange={onLeadStatusChange} statusOptions={leadStatuses} disabled={selectedChatLeadMutationLoading} />
               ) : null}
@@ -138,9 +140,9 @@ export function WhatsAppThreadHeader({
               ) : null}
               <WhatsAppPresenceIndicator chat={selectedChat} />
               {!selectedChatForPresentation?.saved_contact_name ? (
-                <button type="button" onClick={() => onSaveContact(selectedChatDisplayName)} className="text-xs font-semibold text-[var(--brand-primary)] hover:underline">+ Salvar contato</button>
+                <Button variant="ghost" type="button" onClick={() => onSaveContact(selectedChatDisplayName)} className="font-semibold hover:underline">+ Salvar contato</Button>
               ) : (
-                <button type="button" onClick={() => onSaveContact(selectedChatForPresentation.saved_contact_name || selectedChatDisplayName)} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline"><Pencil className="h-3 w-3" />Renomear contato</button>
+                <Button variant="ghost" type="button" onClick={() => onSaveContact(selectedChatForPresentation.saved_contact_name || selectedChatDisplayName)} className="inline-flex items-center font-semibold hover:underline"><Pencil className="" />Renomear contato</Button>
               )}
               {leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
             </div>

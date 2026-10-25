@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../design-system';
 import {
   useCallback,
   useEffect,
@@ -1212,7 +1213,7 @@ export default function AgendaScreen() {
       });
 
       cells.push(
-        <button
+        <Button variant="ghost"
           key={day}
           type="button"
           onClick={() => {
@@ -1236,7 +1237,7 @@ export default function AgendaScreen() {
               {totalCount}
             </span>
           )}
-        </button>,
+        </Button>,
       );
     }
 
@@ -1321,15 +1322,15 @@ export default function AgendaScreen() {
             <div className="space-y-2">
               <div>
                 <div className="flex flex-col gap-1 xl:flex-row xl:items-center xl:gap-3">
-                  <h3 className="line-clamp-2 text-sm font-bold leading-5 text-[var(--text-primary)]">
+                  <Heading level={3} className="line-clamp-2 text-sm font-bold leading-5 text-[var(--text-primary)]">
                     {reminder.titulo}
-                  </h3>
+                  </Heading>
                   {contextBadge && <div className="hidden xl:flex xl:items-center">{contextBadge}</div>}
                 </div>
                 {reminder.descricao && (
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">
+                  <Text className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">
                     {reminder.descricao}
-                  </p>
+                  </Text>
                 )}
               </div>
 
@@ -1620,12 +1621,12 @@ export default function AgendaScreen() {
                   <ChevronLeft className="kds-control-icon" />
                 </IconButton>
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold capitalize text-[var(--text-primary)]">
+                  <Heading level={3} className="text-lg font-semibold capitalize text-[var(--text-primary)]">
                     {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                  </h3>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  </Heading>
+                  <Text className="text-xs text-[var(--text-muted)]">
                     {filteredMonthReminders.length} item(ns) com os filtros atuais
-                  </p>
+                  </Text>
                 </div>
                 <IconButton onClick={goToNextMonth} variant="icon" aria-label="Próximo mês" size="md">
                   <ChevronRight className="kds-control-icon" />

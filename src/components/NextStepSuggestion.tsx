@@ -1,3 +1,4 @@
+import { Heading, Text } from '../design-system';
 import { Lightbulb, ArrowRight } from 'lucide-react';
 
 import {
@@ -93,13 +94,13 @@ export default function NextStepSuggestion({ leadStatus, lastContact }: NextStep
           <Lightbulb className="h-5 w-5" aria-hidden="true" />
         </Surface>
         <div className="min-w-0 flex-1">
-          <h4 className="mb-2 font-semibold text-[var(--text-primary)]">
+          <Heading level={4} className="mb-2 font-semibold text-[var(--text-primary)]">
             {isUrgent && 'Atenção: '} Próximos Passos - {suggestion.title}
-          </h4>
+          </Heading>
           {isUrgent && (
-            <p className="mb-3 text-sm font-medium">
+            <Text className="mb-3 text-sm font-medium">
               Este lead está {daysInactive} dias sem contato. É importante agir rapidamente!
-            </p>
+            </Text>
           )}
           <ul className="space-y-2">
             {suggestion.actions.map((action, index) => (

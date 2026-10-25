@@ -1,3 +1,5 @@
+import { Text } from '../../../design-system';
+import { FileInput } from '../../../design-system';
 import { useRef, useState } from 'react';
 import { CheckCircle2, Download, FileUp, Loader2 } from 'lucide-react';
 
@@ -100,8 +102,8 @@ export function ContractJsonImportDialog({
       <DialogBody className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3">
           <div className="min-w-0 text-sm text-[var(--text-secondary)]">
-            <p className="font-medium text-[var(--text-primary)]">Baixe o modelo esperado</p>
-            <p className="mt-1">O arquivo inclui os dados do contrato e, opcionalmente, do titular.</p>
+            <Text className="font-medium text-[var(--text-primary)]">Baixe o modelo esperado</Text>
+            <Text className="mt-1">O arquivo inclui os dados do contrato e, opcionalmente, do titular.</Text>
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={downloadTemplate}>
             <Download className="kds-control-icon" />
@@ -111,19 +113,19 @@ export function ContractJsonImportDialog({
 
         <div className="rounded-[var(--kds-radius-sm)] border border-dashed border-[var(--border-default)] bg-[var(--surface-primary)] p-5 text-center">
           <FileUp className="mx-auto h-7 w-7 text-[var(--brand-primary)]" />
-          <p className="mt-2 font-medium text-[var(--text-primary)]">
+          <Text className="mt-2 font-medium text-[var(--text-primary)]">
             {file ? file.name : 'Escolha o arquivo .json do contrato'}
-          </p>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          </Text>
+          <Text className="mt-1 text-sm text-[var(--text-secondary)]">
             Use o modelo de arquivo para preencher os dados. Depois de importar, confira valores, datas e a taxa de adesão no formulário.
-          </p>
+          </Text>
           <details className="mt-3 text-left text-xs text-[var(--text-muted)]">
             <summary className="cursor-pointer">Orientações de formato para quem prepara o arquivo</summary>
-            <p className="mt-2">Datas: AAAA-MM-DD; renovação: AAAA-MM. O campo taxa_adesao_tipo aceita nao_cobrar, percentual_mensalidade ou valor_fixo. Valores numéricos devem seguir o modelo .json.</p>
+            <Text className="mt-2">Datas: AAAA-MM-DD; renovação: AAAA-MM. O campo taxa_adesao_tipo aceita nao_cobrar, percentual_mensalidade ou valor_fixo. Valores numéricos devem seguir o modelo .json.</Text>
           </details>
-          <input
+          <FileInput
             ref={inputRef}
-            type="file"
+
             accept="application/json,.json"
             className="sr-only"
             disabled={loading}

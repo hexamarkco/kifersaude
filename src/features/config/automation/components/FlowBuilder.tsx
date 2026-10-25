@@ -1,20 +1,7 @@
+import { FieldLabel, Text } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ReactFlow, {
-  addEdge,
-  Background,
-  Controls,
-  Handle,
-  MiniMap,
-  Position,
-  type Connection,
-  type Edge,
-  type Node,
-  getNodesBounds,
-  getViewportForBounds,
-  useEdgesState,
-  useNodesState,
-} from "reactflow";
-import "reactflow/dist/style.css";
+import { WorkflowCanvas as ReactFlow, WorkflowBackground as Background, WorkflowControls as Controls, WorkflowHandle as Handle, WorkflowMiniMap as MiniMap } from '../../../../design-system';
+import { addEdge, Position, type Connection, type Edge, type Node, getNodesBounds, getViewportForBounds, useEdgesState, useNodesState } from 'reactflow';
 import { RefreshCcw, Download } from "lucide-react";
 import { toPng } from "html-to-image";
 
@@ -35,7 +22,7 @@ import type { LeadStatusConfig } from "../../../leads";
 import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
 import { evaluateSafeFormula } from "../../../../lib/safeFormula";
-import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
+import { VariableAutocompleteTextarea } from '../../../../design-system';
 import { MessageListEditor } from "./MessageListEditor";
 import {
   Button,
@@ -1185,9 +1172,9 @@ export default function FlowBuilder({
             {selectedNode.type === "trigger" && (
               <div className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                  <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                     Tipo de gatilho
-                  </label>
+                  </FieldLabel>
                   <FilterSelect
                     icon={RefreshCcw}
                     size="sm"
@@ -1259,11 +1246,11 @@ export default function FlowBuilder({
                 {(selectedNode.data.triggerType === "status_duration" ||
                   selectedNode.data.triggerType === "inactivity_duration") && (
                   <div>
-                    <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       {selectedNode.data.triggerType === "inactivity_duration"
                         ? "Tempo sem interação (horas)"
                         : "Tempo no status (horas)"}
-                    </label>
+                    </FieldLabel>
                     <Input
                       type="number"
                       min={1}
@@ -1522,9 +1509,9 @@ export default function FlowBuilder({
               <div className="space-y-3">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       Esperar
-                    </label>
+                    </FieldLabel>
                     <Input
                       type="number"
                       min={0}
@@ -1538,9 +1525,9 @@ export default function FlowBuilder({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       Unidade
-                    </label>
+                    </FieldLabel>
                     <FilterSelect
                       icon={RefreshCcw}
                       size="sm"
@@ -1563,9 +1550,9 @@ export default function FlowBuilder({
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="block text-[11px] text-[var(--text-muted)]">
                       Formula de delay (opcional)
-                    </label>
+                    </FieldLabel>
                     <Button
                       onClick={() =>
                         updateSelectedStep({
@@ -1606,9 +1593,9 @@ export default function FlowBuilder({
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                  <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                     Tipo de ação
-                  </label>
+                  </FieldLabel>
                   <FilterSelect
                     icon={RefreshCcw}
                     size="sm"
@@ -1655,9 +1642,9 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "update_status" && (
                   <div>
-                    <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                       Status do lead
-                    </label>
+                    </FieldLabel>
                     <FilterSelect
                       icon={RefreshCcw}
                       size="sm"
@@ -1683,9 +1670,9 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === "create_task" && (
                   <div className="space-y-2">
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Título
-                      </label>
+                      </FieldLabel>
                       <Input
                         type="text"
                         value={selectedNode.data.step?.taskTitle ?? ""}
@@ -1696,9 +1683,9 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Descrição
-                      </label>
+                      </FieldLabel>
                       <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.taskDescription ?? ""}
                         onChange={(value) =>
@@ -1711,9 +1698,9 @@ export default function FlowBuilder({
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Vencimento (h)
-                        </label>
+                        </FieldLabel>
                         <Input
                           type="number"
                           min={0}
@@ -1727,9 +1714,9 @@ export default function FlowBuilder({
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Prioridade
-                        </label>
+                        </FieldLabel>
                         <FilterSelect
                           icon={RefreshCcw}
                           size="sm"
@@ -1762,9 +1749,9 @@ export default function FlowBuilder({
                       e-mail.
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Para
-                      </label>
+                      </FieldLabel>
                       <Input
                         type="text"
                         value={selectedNode.data.step?.emailTo ?? ""}
@@ -1775,9 +1762,9 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Assunto
-                      </label>
+                      </FieldLabel>
                       <Input
                         type="text"
                         value={selectedNode.data.step?.emailSubject ?? ""}
@@ -1790,9 +1777,9 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Corpo
-                      </label>
+                      </FieldLabel>
                       <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.emailBody ?? ""}
                         onChange={(value) =>
@@ -1808,11 +1795,11 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "webhook" && (
                   <div className="space-y-2">
-                    <p className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</p>
+                    <Text className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</Text>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Endereço do serviço
-                      </label>
+                      </FieldLabel>
                       <Input
                         type="text"
                         value={selectedNode.data.step?.webhookUrl ?? ""}
@@ -1824,9 +1811,9 @@ export default function FlowBuilder({
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Método
-                        </label>
+                        </FieldLabel>
                         <FilterSelect
                           icon={RefreshCcw}
                           size="sm"
@@ -1850,9 +1837,9 @@ export default function FlowBuilder({
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                           Cabeçalhos da conexão (JSON)
-                        </label>
+                        </FieldLabel>
                         <Input
                           type="text"
                           value={selectedNode.data.step?.webhookHeaders ?? ""}
@@ -1866,9 +1853,9 @@ export default function FlowBuilder({
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
                         Dados enviados
-                      </label>
+                      </FieldLabel>
                       <VariableAutocompleteTextarea
                         value={selectedNode.data.step?.webhookBody ?? ""}
                         onChange={(value) =>

@@ -1,3 +1,5 @@
+import { Text, Heading } from '../../../../design-system';
+import { Button, IconButton } from '../../../../design-system';
 import type { ComponentType, ReactNode } from 'react';
 import {
   Calendar,
@@ -47,9 +49,9 @@ export function AiContextPanel({
             <HeartHandshake className="h-3.5 w-3.5 shrink-0" />
             <span>Contexto pessoal identificado</span>
           </div>
-          <p className="mt-1 opacity-90">
+          <Text className="mt-1 opacity-90">
             {emotionalContext.guidance || 'A IA percebeu algo pessoal nesta conversa e ajustou a abordagem por bom senso.'}
-          </p>
+          </Text>
         </div>
       ) : null}
       {rationale ? (
@@ -58,7 +60,7 @@ export function AiContextPanel({
             <Sparkles className="h-3.5 w-3.5 shrink-0" />
             <span>Leitura da IA sobre esta conversa</span>
           </div>
-          <p className="mt-1 opacity-85">{rationale}</p>
+          <Text className="mt-1 opacity-85">{rationale}</Text>
         </div>
       ) : null}
     </div>
@@ -80,7 +82,7 @@ export function ChatBubblePreview({
     return (
       <div className="whatsapp-inbox-thread rounded-xl border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-10 text-center">
         <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--text-muted)]" />
-        <p className="text-sm text-[var(--text-muted)]">{emptyLabel}</p>
+        <Text className="text-sm text-[var(--text-muted)]">{emptyLabel}</Text>
       </div>
     );
   }
@@ -90,7 +92,7 @@ export function ChatBubblePreview({
       {segments.map((segment, index) => (
         <div key={`${index}:${segment.slice(0, 32)}`} className="message-bubble-row flex w-full justify-end">
           <div className="message-bubble message-bubble-outbound max-w-[92%] rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm">
-            <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">{segment}</p>
+            <Text className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">{segment}</Text>
             {segments.length > 1 ? (
               <div className="mt-1.5 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 {index + 1}/{segments.length}
@@ -121,16 +123,16 @@ export function VariationCarousel({
   return (
     <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Variações geradas">
       {variations.map((variation, index) => (
-        <button
+        <Button variant="ghost"
           key={`${variation.label}:${index}`}
           type="button"
           onClick={() => onSelect(variation.text)}
           disabled={disabled}
-          className="min-w-[12rem] max-w-[16rem] shrink-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-w-[12rem] max-w-[16rem] shrink-0 border text-left transition disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span className="block truncate font-semibold text-[var(--text-primary)]">{variation.label}</span>
           <span className="mt-1 line-clamp-2 block leading-5 text-[var(--text-muted)]">{variation.text}</span>
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -155,7 +157,7 @@ export function NextActionCard({
             <CalendarPlus className="h-4 w-4 text-[var(--brand-primary)]" />
             {title}
           </div>
-          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{nextAction.reason}</p>
+          <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{nextAction.reason}</Text>
         </div>
         <span className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
           {getNextActionBadgeLabel(nextAction.type)}
@@ -178,7 +180,7 @@ export function NextActionCard({
         </div>
       </div>
 
-      <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{nextAction.giveUpRecommendation}</p>
+      <Text className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{nextAction.giveUpRecommendation}</Text>
 
       {action ? <div className="mt-3">{action}</div> : null}
     </div>
@@ -203,16 +205,16 @@ export function RefinementChip({
   disabled?: boolean;
 }) {
   return (
-    <button
+    <IconButton variant="ghost" size="sm" aria-label={description}
       type="button"
       onClick={onClick}
       disabled={disabled}
       title={description}
-      className="flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] transition hover:border-[var(--brand-primary-border)] hover:text-[var(--accent-gold-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex items-center border font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
+      {loading ? <Loader2 className="animate-spin" /> : <Icon className="" />}
       {label}
-    </button>
+    </IconButton>
   );
 }
 
@@ -238,8 +240,8 @@ export function SectionCard({
       {title || description || action ? (
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {title ? <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3> : null}
-            {description ? <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">{description}</p> : null}
+            {title ? <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">{title}</Heading> : null}
+            {description ? <Text className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">{description}</Text> : null}
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>

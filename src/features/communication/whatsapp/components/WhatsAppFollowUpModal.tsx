@@ -1,3 +1,4 @@
+import { Heading, Text } from '../../../../design-system';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
@@ -6,7 +7,7 @@ import {
   Textarea,
   WorkspaceDialog,
 } from '../../../../design-system';
-import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
+import { VariableAutocompleteTextarea } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
@@ -366,8 +367,8 @@ export default function WhatsAppFollowUpModal({
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">Ajustes extras</h3>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">Diga à IA o que ela precisa saber para escrever a melhor mensagem agora — a IA decide sozinha o estágio, o tom e a estratégia com base no histórico.</p>
+                    <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Ajustes extras</Heading>
+                    <Text className="mt-0.5 text-xs text-[var(--text-muted)]">Diga à IA o que ela precisa saber para escrever a melhor mensagem agora — a IA decide sozinha o estágio, o tom e a estratégia com base no histórico.</Text>
                   </div>
                   <span className="shrink-0 text-[11px] text-[var(--text-muted)]">Digite {'{{'} para variáveis</span>
                 </div>
@@ -392,9 +393,9 @@ export default function WhatsAppFollowUpModal({
                       "...{currentTranscript}"
                     </div>
                   ) : (
-                    <p className="text-[11px] leading-5 text-[var(--text-muted)]">
+                    <Text className="text-[11px] leading-5 text-[var(--text-muted)]">
                       O áudio entra como instrução corrigida automaticamente.
-                    </p>
+                    </Text>
                   )}
                   <Button
                     type="button"

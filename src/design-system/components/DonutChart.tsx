@@ -1,6 +1,7 @@
+import { ActionSurface } from './Surface';
 import { useMemo } from 'react';
 
-type DonutChartProps = {
+export type DonutChartProps = {
   data: Array<{
     label: string;
     value: number;
@@ -129,7 +130,7 @@ export default function DonutChart({
       {!compact && (
         <div className="mt-5 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
         {segments.map((segment, index) => (
-          <button
+          <ActionSurface variant="plain" padding="none"
             key={`${segment.label}-${index}`}
             type="button"
             className="kds-donut-legend-item flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
@@ -152,7 +153,7 @@ export default function DonutChart({
                 {segment.value.toLocaleString('pt-BR')} ({segment.percentage.toFixed(0)}%)
               </div>
             </div>
-          </button>
+          </ActionSurface>
         ))}
         </div>
       )}

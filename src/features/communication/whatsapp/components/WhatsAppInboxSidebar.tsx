@@ -1,3 +1,4 @@
+import { Text } from '../../../../design-system';
 import { Archive, Calendar, CalendarClock, Cog, Loader2, MessageCircle, Plus, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import type { MutableRefObject } from 'react';
 import type { LeadStatusConfig } from '../../../leads';
@@ -145,9 +146,9 @@ export function WhatsAppInboxSidebar({
       <div className="whatsapp-inbox-sidebar-header border-b p-4">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <Text className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
               {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
-            </p>
+            </Text>
             <ButtonGroup className="whatsapp-inbox-action-group shrink-0" role="group" aria-label="Ações das conversas">
               <IconButton
                 variant={archivedSectionOpen ? 'soft' : 'ghost'}
@@ -267,8 +268,8 @@ export function WhatsAppInboxSidebar({
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed border-[var(--danger)] p-6 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 text-[var(--danger)]" />
             <div className="space-y-1">
-              <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as conversas</p>
-              <p className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente. Seus chats não foram apagados.</p>
+              <Text className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as conversas</Text>
+              <Text className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente. Seus chats não foram apagados.</Text>
             </div>
             <Button variant="secondary" size="sm" onClick={onRetryChatLoad}>Tentar novamente</Button>
           </div>
@@ -277,8 +278,8 @@ export function WhatsAppInboxSidebar({
             <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
               <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
               <div className="space-y-1">
-                <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Nenhum resultado encontrado</p>
-                <p className="text-sm text-[var(--text-secondary)]">Busque pelo nome do contato, telefone ou trecho de mensagem.</p>
+                <Text className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Nenhum resultado encontrado</Text>
+                <Text className="text-sm text-[var(--text-secondary)]">Busque pelo nome do contato, telefone ou trecho de mensagem.</Text>
               </div>
             </div>
           ) : (
@@ -320,8 +321,8 @@ export function WhatsAppInboxSidebar({
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 text-[var(--warning)]" />
             <div className="space-y-1">
-              <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar os arquivados</p>
-              <p className="text-sm text-[var(--text-secondary)]">A lista não foi atualizada. Tente novamente.</p>
+              <Text className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar os arquivados</Text>
+              <Text className="text-sm text-[var(--text-secondary)]">A lista não foi atualizada. Tente novamente.</Text>
             </div>
             <Button variant="secondary" size="sm" onClick={onRetryChatLoad} loading={loading}>Tentar novamente</Button>
           </div>
@@ -329,8 +330,8 @@ export function WhatsAppInboxSidebar({
           <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
             {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
             <div className="space-y-1">
-              <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">{archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}</p>
-              <p className="text-sm text-[var(--text-secondary)]">{archivedSectionOpen ? 'Arquive uma conversa para ela aparecer nesta lista separada.' : 'As mensagens recebidas no WhatsApp aparecerão aqui automaticamente.'}</p>
+              <Text className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">{archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}</Text>
+              <Text className="text-sm text-[var(--text-secondary)]">{archivedSectionOpen ? 'Arquive uma conversa para ela aparecer nesta lista separada.' : 'As mensagens recebidas no WhatsApp aparecerão aqui automaticamente.'}</Text>
             </div>
           </div>
         ) : (

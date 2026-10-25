@@ -1,3 +1,5 @@
+import { Text } from '../../../../design-system';
+import { Button } from '../../../../design-system';
 import type { ComponentProps, DragEventHandler } from 'react';
 import { MessageCircle } from 'lucide-react';
 
@@ -46,7 +48,7 @@ export const WhatsAppInboxConversationPane = ({
   >
     {isDraggingFilesOverThread ? (
       <div className="pointer-events-none absolute inset-2 z-[3] flex items-center justify-center rounded-2xl border-2 border-dashed border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]/90">
-        <p className="whatsapp-inbox-heading text-sm font-semibold text-[var(--brand-primary)]">Solte para anexar à conversa</p>
+        <Text className="whatsapp-inbox-heading text-sm font-semibold text-[var(--brand-primary)]">Solte para anexar à conversa</Text>
       </div>
     ) : null}
     {conversation ? (
@@ -57,13 +59,13 @@ export const WhatsAppInboxConversationPane = ({
         {conversation.removedAttachment ? (
           <div className="mx-2.5 mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] sm:mx-3">
             <span className="truncate">Anexo removido: {conversation.removedAttachment.fileName}</span>
-            <button
+            <Button variant="ghost"
               type="button"
               onClick={conversation.removedAttachment.onUndo}
-              className="shrink-0 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+              className="shrink-0 font-semibold hover:underline"
             >
               Desfazer
-            </button>
+            </Button>
           </div>
         ) : null}
         <WhatsAppComposer selectedChat={conversation.selectedChat} {...conversation.composer} />
@@ -72,8 +74,8 @@ export const WhatsAppInboxConversationPane = ({
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
         <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
         <div className="space-y-1">
-          <p className="whatsapp-inbox-heading text-base font-semibold text-[var(--text-primary)]">Selecione uma conversa</p>
-          <p className="text-sm text-[var(--text-secondary)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
+          <Text className="whatsapp-inbox-heading text-base font-semibold text-[var(--text-primary)]">Selecione uma conversa</Text>
+          <Text className="text-sm text-[var(--text-secondary)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</Text>
         </div>
       </div>
     )}

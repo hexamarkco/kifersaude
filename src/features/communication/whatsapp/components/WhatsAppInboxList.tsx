@@ -388,7 +388,7 @@ export function InboxChatListItem({
       }}
     >
       <div className="px-4 py-3">
-        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
+        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} className="whatsapp-inbox-chat-select min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
@@ -407,7 +407,7 @@ export function InboxChatListItem({
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
               </div>
             </div>
-            <div className="flex shrink-0 items-start">
+            <div className="flex shrink-0 items-start pr-12 sm:pr-8">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
             </div>
           </div>

@@ -21,6 +21,17 @@
   background: var(--bg-surface);
 }
 
+.comm-terracotta .whatsapp-inbox-thread-header {
+  padding: var(--space-2) var(--space-4);
+  gap: var(--space-2);
+}
+
+@media (max-width: 767px) {
+  .comm-terracotta .whatsapp-inbox-thread-header {
+    padding-inline: var(--space-3);
+  }
+}
+
 .comm-terracotta .whatsapp-inbox-sidebar-scroll,
 .comm-terracotta .whatsapp-inbox-messages {
   background: var(--bg-inset);
@@ -41,6 +52,14 @@
   border-color: var(--brand-primary-border);
   background: var(--brand-primary-muted);
   box-shadow: inset 3px 0 0 var(--brand-primary);
+}
+
+/* The row owns the hover/selection surface; its inner action stays transparent. */
+.comm-terracotta .whatsapp-inbox-chat-select,
+.comm-terracotta .whatsapp-inbox-chat-select:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .comm-terracotta .whatsapp-inbox-empty-state {

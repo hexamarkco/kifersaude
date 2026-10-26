@@ -42,3 +42,6 @@ scripts/hospital_location_report.json
 scripts/hospital_location_report.csv
 
 .vercel
+
+# Local visual audit archive (exceeds GitHub's file size limit).
+/kifersaude-ui-audit.zip

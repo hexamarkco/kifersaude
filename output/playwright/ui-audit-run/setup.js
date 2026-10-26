@@ -7,7 +7,7 @@ async (page) => {
   const encode=v=>btoa(JSON.stringify(v)).replaceAll('=','').replaceAll('+','-').replaceAll('/','_');
   const token=[encode({alg:'HS256',typ:'JWT'}),encode({sub:user.id,role:'authenticated',exp:2114380800}), 'demonstracao-sem-validade'].join('.');
   if(location.pathname==='/login')localStorage.removeItem('sb-127-auth-token');
-  else localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:token,refresh_token:'demonstracao-sem-validade',expires_at:2114380800,expires_in:86400,token_type:'bearer',user}));
+  else localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:token,refresh_token:'placeholder-ui-audit-refresh-token',expires_at:2114380800,expires_in:86400,token_type:'bearer',user}));
   localStorage.setItem('painel.theme.v2','light');
   Notification.requestPermission=async()=> 'denied';
  });

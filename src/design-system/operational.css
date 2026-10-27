@@ -958,7 +958,8 @@
 .kds-page-title-row { flex: 1; }
 .kds-page-header-operational .kds-page-actions { width: auto; max-width: 100%; }
 .kds-page-action-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); max-width: 100%; min-width: 0; }
-.kds-page-action-buttons { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); margin-left: auto; min-width: 0; max-width: 100%; }
+.kds-page-action-buttons { align-items: stretch; justify-content: flex-end; flex-wrap: nowrap; margin-left: auto; min-width: 0; max-width: 100%; }
+.kds-page-action-buttons.kds-button-group > .kds-button { flex-shrink: 1; }
 .kds-page-action-message { flex: 1 1 12rem; color: var(--text-secondary); font: var(--type-body-sm); }
 .kds-page-action-destructive { margin-right: auto; }
 .kds-page-action-bar-form { padding-block: var(--space-4); border-top: 1px solid var(--border-default); }
@@ -993,15 +994,24 @@
 .painel-theme.kifer-ds .kds-button-group { border-radius: var(--radius-control); }
 .painel-theme.kifer-ds .kds-button-group .kds-button { border-radius: 0; }
 .painel-theme.kifer-ds .kds-button-group > .kds-button:first-child,
-.painel-theme.kifer-ds .kds-button-group > .kds-popover-trigger:first-child > .kds-button {
+.painel-theme.kifer-ds .kds-button-group > :not(.kds-button):first-child > .kds-button {
   border-top-left-radius: var(--radius-control-inset);
   border-bottom-left-radius: var(--radius-control-inset);
 }
 .painel-theme.kifer-ds .kds-button-group > .kds-button:last-child,
-.painel-theme.kifer-ds .kds-button-group > .kds-popover-trigger:last-child > .kds-button {
+.painel-theme.kifer-ds .kds-button-group > :not(.kds-button):last-child > .kds-button {
   border-top-right-radius: var(--radius-control-inset);
   border-bottom-right-radius: var(--radius-control-inset);
 }
+.kds-button-group-vertical { flex-direction: column; }
+.kds-button-group-vertical > * + * { border-left: 0; border-top: var(--border-width) solid var(--border-default); }
+.painel-theme.kifer-ds .kds-button-group-vertical > .kds-button:first-child {
+  border-radius: var(--radius-control-inset) var(--radius-control-inset) 0 0;
+}
+.painel-theme.kifer-ds .kds-button-group-vertical > .kds-button:last-child {
+  border-radius: 0 0 var(--radius-control-inset) var(--radius-control-inset);
+}
+.painel-theme.kifer-ds .kds-button-group > .kds-button:only-child { border-radius: var(--radius-control-inset); }
 .painel-theme.kifer-ds .kds-input-group > :first-child:not(:only-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .painel-theme.kifer-ds .kds-input-group > :last-child:not(:only-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .painel-theme.kifer-ds .kds-button:not(.kds-icon-button) {

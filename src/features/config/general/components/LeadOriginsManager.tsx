@@ -169,7 +169,7 @@ export default function LeadOriginsManager() {
                 <Switch size="sm" checked={origin.visivel_para_observadores} onChange={(event) => void handleToggleObserverVisibility(origin.id, event.target.checked)} disabled={isBusy} aria-label={`${origin.visivel_para_observadores ? 'Ocultar' : 'Exibir'} ${origin.nome} para observadores`} />
                 <span className="text-xs text-[var(--text-secondary)] md:sr-only">Observadores</span>
               </div>
-              <ButtonGroup role="group" aria-label={`Ações da origem ${origin.nome}`}>
+              <ButtonGroup size="sm" role="group" aria-label={`Ações da origem ${origin.nome}`}>
                 {isEditing ? <>
                   <IconButton onClick={() => void confirmEditing()} variant="success" disabled={isBusy} size="sm" aria-label={`Salvar origem ${origin.nome}`} title="Salvar origem"><Check aria-hidden="true" /></IconButton>
                   <IconButton onClick={cancelEditing} variant="secondary" disabled={isBusy} size="sm" aria-label={`Cancelar edição de ${origin.nome}`} title="Cancelar edição"><X aria-hidden="true" /></IconButton>

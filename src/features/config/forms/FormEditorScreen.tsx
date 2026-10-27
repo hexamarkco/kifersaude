@@ -1,4 +1,4 @@
-import { Heading, Text, TextLink } from '../../../design-system';
+import { ButtonGroup, Heading, Text, TextLink } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -443,14 +443,14 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
               return (
                 <Card key={step.id} variant="muted" padding="sm" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="flex flex-col items-center gap-0.5 pt-0.5">
+                    <ButtonGroup size="sm" aria-label="Ordenar etapa" orientation="vertical">
                       <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, -1)} disabled={index === 0 || stepMutationInFlight} aria-label="Mover para cima">
                         <ChevronUp />
                       </IconButton>
                       <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, 1)} disabled={index === questionSteps.length - 1 || stepMutationInFlight} aria-label="Mover para baixo">
                         <ChevronDown />
                       </IconButton>
-                    </div>
+                    </ButtonGroup>
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
                       <ListChecks className="h-4 w-4" />
                     </div>
@@ -463,7 +463,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 self-end sm:self-center">
+                  <ButtonGroup size="md" aria-label="Ações da etapa">
                     <Button variant="secondary" size="sm" disabled={stepMutationInFlight} onClick={() => setStepDialog({ step })}>
                       <Pencil className="kds-control-icon" />
                       <span>Editar</span>
@@ -471,7 +471,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
                     <IconButton variant="danger" disabled={stepMutationInFlight} size="sm" onClick={() => void handleDeleteStep(step)} aria-label={`Excluir etapa ${step.title}`} title="Excluir etapa">
                       <Trash2 aria-hidden="true" />
                     </IconButton>
-                  </div>
+                  </ButtonGroup>
                 </Card>
               );
             })}

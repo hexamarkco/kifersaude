@@ -1,4 +1,4 @@
-import { Heading, Text, FieldLabel, TextLink } from '../../design-system';
+import { ButtonGroup, Heading, Text, FieldLabel, TextLink } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -1965,12 +1965,12 @@ export default function LeadsManager({
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
-                          <div className="flex justify-end gap-1">
+                          <ButtonGroup size="md" aria-label="Ações do lead">
                             <IconButton onClick={() => setSelectedLead(lead)} variant="secondary" title="Ver detalhes do lead" aria-label="Ver detalhes do lead" size="md"><Contact aria-hidden="true" /></IconButton>
                             {canEditLeads && <IconButton onClick={() => openReminderScheduler(lead)} variant="soft" title="Agendar lembrete" aria-label="Agendar lembrete" size="md"><Bell aria-hidden="true" /></IconButton>}
                             {canEditLeads && <IconButton onClick={() => handleConvertToContract(lead)} variant="soft" title="Converter em contrato" aria-label="Converter em contrato" size="md"><FileText aria-hidden="true" /></IconButton>}
                             {canEditLeads && <IconButton onClick={() => handleDeleteLead(lead)} variant="danger" title="Excluir lead" aria-label="Excluir lead" size="md" loading={deletingLeadIds.has(lead.id)}><Trash2 aria-hidden="true" /></IconButton>}
-                          </div>
+                          </ButtonGroup>
                         </TableCell>
                       </TableRow>
                     );
@@ -2098,16 +2098,13 @@ export default function LeadsManager({
                           )}
                       </div>
                     </div>
-                  <div
-                    className={`kds-op-lead-actions mt-3 grid items-center gap-1.5 pt-3 ${
-                      canEditLeads ? "grid-cols-4" : "grid-cols-1"
-                    }`}
-                  >
+                  <div className="kds-op-lead-actions mt-3 pt-3">
+                    <ButtonGroup aria-label="Ações do lead" className="overflow-x-auto">
                     <Button
                       onClick={() => setSelectedLead(lead)}
                       variant="secondary"
                       size="sm"
-                      className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
+                      className="kds-op-inline-action"
                       aria-label={
                         canEditLeads
                           ? "Ver e editar lead"
@@ -2125,7 +2122,7 @@ export default function LeadsManager({
                           onClick={() => handleConvertToContract(lead)}
                           variant="soft"
                           size="sm"
-                          className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action"
                           aria-label="Converter em contrato"
                         >
                           <FileText className="kds-control-icon" />
@@ -2135,7 +2132,7 @@ export default function LeadsManager({
                           onClick={() => openReminderScheduler(lead)}
                           variant="soft"
                           size="sm"
-                          className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action"
                           aria-label="Agendar lembrete"
                           type="button"
                         >
@@ -2148,7 +2145,7 @@ export default function LeadsManager({
                           onClick={() => handleDeleteLead(lead)}
                           variant="danger"
                           size="sm"
-                          className="kds-op-inline-action w-full justify-center space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action"
                           aria-label="Excluir lead"
                           type="button"
                           loading={deletingLeadIds.has(lead.id)}
@@ -2158,6 +2155,7 @@ export default function LeadsManager({
                         </Button>
                       </>
                     )}
+                  </ButtonGroup>
                   </div>
                 </Surface>
               ))}

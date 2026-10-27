@@ -1,4 +1,4 @@
-import { Text } from '../../../design-system';
+import { ButtonGroup, Text } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -256,7 +256,7 @@ export default function AiConfigScreen() {
         title="Configurações de IA"
         description="Gerencie prompts, parâmetros e versões das funcionalidades de IA do sistema."
         action={
-          <div className="flex items-center gap-2">
+          <ButtonGroup size="sm" aria-label="Ações das configurações de IA">
             <Button variant="ghost" size="sm" onClick={handleExport} disabled={loading || exporting} loading={exporting}>
               <Download className="kds-control-icon" />
               Exportar
@@ -283,7 +283,7 @@ export default function AiConfigScreen() {
             >
               <RefreshCw />
             </IconButton>
-          </div>
+          </ButtonGroup>
         }
       />
 

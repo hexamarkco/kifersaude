@@ -1,4 +1,4 @@
-import { Heading, Text, Image, FieldLabel } from '../../../design-system';
+import { ButtonGroup, Heading, Text, Image, FieldLabel } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
@@ -549,7 +549,7 @@ export default function LinksScreen() {
                   className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="flex flex-col items-center gap-0.5 pt-0.5">
+                    <ButtonGroup size="sm" aria-label="Ordenar link" orientation="vertical">
                       <IconButton
                         type="button"
                         size="sm"
@@ -570,7 +570,7 @@ export default function LinksScreen() {
                       >
                         <ChevronDown />
                       </IconButton>
-                    </div>
+                    </ButtonGroup>
 
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
                       <Icon className="h-4 w-4" />
@@ -631,7 +631,7 @@ export default function LinksScreen() {
                     )}
 
                     {isEditing ? (
-                      <div className="flex items-center gap-2">
+                      <ButtonGroup size="sm" aria-label="Ações da edição do link">
                         <IconButton
                           onClick={() => void confirmEditing()}
                           variant="success"
@@ -653,9 +653,9 @@ export default function LinksScreen() {
                         >
                           <X />
                         </IconButton>
-                      </div>
+                      </ButtonGroup>
                     ) : (
-                      <div className="flex items-center gap-2">
+                      <ButtonGroup size="sm" aria-label="Ações do link">
                         <Button onClick={() => startEditing(link)} variant="secondary" size="sm" disabled={hasBusyMutation}>
                           Editar
                         </Button>
@@ -670,7 +670,7 @@ export default function LinksScreen() {
                         >
                           <Trash2 aria-hidden="true" />
                         </IconButton>
-                      </div>
+                      </ButtonGroup>
                     )}
                   </div>
                 </Card>

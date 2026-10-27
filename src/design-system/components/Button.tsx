@@ -58,11 +58,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   );
 });
 
-export type ButtonGroupProps = HTMLAttributes<HTMLDivElement>;
+export type ButtonGroupProps = HTMLAttributes<HTMLDivElement> & {
+  size?: ControlSize;
+  orientation?: 'horizontal' | 'vertical';
+};
 
-export function ButtonGroup({ className, children, ...props }: ButtonGroupProps) {
+export function ButtonGroup({ size = 'md', orientation = 'horizontal', className, children, ...props }: ButtonGroupProps) {
   return (
-    <div className={cx('kds-button-group', className)} {...props}>
+    <div role="group" className={cx('kds-button-group', `kds-control-group-${size}`, orientation === 'vertical' && 'kds-button-group-vertical', className)} {...props}>
       {children}
     </div>
   );

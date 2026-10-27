@@ -1,4 +1,4 @@
-import { Text, Image, Heading } from '../../../design-system';
+import { ButtonGroup, Text, Image, Heading } from '../../../design-system';
 import {
   Edit2,
   Eye,
@@ -141,7 +141,7 @@ export default function BlogPostsList({
                           </div>
                         </div>
 
-                        <div className="flex flex-shrink-0 items-center gap-2">
+                        <ButtonGroup size="md" aria-label="Ações da publicação">
                           <IconButton
                             type="button"
                             onClick={() =>
@@ -181,7 +181,7 @@ export default function BlogPostsList({
                            size="md" aria-label="Excluir">
                             <Trash2 aria-hidden="true" />
                           </IconButton>
-                        </div>
+                        </ButtonGroup>
                       </div>
                     </div>
                   </div>

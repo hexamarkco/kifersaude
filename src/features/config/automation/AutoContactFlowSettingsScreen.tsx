@@ -1,4 +1,4 @@
-import { Text, Heading, FieldLabel } from '../../../design-system';
+import { ButtonGroup, Text, Heading, FieldLabel } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -3592,7 +3592,7 @@ Os horários já consideram a janela do fluxo,
                               configuradas
                             </Text>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <ButtonGroup size="md" aria-label="Ações do modelo">
                             <Button
                               onClick={() => handleEditTemplate(template.id)}
                               variant="secondary"
@@ -3609,7 +3609,7 @@ Os horários já consideram a janela do fluxo,
                              size="sm" aria-label="Remover modelo">
                               <Trash2 aria-hidden="true" />
                             </IconButton>
-                          </div>
+                          </ButtonGroup>
                         </div>
                         <div className="space-y-2">
                           {previewMessages.length > 0 ? (

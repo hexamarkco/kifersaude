@@ -1,3 +1,4 @@
+import { ButtonGroup } from '../../../design-system';
 import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Ban, BarChart3, Filter, PauseCircle, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
@@ -574,12 +575,14 @@ export default function WhatsAppCampaignDetailScreen() {
                 {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
               </span>
             )}
-            <IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
+            <ButtonGroup aria-label="Ações do disparo">
+<IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
               <ArrowLeft className="kds-control-icon" />
             </IconButton>
             <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
               <RefreshCw className="kds-control-icon" />
             </IconButton>
+</ButtonGroup>
           </div>
         )}
       />

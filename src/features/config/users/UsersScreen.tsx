@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../../design-system';
+import { ButtonGroup, Heading, Text } from '../../../design-system';
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { UserProfile } from "../domain/types";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -417,10 +417,10 @@ export default function UsersScreen() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{new Date(userProfile.created_at).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
-                          <div className="flex justify-end gap-1">
+                          <ButtonGroup size="md" aria-label="Ações do usuário">
                             <IconButton type="button" onClick={() => startEditingUser(userProfile)} disabled={actionLoading} variant="icon" title="Editar usuário" aria-label={`Editar ${userProfile.username}`} size="md"><Pencil aria-hidden="true" /></IconButton>
                             {!isCurrentUser && <IconButton type="button" onClick={() => void handleDeleteUser(userProfile.id)} disabled={actionLoading} variant="danger" title="Excluir usuário" aria-label={`Excluir ${userProfile.username}`} size="md"><Trash2 aria-hidden="true" /></IconButton>}
-                          </div>
+                          </ButtonGroup>
                         </TableCell>
                       </TableRow>
                     );
@@ -472,7 +472,8 @@ export default function UsersScreen() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
+                      <ButtonGroup aria-label="Ações do usuário">
                       <IconButton
                         type="button"
                         onClick={() => startEditingUser(userProfile)}
@@ -492,11 +493,9 @@ export default function UsersScreen() {
                          size="md" aria-label="Excluir usuário">
                           <Trash2 aria-hidden="true" />
                         </IconButton>
-                      ) : (
-                        <span className="text-sm italic text-[color:var(--text-muted)]">
-                          Você
-                        </span>
-                      )}
+                      ) : null}
+                      </ButtonGroup>
+                      {isCurrentUser && <span className="text-sm italic text-[color:var(--text-muted)]">Você</span>}
                     </div>
                   </Card>
                 );

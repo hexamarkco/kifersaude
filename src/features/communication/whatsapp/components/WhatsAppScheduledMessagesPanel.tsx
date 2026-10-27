@@ -1,4 +1,4 @@
-import { Heading, Text, FieldLabel } from '../../../../design-system';
+import { ButtonGroup, Heading, Text, FieldLabel } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
@@ -629,7 +629,7 @@ export default function WhatsAppScheduledMessagesPanel({
               <Text className="text-sm text-[var(--text-muted)]">{headerSummary}</Text>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <ButtonGroup size="md" aria-label="Ações dos agendamentos">
             {onScheduleNew && (
               <Button onClick={onScheduleNew} size="sm">
                 <Plus className="kds-control-icon" />
@@ -639,7 +639,7 @@ export default function WhatsAppScheduledMessagesPanel({
             <IconButton onClick={onClose} aria-label="Fechar">
               <X className="kds-control-icon" />
             </IconButton>
-          </div>
+          </ButtonGroup>
         </div>
 
       <DialogBody className="space-y-4 px-6 py-4">
@@ -918,7 +918,7 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
         </div>
 
         {isActive && (
-          <div className="flex items-center gap-1 shrink-0">
+          <ButtonGroup size="md" aria-label="Ações da mensagem agendada">
             {message.status === 'scheduled' && (
               <IconButton
                 onClick={onEdit}
@@ -947,7 +947,7 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
                 {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <Trash2 className="kds-control-icon" />}
               </IconButton>
             )}
-          </div>
+          </ButtonGroup>
         )}
       </div>
     </div>
@@ -1005,7 +1005,7 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
         </div>
 
         {(canCancel || canRetry) && (
-          <div className="flex shrink-0 items-center gap-1">
+          <ButtonGroup size="md" aria-label="Ações da sequência agendada">
             {canEdit && (
               <IconButton onClick={onEdit} disabled={cancelling} aria-label="Editar sequência agendada" title="Editar sequência agendada">
                 <Pencil className="kds-control-icon" />
@@ -1021,7 +1021,7 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
                 {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <X className="kds-control-icon" />}
               </IconButton>
             )}
-          </div>
+          </ButtonGroup>
         )}
       </div>
     </div>

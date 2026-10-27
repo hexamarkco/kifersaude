@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../../../design-system';
+import { ButtonGroup, Heading, Text } from '../../../../design-system';
 import { useState } from "react";
 import { Brain, Pencil, Power, PowerOff } from "lucide-react";
 
@@ -76,6 +76,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     {isLegacy ? "Desativada" : isActive ? "Ativo" : "Inativo"}
                   </Badge>
                 )}
+                <ButtonGroup size="sm" aria-label="Ações da configuração">
                 {!isLegacy && (
                   <IconButton
                     variant="ghost"
@@ -107,6 +108,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                     )}
                   </IconButton>
                 )}
+                </ButtonGroup>
               </div>
             </div>
           );

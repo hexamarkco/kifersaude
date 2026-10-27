@@ -1,5 +1,6 @@
+import { ButtonGroup } from '../../../../design-system';
 import { Text, Audio, Image, TextLink, Video } from '../../../../design-system';
-import { ActionSurface, IconButton } from '../../../../design-system';
+import { ActionSurface } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, Loader2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { Button } from '../../../../design-system';
@@ -443,7 +444,7 @@ export function WhatsAppMessageBody({
                     <Text className="mt-1 text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</Text>
                   ) : null}
                   {item.phoneNumber ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <ButtonGroup size="sm" aria-label="Ações do contato compartilhado" className="mt-2 overflow-x-auto">
                       <Button variant="ghost"
                         type="button"
                         onClick={() => onOpenSharedContactChat(item)}
@@ -452,7 +453,7 @@ export function WhatsAppMessageBody({
                       >
                         {sharedContactActionKey === `open:${item.phoneNumber}` ? 'Abrindo...' : 'Abrir chat'}
                       </Button>
-                      <IconButton variant="ghost" size="sm" aria-label={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
+                      <Button variant="ghost" size="sm" aria-label={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
                         type="button"
                         onClick={() => onSaveSharedContact(item)}
                         disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
@@ -460,8 +461,8 @@ export function WhatsAppMessageBody({
                         title={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
                       >
                         {sharedContactActionKey === `save:${item.phoneNumber}` ? 'Salvando...' : 'Salvar contato'}
-                      </IconButton>
-                    </div>
+                      </Button>
+                    </ButtonGroup>
                   ) : null}
                 </div>
               ))}

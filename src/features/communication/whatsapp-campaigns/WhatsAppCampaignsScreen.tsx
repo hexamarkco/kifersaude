@@ -1,4 +1,4 @@
-import { Heading, Text, FieldLabel as DsFieldLabel } from '../../../design-system';
+import { ButtonGroup, Heading, Text, FieldLabel as DsFieldLabel } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
@@ -1300,7 +1300,7 @@ export default function WhatsAppCampaignsScreen() {
                               <div className="mb-1 flex items-center justify-between gap-2">
                                 <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}</span>
                                 {stage.messages.length > 1 && (
-                                  <div className="flex items-center gap-0.5">
+                                  <ButtonGroup size="sm" aria-label="Ações da mensagem">
                                     <IconButton type="button" size="sm" variant="ghost" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
                                       <ChevronUp />
                                     </IconButton>
@@ -1310,7 +1310,7 @@ export default function WhatsAppCampaignsScreen() {
                                     <IconButton type="button" size="sm" variant="danger" onClick={() => removeMessageFromStage(stageIndex, messageIndex)} aria-label="Remover mensagem">
                                       <Trash2 />
                                     </IconButton>
-                                  </div>
+                                  </ButtonGroup>
                                 )}
                               </div>
                               <div className="relative">

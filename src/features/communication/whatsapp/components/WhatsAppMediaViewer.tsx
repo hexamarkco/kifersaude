@@ -1,4 +1,4 @@
-import { Video, Image, Text, TextLink } from '../../../../design-system';
+import { ButtonGroup, Video, Image, Text, TextLink } from '../../../../design-system';
 import { ActionSurface, IconButton, Button } from '../../../../design-system';
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -129,7 +129,7 @@ export function WhatsAppMediaViewer({
           <Text className="truncate text-sm font-semibold">{selectedAuthor}</Text>
           <Text className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</Text>
         </div>
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <ButtonGroup size="md" aria-label="Ações do arquivo">
           {mediaUrl && !isVideo ? (
             <>
               <IconButton variant="ghost" size="sm"
@@ -191,7 +191,7 @@ export function WhatsAppMediaViewer({
           >
             <X className="" />
           </IconButton>
-        </div>
+        </ButtonGroup>
       </header>
 
       <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-5">

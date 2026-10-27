@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../design-system';
+import { ButtonGroup, Heading, Text } from '../../design-system';
 import { ActionSurface } from '../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -821,10 +821,10 @@ export default function ContractsManager({
                     </TableCell>
                     <TableCell>{formatContractEntityName(contract.responsavel) || "Não atribuído"}</TableCell>
                       <TableCell align="right">
-                        <div className="flex justify-end gap-1">
+                        <ButtonGroup size="md" aria-label="Ações do contrato">
                           <IconButton onClick={() => setSelectedContract(contract)} variant="secondary" title="Abrir contrato" aria-label="Abrir contrato" size="md"><Eye aria-hidden="true" /></IconButton>
                           {canEditContracts && <IconButton onClick={() => handleDeleteContract(contract)} variant="danger" title="Excluir contrato" aria-label="Excluir contrato" size="md" loading={deletingContractIds.has(contract.id)}><Trash2 aria-hidden="true" /></IconButton>}
-                        </div>
+                        </ButtonGroup>
                       </TableCell>
                     </TableRow>
                   );
@@ -972,12 +972,13 @@ export default function ContractsManager({
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 border-t border-[var(--border-subtle)] pt-4 sm:flex sm:flex-wrap sm:items-center sm:justify-start">
+                  <div className="border-t border-[var(--border-subtle)] pt-4">
+                    <ButtonGroup aria-label="Ações do contrato" className="overflow-x-auto">
                     <Button
                       onClick={() => setSelectedContract(contract)}
                       variant="soft"
                       size="sm"
-                      className="w-full sm:w-auto"
+
                     >
                       <Eye className="kds-control-icon" />
                       <span>Abrir</span>
@@ -987,7 +988,7 @@ export default function ContractsManager({
                         onClick={() => handleDeleteContract(contract)}
                         variant="danger"
                         size="sm"
-                        className="w-full sm:w-auto"
+
                         type="button"
                         loading={deletingContractIds.has(contract.id)}
                       >
@@ -995,6 +996,7 @@ export default function ContractsManager({
                         <span>Excluir</span>
                       </Button>
                     )}
+                  </ButtonGroup>
                   </div>
                 </Surface>
               );

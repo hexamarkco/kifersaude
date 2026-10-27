@@ -1,4 +1,4 @@
-import { Heading, Text, FieldLabel } from '../../../../design-system';
+import { ButtonGroup, Heading, Text, FieldLabel } from '../../../../design-system';
 import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
@@ -1386,7 +1386,7 @@ export default function WhatsAppAgendaModal({
             </div>
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-2 min-[400px]:justify-between lg:max-w-[360px] lg:justify-end">
+          <ButtonGroup size="md" aria-label="Ações do lembrete" className="overflow-x-auto">
             {onOpenLeadChat && leadId ? (
               <IconButton
                 onClick={() => void handleOpenReminderChat(reminder)}
@@ -1560,7 +1560,7 @@ export default function WhatsAppAgendaModal({
                 {!deletingReminderIds.has(reminder.id) && <Trash2 aria-hidden="true" />}
               </IconButton>
             ) : null}
-          </div>
+          </ButtonGroup>
         </div>
       </Surface>
     );

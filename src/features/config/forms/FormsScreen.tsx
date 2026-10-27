@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../../design-system';
+import { ButtonGroup, Heading, Text } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, ExternalLink, FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
 
@@ -315,7 +315,7 @@ export default function FormsScreen() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <ButtonGroup size="md" aria-label="Ações do formulário">
                     <Switch
                       checked={form.is_published}
                       onChange={() => void handleTogglePublish(form)}
@@ -353,7 +353,7 @@ export default function FormsScreen() {
                     >
                       <Trash2 />
                     </IconButton>
-                  </div>
+                  </ButtonGroup>
                 </Card>
               );
             })}

@@ -1,4 +1,4 @@
-import { FieldLabel, Text } from '../../../../design-system';
+import { ButtonGroup, FieldLabel, Text } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkflowCanvas as ReactFlow, WorkflowBackground as Background, WorkflowControls as Controls, WorkflowHandle as Handle, WorkflowMiniMap as MiniMap } from '../../../../design-system';
 import { addEdge, Position, type Connection, type Edge, type Node, getNodesBounds, getViewportForBounds, useEdgesState, useNodesState } from 'reactflow';
@@ -1049,7 +1049,7 @@ export default function FlowBuilder({
               Clique em uma linha para remover.
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <ButtonGroup size="sm" aria-label="Ações do fluxo" className="overflow-x-auto">
             <Button onClick={addConditionNode} variant="secondary" size="sm">
               + Condicao
             </Button>
@@ -1085,7 +1085,7 @@ export default function FlowBuilder({
              size="sm">
               <RefreshCcw className="kds-control-icon" />
             </IconButton>
-          </div>
+          </ButtonGroup>
         </div>
         {totalIssueCount > 0 && (
           <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]">

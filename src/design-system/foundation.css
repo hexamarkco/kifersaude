@@ -987,6 +987,12 @@
 
 .kds-button-group {
   display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+  align-self: center;
+  gap: 0;
+  padding: 0;
   overflow: visible;
   border: 1px solid var(--brand-primary-border);
   border-radius: var(--radius-control);
@@ -994,11 +1000,14 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.kds-button-group > .kds-popover-trigger {
+.kds-button-group > :is(div, span) {
   display: flex;
 }
 
+.kds-button-group:empty { display: none; }
+
 .kds-button-group .kds-button {
+  flex-shrink: 0;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -1028,6 +1037,7 @@
 .kds-button-group .kds-button:focus-visible {
   position: relative;
   z-index: 1;
+  outline-offset: -2px;
 }
 
 .kds-input-shell {

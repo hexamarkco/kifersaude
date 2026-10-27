@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../design-system';
+import { ButtonGroup, Heading, Text } from '../../design-system';
 import {
   useCallback,
   useEffect,
@@ -1382,7 +1382,7 @@ export default function AgendaScreen() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <ButtonGroup size="md" aria-label="Ações do lembrete" className="overflow-x-auto">
                 <IconButton
                   onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
                   disabled={!hasLeadPhone}
@@ -1470,7 +1470,7 @@ export default function AgendaScreen() {
                  size="md">
                   <Trash2 aria-hidden="true" />
                 </IconButton>
-          </div>
+          </ButtonGroup>
         </div>
       </article>
     );
@@ -1496,7 +1496,7 @@ export default function AgendaScreen() {
             <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
               <OperationalMetricChip value={pendingFilteredCount} label="pendentes" tone="accent" />
               <OperationalMetricChip value={overdueFilteredCount} label="atrasados" tone="danger" active={overdueFilteredCount > 0} />
-              <div className="flex w-full items-center justify-end gap-2 lg:w-auto">
+              <ButtonGroup size="md" aria-label="Ações da agenda">
                 <IconButton
                   onClick={() => setOrganizerOpen(true)}
                   variant="secondary"
@@ -1511,7 +1511,7 @@ export default function AgendaScreen() {
                   <Plus className="kds-control-icon" />
                   Nova tarefa
                 </Button>
-              </div>
+              </ButtonGroup>
             </div>
           )}
         />

@@ -8,7 +8,7 @@ import {
   type AutoContactTemplate,
 } from "../../../../lib/autoContactService";
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from "../../../../lib/templateVariableSuggestions";
-import { VariableAutocompleteTextarea } from '../../../../design-system';
+import { ButtonGroup, VariableAutocompleteTextarea } from '../../../../design-system';
 import {
   Button,
   FilterSelect,
@@ -101,7 +101,7 @@ export function MessageListEditor({
               <span className="text-[10px] font-medium text-[var(--text-muted)]">
                 Mensagem {index + 1}
               </span>
-              <div className="flex items-center gap-0.5">
+              <ButtonGroup size="sm" aria-label="Ações da mensagem">
                 <IconButton
                   type="button"
                   size="sm"
@@ -132,7 +132,7 @@ export function MessageListEditor({
                 >
                   <Trash2 />
                 </IconButton>
-              </div>
+              </ButtonGroup>
             </div>
 
             <div className="mb-1 flex items-center gap-1">

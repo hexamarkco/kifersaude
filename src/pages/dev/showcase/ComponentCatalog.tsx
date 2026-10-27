@@ -310,7 +310,7 @@ function Actions() {
           description="Agrupe opções relacionadas. A seleção fica evidente além da cor."
           source="ButtonGroup / SegmentedControl"
         >
-          <ButtonGroup>
+          <ButtonGroup size="sm">
             {[
               { id: 'day', label: 'Dia' },
               { id: 'week', label: 'Semana' },
@@ -339,6 +339,22 @@ function Actions() {
           <Text size="sm">
             Exibição selecionada: {view === 'list' ? 'lista' : 'cards'}.
           </Text>
+        </Specimen>
+        <Specimen
+          title="Ações de registros"
+          description="Use ButtonGroup para ações relacionadas do mesmo registro. O contorno acompanha o conteúdo, mesmo em colunas largas. Mantenha abrir/editar antes de excluir. Use orientação vertical somente para ordenação."
+          source="ButtonGroup size / orientation / IconButton"
+        >
+          <div className="grid grid-cols-1 gap-3">
+            <ButtonGroup aria-label="Ações do registro demonstrativo">
+              <IconButton variant="secondary" aria-label="Editar registro demonstrativo" onClick={() => toast({ variant: 'info', description: 'Edição demonstrativa selecionada.' })}><Pencil /></IconButton>
+              <IconButton variant="danger" aria-label="Excluir registro demonstrativo" onClick={() => setDeleteConfirm(true)}><Trash2 /></IconButton>
+            </ButtonGroup>
+            <ButtonGroup size="sm" orientation="vertical" aria-label="Ordenar registro demonstrativo">
+              <IconButton variant="ghost" aria-label="Mover registro para cima" onClick={() => toast({ variant: 'info', description: 'Movimento demonstrativo para cima.' })}><ArrowLeft className="rotate-90" /></IconButton>
+              <IconButton variant="ghost" aria-label="Mover registro para baixo" onClick={() => toast({ variant: 'info', description: 'Movimento demonstrativo para baixo.' })}><ArrowRight className="rotate-90" /></IconButton>
+            </ButtonGroup>
+          </div>
         </Specimen>
         <Specimen
           title="Links e superfícies interativas"

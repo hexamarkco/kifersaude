@@ -1625,7 +1625,6 @@ html,
     padding-inline: 1rem !important;
   }
 
-  .painel-theme .kds-button-group,
   .painel-theme .kds-page-actions,
   .painel-theme .kds-dialog-footer,
   .painel-theme .kds-drawer-footer {
@@ -1638,12 +1637,12 @@ html,
     justify-content: center;
   }
 
-  .painel-theme .kds-page-actions > * {
+  .painel-theme .kds-page-actions > :not(.kds-button-group) {
     flex: 1 1 100%;
   }
 
-  .painel-theme .kds-dialog-footer > *,
-  .painel-theme .kds-drawer-footer > * {
+  .painel-theme .kds-dialog-footer > :not(.kds-button-group),
+  .painel-theme .kds-drawer-footer > :not(.kds-button-group) {
     flex: 0 0 auto;
     width: 100%;
   }
@@ -1654,7 +1653,7 @@ html,
   }
 
   .painel-theme .kds-op-toolbar-actions,
-  .painel-theme .kds-op-toolbar-actions > * {
+  .painel-theme .kds-op-toolbar-actions > :not(.kds-button-group) {
     width: 100%;
   }
 

@@ -648,3 +648,15 @@
   .kds-public-hero-glow::after,
   .kds-public-hero-orb { animation: none; }
 }
+
+/* Public identity remains separate from the CRM navigation and preserves content. */
+.kds-public-shell { background: var(--bg-canvas); }
+.kds-public-card { border-radius: var(--radius-panel); box-shadow: none; background: var(--bg-surface); }
+.kds-login-heading { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); }
+.kds-login-heading .kds-workspace-brand { margin-bottom: var(--space-4); }
+.kds-login-page .kds-surface { background: var(--bg-surface); }
+.kds-public-home-hero { background: var(--bg-canvas); }
+.kds-public-home-hero::before, .kds-public-home-hero::after { display: none; }
+.kds-public-home-hero :is(.kds-public-home-hero-disc,.kds-public-home-hero-ring,.kds-public-home-hero-dot) { display: none; }
+.kds-public-home-hero .kds-public-home-hero-portrait { mask-image: none; -webkit-mask-image: none; border-radius: var(--radius-xl); }
+.painel-theme.kifer-ds .kds-public-home-hero h1 { font: 700 clamp(2rem, 3.5vw, 3.25rem) / 1.1 var(--font-sans); letter-spacing: -0.04em; max-width: 20ch; }

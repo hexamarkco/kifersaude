@@ -1248,3 +1248,57 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-lead-form-grid .kds-form-section > .kds-form-section-description { clear: both; }
 .kds-form-section-step { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border: var(--border-width) solid var(--brand-primary-border); border-radius: var(--radius-control); background: var(--brand-primary-soft); color: var(--brand-primary-active); font: var(--type-caption); font-weight: var(--font-weight-semibold); }
 .kds-workspace-header .kds-breadcrumb-list { gap: var(--space-3); }
+
+/* Detail workspaces: consistent sections with contextual operations preserved. */
+.kds-detail-workspace { display: grid; gap: var(--space-4); min-width: 0; }
+.kds-detail-overview-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.kds-detail-workspace .kds-surface { min-width: 0; }
+.kds-detail-quick-actions, .kds-detail-followups { display: grid; gap: var(--space-3); }
+.kds-detail-quick-actions > .kds-button { width: 100%; }
+.kds-detail-data-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); margin-top: var(--space-5); }
+.kds-detail-data-grid dt { font: var(--type-caption); color: var(--text-muted); margin-bottom: var(--space-1); }
+.kds-detail-data-grid dd { font: var(--type-body-sm); color: var(--text-primary); overflow-wrap: anywhere; }
+.kds-detail-reminder-heading, .kds-detail-dialog-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.kds-detail-interactions > .kds-section-header { margin-bottom: var(--space-4); }
+@media(max-width: 1199px) { .kds-detail-overview-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .kds-detail-quick-actions { grid-column: 1 / -1; } }
+@media(max-width: 767px) { .kds-detail-overview-grid, .kds-detail-data-grid { grid-template-columns: minmax(0,1fr); } .kds-detail-workspace .kds-tabs-list { overflow-x: auto; flex-wrap: nowrap; } .kds-detail-workspace .kds-tabs-trigger { white-space: nowrap; } }
+
+.kds-detail-data-grid-compact { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.kds-detail-timeline > .space-y-3 { border-left: var(--border-width) solid var(--brand-primary-border); padding-left: var(--space-3); }
+.kds-detail-timeline > .space-y-3 > .kds-surface { border: 0; border-radius: 0; background: transparent; padding: var(--space-2) 0; }
+@media(max-width: 479px) { .kds-detail-data-grid-compact { grid-template-columns: minmax(0,1fr); } }
+
+/* The inbox is an operational workspace; all communication controls remain real. */
+.painel-theme.kifer-ds .whatsapp-inbox-shell { padding: var(--space-5) var(--page-gutter) !important; }
+.kds-inbox-page-header { margin-bottom: var(--space-5); }
+.painel-theme.kifer-ds .whatsapp-inbox-heading { font-family: var(--font-sans); }
+.painel-theme.kifer-ds .whatsapp-inbox-panel { background: var(--bg-surface); box-shadow: none; }
+.painel-theme.kifer-ds .whatsapp-inbox-sidebar { border-radius: var(--radius-panel) 0 0 var(--radius-panel); }
+.painel-theme.kifer-ds .whatsapp-inbox-thread { border-radius: 0 var(--radius-panel) var(--radius-panel) 0; }
+.painel-theme.kifer-ds .whatsapp-inbox-sidebar-header, .painel-theme.kifer-ds .whatsapp-inbox-thread-header { background: var(--bg-surface); padding: var(--space-4); }
+.painel-theme.kifer-ds .whatsapp-inbox-messages { background: var(--bg-canvas); }
+.painel-theme.kifer-ds .whatsapp-inbox-thread .message-bubble-inbound { background: var(--bg-surface); }
+.painel-theme.kifer-ds .message-bubble { box-shadow: none; border-radius: var(--radius-panel); }
+.painel-theme.kifer-ds .whatsapp-inbox-chat-card { box-shadow: none; border-color: var(--border-subtle); }
+.painel-theme.kifer-ds .whatsapp-inbox-chat-card.is-active { box-shadow: none; background: var(--brand-primary-soft); }
+.painel-theme.kifer-ds .whatsapp-inbox-chat-select { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: var(--space-3); }
+.kds-inbox-chat-copy { min-width: 0; }
+@media(min-width: 1024px) { .kds-inbox-workspace-grid { grid-template-columns: 20rem minmax(0,1fr); } }
+@media(max-width: 767px) {
+  .painel-theme.kifer-ds .whatsapp-inbox-shell { padding: var(--space-3) !important; }
+  .whatsapp-inbox-shell.is-conversation-open > div > .kds-inbox-page-header { display: none; }
+  .painel-theme.kifer-ds .whatsapp-inbox-sidebar, .painel-theme.kifer-ds .whatsapp-inbox-thread { border-radius: var(--radius-panel); }
+  .painel-theme.kifer-ds .whatsapp-inbox-chat-select { gap: var(--space-2); }
+  .painel-theme.kifer-ds .whatsapp-inbox-sidebar-header { padding: var(--space-3); }
+}
+
+/* Record pages share list and form density across operational modules. */
+.painel-theme.kifer-ds .kds-record-filters .kds-toolbar { border: 0; background: transparent; padding: 0; box-shadow: none; }
+.painel-theme.kifer-ds .kds-record-filters .kds-toolbar-search { max-width: none; }
+.kds-record-results .kds-table-wrapper { border: 0; }
+.kds-record-results .kds-table-head { background: var(--bg-canvas-subtle); }
+.kds-record-form form { display: grid; gap: var(--space-4); }
+.painel-theme.kifer-ds .kds-record-form form > .kds-surface { margin: 0; background: var(--bg-surface); padding: var(--space-5); }
+.painel-theme.kifer-ds .kds-record-form :is(h3,h4), .painel-theme.kifer-ds .kds-record-detail :is(h3,h4) { font-family: var(--font-sans); }
+.painel-theme.kifer-ds .kds-record-form > .kds-page-action-bar { background: var(--bg-surface); padding: var(--space-4); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); }
+@media(max-width: 767px) { .kds-record-form .kds-page-action-bar-sticky { bottom: calc(4.5rem + env(safe-area-inset-bottom)); } .painel-theme.kifer-ds .kds-record-form form > .kds-surface { padding: var(--space-3); } }

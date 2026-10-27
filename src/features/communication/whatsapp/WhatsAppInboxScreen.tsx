@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
+  PageHeader,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { PositionedPopover as PanelPopoverShell } from '../../../design-system';
@@ -2007,8 +2008,9 @@ export default function WhatsAppInboxScreen() {
 
   return (
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
-    <div className="comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
+    <div className={`comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0 ${selectedChat ? 'is-conversation-open' : ''}`}>
       <div className="flex h-full min-h-0 flex-col gap-0">
+        <PageHeader className="kds-inbox-page-header" eyebrow="Comunicação" title="WhatsApp Inbox" description="Atenda seus leads e acompanhe cada conversa em um único lugar." actions={<Button onClick={() => setStartChatModalOpen(true)}>Nova conversa</Button>} />
         {operationalBanner && (
           <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3.5`}>
             <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
@@ -2019,7 +2021,7 @@ export default function WhatsAppInboxScreen() {
           </section>
         )}
 
-        <section className="grid h-full min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="kds-inbox-workspace-grid grid h-full min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
         <WhatsAppInboxSidebar
           leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}

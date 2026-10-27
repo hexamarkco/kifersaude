@@ -1113,11 +1113,16 @@
         "references/desktop/extra--leads-detalhe-pagina.png",
         "references/mobile/extra--leads-detalhe-pagina.png"
       ],
-      "status": "pendente",
+      "status": "validado",
       "exceptions": [
-        "Detalhe/histórico/follow-up permanecem contextuais. A referência de página independente exige migração posterior que preserve confirmação, lembretes e callbacks do gerenciador."
+        "Conteúdo de produção preservado; a página inclui ações e campos operacionais adicionais aos da referência."
       ],
-      "validation": []
+      "validation": [
+        "validacao/consolidacao/desktop/leads-detalhes.png",
+        "validacao/consolidacao/tablet/leads-detalhes.png",
+        "validacao/consolidacao/mobile/leads-detalhes.png",
+        "validacao/consolidacao/mobile-320/leads-detalhes.png"
+      ]
     },
     {
       "id": "extra--leads-edicao-pagina",
@@ -1286,9 +1291,16 @@
         "references/desktop/extra--contratos-ficha.png",
         "references/mobile/extra--contratos-ficha.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Conteúdo de produção preservado; a página inclui ações e campos operacionais adicionais aos da referência."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-detalhes.png",
+        "validacao/consolidacao/tablet/contratos-detalhes.png",
+        "validacao/consolidacao/mobile/contratos-detalhes.png",
+        "validacao/consolidacao/mobile-320/contratos-detalhes.png"
+      ]
     },
     {
       "id": "extra--contratos-beneficiarios",
@@ -1672,13 +1684,13 @@
       ],
       "status": "validado",
       "exceptions": [
-        "Formulário em página dentro da rota atual /painel/leads; apresentação modal padrão preservada para outros módulos. Campos e validações de produção prevalecem sobre os mockups."
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
       ],
       "validation": [
-        "validacao/depois/desktop/leads-criar.png",
-        "validacao/depois/tablet/leads-criar.png",
-        "validacao/depois/mobile/leads-criar.png",
-        "validacao/depois/mobile-320/leads-criar.png"
+        "validacao/consolidacao/desktop/leads-criar.png",
+        "validacao/consolidacao/tablet/leads-criar.png",
+        "validacao/consolidacao/mobile/leads-criar.png",
+        "validacao/consolidacao/mobile-320/leads-criar.png"
       ]
     },
     {
@@ -1701,15 +1713,15 @@
         "references/desktop/state--leads-detalhes.png",
         "references/mobile/state--leads-detalhes.png"
       ],
-      "status": "pendente",
+      "status": "validado",
       "exceptions": [
-        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir."
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
       ],
       "validation": [
-        "validacao/depois/desktop/leads-detalhe-contextual.png",
-        "validacao/depois/tablet/leads-detalhe-contextual.png",
-        "validacao/depois/mobile/leads-detalhe-contextual.png",
-        "validacao/depois/mobile-320/leads-detalhe-contextual.png"
+        "validacao/consolidacao/desktop/leads-detalhes.png",
+        "validacao/consolidacao/tablet/leads-detalhes.png",
+        "validacao/consolidacao/mobile/leads-detalhes.png",
+        "validacao/consolidacao/mobile-320/leads-detalhes.png"
       ]
     },
     {
@@ -1732,15 +1744,15 @@
         "references/desktop/state--leads-agendar.png",
         "references/mobile/state--leads-agendar.png"
       ],
-      "status": "pendente",
+      "status": "validado",
       "exceptions": [
-        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir."
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
       ],
       "validation": [
-        "validacao/depois/desktop/leads-agendar-lembrete.png",
-        "validacao/depois/tablet/leads-agendar-lembrete.png",
-        "validacao/depois/mobile/leads-agendar-lembrete.png",
-        "validacao/depois/mobile-320/leads-agendar-lembrete.png"
+        "validacao/consolidacao/desktop/leads-agendar.png",
+        "validacao/consolidacao/tablet/leads-agendar.png",
+        "validacao/consolidacao/mobile/leads-agendar.png",
+        "validacao/consolidacao/mobile-320/leads-agendar.png"
       ]
     },
     {
@@ -1763,15 +1775,15 @@
         "references/desktop/state--leads-excluir-confirmacao.png",
         "references/mobile/state--leads-excluir-confirmacao.png"
       ],
-      "status": "pendente",
+      "status": "validado",
       "exceptions": [
-        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir."
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
       ],
       "validation": [
-        "validacao/depois/desktop/leads-confirmar-exclusao.png",
-        "validacao/depois/tablet/leads-confirmar-exclusao.png",
-        "validacao/depois/mobile/leads-confirmar-exclusao.png",
-        "validacao/depois/mobile-320/leads-confirmar-exclusao.png"
+        "validacao/consolidacao/desktop/leads-excluir-confirmacao.png",
+        "validacao/consolidacao/tablet/leads-excluir-confirmacao.png",
+        "validacao/consolidacao/mobile/leads-excluir-confirmacao.png",
+        "validacao/consolidacao/mobile-320/leads-excluir-confirmacao.png"
       ]
     },
     {
@@ -1795,12 +1807,14 @@
         "references/mobile/state--leads-filtros-avancados.png"
       ],
       "status": "validado",
-      "exceptions": [],
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
       "validation": [
-        "validacao/depois/desktop/leads-filtros.png",
-        "validacao/depois/tablet/leads-filtros.png",
-        "validacao/depois/mobile/leads-filtros.png",
-        "validacao/depois/mobile-320/leads-filtros.png"
+        "validacao/consolidacao/desktop/leads-filtros-avancados.png",
+        "validacao/consolidacao/tablet/leads-filtros-avancados.png",
+        "validacao/consolidacao/mobile/leads-filtros-avancados.png",
+        "validacao/consolidacao/mobile-320/leads-filtros-avancados.png"
       ]
     },
     {
@@ -1823,9 +1837,16 @@
         "references/desktop/state--leads-status-menu.png",
         "references/mobile/state--leads-status-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-status-menu.png",
+        "validacao/consolidacao/tablet/leads-status-menu.png",
+        "validacao/consolidacao/mobile/leads-status-menu.png",
+        "validacao/consolidacao/mobile-320/leads-status-menu.png"
+      ]
     },
     {
       "id": "state--leads-responsavel-menu",
@@ -1847,9 +1868,16 @@
         "references/desktop/state--leads-responsavel-menu.png",
         "references/mobile/state--leads-responsavel-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-responsavel-menu.png",
+        "validacao/consolidacao/tablet/leads-responsavel-menu.png",
+        "validacao/consolidacao/mobile/leads-responsavel-menu.png",
+        "validacao/consolidacao/mobile-320/leads-responsavel-menu.png"
+      ]
     },
     {
       "id": "state--leads-origem-menu",
@@ -1871,9 +1899,16 @@
         "references/desktop/state--leads-origem-menu.png",
         "references/mobile/state--leads-origem-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-origem-menu.png",
+        "validacao/consolidacao/tablet/leads-origem-menu.png",
+        "validacao/consolidacao/mobile/leads-origem-menu.png",
+        "validacao/consolidacao/mobile-320/leads-origem-menu.png"
+      ]
     },
     {
       "id": "state--leads-tipo-menu",
@@ -1895,9 +1930,16 @@
         "references/desktop/state--leads-tipo-menu.png",
         "references/mobile/state--leads-tipo-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-tipo-menu.png",
+        "validacao/consolidacao/tablet/leads-tipo-menu.png",
+        "validacao/consolidacao/mobile/leads-tipo-menu.png",
+        "validacao/consolidacao/mobile-320/leads-tipo-menu.png"
+      ]
     },
     {
       "id": "state--leads-ordenacao-menu",
@@ -1919,9 +1961,16 @@
         "references/desktop/state--leads-ordenacao-menu.png",
         "references/mobile/state--leads-ordenacao-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-ordenacao-menu.png",
+        "validacao/consolidacao/tablet/leads-ordenacao-menu.png",
+        "validacao/consolidacao/mobile/leads-ordenacao-menu.png",
+        "validacao/consolidacao/mobile-320/leads-ordenacao-menu.png"
+      ]
     },
     {
       "id": "state--leads-status-contextual",
@@ -1943,9 +1992,16 @@
         "references/desktop/state--leads-status-contextual.png",
         "references/mobile/state--leads-status-contextual.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-status-contextual.png",
+        "validacao/consolidacao/tablet/leads-status-contextual.png",
+        "validacao/consolidacao/mobile/leads-status-contextual.png",
+        "validacao/consolidacao/mobile-320/leads-status-contextual.png"
+      ]
     },
     {
       "id": "state--contratos-criar",
@@ -1967,9 +2023,16 @@
         "references/desktop/state--contratos-criar.png",
         "references/mobile/state--contratos-criar.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-criar.png",
+        "validacao/consolidacao/tablet/contratos-criar.png",
+        "validacao/consolidacao/mobile/contratos-criar.png",
+        "validacao/consolidacao/mobile-320/contratos-criar.png"
+      ]
     },
     {
       "id": "state--contratos-detalhes",
@@ -1991,9 +2054,16 @@
         "references/desktop/state--contratos-detalhes.png",
         "references/mobile/state--contratos-detalhes.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-detalhes.png",
+        "validacao/consolidacao/tablet/contratos-detalhes.png",
+        "validacao/consolidacao/mobile/contratos-detalhes.png",
+        "validacao/consolidacao/mobile-320/contratos-detalhes.png"
+      ]
     },
     {
       "id": "state--contratos-importacao",
@@ -2015,9 +2085,16 @@
         "references/desktop/state--contratos-importacao.png",
         "references/mobile/state--contratos-importacao.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-importacao.png",
+        "validacao/consolidacao/tablet/contratos-importacao.png",
+        "validacao/consolidacao/mobile/contratos-importacao.png",
+        "validacao/consolidacao/mobile-320/contratos-importacao.png"
+      ]
     },
     {
       "id": "state--contratos-excluir-confirmacao",
@@ -2039,9 +2116,16 @@
         "references/desktop/state--contratos-excluir-confirmacao.png",
         "references/mobile/state--contratos-excluir-confirmacao.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-excluir-confirmacao.png",
+        "validacao/consolidacao/tablet/contratos-excluir-confirmacao.png",
+        "validacao/consolidacao/mobile/contratos-excluir-confirmacao.png",
+        "validacao/consolidacao/mobile-320/contratos-excluir-confirmacao.png"
+      ]
     },
     {
       "id": "state--contratos-status-menu",
@@ -2063,9 +2147,16 @@
         "references/desktop/state--contratos-status-menu.png",
         "references/mobile/state--contratos-status-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-status-menu.png",
+        "validacao/consolidacao/tablet/contratos-status-menu.png",
+        "validacao/consolidacao/mobile/contratos-status-menu.png",
+        "validacao/consolidacao/mobile-320/contratos-status-menu.png"
+      ]
     },
     {
       "id": "state--contratos-operadoras-menu",
@@ -2087,9 +2178,16 @@
         "references/desktop/state--contratos-operadoras-menu.png",
         "references/mobile/state--contratos-operadoras-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-operadoras-menu.png",
+        "validacao/consolidacao/tablet/contratos-operadoras-menu.png",
+        "validacao/consolidacao/mobile/contratos-operadoras-menu.png",
+        "validacao/consolidacao/mobile-320/contratos-operadoras-menu.png"
+      ]
     },
     {
       "id": "state--contratos-datas-menu",
@@ -2111,9 +2209,16 @@
         "references/desktop/state--contratos-datas-menu.png",
         "references/mobile/state--contratos-datas-menu.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-datas-menu.png",
+        "validacao/consolidacao/tablet/contratos-datas-menu.png",
+        "validacao/consolidacao/mobile/contratos-datas-menu.png",
+        "validacao/consolidacao/mobile-320/contratos-datas-menu.png"
+      ]
     },
     {
       "id": "state--comissoes-dia",
@@ -2255,9 +2360,16 @@
         "references/desktop/state--inbox-agenda.png",
         "references/mobile/state--inbox-agenda.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/inbox-agenda.png",
+        "validacao/consolidacao/tablet/inbox-agenda.png",
+        "validacao/consolidacao/mobile/inbox-agenda.png",
+        "validacao/consolidacao/mobile-320/inbox-agenda.png"
+      ]
     },
     {
       "id": "state--inbox-agendadas",
@@ -2279,9 +2391,16 @@
         "references/desktop/state--inbox-agendadas.png",
         "references/mobile/state--inbox-agendadas.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/inbox-agendadas.png",
+        "validacao/consolidacao/tablet/inbox-agendadas.png",
+        "validacao/consolidacao/mobile/inbox-agendadas.png",
+        "validacao/consolidacao/mobile-320/inbox-agendadas.png"
+      ]
     },
     {
       "id": "state--inbox-painel",
@@ -2303,9 +2422,16 @@
         "references/desktop/state--inbox-painel.png",
         "references/mobile/state--inbox-painel.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/inbox-painel.png",
+        "validacao/consolidacao/tablet/inbox-painel.png",
+        "validacao/consolidacao/mobile/inbox-painel.png",
+        "validacao/consolidacao/mobile-320/inbox-painel.png"
+      ]
     },
     {
       "id": "state--inbox-nova-conversa",
@@ -2327,9 +2453,16 @@
         "references/desktop/state--inbox-nova-conversa.png",
         "references/mobile/state--inbox-nova-conversa.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/inbox-nova-conversa.png",
+        "validacao/consolidacao/tablet/inbox-nova-conversa.png",
+        "validacao/consolidacao/mobile/inbox-nova-conversa.png",
+        "validacao/consolidacao/mobile-320/inbox-nova-conversa.png"
+      ]
     },
     {
       "id": "state--inbox-filtros",
@@ -2351,9 +2484,16 @@
         "references/desktop/state--inbox-filtros.png",
         "references/mobile/state--inbox-filtros.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/inbox-filtros.png",
+        "validacao/consolidacao/tablet/inbox-filtros.png",
+        "validacao/consolidacao/mobile/inbox-filtros.png",
+        "validacao/consolidacao/mobile-320/inbox-filtros.png"
+      ]
     },
     {
       "id": "state--campanhas-criar",
@@ -2545,13 +2685,13 @@
       ],
       "status": "validado",
       "exceptions": [
-        "Formulário em página dentro da rota atual /painel/leads; apresentação modal padrão preservada para outros módulos. Campos e validações de produção prevalecem sobre os mockups."
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
       ],
       "validation": [
-        "validacao/depois/desktop/leads-editar.png",
-        "validacao/depois/tablet/leads-editar.png",
-        "validacao/depois/mobile/leads-editar.png",
-        "validacao/depois/mobile-320/leads-editar.png"
+        "validacao/consolidacao/desktop/leads-editar.png",
+        "validacao/consolidacao/tablet/leads-editar.png",
+        "validacao/consolidacao/mobile/leads-editar.png",
+        "validacao/consolidacao/mobile-320/leads-editar.png"
       ]
     },
     {
@@ -2574,9 +2714,16 @@
         "references/desktop/state--leads-converter.png",
         "references/mobile/state--leads-converter.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/leads-converter.png",
+        "validacao/consolidacao/tablet/leads-converter.png",
+        "validacao/consolidacao/mobile/leads-converter.png",
+        "validacao/consolidacao/mobile-320/leads-converter.png"
+      ]
     },
     {
       "id": "state--contratos-editar",
@@ -2598,9 +2745,16 @@
         "references/desktop/state--contratos-editar.png",
         "references/mobile/state--contratos-editar.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-editar.png",
+        "validacao/consolidacao/tablet/contratos-editar.png",
+        "validacao/consolidacao/mobile/contratos-editar.png",
+        "validacao/consolidacao/mobile-320/contratos-editar.png"
+      ]
     },
     {
       "id": "state--contratos-titular",
@@ -2622,9 +2776,16 @@
         "references/desktop/state--contratos-titular.png",
         "references/mobile/state--contratos-titular.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-titular.png",
+        "validacao/consolidacao/tablet/contratos-titular.png",
+        "validacao/consolidacao/mobile/contratos-titular.png",
+        "validacao/consolidacao/mobile-320/contratos-titular.png"
+      ]
     },
     {
       "id": "state--contratos-dependente",
@@ -2646,9 +2807,16 @@
         "references/desktop/state--contratos-dependente.png",
         "references/mobile/state--contratos-dependente.png"
       ],
-      "status": "pendente",
-      "exceptions": [],
-      "validation": []
+      "status": "validado",
+      "exceptions": [
+        "Campos e comportamentos de produção prevalecem sobre os exemplos ilustrativos das referências."
+      ],
+      "validation": [
+        "validacao/consolidacao/desktop/contratos-dependente.png",
+        "validacao/consolidacao/tablet/contratos-dependente.png",
+        "validacao/consolidacao/mobile/contratos-dependente.png",
+        "validacao/consolidacao/mobile-320/contratos-dependente.png"
+      ]
     },
     {
       "id": "state--usuarios-criar",

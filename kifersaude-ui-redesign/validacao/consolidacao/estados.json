@@ -1,0 +1,1457 @@
+{
+  "records": [
+    {
+      "id": "leads-criar",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-criar.png",
+      "heading": [
+        "Novo lead"
+      ]
+    },
+    {
+      "id": "leads-detalhes",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-detalhes.png",
+      "heading": [
+        "Contato Demonstração 01"
+      ]
+    },
+    {
+      "id": "leads-agendar",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-agendar.png",
+      "heading": [
+        "Gestão de leads",
+        "Agendar novo lembrete"
+      ]
+    },
+    {
+      "id": "leads-excluir-confirmacao",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de leads",
+        "Excluir lead"
+      ]
+    },
+    {
+      "id": "leads-criar",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-criar.png",
+      "heading": [
+        "Novo lead"
+      ]
+    },
+    {
+      "id": "leads-detalhes",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-detalhes.png",
+      "heading": [
+        "Contato Demonstração 01"
+      ]
+    },
+    {
+      "id": "leads-agendar",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-agendar.png",
+      "heading": [
+        "Gestão de leads",
+        "Agendar novo lembrete"
+      ]
+    },
+    {
+      "id": "leads-excluir-confirmacao",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de leads",
+        "Excluir lead"
+      ]
+    },
+    {
+      "id": "leads-criar",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-criar.png",
+      "heading": [
+        "Novo lead"
+      ]
+    },
+    {
+      "id": "leads-detalhes",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-detalhes.png",
+      "heading": [
+        "Contato Demonstração 01"
+      ]
+    },
+    {
+      "id": "leads-agendar",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-agendar.png",
+      "heading": [
+        "Gestão de leads",
+        "Agendar novo lembrete"
+      ]
+    },
+    {
+      "id": "leads-excluir-confirmacao",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de leads",
+        "Excluir lead"
+      ]
+    },
+    {
+      "id": "leads-criar",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-criar.png",
+      "heading": [
+        "Novo lead"
+      ]
+    },
+    {
+      "id": "leads-detalhes",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-detalhes.png",
+      "heading": [
+        "Contato Demonstração 01"
+      ]
+    },
+    {
+      "id": "leads-agendar",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-agendar.png",
+      "heading": [
+        "Gestão de leads",
+        "Agendar novo lembrete"
+      ]
+    },
+    {
+      "id": "leads-excluir-confirmacao",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de leads",
+        "Excluir lead"
+      ]
+    },
+    {
+      "id": "leads-kanban",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-kanban.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-filtros-avancados",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-filtros-avancados.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-exportar-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-exportar-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-status-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-status-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-kanban",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-kanban.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-filtros-avancados",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-filtros-avancados.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-exportar-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-exportar-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-status-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-status-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-kanban",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-kanban.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-filtros-avancados",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-filtros-avancados.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-exportar-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-exportar-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-status-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-status-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-kanban",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-kanban.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-filtros-avancados",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-filtros-avancados.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-exportar-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-exportar-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-status-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-status-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-responsavel-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-responsavel-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-origem-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-origem-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-tipo-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-tipo-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-ordenacao-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-ordenacao-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-responsavel-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-responsavel-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-origem-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-origem-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-tipo-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-tipo-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-ordenacao-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-ordenacao-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-responsavel-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-responsavel-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-origem-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-origem-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-tipo-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-tipo-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-ordenacao-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-ordenacao-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-responsavel-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-responsavel-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-origem-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-origem-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-tipo-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-tipo-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-ordenacao-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-ordenacao-menu.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "leads-status-contextual",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-status-contextual.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "contratos-criar",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-criar.png",
+      "heading": [
+        "Novo contrato"
+      ]
+    },
+    {
+      "id": "contratos-detalhes",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-detalhes.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-importacao",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-importacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Importar contratos em massa"
+      ]
+    },
+    {
+      "id": "leads-status-contextual",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-status-contextual.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "contratos-criar",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-criar.png",
+      "heading": [
+        "Novo contrato"
+      ]
+    },
+    {
+      "id": "contratos-detalhes",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-detalhes.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-importacao",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-importacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Importar contratos em massa"
+      ]
+    },
+    {
+      "id": "leads-status-contextual",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-status-contextual.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "contratos-criar",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-criar.png",
+      "heading": [
+        "Novo contrato"
+      ]
+    },
+    {
+      "id": "contratos-detalhes",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-detalhes.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-importacao",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-importacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Importar contratos em massa"
+      ]
+    },
+    {
+      "id": "leads-status-contextual",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-status-contextual.png",
+      "heading": [
+        "Gestão de leads"
+      ]
+    },
+    {
+      "id": "contratos-criar",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-criar.png",
+      "heading": [
+        "Novo contrato"
+      ]
+    },
+    {
+      "id": "contratos-detalhes",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-detalhes.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-importacao",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-importacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Importar contratos em massa"
+      ]
+    },
+    {
+      "id": "contratos-excluir-confirmacao",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Excluir contrato"
+      ]
+    },
+    {
+      "id": "contratos-status-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-status-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-operadoras-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-operadoras-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-datas-menu",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-datas-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-excluir-confirmacao",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Excluir contrato"
+      ]
+    },
+    {
+      "id": "contratos-status-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-status-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-operadoras-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-operadoras-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-datas-menu",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-datas-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-excluir-confirmacao",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Excluir contrato"
+      ]
+    },
+    {
+      "id": "contratos-status-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-status-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-operadoras-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-operadoras-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-datas-menu",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-datas-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-excluir-confirmacao",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-excluir-confirmacao.png",
+      "heading": [
+        "Gestão de Contratos",
+        "Excluir contrato"
+      ]
+    },
+    {
+      "id": "contratos-status-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-status-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-operadoras-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-operadoras-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "contratos-datas-menu",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-datas-menu.png",
+      "heading": [
+        "Gestão de Contratos"
+      ]
+    },
+    {
+      "id": "inbox-arquivados",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1920,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/inbox-arquivados.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "inbox-agenda",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1920,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/inbox-agenda.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Agenda do WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-agendadas",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1920,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/inbox-agendadas.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Mensagens Agendadas"
+      ]
+    },
+    {
+      "id": "inbox-painel",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1920,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/inbox-painel.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Painel WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-arquivados",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 768,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/inbox-arquivados.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "inbox-agenda",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 768,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/inbox-agenda.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Agenda do WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-agendadas",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 768,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/inbox-agendadas.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Mensagens Agendadas"
+      ]
+    },
+    {
+      "id": "inbox-painel",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 768,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/inbox-painel.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Painel WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-arquivados",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 390,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/inbox-arquivados.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "inbox-agenda",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 390,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/inbox-agenda.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Agenda do WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-agendadas",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 390,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/inbox-agendadas.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Mensagens Agendadas"
+      ]
+    },
+    {
+      "id": "inbox-painel",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 390,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/inbox-painel.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Painel WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-arquivados",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 320,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/inbox-arquivados.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "inbox-agenda",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 320,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/inbox-agenda.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Agenda do WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-agendadas",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 320,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/inbox-agendadas.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Mensagens Agendadas"
+      ]
+    },
+    {
+      "id": "inbox-painel",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 320,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/inbox-painel.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Painel WhatsApp"
+      ]
+    },
+    {
+      "id": "inbox-nova-conversa",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1920,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/inbox-nova-conversa.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Novo chat"
+      ]
+    },
+    {
+      "id": "inbox-filtros",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1920,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/inbox-filtros.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "leads-editar",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-editar.png",
+      "heading": [
+        "Editar lead"
+      ]
+    },
+    {
+      "id": "leads-converter",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/leads-converter.png",
+      "heading": [
+        "Converter lead em contrato"
+      ]
+    },
+    {
+      "id": "inbox-nova-conversa",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 768,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/inbox-nova-conversa.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Novo chat"
+      ]
+    },
+    {
+      "id": "inbox-filtros",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 768,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/inbox-filtros.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "leads-editar",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-editar.png",
+      "heading": [
+        "Editar lead"
+      ]
+    },
+    {
+      "id": "leads-converter",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/leads-converter.png",
+      "heading": [
+        "Converter lead em contrato"
+      ]
+    },
+    {
+      "id": "inbox-nova-conversa",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 390,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/inbox-nova-conversa.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Novo chat"
+      ]
+    },
+    {
+      "id": "inbox-filtros",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 390,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/inbox-filtros.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "leads-editar",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-editar.png",
+      "heading": [
+        "Editar lead"
+      ]
+    },
+    {
+      "id": "leads-converter",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/leads-converter.png",
+      "heading": [
+        "Converter lead em contrato"
+      ]
+    },
+    {
+      "id": "inbox-nova-conversa",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 320,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/inbox-nova-conversa.png",
+      "heading": [
+        "WhatsApp Inbox",
+        "Novo chat"
+      ]
+    },
+    {
+      "id": "inbox-filtros",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 320,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/inbox-filtros.png",
+      "heading": [
+        "WhatsApp Inbox"
+      ]
+    },
+    {
+      "id": "leads-editar",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-editar.png",
+      "heading": [
+        "Editar lead"
+      ]
+    },
+    {
+      "id": "leads-converter",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/leads-converter.png",
+      "heading": [
+        "Converter lead em contrato"
+      ]
+    },
+    {
+      "id": "contratos-editar",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-editar.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Editar Contrato"
+      ]
+    },
+    {
+      "id": "contratos-titular",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-titular.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Dados do Titular"
+      ]
+    },
+    {
+      "id": "contratos-dependente",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-dependente.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Novo Dependente"
+      ]
+    },
+    {
+      "id": "contratos-interacao",
+      "device": "desktop",
+      "status": "validated",
+      "viewport": 1920,
+      "scroll": 1910,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/desktop/contratos-interacao.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-editar",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-editar.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Editar Contrato"
+      ]
+    },
+    {
+      "id": "contratos-titular",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-titular.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Dados do Titular"
+      ]
+    },
+    {
+      "id": "contratos-dependente",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-dependente.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Novo Dependente"
+      ]
+    },
+    {
+      "id": "contratos-interacao",
+      "device": "tablet",
+      "status": "validated",
+      "viewport": 768,
+      "scroll": 758,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/tablet/contratos-interacao.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-editar",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-editar.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Editar Contrato"
+      ]
+    },
+    {
+      "id": "contratos-titular",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-titular.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Dados do Titular"
+      ]
+    },
+    {
+      "id": "contratos-dependente",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-dependente.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Novo Dependente"
+      ]
+    },
+    {
+      "id": "contratos-interacao",
+      "device": "mobile",
+      "status": "validated",
+      "viewport": 390,
+      "scroll": 380,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile/contratos-interacao.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    },
+    {
+      "id": "contratos-editar",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-editar.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Editar Contrato"
+      ]
+    },
+    {
+      "id": "contratos-titular",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-titular.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Dados do Titular"
+      ]
+    },
+    {
+      "id": "contratos-dependente",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-dependente.png",
+      "heading": [
+        "Ficha do contrato DEMO-001",
+        "Novo Dependente"
+      ]
+    },
+    {
+      "id": "contratos-interacao",
+      "device": "mobile-320",
+      "status": "validated",
+      "viewport": 320,
+      "scroll": 310,
+      "screenshot": "kifersaude-ui-redesign/validacao/consolidacao/mobile-320/contratos-interacao.png",
+      "heading": [
+        "Ficha do contrato DEMO-001"
+      ]
+    }
+  ],
+  "scope": "32 estados de Leads, Inbox e Contratos em quatro larguras; não representa conclusão integral do manifesto."
+}

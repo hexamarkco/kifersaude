@@ -4,6 +4,7 @@ import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Alert,
+  BrandWordmark,
   Button,
   Field,
   Heading,
@@ -40,18 +41,16 @@ export default function LoginPage() {
 
   return (
     <PublicShell
-      theme="dark"
+      theme="light"
       width="narrow"
-      className="flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-6 sm:py-12"
+      className="kds-login-page flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-6 sm:py-12"
     >
       <div className="w-full">
-        <Surface variant="strong" padding="lg">
-          <div className="mb-8 text-center">
-            <div className="kds-public-login-icon mb-4">
-              <Lock className="kds-public-login-symbol" />
-            </div>
-            <Heading level={1} size="lg">Kifer Saúde</Heading>
-            <Text>Sistema de Gestão de Leads e Contratos</Text>
+        <Surface padding="lg">
+          <div className="kds-login-heading">
+            <BrandWordmark />
+            <Heading level={1} size="lg">Bem-vindo ao CRM</Heading>
+            <Text>Entre com seu usuário e senha para acessar o sistema.</Text>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

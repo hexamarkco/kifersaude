@@ -162,3 +162,5 @@ export * from './components/ApplicationSkeletons';
 export * from './components/AsyncContent';
 export { default as VariableAutocompleteTextarea } from './components/VariableAutocompleteTextarea';
 export { default as PositionedPopover } from './components/PositionedPopover';
+
+export { BrandWordmark, type BrandWordmarkProps } from './components/BrandWordmark';

@@ -59,7 +59,8 @@ const waitForBodyText = async (text: string) => {
   }
 
   const elements = Array.from(document.body.querySelectorAll<HTMLElement>('*'));
-  return elements.find((element) => element.textContent?.trim() === text)
+  return elements.find((element) => element instanceof HTMLButtonElement && element.textContent?.trim() === text)
+    ?? elements.find((element) => element.textContent?.trim() === text)
     ?? elements.find((element) => element.textContent?.includes(text))
     ?? null;
 };
@@ -91,7 +92,7 @@ test('libera o botão de salvar quando a criação da configuração falha por e
     />,
   );
 
-  await waitForSelector<HTMLTextAreaElement>('textarea[placeholder="Digite o prompt..."]');
+  await waitForSelector<HTMLTextAreaElement>('textarea[placeholder="Descreva como a IA deve agir nesta tarefa..."]');
   const saveButton = await waitForBodyText('Criar versão e ativar');
   assert.ok(saveButton instanceof HTMLButtonElement);
 

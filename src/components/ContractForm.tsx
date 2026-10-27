@@ -38,6 +38,7 @@ import {
 import { normalizeLeadStatusLabel } from "../lib/leadReminderUtils";
 import { resolveStatusIdByName } from "../lib/leadRelations";
 import {
+  ArrowLeft,
   User,
   Plus,
   Trash2,
@@ -72,6 +73,8 @@ import {
   Textarea,
   IconButton,
   FilterSelect,
+  PageHeader,
+  FormActions,
 } from "../design-system";
 import { configService } from "../features/config";
 import { useConfig } from "../contexts/ConfigContext";
@@ -276,12 +279,14 @@ const withCurrentOption = (
 
 type ContractFormProps = {
   contract: Contract | null;
+  presentation?: 'dialog' | 'page';
   leadToConvert?: Lead | null;
   onClose: () => void;
   onSave: () => void;
 };
 
 export default function ContractForm({
+  presentation = 'dialog',
   contract,
   leadToConvert,
   onClose,
@@ -1192,41 +1197,7 @@ export default function ContractForm({
     );
   }
 
-  return (
-    <>
-      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
-        <DialogHeader onClose={saving ? undefined : onClose}>
-          <DialogTitle>
-            {contract
-              ? "Editar Contrato"
-              : leadToConvert
-                ? "Converter Lead em Contrato"
-                : "Novo Contrato"}
-          </DialogTitle>
-          {leadToConvert && (
-            <DialogDescription className="flex items-center gap-1.5">
-              <LeadFavoriteBadge favorito={leadToConvert.favorito} />
-              {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
-            </DialogDescription>
-          )}
-          {!leadToConvert && (
-            <DialogDescription>
-              Registre os dados comerciais, financeiros e de vigencia do contrato.
-            </DialogDescription>
-          )}
-          <Button
-            type="button"
-            variant="soft"
-            size="sm"
-            className="mt-3"
-            onClick={() => setShowJsonImport(true)}
-            disabled={saving}
-          >
-            <FileUp className="kds-control-icon" />
-            Importar de arquivo
-          </Button>
-        </DialogHeader>
-        <DialogBody>
+  const formContent = (<>{/* Existing production fields and validation stay in the same form. */}
         <form
           id="contract-form"
           onSubmit={handleSubmit}
@@ -2287,7 +2258,50 @@ export default function ContractForm({
             </div>
           </Surface>
         </form>
-        </DialogBody>
+</>);
+  const title = contract ? 'Editar contrato' : leadToConvert ? 'Converter lead em contrato' : 'Novo contrato';
+  return <>
+    {presentation === 'page' ? <section className="kds-record-form kds-detail-workspace">
+      <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose} disabled={saving}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
+      <PageHeader eyebrow="Contratos" title={title} description="Registre os dados comerciais, financeiros e de vigência do contrato." actions={<Button variant="secondary" onClick={() => setShowJsonImport(true)} disabled={saving}><FileUp className="kds-control-icon" aria-hidden="true" />Importar de arquivo</Button>} />
+      {leadToConvert && <Alert tone="info">Conversão de {leadToConvert.nome_completo}. Os dados do lead foram preservados no formulário.</Alert>}
+      {formContent}
+      <FormActions onCancel={onClose} submitLabel={contract ? 'Salvar alterações' : 'Continuar para titular'} loading={saving} form="contract-form" sticky />
+    </section> : <>
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
+        <DialogHeader onClose={saving ? undefined : onClose}>
+          <DialogTitle>
+            {contract
+              ? "Editar Contrato"
+              : leadToConvert
+                ? "Converter Lead em Contrato"
+                : "Novo Contrato"}
+          </DialogTitle>
+          {leadToConvert && (
+            <DialogDescription className="flex items-center gap-1.5">
+              <LeadFavoriteBadge favorito={leadToConvert.favorito} />
+              {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
+            </DialogDescription>
+          )}
+          {!leadToConvert && (
+            <DialogDescription>
+              Registre os dados comerciais, financeiros e de vigencia do contrato.
+            </DialogDescription>
+          )}
+          <Button
+            type="button"
+            variant="soft"
+            size="sm"
+            className="mt-3"
+            onClick={() => setShowJsonImport(true)}
+            disabled={saving}
+          >
+            <FileUp className="kds-control-icon" />
+            Importar de arquivo
+          </Button>
+        </DialogHeader>
+        <DialogBody>{formContent}</DialogBody>
+
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar
@@ -2301,6 +2315,8 @@ export default function ContractForm({
           </Button>
         </DialogFooter>
       </Dialog>
+    </>}
+
 
       {showJsonImport && (
         <ContractJsonImportDialog
@@ -2328,6 +2344,5 @@ export default function ContractForm({
         />
       )}
       {ConfirmationDialog}
-    </>
-  );
+    </>;
 }

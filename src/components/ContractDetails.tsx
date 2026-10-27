@@ -18,6 +18,7 @@ import {
 } from "../features/contracts";
 import type { Interaction } from "../features/activity";
 import {
+  ArrowLeft,
   User,
   Users,
   Plus,
@@ -35,6 +36,7 @@ import HolderForm from "./HolderForm";
 import ContractForm from "./ContractForm";
 import DependentForm from "./DependentForm";
 import {
+  PageHeader,
   Badge,
   Alert,
   Button,
@@ -96,6 +98,7 @@ const detailEmptyIconClass =
 
 type ContractDetailsProps = {
   contract: Contract;
+  presentation?: 'dialog' | 'page';
   onClose: () => void;
   onUpdate: () => void;
   onDelete?: (contract: Contract) => void;
@@ -103,6 +106,7 @@ type ContractDetailsProps = {
 };
 
 export default function ContractDetails({
+  presentation = 'dialog',
   contract,
   onClose,
   onUpdate,
@@ -820,13 +824,8 @@ export default function ContractDetails({
     );
   }
 
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
-      <DialogHeader onClose={onClose}>
-        <DialogTitle>{contract.codigo_contrato}</DialogTitle>
-        <DialogDescription>{`${normalizeOperadoraLabel(contract.operadora)} - ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}</DialogDescription>
-      </DialogHeader>
-      <DialogBody>
+  const detailContent = (<>
+
       <div className="mb-4 flex items-center justify-end gap-2">
         {canEditContracts && (
           <Button
@@ -1888,7 +1887,16 @@ export default function ContractDetails({
         />
       )}
       {ConfirmationDialog}
-      </DialogBody>
-    </Dialog>
-  );
+</>);
+  if (presentation === 'page') return <section className="kds-record-detail kds-detail-workspace">
+    <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
+    <PageHeader eyebrow="Contratos" title={`Ficha do contrato ${contract.codigo_contrato}`} description={`${normalizeOperadoraLabel(contract.operadora)} · ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`} />
+    {detailContent}
+  </section>;
+  return (<Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{contract.codigo_contrato}</DialogTitle>
+        <DialogDescription>{`${normalizeOperadoraLabel(contract.operadora)} - ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}</DialogDescription>
+      </DialogHeader>
+<DialogBody>{detailContent}</DialogBody></Dialog>);
 }

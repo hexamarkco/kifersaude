@@ -238,7 +238,7 @@ export const buildXlsxFile = (headers: string[], rows: string[][], sheetName = '
 
 export const downloadXlsx = (filename: string, headers: string[], rows: string[][], sheetName = 'Leads') => {
   const workbook = buildXlsxFile(headers, rows, sheetName);
-  const blob = new Blob([workbook], {
+  const blob = new Blob([new Uint8Array(workbook).buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 

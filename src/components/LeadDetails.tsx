@@ -8,7 +8,7 @@ import {
   type LeadTimelineReminder,
   type LeadTimelineStatusHistory,
 } from '../features/leads';
-import { AlertCircle, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, MessageCircle, Plus, Pencil, Trash2, History, Bell, Clock, UserCircle, RefreshCw, ArrowLeft, FileText } from 'lucide-react';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -30,6 +30,8 @@ import {
   DialogHeader,
   DialogTitle,
   FilterSelect,
+  PageHeader,
+  Tabs,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -40,16 +42,20 @@ type LeadWithRelations = Lead & {
 
 type LeadDetailsProps = {
   lead: LeadWithRelations;
+  presentation?: 'dialog' | 'page';
+  onScheduleReminder?: (lead: LeadWithRelations) => void;
+  onConvert?: (lead: LeadWithRelations) => void;
   onClose: () => void;
   onUpdate: () => void;
   onEdit: (lead: LeadWithRelations) => void;
   onDelete?: (lead: LeadWithRelations) => void;
 };
 
-export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete }: LeadDetailsProps) {
+export default function LeadDetails({ lead, presentation = 'dialog', onClose, onUpdate, onEdit, onDelete, onScheduleReminder, onConvert }: LeadDetailsProps) {
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const canEditLead = getRoleModulePermission(role, 'leads').can_edit;
+  const [activeSection, setActiveSection] = useState('overview');
   const [favorito, setFavorito] = useState(Boolean(lead.favorito));
   const [interactions, setInteractions] = useState<LeadTimelineInteraction[]>([]);
   const [statusHistory, setStatusHistory] = useState<LeadTimelineStatusHistory[]>([]);
@@ -182,86 +188,18 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
     }
   };
 
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
-      <DialogHeader onClose={onClose}>
-        <div>
-          <DialogTitle className="flex items-center gap-2">
-            <LeadFavoriteToggle
-              leadId={lead.id}
-              favorito={favorito}
-              onToggled={(next) => {
-                setFavorito(next);
-                onUpdate();
-              }}
-            />
-            {lead.nome_completo}
-          </DialogTitle>
-          <DialogDescription>Histórico de interações, status e lembretes.</DialogDescription>
-        </div>
-      </DialogHeader>
-      <DialogBody>
-      <div className="flex-1 overflow-y-auto text-[var(--text-secondary)]">
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-          {canEditLead && (
-            <Button
-              type="button"
-              onClick={() => onEdit(lead)}
-              variant="secondary"
-              size="sm"
-            >
-              <Pencil className="kds-control-icon" aria-hidden="true" />
-              <span className="hidden sm:inline">Editar lead</span>
-            </Button>
-          )}
-          {canEditLead && onDelete && (
-            <Button
-              type="button"
-              onClick={() => onDelete(lead)}
-              variant="danger"
-              size="sm"
-            >
-              <Trash2 className="kds-control-icon" aria-hidden="true" />
-              <span className="hidden sm:inline">Excluir</span>
-            </Button>
-          )}
-        </div>
-
-        <Surface variant="muted" padding="sm" className="mb-6">
-          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="inline font-medium text-[var(--text-secondary)]">Telefone:</dt>
-              <dd className="ml-2 inline text-[var(--text-primary)]">{lead.telefone}</dd>
-            </div>
-            {lead.email && (
-              <div>
-                <dt className="inline font-medium text-[var(--text-secondary)]">E-mail:</dt>
-                <dd className="ml-2 inline break-all text-[var(--text-primary)]">{lead.email}</dd>
-              </div>
-            )}
-            <div>
-              <dt className="inline font-medium text-[var(--text-secondary)]">Status:</dt>
-              <dd className="ml-2 inline text-[var(--text-primary)]">
-                {lead.status_nome ?? lead.status ?? 'Sem status'}
-              </dd>
-            </div>
-            <div>
-              <dt className="inline font-medium text-[var(--text-secondary)]">Responsável:</dt>
-              <dd className="ml-2 inline text-[var(--text-primary)]">
-                {lead.responsavel_label ?? lead.responsavel ?? 'Sem responsável'}
-              </dd>
-            </div>
-          </dl>
-        </Surface>
-
-        <div className="mb-6">
-          <NextStepSuggestion
-            leadStatus={lead.status_nome ?? lead.status ?? 'Novo'}
-            lastContact={lead.ultimo_contato ?? undefined}
-          />
-        </div>
-
-        <section className="mb-6" aria-labelledby="lead-timeline-title">
+  const favorite = <LeadFavoriteToggle leadId={lead.id} favorito={favorito} onToggled={(next) => { setFavorito(next); onUpdate(); }} />;
+  const actions = <>
+    {canEditLead && <Button onClick={() => onEdit(lead)}><Pencil className="kds-control-icon" aria-hidden="true" />Editar lead</Button>}
+    {canEditLead && onDelete && <Button variant="danger" onClick={() => onDelete(lead)}><Trash2 className="kds-control-icon" aria-hidden="true" />Excluir</Button>}
+  </>;
+  const contact = <Surface className="kds-detail-contact">
+    <SectionHeader as="h2" title="Dados do contato" />
+    <dl className="kds-detail-data-grid kds-detail-data-grid-compact">
+      {[['Nome', lead.nome_completo], ['Telefone', lead.telefone], ['E-mail', lead.email], ['Origem', lead.origem], ['Tipo', lead.tipo_contratacao], ['Responsável', lead.responsavel_label ?? lead.responsavel], ['Cidade', lead.cidade], ['Próximo retorno', lead.proximo_retorno ? formatDateTimeFullBR(lead.proximo_retorno) : null]].map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}
+    </dl>
+  </Surface>;
+  const timeline = (        <section className="kds-detail-timeline" aria-labelledby="lead-timeline-title">
           <SectionHeader
             as="h3"
             id="lead-timeline-title"
@@ -302,7 +240,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               {timelineEvents.map((event) => (
                 <Surface key={event.id} variant="muted" padding="sm">
                   <div className="flex items-start gap-3">
-                    <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--text-muted)]">
+                    <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-surface)] text-[var(--text-muted)]">
                       {event.type === 'interaction' && <MessageCircle className="h-4 w-4" aria-hidden="true" />}
                       {event.type === 'reminder' && <Bell className="h-4 w-4" aria-hidden="true" />}
                       {event.type === 'status' && <Clock className="h-4 w-4" aria-hidden="true" />}
@@ -331,7 +269,8 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
           )}
         </section>
 
-        <SectionHeader
+);
+  const interaction = <Surface className="kds-detail-interactions">        <SectionHeader
           as="h3"
           title="Interações"
           className="mb-4"
@@ -445,8 +384,46 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
             ))}
           </div>
         )}
-      </div>
-      </DialogBody>
-    </Dialog>
+</Surface>;
+  const leadData = [
+    ['Nome', lead.nome_completo], ['Telefone', lead.telefone], ['E-mail', lead.email],
+    ['Origem', lead.origem], ['Tipo de contratação', lead.tipo_contratacao],
+    ['Operadora atual', lead.operadora_atual], ['CEP', lead.cep], ['Endereço', lead.endereco],
+    ['Cidade', lead.cidade], ['Estado', lead.estado], ['Região', lead.regiao],
+    ['Responsável', lead.responsavel_label ?? lead.responsavel], ['Canal', lead.canal],
+    ['Tags', lead.tags?.join(', ')], ['Limite diário de envios', lead.daily_send_limit?.toString()],
+    ['Observações', lead.observacoes],
+  ];
+
+  if (presentation === 'page') return (
+    <section className="kds-detail-workspace">
+      <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de leads</Button>
+      <PageHeader eyebrow="Relacionamento" title={lead.nome_completo} identity={favorite} status={<Badge>{lead.status_nome ?? lead.status ?? 'Sem status'}</Badge>} description={`Responsável: ${lead.responsavel_label ?? lead.responsavel ?? 'Não atribuído'}`} actions={actions} />
+      <Tabs ariaLabel="Seções do lead" items={[{id:'overview',label:'Visão geral'},{id:'history',label:'Histórico'},{id:'followups',label:'Follow-ups'},{id:'data',label:'Dados do lead'}]} value={activeSection} onChange={setActiveSection} />
+      {activeSection === 'overview' && <>
+        <div className="kds-detail-overview-grid">
+          {contact}
+          <Surface>{timeline}</Surface>
+          <Surface className="kds-detail-quick-actions">
+            <SectionHeader as="h2" title="Ações rápidas" />
+            {canEditLead && onScheduleReminder && <Button onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Agendar follow-up</Button>}
+            {canEditLead && <Button variant="secondary" onClick={() => { setActiveSection('history'); setShowForm(true); }}><Plus className="kds-control-icon" aria-hidden="true" />Registrar interação</Button>}
+            {canEditLead && onConvert && <Button variant="secondary" onClick={() => onConvert(lead)}><FileText className="kds-control-icon" aria-hidden="true" />Converter em contrato</Button>}
+            <NextStepSuggestion leadStatus={lead.status_nome ?? lead.status ?? 'Novo'} lastContact={lead.ultimo_contato ?? undefined} />
+          </Surface>
+        </div>
+        {interaction}
+      </>}
+      {activeSection === 'history' && <><Surface>{timeline}</Surface>{interaction}</>}
+      {activeSection === 'data' && <Surface><SectionHeader as="h2" title="Dados do lead" /><dl className="kds-detail-data-grid">{leadData.map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}</dl></Surface>}
+      {activeSection === 'followups' && <Surface className="kds-detail-followups"><SectionHeader as="h2" title="Follow-ups" action={canEditLead && onScheduleReminder ? <Button onClick={() => onScheduleReminder(lead)}>Agendar follow-up</Button> : undefined} />
+        {loading ? <LoadingState label="Carregando follow-ups" /> : timelineLoadError ? <Alert tone="danger">Não foi possível carregar os follow-ups. Consulte novamente o histórico.</Alert> : reminders.length === 0 ? <EmptyState title="Nenhum follow-up registrado" description="Agende o próximo contato para acompanhar este lead." /> : reminders.map(reminder => <Surface key={reminder.id} variant="muted"><div className="kds-detail-reminder-heading"><Text>{reminder.titulo}</Text><Badge tone={reminder.lido ? 'success' : 'warning'}>{reminder.lido ? 'Concluído' : 'Pendente'}</Badge></div><Text>{reminder.descricao}</Text><time dateTime={reminder.data_lembrete}>{formatDateTimeFullBR(reminder.data_lembrete)}</time></Surface>)}
+      </Surface>}
+    </section>
   );
+
+  return <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+    <DialogHeader onClose={onClose}><div><DialogTitle className="flex items-center gap-2">{favorite}{lead.nome_completo}</DialogTitle><DialogDescription>Histórico de interações, status e lembretes.</DialogDescription></div></DialogHeader>
+    <DialogBody><div className="kds-detail-workspace"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<Surface>{timeline}</Surface>{interaction}</div></DialogBody>
+  </Dialog>;
 }

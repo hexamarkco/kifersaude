@@ -80,7 +80,7 @@ export default function LinksPage() {
 
   return (
     <PublicShell
-      theme="dark"
+      theme="light"
       width="narrow"
       className="flex min-h-dvh w-full justify-center overflow-y-auto px-4 py-10 sm:py-16"
     >

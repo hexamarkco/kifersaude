@@ -13,6 +13,7 @@ import LinksScreen from "./links/LinksScreen";
 import { CONFIG_TAB_DEFINITIONS, getAllowedConfigTabs, getConfigAreaForTab, type ConfigArea, type ConfigTabType } from "./shared/configTabs";
 import { useConfigParam } from "./shared/useConfigTab";
 import UsersScreen from "./users/UsersScreen";
+import { CONTRACT_CONFIG_MANAGERS, LEAD_CONFIG_MANAGERS } from "./general/shared/systemSettingsConfig";
 
 const ALL_TAB_IDS = CONFIG_TAB_DEFINITIONS.map((t) => t.id);
 
@@ -49,11 +50,23 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const activeAllowedTab = allowedTabs.some((tab) => tab.id === activeTab)
     ? activeTab
     : allowedTabs[0].id;
+  const query = new URLSearchParams(location.search);
+  const section = query.get('section');
+  const leadTab = query.get('leadTab');
+  const contractTab = query.get('contractTab');
+  const systemTitle = section === 'access' ? 'Perfis e acessos'
+    : section === 'leads' ? (leadTab === 'origins' ? 'Origens dos leads' : LEAD_CONFIG_MANAGERS.find(item => `manager:${item.category}` === leadTab)?.title ?? 'Configurações de leads')
+    : section === 'contracts' ? (CONTRACT_CONFIG_MANAGERS.find(item => item.category === contractTab)?.title ?? 'Configurações de contratos')
+    : 'Configurações gerais';
+  const title = area === 'automation' ? 'Automações, integrações e IA'
+    : activeAllowedTab === 'users' ? 'Usuários e permissões'
+    : activeAllowedTab === 'links' ? 'Links públicos'
+    : activeAllowedTab === 'forms' ? 'Formulários de captação' : systemTitle;
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
       <PageHeader
         eyebrow="Administração"
-        title={area === "automation" ? "Automações, integrações e IA" : "Configurações"}
+        title={title}
         description={area === "automation" ? "Organize os atendimentos automáticos, conecte serviços e configure a inteligência artificial." : "Ajuste o sistema, os cadastros e os acessos da equipe."}
         actions={
           <Badge tone="gold">
@@ -66,7 +79,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
           items={allowedTabs}
           value={activeAllowedTab}
           onChange={setActiveTab}
-          variant="rail"
+          variant="underline"
           size={area === "automation" ? "sm" : "md"}
           ariaLabel={area === "automation" ? "Áreas de automações e IA" : "Áreas de configurações"}
           listClassName="flex-nowrap overflow-x-auto"

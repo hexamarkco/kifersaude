@@ -172,8 +172,8 @@
   --control-padding-md: 1rem;
   --control-padding-lg: 1.25rem;
   --card-padding-sm: 1rem;
-  --card-padding-md: 1.5rem;
-  --card-padding-lg: 2rem;
+  --card-padding-md: 1.25rem;
+  --card-padding-lg: 1.5rem;
 
   --shadow-card: 0 18px 42px -28px rgba(0, 0, 0, 0.86), 0 1px 0 rgba(255, 224, 184, 0.04) inset;
   --shadow-card-hover: 0 26px 56px -30px rgba(0, 0, 0, 0.92), 0 0 0 1px rgba(240, 121, 63, 0.22);

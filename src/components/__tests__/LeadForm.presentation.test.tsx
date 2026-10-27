@@ -3,9 +3,14 @@ import { act } from 'react';
 import { test, vi } from 'vitest';
 import { render } from '../../testing-library/react';
 
+type MockFunction<Args extends unknown[], Result> = ((...args: Args) => Result) & {
+  mock: { calls: Args[] };
+  mockClear(): void;
+};
+
 const mocks = vi.hoisted(() => ({
-  save: vi.fn(async (_request: { payload: Record<string, unknown> }) => ({ id: 'demo-lead' })),
-  warning: vi.fn(),
+  save: vi.fn(async () => ({ id: 'demo-lead' })) as unknown as MockFunction<[{ payload: Record<string, unknown> }], Promise<{ id: string }>>,
+  warning: vi.fn() as unknown as MockFunction<[unknown], void>,
   config: {
     loading: false,
     leadStatuses: [{ id: 'status-demo', nome: 'Contato inicial', ativo: true, padrao: true }],
@@ -22,7 +27,7 @@ import LeadForm from '../LeadForm';
 
 test('page presentation keeps the production fields and automation opt-out in its save payload', async () => {
   mocks.save.mockClear();
-  const onSave = vi.fn();
+  const onSave = vi.fn() as unknown as MockFunction<unknown[], void>;
   const view = render(<LeadForm presentation="page" lead={null} initialValues={{ nome_completo: 'Contato Demonstração', telefone: '5521000000000' }} onClose={() => undefined} onSave={onSave} />);
   try {
     assert.equal(view.container.querySelectorAll('fieldset').length, 4);
@@ -45,7 +50,7 @@ test('page presentation keeps the production fields and automation opt-out in it
 
 test('page presentation rejects incomplete data and keeps cancel available', async () => {
   mocks.save.mockClear(); mocks.warning.mockClear();
-  const onClose = vi.fn();
+  const onClose = vi.fn() as unknown as MockFunction<unknown[], void>;
   const view = render(<LeadForm presentation="page" lead={null} onClose={onClose} onSave={() => undefined} />);
   try {
     const form = view.container.querySelector('form'); assert.ok(form);

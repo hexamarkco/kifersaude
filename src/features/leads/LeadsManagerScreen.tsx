@@ -1489,6 +1489,7 @@ export default function LeadsManager({
         ref={leadsRootRef}
         className="kds-leads-page panel-dashboard-immersive panel-page-shell space-y-5"
       >
+        {!selectedLead && <>
         <ObserverBanner />
         <LeadsHeader
           viewMode={viewMode}
@@ -2188,8 +2189,12 @@ export default function LeadsManager({
         )}
 
 
+        </>}
         {selectedLead && (
           <LeadDetails
+            presentation="page"
+            onScheduleReminder={openReminderScheduler}
+            onConvert={handleConvertToContract}
             lead={selectedLead}
             onClose={() => setSelectedLead(null)}
             onUpdate={loadLeads}

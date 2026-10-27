@@ -578,8 +578,9 @@ export default function ContractsManager({
     >
       <div
         ref={contractsRootRef}
-        className="panel-dashboard-immersive panel-page-shell space-y-5"
+        className="kds-contracts-page panel-dashboard-immersive panel-page-shell space-y-5"
       >
+        {!showForm && !selectedContract && <>
         <PageHeader
           eyebrow="Operação contratual"
           title="Gestão de Contratos"
@@ -632,7 +633,7 @@ export default function ContractsManager({
           </Alert>
         )}
 
-        <Surface className="space-y-5" data-panel-animate>
+        <Surface className="kds-record-filters space-y-5" data-panel-animate>
           <Toolbar>
             <ToolbarSearch className="relative">
               <Input
@@ -738,7 +739,7 @@ export default function ContractsManager({
           </div>
         </Surface>
 
-        <Surface data-panel-animate>
+        <Surface className="kds-record-results" data-panel-animate>
           <SectionHeader
             eyebrow="Carteira contratual"
             title="Contratos em acompanhamento"
@@ -1027,8 +1028,10 @@ export default function ContractsManager({
           )}
         </Surface>
 
+        </>}
         {showForm && (
           <ContractForm
+            presentation="page"
             key={editingContract?.id ?? leadToConvert?.id ?? "new-contract"}
             contract={editingContract}
             leadToConvert={leadToConvert}
@@ -1055,6 +1058,7 @@ export default function ContractsManager({
 
         {selectedContract && (
           <ContractDetails
+            presentation="page"
             key={selectedContract.id}
             contract={selectedContract}
             onClose={() => setSelectedContract(null)}

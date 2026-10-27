@@ -1,4 +1,4 @@
-import { Text, WorkspaceHeader } from '../design-system';
+import { Text, WorkspaceHeader, BrandWordmark } from '../design-system';
 import { ActionSurface, Button } from '../design-system';
 import { DesignSystemProvider } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -1002,7 +1002,7 @@ export default function Layout({
       >
         <div className="flex h-full flex-col">
           <div className={`kds-sidebar-divider terracota-sidebar-header flex h-16 items-center border-b px-4 transition-all duration-300 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isSidebarCollapsed && <div className="kds-workspace-brand" aria-label="Kifer Saúde CRM"><span>kifer<span>saúde</span></span><small>CRM</small></div>}
+            {!isSidebarCollapsed && <BrandWordmark caption="CRM" />}
             {isSidebarCollapsed && (
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>

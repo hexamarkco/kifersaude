@@ -115,6 +115,7 @@ import {
   ToolbarSearch,
   WorkspaceDialog,
   WorkspaceHeader,
+  BrandWordmark,
   useToast,
   type ButtonVariant,
   type CardKind,
@@ -792,7 +793,7 @@ function Navigation() {
           description="Links reais com indicação da seção atual. Também usada na navegação deste showcase."
           source="NavigationList · components/NavigationList.tsx"
         >
-          <DesignSystemProvider theme={workspaceTheme}><WorkspaceHeader title="Gestão de leads" username="Operador Demonstração" theme={workspaceTheme} onNavigateHome={() => setActive('summary')} onToggleTheme={() => setWorkspaceTheme(theme => theme === 'light' ? 'dark' : 'light')} /></DesignSystemProvider>
+          <BrandWordmark caption="CRM" /><DesignSystemProvider theme={workspaceTheme}><WorkspaceHeader title="Gestão de leads" username="Operador Demonstração" theme={workspaceTheme} onNavigateHome={() => setActive('summary')} onToggleTheme={() => setWorkspaceTheme(theme => theme === 'light' ? 'dark' : 'light')} /></DesignSystemProvider>
           <NavigationList
             items={items.map((item) => ({
               ...item,

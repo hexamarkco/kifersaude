@@ -1,8 +1,9 @@
-import { Text, FieldLabel } from '../design-system';
+import { FormSection, FormActions, PageHeader, Text, FieldLabel } from '../design-system';
 import { IconButton } from '../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  ArrowLeft,
   Briefcase,
   Building2,
   Calendar,
@@ -57,6 +58,7 @@ import { toast } from '../lib/toast';
 
 type LeadFormProps = {
   lead: Lead | null;
+  presentation?: 'dialog' | 'page';
   initialValues?: Partial<Lead>;
   onClose: () => void;
   onSave: (lead: Lead, context?: { created: boolean }) => void;
@@ -160,7 +162,7 @@ const buildInitialFormData = (
   };
 };
 
-export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadFormProps) {
+export default function LeadForm({ presentation = 'dialog', lead, initialValues, onClose, onSave }: LeadFormProps) {
   const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
   const { isObserver } = useAuth();
 
@@ -451,20 +453,10 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
     }
   };
 
-  return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
-      <DialogHeader onClose={saving ? undefined : onClose}>
-        <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
-        <DialogDescription>
-          {lead ? 'Atualize os dados comerciais e o próximo follow-up.' : 'Registre o contato e defina o primeiro acompanhamento.'}
-        </DialogDescription>
-      </DialogHeader>
-      <DialogBody>
-      <form
-        id="lead-form"
-        onSubmit={handleSubmit}
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  const formContent = (
+    <form id="lead-form" onSubmit={handleSubmit}>
+      <div className="kds-lead-form-grid">
+        <FormSection step="01" title="Dados de contato" description="Informações básicas para identificação e contato.">
           <Field label="Nome completo *" htmlFor="lead-nome" className="md:col-span-2">
             <Input
               id="lead-nome"
@@ -477,7 +469,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               }
             />
           </Field>
-
           <Field label="Telefone *" htmlFor="lead-telefone">
             <Input
               id="lead-telefone"
@@ -491,7 +482,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               }
             />
           </Field>
-
           <Field label="E-mail" htmlFor="lead-email">
             <Input
               id="lead-email"
@@ -503,7 +493,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               }
             />
           </Field>
-
+        </FormSection>
+<FormSection step="02" title="Localização" description="Endereço e região do contato.">
           <Field label="CEP" htmlFor="lead-cep">
               <Input
                 id="lead-cep"
@@ -528,7 +519,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 )}
               />
           </Field>
-
           <Field label="Endereço" htmlFor="lead-endereco">
             <Input
               id="lead-endereco"
@@ -540,7 +530,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               }
             />
           </Field>
-
           <Field label="Estado">
             <FilterSelect
               icon={MapPin}
@@ -550,7 +539,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               options={BRAZIL_STATE_OPTIONS}
             />
           </Field>
-
           <Field
             label="Cidade"
             description={
@@ -576,7 +564,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               disabled={!formData.estado || loadingCities || citySelectOptions.length === 0}
             />
           </Field>
-
+        </FormSection>
+<FormSection step="03" title="Qualificação e origem" description="Organize o contato no funil comercial.">
           <Field label="Origem do lead *">
             {activeOrigins.length > 0 ? (
               <FilterSelect
@@ -609,7 +598,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               />
             )}
           </Field>
-
           <Field label="Tipo de contratação">
             {tipoContratacaoOptions.length > 0 ? (
               <FilterSelect
@@ -655,7 +643,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               />
             )}
           </Field>
-
           <Field label="Operadora atual" htmlFor="lead-operadora">
             <Input
               id="lead-operadora"
@@ -670,7 +657,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               }
             />
           </Field>
-
           <Field label="Status *">
             {activeLeadStatuses.length > 0 ? (
               <FilterSelect
@@ -703,22 +689,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               />
             )}
           </Field>
-
-          {isNewLead && (
-            <Surface variant="muted" padding="sm" className="md:col-span-2">
-              <FieldLabel className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
-                <Checkbox
-                  checked={skipAutomationOnCreate}
-                  onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  Não disparar automações ao criar este lead (ex.: já abordado manualmente).
-                </span>
-              </FieldLabel>
-            </Surface>
-          )}
-
+        </FormSection>
+<FormSection step="04" title="Responsável e acompanhamento" description="Prazos, preferências de automação e contexto do atendimento.">
           <Field label="Responsável *">
             {responsavelOptions.length > 0 ? (
               <FilterSelect
@@ -760,7 +732,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               />
             )}
           </Field>
-
           <Field label="Data de criação">
             <DateTimePicker
               type="date"
@@ -771,7 +742,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               placeholder="Selecionar data"
             />
           </Field>
-
           <Field label="Próximo follow-up">
             <DateTimePicker
               type="datetime-local"
@@ -785,7 +755,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               placeholder="Selecionar data e hora"
             />
           </Field>
-
           <Field
             label="Limite diário de envios"
             htmlFor="lead-daily-send-limit"
@@ -806,7 +775,20 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               placeholder="Sem limite"
             />
           </Field>
-
+{isNewLead && (
+            <Surface variant="muted" padding="sm" className="md:col-span-2">
+              <FieldLabel className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+                <Checkbox
+                  checked={skipAutomationOnCreate}
+                  onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  Não disparar automações ao criar este lead (ex.: já abordado manualmente).
+                </span>
+              </FieldLabel>
+            </Surface>
+          )}
           <Field label="Observações" className="md:col-span-2">
             <Textarea
               value={formData.observacoes}
@@ -819,9 +801,27 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
               rows={3}
             />
           </Field>
-        </div>
+        </FormSection>
+      </div>
+    </form>
+  );
+  if (presentation === 'page') return <section className="kds-lead-form-page">
+    <Button variant="text" size="sm" onClick={onClose} disabled={saving} className="kds-lead-form-back"><ArrowLeft className="kds-control-icon" />Gestão de leads</Button>
+    <PageHeader eyebrow={lead ? 'Atualizar cadastro' : 'Novo cadastro'} title={lead ? 'Editar lead' : 'Novo lead'} description={lead ? 'Atualize os dados comerciais e o próximo acompanhamento.' : 'Registre o contato e configure o primeiro acompanhamento.'} />
+    {formContent}
+    <FormActions onCancel={onClose} submitLabel={lead ? 'Salvar alterações' : 'Salvar lead'} loading={saving} form="lead-form" sticky />
+  </section>;
 
-      </form>
+  return (
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-lead-form-dialog">
+      <DialogHeader onClose={saving ? undefined : onClose}>
+        <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
+        <DialogDescription>
+          {lead ? 'Atualize os dados comerciais e o próximo follow-up.' : 'Registre o contato e defina o primeiro acompanhamento.'}
+        </DialogDescription>
+      </DialogHeader>
+      <DialogBody>
+      {formContent}
       </DialogBody>
       <DialogFooter className="flex-col-reverse sm:flex-row">
         <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>

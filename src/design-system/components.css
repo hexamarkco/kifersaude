@@ -1969,3 +1969,17 @@
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
+
+/* Workspace chrome: shared by real routes and the design-system preview. */
+.kds-workspace-header { min-height: var(--workspace-header-height); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--page-gutter); border-bottom: var(--border-width) solid var(--border-default); background: var(--bg-surface); }
+.kds-workspace-account { display: flex; min-width: 0; align-items: center; gap: var(--space-3); }
+.kds-workspace-username { color: var(--text-muted); font: var(--type-caption); max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kds-workspace-brand { color: var(--brand-primary); line-height: 1; }
+.kds-workspace-brand > span { font: 800 1.75rem / 1 var(--font-sans); letter-spacing: -0.07em; }
+.kds-workspace-brand > span > span { font-size: 1.25rem; font-weight: var(--font-weight-medium); }
+.kds-workspace-brand > small { display: block; margin-top: var(--space-2); font: var(--font-weight-semibold) 0.5625rem / 1 var(--font-sans); letter-spacing: 0.3em; color: var(--text-muted); }
+@media (max-width: 767px) {
+  .kds-workspace-header { display: none; }
+}
+
+.kds-avatar.kds-avatar-brand { background: var(--brand-primary-soft); color: var(--brand-primary-active); }

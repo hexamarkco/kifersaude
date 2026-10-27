@@ -54,6 +54,7 @@ import {
   DialogHeader,
   DialogTitle,
   DisclosureTrigger,
+  DesignSystemProvider,
   Drawer,
   DrawerBody,
   DrawerFooter,
@@ -113,6 +114,7 @@ import {
   ToolbarActions,
   ToolbarSearch,
   WorkspaceDialog,
+  WorkspaceHeader,
   useToast,
   type ButtonVariant,
   type CardKind,
@@ -767,6 +769,7 @@ function Forms() {
 }
 
 function Navigation() {
+  const [workspaceTheme, setWorkspaceTheme] = useState<'light' | 'dark'>('light');
   const [active, setActive] = useState('contacts');
   const [tab, setTab] = useState('summary');
   const [page, setPage] = useState(1);
@@ -789,6 +792,7 @@ function Navigation() {
           description="Links reais com indicação da seção atual. Também usada na navegação deste showcase."
           source="NavigationList · components/NavigationList.tsx"
         >
+          <DesignSystemProvider theme={workspaceTheme}><WorkspaceHeader title="Gestão de leads" username="Operador Demonstração" theme={workspaceTheme} onNavigateHome={() => setActive('summary')} onToggleTheme={() => setWorkspaceTheme(theme => theme === 'light' ? 'dark' : 'light')} /></DesignSystemProvider>
           <NavigationList
             items={items.map((item) => ({
               ...item,
@@ -1248,7 +1252,7 @@ function Data() {
           </AvatarGroup>
           <div className="ds-person">
             <div className="relative">
-              <Avatar name="Marina Costa" />
+              <Avatar name="Marina Costa" tone="brand" />
               <AvatarBadge>
                 <Check size={10} />
               </AvatarBadge>

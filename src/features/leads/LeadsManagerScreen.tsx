@@ -1,4 +1,4 @@
-import { DisclosureTrigger, ButtonGroup, Heading, Text, FieldLabel, TextLink } from '../../design-system';
+import { ActionSurface, Avatar, DisclosureTrigger, ButtonGroup, Heading, Text, FieldLabel, TextLink } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -143,6 +143,7 @@ export default function LeadsManager({
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [showForm, setShowForm] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [reminderLead, setReminderLead] = useState<Lead | null>(null);
@@ -1462,6 +1463,19 @@ export default function LeadsManager({
   };
   const sortDirectionFor = (field: SortField) => sortField === field ? sortDirection : null;
 
+  if (showForm) return <LeadForm presentation="page"
+            lead={editingLead}
+            onClose={() => {
+              setShowForm(false);
+              setEditingLead(null);
+            }}
+            onSave={async () => {
+              setShowForm(false);
+              setEditingLead(null);
+              await loadLeads();
+            }}
+          />;
+
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
@@ -1473,7 +1487,7 @@ export default function LeadsManager({
     >
       <div
         ref={leadsRootRef}
-        className="panel-dashboard-immersive panel-page-shell space-y-5"
+        className="kds-leads-page panel-dashboard-immersive panel-page-shell space-y-5"
       >
         <ObserverBanner />
         <LeadsHeader
@@ -1522,8 +1536,8 @@ export default function LeadsManager({
             {leadContractsLoadError}
           </Alert>
         )}
-        <Surface className="space-y-5" data-panel-animate>
-          <Toolbar>
+        <Surface className="kds-leads-filters space-y-5" data-panel-animate>
+          <Toolbar className="kds-leads-search-toolbar">
             <ToolbarSearch className="relative">
               <Input
                 type="text"
@@ -1534,12 +1548,13 @@ export default function LeadsManager({
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-leads-toolbar-actions">
+              <IconButton variant="secondary" className="kds-leads-mobile-filter-toggle" aria-label="Mostrar filtros de leads" aria-expanded={mobileFiltersOpen} aria-controls="leads-filter-controls" onClick={() => setMobileFiltersOpen(open => !open)}><Filter aria-hidden="true" /></IconButton>
               <Button
                 type="button"
                 onClick={resetFilters}
                 variant="soft"
                 size="md"
-                className="whitespace-nowrap kds-mobile-icon-action"
+                className="kds-leads-clear-filters whitespace-nowrap kds-mobile-icon-action"
                 aria-label="Limpar filtros"
                 title="Limpar filtros"
               >
@@ -1566,7 +1581,8 @@ export default function LeadsManager({
             </ToolbarActions>
           </Toolbar>
 
-          <div className="space-y-4">
+          <div id="leads-filter-controls" className={`kds-leads-filter-controls space-y-4 ${mobileFiltersOpen ? 'is-open' : ''}`}>
+            <Button variant="text" className="kds-leads-mobile-filter-toggle" onClick={resetFilters}>Limpar filtros</Button>
             <div className="kds-leads-filter-grid">
               {[
                 {
@@ -1721,7 +1737,7 @@ export default function LeadsManager({
             />
           </div>
         ) : (
-          <Surface data-panel-animate>
+          <Surface className="kds-leads-results" data-panel-animate>
             <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <Text className="kds-op-section-label">
@@ -1927,14 +1943,10 @@ export default function LeadsManager({
                               className="mt-0.5"
                               onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
                             />
-                            <Button variant="ghost"
-                              type="button"
-                              onClick={() => setSelectedLead(lead)}
-                              className="block max-w-72 text-left transition-colors"
-                            >
-                              <span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span>
-                              <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span>
-                            </Button>
+                            <ActionSurface variant="plain" padding="none" type="button" onClick={() => setSelectedLead(lead)} className="kds-lead-identity">
+                              <Avatar name={lead.nome_completo} tone="brand" size="sm" className="kds-lead-avatar" />
+                              <span className="min-w-0"><span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
+                            </ActionSurface>
                           </div>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
                         </TableCell>
@@ -2018,7 +2030,7 @@ export default function LeadsManager({
                               </OperationalStatusBadge>
                             )}
                           </div>
-                          <div className="kds-op-lead-meta grid grid-cols-2 gap-x-3 gap-y-2.5">
+                          <details className="kds-lead-card-context"><DisclosureTrigger size="sm">Dados do contato</DisclosureTrigger><div className="kds-op-lead-meta grid grid-cols-2 gap-x-3 gap-y-2.5">
                             <div className="col-span-2 min-[480px]:col-span-1 flex items-center gap-2 break-words">
                               {lead.telefone && (
                                 <TextLink
@@ -2070,7 +2082,7 @@ export default function LeadsManager({
                                 "pt-BR",
                               )}
                             </div>
-                          </div>
+                          </div></details>
                           {lead.cidade && (
                             <div className="kds-op-lead-meta mt-2.5">
                               <span className="font-medium">Cidade</span>{" "}
@@ -2175,20 +2187,6 @@ export default function LeadsManager({
           </Surface>
         )}
 
-        {showForm && (
-          <LeadForm
-            lead={editingLead}
-            onClose={() => {
-              setShowForm(false);
-              setEditingLead(null);
-            }}
-            onSave={async () => {
-              setShowForm(false);
-              setEditingLead(null);
-              await loadLeads();
-            }}
-          />
-        )}
 
         {selectedLead && (
           <LeadDetails

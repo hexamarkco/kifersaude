@@ -110,17 +110,19 @@ export function FormPage({
 
 export function FormSection({
   title,
+  step,
   description,
   children,
   className,
   ...props
 }: Omit<HTMLAttributes<HTMLFieldSetElement>, 'title'> & {
   title: string;
+  step?: string;
   description?: string;
 }) {
   return (
     <fieldset className={cx('kds-form-section', className)} {...props}>
-      <legend>{title}</legend>
+      <legend>{step && <span className="kds-form-section-step" aria-hidden="true">{step}</span>}<span>{title}</span></legend>
       {description && (
         <p className="kds-form-section-description">{description}</p>
       )}

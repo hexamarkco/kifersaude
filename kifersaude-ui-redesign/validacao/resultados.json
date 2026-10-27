@@ -1,0 +1,364 @@
+{
+  "date": "2026-10-27",
+  "scope": "Shell compartilhado e primeira etapa de Leads; não é conclusão do redesign integral.",
+  "screenshots": 73,
+  "before": 12,
+  "after": 61,
+  "resolutions": {
+    "desktop": [
+      1920,
+      1080
+    ],
+    "tablet": [
+      768,
+      1024
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "mobile-320": [
+      320,
+      640
+    ]
+  },
+  "playwright": {
+    "final-visual": {
+      "results": [
+        {
+          "name": "desktop",
+          "state": "lista",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "filtros",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "kanban",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "criar",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "tablet",
+          "state": "lista",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "filtros",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "kanban",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "criar",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "mobile",
+          "state": "lista",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "filtros",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "kanban",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "criar",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile-320",
+          "state": "lista",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "filtros",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "kanban",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "criar",
+          "viewport": 320,
+          "scroll": 310
+        }
+      ],
+      "errors": [],
+      "blocked": 10
+    },
+    "interactions": {
+      "results": [
+        {
+          "name": "desktop",
+          "state": "viewport",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "detalhe-contextual",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "nova-interacao",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "historico-rolagem",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "editar",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "confirmar-exclusao",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "agendar-lembrete",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "desktop",
+          "state": "menu-exportacao",
+          "viewport": 1920,
+          "scroll": 1910
+        },
+        {
+          "name": "tablet",
+          "state": "viewport",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "detalhe-contextual",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "nova-interacao",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "historico-rolagem",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "editar",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "confirmar-exclusao",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "agendar-lembrete",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "tablet",
+          "state": "menu-exportacao",
+          "viewport": 768,
+          "scroll": 758
+        },
+        {
+          "name": "mobile",
+          "state": "viewport",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "detalhe-contextual",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "nova-interacao",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "historico-rolagem",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "editar",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "confirmar-exclusao",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "agendar-lembrete",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile",
+          "state": "menu-exportacao",
+          "viewport": 390,
+          "scroll": 380
+        },
+        {
+          "name": "mobile-320",
+          "state": "viewport",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "detalhe-contextual",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "nova-interacao",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "historico-rolagem",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "editar",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "confirmar-exclusao",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "agendar-lembrete",
+          "viewport": 320,
+          "scroll": 310
+        },
+        {
+          "name": "mobile-320",
+          "state": "menu-exportacao",
+          "viewport": 320,
+          "scroll": 310
+        }
+      ],
+      "errors": [],
+      "blocked": 10
+    },
+    "final-states": {
+      "results": [
+        {
+          "state": "dark",
+          "overflow": false
+        },
+        {
+          "state": "loading",
+          "name": "desktop"
+        },
+        {
+          "state": "loading",
+          "name": "mobile"
+        }
+      ],
+      "errors": []
+    }
+  },
+  "additional_states": [
+    "empty e error capturados em desktop/mobile por respostas GET simuladas",
+    "seleção em lote aberta sem aplicar mudanças"
+  ],
+  "checks": {
+    "build": "passed",
+    "design-system": "passed",
+    "visual-hardcodes": "passed",
+    "architecture": "passed",
+    "lint": "0 errors; 1 preexisting warning",
+    "typecheck": "2 preexisting errors; no new errors",
+    "focused": "15 passed",
+    "suite": {
+      "files": 320,
+      "tests": 1717,
+      "passed": 1713,
+      "failed_preexisting": 4
+    }
+  },
+  "safety": "Fixtures com nomes demonstrativos e domínio .invalid; backend local interceptado; escritas e integrações bloqueadas. Requisições IBGE de leitura bloqueadas durante edição; valor da cidade existente preservado."
+}

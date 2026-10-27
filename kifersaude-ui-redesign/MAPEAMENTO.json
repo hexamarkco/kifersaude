@@ -1,0 +1,3884 @@
+{
+  "stack": "React 18 / TypeScript / Vite 5 / Tailwind / design-system interno / Supabase",
+  "source_of_functionality": "Código atual; nenhum HTML do pacote será importado pelo frontend.",
+  "entries": [
+    {
+      "id": "page--dashboard",
+      "context": "dashboard",
+      "kind": "pages",
+      "route": "/painel/dashboard",
+      "current_components": [
+        "src/features/dashboard/DashboardScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--dashboard.png",
+        "references/mobile/page--dashboard.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--leads-listagem",
+      "context": "leads-listagem",
+      "kind": "pages",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "previous-approved/leads-list-desktop-viewport.png",
+        "previous-approved/leads-list-mobile-viewport.png"
+      ],
+      "status": "validado",
+      "exceptions": [],
+      "validation": [
+        "validacao/depois/desktop/leads-listagem.png",
+        "validacao/depois/tablet/leads-listagem.png",
+        "validacao/depois/mobile/leads-listagem.png",
+        "validacao/depois/mobile-320/leads-listagem.png"
+      ]
+    },
+    {
+      "id": "page--contratos-listagem",
+      "context": "contratos-listagem",
+      "kind": "pages",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--contratos-listagem.png",
+        "references/mobile/page--contratos-listagem.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--comissoes",
+      "context": "comissoes",
+      "kind": "pages",
+      "route": "/painel/comissoes",
+      "current_components": [
+        "src/features/commissions/CommissionCalendarScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--comissoes.png",
+        "references/mobile/page--comissoes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--agenda",
+      "context": "agenda",
+      "kind": "pages",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/AgendaScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--agenda.png",
+        "references/mobile/page--agenda.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--inbox",
+      "context": "inbox",
+      "kind": "pages",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--inbox.png",
+        "references/mobile/page--inbox.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--campanhas",
+      "context": "campanhas",
+      "kind": "pages",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--campanhas.png",
+        "references/mobile/page--campanhas.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--campanha-detalhes",
+      "context": "campanha-detalhes",
+      "kind": "pages",
+      "route": "/painel/disparos/00000000-0000-4000-8000-000000000700",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignDetailScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--campanha-detalhes.png",
+        "references/mobile/page--campanha-detalhes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--blog",
+      "context": "blog",
+      "kind": "pages",
+      "route": "/painel/blog",
+      "current_components": [
+        "src/features/blog/BlogTabScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--blog.png",
+        "references/mobile/page--blog.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--api",
+      "context": "api",
+      "kind": "pages",
+      "route": "/painel/api",
+      "current_components": [
+        "src/features/config/integrations/api-docs/ApiDocsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--api.png",
+        "references/mobile/page--api.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--chat-ia",
+      "context": "chat-ia",
+      "kind": "pages",
+      "route": "/chat",
+      "current_components": [
+        "src/features/ai-sandbox/AiSandboxChatScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--chat-ia.png",
+        "references/mobile/page--chat-ia.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--login",
+      "context": "login",
+      "kind": "pages",
+      "route": "/login",
+      "current_components": [
+        "src/pages/LoginPage.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--login.png",
+        "references/mobile/page--login.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-system",
+      "context": "config-system",
+      "kind": "pages",
+      "route": "/painel/config?tab=system",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-system.png",
+        "references/mobile/page--config-system.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-users",
+      "context": "config-users",
+      "kind": "pages",
+      "route": "/painel/config?tab=users",
+      "current_components": [
+        "src/features/config/users/UsersScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-users.png",
+        "references/mobile/page--config-users.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-links",
+      "context": "config-links",
+      "kind": "pages",
+      "route": "/painel/config?tab=links",
+      "current_components": [
+        "src/features/config/links/LinksScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-links.png",
+        "references/mobile/page--config-links.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-forms",
+      "context": "config-forms",
+      "kind": "pages",
+      "route": "/painel/config?tab=forms",
+      "current_components": [
+        "src/features/config/forms/FormsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-forms.png",
+        "references/mobile/page--config-forms.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-automation",
+      "context": "config-automation",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-automation.png",
+        "references/mobile/page--config-automation.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-integrations",
+      "context": "config-integrations",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=integrations",
+      "current_components": [
+        "src/features/config/integrations/IntegrationsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-integrations.png",
+        "references/mobile/page--config-integrations.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-ai",
+      "context": "config-ai",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=ai",
+      "current_components": [
+        "src/features/config/ai/AiConfigScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-ai.png",
+        "references/mobile/page--config-ai.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-access",
+      "context": "config-access",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=access",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-access.png",
+        "references/mobile/page--config-access.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-leads",
+      "context": "config-leads",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=leads",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-leads.png",
+        "references/mobile/page--config-leads.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-contracts",
+      "context": "config-contracts",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=contracts",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-contracts.png",
+        "references/mobile/page--config-contracts.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-leads-origins",
+      "context": "config-leads-origins",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=leads&leadTab=origins",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-leads-origins.png",
+        "references/mobile/page--config-leads-origins.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-leads-manager-lead_tipo_contratacao",
+      "context": "config-leads-manager-lead_tipo_contratacao",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=leads&leadTab=manager:lead_tipo_contratacao",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-leads-manager-lead_tipo_contratacao.png",
+        "references/mobile/page--config-leads-manager-lead_tipo_contratacao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-leads-manager-lead_responsavel",
+      "context": "config-leads-manager-lead_responsavel",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=leads&leadTab=manager:lead_responsavel",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-leads-manager-lead_responsavel.png",
+        "references/mobile/page--config-leads-manager-lead_responsavel.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-contract_modalidade",
+      "context": "config-contract_modalidade",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_modalidade",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-contract_modalidade.png",
+        "references/mobile/page--config-contract_modalidade.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-contract_abrangencia",
+      "context": "config-contract_abrangencia",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_abrangencia",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-contract_abrangencia.png",
+        "references/mobile/page--config-contract_abrangencia.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-contract_acomodacao",
+      "context": "config-contract_acomodacao",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_acomodacao",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-contract_acomodacao.png",
+        "references/mobile/page--config-contract_acomodacao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--config-contract_carencia",
+      "context": "config-contract_carencia",
+      "kind": "pages",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_carencia",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--config-contract_carencia.png",
+        "references/mobile/page--config-contract_carencia.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--integracao-whatsapp",
+      "context": "integracao-whatsapp",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=integrations&section=whatsapp",
+      "current_components": [
+        "src/features/config/integrations/IntegrationsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--integracao-whatsapp.png",
+        "references/mobile/page--integracao-whatsapp.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--integracao-meta",
+      "context": "integracao-meta",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=integrations&section=meta",
+      "current_components": [
+        "src/features/config/integrations/IntegrationsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--integracao-meta.png",
+        "references/mobile/page--integracao-meta.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--integracao-tracking",
+      "context": "integracao-tracking",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=integrations&section=tracking",
+      "current_components": [
+        "src/features/config/integrations/IntegrationsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--integracao-tracking.png",
+        "references/mobile/page--integracao-tracking.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--ia-global",
+      "context": "ia-global",
+      "kind": "pages",
+      "route": "/painel/automacoes?tab=ai&section=global",
+      "current_components": [
+        "src/features/config/ai/AiConfigScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/page--ia-global.png",
+        "references/mobile/page--ia-global.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-home",
+      "context": "public-home",
+      "kind": "pages",
+      "route": "/",
+      "current_components": [
+        "src/pages/public/HomePage.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-home.png",
+        "references/mobile/page--public-home.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-links",
+      "context": "public-links",
+      "kind": "pages",
+      "route": "/links",
+      "current_components": [
+        "src/pages/public/LinksPage.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-links.png",
+        "references/mobile/page--public-links.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-form",
+      "context": "public-form",
+      "kind": "pages",
+      "route": "/forms/demonstracao",
+      "current_components": [
+        "src/pages/public/FormPage.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-form.png",
+        "references/mobile/page--public-form.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator",
+      "context": "public-operator",
+      "kind": "pages",
+      "route": "/planos/amil",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator.png",
+        "references/mobile/page--public-operator.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-privacy",
+      "context": "public-privacy",
+      "kind": "pages",
+      "route": "/politica-de-privacidade",
+      "current_components": [
+        "src/features/public-content/PrivacyPolicyPage.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-privacy.png",
+        "references/mobile/page--public-privacy.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-porto-saude",
+      "context": "public-operator-porto-saude",
+      "kind": "pages",
+      "route": "/planos/porto-saude",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-porto-saude.png",
+        "references/mobile/page--public-operator-porto-saude.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-bradesco-saude",
+      "context": "public-operator-bradesco-saude",
+      "kind": "pages",
+      "route": "/planos/bradesco-saude",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-bradesco-saude.png",
+        "references/mobile/page--public-operator-bradesco-saude.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-sulamerica",
+      "context": "public-operator-sulamerica",
+      "kind": "pages",
+      "route": "/planos/sulamerica",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-sulamerica.png",
+        "references/mobile/page--public-operator-sulamerica.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-unimed",
+      "context": "public-operator-unimed",
+      "kind": "pages",
+      "route": "/planos/unimed",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-unimed.png",
+        "references/mobile/page--public-operator-unimed.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-medsenior",
+      "context": "public-operator-medsenior",
+      "kind": "pages",
+      "route": "/planos/medsenior",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-medsenior.png",
+        "references/mobile/page--public-operator-medsenior.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-assim-saude",
+      "context": "public-operator-assim-saude",
+      "kind": "pages",
+      "route": "/planos/assim-saude",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-assim-saude.png",
+        "references/mobile/page--public-operator-assim-saude.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-hapvida-notredame",
+      "context": "public-operator-hapvida-notredame",
+      "kind": "pages",
+      "route": "/planos/hapvida-notredame",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-hapvida-notredame.png",
+        "references/mobile/page--public-operator-hapvida-notredame.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-leve-saude",
+      "context": "public-operator-leve-saude",
+      "kind": "pages",
+      "route": "/planos/leve-saude",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-leve-saude.png",
+        "references/mobile/page--public-operator-leve-saude.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "page--public-operator-klini",
+      "context": "public-operator-klini",
+      "kind": "pages",
+      "route": "/planos/klini",
+      "current_components": [
+        "src/features/operator-landings/OperatorLandingScreen.tsx"
+      ],
+      "shared_components": [
+        "PublicShell",
+        "PublicSection",
+        "PublicCard"
+      ],
+      "references": [
+        "references/desktop/page--public-operator-klini.png",
+        "references/mobile/page--public-operator-klini.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--leads-detalhe-pagina",
+      "context": "leads-detalhe-pagina",
+      "kind": "extras",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--leads-detalhe-pagina.png",
+        "references/mobile/extra--leads-detalhe-pagina.png"
+      ],
+      "status": "pendente",
+      "exceptions": [
+        "Detalhe/histórico/follow-up permanecem contextuais. A referência de página independente exige migração posterior que preserve confirmação, lembretes e callbacks do gerenciador."
+      ],
+      "validation": []
+    },
+    {
+      "id": "extra--leads-edicao-pagina",
+      "context": "leads-edicao-pagina",
+      "kind": "extras",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--leads-edicao-pagina.png",
+        "references/mobile/extra--leads-edicao-pagina.png"
+      ],
+      "status": "validado",
+      "exceptions": [
+        "Formulário em página dentro da rota atual /painel/leads; apresentação modal padrão preservada para outros módulos. Campos e validações de produção prevalecem sobre os mockups."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-editar.png",
+        "validacao/depois/tablet/leads-editar.png",
+        "validacao/depois/mobile/leads-editar.png",
+        "validacao/depois/mobile-320/leads-editar.png"
+      ]
+    },
+    {
+      "id": "extra--leads-filtros-avancados",
+      "context": "leads-filtros-avancados",
+      "kind": "extras",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--leads-filtros-avancados.png",
+        "references/mobile/extra--leads-filtros-avancados.png"
+      ],
+      "status": "validado",
+      "exceptions": [],
+      "validation": [
+        "validacao/depois/desktop/leads-filtros.png",
+        "validacao/depois/tablet/leads-filtros.png",
+        "validacao/depois/mobile/leads-filtros.png",
+        "validacao/depois/mobile-320/leads-filtros.png"
+      ]
+    },
+    {
+      "id": "extra--leads-historico",
+      "context": "leads-historico",
+      "kind": "extras",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--leads-historico.png",
+        "references/mobile/extra--leads-historico.png"
+      ],
+      "status": "pendente",
+      "exceptions": [
+        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir.",
+        "Detalhe/histórico/follow-up permanecem contextuais. A referência de página independente exige migração posterior que preserve confirmação, lembretes e callbacks do gerenciador."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-historico-rolagem.png",
+        "validacao/depois/tablet/leads-historico-rolagem.png",
+        "validacao/depois/mobile/leads-historico-rolagem.png",
+        "validacao/depois/mobile-320/leads-historico-rolagem.png"
+      ]
+    },
+    {
+      "id": "extra--leads-followups",
+      "context": "leads-followups",
+      "kind": "extras",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--leads-followups.png",
+        "references/mobile/extra--leads-followups.png"
+      ],
+      "status": "pendente",
+      "exceptions": [
+        "Detalhe/histórico/follow-up permanecem contextuais. A referência de página independente exige migração posterior que preserve confirmação, lembretes e callbacks do gerenciador."
+      ],
+      "validation": []
+    },
+    {
+      "id": "extra--leads-kanban",
+      "context": "leads-kanban",
+      "kind": "extras",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "previous-approved/leads-kanban-desktop-viewport.png",
+        "previous-approved/leads-kanban-mobile-viewport.png"
+      ],
+      "status": "validado",
+      "exceptions": [],
+      "validation": [
+        "validacao/depois/desktop/leads-kanban.png",
+        "validacao/depois/tablet/leads-kanban.png",
+        "validacao/depois/mobile/leads-kanban.png",
+        "validacao/depois/mobile-320/leads-kanban.png"
+      ]
+    },
+    {
+      "id": "extra--contratos-ficha",
+      "context": "contratos-ficha",
+      "kind": "extras",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--contratos-ficha.png",
+        "references/mobile/extra--contratos-ficha.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--contratos-beneficiarios",
+      "context": "contratos-beneficiarios",
+      "kind": "extras",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--contratos-beneficiarios.png",
+        "references/mobile/extra--contratos-beneficiarios.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--contratos-importar",
+      "context": "contratos-importar",
+      "kind": "extras",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--contratos-importar.png",
+        "references/mobile/extra--contratos-importar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--inbox-conversa",
+      "context": "inbox-conversa",
+      "kind": "extras",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--inbox-conversa.png",
+        "references/mobile/extra--inbox-conversa.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--inbox-agendamentos",
+      "context": "inbox-agendamentos",
+      "kind": "extras",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--inbox-agendamentos.png",
+        "references/mobile/extra--inbox-agendamentos.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--agenda-tarefas",
+      "context": "agenda-tarefas",
+      "kind": "extras",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/AgendaScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--agenda-tarefas.png",
+        "references/mobile/extra--agenda-tarefas.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--agenda-concluidos",
+      "context": "agenda-concluidos",
+      "kind": "extras",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/AgendaScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--agenda-concluidos.png",
+        "references/mobile/extra--agenda-concluidos.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--automacoes-fluxo-detalhes",
+      "context": "automacoes-fluxo-detalhes",
+      "kind": "extras",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--automacoes-fluxo-detalhes.png",
+        "references/mobile/extra--automacoes-fluxo-detalhes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--automacoes-execucao",
+      "context": "automacoes-execucao",
+      "kind": "extras",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--automacoes-execucao.png",
+        "references/mobile/extra--automacoes-execucao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--automacoes-templates",
+      "context": "automacoes-templates",
+      "kind": "extras",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--automacoes-templates.png",
+        "references/mobile/extra--automacoes-templates.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--campanhas-criar-pagina",
+      "context": "campanhas-criar-pagina",
+      "kind": "extras",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--campanhas-criar-pagina.png",
+        "references/mobile/extra--campanhas-criar-pagina.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--conteudo-editor",
+      "context": "conteudo-editor",
+      "kind": "extras",
+      "route": "/painel/blog",
+      "current_components": [
+        "src/features/blog/BlogTabScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--conteudo-editor.png",
+        "references/mobile/extra--conteudo-editor.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "extra--config-formularios-editor",
+      "context": "config-formularios-editor",
+      "kind": "extras",
+      "route": "/painel/config?tab=forms",
+      "current_components": [
+        "src/features/config/forms/FormsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/extra--config-formularios-editor.png",
+        "references/mobile/extra--config-formularios-editor.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--dashboard-filtros",
+      "context": "dashboard-filtros",
+      "kind": "states",
+      "route": "/painel/dashboard",
+      "current_components": [
+        "src/features/dashboard/DashboardScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--dashboard-filtros.png",
+        "references/mobile/state--dashboard-filtros.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--dashboard-periodo",
+      "context": "dashboard-periodo",
+      "kind": "states",
+      "route": "/painel/dashboard",
+      "current_components": [
+        "src/features/dashboard/DashboardScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--dashboard-periodo.png",
+        "references/mobile/state--dashboard-periodo.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--dashboard-analises",
+      "context": "dashboard-analises",
+      "kind": "states",
+      "route": "/painel/dashboard",
+      "current_components": [
+        "src/features/dashboard/DashboardScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--dashboard-analises.png",
+        "references/mobile/state--dashboard-analises.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar",
+      "context": "leads-criar",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/components/LeadForm.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "previous-approved/leads-create-desktop-viewport.png",
+        "previous-approved/leads-create-mobile-completa.png"
+      ],
+      "status": "validado",
+      "exceptions": [
+        "Formulário em página dentro da rota atual /painel/leads; apresentação modal padrão preservada para outros módulos. Campos e validações de produção prevalecem sobre os mockups."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-criar.png",
+        "validacao/depois/tablet/leads-criar.png",
+        "validacao/depois/mobile/leads-criar.png",
+        "validacao/depois/mobile-320/leads-criar.png"
+      ]
+    },
+    {
+      "id": "state--leads-detalhes",
+      "context": "leads-detalhes",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/components/LeadDetails.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-detalhes.png",
+        "references/mobile/state--leads-detalhes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [
+        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-detalhe-contextual.png",
+        "validacao/depois/tablet/leads-detalhe-contextual.png",
+        "validacao/depois/mobile/leads-detalhe-contextual.png",
+        "validacao/depois/mobile-320/leads-detalhe-contextual.png"
+      ]
+    },
+    {
+      "id": "state--leads-agendar",
+      "context": "leads-agendar",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/components/ReminderSchedulerModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-agendar.png",
+        "references/mobile/state--leads-agendar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [
+        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-agendar-lembrete.png",
+        "validacao/depois/tablet/leads-agendar-lembrete.png",
+        "validacao/depois/mobile/leads-agendar-lembrete.png",
+        "validacao/depois/mobile-320/leads-agendar-lembrete.png"
+      ]
+    },
+    {
+      "id": "state--leads-excluir-confirmacao",
+      "context": "leads-excluir-confirmacao",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-excluir-confirmacao.png",
+        "references/mobile/state--leads-excluir-confirmacao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [
+        "Regressão visual do fluxo contextual existente verificada; redesign específico da referência ainda pendente. Apenas abrir/cancelar, sem persistir."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-confirmar-exclusao.png",
+        "validacao/depois/tablet/leads-confirmar-exclusao.png",
+        "validacao/depois/mobile/leads-confirmar-exclusao.png",
+        "validacao/depois/mobile-320/leads-confirmar-exclusao.png"
+      ]
+    },
+    {
+      "id": "state--leads-filtros-avancados",
+      "context": "leads-filtros-avancados",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-filtros-avancados.png",
+        "references/mobile/state--leads-filtros-avancados.png"
+      ],
+      "status": "validado",
+      "exceptions": [],
+      "validation": [
+        "validacao/depois/desktop/leads-filtros.png",
+        "validacao/depois/tablet/leads-filtros.png",
+        "validacao/depois/mobile/leads-filtros.png",
+        "validacao/depois/mobile-320/leads-filtros.png"
+      ]
+    },
+    {
+      "id": "state--leads-status-menu",
+      "context": "leads-status-menu",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-status-menu.png",
+        "references/mobile/state--leads-status-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-responsavel-menu",
+      "context": "leads-responsavel-menu",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-responsavel-menu.png",
+        "references/mobile/state--leads-responsavel-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-origem-menu",
+      "context": "leads-origem-menu",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-origem-menu.png",
+        "references/mobile/state--leads-origem-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-tipo-menu",
+      "context": "leads-tipo-menu",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-tipo-menu.png",
+        "references/mobile/state--leads-tipo-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-ordenacao-menu",
+      "context": "leads-ordenacao-menu",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-ordenacao-menu.png",
+        "references/mobile/state--leads-ordenacao-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-status-contextual",
+      "context": "leads-status-contextual",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-status-contextual.png",
+        "references/mobile/state--leads-status-contextual.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-criar",
+      "context": "contratos-criar",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/components/ContractForm.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-criar.png",
+        "references/mobile/state--contratos-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-detalhes",
+      "context": "contratos-detalhes",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/components/ContractDetails.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-detalhes.png",
+        "references/mobile/state--contratos-detalhes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-importacao",
+      "context": "contratos-importacao",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/components/ContractBulkJsonImportDialog.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-importacao.png",
+        "references/mobile/state--contratos-importacao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-excluir-confirmacao",
+      "context": "contratos-excluir-confirmacao",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-excluir-confirmacao.png",
+        "references/mobile/state--contratos-excluir-confirmacao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-status-menu",
+      "context": "contratos-status-menu",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-status-menu.png",
+        "references/mobile/state--contratos-status-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-operadoras-menu",
+      "context": "contratos-operadoras-menu",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-operadoras-menu.png",
+        "references/mobile/state--contratos-operadoras-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-datas-menu",
+      "context": "contratos-datas-menu",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/ContractsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-datas-menu.png",
+        "references/mobile/state--contratos-datas-menu.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--comissoes-dia",
+      "context": "comissoes-dia",
+      "kind": "states",
+      "route": "/painel/comissoes",
+      "current_components": [
+        "src/features/commissions/CommissionCalendarScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--comissoes-dia.png",
+        "references/mobile/state--comissoes-dia.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--agenda-criar",
+      "context": "agenda-criar",
+      "kind": "states",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/AgendaScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--agenda-criar.png",
+        "references/mobile/state--agenda-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--agenda-organizar",
+      "context": "agenda-organizar",
+      "kind": "states",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/components/FollowUpAgendaOrganizerModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--agenda-organizar.png",
+        "references/mobile/state--agenda-organizar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--agenda-reagendar",
+      "context": "agenda-reagendar",
+      "kind": "states",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/AgendaScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--agenda-reagendar.png",
+        "references/mobile/state--agenda-reagendar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--agenda-tipos",
+      "context": "agenda-tipos",
+      "kind": "states",
+      "route": "/painel/agenda",
+      "current_components": [
+        "src/features/agenda/AgendaScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--agenda-tipos.png",
+        "references/mobile/state--agenda-tipos.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-agenda",
+      "context": "inbox-agenda",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-agenda.png",
+        "references/mobile/state--inbox-agenda.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-agendadas",
+      "context": "inbox-agendadas",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-agendadas.png",
+        "references/mobile/state--inbox-agendadas.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-painel",
+      "context": "inbox-painel",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppDashboardModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-painel.png",
+        "references/mobile/state--inbox-painel.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-nova-conversa",
+      "context": "inbox-nova-conversa",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppStartChatModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-nova-conversa.png",
+        "references/mobile/state--inbox-nova-conversa.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-filtros",
+      "context": "inbox-filtros",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-filtros.png",
+        "references/mobile/state--inbox-filtros.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--campanhas-criar",
+      "context": "campanhas-criar",
+      "kind": "states",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--campanhas-criar.png",
+        "references/mobile/state--campanhas-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--campanhas-editar",
+      "context": "campanhas-editar",
+      "kind": "states",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--campanhas-editar.png",
+        "references/mobile/state--campanhas-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--campanhas-excluir",
+      "context": "campanhas-excluir",
+      "kind": "states",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--campanhas-excluir.png",
+        "references/mobile/state--campanhas-excluir.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--blog-criar",
+      "context": "blog-criar",
+      "kind": "states",
+      "route": "/painel/blog",
+      "current_components": [
+        "src/features/blog/BlogTabScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--blog-criar.png",
+        "references/mobile/state--blog-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--blog-editar",
+      "context": "blog-editar",
+      "kind": "states",
+      "route": "/painel/blog",
+      "current_components": [
+        "src/features/blog/BlogTabScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--blog-editar.png",
+        "references/mobile/state--blog-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--blog-visualizar",
+      "context": "blog-visualizar",
+      "kind": "states",
+      "route": "/painel/blog",
+      "current_components": [
+        "src/features/blog/BlogTabScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--blog-visualizar.png",
+        "references/mobile/state--blog-visualizar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--blog-excluir",
+      "context": "blog-excluir",
+      "kind": "states",
+      "route": "/painel/blog",
+      "current_components": [
+        "src/features/blog/BlogTabScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--blog-excluir.png",
+        "references/mobile/state--blog-excluir.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-editar",
+      "context": "leads-editar",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/components/LeadForm.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-editar.png",
+        "references/mobile/state--leads-editar.png"
+      ],
+      "status": "validado",
+      "exceptions": [
+        "Formulário em página dentro da rota atual /painel/leads; apresentação modal padrão preservada para outros módulos. Campos e validações de produção prevalecem sobre os mockups."
+      ],
+      "validation": [
+        "validacao/depois/desktop/leads-editar.png",
+        "validacao/depois/tablet/leads-editar.png",
+        "validacao/depois/mobile/leads-editar.png",
+        "validacao/depois/mobile-320/leads-editar.png"
+      ]
+    },
+    {
+      "id": "state--leads-converter",
+      "context": "leads-converter",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-converter.png",
+        "references/mobile/state--leads-converter.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-editar",
+      "context": "contratos-editar",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/components/ContractForm.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-editar.png",
+        "references/mobile/state--contratos-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-titular",
+      "context": "contratos-titular",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/components/HolderForm.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-titular.png",
+        "references/mobile/state--contratos-titular.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-dependente",
+      "context": "contratos-dependente",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/components/DependentForm.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-dependente.png",
+        "references/mobile/state--contratos-dependente.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--usuarios-criar",
+      "context": "usuarios-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=users",
+      "current_components": [
+        "src/features/config/users/UsersScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--usuarios-criar.png",
+        "references/mobile/state--usuarios-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--usuarios-editar",
+      "context": "usuarios-editar",
+      "kind": "states",
+      "route": "/painel/config?tab=users",
+      "current_components": [
+        "src/features/config/users/UsersScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--usuarios-editar.png",
+        "references/mobile/state--usuarios-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--links-criar",
+      "context": "links-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=links",
+      "current_components": [
+        "src/features/config/links/LinksScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--links-criar.png",
+        "references/mobile/state--links-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--links-editar",
+      "context": "links-editar",
+      "kind": "states",
+      "route": "/painel/config?tab=links",
+      "current_components": [
+        "src/features/config/links/LinksScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--links-editar.png",
+        "references/mobile/state--links-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--formularios-criar",
+      "context": "formularios-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=forms",
+      "current_components": [
+        "src/features/config/forms/FormsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--formularios-criar.png",
+        "references/mobile/state--formularios-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--formularios-editar",
+      "context": "formularios-editar",
+      "kind": "states",
+      "route": "/painel/config?tab=forms",
+      "current_components": [
+        "src/features/config/forms/FormsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--formularios-editar.png",
+        "references/mobile/state--formularios-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--formularios-pergunta",
+      "context": "formularios-pergunta",
+      "kind": "states",
+      "route": "/painel/config?tab=forms",
+      "current_components": [
+        "src/features/config/forms/StepEditorDialog.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--formularios-pergunta.png",
+        "references/mobile/state--formularios-pergunta.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--perfis-criar",
+      "context": "perfis-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=access",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--perfis-criar.png",
+        "references/mobile/state--perfis-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--perfis-permissoes",
+      "context": "perfis-permissoes",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=access",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--perfis-permissoes.png",
+        "references/mobile/state--perfis-permissoes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-etapa-criar",
+      "context": "config-etapa-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=leads",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-etapa-criar.png",
+        "references/mobile/state--config-etapa-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-origem-criar",
+      "context": "config-origem-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=leads&leadTab=origins",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-origem-criar.png",
+        "references/mobile/state--config-origem-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-tipo-criar",
+      "context": "config-tipo-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=leads&leadTab=manager:lead_tipo_contratacao",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-tipo-criar.png",
+        "references/mobile/state--config-tipo-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-responsavel-criar",
+      "context": "config-responsavel-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=leads&leadTab=manager:lead_responsavel",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-responsavel-criar.png",
+        "references/mobile/state--config-responsavel-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-status-contrato-criar",
+      "context": "config-status-contrato-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=contracts",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-status-contrato-criar.png",
+        "references/mobile/state--config-status-contrato-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-modalidade-criar",
+      "context": "config-modalidade-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_modalidade",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-modalidade-criar.png",
+        "references/mobile/state--config-modalidade-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-abrangencia-criar",
+      "context": "config-abrangencia-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_abrangencia",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-abrangencia-criar.png",
+        "references/mobile/state--config-abrangencia-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-acomodacao-criar",
+      "context": "config-acomodacao-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_acomodacao",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-acomodacao-criar.png",
+        "references/mobile/state--config-acomodacao-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--config-carencia-criar",
+      "context": "config-carencia-criar",
+      "kind": "states",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_carencia",
+      "current_components": [
+        "src/features/config/general/SystemSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--config-carencia-criar.png",
+        "references/mobile/state--config-carencia-criar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--ia-feature-editar",
+      "context": "ia-feature-editar",
+      "kind": "states",
+      "route": "/painel/automacoes?tab=ai",
+      "current_components": [
+        "src/features/config/ai/components/FeatureEditorDrawer.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--ia-feature-editar.png",
+        "references/mobile/state--ia-feature-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--automacao-novo-fluxo",
+      "context": "automacao-novo-fluxo",
+      "kind": "states",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--automacao-novo-fluxo.png",
+        "references/mobile/state--automacao-novo-fluxo.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--automacao-novo-template",
+      "context": "automacao-novo-template",
+      "kind": "states",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--automacao-novo-template.png",
+        "references/mobile/state--automacao-novo-template.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--nav-notificacoes",
+      "context": "nav-notificacoes",
+      "kind": "states",
+      "route": "/painel/dashboard",
+      "current_components": [
+        "src/features/dashboard/DashboardScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--nav-notificacoes.png",
+        "references/mobile/state--nav-notificacoes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-seletor-1",
+      "context": "leads-criar-seletor-1",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-seletor-1.png",
+        "references/mobile/state--leads-criar-seletor-1.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-seletor-2",
+      "context": "leads-criar-seletor-2",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-seletor-2.png",
+        "references/mobile/state--leads-criar-seletor-2.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-seletor-3",
+      "context": "leads-criar-seletor-3",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-seletor-3.png",
+        "references/mobile/state--leads-criar-seletor-3.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-seletor-4",
+      "context": "leads-criar-seletor-4",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-seletor-4.png",
+        "references/mobile/state--leads-criar-seletor-4.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-seletor-5",
+      "context": "leads-criar-seletor-5",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-seletor-5.png",
+        "references/mobile/state--leads-criar-seletor-5.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-seletor-6",
+      "context": "leads-criar-seletor-6",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-seletor-6.png",
+        "references/mobile/state--leads-criar-seletor-6.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--leads-criar-validacao",
+      "context": "leads-criar-validacao",
+      "kind": "states",
+      "route": "/painel/leads",
+      "current_components": [
+        "src/features/leads/LeadsManagerScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--leads-criar-validacao.png",
+        "references/mobile/state--leads-criar-validacao.png"
+      ],
+      "status": "validado",
+      "exceptions": [],
+      "validation": [
+        "validacao/depois/desktop/leads-validacao.png",
+        "validacao/depois/tablet/leads-validacao.png",
+        "validacao/depois/mobile/leads-validacao.png",
+        "validacao/depois/mobile-320/leads-validacao.png"
+      ]
+    },
+    {
+      "id": "state--campanhas-criar-etapa-2",
+      "context": "campanhas-criar-etapa-2",
+      "kind": "states",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--campanhas-criar-etapa-2.png",
+        "references/mobile/state--campanhas-criar-etapa-2.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--campanhas-criar-etapa-3",
+      "context": "campanhas-criar-etapa-3",
+      "kind": "states",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--campanhas-criar-etapa-3.png",
+        "references/mobile/state--campanhas-criar-etapa-3.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--campanhas-criar-etapa-4",
+      "context": "campanhas-criar-etapa-4",
+      "kind": "states",
+      "route": "/painel/disparos",
+      "current_components": [
+        "src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--campanhas-criar-etapa-4.png",
+        "references/mobile/state--campanhas-criar-etapa-4.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-lead-drawer",
+      "context": "inbox-lead-drawer",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-lead-drawer.png",
+        "references/mobile/state--inbox-lead-drawer.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-arquivos-drawer",
+      "context": "inbox-arquivos-drawer",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppChatFilesDrawer.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-arquivos-drawer.png",
+        "references/mobile/state--inbox-arquivos-drawer.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-busca-mensagens",
+      "context": "inbox-busca-mensagens",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-busca-mensagens.png",
+        "references/mobile/state--inbox-busca-mensagens.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-agendadas-conversa",
+      "context": "inbox-agendadas-conversa",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-agendadas-conversa.png",
+        "references/mobile/state--inbox-agendadas-conversa.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-mensagens-rapidas",
+      "context": "inbox-mensagens-rapidas",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-mensagens-rapidas.png",
+        "references/mobile/state--inbox-mensagens-rapidas.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-emojis",
+      "context": "inbox-emojis",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppMediaDrawer.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-emojis.png",
+        "references/mobile/state--inbox-emojis.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-anexos",
+      "context": "inbox-anexos",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-anexos.png",
+        "references/mobile/state--inbox-anexos.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-formatacao",
+      "context": "inbox-formatacao",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-formatacao.png",
+        "references/mobile/state--inbox-formatacao.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--automacao-fluxo-editar",
+      "context": "automacao-fluxo-editar",
+      "kind": "states",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--automacao-fluxo-editar.png",
+        "references/mobile/state--automacao-fluxo-editar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--automacao-fluxo-regras",
+      "context": "automacao-fluxo-regras",
+      "kind": "states",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--automacao-fluxo-regras.png",
+        "references/mobile/state--automacao-fluxo-regras.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--automacao-fluxo-testes",
+      "context": "automacao-fluxo-testes",
+      "kind": "states",
+      "route": "/painel/automacoes?tab=automation",
+      "current_components": [
+        "src/features/config/automation/AutoContactFlowSettingsScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--automacao-fluxo-testes.png",
+        "references/mobile/state--automacao-fluxo-testes.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--formulario-publico-contato",
+      "context": "formulario-publico-contato",
+      "kind": "states",
+      "route": "/forms/demonstracao",
+      "current_components": [
+        "src/pages/public/FormPage.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--formulario-publico-contato.png",
+        "references/mobile/state--formulario-publico-contato.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-mensagens-rapidas-gerenciar",
+      "context": "inbox-mensagens-rapidas-gerenciar",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-mensagens-rapidas-gerenciar.png",
+        "references/mobile/state--inbox-mensagens-rapidas-gerenciar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-dados-mensagem",
+      "context": "inbox-dados-mensagem",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppMessageDetailsModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-dados-mensagem.png",
+        "references/mobile/state--inbox-dados-mensagem.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-editar-mensagem",
+      "context": "inbox-editar-mensagem",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/components/WhatsAppEditMessageModal.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-editar-mensagem.png",
+        "references/mobile/state--inbox-editar-mensagem.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-encaminhar",
+      "context": "inbox-encaminhar",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-encaminhar.png",
+        "references/mobile/state--inbox-encaminhar.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-resposta",
+      "context": "inbox-resposta",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-resposta.png",
+        "references/mobile/state--inbox-resposta.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--inbox-visualizador-imagem",
+      "context": "inbox-visualizador-imagem",
+      "kind": "states",
+      "route": "/painel/inbox",
+      "current_components": [
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--inbox-visualizador-imagem.png",
+        "references/mobile/state--inbox-visualizador-imagem.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    },
+    {
+      "id": "state--contratos-importacao-individual",
+      "context": "contratos-importacao-individual",
+      "kind": "states",
+      "route": "/painel/contratos",
+      "current_components": [
+        "src/features/contracts/components/ContractJsonImportDialog.tsx"
+      ],
+      "shared_components": [
+        "PageHeader",
+        "Button",
+        "Input",
+        "Select",
+        "Dialog",
+        "Table"
+      ],
+      "references": [
+        "references/desktop/state--contratos-importacao-individual.png",
+        "references/mobile/state--contratos-importacao-individual.png"
+      ],
+      "status": "pendente",
+      "exceptions": [],
+      "validation": []
+    }
+  ],
+  "validation_scope": "Validação visual local com fixtures; nenhuma comprovação de escrita remota ou de redesign dos módulos pendentes."
+}

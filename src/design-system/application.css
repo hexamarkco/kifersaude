@@ -57,7 +57,7 @@ html,
 
 .panel-page-shell {
   width: 100%;
-  max-width: min(100%, 96rem);
+  max-width: min(100%, var(--page-max-width));
   min-width: 0;
   margin-inline: auto;
 }
@@ -1438,9 +1438,13 @@ html,
   background: var(--bg-canvas);
 }
 
-.terracota-sidebar {
-  box-shadow: none;
-}
+.terracota-sidebar { width: var(--sidebar-width); background: var(--bg-surface); box-shadow: none; }
+.terracota-sidebar[data-collapsed='true'] { width: var(--sidebar-width-collapsed); }
+.terracota-sidebar-header { min-height: var(--workspace-header-height); border-bottom-color: transparent; }
+.terracota-sidebar .kds-sidebar-item { border-radius: var(--radius-control); box-shadow: none; }
+.terracota-sidebar .kds-action-surface:hover { background: var(--bg-hover); box-shadow: none; }
+.terracota-sidebar .kds-sidebar-item.is-active { background: var(--brand-primary-soft); color: var(--brand-primary-active); }
+
 
 @keyframes whatsapp-recording-pulse {
   0% {
@@ -1467,6 +1471,7 @@ html,
 }
 
 .terracota-content-shell {
+  margin-left: var(--terracota-sidebar-width);
   width: auto;
   max-width: none;
 }
@@ -1478,7 +1483,7 @@ html,
 }
 
 .terracota-content-shell:not(.is-full-bleed) .terracota-panel-content {
-  padding-inline: clamp(0.75rem, 1.6vw, 1.5rem) !important;
+  padding-inline: var(--page-gutter) !important;
 }
 
 .terracota-sidebar-popover {

@@ -24,6 +24,7 @@ export function LeadsHeader({
 }: LeadsHeaderProps) {
   return (
     <PageHeader
+      className="kds-leads-header"
       eyebrow="Operação comercial"
       title="Gestão de leads"
       description="Acompanhe a carteira, priorize follow-ups e mantenha o funil em ritmo constante."
@@ -33,13 +34,15 @@ export function LeadsHeader({
             href="/painel/api"
             variant="secondary"
             size="md"
+            aria-label="Documentação de integração"
             title="Abrir documentação para integrar outros sistemas"
           >
             <BookOpen className="kds-control-icon" />
-            <span>Documentação de integração</span>
+            <span className="kds-leads-action-label">Documentação de integração</span>
           </LinkButton>
           <Button
             type="button"
+            aria-label="Novo lead"
             onClick={onCreateLead}
             disabled={!canEditLeads}
             size="md"
@@ -50,7 +53,7 @@ export function LeadsHeader({
             }
           >
             <Plus className="kds-control-icon" />
-            <span>Novo lead</span>
+            <span className="kds-leads-action-label">Novo lead</span>
           </Button>
         </>
       )}

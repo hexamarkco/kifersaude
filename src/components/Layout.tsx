@@ -1,4 +1,4 @@
-import { Text } from '../design-system';
+import { Text, WorkspaceHeader } from '../design-system';
 import { ActionSurface, Button } from '../design-system';
 import { DesignSystemProvider } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -70,7 +70,7 @@ const PANEL_THEME_STORAGE_KEY = 'painel.theme.v2';
 
 const getInitialThemeMode = (): ThemeMode => {
   if (typeof window === 'undefined') {
-    return 'dark';
+    return 'light';
   }
 
   const storedTheme = window.localStorage.getItem(PANEL_THEME_STORAGE_KEY);
@@ -78,7 +78,7 @@ const getInitialThemeMode = (): ThemeMode => {
     return storedTheme;
   }
 
-  return 'dark';
+  return 'light';
 };
 
 export default function Layout({
@@ -91,10 +91,10 @@ export default function Layout({
   hasActiveNotification,
   newLeadsCount = 0,
 }: LayoutProps) {
-  const { signOut, role } = useAuth();
+  const { signOut, role, userProfile } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const navigate = useNavigate();
-  const [expandedParent, setExpandedParent] = useState<string | null>(null);
+  const [expandedParent, setExpandedParent] = useState<string | null>(() => ['leads', 'contracts', 'agenda'].includes(activeTab) ? 'crm' : ['whatsapp-inbox', 'whatsapp-campaigns', 'blog'].includes(activeTab) ? 'comunicacao' : null);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem('painel.sidebar.collapsed');
@@ -147,7 +147,7 @@ export default function Layout({
     ease,
   } = usePanelMotion();
   const isSidebarCollapsed = isMenuCollapsed && !isMobileMenuOpen;
-  const sidebarOffset = isSidebarCollapsed ? '4rem' : '16rem';
+  const sidebarOffset = isSidebarCollapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width)';
   const currentRole = role;
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -866,7 +866,7 @@ export default function Layout({
                     key={child.id}
                     onClick={() => {
                       onTabChange(child.id);
-                      setExpandedParent(null);
+                      setExpandedParent(tab.id);
                       setIsMobileMenuOpen(false);
                     }}
                     className={cx(
@@ -995,20 +995,14 @@ export default function Layout({
       <aside
         ref={sidebarRef}
         id="painel-navigation"
+        data-collapsed={isSidebarCollapsed}
         className={`kds-sidebar terracota-sidebar fixed left-0 top-0 z-40 h-screen border-r transition-[width] duration-300 ease-in-out ${
-          isSidebarCollapsed ? 'w-16' : 'w-64'
-        } ${
           isMobileMenuOpen ? 'is-mobile-open' : ''
         }`}
       >
         <div className="flex h-full flex-col">
           <div className={`kds-sidebar-divider terracota-sidebar-header flex h-16 items-center border-b px-4 transition-all duration-300 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-            <div className={`flex items-center gap-3 transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-              <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
-                <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
-              </div>
-              <span className="whitespace-nowrap text-sm font-semibold text-[color:var(--text-on-brand)]">Kifer Saúde</span>
-            </div>
+            {!isSidebarCollapsed && <div className="kds-workspace-brand" aria-label="Kifer Saúde CRM"><span>kifer<span>saúde</span></span><small>CRM</small></div>}
             {isSidebarCollapsed && (
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
@@ -1319,9 +1313,16 @@ export default function Layout({
       )}
 
       <div
-        className={`terracota-content-shell relative z-10 flex min-h-0 min-w-0 flex-1 flex-col transition-[margin,width,max-width] duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'} ${useFullBleedContent ? 'is-full-bleed' : ''}`}
+        className={`terracota-content-shell relative z-10 flex min-h-0 min-w-0 flex-1 flex-col transition-[margin,width,max-width] duration-300 ${useFullBleedContent ? 'is-full-bleed' : ''}`}
         style={{ '--terracota-sidebar-width': sidebarOffset } as CSSProperties}
       >
+        {!useFullBleedContent && <WorkspaceHeader
+          title={tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'CRM'}
+          username={userProfile?.username}
+          theme={themeMode}
+          onNavigateHome={() => onTabChange('dashboard')}
+          onToggleTheme={toggleThemeMode}
+        />}
         <main className={`terracota-main flex min-h-0 flex-1 flex-col ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}

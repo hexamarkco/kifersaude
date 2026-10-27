@@ -75,6 +75,8 @@ export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { default as FilterTrigger } from './components/FilterTrigger';
 export { default as DisclosureTrigger } from './components/DisclosureTrigger';
+export { WorkspaceHeader } from './components/WorkspaceHeader';
+export type { WorkspaceHeaderProps } from './components/WorkspaceHeader';
 export type { DisclosureTriggerProps } from './components/DisclosureTrigger';
 export type { FilterTriggerProps } from './components/FilterTrigger';
 export { LinkButton } from './components/LinkButton';

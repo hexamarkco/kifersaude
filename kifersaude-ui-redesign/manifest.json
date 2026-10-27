@@ -1,0 +1,1275 @@
+{
+  "created_at": "2026-10-26",
+  "source": {
+    "file": "kifersaude-ui-audit.zip",
+    "date": "2026-10-25",
+    "commit": "b99d7b2c",
+    "screenshots_in_full_audit": 1470
+  },
+  "pages": [
+    {
+      "id": "dashboard",
+      "name": "Dashboard",
+      "category": "dashboard",
+      "route": "/painel/dashboard",
+      "reference_desktop": "references/desktop/page--dashboard.png",
+      "reference_mobile": "references/mobile/page--dashboard.png",
+      "html": "html/page--dashboard.html"
+    },
+    {
+      "id": "leads-listagem",
+      "name": "Gestão de leads",
+      "category": "leads",
+      "route": "/painel/leads",
+      "reference_desktop": "references/desktop/page--leads-listagem.png",
+      "reference_mobile": "references/mobile/page--leads-listagem.png",
+      "html": "html/page--leads-listagem.html"
+    },
+    {
+      "id": "contratos-listagem",
+      "name": "Gestão de contratos e clientes",
+      "category": "contratos",
+      "route": "/painel/contratos",
+      "reference_desktop": "references/desktop/page--contratos-listagem.png",
+      "reference_mobile": "references/mobile/page--contratos-listagem.png",
+      "html": "html/page--contratos-listagem.html"
+    },
+    {
+      "id": "comissoes",
+      "name": "Comissões e produção",
+      "category": "financeiro",
+      "route": "/painel/comissoes",
+      "reference_desktop": "references/desktop/page--comissoes.png",
+      "reference_mobile": "references/mobile/page--comissoes.png",
+      "html": "html/page--comissoes.html"
+    },
+    {
+      "id": "agenda",
+      "name": "Agenda, tarefas e lembretes",
+      "category": "agenda",
+      "route": "/painel/agenda",
+      "reference_desktop": "references/desktop/page--agenda.png",
+      "reference_mobile": "references/mobile/page--agenda.png",
+      "html": "html/page--agenda.html"
+    },
+    {
+      "id": "inbox",
+      "name": "WhatsApp Inbox",
+      "category": "comunicacao",
+      "route": "/painel/inbox",
+      "reference_desktop": "references/desktop/page--inbox.png",
+      "reference_mobile": "references/mobile/page--inbox.png",
+      "html": "html/page--inbox.html"
+    },
+    {
+      "id": "campanhas",
+      "name": "Campanhas e disparos",
+      "category": "campanhas",
+      "route": "/painel/disparos",
+      "reference_desktop": "references/desktop/page--campanhas.png",
+      "reference_mobile": "references/mobile/page--campanhas.png",
+      "html": "html/page--campanhas.html"
+    },
+    {
+      "id": "campanha-detalhes",
+      "name": "Detalhes de campanha",
+      "category": "campanhas",
+      "route": "/painel/disparos/00000000-0000-4000-8000-000000000700",
+      "reference_desktop": "references/desktop/page--campanha-detalhes.png",
+      "reference_mobile": "references/mobile/page--campanha-detalhes.png",
+      "html": "html/page--campanha-detalhes.html"
+    },
+    {
+      "id": "blog",
+      "name": "Gestão de conteúdo",
+      "category": "conteudo",
+      "route": "/painel/blog",
+      "reference_desktop": "references/desktop/page--blog.png",
+      "reference_mobile": "references/mobile/page--blog.png",
+      "html": "html/page--blog.html"
+    },
+    {
+      "id": "api",
+      "name": "Documentação da API",
+      "category": "integracoes",
+      "route": "/painel/api",
+      "reference_desktop": "references/desktop/page--api.png",
+      "reference_mobile": "references/mobile/page--api.png",
+      "html": "html/page--api.html"
+    },
+    {
+      "id": "chat-ia",
+      "name": "Chat e testes de IA",
+      "category": "ia",
+      "route": "/chat",
+      "reference_desktop": "references/desktop/page--chat-ia.png",
+      "reference_mobile": "references/mobile/page--chat-ia.png",
+      "html": "html/page--chat-ia.html"
+    },
+    {
+      "id": "login",
+      "name": "Acesso ao CRM",
+      "category": "acesso",
+      "route": "/login",
+      "reference_desktop": "references/desktop/page--login.png",
+      "reference_mobile": "references/mobile/page--login.png",
+      "html": "html/page--login.html"
+    },
+    {
+      "id": "config-system",
+      "name": "Geral",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system",
+      "reference_desktop": "references/desktop/page--config-system.png",
+      "reference_mobile": "references/mobile/page--config-system.png",
+      "html": "html/page--config-system.html"
+    },
+    {
+      "id": "config-users",
+      "name": "Usuários",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=users",
+      "reference_desktop": "references/desktop/page--config-users.png",
+      "reference_mobile": "references/mobile/page--config-users.png",
+      "html": "html/page--config-users.html"
+    },
+    {
+      "id": "config-links",
+      "name": "Links",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=links",
+      "reference_desktop": "references/desktop/page--config-links.png",
+      "reference_mobile": "references/mobile/page--config-links.png",
+      "html": "html/page--config-links.html"
+    },
+    {
+      "id": "config-forms",
+      "name": "Formulários",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=forms",
+      "reference_desktop": "references/desktop/page--config-forms.png",
+      "reference_mobile": "references/mobile/page--config-forms.png",
+      "html": "html/page--config-forms.html"
+    },
+    {
+      "id": "config-automation",
+      "name": "Automações",
+      "category": "automacoes",
+      "route": "/painel/automacoes?tab=automation",
+      "reference_desktop": "references/desktop/page--config-automation.png",
+      "reference_mobile": "references/mobile/page--config-automation.png",
+      "html": "html/page--config-automation.html"
+    },
+    {
+      "id": "config-integrations",
+      "name": "Integrações",
+      "category": "automacoes",
+      "route": "/painel/automacoes?tab=integrations",
+      "reference_desktop": "references/desktop/page--config-integrations.png",
+      "reference_mobile": "references/mobile/page--config-integrations.png",
+      "html": "html/page--config-integrations.html"
+    },
+    {
+      "id": "config-ai",
+      "name": "Inteligência artificial",
+      "category": "automacoes",
+      "route": "/painel/automacoes?tab=ai",
+      "reference_desktop": "references/desktop/page--config-ai.png",
+      "reference_mobile": "references/mobile/page--config-ai.png",
+      "html": "html/page--config-ai.html"
+    },
+    {
+      "id": "config-access",
+      "name": "Perfis e acessos",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=access",
+      "reference_desktop": "references/desktop/page--config-access.png",
+      "reference_mobile": "references/mobile/page--config-access.png",
+      "html": "html/page--config-access.html"
+    },
+    {
+      "id": "config-leads",
+      "name": "Configurações de leads",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=leads",
+      "reference_desktop": "references/desktop/page--config-leads.png",
+      "reference_mobile": "references/mobile/page--config-leads.png",
+      "html": "html/page--config-leads.html"
+    },
+    {
+      "id": "config-contracts",
+      "name": "Configurações de contratos",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=contracts",
+      "reference_desktop": "references/desktop/page--config-contracts.png",
+      "reference_mobile": "references/mobile/page--config-contracts.png",
+      "html": "html/page--config-contracts.html"
+    },
+    {
+      "id": "config-leads-origins",
+      "name": "Origens",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=leads&leadTab=origins",
+      "reference_desktop": "references/desktop/page--config-leads-origins.png",
+      "reference_mobile": "references/mobile/page--config-leads-origins.png",
+      "html": "html/page--config-leads-origins.html"
+    },
+    {
+      "id": "config-leads-manager-lead_tipo_contratacao",
+      "name": "Tipos de contratação",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=leads&leadTab=manager:lead_tipo_contratacao",
+      "reference_desktop": "references/desktop/page--config-leads-manager-lead_tipo_contratacao.png",
+      "reference_mobile": "references/mobile/page--config-leads-manager-lead_tipo_contratacao.png",
+      "html": "html/page--config-leads-manager-lead_tipo_contratacao.html"
+    },
+    {
+      "id": "config-leads-manager-lead_responsavel",
+      "name": "Responsáveis",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=leads&leadTab=manager:lead_responsavel",
+      "reference_desktop": "references/desktop/page--config-leads-manager-lead_responsavel.png",
+      "reference_mobile": "references/mobile/page--config-leads-manager-lead_responsavel.png",
+      "html": "html/page--config-leads-manager-lead_responsavel.html"
+    },
+    {
+      "id": "config-contract_modalidade",
+      "name": "Modalidade",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_modalidade",
+      "reference_desktop": "references/desktop/page--config-contract_modalidade.png",
+      "reference_mobile": "references/mobile/page--config-contract_modalidade.png",
+      "html": "html/page--config-contract_modalidade.html"
+    },
+    {
+      "id": "config-contract_abrangencia",
+      "name": "Abrangencia",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_abrangencia",
+      "reference_desktop": "references/desktop/page--config-contract_abrangencia.png",
+      "reference_mobile": "references/mobile/page--config-contract_abrangencia.png",
+      "html": "html/page--config-contract_abrangencia.html"
+    },
+    {
+      "id": "config-contract_acomodacao",
+      "name": "Acomodacao",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_acomodacao",
+      "reference_desktop": "references/desktop/page--config-contract_acomodacao.png",
+      "reference_mobile": "references/mobile/page--config-contract_acomodacao.png",
+      "html": "html/page--config-contract_acomodacao.html"
+    },
+    {
+      "id": "config-contract_carencia",
+      "name": "Carencia",
+      "category": "configuracoes",
+      "route": "/painel/config?tab=system&section=contracts&contractTab=contract_carencia",
+      "reference_desktop": "references/desktop/page--config-contract_carencia.png",
+      "reference_mobile": "references/mobile/page--config-contract_carencia.png",
+      "html": "html/page--config-contract_carencia.html"
+    },
+    {
+      "id": "integracao-whatsapp",
+      "name": "Integrações: whatsapp",
+      "category": "integracoes",
+      "route": "/painel/automacoes?tab=integrations&section=whatsapp",
+      "reference_desktop": "references/desktop/page--integracao-whatsapp.png",
+      "reference_mobile": "references/mobile/page--integracao-whatsapp.png",
+      "html": "html/page--integracao-whatsapp.html"
+    },
+    {
+      "id": "integracao-meta",
+      "name": "Integrações: meta",
+      "category": "integracoes",
+      "route": "/painel/automacoes?tab=integrations&section=meta",
+      "reference_desktop": "references/desktop/page--integracao-meta.png",
+      "reference_mobile": "references/mobile/page--integracao-meta.png",
+      "html": "html/page--integracao-meta.html"
+    },
+    {
+      "id": "integracao-tracking",
+      "name": "Integrações: tracking",
+      "category": "integracoes",
+      "route": "/painel/automacoes?tab=integrations&section=tracking",
+      "reference_desktop": "references/desktop/page--integracao-tracking.png",
+      "reference_mobile": "references/mobile/page--integracao-tracking.png",
+      "html": "html/page--integracao-tracking.html"
+    },
+    {
+      "id": "ia-global",
+      "name": "IA: configurações globais",
+      "category": "ia",
+      "route": "/painel/automacoes?tab=ai&section=global",
+      "reference_desktop": "references/desktop/page--ia-global.png",
+      "reference_mobile": "references/mobile/page--ia-global.png",
+      "html": "html/page--ia-global.html"
+    },
+    {
+      "id": "public-home",
+      "name": "Site público",
+      "category": "publico",
+      "route": "/",
+      "reference_desktop": "references/desktop/page--public-home.png",
+      "reference_mobile": "references/mobile/page--public-home.png",
+      "html": "html/page--public-home.html"
+    },
+    {
+      "id": "public-links",
+      "name": "Página pública de links",
+      "category": "publico",
+      "route": "/links",
+      "reference_desktop": "references/desktop/page--public-links.png",
+      "reference_mobile": "references/mobile/page--public-links.png",
+      "html": "html/page--public-links.html"
+    },
+    {
+      "id": "public-form",
+      "name": "Formulário público",
+      "category": "publico",
+      "route": "/forms/demonstracao",
+      "reference_desktop": "references/desktop/page--public-form.png",
+      "reference_mobile": "references/mobile/page--public-form.png",
+      "html": "html/page--public-form.html"
+    },
+    {
+      "id": "public-operator",
+      "name": "Página de operadora",
+      "category": "publico",
+      "route": "/planos/amil",
+      "reference_desktop": "references/desktop/page--public-operator.png",
+      "reference_mobile": "references/mobile/page--public-operator.png",
+      "html": "html/page--public-operator.html"
+    },
+    {
+      "id": "public-privacy",
+      "name": "Política de privacidade",
+      "category": "publico",
+      "route": "/politica-de-privacidade",
+      "reference_desktop": "references/desktop/page--public-privacy.png",
+      "reference_mobile": "references/mobile/page--public-privacy.png",
+      "html": "html/page--public-privacy.html"
+    },
+    {
+      "id": "public-operator-porto-saude",
+      "name": "Operadora: Porto Saude",
+      "category": "publico",
+      "route": "/planos/porto-saude",
+      "reference_desktop": "references/desktop/page--public-operator-porto-saude.png",
+      "reference_mobile": "references/mobile/page--public-operator-porto-saude.png",
+      "html": "html/page--public-operator-porto-saude.html"
+    },
+    {
+      "id": "public-operator-bradesco-saude",
+      "name": "Operadora: Bradesco Saude",
+      "category": "publico",
+      "route": "/planos/bradesco-saude",
+      "reference_desktop": "references/desktop/page--public-operator-bradesco-saude.png",
+      "reference_mobile": "references/mobile/page--public-operator-bradesco-saude.png",
+      "html": "html/page--public-operator-bradesco-saude.html"
+    },
+    {
+      "id": "public-operator-sulamerica",
+      "name": "Operadora: Sulamerica",
+      "category": "publico",
+      "route": "/planos/sulamerica",
+      "reference_desktop": "references/desktop/page--public-operator-sulamerica.png",
+      "reference_mobile": "references/mobile/page--public-operator-sulamerica.png",
+      "html": "html/page--public-operator-sulamerica.html"
+    },
+    {
+      "id": "public-operator-unimed",
+      "name": "Operadora: Unimed",
+      "category": "publico",
+      "route": "/planos/unimed",
+      "reference_desktop": "references/desktop/page--public-operator-unimed.png",
+      "reference_mobile": "references/mobile/page--public-operator-unimed.png",
+      "html": "html/page--public-operator-unimed.html"
+    },
+    {
+      "id": "public-operator-medsenior",
+      "name": "Operadora: Medsenior",
+      "category": "publico",
+      "route": "/planos/medsenior",
+      "reference_desktop": "references/desktop/page--public-operator-medsenior.png",
+      "reference_mobile": "references/mobile/page--public-operator-medsenior.png",
+      "html": "html/page--public-operator-medsenior.html"
+    },
+    {
+      "id": "public-operator-assim-saude",
+      "name": "Operadora: Assim Saude",
+      "category": "publico",
+      "route": "/planos/assim-saude",
+      "reference_desktop": "references/desktop/page--public-operator-assim-saude.png",
+      "reference_mobile": "references/mobile/page--public-operator-assim-saude.png",
+      "html": "html/page--public-operator-assim-saude.html"
+    },
+    {
+      "id": "public-operator-hapvida-notredame",
+      "name": "Operadora: Hapvida Notredame",
+      "category": "publico",
+      "route": "/planos/hapvida-notredame",
+      "reference_desktop": "references/desktop/page--public-operator-hapvida-notredame.png",
+      "reference_mobile": "references/mobile/page--public-operator-hapvida-notredame.png",
+      "html": "html/page--public-operator-hapvida-notredame.html"
+    },
+    {
+      "id": "public-operator-leve-saude",
+      "name": "Operadora: Leve Saude",
+      "category": "publico",
+      "route": "/planos/leve-saude",
+      "reference_desktop": "references/desktop/page--public-operator-leve-saude.png",
+      "reference_mobile": "references/mobile/page--public-operator-leve-saude.png",
+      "html": "html/page--public-operator-leve-saude.html"
+    },
+    {
+      "id": "public-operator-klini",
+      "name": "Operadora: Klini",
+      "category": "publico",
+      "route": "/planos/klini",
+      "reference_desktop": "references/desktop/page--public-operator-klini.png",
+      "reference_mobile": "references/mobile/page--public-operator-klini.png",
+      "html": "html/page--public-operator-klini.html"
+    }
+  ],
+  "extras": [
+    {
+      "id": "leads-detalhe-pagina",
+      "name": "Detalhes do lead",
+      "category": "leads",
+      "reference_desktop": "references/desktop/extra--leads-detalhe-pagina.png",
+      "reference_mobile": "references/mobile/extra--leads-detalhe-pagina.png",
+      "html": "html/extra--leads-detalhe-pagina.html"
+    },
+    {
+      "id": "leads-edicao-pagina",
+      "name": "Editar lead",
+      "category": "leads",
+      "reference_desktop": "references/desktop/extra--leads-edicao-pagina.png",
+      "reference_mobile": "references/mobile/extra--leads-edicao-pagina.png",
+      "html": "html/extra--leads-edicao-pagina.html"
+    },
+    {
+      "id": "leads-filtros-avancados",
+      "name": "Filtros avançados",
+      "category": "leads",
+      "reference_desktop": "references/desktop/extra--leads-filtros-avancados.png",
+      "reference_mobile": "references/mobile/extra--leads-filtros-avancados.png",
+      "html": "html/extra--leads-filtros-avancados.html"
+    },
+    {
+      "id": "leads-historico",
+      "name": "Histórico e interações",
+      "category": "leads",
+      "reference_desktop": "references/desktop/extra--leads-historico.png",
+      "reference_mobile": "references/mobile/extra--leads-historico.png",
+      "html": "html/extra--leads-historico.html"
+    },
+    {
+      "id": "leads-followups",
+      "name": "Follow-ups do lead",
+      "category": "leads",
+      "reference_desktop": "references/desktop/extra--leads-followups.png",
+      "reference_mobile": "references/mobile/extra--leads-followups.png",
+      "html": "html/extra--leads-followups.html"
+    },
+    {
+      "id": "leads-kanban",
+      "name": "Kanban de leads",
+      "category": "leads",
+      "reference_desktop": "references/desktop/extra--leads-kanban.png",
+      "reference_mobile": "references/mobile/extra--leads-kanban.png",
+      "html": "html/extra--leads-kanban.html"
+    },
+    {
+      "id": "contratos-ficha",
+      "name": "Ficha do contrato",
+      "category": "contratos",
+      "reference_desktop": "references/desktop/extra--contratos-ficha.png",
+      "reference_mobile": "references/mobile/extra--contratos-ficha.png",
+      "html": "html/extra--contratos-ficha.html"
+    },
+    {
+      "id": "contratos-beneficiarios",
+      "name": "Titulares e dependentes",
+      "category": "contratos",
+      "reference_desktop": "references/desktop/extra--contratos-beneficiarios.png",
+      "reference_mobile": "references/mobile/extra--contratos-beneficiarios.png",
+      "html": "html/extra--contratos-beneficiarios.html"
+    },
+    {
+      "id": "contratos-importar",
+      "name": "Importação de contratos",
+      "category": "contratos",
+      "reference_desktop": "references/desktop/extra--contratos-importar.png",
+      "reference_mobile": "references/mobile/extra--contratos-importar.png",
+      "html": "html/extra--contratos-importar.html"
+    },
+    {
+      "id": "inbox-conversa",
+      "name": "Conversa no WhatsApp",
+      "category": "comunicacao",
+      "reference_desktop": "references/desktop/extra--inbox-conversa.png",
+      "reference_mobile": "references/mobile/extra--inbox-conversa.png",
+      "html": "html/extra--inbox-conversa.html"
+    },
+    {
+      "id": "inbox-agendamentos",
+      "name": "Mensagens agendadas",
+      "category": "comunicacao",
+      "reference_desktop": "references/desktop/extra--inbox-agendamentos.png",
+      "reference_mobile": "references/mobile/extra--inbox-agendamentos.png",
+      "html": "html/extra--inbox-agendamentos.html"
+    },
+    {
+      "id": "agenda-tarefas",
+      "name": "Minhas tarefas",
+      "category": "agenda",
+      "reference_desktop": "references/desktop/extra--agenda-tarefas.png",
+      "reference_mobile": "references/mobile/extra--agenda-tarefas.png",
+      "html": "html/extra--agenda-tarefas.html"
+    },
+    {
+      "id": "agenda-concluidos",
+      "name": "Tarefas concluídas",
+      "category": "agenda",
+      "reference_desktop": "references/desktop/extra--agenda-concluidos.png",
+      "reference_mobile": "references/mobile/extra--agenda-concluidos.png",
+      "html": "html/extra--agenda-concluidos.html"
+    },
+    {
+      "id": "automacoes-fluxo-detalhes",
+      "name": "Detalhes do fluxo",
+      "category": "automacoes",
+      "reference_desktop": "references/desktop/extra--automacoes-fluxo-detalhes.png",
+      "reference_mobile": "references/mobile/extra--automacoes-fluxo-detalhes.png",
+      "html": "html/extra--automacoes-fluxo-detalhes.html"
+    },
+    {
+      "id": "automacoes-execucao",
+      "name": "Execuções das automações",
+      "category": "automacoes",
+      "reference_desktop": "references/desktop/extra--automacoes-execucao.png",
+      "reference_mobile": "references/mobile/extra--automacoes-execucao.png",
+      "html": "html/extra--automacoes-execucao.html"
+    },
+    {
+      "id": "automacoes-templates",
+      "name": "Templates de mensagens",
+      "category": "automacoes",
+      "reference_desktop": "references/desktop/extra--automacoes-templates.png",
+      "reference_mobile": "references/mobile/extra--automacoes-templates.png",
+      "html": "html/extra--automacoes-templates.html"
+    },
+    {
+      "id": "campanhas-criar-pagina",
+      "name": "Criar campanha",
+      "category": "campanhas",
+      "reference_desktop": "references/desktop/extra--campanhas-criar-pagina.png",
+      "reference_mobile": "references/mobile/extra--campanhas-criar-pagina.png",
+      "html": "html/extra--campanhas-criar-pagina.html"
+    },
+    {
+      "id": "conteudo-editor",
+      "name": "Editor de artigo",
+      "category": "conteudo",
+      "reference_desktop": "references/desktop/extra--conteudo-editor.png",
+      "reference_mobile": "references/mobile/extra--conteudo-editor.png",
+      "html": "html/extra--conteudo-editor.html"
+    },
+    {
+      "id": "config-formularios-editor",
+      "name": "Editor de formulários",
+      "category": "configuracoes",
+      "reference_desktop": "references/desktop/extra--config-formularios-editor.png",
+      "reference_mobile": "references/mobile/extra--config-formularios-editor.png",
+      "html": "html/extra--config-formularios-editor.html"
+    }
+  ],
+  "states": [
+    {
+      "id": "dashboard-filtros",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--dashboard-filtros.png",
+      "reference_mobile": "references/mobile/state--dashboard-filtros.png",
+      "html": "html/state--dashboard-filtros.html"
+    },
+    {
+      "id": "dashboard-periodo",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--dashboard-periodo.png",
+      "reference_mobile": "references/mobile/state--dashboard-periodo.png",
+      "html": "html/state--dashboard-periodo.html"
+    },
+    {
+      "id": "dashboard-analises",
+      "kind": "section",
+      "reference_desktop": "references/desktop/state--dashboard-analises.png",
+      "reference_mobile": "references/mobile/state--dashboard-analises.png",
+      "html": "html/state--dashboard-analises.html"
+    },
+    {
+      "id": "leads-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--leads-criar.png",
+      "reference_mobile": "references/mobile/state--leads-criar.png",
+      "html": "html/state--leads-criar.html"
+    },
+    {
+      "id": "leads-detalhes",
+      "kind": "drawer",
+      "reference_desktop": "references/desktop/state--leads-detalhes.png",
+      "reference_mobile": "references/mobile/state--leads-detalhes.png",
+      "html": "html/state--leads-detalhes.html"
+    },
+    {
+      "id": "leads-agendar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--leads-agendar.png",
+      "reference_mobile": "references/mobile/state--leads-agendar.png",
+      "html": "html/state--leads-agendar.html"
+    },
+    {
+      "id": "leads-excluir-confirmacao",
+      "kind": "confirmation",
+      "reference_desktop": "references/desktop/state--leads-excluir-confirmacao.png",
+      "reference_mobile": "references/mobile/state--leads-excluir-confirmacao.png",
+      "html": "html/state--leads-excluir-confirmacao.html"
+    },
+    {
+      "id": "leads-filtros-avancados",
+      "kind": "section",
+      "reference_desktop": "references/desktop/state--leads-filtros-avancados.png",
+      "reference_mobile": "references/mobile/state--leads-filtros-avancados.png",
+      "html": "html/state--leads-filtros-avancados.html"
+    },
+    {
+      "id": "leads-status-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-status-menu.png",
+      "reference_mobile": "references/mobile/state--leads-status-menu.png",
+      "html": "html/state--leads-status-menu.html"
+    },
+    {
+      "id": "leads-responsavel-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-responsavel-menu.png",
+      "reference_mobile": "references/mobile/state--leads-responsavel-menu.png",
+      "html": "html/state--leads-responsavel-menu.html"
+    },
+    {
+      "id": "leads-origem-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-origem-menu.png",
+      "reference_mobile": "references/mobile/state--leads-origem-menu.png",
+      "html": "html/state--leads-origem-menu.html"
+    },
+    {
+      "id": "leads-tipo-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-tipo-menu.png",
+      "reference_mobile": "references/mobile/state--leads-tipo-menu.png",
+      "html": "html/state--leads-tipo-menu.html"
+    },
+    {
+      "id": "leads-ordenacao-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-ordenacao-menu.png",
+      "reference_mobile": "references/mobile/state--leads-ordenacao-menu.png",
+      "html": "html/state--leads-ordenacao-menu.html"
+    },
+    {
+      "id": "leads-status-contextual",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--leads-status-contextual.png",
+      "reference_mobile": "references/mobile/state--leads-status-contextual.png",
+      "html": "html/state--leads-status-contextual.html"
+    },
+    {
+      "id": "contratos-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--contratos-criar.png",
+      "reference_mobile": "references/mobile/state--contratos-criar.png",
+      "html": "html/state--contratos-criar.html"
+    },
+    {
+      "id": "contratos-detalhes",
+      "kind": "drawer",
+      "reference_desktop": "references/desktop/state--contratos-detalhes.png",
+      "reference_mobile": "references/mobile/state--contratos-detalhes.png",
+      "html": "html/state--contratos-detalhes.html"
+    },
+    {
+      "id": "contratos-importacao",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--contratos-importacao.png",
+      "reference_mobile": "references/mobile/state--contratos-importacao.png",
+      "html": "html/state--contratos-importacao.html"
+    },
+    {
+      "id": "contratos-excluir-confirmacao",
+      "kind": "confirmation",
+      "reference_desktop": "references/desktop/state--contratos-excluir-confirmacao.png",
+      "reference_mobile": "references/mobile/state--contratos-excluir-confirmacao.png",
+      "html": "html/state--contratos-excluir-confirmacao.html"
+    },
+    {
+      "id": "contratos-status-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--contratos-status-menu.png",
+      "reference_mobile": "references/mobile/state--contratos-status-menu.png",
+      "html": "html/state--contratos-status-menu.html"
+    },
+    {
+      "id": "contratos-operadoras-menu",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--contratos-operadoras-menu.png",
+      "reference_mobile": "references/mobile/state--contratos-operadoras-menu.png",
+      "html": "html/state--contratos-operadoras-menu.html"
+    },
+    {
+      "id": "contratos-datas-menu",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--contratos-datas-menu.png",
+      "reference_mobile": "references/mobile/state--contratos-datas-menu.png",
+      "html": "html/state--contratos-datas-menu.html"
+    },
+    {
+      "id": "comissoes-dia",
+      "kind": "section",
+      "reference_desktop": "references/desktop/state--comissoes-dia.png",
+      "reference_mobile": "references/mobile/state--comissoes-dia.png",
+      "html": "html/state--comissoes-dia.html"
+    },
+    {
+      "id": "agenda-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--agenda-criar.png",
+      "reference_mobile": "references/mobile/state--agenda-criar.png",
+      "html": "html/state--agenda-criar.html"
+    },
+    {
+      "id": "agenda-organizar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--agenda-organizar.png",
+      "reference_mobile": "references/mobile/state--agenda-organizar.png",
+      "html": "html/state--agenda-organizar.html"
+    },
+    {
+      "id": "agenda-reagendar",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--agenda-reagendar.png",
+      "reference_mobile": "references/mobile/state--agenda-reagendar.png",
+      "html": "html/state--agenda-reagendar.html"
+    },
+    {
+      "id": "agenda-tipos",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--agenda-tipos.png",
+      "reference_mobile": "references/mobile/state--agenda-tipos.png",
+      "html": "html/state--agenda-tipos.html"
+    },
+    {
+      "id": "inbox-agenda",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-agenda.png",
+      "reference_mobile": "references/mobile/state--inbox-agenda.png",
+      "html": "html/state--inbox-agenda.html"
+    },
+    {
+      "id": "inbox-agendadas",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-agendadas.png",
+      "reference_mobile": "references/mobile/state--inbox-agendadas.png",
+      "html": "html/state--inbox-agendadas.html"
+    },
+    {
+      "id": "inbox-painel",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-painel.png",
+      "reference_mobile": "references/mobile/state--inbox-painel.png",
+      "html": "html/state--inbox-painel.html"
+    },
+    {
+      "id": "inbox-nova-conversa",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-nova-conversa.png",
+      "reference_mobile": "references/mobile/state--inbox-nova-conversa.png",
+      "html": "html/state--inbox-nova-conversa.html"
+    },
+    {
+      "id": "inbox-filtros",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--inbox-filtros.png",
+      "reference_mobile": "references/mobile/state--inbox-filtros.png",
+      "html": "html/state--inbox-filtros.html"
+    },
+    {
+      "id": "campanhas-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--campanhas-criar.png",
+      "reference_mobile": "references/mobile/state--campanhas-criar.png",
+      "html": "html/state--campanhas-criar.html"
+    },
+    {
+      "id": "campanhas-editar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--campanhas-editar.png",
+      "reference_mobile": "references/mobile/state--campanhas-editar.png",
+      "html": "html/state--campanhas-editar.html"
+    },
+    {
+      "id": "campanhas-excluir",
+      "kind": "confirmation",
+      "reference_desktop": "references/desktop/state--campanhas-excluir.png",
+      "reference_mobile": "references/mobile/state--campanhas-excluir.png",
+      "html": "html/state--campanhas-excluir.html"
+    },
+    {
+      "id": "blog-criar",
+      "kind": "form",
+      "reference_desktop": "references/desktop/state--blog-criar.png",
+      "reference_mobile": "references/mobile/state--blog-criar.png",
+      "html": "html/state--blog-criar.html"
+    },
+    {
+      "id": "blog-editar",
+      "kind": "form",
+      "reference_desktop": "references/desktop/state--blog-editar.png",
+      "reference_mobile": "references/mobile/state--blog-editar.png",
+      "html": "html/state--blog-editar.html"
+    },
+    {
+      "id": "blog-visualizar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--blog-visualizar.png",
+      "reference_mobile": "references/mobile/state--blog-visualizar.png",
+      "html": "html/state--blog-visualizar.html"
+    },
+    {
+      "id": "blog-excluir",
+      "kind": "confirmation",
+      "reference_desktop": "references/desktop/state--blog-excluir.png",
+      "reference_mobile": "references/mobile/state--blog-excluir.png",
+      "html": "html/state--blog-excluir.html"
+    },
+    {
+      "id": "leads-editar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--leads-editar.png",
+      "reference_mobile": "references/mobile/state--leads-editar.png",
+      "html": "html/state--leads-editar.html"
+    },
+    {
+      "id": "leads-converter",
+      "kind": "form",
+      "reference_desktop": "references/desktop/state--leads-converter.png",
+      "reference_mobile": "references/mobile/state--leads-converter.png",
+      "html": "html/state--leads-converter.html"
+    },
+    {
+      "id": "contratos-editar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--contratos-editar.png",
+      "reference_mobile": "references/mobile/state--contratos-editar.png",
+      "html": "html/state--contratos-editar.html"
+    },
+    {
+      "id": "contratos-titular",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--contratos-titular.png",
+      "reference_mobile": "references/mobile/state--contratos-titular.png",
+      "html": "html/state--contratos-titular.html"
+    },
+    {
+      "id": "contratos-dependente",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--contratos-dependente.png",
+      "reference_mobile": "references/mobile/state--contratos-dependente.png",
+      "html": "html/state--contratos-dependente.html"
+    },
+    {
+      "id": "usuarios-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--usuarios-criar.png",
+      "reference_mobile": "references/mobile/state--usuarios-criar.png",
+      "html": "html/state--usuarios-criar.html"
+    },
+    {
+      "id": "usuarios-editar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--usuarios-editar.png",
+      "reference_mobile": "references/mobile/state--usuarios-editar.png",
+      "html": "html/state--usuarios-editar.html"
+    },
+    {
+      "id": "links-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--links-criar.png",
+      "reference_mobile": "references/mobile/state--links-criar.png",
+      "html": "html/state--links-criar.html"
+    },
+    {
+      "id": "links-editar",
+      "kind": "form",
+      "reference_desktop": "references/desktop/state--links-editar.png",
+      "reference_mobile": "references/mobile/state--links-editar.png",
+      "html": "html/state--links-editar.html"
+    },
+    {
+      "id": "formularios-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--formularios-criar.png",
+      "reference_mobile": "references/mobile/state--formularios-criar.png",
+      "html": "html/state--formularios-criar.html"
+    },
+    {
+      "id": "formularios-editar",
+      "kind": "form",
+      "reference_desktop": "references/desktop/state--formularios-editar.png",
+      "reference_mobile": "references/mobile/state--formularios-editar.png",
+      "html": "html/state--formularios-editar.html"
+    },
+    {
+      "id": "formularios-pergunta",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--formularios-pergunta.png",
+      "reference_mobile": "references/mobile/state--formularios-pergunta.png",
+      "html": "html/state--formularios-pergunta.html"
+    },
+    {
+      "id": "perfis-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--perfis-criar.png",
+      "reference_mobile": "references/mobile/state--perfis-criar.png",
+      "html": "html/state--perfis-criar.html"
+    },
+    {
+      "id": "perfis-permissoes",
+      "kind": "section",
+      "reference_desktop": "references/desktop/state--perfis-permissoes.png",
+      "reference_mobile": "references/mobile/state--perfis-permissoes.png",
+      "html": "html/state--perfis-permissoes.html"
+    },
+    {
+      "id": "config-etapa-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-etapa-criar.png",
+      "reference_mobile": "references/mobile/state--config-etapa-criar.png",
+      "html": "html/state--config-etapa-criar.html"
+    },
+    {
+      "id": "config-origem-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-origem-criar.png",
+      "reference_mobile": "references/mobile/state--config-origem-criar.png",
+      "html": "html/state--config-origem-criar.html"
+    },
+    {
+      "id": "config-tipo-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-tipo-criar.png",
+      "reference_mobile": "references/mobile/state--config-tipo-criar.png",
+      "html": "html/state--config-tipo-criar.html"
+    },
+    {
+      "id": "config-responsavel-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-responsavel-criar.png",
+      "reference_mobile": "references/mobile/state--config-responsavel-criar.png",
+      "html": "html/state--config-responsavel-criar.html"
+    },
+    {
+      "id": "config-status-contrato-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-status-contrato-criar.png",
+      "reference_mobile": "references/mobile/state--config-status-contrato-criar.png",
+      "html": "html/state--config-status-contrato-criar.html"
+    },
+    {
+      "id": "config-modalidade-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-modalidade-criar.png",
+      "reference_mobile": "references/mobile/state--config-modalidade-criar.png",
+      "html": "html/state--config-modalidade-criar.html"
+    },
+    {
+      "id": "config-abrangencia-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-abrangencia-criar.png",
+      "reference_mobile": "references/mobile/state--config-abrangencia-criar.png",
+      "html": "html/state--config-abrangencia-criar.html"
+    },
+    {
+      "id": "config-acomodacao-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-acomodacao-criar.png",
+      "reference_mobile": "references/mobile/state--config-acomodacao-criar.png",
+      "html": "html/state--config-acomodacao-criar.html"
+    },
+    {
+      "id": "config-carencia-criar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--config-carencia-criar.png",
+      "reference_mobile": "references/mobile/state--config-carencia-criar.png",
+      "html": "html/state--config-carencia-criar.html"
+    },
+    {
+      "id": "ia-feature-editar",
+      "kind": "drawer",
+      "reference_desktop": "references/desktop/state--ia-feature-editar.png",
+      "reference_mobile": "references/mobile/state--ia-feature-editar.png",
+      "html": "html/state--ia-feature-editar.html"
+    },
+    {
+      "id": "automacao-novo-fluxo",
+      "kind": "form",
+      "reference_desktop": "references/desktop/state--automacao-novo-fluxo.png",
+      "reference_mobile": "references/mobile/state--automacao-novo-fluxo.png",
+      "html": "html/state--automacao-novo-fluxo.html"
+    },
+    {
+      "id": "automacao-novo-template",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--automacao-novo-template.png",
+      "reference_mobile": "references/mobile/state--automacao-novo-template.png",
+      "html": "html/state--automacao-novo-template.html"
+    },
+    {
+      "id": "nav-notificacoes",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--nav-notificacoes.png",
+      "reference_mobile": "references/mobile/state--nav-notificacoes.png",
+      "html": "html/state--nav-notificacoes.html"
+    },
+    {
+      "id": "leads-criar-seletor-1",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-criar-seletor-1.png",
+      "reference_mobile": "references/mobile/state--leads-criar-seletor-1.png",
+      "html": "html/state--leads-criar-seletor-1.html"
+    },
+    {
+      "id": "leads-criar-seletor-2",
+      "kind": "interaction",
+      "reference_desktop": "references/desktop/state--leads-criar-seletor-2.png",
+      "reference_mobile": "references/mobile/state--leads-criar-seletor-2.png",
+      "html": "html/state--leads-criar-seletor-2.html"
+    },
+    {
+      "id": "leads-criar-seletor-3",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-criar-seletor-3.png",
+      "reference_mobile": "references/mobile/state--leads-criar-seletor-3.png",
+      "html": "html/state--leads-criar-seletor-3.html"
+    },
+    {
+      "id": "leads-criar-seletor-4",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-criar-seletor-4.png",
+      "reference_mobile": "references/mobile/state--leads-criar-seletor-4.png",
+      "html": "html/state--leads-criar-seletor-4.html"
+    },
+    {
+      "id": "leads-criar-seletor-5",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-criar-seletor-5.png",
+      "reference_mobile": "references/mobile/state--leads-criar-seletor-5.png",
+      "html": "html/state--leads-criar-seletor-5.html"
+    },
+    {
+      "id": "leads-criar-seletor-6",
+      "kind": "dropdown",
+      "reference_desktop": "references/desktop/state--leads-criar-seletor-6.png",
+      "reference_mobile": "references/mobile/state--leads-criar-seletor-6.png",
+      "html": "html/state--leads-criar-seletor-6.html"
+    },
+    {
+      "id": "leads-criar-validacao",
+      "kind": "validation",
+      "reference_desktop": "references/desktop/state--leads-criar-validacao.png",
+      "reference_mobile": "references/mobile/state--leads-criar-validacao.png",
+      "html": "html/state--leads-criar-validacao.html"
+    },
+    {
+      "id": "campanhas-criar-etapa-2",
+      "kind": "wizard",
+      "reference_desktop": "references/desktop/state--campanhas-criar-etapa-2.png",
+      "reference_mobile": "references/mobile/state--campanhas-criar-etapa-2.png",
+      "html": "html/state--campanhas-criar-etapa-2.html"
+    },
+    {
+      "id": "campanhas-criar-etapa-3",
+      "kind": "wizard",
+      "reference_desktop": "references/desktop/state--campanhas-criar-etapa-3.png",
+      "reference_mobile": "references/mobile/state--campanhas-criar-etapa-3.png",
+      "html": "html/state--campanhas-criar-etapa-3.html"
+    },
+    {
+      "id": "campanhas-criar-etapa-4",
+      "kind": "wizard",
+      "reference_desktop": "references/desktop/state--campanhas-criar-etapa-4.png",
+      "reference_mobile": "references/mobile/state--campanhas-criar-etapa-4.png",
+      "html": "html/state--campanhas-criar-etapa-4.html"
+    },
+    {
+      "id": "inbox-lead-drawer",
+      "kind": "drawer",
+      "reference_desktop": "references/desktop/state--inbox-lead-drawer.png",
+      "reference_mobile": "references/mobile/state--inbox-lead-drawer.png",
+      "html": "html/state--inbox-lead-drawer.html"
+    },
+    {
+      "id": "inbox-arquivos-drawer",
+      "kind": "drawer",
+      "reference_desktop": "references/desktop/state--inbox-arquivos-drawer.png",
+      "reference_mobile": "references/mobile/state--inbox-arquivos-drawer.png",
+      "html": "html/state--inbox-arquivos-drawer.html"
+    },
+    {
+      "id": "inbox-busca-mensagens",
+      "kind": "interaction",
+      "reference_desktop": "references/desktop/state--inbox-busca-mensagens.png",
+      "reference_mobile": "references/mobile/state--inbox-busca-mensagens.png",
+      "html": "html/state--inbox-busca-mensagens.html"
+    },
+    {
+      "id": "inbox-agendadas-conversa",
+      "kind": "interaction",
+      "reference_desktop": "references/desktop/state--inbox-agendadas-conversa.png",
+      "reference_mobile": "references/mobile/state--inbox-agendadas-conversa.png",
+      "html": "html/state--inbox-agendadas-conversa.html"
+    },
+    {
+      "id": "inbox-mensagens-rapidas",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--inbox-mensagens-rapidas.png",
+      "reference_mobile": "references/mobile/state--inbox-mensagens-rapidas.png",
+      "html": "html/state--inbox-mensagens-rapidas.html"
+    },
+    {
+      "id": "inbox-emojis",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--inbox-emojis.png",
+      "reference_mobile": "references/mobile/state--inbox-emojis.png",
+      "html": "html/state--inbox-emojis.html"
+    },
+    {
+      "id": "inbox-anexos",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--inbox-anexos.png",
+      "reference_mobile": "references/mobile/state--inbox-anexos.png",
+      "html": "html/state--inbox-anexos.html"
+    },
+    {
+      "id": "inbox-formatacao",
+      "kind": "popover",
+      "reference_desktop": "references/desktop/state--inbox-formatacao.png",
+      "reference_mobile": "references/mobile/state--inbox-formatacao.png",
+      "html": "html/state--inbox-formatacao.html"
+    },
+    {
+      "id": "automacao-fluxo-editar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--automacao-fluxo-editar.png",
+      "reference_mobile": "references/mobile/state--automacao-fluxo-editar.png",
+      "html": "html/state--automacao-fluxo-editar.html"
+    },
+    {
+      "id": "automacao-fluxo-regras",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--automacao-fluxo-regras.png",
+      "reference_mobile": "references/mobile/state--automacao-fluxo-regras.png",
+      "html": "html/state--automacao-fluxo-regras.html"
+    },
+    {
+      "id": "automacao-fluxo-testes",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--automacao-fluxo-testes.png",
+      "reference_mobile": "references/mobile/state--automacao-fluxo-testes.png",
+      "html": "html/state--automacao-fluxo-testes.html"
+    },
+    {
+      "id": "formulario-publico-contato",
+      "kind": "wizard",
+      "reference_desktop": "references/desktop/state--formulario-publico-contato.png",
+      "reference_mobile": "references/mobile/state--formulario-publico-contato.png",
+      "html": "html/state--formulario-publico-contato.html"
+    },
+    {
+      "id": "inbox-mensagens-rapidas-gerenciar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-mensagens-rapidas-gerenciar.png",
+      "reference_mobile": "references/mobile/state--inbox-mensagens-rapidas-gerenciar.png",
+      "html": "html/state--inbox-mensagens-rapidas-gerenciar.html"
+    },
+    {
+      "id": "inbox-dados-mensagem",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-dados-mensagem.png",
+      "reference_mobile": "references/mobile/state--inbox-dados-mensagem.png",
+      "html": "html/state--inbox-dados-mensagem.html"
+    },
+    {
+      "id": "inbox-editar-mensagem",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-editar-mensagem.png",
+      "reference_mobile": "references/mobile/state--inbox-editar-mensagem.png",
+      "html": "html/state--inbox-editar-mensagem.html"
+    },
+    {
+      "id": "inbox-encaminhar",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-encaminhar.png",
+      "reference_mobile": "references/mobile/state--inbox-encaminhar.png",
+      "html": "html/state--inbox-encaminhar.html"
+    },
+    {
+      "id": "inbox-resposta",
+      "kind": "section",
+      "reference_desktop": "references/desktop/state--inbox-resposta.png",
+      "reference_mobile": "references/mobile/state--inbox-resposta.png",
+      "html": "html/state--inbox-resposta.html"
+    },
+    {
+      "id": "inbox-visualizador-imagem",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--inbox-visualizador-imagem.png",
+      "reference_mobile": "references/mobile/state--inbox-visualizador-imagem.png",
+      "html": "html/state--inbox-visualizador-imagem.html"
+    },
+    {
+      "id": "contratos-importacao-individual",
+      "kind": "modal",
+      "reference_desktop": "references/desktop/state--contratos-importacao-individual.png",
+      "reference_mobile": "references/mobile/state--contratos-importacao-individual.png",
+      "html": "html/state--contratos-importacao-individual.html"
+    }
+  ],
+  "caveats": [
+    "Propostas visuais estáticas; não validam fluxo real nem equivalência funcional.",
+    "Design e estilo derivados da direção aprovada para Leads.",
+    "Páginas públicas usam estrutura própria, separada do shell administrativo.",
+    "Screenshots de auditoria são dados sintéticos."
+  ],
+  "statistics": {
+    "total_contexts": 160,
+    "screenshots_desktop": 160,
+    "screenshots_mobile": 160,
+    "screenshots_mobile_full": 122,
+    "prior_approved_png": 6
+  },
+  "visual_priority": {
+    "page--leads-listagem": [
+      "previous-approved/leads-list-desktop-viewport.png",
+      "previous-approved/leads-list-mobile-viewport.png"
+    ],
+    "extra--leads-kanban": [
+      "previous-approved/leads-kanban-desktop-viewport.png",
+      "previous-approved/leads-kanban-mobile-viewport.png"
+    ],
+    "state--leads-criar": [
+      "previous-approved/leads-create-desktop-viewport.png",
+      "previous-approved/leads-create-mobile-completa.png"
+    ]
+  }
+}

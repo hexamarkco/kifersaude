@@ -11,6 +11,7 @@ export type AvatarProps = {
   size?: AvatarSize;
   className?: string;
   fallback?: ReactNode;
+  tone?: 'auto' | 'brand';
 };
 
 function getInitials(name: string): string {
@@ -45,14 +46,15 @@ export default function Avatar({
   size = 'md',
   className,
   fallback,
+  tone = 'auto',
 }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
   const showImage = src && !imgError;
 
   return (
     <div
-      className={cx('kds-avatar', `kds-avatar-${size}`, className)}
-      style={!showImage && name ? { backgroundColor: hashColor(name) } : undefined}
+      className={cx('kds-avatar', `kds-avatar-${size}`, tone === 'brand' && 'kds-avatar-brand', className)}
+      style={!showImage && name && tone === 'auto' ? { backgroundColor: hashColor(name) } : undefined}
     >
       {showImage ? (
         <img

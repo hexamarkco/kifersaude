@@ -209,7 +209,7 @@ export function ContactForm({
           />
         </Field>
       </FormSection>
-      <FormSection title="Contexto do atendimento">
+      <FormSection step="02" title="Contexto do atendimento">
         <Field
           label="Observações"
           hint="Este exemplo mantém os dados somente enquanto a prévia estiver aberta."

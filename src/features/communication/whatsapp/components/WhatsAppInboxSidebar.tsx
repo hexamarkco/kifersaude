@@ -44,6 +44,7 @@ type WhatsAppInboxSidebarProps = {
   hasActiveChatFilters: boolean;
   activeChatFiltersCount: number;
   advancedFiltersOpen: boolean;
+  advancedFiltersTriggerRef: MutableRefObject<HTMLButtonElement | null>;
   onToggleAdvancedFilters: () => void;
   onClearFilters: () => void;
   chatRefreshError: string | null;
@@ -91,6 +92,7 @@ export function WhatsAppInboxSidebar({
   hasActiveChatFilters,
   activeChatFiltersCount,
   advancedFiltersOpen,
+  advancedFiltersTriggerRef,
   onToggleAdvancedFilters,
   onClearFilters,
   chatRefreshError,
@@ -222,8 +224,11 @@ export function WhatsAppInboxSidebar({
             <InboxFilterChip active={!hasActiveChatFilters} label="Todas" onClick={onClearFilters} />
             <div className="relative shrink-0">
               <Button
+                ref={advancedFiltersTriggerRef}
                 type="button"
                 onClick={onToggleAdvancedFilters}
+                aria-expanded={advancedFiltersOpen}
+                aria-haspopup="dialog"
                 variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
                 size="sm"
               >

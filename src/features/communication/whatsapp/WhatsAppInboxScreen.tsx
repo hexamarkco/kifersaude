@@ -2040,6 +2040,7 @@ export default function WhatsAppInboxScreen() {
           hasActiveChatFilters={hasActiveChatFilters}
           activeChatFiltersCount={activeChatFiltersCount}
           advancedFiltersOpen={advancedFiltersOpen}
+          advancedFiltersTriggerRef={advancedFiltersTriggerRef}
           onToggleAdvancedFilters={() => setAdvancedFiltersOpen((current) => !current)}
           onClearFilters={() => {
             setChatActivityFilter('all');

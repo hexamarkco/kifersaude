@@ -113,7 +113,7 @@ export function DashboardEventsCalendar({
               : dayEvents.length > 0
                 ? "kds-surface-muted"
                 : "",
-        ].join("")}
+        ].join(" ")}
       >
         <span className="text-sm font-semibold leading-none tabular-nums">{day}</span>
         {dayEvents.length > 0 && (
@@ -178,8 +178,8 @@ export function DashboardEventsCalendar({
         as="h3"
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1.1fr)] xl:items-stretch">
-        <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1.1fr)] xl:items-stretch">
+        <div className="min-w-0 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <IconButton
               type="button"
@@ -210,7 +210,7 @@ export function DashboardEventsCalendar({
             </IconButton>
           </div>
 
-          <div className="mb-3 grid grid-cols-3 gap-1 rounded-full bg-[var(--bg-surface)] p-1">
+          <div className="mb-3 grid grid-cols-3 gap-1 rounded-[var(--radius-control-group)] bg-[var(--bg-surface)] p-1">
             {viewTabs.map((tab) => (
               <Button variant="ghost"
                 key={tab.id}
@@ -240,7 +240,7 @@ export function DashboardEventsCalendar({
           </div>
         </div>
 
-        <div className="flex min-h-[28rem] flex-col rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
+        <div className="flex min-h-[28rem] min-w-0 flex-col rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--kds-radius-md)] bg-[var(--bg-surface)] px-3 py-2.5">
             <div className="min-w-0">
               <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{calendarViewLabel}</Text>
@@ -315,7 +315,7 @@ function CalendarEventRow({
     return (
       <article className="group rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full bg-[var(--brand-primary-muted)] p-1 text-center text-[var(--brand-primary)]">
+          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-primary-muted)] p-1 text-center text-[var(--brand-primary)]">
             <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
             <span className="mt-1 text-lg font-bold leading-none tabular-nums">{event.date.getDate()}</span>
           </div>
@@ -377,7 +377,7 @@ function CalendarEventRow({
   return (
     <article className="group rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
       <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full bg-[var(--bg-elevated)] p-1 text-center text-[var(--accent-copper)]">
+        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-[var(--radius-control)] bg-[var(--bg-elevated)] p-1 text-center text-[var(--accent-copper)]">
           <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
           <span className="mt-1 text-lg font-bold leading-none tabular-nums">{event.date.getDate()}</span>
         </div>

@@ -309,7 +309,7 @@ export function DashboardCommercialSections({
             <div className="mt-4 space-y-2">
               {analysis.agenda.items.length > 0 ? analysis.agenda.items.slice(0, 5).map((item) => (
                 <ActionSurface variant="plain" padding="none" key={item.id} type="button" onClick={() => item.leadId ? onNavigateToLead(item.leadId) : openAgenda()} className="flex w-full items-start gap-3 rounded-xl border border-[var(--border-subtle)] p-3 text-left transition hover:border-[var(--brand-primary-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
-                  <span className={`mt-0.5 rounded-full p-1.5 ${item.overdue ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]' : 'bg-[var(--info-soft)] text-[var(--info-text)]'}`}><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /></span>
+                  <span className={`mt-0.5 rounded-[var(--radius-control)] p-1.5 ${item.overdue ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]' : 'bg-[var(--info-soft)] text-[var(--info-text)]'}`}><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /></span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-[var(--text-primary)]">{item.title}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{item.leadName || item.type} · {dateTime(item.date)}</span></span>
                   {item.overdue && <Badge tone="danger" size="sm">Atrasado</Badge>}
                 </ActionSurface>

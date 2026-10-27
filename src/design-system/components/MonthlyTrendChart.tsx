@@ -107,7 +107,7 @@ export default function MonthlyTrendChart({
             Tendência suavizada do indicador selecionado
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+        <div className="inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
           Série atual
         </div>

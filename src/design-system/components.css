@@ -1207,7 +1207,7 @@
   width: 4.5rem;
   height: 4.5rem;
   border: 1px solid var(--brand-primary-border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-panel);
   background: var(--brand-primary-soft);
   color: var(--brand-primary-hover);
 }
@@ -1527,7 +1527,7 @@
 }
 
 .kds-badge {
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--badge-bg, var(--bg-surface));
   box-shadow: none;
   letter-spacing: normal;

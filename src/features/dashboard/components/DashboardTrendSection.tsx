@@ -148,7 +148,7 @@ export function DashboardTrendSection({
               <Text className="mt-1 text-xs text-[var(--text-muted)]">{selectedMetricContent.description}</Text>
             </div>
             {latestMonthlyPoint && (
-              <div className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-1.5">
+              <div className="flex items-center gap-2 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-1.5">
                 <span
                   className="h-2 w-2 rounded-full"
                   style={{ background: DASHBOARD_METRIC_COLORS[selectedMetric] }}

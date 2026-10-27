@@ -872,7 +872,7 @@ export default function ContractDetails({
               </div>
             </Alert>
           ) : null}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="kds-detail-summary-grid grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <span className={detailLabelTextClass}>Status</span>
               <span className={`ml-2 ${detailHeadingTextClass}`}>
@@ -1284,7 +1284,7 @@ export default function ContractDetails({
         </div>
 
         <div className="mb-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailSectionHeadingClass}>
               <User className={detailSectionIconClass} />
               <span>Titulares ({holders.length})</span>
@@ -1310,13 +1310,13 @@ export default function ContractDetails({
             <div className="grid grid-cols-1 gap-3">
               {holders.map((holderItem) => (
                 <div key={holderItem.id} className={`${detailPanelClass} p-4`}>
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="kds-detail-person-card flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <Heading level={5} className={`mb-3 ${detailHeadingTextClass}`}>
                         {holderItem.nome_completo}
                       </Heading>
                       <div
-                        className={`grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
+                        className={`kds-detail-data-fields grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
                       >
                         <div>
                            <span className={detailLabelTextClass}>CPF</span>{" "}
@@ -1404,7 +1404,7 @@ export default function ContractDetails({
           )}
         </div>
         <div className="mb-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailSectionHeadingClass}>
               <Users className={detailSectionIconClass} />
               <span>Dependentes ({dependents.length})</span>
@@ -1466,14 +1466,14 @@ export default function ContractDetails({
                         holderDependents.map((dependent) => (
                           <div
                             key={dependent.id}
-                            className={`${detailNestedPanelClass} flex items-start justify-between gap-4 p-3`}
+                            className={`${detailNestedPanelClass} kds-detail-person-card flex items-start justify-between gap-4 p-3`}
                           >
                             <div className="flex-1">
                               <Heading level={5} className={`mb-1 ${detailHeadingTextClass}`}>
                                 {dependent.nome_completo}
                               </Heading>
                               <div
-                                className={`grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
+                                className={`kds-detail-data-fields grid grid-cols-2 gap-3 text-sm md:grid-cols-3 ${detailBodyTextClass}`}
                               >
                                 <div>
                                   <span className={detailLabelTextClass}>
@@ -1556,7 +1556,7 @@ export default function ContractDetails({
         </div>
 
         <div className="mb-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Documentos</Heading>
             <span className={detailMutedTextClass}>
               {documents.length} arquivo(s)
@@ -1616,7 +1616,7 @@ export default function ContractDetails({
         </div>
 
         <div className="mb-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Auditoria</Heading>
             <span className={detailMutedTextClass}>
               {auditEvents.length} evento(s)
@@ -1652,7 +1652,7 @@ export default function ContractDetails({
           )}
         </div>
         <div>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Histórico de interações</Heading>
             {canEditContracts && (
               <Button

@@ -26,6 +26,7 @@
     "add_username_to_user_profiles",
     "add_vidas_to_contracts",
     "add_whatsapp_message_reads",
+    "comm_whatsapp_status_refresh_index_trigger",
     "consolidate_security_fixes",
     "create_email_tables",
     "create_kifer_saude_schema",

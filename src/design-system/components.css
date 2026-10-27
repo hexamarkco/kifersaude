@@ -676,6 +676,20 @@
   display: flex;
   gap: 0;
 }
+.kds-stepper-shell { width: 100%; min-width: 0; }
+.kds-stepper-mobile-summary { display: none; }
+@media(max-width: 480px) {
+  .kds-stepper-shell:not(.kds-stepper-shell-vertical) .kds-stepper-content {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .kds-stepper-mobile-summary { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-3); }
+}
 .kds-stepper-vertical {
   flex-direction: column;
 }

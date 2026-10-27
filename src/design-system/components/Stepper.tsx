@@ -16,6 +16,7 @@ export type StepperProps = {
 
 export function Stepper({ currentStep, steps, orientation = 'horizontal', minWidth, className }: StepperProps) {
   return (
+    <div className={cx('kds-stepper-shell', orientation === 'vertical' && 'kds-stepper-shell-vertical')}>
     <div
       className={cx(
         'kds-stepper',
@@ -34,6 +35,7 @@ export function Stepper({ currentStep, steps, orientation = 'horizontal', minWid
             key={index}
             className={cx('kds-stepper-step', `kds-stepper-step-${status}`)}
             role="listitem"
+            aria-current={status === 'active' ? 'step' : undefined}
           >
             <div className="kds-stepper-indicator">
               <div className="kds-stepper-circle">
@@ -56,6 +58,11 @@ export function Stepper({ currentStep, steps, orientation = 'horizontal', minWid
           </div>
         );
       })}
+    </div>
+    {orientation === 'horizontal' && steps[currentStep] && <div className="kds-stepper-mobile-summary" aria-hidden="true">
+      <span className="kds-stepper-label">Etapa {currentStep + 1} de {steps.length} · {steps[currentStep].label}</span>
+      {steps[currentStep].description && <span className="kds-stepper-description">{steps[currentStep].description}</span>}
+    </div>}
     </div>
   );
 }

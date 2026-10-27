@@ -29,6 +29,7 @@ type BlogPostsListProps = {
   onCreatePost: () => void;
   onDeletePost: (id: string) => void;
   onEditPost: (post: BlogPost) => void;
+  onPreviewPost: (post: BlogPost) => void;
   onSearchTermChange: (value: string) => void;
   onTogglePublish: (post: BlogPost) => void;
   posts: BlogPost[];
@@ -42,6 +43,7 @@ export default function BlogPostsList({
   onCreatePost,
   onDeletePost,
   onEditPost,
+  onPreviewPost,
   onSearchTermChange,
   onTogglePublish,
   posts,
@@ -144,9 +146,7 @@ export default function BlogPostsList({
                         <ButtonGroup size="md" aria-label="Ações da publicação">
                           <IconButton
                             type="button"
-                            onClick={() =>
-                              window.open(`/blog/${post.slug}`, "_blank")
-                            }
+                            onClick={() => onPreviewPost(post)}
                             variant="icon"
                             title="Visualizar"
                            size="md" aria-label="Visualizar">

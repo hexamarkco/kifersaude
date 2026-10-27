@@ -80,6 +80,8 @@ export default function ApplicationComponents() {
       </Specimen>
       <Specimen title="Editor de conteúdo" description="A barra de edição e o conteúdo usam o editor real das publicações, com tema controlado pela biblioteca." source="RichTextEditor" wide>
         <RichTextEditor value={content} onChange={setContent} placeholder="Escreva uma orientação para o atendimento" />
+        <Text size="sm">Prévia em somente leitura, como na visualização de publicações:</Text>
+        <RichTextEditor className="kds-rich-text-preview" value={content} readOnly modules={{ toolbar: false }} />
       </Specimen>
       <Specimen title="Campos com variáveis" description="Digite duas chaves e escolha uma variável por clique ou pelas setas e Enter." source="VariableAutocompleteTextarea">
         <Field label="Mensagem com variáveis"><VariableAutocompleteTextarea value={template} onChange={setTemplate} suggestions={[{ key: 'nome', label: 'Nome do contato', description: 'Identificação do contato na mensagem' }, { key: 'saudacao', label: 'Saudação', description: 'Saudação conforme o horário' }]} /></Field>

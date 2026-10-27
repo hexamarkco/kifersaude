@@ -1558,13 +1558,14 @@ html,
   .terracota-mobile-menu-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 30;
+    z-index: 69;
     display: block;
     border: 0;
     background: var(--overlay);
   }
 
   .terracota-sidebar {
+    z-index: 70;
     top: auto !important;
     right: 0;
     bottom: 0;

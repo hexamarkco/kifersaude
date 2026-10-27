@@ -1250,7 +1250,18 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-workspace-header .kds-breadcrumb-list { gap: var(--space-3); }
 
 /* Detail workspaces: consistent sections with contextual operations preserved. */
-.kds-detail-workspace { display: grid; gap: var(--space-4); min-width: 0; }
+.kds-detail-workspace { display: grid; grid-template-columns: minmax(0,1fr); gap: var(--space-4); min-width: 0; }
+.kds-detail-workspace .grid > *, .kds-detail-workspace .flex-1 { min-width: 0; }
+.kds-detail-section-header { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.kds-record-detail { overflow-wrap: anywhere; }
+.kds-detail-summary-grid > div { display: flex; flex-direction: column; gap: var(--space-1); }
+.kds-detail-summary-grid > div > span { margin-left: 0; }
+.kds-detail-data-fields > div > span { display: block; margin-bottom: var(--space-1); }
+@media(max-width: 639px) {
+ .kds-detail-person-card { flex-direction: column; }
+ .kds-detail-person-card > .flex-1 { width: 100%; }
+ .kds-record-detail .justify-between { flex-wrap: wrap; gap: var(--space-2); }
+}
 .kds-detail-overview-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
 .kds-detail-workspace .kds-surface { min-width: 0; }
 .kds-detail-quick-actions, .kds-detail-followups { display: grid; gap: var(--space-3); }
@@ -1304,6 +1315,8 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 @media(max-width: 767px) { .kds-record-form .kds-page-action-bar-sticky { bottom: calc(4.5rem + env(safe-area-inset-bottom)); } .painel-theme.kifer-ds .kds-record-form form > .kds-surface { padding: var(--space-3); } }
 
 .kds-agenda-search-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--space-2); }
+.kds-rich-text-preview .ql-container.ql-snow { border: 0; font: inherit; }
+.kds-rich-text-preview .ql-editor { padding: 0; min-height: 0; overflow-wrap: anywhere; }
 .painel-theme.kifer-ds .kds-agenda-filter-toggle { display: none; }
 .kds-agenda-secondary-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-3); }
 @media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-kpi-grid { grid-template-columns: repeat(6,minmax(0,1fr)); } }

@@ -23,6 +23,7 @@ import {
   mapBlogPostToFormData,
 } from "./shared/blogUtils";
 import type { BlogPost } from "./shared/blogTypes";
+import { Badge, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Image, RichTextEditor, Text } from '../../design-system';
 import {
   deleteBlogPost,
   listBlogPosts,
@@ -38,6 +39,7 @@ export default function BlogTabScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingContent, setUploadingContent] = useState(false);
   const [formData, setFormData] = useState(createEmptyBlogFormData);
@@ -270,6 +272,7 @@ export default function BlogTabScreen() {
           onCreatePost={() => setShowEditor(true)}
           onDeletePost={handleDelete}
           onEditPost={handleEdit}
+          onPreviewPost={setPreviewPost}
           onSearchTermChange={setSearchTerm}
           onTogglePublish={handleTogglePublish}
           posts={filteredPosts}
@@ -277,6 +280,18 @@ export default function BlogTabScreen() {
         />
       )}
       {ConfirmationDialog}
+      <Dialog open={Boolean(previewPost)} onOpenChange={open => { if (!open) setPreviewPost(null); }} size="lg" aria-label="Prévia do artigo">
+        {previewPost && <>
+          <DialogHeader onClose={() => setPreviewPost(null)}><div><Text size="sm" tone="brand">Prévia do artigo</Text><DialogTitle>{previewPost.title}</DialogTitle></div></DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2"><Badge>{previewPost.category}</Badge><Badge tone={previewPost.published ? 'success' : 'neutral'}>{previewPost.published ? 'Publicado' : 'Rascunho'}</Badge><Text size="sm">{previewPost.read_time}</Text></div>
+            {previewPost.cover_image_url && <Image src={previewPost.cover_image_url} alt={previewPost.title} className="w-full" />}
+            <Text>{previewPost.excerpt}</Text>
+            <RichTextEditor className="kds-rich-text-preview" value={previewPost.content} readOnly modules={{ toolbar: false }} />
+          </DialogBody>
+          <DialogFooter><Button variant="secondary" onClick={() => setPreviewPost(null)}>Fechar</Button></DialogFooter>
+        </>}
+      </Dialog>
     </>
   );
 }

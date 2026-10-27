@@ -1,5 +1,5 @@
 import { Text, WorkspaceHeader, BrandWordmark } from '../design-system';
-import { ActionSurface, Button } from '../design-system';
+import { ActionSurface, Button, IconButton } from '../design-system';
 import { DesignSystemProvider } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
@@ -103,6 +103,7 @@ export default function Layout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileMoreTriggerRef = useRef<HTMLButtonElement>(null);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -932,9 +933,10 @@ export default function Layout({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const menu = sidebarRef.current;
-    const menuTrigger = mobileMenuTriggerRef.current;
+    const menuTrigger = mobileMoreTriggerRef.current ?? mobileMenuTriggerRef.current;
     const focusableSelector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
-    const focusable = () => Array.from(menu?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
+    const focusable = () => Array.from(menu?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
+      .filter(item => item.getClientRects().length > 0 && getComputedStyle(item).visibility !== 'hidden');
     const firstFocusable = focusable()[0];
     firstFocusable?.focus();
 
@@ -995,6 +997,9 @@ export default function Layout({
       <aside
         ref={sidebarRef}
         id="painel-navigation"
+        role={isMobileMenuOpen ? 'dialog' : undefined}
+        aria-modal={isMobileMenuOpen || undefined}
+        aria-label={isMobileMenuOpen ? 'Navegação completa' : undefined}
         data-collapsed={isSidebarCollapsed}
         className={`kds-sidebar terracota-sidebar fixed left-0 top-0 z-40 h-screen border-r transition-[width] duration-300 ease-in-out ${
           isMobileMenuOpen ? 'is-mobile-open' : ''
@@ -1008,6 +1013,7 @@ export default function Layout({
                 <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
               </div>
             )}
+            {isMobileMenuOpen && <IconButton variant="ghost" aria-label="Fechar menu" onClick={() => setIsMobileMenuOpen(false)}><X aria-hidden="true" /></IconButton>}
           </div>
 
           <nav className={`terracota-sidebar-navigation flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isSidebarCollapsed ? 'px-1' : 'px-2'}`}>
@@ -1211,6 +1217,7 @@ export default function Layout({
           type="button"
           onClick={() => setIsMobileMoreOpen((current) => !current)}
           className={cx('terracota-mobile-bottom-nav-item', isMobileMoreOpen && 'is-active')}
+          ref={mobileMoreTriggerRef}
           aria-label="Abrir mais opções"
           aria-expanded={isMobileMoreOpen}
           aria-controls="mobile-more-menu"
@@ -1252,6 +1259,10 @@ export default function Layout({
                 </ActionSurface>
               );
             })}
+            <ActionSurface variant="plain" padding="none" type="button" role="menuitem" className="terracota-mobile-more-item" onClick={() => { setIsMobileMoreOpen(false); setIsMobileMenuOpen(true); }}>
+              <Menu className="h-4 w-4" aria-hidden="true" />
+              <span>Menu completo</span>
+            </ActionSurface>
           </div>
         </>
       )}

@@ -1,0 +1,1 @@
+async(page)=>({selected:await page.locator('[aria-pressed="true"]').count(),labels:await page.locator('.kds-calendar-day').evaluateAll(els=>els.slice(0,3).map(e=>({label:e.getAttribute('aria-label'),pressed:e.getAttribute('aria-pressed'),cls:e.className})))})

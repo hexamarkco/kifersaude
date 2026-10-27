@@ -1,0 +1,1 @@
+async(page)=>page.locator('.kds-calendar-event-count').first().evaluate(el=>{const a=[];for(let p=el;p;p=p.parentElement){const s=getComputedStyle(p);a.push({cls:p.className,overflow:s.overflow,clip:s.clipPath,contain:s.contain})}return a;})

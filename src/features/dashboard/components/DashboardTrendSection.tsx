@@ -141,7 +141,7 @@ export function DashboardTrendSection({
       />
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="min-w-0">
+        <div className="kds-dashboard-trend-main">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <Text className="text-sm font-semibold text-[var(--text-primary)]">{selectedMetricContent.label}</Text>

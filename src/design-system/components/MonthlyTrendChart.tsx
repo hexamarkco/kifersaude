@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type MonthlyTrendPoint = {
   label: string;
@@ -12,8 +12,6 @@ export type MonthlyTrendChartProps = {
   formatValue?: (value: number) => string;
 };
 
-const VIEWBOX_WIDTH = 720;
-const VIEWBOX_HEIGHT = 280;
 const PADDING = {
   top: 20,
   right: 24,
@@ -28,13 +26,32 @@ export default function MonthlyTrendChart({
   height = 280,
   formatValue = (value) => value.toLocaleString('pt-BR'),
 }: MonthlyTrendChartProps) {
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 720, height });
+
+  useEffect(() => {
+    const plot = plotRef.current;
+    if (!plot) return;
+    const measure = () => {
+      const width = Math.round(plot.clientWidth);
+      const nextHeight = Math.round(plot.clientHeight);
+      if (!width || !nextHeight) return;
+      setSize(current => current.width === width && current.height === nextHeight
+        ? current : { width, height: nextHeight });
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(plot);
+    return () => observer?.disconnect();
+  }, [data.length, height]);
+
   const chart = useMemo(() => {
     if (data.length === 0) {
       return null;
     }
 
-    const width = VIEWBOX_WIDTH - PADDING.left - PADDING.right;
-    const chartHeight = VIEWBOX_HEIGHT - PADDING.top - PADDING.bottom;
+    const width = size.width - PADDING.left - PADDING.right;
+    const chartHeight = size.height - PADDING.top - PADDING.bottom;
     const maxValue = Math.max(...data.map((item) => item.value), 0);
     const minValue = Math.min(...data.map((item) => item.value), 0);
     const range = Math.max(maxValue - minValue, 1);
@@ -63,7 +80,7 @@ export default function MonthlyTrendChart({
       return `${path} C ${midX} ${previous.y}, ${midX} ${point.y}, ${point.x} ${point.y}`;
     }, '');
 
-    const areaPath = `${linePath} L ${points[points.length - 1].x} ${VIEWBOX_HEIGHT - PADDING.bottom} L ${points[0].x} ${VIEWBOX_HEIGHT - PADDING.bottom} Z`;
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${size.height - PADDING.bottom} L ${points[0].x} ${size.height - PADDING.bottom} Z`;
 
     const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, index) => {
       const ratio = index / TICK_COUNT;
@@ -76,14 +93,19 @@ export default function MonthlyTrendChart({
       };
     });
 
+    const labelCount = Math.min(data.length, Math.max(2, Math.floor(width / 88)));
     return {
       points,
+      visibleLabels: new Set(Array.from(
+        { length: labelCount },
+        (_, index) => Math.round(index * (data.length - 1) / Math.max(labelCount - 1, 1)),
+      )),
       ticks,
       linePath,
       areaPath,
-      baselineY: VIEWBOX_HEIGHT - PADDING.bottom,
+      baselineY: size.height - PADDING.bottom,
     };
-  }, [data]);
+  }, [data, size]);
 
   if (!chart) {
     return (
@@ -97,7 +119,7 @@ export default function MonthlyTrendChart({
   }
 
   return (
-    <div className="h-full rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5">
+    <div className="kds-monthly-trend-chart rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
@@ -113,7 +135,8 @@ export default function MonthlyTrendChart({
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
+      <div ref={plotRef} className="kds-monthly-trend-plot" style={{ minHeight: height }}>
+      <svg viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label="Evolução mensal do indicador selecionado">
           {chart.points.map((point, index) => (
             <line
               key={`x-grid-${point.label}-${index}`}
@@ -132,7 +155,7 @@ export default function MonthlyTrendChart({
               <line
                 x1={PADDING.left}
                 y1={tick.y}
-                x2={VIEWBOX_WIDTH - PADDING.right}
+                x2={size.width - PADDING.right}
                 y2={tick.y}
                 stroke="var(--panel-chart-grid)"
                 strokeWidth="1"
@@ -191,16 +214,16 @@ export default function MonthlyTrendChart({
                     </text>
                   </>
                 )}
-                <text
+                {chart.visibleLabels.has(index) && <text
                   x={point.x}
                   y={chart.baselineY + 24}
-                  textAnchor="middle"
+                  textAnchor={index === 0 ? 'start' : isLatest ? 'end' : 'middle'}
                   fontSize="12"
                   fontFamily="var(--font-sans)"
                   fill={isLatest ? 'var(--text-primary)' : 'var(--text-muted)'}
                 >
                   {point.label}
-                </text>
+                </text>}
                 <title>{`${point.label}: ${formatValue(point.value)}`}</title>
               </g>
             );
@@ -209,12 +232,13 @@ export default function MonthlyTrendChart({
           <line
             x1={PADDING.left}
             y1={chart.baselineY}
-            x2={VIEWBOX_WIDTH - PADDING.right}
+            x2={size.width - PADDING.right}
             y2={chart.baselineY}
             stroke="var(--border-subtle)"
             strokeWidth="1.2"
           />
         </svg>
+      </div>
     </div>
   );
 }

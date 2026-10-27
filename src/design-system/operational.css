@@ -1317,6 +1317,10 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-agenda-search-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--space-2); }
 .kds-rich-text-preview .ql-container.ql-snow { border: 0; font: inherit; }
 .kds-rich-text-preview .ql-editor { padding: 0; min-height: 0; overflow-wrap: anywhere; }
+.kds-dashboard-trend-main, .kds-monthly-trend-chart { display: flex; flex-direction: column; min-width: 0; }
+.kds-monthly-trend-chart { flex: 1; }
+.kds-monthly-trend-plot { position: relative; flex: 1; min-width: 0; }
+.kds-monthly-trend-plot > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .painel-theme.kifer-ds .kds-agenda-filter-toggle { display: none; }
 .kds-agenda-secondary-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-3); }
 @media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-kpi-grid { grid-template-columns: repeat(6,minmax(0,1fr)); } }

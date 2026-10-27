@@ -46,8 +46,10 @@ export function TeamProduction({ onNavigateToLead }: { onNavigateToLead: (id: st
     </div>
     {model.loading && <Text role="status">Carregando produção…</Text>}
     {model.error && <Alert tone="warning">{model.error}</Alert>}
-    {report && !report.started_at && <Alert tone="info">A medição individual ainda não foi ativada. O histórico do login compartilhado não será atribuído a uma pessoa.
-      {isAdmin && <Button className="mt-3" onClick={() => void model.activate()}>Iniciar medição a partir de agora</Button>}</Alert>}
+    {report && !report.started_at && <Alert
+      tone="info"
+      action={isAdmin ? <Button size="sm" className="w-full whitespace-normal sm:w-auto" onClick={() => void model.activate()}>Iniciar medição a partir de agora</Button> : undefined}
+    >A medição individual ainda não foi ativada. O histórico do login compartilhado não será atribuído a uma pessoa.</Alert>}
     {report?.started_at && <>
       <Text className="text-xs text-[var(--text-muted)]">Medição iniciada em {new Date(report.started_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}. No painel, a conta identifica o responsável. No assistente conectado, informe quem está atendendo em cada ação.</Text>
       <div className="overflow-x-auto"><Table size="sm" className="min-w-[100rem]" columnWidths={['16%', ...metrics.map(() => '8.4%')]}><TableHeader><TableRow><SortableTableHead label="Atendente" sortDirection={summarySorting.key === 'display_name' ? summarySorting.direction : null} onSort={() => sortSummaryBy('display_name')} />{metrics.map(([key,label]) => <SortableTableHead key={key} align="right" label={label} sortDirection={summarySorting.key === key ? summarySorting.direction : null} onSort={() => sortSummaryBy(key)} />)}</TableRow></TableHeader>

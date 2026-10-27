@@ -80,7 +80,7 @@ test('bursts recheck status, window, permission and campaign evidence before eac
 
 test('a normal reply keeps zero-delay burst behavior while an explicit opt-out cancels later bubbles', () => {
   assert.match(worker, /Normal reply with delay_amount=0 → record only, burst continues/);
-  assert.match(worker, /if \(isOptOut \|\| shouldStopSequenceBeforeStep\(step\)\)/);
+  assert.match(worker, /if \(isOptOut \|\| shouldStopSequenceBeforeStep\(step, target\.status, hasConfiguredInterMessageWait\(allSteps, step, campaign\.inter_message_interval_minutes\)\)\)/);
   assert.match(worker, /resolution: isOptOut \? 'opt_out_during_burst' : 'stop_on_reply'/);
   assert.match(worker, /Opt-out re-check: even after responded_at is set/);
 });

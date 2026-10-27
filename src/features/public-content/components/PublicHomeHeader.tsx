@@ -1,8 +1,7 @@
-import { TextLink } from '../../../design-system';
+import { BrandWordmark, TextLink } from '../../../design-system';
 import { useEffect, useId, useState, type MouseEvent } from 'react';
 import { Menu } from 'lucide-react';
 
-import PublicBrandMark from '../../../components/public/PublicBrandMark';
 import { Button, DialogTitle, Drawer, DrawerBody, DrawerFooter, DrawerHeader, IconButton } from '../../../design-system';
 
 const navigationItems = [
@@ -52,8 +51,7 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
             aria-label="Kifer Saúde, início"
             className="kds-public-header-brand"
           >
-            <PublicBrandMark className="kds-public-header-mark" />
-            <span className="kds-public-header-wordmark">Kifer Saúde</span>
+            <BrandWordmark />
           </TextLink>
 
           <nav aria-label="Navegação principal" className="kds-public-header-navigation">

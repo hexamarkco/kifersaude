@@ -22,7 +22,11 @@ export function useMetaAds() {
     catch (e) { if (request === requestId.current) setError(e instanceof Error ? e.message : 'Não foi possível consultar a integração.'); }
     finally { if (request === requestId.current) setLoading(false); }
   }, [query]);
-  useEffect(() => { void refresh(); return () => { requestId.current++; }; }, [refresh]);
+  useEffect(() => {
+    const requestState = requestId;
+    void refresh();
+    return () => { requestState.current++; };
+  }, [refresh]);
   const mutate = async (operation: () => Promise<void>, success: string) => {
     setSaving(true); setMessage(null); setError(null);
     try { await operation(); setMessage(success); await refresh(); }

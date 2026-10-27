@@ -36,6 +36,7 @@ import { DashboardAutomationCommand } from "./components/DashboardOperationsSect
 import {
   DashboardCommercialSections,
   DashboardDailyOverview,
+  DashboardResultOverview,
 } from "./components/DashboardCommercialSections";
 import {
   DASHBOARD_CHART_PALETTE,
@@ -2314,6 +2315,20 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
+        <DashboardResultOverview analysis={dashboardCommercial} showFinancialMetrics={!isObserver} />
+            <div className="grid grid-cols-1 gap-4" data-panel-animate>
+              <DashboardTrendSection
+                selectedMetric={selectedMetric}
+                chartRangeInMonths={chartRangeInMonths}
+                displayedMonthlySeries={displayedMonthlySeries}
+                latestMonthlyPoint={latestMonthlyPoint}
+                previousMonthlyPoint={previousMonthlyPoint}
+                highestMonthlyPoint={highestMonthlyPoint}
+                averageMonthlyValue={averageMonthlyValue}
+                onSelectedMetricChange={setSelectedMetric}
+                onChartRangeChange={setChartRangeInMonths}
+              />
+            </div>
         <DashboardDailyOverview
           analysis={dashboardCommercial}
           showFinancialMetrics={!isObserver}
@@ -2350,19 +2365,6 @@ export default function DashboardScreen({
               onNavigateToStatus={handleLeadStatusSegmentClick}
               onNavigateToTab={onNavigateToTab}
             />
-            <div className="grid grid-cols-1 gap-4" data-panel-animate>
-              <DashboardTrendSection
-                selectedMetric={selectedMetric}
-                chartRangeInMonths={chartRangeInMonths}
-                displayedMonthlySeries={displayedMonthlySeries}
-                latestMonthlyPoint={latestMonthlyPoint}
-                previousMonthlyPoint={previousMonthlyPoint}
-                highestMonthlyPoint={highestMonthlyPoint}
-                averageMonthlyValue={averageMonthlyValue}
-                onSelectedMetricChange={setSelectedMetric}
-                onChartRangeChange={setChartRangeInMonths}
-              />
-            </div>
             <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
             <DashboardDistributionSection
               leadStatusData={leadStatusData}

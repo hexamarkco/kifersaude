@@ -300,20 +300,21 @@ test('retorna INVALID_STATUS quando o status não está ativo no CRM', async () 
 test('cria lembrete válido e sincroniza o próximo retorno do lead', async () => {
   const supabase = client({
     leads: [{ data: { id: actor.actorId, status: 'Novo', status_id: null, responsavel_id: actor.actorId } }, {}],
-    reminders: [{ data: { id: 'reminder-1', lead_id: actor.actorId, titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', prioridade: 'alta' } }, { data: { data_lembrete: '2026-10-01T13:00:00.000Z' } }],
+    reminders: [{ data: { id: 'reminder-1', lead_id: actor.actorId, titulo: 'Ligar', data_lembrete: '2030-10-01T13:00:00.000Z', prioridade: 'alta' } }, { data: { data_lembrete: '2030-10-01T13:00:00.000Z' } }],
     mcp_action_audit_log: {},
-  });
-  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { lead_id: actor.actorId, tipo: 'Follow-up', titulo: 'Ligar', data_lembrete: '2026-10-01T13:00:00.000Z', prioridade: 'alta' }, actor });
+  }, { get_lead_pending_reminder_date: { data: '2030-10-01T13:00:00.000Z', error: null } });
+  const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_create_reminder', arguments: { lead_id: actor.actorId, tipo: 'Follow-up', titulo: 'Ligar', data_lembrete: '2030-10-01T13:00:00.000Z', prioridade: 'alta' }, actor });
 
   assert.equal(result?.success, true);
-  assert.equal(result?.proximo_retorno, '2026-10-01T13:00:00.000Z');
+  assert.deepEqual(supabase.rpcCalls.find(call => call.name === 'get_lead_pending_reminder_date')?.args, { p_lead_id: actor.actorId });
+  assert.equal(result?.proximo_retorno, '2030-10-01T13:00:00.000Z');
   assert.deepEqual(supabase.writes.find((write) => write.table === 'reminders')?.value, {
     lead_id: actor.actorId,
     contract_id: null,
     tipo: 'Follow-up',
     titulo: 'Ligar',
     descricao: null,
-    data_lembrete: '2026-10-01T13:00:00.000Z',
+    data_lembrete: '2030-10-01T13:00:00.000Z',
     prioridade: 'alta',
   });
 });

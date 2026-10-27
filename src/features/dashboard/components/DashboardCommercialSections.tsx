@@ -247,24 +247,11 @@ export function DashboardCommercialSections({
       case "value": return item.monthlyValue;
     }
   });
-  const periodLabel = analysis.currentRange?.label ?? 'todo o histórico disponível';
   const openAgenda = () => onNavigateToTab?.('agenda');
   const openLeads = () => onNavigateToTab?.('leads');
 
   return (
     <div className="space-y-6">
-      <section data-panel-animate aria-labelledby="dashboard-kpi-title">
-        <SectionHeader eyebrow="Resultado" title="Indicadores do período" description={`Recorte ativo: ${periodLabel}.`} as="h2" />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <KpiCard padding="sm" icon={<Briefcase className="h-4 w-4" aria-hidden="true" />} title="Vendas" subtitle="Contratos fechados" value={<span className="tabular-nums">{analysis.salesCount}</span>} trend={<KpiTrend>{`${analysis.leadsReceived} leads recebidos`}</KpiTrend>} className="h-full" />
-          <KpiCard padding="sm" icon={<DollarSign className="h-4 w-4" aria-hidden="true" />} title="Valor mensal vendido" subtitle="Contratos do período" value={<span className="tabular-nums">{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? currency(analysis.monthlyRevenue) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? 'Mensalidade registrada' : 'Sem mensalidade cadastrada'}</KpiTrend>} className="h-full" />
-          {showFinancialMetrics && <KpiCard padding="sm" icon={<WalletCards className="h-4 w-4" aria-hidden="true" />} title="Comissão prevista" subtitle="Vendas do período" value={<span className="tabular-nums">{analysis.dataCoverage.commissionExpected ? currency(analysis.commissionExpected) : '—'}</span>} trend={<KpiTrend tone={analysis.dataCoverage.commissionExpected ? 'neutral' : 'warning'}>{analysis.dataCoverage.commissionExpected ? 'Sem forecast adicional' : 'Sem comissão cadastrada'}</KpiTrend>} className="h-full" />}
-          {showFinancialMetrics && <KpiCard padding="sm" icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} title="Comissão recebida" subtitle="Parcelas pagas" value={<span className="tabular-nums">{analysis.commissionReceived === null ? '—' : currency(analysis.commissionReceived)}</span>} trend={<KpiTrend tone={analysis.commissionReceived === null ? 'warning' : 'success'}>{analysis.commissionReceived === null ? 'Sem parcelas pagas registradas' : 'Base de parcelas pagas'}</KpiTrend>} className="h-full" />}
-          <KpiCard padding="sm" icon={<Gauge className="h-4 w-4" aria-hidden="true" />} title="Ticket médio" subtitle="Mensalidade por venda" value={<span className="tabular-nums">{showFinancialMetrics && analysis.averageTicket !== null ? currency(analysis.averageTicket) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics ? 'Sem meta configurada' : 'Restrito ao perfil'}</KpiTrend>} className="h-full" />
-          <KpiCard padding="sm" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} title="Conversão" subtitle="Leads → contratos" value={<span className="tabular-nums">{percent(analysis.conversion)}</span>} trend={<KpiTrend>{analysis.conversion === null ? 'Base insuficiente' : 'Contratos vinculados ao lead'}</KpiTrend>} className="h-full" />
-        </div>
-      </section>
-
       <section data-panel-animate aria-labelledby="dashboard-funnel-title">
         <Surface padding="md">
           <SectionHeader eyebrow="Negociações" title="Funil comercial" description="Veja quantos contatos estão em cada etapa e há quanto tempo estão nela." as="h2" />
@@ -512,4 +499,19 @@ export function DashboardDailyOverview({
       </div>
     </section>
   );
+}
+
+export function DashboardResultOverview({ analysis, showFinancialMetrics }: Pick<DashboardCommercialSectionsProps, 'analysis' | 'showFinancialMetrics'>) {
+  const periodLabel = analysis.currentRange?.label ?? 'todo o histórico disponível';
+  return (<section data-panel-animate aria-label="Indicadores do período">
+        <SectionHeader eyebrow="Resultado" title="Indicadores do período" description={`Recorte ativo: ${periodLabel}.`} as="h2" />
+        <div className="kds-dashboard-kpi-grid mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <KpiCard padding="sm" icon={<Briefcase className="h-4 w-4" aria-hidden="true" />} title="Vendas" subtitle="Contratos fechados" value={<span className="tabular-nums">{analysis.salesCount}</span>} trend={<KpiTrend>{`${analysis.leadsReceived} leads recebidos`}</KpiTrend>} className="h-full" />
+          <KpiCard padding="sm" icon={<DollarSign className="h-4 w-4" aria-hidden="true" />} title="Valor mensal vendido" subtitle="Contratos do período" value={<span className="tabular-nums">{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? currency(analysis.monthlyRevenue) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? 'Mensalidade registrada' : 'Sem mensalidade cadastrada'}</KpiTrend>} className="h-full" />
+          {showFinancialMetrics && <KpiCard padding="sm" icon={<WalletCards className="h-4 w-4" aria-hidden="true" />} title="Comissão prevista" subtitle="Vendas do período" value={<span className="tabular-nums">{analysis.dataCoverage.commissionExpected ? currency(analysis.commissionExpected) : '—'}</span>} trend={<KpiTrend tone={analysis.dataCoverage.commissionExpected ? 'neutral' : 'warning'}>{analysis.dataCoverage.commissionExpected ? 'Sem forecast adicional' : 'Sem comissão cadastrada'}</KpiTrend>} className="h-full" />}
+          {showFinancialMetrics && <KpiCard padding="sm" icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} title="Comissão recebida" subtitle="Parcelas pagas" value={<span className="tabular-nums">{analysis.commissionReceived === null ? '—' : currency(analysis.commissionReceived)}</span>} trend={<KpiTrend tone={analysis.commissionReceived === null ? 'warning' : 'success'}>{analysis.commissionReceived === null ? 'Sem parcelas pagas registradas' : 'Base de parcelas pagas'}</KpiTrend>} className="h-full" />}
+          <KpiCard padding="sm" icon={<Gauge className="h-4 w-4" aria-hidden="true" />} title="Ticket médio" subtitle="Mensalidade por venda" value={<span className="tabular-nums">{showFinancialMetrics && analysis.averageTicket !== null ? currency(analysis.averageTicket) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics ? 'Sem meta configurada' : 'Restrito ao perfil'}</KpiTrend>} className="h-full" />
+          <KpiCard padding="sm" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} title="Conversão" subtitle="Leads → contratos" value={<span className="tabular-nums">{percent(analysis.conversion)}</span>} trend={<KpiTrend>{analysis.conversion === null ? 'Base insuficiente' : 'Contratos vinculados ao lead'}</KpiTrend>} className="h-full" />
+        </div>
+      </section>);
 }

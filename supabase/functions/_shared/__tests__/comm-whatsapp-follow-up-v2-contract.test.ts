@@ -7,6 +7,7 @@ const edgeSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/comm-whatsapp-generate-follow-up/index.ts'),
   'utf8',
 );
+const internalActorSource = readFileSync(resolve(process.cwd(), 'supabase/functions/_shared/mcp-internal-actor.ts'), 'utf8');
 const batchModalSource = readFileSync(
   resolve(process.cwd(), 'src/features/communication/whatsapp/components/WhatsAppBatchFollowUpModal.tsx'),
   'utf8',
@@ -118,9 +119,13 @@ test('followup.refine continua manual e em uma única chamada própria', () => {
   assert.match(refinementPipeline, /Ajuste solicitado/);
 });
 
-test('modo interno de simulação exige service role e não grava auditoria comercial', () => {
+test('modo interno de simulação exige service role, ator administrador e não grava auditoria comercial', () => {
   assert.match(edgeSource, /body\.simulationMode === true/);
-  assert.match(edgeSource, /isServiceRoleRequest\(req, serviceRoleKey\)/);
+  assert.match(edgeSource, /resolveMcpServiceActor\(req, supabaseAdmin, serviceRoleKey\)/);
+  assert.match(edgeSource, /body\.simulationMode === true && serviceActor\.isServiceRole && serviceActor\.authorized/);
+  assert.match(internalActorSource, /isServiceRoleRequest\(req, serviceRoleKey\)/);
+  assert.match(internalActorSource, /profile\.role === 'admin'/);
+  assert.match(internalActorSource, /!UUID\.test\(actorId\)/);
   assert.match(edgeSource, /if \(chat\.lead_id && !isInternalSimulation\)/);
   assert.match(edgeSource, /simulationValidation: isInternalSimulation/);
 });

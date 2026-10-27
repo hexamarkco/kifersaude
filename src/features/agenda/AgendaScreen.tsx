@@ -24,6 +24,7 @@ import {
   Loader2,
   Plus,
   Search,
+  SlidersHorizontal,
   Sparkles,
   Tag,
   Timer,
@@ -126,6 +127,7 @@ const AGENDA_DAY_SECTION_STYLES = {
 };
 
 export default function AgendaScreen() {
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1487,7 +1489,7 @@ export default function AgendaScreen() {
       {loading && !hasAgendaSnapshot ? (
         <LoadingState label="Carregando agenda..." className="min-h-96" />
       ) : (
-      <div className="panel-page-shell space-y-6">
+      <div className="kds-agenda-page panel-page-shell space-y-6">
         <PageHeader
           eyebrow="Rotina operacional"
           title="Agenda"
@@ -1516,8 +1518,8 @@ export default function AgendaScreen() {
           )}
         />
 
-        <Surface padding="md" className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(10rem,1fr))]">
+        <Surface padding="md" className="kds-agenda-filters space-y-4">
+          <div className="kds-agenda-search-row">
             <div className="relative">
                 <Input
                   type="text"
@@ -1538,6 +1540,9 @@ export default function AgendaScreen() {
                   </IconButton>
                 )}
             </div>
+            <IconButton className="kds-agenda-filter-toggle" aria-label="Mostrar filtros da agenda" aria-expanded={mobileFiltersOpen} aria-controls="agenda-secondary-filters" onClick={() => setMobileFiltersOpen(open => !open)} variant="secondary"><SlidersHorizontal aria-hidden="true" /></IconButton>
+          </div>
+          <div id="agenda-secondary-filters" className={`kds-agenda-secondary-filters ${mobileFiltersOpen ? 'is-open' : ''}`}>
             <FilterSelect
                   icon={Tag}
                   value={typeFilter}
@@ -1589,7 +1594,7 @@ export default function AgendaScreen() {
                   disabled={markingAllFiltered || updatingReminderIds.size > 0}
                   loading={markingAllFiltered}
                 >
-                  {!markingAllFiltered && <>Marcar <span className="hidden sm:inline">como </span>lidos</>}
+                  {!markingAllFiltered && <span>Marcar lidos</span>}
                   {markingAllFiltered && "Marcando..."}
                 </Button>
               )}

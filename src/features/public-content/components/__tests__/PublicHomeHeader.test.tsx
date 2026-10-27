@@ -34,13 +34,13 @@ function setupHeader() {
   };
 }
 
-test('preserves logo proportions, existing navigation labels and quote action', () => {
+test('uses the shared wordmark and preserves navigation labels and quote action', () => {
   const view = setupHeader();
   try {
     const brand = view.container.querySelector('[aria-label="Kifer Saúde, início"]');
-    assert.equal(brand?.firstElementChild?.tagName.toLowerCase(), 'svg');
-    assert.equal(brand?.firstElementChild?.getAttribute('viewBox'), '0 0 574 455');
-    assert.equal(brand?.firstElementChild?.getAttribute('preserveAspectRatio'), 'xMidYMid meet');
+    const wordmark = brand?.querySelector('[role="img"]');
+    assert.equal(wordmark?.getAttribute('aria-label'), 'Kifer Saúde');
+    assert.equal(wordmark?.textContent, 'kifersaúde');
     const links = [...view.container.querySelectorAll('nav a')];
     assert.deepEqual(links.map((link) => link.textContent), ['Operadoras', 'Para quem é', 'Como funciona', 'Depoimentos', 'Dúvidas']);
     act(() => (links[2] as HTMLAnchorElement).click());

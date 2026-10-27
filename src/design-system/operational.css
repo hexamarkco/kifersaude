@@ -1302,3 +1302,29 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-record-form :is(h3,h4), .painel-theme.kifer-ds .kds-record-detail :is(h3,h4) { font-family: var(--font-sans); }
 .painel-theme.kifer-ds .kds-record-form > .kds-page-action-bar { background: var(--bg-surface); padding: var(--space-4); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); }
 @media(max-width: 767px) { .kds-record-form .kds-page-action-bar-sticky { bottom: calc(4.5rem + env(safe-area-inset-bottom)); } .painel-theme.kifer-ds .kds-record-form form > .kds-surface { padding: var(--space-3); } }
+
+.kds-agenda-search-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--space-2); }
+.painel-theme.kifer-ds .kds-agenda-filter-toggle { display: none; }
+.kds-agenda-secondary-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-3); }
+@media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-kpi-grid { grid-template-columns: repeat(6,minmax(0,1fr)); } }
+@media(max-width: 767px) {
+ .painel-theme.kifer-ds .kds-agenda-filter-toggle { display: inline-flex; }
+ .painel-theme.kifer-ds .kds-agenda-secondary-filters:not(.is-open) { display: none; }
+ .kds-agenda-secondary-filters { grid-template-columns: minmax(0,1fr); }
+ .kds-ai-workspace > aside { height: clamp(11rem,30dvh,20rem); }
+}
+
+/* Numeric calendar cells do not inherit the horizontal padding of text buttons. */
+.painel-theme.kifer-ds :is(.kds-calendar-day,.calendar-day) { padding: 0; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+@media(max-width: 639px) {
+ .painel-theme.kifer-ds .kds-agenda-filter-actions { display: flex; flex-wrap: wrap; }
+ .painel-theme.kifer-ds .kds-agenda-filter-actions .kds-button:not(.kds-agenda-clear-filters) { flex: 1 0 auto; padding-inline: var(--space-2); white-space: nowrap; }
+}
+
+@media(max-width: 639px) {
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-card-icon { display: none; }
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-kpi-value { font-size: clamp(1rem,4.75vw,1.25rem); }
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card { padding: var(--space-3); }
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card > * + * { margin-top: var(--space-3); }
+}

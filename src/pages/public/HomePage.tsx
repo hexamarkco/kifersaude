@@ -24,6 +24,7 @@ import {
 
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import {
+  Badge,
   Button,
   Dialog,
   DialogBody,
@@ -940,10 +941,7 @@ export default function HomePage() {
           <div aria-hidden="true" className="kds-public-hero-orb kds-public-hero-orb-two pointer-events-none" />
           <div className="relative mx-auto grid w-full max-w-7xl items-center gap-6 lg:grid-cols-2 lg:gap-0">
             <div className="kds-public-hero-copy relative z-10 min-w-0 pt-6 sm:pt-10 lg:self-start lg:pb-16 lg:pt-24">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)]">
-                <Heart aria-hidden="true" className="h-4 w-4 shrink-0 fill-current text-[color:var(--brand-primary)]" />
-                Corretora de planos de saúde no Rio de Janeiro
-              </div>
+              <Badge tone="accent" icon={Heart}>Corretora de planos de saúde no Rio de Janeiro</Badge>
 
               <Heading family="display" level={1} className="mt-8">
                 <span className="lg:block">Plano de saúde</span>{' '}

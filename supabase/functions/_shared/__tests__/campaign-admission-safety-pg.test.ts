@@ -120,7 +120,12 @@ beforeEach(async () => {
     getFunctionSql('_comm_whatsapp_campaign_contact_interval_seconds'),
     getFunctionSql('_mcp_comm_whatsapp_campaign_apply_pacing_config'),
     getFunctionSql('_comm_whatsapp_campaign_reserve_new_contact'),
-    getFunctionSql('get_comm_whatsapp_campaign_admission_turn'),
+    // The function reads the database clock rather than receiving p_now.
+    // Keep its test clock on the fixture day to exercise the 24-hour cap.
+    getFunctionSql('get_comm_whatsapp_campaign_admission_turn').replace(
+      'clock_timestamp()',
+      "'2026-10-21T22:00:00.000Z'::timestamptz",
+    ),
     getFunctionSql('_mcp_comm_whatsapp_campaign_replace_steps'),
   ].join('\n'));
   await db.exec(`

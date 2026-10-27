@@ -226,3 +226,12 @@ Na primeira etapa, oito dos 160 contextos foram implementados e validados. As en
 - Tokens de padding dos cards centralizados em 16/20/24px; componentes continuam no design system real.
 - 128 verificações de estados aprovadas, em 32 contextos × quatro resoluções, sem overflow do documento; [resultados](validacao/consolidacao/estados.json). A revisão das páginas principais e dos estados adicionais continua em execução.
 - Typecheck passou: corrigidas a tipagem dos mocks e as fronteiras de ArrayBuffer no áudio/exportação, sem mudar o conteúdo dos arquivos ou o processamento do áudio. Build passou. Onze testes focados passaram, incluindo paridade de campos de ContractForm entre página e modal. Teste de IA atualizado para o rótulo atual da interface e aprovado. Lint sem erros, mantendo um aviso preexistente.
+
+## Continuação — dashboard, agenda e campanhas
+
+- Dashboard: indicadores reais e evolução mensal passam a aparecer na área inicial; análises complementares mantêm seu acionamento existente, evitando antecipar efeitos operacionais.
+- Agenda: filtros secundários recolhíveis no mobile, busca acessível, dias do calendário sem quebra numérica e ações com texto em uma linha.
+- Campanhas: assistente longo em página com Stepper e PageActions compartilhados, mantendo campos, validações e callbacks de todas as etapas.
+- Chat de IA com título operacional e navegação mobile; site público usa a marca compartilhada e hero compacto sem elementos ornamentais, preservando conteúdo e CTAs.
+- Typecheck, lint, build e arquitetura aprovados. A execução completa registrou 1.717 aprovações e duas falhas; ambas foram corrigidas em testes (marca compartilhada e relógio determinístico da fixture de campanhas), com 10/10 regressões aprovadas. Nenhuma função de produção ou migration foi alterada.
+- A cobertura visual final permanece em revisão, com metadados por contexto e resolução. Não houve envios, gravações remotas ou execução de automações no navegador.

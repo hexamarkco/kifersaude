@@ -1,4 +1,4 @@
-import { Text, DesignSystemProvider } from '../../design-system';
+import { Text, Heading, DesignSystemProvider } from '../../design-system';
 import { ActionSurface, Textarea } from '../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Download, FlaskConical, Lightbulb, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
@@ -567,11 +567,11 @@ export default function AiSandboxChatScreen() {
   };
 
   return (
-    <DesignSystemProvider className="painel-theme kifer-ds flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] md:flex-row">
+    <DesignSystemProvider className="kds-ai-workspace painel-theme kifer-ds flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] md:flex-row">
       <aside className="flex h-[34dvh] w-full shrink-0 flex-col border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] md:h-auto md:w-72 md:border-b-0 md:border-r">
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-4">
           <div>
-            <Text className="text-sm font-semibold">Chat de testes — IA</Text>
+            <Heading level={1} size="md">Chat e testes de IA</Heading>
             <Text className="text-xs text-[var(--text-secondary)]">Simulações de atendimento</Text>
           </div>
           <Button variant="text" size="sm" onClick={() => signOut()}>

@@ -660,3 +660,13 @@
 .kds-public-home-hero :is(.kds-public-home-hero-disc,.kds-public-home-hero-ring,.kds-public-home-hero-dot) { display: none; }
 .kds-public-home-hero .kds-public-home-hero-portrait { mask-image: none; -webkit-mask-image: none; border-radius: var(--radius-xl); }
 .painel-theme.kifer-ds .kds-public-home-hero h1 { font: 700 clamp(2rem, 3.5vw, 3.25rem) / 1.1 var(--font-sans); letter-spacing: -0.04em; max-width: 20ch; }
+
+.painel-theme.kifer-ds .kds-public-home-hero { padding-top: var(--space-8); }
+.painel-theme.kifer-ds .kds-public-home-hero .kds-public-hero-copy { padding-block: var(--space-6); }
+.painel-theme.kifer-ds .kds-public-home-hero .kds-public-hero-copy > * + * { margin-top: var(--space-5); }
+.painel-theme.kifer-ds .kds-public-home-hero .kds-public-home-hero-portrait { width: auto; max-width: 100%; max-height: 34rem; }
+.painel-theme.kifer-ds .kds-public-home-hero :is(.kds-public-home-hero-disc,.kds-public-home-hero-ring,.kds-public-home-hero-dot,.kds-public-hero-orb,.kds-public-hero-glow) { display: none; }
+@media(max-width: 767px) {
+ .painel-theme.kifer-ds .kds-public-home-hero .kds-public-home-hero-portrait { max-height: 24rem; }
+ .painel-theme.kifer-ds .kds-public-home-hero .kds-public-hero-copy > .kds-badge { white-space: normal; }
+}

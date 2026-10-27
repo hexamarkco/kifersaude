@@ -24,6 +24,7 @@ import {
   IconButton,
   OperationalMetricChip,
   PageHeader,
+  PageActions,
   Select,
   Stepper,
   Surface,
@@ -963,112 +964,12 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
-  return (
-    <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
-      <PageHeader
-        eyebrow="Comunicação"
-        title="Disparos WhatsApp"
-        description="Crie campanhas para seus contatos, defina as mensagens e acompanhe os envios. Você também pode importar uma lista de uma planilha CSV."
-        actions={(
-          <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 lg:justify-end">
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PauseCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="rascunhos" value={stats.drafts} />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />} label="agendadas" value={stats.scheduled} tone="accent" />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
-            <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
-              <Plus className="kds-control-icon" />
-              Novo disparo
-            </Button>
-          </div>
-        )}
-      />
-
-      <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
-
-      {aiSuggestions.length > 0 && (
-        <Card className="space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</Heading>
-              <Text className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confira respostas que podem indicar um pedido para parar as mensagens, número errado ou reclamação. A IA sugere a revisão; você confirma a decisão.</Text>
-            </div>
-            <Badge tone="warning">{aiSuggestions.length} pendente(s)</Badge>
-          </div>
-          <div className="grid gap-3 xl:grid-cols-2">
-            {aiSuggestions.map((suggestion) => {
-              const cp = suggestion.contact_permission;
-              const isHighRisk = cp === 'OPT_OUT_EXPLICITO' || cp === 'NUMERO_ERRADO' || cp === 'DESTINATARIO_INCORRETO' || cp === 'RECLAMACAO_CONTATO';
-              return (
-                <Surface key={suggestion.id} variant="muted" padding="sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                          isHighRisk
-                            ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]'
-                            : 'bg-[var(--warning-soft)] text-[var(--warning-text)]'
-                        }`}
-                      >
-                        <Bot className="h-4 w-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <Heading level={3} className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{getSafeChatDisplayName({ ...suggestion.chat, phone_digits: suggestion.phone_digits })}</Heading>
-                        <Text className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</Text>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge tone={isHighRisk ? 'danger' : 'warning'} size="sm" className="shrink-0">
-                        {formatContactPermissionLabel(cp)} · {Math.round((suggestion.confidence ?? 0) * 100)}%
-                      </Badge>
-                      {suggestion.commercial_intent && suggestion.commercial_intent !== 'OUTRO' && (
-                        <Badge tone="info" size="sm" className="shrink-0">
-                          {formatCommercialIntentLabel(suggestion.commercial_intent)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Text className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</Text>
-                  {suggestion.evidence && (
-                    <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent-strong)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
-                      {suggestion.evidence}
-                    </blockquote>
-                  )}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {suggestion.intent === 'opt_out' && suggestion.recommended_action === 'suggest_block_whatsapp_campaigns' ? (
-                      <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
-                        Parar mensagens comerciais
-                      </Button>
-                    ) : suggestion.intent === 'wrong_number' ? (
-                      <Text className="self-center text-xs text-[color:var(--panel-text-muted)]">
-                        Se o número ou a pessoa estiver incorreta, confira os dados do contato antes de registrar um pedido para parar as mensagens.
-                      </Text>
-                    ) : null}
-                    <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
-                      Dispensar
-                    </Button>
-                  </div>
-                </Surface>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
-      {campaignModalOpen && (
-        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && !saving && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay">
-            <DialogHeader onClose={saving ? undefined : closeCampaignModal}>
-              <div>
-                <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
-                <DialogDescription>{campaignWizardSteps[wizardStep]?.description}</DialogDescription>
-              </div>
-            </DialogHeader>
-
-            <div className="shrink-0 px-1 pb-1 pt-2">
-              <Stepper currentStep={wizardStep} steps={campaignWizardSteps} />
-            </div>
-
-            <DialogBody className="min-h-0 flex-1 space-y-5">
+  if (campaignModalOpen) return (
+    <section className="comm-terracotta comm-terracotta-campaigns kds-record-form kds-campaign-workspace panel-page-shell kds-detail-workspace">
+      <Button variant="text" size="sm" className="kds-lead-form-back" onClick={closeCampaignModal} disabled={saving}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Disparos WhatsApp</Button>
+      <PageHeader eyebrow="Comunicação" title={editingCampaign ? 'Editar disparo' : 'Novo disparo'} description={campaignWizardSteps[wizardStep]?.description} />
+      <Stepper currentStep={wizardStep} steps={campaignWizardSteps} />
+      <Surface className="space-y-5">
           {wizardStep === 0 && (
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={<FieldLabel text="Nome da campanha" hint="Nome interno para voce identificar o disparo na lista. O lead nunca ve esse nome." />}>
@@ -1518,36 +1419,105 @@ export default function WhatsAppCampaignsScreen() {
           </Field>
           </>
           )}
-            </DialogBody>
+</Surface>
+      <PageActions placement="form" sticky busy={saving}
+        message={<div className="flex items-start gap-2 text-xs"><ShieldCheck className="kds-control-icon" aria-hidden="true" />{csvSaveProgress ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Não feche esta página.` : 'Respostas interrompem novos envios para aquele contato. Quem pediu para não receber mensagens fica fora da fila.'}</div>}
+        secondary={[{label:'Cancelar',onClick:closeCampaignModal},...(wizardStep > 0 ? [{label:'Voltar',icon:ArrowLeft,onClick:()=>goToWizardStep(wizardStep - 1)}] : [])]}
+        primary={wizardStep < campaignWizardSteps.length - 1 ? {label:'Próximo',icon:ArrowRight,onClick:handleWizardNext} : {label:csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar',icon:Send,onClick:()=>void handleCreateDraft(),loading:saving}}
+      />
+    </section>
+  );
 
-          <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent-strong)]" />
-              {csvSaveProgress
-                ? `Salvando contatos do CSV: ${csvSaveProgress.saved.toLocaleString('pt-BR')} de ${csvSaveProgress.total.toLocaleString('pt-BR')}. Não feche esta janela.`
-                : 'Respostas interrompem novos envios para aquele contato. Quem pediu para não receber mensagens fica fora da fila.'}
+  return (
+    <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
+      <PageHeader
+        eyebrow="Comunicação"
+        title="Disparos WhatsApp"
+        description="Crie campanhas para seus contatos, defina as mensagens e acompanhe os envios. Você também pode importar uma lista de uma planilha CSV."
+        actions={(
+          <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 lg:justify-end">
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PauseCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="rascunhos" value={stats.drafts} />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />} label="agendadas" value={stats.scheduled} tone="accent" />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
+            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
+            <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
+              <Plus className="kds-control-icon" />
+              Novo disparo
+            </Button>
+          </div>
+        )}
+      />
+
+      <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
+
+      {aiSuggestions.length > 0 && (
+        <Card className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</Heading>
+              <Text className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confira respostas que podem indicar um pedido para parar as mensagens, número errado ou reclamação. A IA sugere a revisão; você confirma a decisão.</Text>
             </div>
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-              {wizardStep > 0 && (
-                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => goToWizardStep(wizardStep - 1)} disabled={saving}>
-                  <ArrowLeft className="kds-control-icon" />
-                  Voltar
-                </Button>
-              )}
-              {wizardStep < campaignWizardSteps.length - 1 ? (
-                <Button className="w-full sm:w-auto" onClick={handleWizardNext}>
-                  Próximo
-                  <ArrowRight className="kds-control-icon" />
-                </Button>
-              ) : (
-                <Button className="w-full sm:w-auto" onClick={() => void handleCreateDraft()} loading={saving}>
-                  {!saving && <Send className="kds-control-icon" />}
-                  {csvSaveProgress ? `Salvando ${csvSaveProgress.saved.toLocaleString('pt-BR')}/${csvSaveProgress.total.toLocaleString('pt-BR')}` : 'Salvar'}
-                </Button>
-              )}
-            </div>
-          </DialogFooter>
-        </Dialog>
+            <Badge tone="warning">{aiSuggestions.length} pendente(s)</Badge>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {aiSuggestions.map((suggestion) => {
+              const cp = suggestion.contact_permission;
+              const isHighRisk = cp === 'OPT_OUT_EXPLICITO' || cp === 'NUMERO_ERRADO' || cp === 'DESTINATARIO_INCORRETO' || cp === 'RECLAMACAO_CONTATO';
+              return (
+                <Surface key={suggestion.id} variant="muted" padding="sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                          isHighRisk
+                            ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]'
+                            : 'bg-[var(--warning-soft)] text-[var(--warning-text)]'
+                        }`}
+                      >
+                        <Bot className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <Heading level={3} className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{getSafeChatDisplayName({ ...suggestion.chat, phone_digits: suggestion.phone_digits })}</Heading>
+                        <Text className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</Text>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge tone={isHighRisk ? 'danger' : 'warning'} size="sm" className="shrink-0">
+                        {formatContactPermissionLabel(cp)} · {Math.round((suggestion.confidence ?? 0) * 100)}%
+                      </Badge>
+                      {suggestion.commercial_intent && suggestion.commercial_intent !== 'OUTRO' && (
+                        <Badge tone="info" size="sm" className="shrink-0">
+                          {formatCommercialIntentLabel(suggestion.commercial_intent)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Text className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</Text>
+                  {suggestion.evidence && (
+                    <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent-strong)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
+                      {suggestion.evidence}
+                    </blockquote>
+                  )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {suggestion.intent === 'opt_out' && suggestion.recommended_action === 'suggest_block_whatsapp_campaigns' ? (
+                      <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
+                        Parar mensagens comerciais
+                      </Button>
+                    ) : suggestion.intent === 'wrong_number' ? (
+                      <Text className="self-center text-xs text-[color:var(--panel-text-muted)]">
+                        Se o número ou a pessoa estiver incorreta, confira os dados do contato antes de registrar um pedido para parar as mensagens.
+                      </Text>
+                    ) : null}
+                    <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
+                      Dispensar
+                    </Button>
+                  </div>
+                </Surface>
+              );
+            })}
+          </div>
+        </Card>
       )}
 
       {activationPreview && (

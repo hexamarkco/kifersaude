@@ -53,6 +53,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DisclosureTrigger,
   Drawer,
   DrawerBody,
   DrawerFooter,
@@ -984,7 +985,7 @@ function Data() {
         <Specimen
           title="Barra de filtros"
           description="Filtros ativos mostram a seleção. Limpar restaura a visão sem restrições."
-          source="Toolbar / ToolbarSearch / ToolbarActions / FilterSelect / FilterMultiSelect / DateRangeFilter"
+          source="Toolbar / ToolbarSearch / ToolbarActions / FilterSelect / FilterMultiSelect / DateRangeFilter / DisclosureTrigger"
           wide
         >
           <Toolbar>
@@ -1020,6 +1021,12 @@ function Data() {
               />
             </ToolbarActions>
           </Toolbar>
+          <details>
+            <DisclosureTrigger icon={Filter}>Filtros avançados</DisclosureTrigger>
+            <Surface padding="sm" className="mt-3">
+              <FilterMultiSelect icon={Users} placeholder="Operadoras" values={owners} onChange={setOwners} options={operatorOptions} />
+            </Surface>
+          </details>
           <FilterBar>
             <Text size="sm">
               {status || 'Todos os status'} ·{' '}

@@ -1,4 +1,4 @@
-import { ButtonGroup, Heading, Text, FieldLabel, TextLink } from '../../design-system';
+import { DisclosureTrigger, ButtonGroup, Heading, Text, FieldLabel, TextLink } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -1609,20 +1609,12 @@ export default function LeadsManager({
 
             <div className="kds-leads-filter-secondary">
               <details className="kds-leads-advanced-filters group">
-                <summary className="kds-leads-advanced-summary cursor-pointer list-none">
-                  <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between gap-3 px-4 py-2 transition-colors sm:inline-flex sm:justify-start">
-                    <Heading level={4} className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                      <Filter className="w-4 h-4" />
+                <DisclosureTrigger icon={Filter} className="kds-leads-advanced-summary">
                       Filtros avançados
                       {advancedFilterCount > 0 && (
                         <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>
                       )}
-                    </Heading>
-                    <span className="text-xs transition-transform group-open:rotate-180">
-                      ▼
-                    </span>
-                  </Surface>
-                </summary>
+                </DisclosureTrigger>
                 <Surface variant="muted" padding="none" className="kds-op-disclosure-content kds-leads-advanced-panel mt-3 grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
                   {[
                     {

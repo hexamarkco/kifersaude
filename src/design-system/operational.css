@@ -403,10 +403,11 @@
   font: 700 1.25rem / 1.25 var(--font-sans);
 }
 
-.kds-op-disclosure-trigger {
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-}
+.kds-disclosure-trigger { cursor: pointer; list-style: none; }
+.kds-disclosure-trigger::-webkit-details-marker { display: none; }
+.kds-disclosure-trigger > span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.kds-disclosure-chevron { margin-left: auto; transition: transform 160ms ease; }
+details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rotate(180deg); }
 
 .kds-leads-filter-grid {
   display: grid;
@@ -1021,6 +1022,7 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+.painel-theme.kifer-ds .kds-button.kds-disclosure-trigger { height: var(--kds-control-height); padding-block: 0; }
 .painel-theme.kifer-ds .kds-button-content > .kds-text { font: inherit; color: inherit; }
 .painel-theme.kifer-ds .kds-button-primary { background: var(--action-primary-bg); color: var(--action-primary-text); border-color: var(--action-primary-bg); box-shadow: none; }
 .painel-theme.kifer-ds .kds-button-primary:hover:not(:disabled) { background: var(--action-primary-hover); border-color: var(--action-primary-hover); }

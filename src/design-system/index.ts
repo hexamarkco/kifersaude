@@ -74,6 +74,8 @@ export type { DialogProps, DialogPresentation, DialogSize, DialogBodyProps, Dial
 export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { default as FilterTrigger } from './components/FilterTrigger';
+export { default as DisclosureTrigger } from './components/DisclosureTrigger';
+export type { DisclosureTriggerProps } from './components/DisclosureTrigger';
 export type { FilterTriggerProps } from './components/FilterTrigger';
 export { LinkButton } from './components/LinkButton';
 export type { LinkButtonProps } from './components/LinkButton';

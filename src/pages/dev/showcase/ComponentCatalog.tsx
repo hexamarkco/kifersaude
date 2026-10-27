@@ -44,6 +44,7 @@ import {
   ClienteCard,
   Combobox,
   ConfirmDialog,
+  ControlGroup,
   DateRangeFilter,
   DateTimePicker,
   Dialog,
@@ -153,6 +154,7 @@ export default function ComponentCatalog() {
 }
 
 function Actions() {
+  const [controlDate, setControlDate] = useState('2026-10-26');
   const [actionExamples, setActionExamples] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const { toast } = useToast();
@@ -238,6 +240,25 @@ function Actions() {
           >
             Largura total
           </Button>
+        </Specimen>
+        <Specimen
+          title="Controles alinhados na mesma barra"
+          description="Use md (40 px) em cabeçalhos, filtros e ações de formulários. Use sm (32 px) apenas em grupos compactos. No mobile, ambos têm no mínimo 44 px. O grupo determina a altura, os ícones e a tipografia dos controles; rótulos longos podem quebrar linha."
+          source="ControlGroup / Toolbar size / PageHeader / PageActions"
+          wide
+        >
+          {(['sm', 'md'] as const).map((size) => (
+            <ControlGroup key={size} size={size} className="ds-row" aria-label={`Controles ${size}`}>
+              <IconButton variant="secondary" aria-label={`Dia anterior ${size}`} onClick={() => {
+                const date = new Date(`${controlDate || '2026-10-26'}T12:00:00`);
+                date.setDate(date.getDate() - 1);
+                setControlDate(date.toISOString().slice(0, 10));
+              }}><ArrowLeft /></IconButton>
+              <div className="w-44 max-w-full"><DateTimePicker type="date" value={controlDate} aria-label={`Data ${size}`} onChange={(event) => setControlDate(event.target.value)} /></div>
+              <Button variant="secondary" onClick={() => setControlDate('2026-10-26')}>Hoje</Button>
+              <Button onClick={() => toast({ variant: 'info', description: 'Exemplo de criação de tarefa.' })}><Plus />Nova tarefa</Button>
+            </ControlGroup>
+          ))}
         </Specimen>
         <Specimen
           title="Ícones e ações compactas"

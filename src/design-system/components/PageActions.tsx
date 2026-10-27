@@ -49,7 +49,7 @@ export function PageActions({
   return (
     <div
       className={cx(
-        'kds-page-action-bar',
+        'kds-page-action-bar kds-control-group-md',
         `kds-page-action-bar-${placement}`,
         sticky && 'kds-page-action-bar-sticky',
       )}

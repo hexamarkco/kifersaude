@@ -1004,7 +1004,13 @@
 }
 .painel-theme.kifer-ds .kds-input-group > :first-child:not(:only-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .painel-theme.kifer-ds .kds-input-group > :last-child:not(:only-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
-.painel-theme.kifer-ds .kds-button:not(.kds-icon-button) { height: auto; min-height: var(--kds-control-height); padding-block: max(0px, calc((var(--kds-control-height) - var(--kds-control-font) * var(--control-line-height) - var(--border-width) * 2) / 2)); white-space: normal; overflow-wrap: anywhere; }
+.painel-theme.kifer-ds .kds-button:not(.kds-icon-button) {
+  height: auto;
+  min-height: var(--kds-control-height);
+  padding-block: max(0px, calc((var(--kds-control-height) - max(var(--kds-control-icon), calc(var(--kds-control-font) * var(--control-line-height))) - var(--border-width) * 2) / 2));
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .painel-theme.kifer-ds .kds-button-content > .kds-text { font: inherit; color: inherit; }
 .painel-theme.kifer-ds .kds-button-primary { background: var(--action-primary-bg); color: var(--action-primary-text); border-color: var(--action-primary-bg); box-shadow: none; }
 .painel-theme.kifer-ds .kds-button-primary:hover:not(:disabled) { background: var(--action-primary-hover); border-color: var(--action-primary-hover); }
@@ -1034,7 +1040,8 @@
 .painel-theme.kifer-ds .kds-radio { position: relative; }
 .painel-theme.kifer-ds .kds-radio-input { pointer-events: none; }
 @media (max-width: 767px) {
-  .painel-theme.kifer-ds { --control-height-sm: var(--touch-target); --control-height-md: var(--touch-target); --control-font-md: 1rem; --layout-gap: var(--space-4); }
+  .painel-theme.kifer-ds,
+  .modal-theme-host.painel-theme.kifer-ds { --control-height-sm: var(--touch-target); --control-height-md: var(--touch-target); --control-font-md: 1rem; --layout-gap: var(--space-4); }
   .kds-form-fields, .kds-detail-layout-aside { grid-template-columns: minmax(0, 1fr); }
   .kds-page-action-buttons { width: 100%; }
   .kds-page-action-buttons > button { flex: 1 1 6.5rem; }

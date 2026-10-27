@@ -749,13 +749,33 @@
 .kds-skeleton-card { min-height: 10rem; border-radius: var(--radius-xl); }
 .kds-skeleton-table-row { min-height: 3rem; border-radius: var(--radius-lg); }
 
+/* Related controls use a single scale, including nested picker/filter triggers. */
+.kds-control-group-sm {
+  --control-group-height: var(--control-height-sm);
+  --control-group-font: var(--control-font-sm);
+  --control-group-icon: var(--control-icon-sm);
+  --control-group-padding: var(--control-padding-sm);
+}
+.kds-control-group-md {
+  --control-group-height: var(--control-height-md);
+  --control-group-font: var(--control-font-md);
+  --control-group-icon: var(--control-icon-md);
+  --control-group-padding: var(--control-padding-md);
+}
+.kds-control-group-lg {
+  --control-group-height: var(--control-height-lg);
+  --control-group-font: var(--control-font-lg);
+  --control-group-icon: var(--control-icon-lg);
+  --control-group-padding: var(--control-padding-lg);
+}
+
 .kds-control-sm,
 .kds-control-md,
 .kds-control-lg {
-  --kds-control-height: var(--control-height-md);
-  --kds-control-font: var(--control-font-md);
-  --kds-control-icon: var(--control-icon-md);
-  --kds-control-padding: var(--control-padding-md);
+  --kds-control-height: var(--control-group-height, var(--control-height-md));
+  --kds-control-font: var(--control-group-font, var(--control-font-md));
+  --kds-control-icon: var(--control-group-icon, var(--control-icon-md));
+  --kds-control-padding: var(--control-group-padding, var(--control-padding-md));
   box-sizing: border-box;
   height: var(--kds-control-height);
   min-height: var(--kds-control-height);
@@ -766,17 +786,17 @@
 }
 
 .kds-control-sm {
-  --kds-control-height: var(--control-height-sm);
-  --kds-control-font: var(--control-font-sm);
-  --kds-control-icon: var(--control-icon-sm);
-  --kds-control-padding: var(--control-padding-sm);
+  --kds-control-height: var(--control-group-height, var(--control-height-sm));
+  --kds-control-font: var(--control-group-font, var(--control-font-sm));
+  --kds-control-icon: var(--control-group-icon, var(--control-icon-sm));
+  --kds-control-padding: var(--control-group-padding, var(--control-padding-sm));
 }
 
 .kds-control-lg {
-  --kds-control-height: var(--control-height-lg);
-  --kds-control-font: var(--control-font-lg);
-  --kds-control-icon: var(--control-icon-lg);
-  --kds-control-padding: var(--control-padding-lg);
+  --kds-control-height: var(--control-group-height, var(--control-height-lg));
+  --kds-control-font: var(--control-group-font, var(--control-font-lg));
+  --kds-control-icon: var(--control-group-icon, var(--control-icon-lg));
+  --kds-control-padding: var(--control-group-padding, var(--control-padding-lg));
 }
 
 .kds-control-icon,

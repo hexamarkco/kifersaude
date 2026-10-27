@@ -1,6 +1,17 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import type { ControlSize } from '../tokens';
+
+export type ControlGroupProps = HTMLAttributes<HTMLDivElement> & {
+  size?: ControlSize;
+  children: ReactNode;
+};
+
+/** A shared size for related actions, fields and composite triggers. */
+export function ControlGroup({ size = 'md', className, children, ...props }: ControlGroupProps) {
+  return <div role="group" className={cx(`kds-control-group-${size}`, className)} {...props}>{children}</div>;
+}
 
 export type PageContainerSize = 'default' | 'wide' | 'full';
 export type PageContainerSpacing = 'sm' | 'md' | 'lg';
@@ -46,12 +57,13 @@ export function PageSection({ className, children, ...props }: PageSectionProps)
 }
 
 export type ToolbarProps = HTMLAttributes<HTMLDivElement> & {
+  size?: ControlSize;
   children: ReactNode;
 };
 
-export function Toolbar({ className, children, ...props }: ToolbarProps) {
+export function Toolbar({ size = 'md', className, children, ...props }: ToolbarProps) {
   return (
-    <div className={cx('kds-toolbar kds-op-toolbar', className)} {...props}>
+    <div className={cx('kds-toolbar kds-op-toolbar', `kds-control-group-${size}`, className)} {...props}>
       {children}
     </div>
   );

@@ -50,7 +50,7 @@ export default function PageHeader({
           {description && <p className="kds-page-description">{description}</p>}
         </div>
         {actions && (
-          <div className="kds-page-actions w-full lg:w-auto lg:justify-end">
+          <div className="kds-page-actions kds-control-group-md w-full lg:w-auto lg:justify-end">
             {actions}
           </div>
         )}

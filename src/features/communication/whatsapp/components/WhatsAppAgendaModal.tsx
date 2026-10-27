@@ -33,6 +33,7 @@ import {
   Badge,
   Button,
   DateTimePicker,
+  ControlGroup,
   EmptyState,
   Input,
   Surface,
@@ -1611,10 +1612,10 @@ export default function WhatsAppAgendaModal({
                   </Text>
                 </div>
 
-                <div className="grid w-full grid-cols-[2.75rem_2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 sm:flex sm:flex-wrap sm:justify-end xl:w-auto">
+                <ControlGroup aria-label="Ações do dia" className="grid w-full grid-cols-[var(--control-height-md)_var(--control-height-md)_minmax(0,1fr)_var(--control-height-md)] items-center gap-2 sm:flex sm:flex-wrap sm:justify-end xl:w-auto">
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
-                      <IconButton variant="secondary"  size="lg" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
+                      <IconButton variant="secondary"  size="md" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
                         <Sparkles className="kds-control-icon" />
                       </IconButton>
                       {pendingCount !== null && pendingCount > 0 ? (
@@ -1624,13 +1625,13 @@ export default function WhatsAppAgendaModal({
                       ) : null}
                     </div>
                   ) : null}
-                  <IconButton onClick={goToPreviousDay} variant="secondary"  aria-label="Dia anterior" size="lg">
+                  <IconButton onClick={goToPreviousDay} variant="secondary"  aria-label="Dia anterior" size="md">
                     <ChevronLeft className="kds-control-icon" />
                   </IconButton>
                   <div className={onSendBatchFollowUps ? "min-w-0 w-full sm:flex-none sm:w-[176px]" : "col-span-2 min-w-0 w-full sm:flex-none sm:w-[176px]"}>
                     <DateTimePicker type="date" value={selectedDateInputValue} onChange={(event) => handleSelectedDateChange(event.target.value)} />
                   </div>
-                  <IconButton onClick={goToNextDay} variant="secondary"  aria-label="Próximo dia" size="lg">
+                  <IconButton onClick={goToNextDay} variant="secondary"  aria-label="Próximo dia" size="md">
                     <ChevronRight className="kds-control-icon" />
                   </IconButton>
                   <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="col-span-2 w-full sm:w-auto">
@@ -1640,7 +1641,7 @@ export default function WhatsAppAgendaModal({
                     <Plus className="kds-control-icon" />
                     Nova tarefa
                   </Button>
-                </div>
+                </ControlGroup>
               </div>
             </Surface>
 

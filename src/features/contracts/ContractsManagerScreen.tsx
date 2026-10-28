@@ -865,13 +865,13 @@ export default function ContractsManager({
           )}
         </Surface>
 
-        <Surface className="kds-record-results" data-panel-animate>
+        <Surface className="kds-record-results kds-contracts-results" padding="none" data-panel-animate>
           <SectionHeader
             eyebrow="Carteira contratual"
             title="Contratos em acompanhamento"
             description="Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial."
             as="h3"
-            className="mb-4"
+            className="kds-contracts-results-header mb-4"
             action={(
               <div className="flex flex-wrap gap-2">
                 <OperationalMetricChip value={filteredContracts.length} label="resultados" />
@@ -1049,6 +1049,7 @@ export default function ContractsManager({
 
           {filteredContracts.length > 0 && (
             <Pagination
+              className="kds-contracts-results-pagination"
               currentPage={currentPage}
               totalPages={totalPages}
               itemsPerPage={itemsPerPage}

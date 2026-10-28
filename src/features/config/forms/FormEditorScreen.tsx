@@ -22,6 +22,7 @@ import { formsService } from "../../../lib/formsService";
 import type { PublicForm, PublicFormStep, PublicFormSubmission } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -67,6 +68,11 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     is_published: form.is_published,
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsErrors, setSettingsErrors] = useState<{ title?: string; slug?: string }>({});
+  const [settingsSaveError, setSettingsSaveError] = useState("");
+  const settingsSaveInFlightRef = useRef(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
 
   const [steps, setSteps] = useState<PublicFormStep[]>([]);
   const [loadingSteps, setLoadingSteps] = useState(true);
@@ -153,19 +159,22 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   const contactStep = steps.find((step) => step.step_type === "contact") ?? null;
 
   const handleSaveSettings = async () => {
-    if (savingSettings) return;
+    if (settingsSaveInFlightRef.current) return;
     const title = settings.title.trim();
     const slug = settings.slug.trim();
 
-    if (!title) {
-      toast.error("Informe um título para o formulário.");
-      return;
-    }
-    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length < 2) {
-      toast.error("O endereço público deve conter apenas letras minúsculas, números e hífens.");
+    const errors = {
+      title: !title ? "Informe um título para o formulário." : undefined,
+      slug: !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) || slug.length < 2 ? "Use pelo menos dois caracteres: letras minúsculas, números e hífens." : undefined,
+    };
+    setSettingsErrors(errors);
+    setSettingsSaveError("");
+    if (errors.title || errors.slug) {
+      (errors.title ? titleRef : slugRef).current?.focus();
       return;
     }
 
+    settingsSaveInFlightRef.current = true;
     setSavingSettings(true);
     try {
       const { data, error } = await formsService.updateForm(form.id, {
@@ -181,14 +190,20 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
       });
 
       if (error || !data) {
-        toast.error(error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível salvar as configurações.");
+        if (error?.code === "23505") {
+          setSettingsErrors({ slug: "Já existe um formulário com esse endereço." });
+          requestAnimationFrame(() => slugRef.current?.focus());
+        } else {
+          setSettingsSaveError("Não foi possível salvar as configurações. Confira sua conexão e tente novamente.");
+        }
       } else {
         onFormUpdated(data);
         toast.success("Configurações salvas.");
       }
     } catch {
-      toast.error("Não foi possível salvar as configurações.");
+      setSettingsSaveError("Não foi possível salvar as configurações. Confira sua conexão e tente novamente.");
     } finally {
+      settingsSaveInFlightRef.current = false;
       setSavingSettings(false);
     }
   };
@@ -360,35 +375,37 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Título">
-              <Input value={settings.title} onChange={(event) => setSettings((prev) => ({ ...prev, title: event.target.value }))} />
+            <Field label="Título" required error={settingsErrors.title}>
+              <Input ref={titleRef} disabled={savingSettings} value={settings.title} onChange={(event) => { setSettingsErrors(prev => ({ ...prev, title: undefined })); setSettings((prev) => ({ ...prev, title: event.target.value })); }} />
             </Field>
-            <Field label="Endereço público" description={`kifersaude.com.br/forms/${settings.slug || "..."}`}>
-              <Input value={settings.slug} onChange={(event) => setSettings((prev) => ({ ...prev, slug: event.target.value }))} />
+            <Field label="Endereço público" required error={settingsErrors.slug} descriptionPlacement="tooltip" description={`kifersaude.com.br/forms/${settings.slug || "..."}`}>
+              <Input ref={slugRef} disabled={savingSettings} value={settings.slug} onChange={(event) => { setSettingsErrors(prev => ({ ...prev, slug: undefined })); setSettings((prev) => ({ ...prev, slug: event.target.value })); }} />
             </Field>
           </div>
 
           <Field label="Descrição (SEO, opcional)">
-            <Textarea rows={2} value={settings.description} onChange={(event) => setSettings((prev) => ({ ...prev, description: event.target.value }))} />
+            <Textarea rows={2} disabled={savingSettings} value={settings.description} onChange={(event) => setSettings((prev) => ({ ...prev, description: event.target.value }))} />
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Título da tela de sucesso">
-              <Input value={settings.success_headline} onChange={(event) => setSettings((prev) => ({ ...prev, success_headline: event.target.value }))} />
+              <Input disabled={savingSettings} value={settings.success_headline} onChange={(event) => setSettings((prev) => ({ ...prev, success_headline: event.target.value }))} />
             </Field>
             <Field label="Mensagem da tela de sucesso">
-              <Input value={settings.success_message} onChange={(event) => setSettings((prev) => ({ ...prev, success_message: event.target.value }))} />
+              <Input disabled={savingSettings} value={settings.success_message} onChange={(event) => setSettings((prev) => ({ ...prev, success_message: event.target.value }))} />
             </Field>
           </div>
 
           <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:flex-wrap sm:items-center">
             <Switch
               checked={settings.request_geolocation}
+              disabled={savingSettings}
               onChange={(event) => setSettings((prev) => ({ ...prev, request_geolocation: event.target.checked }))}
               label="Pedir localização (GPS) antes do contato"
             />
             <Switch
               checked={settings.whatsapp_redirect}
+              disabled={savingSettings}
               onChange={(event) => setSettings((prev) => ({ ...prev, whatsapp_redirect: event.target.checked }))}
               label="Redirecionar para o WhatsApp após enviar"
             />
@@ -398,6 +415,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
             <Field label="Mensagem pré-preenchida no WhatsApp" description="Use {{nome}} para inserir o nome informado no formulário.">
               <Textarea
                 rows={2}
+                disabled={savingSettings}
                 value={settings.whatsapp_message_template}
                 onChange={(event) => setSettings((prev) => ({ ...prev, whatsapp_message_template: event.target.value }))}
                 placeholder="Olá! Sou {{nome}} e acabei de preencher o formulário no site."
@@ -408,11 +426,13 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
             <Switch
               checked={settings.is_published}
+              disabled={savingSettings}
               onChange={(event) => setSettings((prev) => ({ ...prev, is_published: event.target.checked }))}
               label={settings.is_published ? "Publicado" : "Rascunho (não acessível publicamente)"}
             />
             <PageActions placement="form" primary={{ label: savingSettings ? "Salvando..." : "Salvar configurações", icon: Save, loading: savingSettings, onClick: () => void handleSaveSettings() }} />
           </div>
+          {settingsSaveError && <Alert tone="danger" role="alert" title="Não foi possível salvar">{settingsSaveError}</Alert>}
         </div>
       </Card>
 

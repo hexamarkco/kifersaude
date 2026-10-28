@@ -941,11 +941,11 @@ export default function ContractsManager({
                       <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}{contract.modalidade ? ` · ${formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}` : ""}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
-                      {contract.comissao_prevista && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
+                      <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
+                      {contract.comissao_prevista != null && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">{renderDateBadges(contract, true)}</div>
+                      {renderDateBadges(contract, true) ?? <span className="text-[var(--text-muted)]">Sem destaque</span>}
                     </TableCell>
                     <TableCell>{formatContractEntityName(contract.responsavel) || "Não atribuído"}</TableCell>
                       <TableCell align="right">
@@ -959,6 +959,7 @@ export default function ContractsManager({
           </div>
 
           <div className="grid grid-cols-1 gap-3 lg:hidden">
+            {filteredContracts.length === 0 && <EmptyState icon={<FileText className="h-8 w-8" />} title="Nenhum contrato encontrado" description="Tente ajustar os filtros ou adicione um novo contrato." />}
             {paginatedContracts.map((contract) => {
               const bonusValue = getBonusValue(contract);
 
@@ -998,7 +999,7 @@ export default function ContractsManager({
                     </div>
                     <div className="min-w-0">
                       <span className="block text-xs text-[var(--text-muted)]">Mensalidade</span>
-                      <span className="block truncate font-semibold text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não informada'}</span>
+                      <span className="block truncate font-semibold text-[var(--text-primary)]">{contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não informada'}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="block text-xs text-[var(--text-muted)]">Responsável</span>
@@ -1019,7 +1020,7 @@ export default function ContractsManager({
                       <div className="grid grid-cols-2 gap-3">
                         <span>Modalidade: {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
                         <span>Criado em: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</span>
-                        {contract.comissao_prevista && <span>Comissão prevista: R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
+                        {contract.comissao_prevista != null && <span>Comissão prevista: R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
                         {bonusValue !== null && <span>Bônus: R$ {bonusValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
                         {contract.mes_reajuste && <span>Mês de reajuste: {formatDate(contract.mes_reajuste.toString(), 'monthOnly')}</span>}
                         {contract.previsao_recebimento_comissao && <span>Prev. comissão: {formatDate(contract.previsao_recebimento_comissao)}</span>}
@@ -1036,17 +1037,6 @@ export default function ContractsManager({
               );
             })}
 
-            {filteredContracts.length === 0 && (
-              <Surface variant="muted" className="py-12 text-center" data-panel-animate>
-                <FileText className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
-                <Heading level={3} className="mb-2 text-lg font-medium text-[var(--text-primary)]">
-                  Nenhum contrato encontrado
-                </Heading>
-                <Text className="text-[var(--text-secondary)]">
-                  Tente ajustar os filtros ou adicione um novo contrato.
-                </Text>
-              </Surface>
-            )}
           </div>
 
           {filteredContracts.length > 0 && (

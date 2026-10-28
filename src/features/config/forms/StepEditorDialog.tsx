@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import type { PublicFormFieldKey, PublicFormStep, PublicFormStepOption, PublicFormStepType } from "../../public-content";
-import { toast } from "../../../lib/toast";
 import {
   Button,
   Dialog,
@@ -71,9 +70,14 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
   const [isRequired, setIsRequired] = useState(true);
   const [fieldKey, setFieldKey] = useState<"none" | PublicFormFieldKey>("none");
   const [options, setOptions] = useState<PublicFormStepOption[]>([emptyOption(), emptyOption()]);
+  const [errors, setErrors] = useState<{ title?: string; options?: string }>({});
+  const titleRef = useRef<HTMLInputElement>(null);
+  const optionRef = useRef<HTMLInputElement>(null);
+  const optionsFieldId = `question-options-${useId().replace(/:/g, "")}`;
 
   useEffect(() => {
     if (!open) return;
+    setErrors({});
 
     if (initialStep) {
       setStepType(initialStep.step_type === "contact" ? "single_choice" : initialStep.step_type);
@@ -117,7 +121,8 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
   const handleSubmit = () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      toast.error("Informe o título da pergunta.");
+      setErrors({ title: "Informe o título da pergunta." });
+      titleRef.current?.focus();
       return;
     }
 
@@ -130,14 +135,16 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
         .filter((option) => option.label.length > 0);
 
       if (cleanedOptions.length < 2) {
-        toast.error("Adicione ao menos 2 opções.");
+        setErrors({ options: "Adicione ao menos 2 opções." });
+        optionRef.current?.focus();
         return;
       }
 
       if (fieldKey === "tipo_contratacao") {
         const missingValue = cleanedOptions.some((option) => !option.value);
         if (missingValue) {
-          toast.error("Defina o tipo de contratação (PF/MEI/CNPJ) de cada opção.");
+          setErrors({ options: "Defina o tipo de contratação (PF/MEI/CNPJ) de cada opção." });
+          optionRef.current?.focus();
           return;
         }
         finalOptions = cleanedOptions.map((option) => ({ id: option.id, label: option.label, value: option.value }));
@@ -172,13 +179,14 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
       </DialogHeader>
       <DialogBody>
         <div className="space-y-4">
-          <Field label="Tipo de pergunta">
-            <Select disabled={saving} value={stepType} onChange={(event) => handleTypeChange(event.target.value as PublicFormStepType)} options={QUESTION_TYPE_OPTIONS} />
-          </Field>
-
-          <Field label="Título">
-            <Input disabled={saving} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex: Você já tem plano de saúde?" />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Título" required error={errors.title}>
+              <Input ref={titleRef} disabled={saving} value={title} onChange={(event) => { setTitle(event.target.value); setErrors(prev => ({ ...prev, title: undefined })); }} placeholder="Ex: Você já tem plano de saúde?" />
+            </Field>
+            <Field label="Tipo de pergunta">
+              <Select disabled={saving} value={stepType} onChange={(event) => handleTypeChange(event.target.value as PublicFormStepType)} options={QUESTION_TYPE_OPTIONS} />
+            </Field>
+          </div>
 
           <Field label="Descrição (opcional)">
             <Textarea disabled={saving} rows={2} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Texto de apoio exibido abaixo do título" />
@@ -200,22 +208,27 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
           </Field>
 
           {isChoiceType && (
-            <Field label="Opções">
+            <Field label="Opções" htmlFor={optionsFieldId} error={errors.options}>
               <div className="space-y-2">
                 {options.map((option, index) => (
-                  <div key={option.id} className="flex items-center gap-2">
+                  <div key={option.id} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                     <Input
+                      ref={index === 0 ? optionRef : undefined}
+                      aria-label={`Opção ${index + 1}`}
+                      aria-invalid={index === 0 && errors.options ? true : undefined}
+                      aria-describedby={index === 0 && errors.options ? `${optionsFieldId}-message` : undefined}
                       value={option.label}
                       disabled={saving}
-                      onChange={(event) => updateOptionLabel(option.id, event.target.value)}
+                      onChange={(event) => { updateOptionLabel(option.id, event.target.value); setErrors(prev => ({ ...prev, options: undefined })); }}
                       placeholder={`Opção ${index + 1}`}
-                      className="flex-1"
+                      className="min-w-0 flex-1"
                     />
                     {fieldKey === "tipo_contratacao" && (
                       <Select
+                        aria-label={`Tipo de contratação da opção ${index + 1}`}
                         value={option.value ?? ""}
                         disabled={saving}
-                        onChange={(event) => updateOptionValue(option.id, event.target.value)}
+                        onChange={(event) => { updateOptionValue(option.id, event.target.value); setErrors(prev => ({ ...prev, options: undefined })); }}
                         options={[{ value: "", label: "Tipo..." }, ...CONTRACT_TYPE_OPTIONS]}
                         className="w-40"
                       />
@@ -227,7 +240,7 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
                       disabled={saving || options.length <= 2}
                       size="sm"
                       onClick={() => removeOption(option.id)}
-                      aria-label={`Remover opção ${option.value || option.id}`}
+                      aria-label={`Remover opção ${index + 1}`}
                       title="Remover opção"
                     >
                       <Trash2 aria-hidden="true" />

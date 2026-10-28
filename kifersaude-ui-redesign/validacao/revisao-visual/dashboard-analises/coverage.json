@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Dashboard — análises reais",
+  "route": "/painel/dashboard",
+  "context": "state--dashboard-analises",
+  "status": "revisado_com_adaptacoes",
+  "references": [
+    "references/desktop/state--dashboard-analises.png",
+    "references/mobile/state--dashboard-analises.png"
+  ],
+  "viewport_sizes": [
+    "1920x1080",
+    "768x1024",
+    "390x844",
+    "320x640"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "checks": {
+    "no_horizontal_overflow": true,
+    "themes_verified_at_all_viewports": true,
+    "real_state": "Disclosure Abrir/Ocultar análises expande os relatórios existentes, sem formulário de cadastro.",
+    "open_close_interaction": "Playwright confirmou abrir, ocultar e abrir novamente; o conteúdo aparece e desaparece sem alterar rota ou dados.",
+    "reference_adaptation": "O modal de nome/descrição/status não corresponde a uma entidade ou fluxo atual do CRM. Não foi criado CRUD fictício.",
+    "empty_and_error_states": "A cobertura indisponível e os estados vazios da fixture permanecem explícitos; ausência de dados não é apresentada como zero.",
+    "safety": "Fixture sintética. Atualizar produção não foi acionado. A guarda do inventário visual bloqueou a tentativa automática de criar lembretes com HTTP 403; nenhuma escrita remota ocorreu.",
+    "browser_console": "Timeout da conexão Realtime local, aviso de ciclo de vida legado e respostas 403 do bloqueio de fixture; sem falha no abrir/recolher a seção.",
+    "measured_document_widths": {
+      "1920x1080": 1910,
+      "768x1024": 758,
+      "390x844": 380,
+      "320x640": 310
+    }
+  },
+  "screenshots": [
+    { "path": "desktop/analyses-viewport.png", "viewport": "1920x1080", "width": 1920, "height": 1080, "theme": "light", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "desktop/analyses-full.png", "viewport": "1920x1080", "width": 1920, "height": 6440, "theme": "light", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "desktop/analyses-dark-viewport.png", "viewport": "1920x1080", "width": 1920, "height": 1080, "theme": "dark", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "desktop/analyses-dark-full.png", "viewport": "1920x1080", "width": 1920, "height": 6440, "theme": "dark", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "tablet/analyses-viewport.png", "viewport": "768x1024", "width": 768, "height": 1024, "theme": "light", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "tablet/analyses-full.png", "viewport": "768x1024", "width": 768, "height": 10091, "theme": "light", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "tablet/analyses-dark-viewport.png", "viewport": "768x1024", "width": 768, "height": 1024, "theme": "dark", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "tablet/analyses-dark-full.png", "viewport": "768x1024", "width": 768, "height": 10091, "theme": "dark", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "mobile/analyses-viewport.png", "viewport": "390x844", "width": 390, "height": 844, "theme": "light", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "mobile/analyses-full.png", "viewport": "390x844", "width": 390, "height": 11786, "theme": "light", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "mobile/analyses-dark-viewport.png", "viewport": "390x844", "width": 390, "height": 844, "theme": "dark", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "mobile/analyses-dark-full.png", "viewport": "390x844", "width": 390, "height": 11786, "theme": "dark", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "mobile-320/analyses-viewport.png", "viewport": "320x640", "width": 320, "height": 640, "theme": "light", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "mobile-320/analyses-full.png", "viewport": "320x640", "width": 320, "height": 12500, "theme": "light", "state": "dashboard completo com análises reais expandidas" },
+    { "path": "mobile-320/analyses-dark-viewport.png", "viewport": "320x640", "width": 320, "height": 640, "theme": "dark", "state": "seção de análises reais expandida, viewport focada" },
+    { "path": "mobile-320/analyses-dark-full.png", "viewport": "320x640", "width": 320, "height": 12500, "theme": "dark", "state": "dashboard completo com análises reais expandidas" }
+  ]
+}

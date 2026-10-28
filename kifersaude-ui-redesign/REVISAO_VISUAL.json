@@ -28,7 +28,7 @@
       "notes": [
         "Comparada com as referências em desktop, tablet, mobile e 320 px; sem overflow horizontal. Temas claro/escuro conferidos em desktop e mobile.",
         "Quatro indicadores principais ficam em destaque e os dois indicadores complementares reais permanecem acessíveis pelo disclosure do design system; cálculos, valores e permissões foram preservados.",
-        "A fixture é sintética e contém um ponto na série mensal. Filtros avançados e seletor de período foram revisados nos contextos state--dashboard-filtros e state--dashboard-periodo; análises/modais permanecem pendentes."
+        "A fixture é sintética e contém um ponto na série mensal. Os quatro contextos do Dashboard foram comparados; state--dashboard-analises registra que a referência pede um cadastro inexistente, mantendo a divulgação real dos relatórios sem inventar persistência."
       ]
     },
     {
@@ -1068,7 +1068,7 @@
         "Comparado com as referências em 1920×1080, 768×1024, 390×844 e 320×640, nos temas claro e escuro; sem overflow horizontal.",
         "Desktop usa Dialog compacto ancorado ao acionador; mobile usa Drawer de viewport completa com rodapé fixo. O intervalo personalizado usa DateTimePicker em uma etapa própria e só é aplicado após confirmação.",
         "Mantidas as sete opções reais do CRM, incluindo Mês anterior e Todo o período que não aparecem na referência estática; fixture sintética e sem escrita real.",
-        "20 screenshots e cobertura Playwright registradas; revisão de análises/modais permanece pendente."
+        "20 screenshots e cobertura Playwright registradas; o contexto de análises foi revisado separadamente com adaptação funcional documentada."
       ]
     },
     {
@@ -1082,9 +1082,16 @@
         "references/desktop/state--dashboard-analises.png",
         "references/mobile/state--dashboard-analises.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/dashboard-analises/README.md",
+        "validacao/revisao-visual/dashboard-analises/coverage.json"
+      ],
+      "notes": [
+        "A referência mostra um modal para cadastrar análise personalizada, mas o CRM atual não possui entidade, salvamento ou fluxo de criação/edição desse tipo.",
+        "Revisado o estado funcional real: Abrir/Ocultar análises exibe os relatórios comerciais existentes. Não foi criada ação ou persistência fictícia.",
+        "16 screenshots em quatro resoluções e dois temas; sem overflow horizontal. A fixture bloqueou com HTTP 403 a tentativa automática de criar lembretes, sem escrita remota."
+      ]
     },
     {
       "id": "state--leads-criar",
@@ -2476,8 +2483,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 10,
-    "remaining_manifest_contexts": 150,
+    "reviewed_contexts": 11,
+    "remaining_manifest_contexts": 149,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

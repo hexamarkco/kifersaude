@@ -2,7 +2,7 @@
   "generated_at": "2026-10-28",
   "module": "Dashboard",
   "route": "/painel/dashboard",
-  "status": "partial",
+  "status": "revisado_com_adaptacoes",
   "target": [
     "references/desktop/page--dashboard.png",
     "references/mobile/page--dashboard.png"
@@ -10,11 +10,10 @@
   "reviewed_contexts": [
     "page--dashboard",
     "state--dashboard-filtros",
-    "state--dashboard-periodo"
-  ],
-  "pending_contexts": [
+    "state--dashboard-periodo",
     "state--dashboard-analises"
   ],
+  "pending_contexts": [],
   "visual_review": {
     "widths": [
       "1920x1080",

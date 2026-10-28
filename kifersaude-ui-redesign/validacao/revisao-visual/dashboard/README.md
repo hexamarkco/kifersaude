@@ -15,6 +15,7 @@
 - A referência estática mostra quatro indicadores e uma série mensal mais populada. O dashboard real oferece seis métricas; as duas complementares ficam recolhidas para preservar a hierarquia sem remover informação. A fixture Playwright é sintética e contém somente um mês, então o gráfico tem um ponto; isso não representa a série histórica de produção.
 - A sessão local usa dados de demonstração. Nenhum registro foi criado, alterado ou excluído e nenhuma comunicação foi enviada. O console do ambiente reportou o aviso de ciclo de vida `UNSAFE_componentWillMount` de uma dependência e timeout da conexão Realtime de teste; nenhuma ação do dashboard dependeu dessa conexão durante a captura.
 - Os filtros avançados foram comparados e revisados com adaptações em [`state--dashboard-filtros`](../dashboard-filtros/README.md). O seletor de período também foi comparado em [`state--dashboard-periodo`](../dashboard-periodo/README.md): período em rascunho até confirmação, intervalo personalizado em etapa própria e Drawer compacto no mobile.
+- O estado real de análises e os limites da referência foram registrados em [`state--dashboard-analises`](../dashboard-analises/README.md). O CRM expande relatórios existentes; não possui o cadastro mostrado no modal da imagem.
 
 ## Capturas
 
@@ -46,6 +47,6 @@ As páginas foram capturadas com Playwright após esperar fontes e imagens e des
 - Sem overflow horizontal medido; em 390 px e 320 px o disclosure termina acima da navegação inferior fixa.
 - Testes do `DashboardDailyOverview` passaram; também passaram typecheck, lint, auditorias arquitetural, visual e do design system, build/verificação do bundle e suíte completa (**1.730 testes em 328 arquivos**). O build mantém o aviso conhecido de chunk vendor acima de 500 kB.
 
-## Pendências do dashboard
+## Status dos contextos do dashboard
 
-- Comparar e validar separadamente as análises/modais indicados em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json). A página, os filtros e o seletor de período não encerram o redesign integral.
+- Os quatro contextos do Dashboard no manifesto foram revisados com adaptações. O modal de criação de análise na referência não tem fluxo correspondente no CRM atual; essa diferença está documentada no contexto de análises. O redesign integral e a descoberta de interfaces adicionais continuam em andamento.

@@ -1,0 +1,810 @@
+- generic [ref=f9e3]:
+  - navigation "Navegação principal" [ref=f9e4]:
+    - button "Início" [ref=f9e5] [cursor=pointer]
+    - button "Leads" [ref=f9e12] [cursor=pointer]
+    - button "WhatsApp" [ref=f9e19] [cursor=pointer]
+    - button "Contratos" [ref=f9e23] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f9e28] [cursor=pointer]:
+      - generic [ref=f9e30]: Mais
+  - generic [ref=f9e31]:
+    - banner [ref=f9e32]:
+      - generic [ref=f9e33]:
+        - img "Kifer Saúde" [ref=f9e34]:
+          - generic [ref=f9e35]: kifersaúde
+        - generic [ref=f9e36]:
+          - button "Abrir menu" [ref=f9e37] [cursor=pointer]
+          - generic [ref=f9e40]: OD
+    - main [ref=f9e42]:
+      - generic [ref=f9e44]:
+        - generic [ref=f9e46]:
+          - generic [ref=f9e47]:
+            - paragraph [ref=f9e48]: Operação comercial
+            - heading "Dashboard" [level=1] [ref=f9e51]
+            - paragraph [ref=f9e52]: Veja o que pede atenção e escolha o próximo passo da operação.
+          - generic [ref=f9e54]:
+            - button "Filtros avançados" [ref=f9e55] [cursor=pointer]:
+              - generic [ref=f9e56]: Filtros
+            - 'button "Período: Personalizado" [ref=f9e59] [cursor=pointer]':
+              - generic [ref=f9e60]: Personalizado
+        - region "Indicadores do período" [ref=f9e66]:
+          - generic [ref=f9e68]:
+            - paragraph [ref=f9e69]: Resultado
+            - heading "Indicadores do período" [level=2] [ref=f9e70]
+            - paragraph [ref=f9e71]: "Recorte ativo: 01 de out. – 28 de out.."
+          - generic [ref=f9e72]:
+            - generic [ref=f9e73]:
+              - heading "Vendas" [level=3] [ref=f9e77]
+              - generic [ref=f9e78]: "4"
+              - generic [ref=f9e79]: 8 leads recebidos
+            - generic [ref=f9e80]:
+              - heading "Valor mensal vendido" [level=3] [ref=f9e84]
+              - generic [ref=f9e85]: R$ 5.020,00
+              - generic [ref=f9e86]: Mensalidade registrada
+            - generic [ref=f9e87]:
+              - heading "Comissão prevista" [level=3] [ref=f9e91]
+              - generic [ref=f9e92]: R$ 10.040,00
+              - generic [ref=f9e93]: Sem forecast adicional
+            - generic [ref=f9e94]:
+              - heading "Conversão" [level=3] [ref=f9e98]
+              - generic [ref=f9e99]: 0%
+              - generic [ref=f9e100]: Leads com contrato
+          - group [ref=f9e101]:
+            - generic "Ver 2 indicadores complementares" [ref=f9e102] [cursor=pointer]
+        - generic [ref=f9e106]:
+          - generic [ref=f9e108]:
+            - generic [ref=f9e109]:
+              - generic [ref=f9e110]:
+                - paragraph [ref=f9e111]: Performance comercial
+                - heading "Evolução mensal" [level=2] [ref=f9e112]
+                - paragraph [ref=f9e113]: Compare o ritmo de entrada, fechamento e comissão dentro dos filtros ativos.
+              - generic [ref=f9e115]:
+                - tablist "Métrica da evolução mensal" [ref=f9e117]:
+                  - tab "Leads" [selected] [ref=f9e118] [cursor=pointer]
+                  - tab "Contratos" [ref=f9e120] [cursor=pointer]
+                  - tab "Comissões" [ref=f9e122] [cursor=pointer]
+                - button "Últimos 6 meses" [ref=f9e125] [cursor=pointer]
+            - generic [ref=f9e132]:
+              - generic [ref=f9e133]:
+                - generic [ref=f9e134]:
+                  - generic [ref=f9e135]:
+                    - paragraph [ref=f9e136]: Leads recebidos
+                    - paragraph [ref=f9e137]: Novas oportunidades adicionadas ao CRM.
+                  - generic [ref=f9e138]:
+                    - generic [ref=f9e140]: "8"
+                    - generic [ref=f9e141]: out. de 26
+                - generic [ref=f9e142]:
+                  - generic [ref=f9e143]:
+                    - generic [ref=f9e144]:
+                      - paragraph [ref=f9e145]: Série temporal
+                      - paragraph [ref=f9e146]: Tendência suavizada do indicador selecionado
+                    - generic [ref=f9e147]: Série atual
+                  - img "Evolução mensal do indicador selecionado" [ref=f9e150]:
+                    - generic [ref=f9e151]: "8"
+                    - generic [ref=f9e153]: "6"
+                    - generic [ref=f9e155]: "4"
+                    - generic [ref=f9e157]: "2"
+                    - generic [ref=f9e159]: "0"
+                    - 'generic "out. de 26: 8" [ref=f9e161]':
+                      - generic [ref=f9e164]: "8"
+                      - generic [ref=f9e165]: out. de 26
+              - complementary "Resumo da evolução mensal" [ref=f9e166]:
+                - generic [ref=f9e167]:
+                  - paragraph [ref=f9e173]: Último mês
+                  - paragraph [ref=f9e174]: "8"
+                  - paragraph [ref=f9e175]: Sem comparação
+                  - paragraph [ref=f9e176]: out. de 26
+                - generic [ref=f9e177]:
+                  - paragraph [ref=f9e182]: Média do período
+                  - paragraph [ref=f9e183]: "8"
+                  - paragraph [ref=f9e184]: Base dos últimos 1 meses
+                  - paragraph [ref=f9e185]: Média mensal
+                - generic [ref=f9e186]:
+                  - paragraph [ref=f9e191]: Melhor mês
+                  - paragraph [ref=f9e192]: "8"
+                  - paragraph [ref=f9e193]: out. de 26 foi o pico
+                  - paragraph [ref=f9e194]: out. de 26
+          - region "Resumo da operação diária" [ref=f9e195]:
+            - generic [ref=f9e196]:
+              - generic [ref=f9e197]:
+                - generic [ref=f9e198]:
+                  - generic [ref=f9e199]:
+                    - paragraph [ref=f9e200]: Prioridades de hoje
+                    - paragraph [ref=f9e201]: Sinais de follow-up, próxima etapa e atividade recente.
+                  - generic [ref=f9e202]:
+                    - button "Abrir agenda" [ref=f9e203] [cursor=pointer]
+                    - button "Abrir leads" [ref=f9e207] [cursor=pointer]
+                - list [ref=f9e211]:
+                  - listitem [ref=f9e212]:
+                    - button "Contato Demonstração 01 Follow-up vencido Contato inicial" [ref=f9e213] [cursor=pointer]:
+                      - generic [ref=f9e214]: Contato Demonstração 01
+                      - generic [ref=f9e218]:
+                        - generic [ref=f9e219]: Follow-up vencido
+                        - generic [ref=f9e222]: Contato inicial
+                  - listitem [ref=f9e224]:
+                    - button "Contato Demonstração 02 Follow-up vencido Em atendimento" [ref=f9e225] [cursor=pointer]:
+                      - generic [ref=f9e226]: Contato Demonstração 02
+                      - generic [ref=f9e230]:
+                        - generic [ref=f9e231]: Follow-up vencido
+                        - generic [ref=f9e234]: Em atendimento
+                  - listitem [ref=f9e236]:
+                    - button "Contato Demonstração 03 Follow-up vencido Proposta enviada" [ref=f9e237] [cursor=pointer]:
+                      - generic [ref=f9e238]: Contato Demonstração 03
+                      - generic [ref=f9e242]:
+                        - generic [ref=f9e243]: Follow-up vencido
+                        - generic [ref=f9e246]: Proposta enviada
+                  - listitem [ref=f9e248]:
+                    - button "Contato Demonstração 04 Etapa avançada Contratado" [ref=f9e249] [cursor=pointer]:
+                      - generic [ref=f9e250]: Contato Demonstração 04
+                      - generic [ref=f9e254]:
+                        - generic [ref=f9e255]: Etapa avançada
+                        - generic [ref=f9e259]: Contratado
+              - generic [ref=f9e261]:
+                - button [ref=f9e262] [cursor=pointer]:
+                  - paragraph [ref=f9e263]: "3"
+                  - paragraph [ref=f9e264]: Atrasados
+                - button [ref=f9e265] [cursor=pointer]:
+                  - paragraph [ref=f9e266]: "0"
+                  - paragraph [ref=f9e267]: Pendentes
+                - button [ref=f9e268] [cursor=pointer]:
+                  - paragraph [ref=f9e269]: "8"
+                  - paragraph [ref=f9e270]: Sem próximo passo
+        - generic [ref=f9e272]:
+          - generic [ref=f9e273]:
+            - paragraph [ref=f9e274]: Aprofundar
+            - heading "Análises e operação da equipe" [level=2] [ref=f9e275]
+            - paragraph [ref=f9e276]: Resultados detalhados, produção, distribuição, automações e calendário.
+          - button "Ocultar análises" [expanded] [active] [ref=f9e381] [cursor=pointer]
+        - generic [ref=f9e382]:
+          - region [ref=f9e383]:
+            - generic [ref=f9e384]:
+              - generic [ref=f9e385]:
+                - heading "Produção da equipe" [level=2] [ref=f9e386]
+                - paragraph [ref=f9e387]: Atividade por executor · carteira compartilhada · horário de Brasília
+              - button "Atualizar produção" [ref=f9e388] [cursor=pointer]
+            - generic [ref=f9e389]:
+              - button "Hoje" [ref=f9e390] [cursor=pointer]
+              - button "7 dias" [ref=f9e391] [cursor=pointer]
+              - button "30 dias" [ref=f9e392] [cursor=pointer]
+              - generic [ref=f9e393]:
+                - generic [ref=f9e394]: De
+                - textbox "De" [ref=f9e398]: 2026-10-28
+              - generic [ref=f9e399]:
+                - generic [ref=f9e400]: Até
+                - textbox "Até" [ref=f9e404]: 2026-10-28
+              - generic [ref=f9e405]:
+                - generic [ref=f9e406]: Executor
+                - combobox [aria-hidden] [ref=f9e409]
+                - button "Executor" [ref=f9e411] [cursor=pointer]:
+                  - generic [ref=f9e412]: Toda a equipe
+            - generic [ref=f9e415]: "Cobertura indisponível: não foi possível consultar a produção. Os dados não representam zero."
+          - generic [ref=f9e418]:
+            - region [ref=f9e419]:
+              - generic [ref=f9e420]:
+                - generic [ref=f9e422]:
+                  - paragraph [ref=f9e423]: Negociações
+                  - heading "Funil comercial" [level=2] [ref=f9e424]
+                  - paragraph [ref=f9e425]: Veja quantos contatos estão em cada etapa e há quanto tempo estão nela.
+                - generic [ref=f9e426]:
+                  - button "Contato inicial 2 25 3d médios 100% avançam Valor mensal não registrado" [ref=f9e427] [cursor=pointer]:
+                    - generic [ref=f9e428]:
+                      - generic [ref=f9e429]: Contato inicial
+                      - generic [ref=f9e431]: "2"
+                    - progressbar [ref=f9e434]
+                    - generic [ref=f9e435]:
+                      - generic [ref=f9e436]: 3d médios
+                      - generic [ref=f9e437]: 100% avançam
+                    - paragraph [ref=f9e438]: Valor mensal não registrado
+                  - button "Em atendimento 2 25 3d médios Sem base de avanço Valor mensal não registrado" [ref=f9e439] [cursor=pointer]:
+                    - generic [ref=f9e440]:
+                      - generic [ref=f9e441]: Em atendimento
+                      - generic [ref=f9e443]: "2"
+                    - progressbar [ref=f9e446]
+                    - generic [ref=f9e447]:
+                      - generic [ref=f9e448]: 3d médios
+                      - generic [ref=f9e449]: Sem base de avanço
+                    - paragraph [ref=f9e450]: Valor mensal não registrado
+                  - button "Proposta enviada 2 25 3d médios Sem base de avanço Valor mensal não registrado" [ref=f9e451] [cursor=pointer]:
+                    - generic [ref=f9e452]:
+                      - generic [ref=f9e453]: Proposta enviada
+                      - generic [ref=f9e455]: "2"
+                    - progressbar [ref=f9e458]
+                    - generic [ref=f9e459]:
+                      - generic [ref=f9e460]: 3d médios
+                      - generic [ref=f9e461]: Sem base de avanço
+                    - paragraph [ref=f9e462]: Valor mensal não registrado
+                  - button "Contratado 2 25 3d médios Sem base de avanço Valor mensal não registrado" [ref=f9e463] [cursor=pointer]:
+                    - generic [ref=f9e464]:
+                      - generic [ref=f9e465]: Contratado
+                      - generic [ref=f9e467]: "2"
+                    - progressbar [ref=f9e470]
+                    - generic [ref=f9e471]:
+                      - generic [ref=f9e472]: 3d médios
+                      - generic [ref=f9e473]: Sem base de avanço
+                    - paragraph [ref=f9e474]: Valor mensal não registrado
+            - generic [ref=f9e475]:
+              - region [ref=f9e476]:
+                - generic [ref=f9e477]:
+                  - generic [ref=f9e479]:
+                    - paragraph [ref=f9e480]: Próxima ação
+                    - heading "Oportunidades que precisam de atenção" [level=2] [ref=f9e481]
+                    - paragraph [ref=f9e482]: Prioridade baseada em follow-up vencido, etapa avançada, próximo passo e atividade real.
+                  - region "Tabela com rolagem horizontal" [ref=f9e484]:
+                    - table [ref=f9e485]:
+                      - rowgroup [ref=f9e493]:
+                        - row [ref=f9e494]:
+                          - columnheader [ref=f9e495]:
+                            - button "Ordenar por Cliente" [ref=f9e496] [cursor=pointer]:
+                              - generic [ref=f9e497]: Cliente
+                          - columnheader [ref=f9e501]:
+                            - button "Ordenar por Estágio" [ref=f9e502] [cursor=pointer]:
+                              - generic [ref=f9e503]: Estágio
+                          - columnheader [ref=f9e507]:
+                            - button "Ordenar por Último contato" [ref=f9e508] [cursor=pointer]:
+                              - generic [ref=f9e509]: Último contato
+                          - columnheader [ref=f9e513]:
+                            - button "Ordenar por Próximo passo" [ref=f9e514] [cursor=pointer]:
+                              - generic [ref=f9e515]: Próximo passo
+                          - columnheader [ref=f9e519]:
+                            - button "Ordenar por Responsável" [ref=f9e520] [cursor=pointer]:
+                              - generic [ref=f9e521]: Responsável
+                          - columnheader [ref=f9e525]:
+                            - button "Ordenar por Valor" [ref=f9e526] [cursor=pointer]:
+                              - generic [ref=f9e527]: Valor
+                      - rowgroup [ref=f9e531]:
+                        - row [ref=f9e532]:
+                          - cell [ref=f9e533]:
+                            - button "Contato Demonstração 01" [ref=f9e534] [cursor=pointer]
+                            - generic [ref=f9e538]: Follow-up vencido
+                          - cell "Contato inicial" [ref=f9e542]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e545]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e546]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e547]
+                          - cell "Operador Demonstração" [ref=f9e548]
+                          - cell "—/mês" [ref=f9e549]
+                        - row [ref=f9e550]:
+                          - cell [ref=f9e551]:
+                            - button "Contato Demonstração 02" [ref=f9e552] [cursor=pointer]
+                            - generic [ref=f9e556]: Follow-up vencido
+                          - cell "Em atendimento" [ref=f9e560]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e563]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e564]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e565]
+                          - cell "Operador Demonstração" [ref=f9e566]
+                          - cell "—/mês" [ref=f9e567]
+                        - row [ref=f9e568]:
+                          - cell [ref=f9e569]:
+                            - button "Contato Demonstração 03" [ref=f9e570] [cursor=pointer]
+                            - generic [ref=f9e574]: Follow-up vencido
+                          - cell "Proposta enviada" [ref=f9e578]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e581]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e582]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e583]
+                          - cell "Operador Demonstração" [ref=f9e584]
+                          - cell "—/mês" [ref=f9e585]
+                        - row [ref=f9e586]:
+                          - cell [ref=f9e587]:
+                            - button "Contato Demonstração 04" [ref=f9e588] [cursor=pointer]
+                            - generic [ref=f9e592]: Etapa avançada
+                          - cell "Contratado" [ref=f9e597]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e600]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e601]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e602]
+                          - cell "Operador Demonstração" [ref=f9e603]
+                          - cell "—/mês" [ref=f9e604]
+                        - row [ref=f9e605]:
+                          - cell [ref=f9e606]:
+                            - button "Contato Demonstração 07" [ref=f9e607] [cursor=pointer]
+                            - generic [ref=f9e611]: Etapa avançada
+                          - cell "Proposta enviada" [ref=f9e616]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e619]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e620]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e621]
+                          - cell "Operador Demonstração" [ref=f9e622]
+                          - cell "—/mês" [ref=f9e623]
+                        - row [ref=f9e624]:
+                          - cell [ref=f9e625]:
+                            - button "Contato Demonstração 08" [ref=f9e626] [cursor=pointer]
+                            - generic [ref=f9e630]: Etapa avançada
+                          - cell "Contratado" [ref=f9e635]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e638]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e639]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e640]
+                          - cell "Operador Demonstração" [ref=f9e641]
+                          - cell "—/mês" [ref=f9e642]
+                        - row [ref=f9e643]:
+                          - cell [ref=f9e644]:
+                            - button "Contato Demonstração 05" [ref=f9e645] [cursor=pointer]
+                            - generic [ref=f9e649]: Sem próximo passo
+                          - cell "Contato inicial" [ref=f9e654]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e657]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e658]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e659]
+                          - cell "Operador Demonstração" [ref=f9e660]
+                          - cell "—/mês" [ref=f9e661]
+                        - row [ref=f9e662]:
+                          - cell [ref=f9e663]:
+                            - button "Contato Demonstração 06" [ref=f9e664] [cursor=pointer]
+                            - generic [ref=f9e668]: Sem próximo passo
+                          - cell "Em atendimento" [ref=f9e673]
+                          - cell "25/10/2026 3d sem interação" [ref=f9e676]:
+                            - text: 25/10/2026
+                            - generic [ref=f9e677]: 3d sem interação
+                          - cell "26/10/2026" [ref=f9e678]
+                          - cell "Operador Demonstração" [ref=f9e679]
+                          - cell "—/mês" [ref=f9e680]
+              - region [ref=f9e681]:
+                - generic [ref=f9e682]:
+                  - generic [ref=f9e683]:
+                    - generic [ref=f9e684]:
+                      - paragraph [ref=f9e685]: Agenda comercial
+                      - heading "Hoje" [level=2] [ref=f9e686]
+                      - paragraph [ref=f9e687]: Lembretes pendentes, atrasados e concluídos.
+                    - button "Abrir agenda" [ref=f9e689] [cursor=pointer]
+                  - generic [ref=f9e693]:
+                    - generic [ref=f9e694]:
+                      - paragraph [ref=f9e695]: "0"
+                      - paragraph [ref=f9e696]: Pendentes
+                    - generic [ref=f9e697]:
+                      - paragraph [ref=f9e698]: "3"
+                      - paragraph [ref=f9e699]: Atrasados
+                    - generic [ref=f9e700]:
+                      - paragraph [ref=f9e701]: "0"
+                      - paragraph [ref=f9e702]: Concluídos
+                  - generic [ref=f9e703]:
+                    - button "Retorno de demonstração 1 Contato Demonstração 01 · 25/10, 11:00 Atrasado" [ref=f9e704] [cursor=pointer]:
+                      - generic [ref=f9e710]:
+                        - generic [ref=f9e711]: Retorno de demonstração 1
+                        - generic [ref=f9e712]: Contato Demonstração 01 · 25/10, 11:00
+                      - generic [ref=f9e713]: Atrasado
+                    - button "Retorno de demonstração 2 Contato Demonstração 02 · 26/10, 11:00 Atrasado" [ref=f9e714] [cursor=pointer]:
+                      - generic [ref=f9e720]:
+                        - generic [ref=f9e721]: Retorno de demonstração 2
+                        - generic [ref=f9e722]: Contato Demonstração 02 · 26/10, 11:00
+                      - generic [ref=f9e723]: Atrasado
+                    - button "Retorno de demonstração 3 Contato Demonstração 03 · 27/10, 11:00 Atrasado" [ref=f9e724] [cursor=pointer]:
+                      - generic [ref=f9e730]:
+                        - generic [ref=f9e731]: Retorno de demonstração 3
+                        - generic [ref=f9e732]: Contato Demonstração 03 · 27/10, 11:00
+                      - generic [ref=f9e733]: Atrasado
+            - generic [ref=f9e734]:
+              - region [ref=f9e735]:
+                - generic [ref=f9e736]:
+                  - generic [ref=f9e738]:
+                    - paragraph [ref=f9e739]: Valor em aberto
+                    - heading "Funil de vendas" [level=2] [ref=f9e740]
+                    - paragraph [ref=f9e741]: Valor mensal registrado em contratos vinculados às oportunidades abertas.
+                  - generic [ref=f9e742]:
+                    - paragraph [ref=f9e743]: —
+                    - generic [ref=f9e744]: Sem valor cadastrado
+                  - generic [ref=f9e745]:
+                    - button "Contato inicial 2 —" [ref=f9e746] [cursor=pointer]:
+                      - generic [ref=f9e747]: Contato inicial
+                      - generic [ref=f9e748]: "2"
+                      - generic [ref=f9e749]: —
+                    - button "Em atendimento 2 —" [ref=f9e750] [cursor=pointer]:
+                      - generic [ref=f9e751]: Em atendimento
+                      - generic [ref=f9e752]: "2"
+                      - generic [ref=f9e753]: —
+                    - button "Proposta enviada 2 —" [ref=f9e754] [cursor=pointer]:
+                      - generic [ref=f9e755]: Proposta enviada
+                      - generic [ref=f9e756]: "2"
+                      - generic [ref=f9e757]: —
+                    - button "Contratado 2 —" [ref=f9e758] [cursor=pointer]:
+                      - generic [ref=f9e759]: Contratado
+                      - generic [ref=f9e760]: "2"
+                      - generic [ref=f9e761]: —
+              - region [ref=f9e762]:
+                - generic [ref=f9e763]:
+                  - generic [ref=f9e765]:
+                    - paragraph [ref=f9e766]: Gargalo
+                    - heading "Conversão por etapa" [level=2] [ref=f9e767]
+                    - paragraph [ref=f9e768]: Transições registradas no histórico; etapas sem base ficam sem percentual.
+                  - generic [ref=f9e769]:
+                    - generic [ref=f9e770]:
+                      - generic [ref=f9e771]: Contato inicial
+                      - generic [ref=f9e774]: Em atendimento
+                      - generic [ref=f9e775]: 100%
+                    - generic [ref=f9e776]:
+                      - generic [ref=f9e777]: Em atendimento
+                      - generic [ref=f9e780]: Proposta enviada
+                      - generic [ref=f9e781]: —
+                    - generic [ref=f9e782]:
+                      - generic [ref=f9e783]: Proposta enviada
+                      - generic [ref=f9e786]: Contratado
+                      - generic [ref=f9e787]: —
+                    - generic [ref=f9e788]:
+                      - generic [ref=f9e789]: Contratado
+                      - generic [ref=f9e792]: Sem interesse
+                      - generic [ref=f9e793]: —
+            - generic [ref=f9e794]:
+              - region [ref=f9e795]:
+                - generic [ref=f9e796]:
+                  - generic [ref=f9e798]:
+                    - paragraph [ref=f9e799]: Disciplina comercial
+                    - heading "Saúde do follow-up" [level=2] [ref=f9e800]
+                    - paragraph [ref=f9e801]: Cobertura de próximo passo para as oportunidades abertas no recorte.
+                  - generic [ref=f9e802]:
+                    - generic [ref=f9e803]:
+                      - paragraph [ref=f9e804]: 0%
+                      - paragraph [ref=f9e805]: Cobertura de próximo passo
+                    - generic [ref=f9e806]: 0 de 8
+                  - generic [ref=f9e808]:
+                    - progressbar
+                  - generic [ref=f9e809]:
+                    - button [ref=f9e810] [cursor=pointer]:
+                      - paragraph [ref=f9e811]: "8"
+                      - paragraph [ref=f9e812]: Oportunidades sem próximo movimento
+                    - generic [ref=f9e813]:
+                      - paragraph [ref=f9e814]: "3"
+                      - paragraph [ref=f9e815]: Follow-ups vencidos
+              - region [ref=f9e816]:
+                - generic [ref=f9e817]:
+                  - generic [ref=f9e819]:
+                    - paragraph [ref=f9e820]: Risco de receita
+                    - heading "Dinheiro parado" [level=2] [ref=f9e821]
+                    - paragraph [ref=f9e822]: Oportunidades avançadas sem interação há mais de 48h.
+                  - generic [ref=f9e824]:
+                    - paragraph [ref=f9e825]: —
+                    - paragraph [ref=f9e826]: 4 oportunidade(s) avançada(s)
+                  - button "Abrir oportunidades" [ref=f9e830] [cursor=pointer]
+            - generic [ref=f9e834]:
+              - region [ref=f9e835]:
+                - generic [ref=f9e836]:
+                  - generic [ref=f9e838]:
+                    - paragraph [ref=f9e839]: Velocidade
+                    - heading "Idade e tempo do funil" [level=2] [ref=f9e840]
+                    - paragraph [ref=f9e841]: A idade usa a criação da oportunidade; tempos médios dependem do histórico disponível.
+                  - generic [ref=f9e842]:
+                    - generic [ref=f9e843]:
+                      - paragraph [ref=f9e844]: Lead → proposta
+                      - paragraph [ref=f9e845]: —
+                    - generic [ref=f9e846]:
+                      - paragraph [ref=f9e847]: Proposta → decisão
+                      - paragraph [ref=f9e848]: —
+                    - generic [ref=f9e849]:
+                      - paragraph [ref=f9e850]: Decisão → fechado
+                      - paragraph [ref=f9e851]: —
+                    - generic [ref=f9e852]:
+                      - paragraph [ref=f9e853]: Lead → fechado
+                      - paragraph [ref=f9e854]: —
+                  - generic [ref=f9e855]:
+                    - button "Hoje 0 0" [ref=f9e856] [cursor=pointer]:
+                      - generic [ref=f9e857]: Hoje
+                      - generic [ref=f9e859]:
+                        - progressbar
+                      - generic [ref=f9e860]: "0"
+                    - button "1–2 dias 0 0" [ref=f9e861] [cursor=pointer]:
+                      - generic [ref=f9e862]: 1–2 dias
+                      - generic [ref=f9e864]:
+                        - progressbar
+                      - generic [ref=f9e865]: "0"
+                    - button "3–7 dias 8 8" [ref=f9e866] [cursor=pointer]:
+                      - generic [ref=f9e867]: 3–7 dias
+                      - progressbar [ref=f9e870]
+                      - generic [ref=f9e871]: "8"
+                    - button "8–15 dias 0 0" [ref=f9e872] [cursor=pointer]:
+                      - generic [ref=f9e873]: 8–15 dias
+                      - generic [ref=f9e875]:
+                        - progressbar
+                      - generic [ref=f9e876]: "0"
+                    - button "16–30 dias 0 0" [ref=f9e877] [cursor=pointer]:
+                      - generic [ref=f9e878]: 16–30 dias
+                      - generic [ref=f9e880]:
+                        - progressbar
+                      - generic [ref=f9e881]: "0"
+                    - button "+30 dias 0 0" [ref=f9e882] [cursor=pointer]:
+                      - generic [ref=f9e883]: +30 dias
+                      - generic [ref=f9e885]:
+                        - progressbar
+                      - generic [ref=f9e886]: "0"
+              - region [ref=f9e887]:
+                - generic [ref=f9e888]:
+                  - generic [ref=f9e890]:
+                    - paragraph [ref=f9e891]: Aprendizado
+                    - heading "Motivos de perda" [level=2] [ref=f9e892]
+                    - paragraph [ref=f9e893]: A base atual não possui um campo persistido de motivo de perda.
+                  - generic [ref=f9e894]:
+                    - paragraph [ref=f9e898]: Métrica indisponível
+                    - paragraph [ref=f9e899]: Nenhum motivo foi inventado. Quando o CRM registrar essa informação, esta área poderá detalhar quantidade, percentual e valor perdido.
+            - generic [ref=f9e900]:
+              - region [ref=f9e901]:
+                - generic [ref=f9e902]:
+                  - generic [ref=f9e904]:
+                    - paragraph [ref=f9e905]: Aquisição
+                    - heading "Origem dos leads" [level=2] [ref=f9e906]
+                    - paragraph [ref=f9e907]: Leads recebidos e contratos iniciados no período selecionado.
+                  - region "Tabela com rolagem horizontal" [ref=f9e909]:
+                    - table [ref=f9e910]:
+                      - rowgroup [ref=f9e919]:
+                        - row [ref=f9e920]:
+                          - columnheader [ref=f9e921]:
+                            - button "Ordenar por Origem" [ref=f9e922] [cursor=pointer]:
+                              - generic [ref=f9e923]: Origem
+                          - columnheader [ref=f9e927]:
+                            - button "Ordenar por Leads" [ref=f9e928] [cursor=pointer]:
+                              - generic [ref=f9e929]: Leads
+                          - columnheader [ref=f9e933]:
+                            - button "Ordenar por Propostas" [ref=f9e934] [cursor=pointer]:
+                              - generic [ref=f9e935]: Propostas
+                          - columnheader [ref=f9e939]:
+                            - button "Ordenar por Vendas" [ref=f9e940] [cursor=pointer]:
+                              - generic [ref=f9e941]: Vendas
+                          - columnheader [ref=f9e945]:
+                            - button "Ordenar por Conversão" [ref=f9e946] [cursor=pointer]:
+                              - generic [ref=f9e947]: Conversão
+                          - columnheader [ref=f9e951]:
+                            - button "Ordenar por Mensalidade" [ref=f9e952] [cursor=pointer]:
+                              - generic [ref=f9e953]: Mensalidade
+                          - columnheader [ref=f9e957]:
+                            - button "Ordenar por Comissão" [ref=f9e958] [cursor=pointer]:
+                              - generic [ref=f9e959]: Comissão
+                      - rowgroup [ref=f9e963]:
+                        - row [ref=f9e964]:
+                          - cell "Não informado" [ref=f9e965]
+                          - cell "—" [ref=f9e966]
+                          - cell "—" [ref=f9e967]
+                          - cell "4" [ref=f9e968]
+                          - cell "—" [ref=f9e969]
+                          - cell "R$ 5 mil" [ref=f9e970]
+                          - cell "R$ 10 mil" [ref=f9e971]
+                        - row [ref=f9e972]:
+                          - cell "Site" [ref=f9e973]
+                          - cell "3" [ref=f9e974]
+                          - cell "—" [ref=f9e975]
+                          - cell "—" [ref=f9e976]
+                          - cell "—" [ref=f9e977]
+                          - cell "—" [ref=f9e978]
+                          - cell "—" [ref=f9e979]
+                        - row [ref=f9e980]:
+                          - cell "Indicação" [ref=f9e981]
+                          - cell "3" [ref=f9e982]
+                          - cell "—" [ref=f9e983]
+                          - cell "—" [ref=f9e984]
+                          - cell "—" [ref=f9e985]
+                          - cell "—" [ref=f9e986]
+                          - cell "—" [ref=f9e987]
+                        - row [ref=f9e988]:
+                          - cell "Campanha de demonstração" [ref=f9e989]
+                          - cell "2" [ref=f9e990]
+                          - cell "—" [ref=f9e991]
+                          - cell "—" [ref=f9e992]
+                          - cell "—" [ref=f9e993]
+                          - cell "—" [ref=f9e994]
+                          - cell "—" [ref=f9e995]
+              - region [ref=f9e996]:
+                - generic [ref=f9e997]:
+                  - generic [ref=f9e999]:
+                    - paragraph [ref=f9e1000]: Mix comercial
+                    - heading "Performance por operadora" [level=2] [ref=f9e1001]
+                    - paragraph [ref=f9e1002]: Vendas e mensalidade registrada; cotado × vendido exige uma entidade de proposta disponível.
+                  - region "Tabela com rolagem horizontal" [ref=f9e1004]:
+                    - table [ref=f9e1005]:
+                      - rowgroup [ref=f9e1013]:
+                        - row [ref=f9e1014]:
+                          - columnheader [ref=f9e1015]:
+                            - button "Ordenar por Operadora" [ref=f9e1016] [cursor=pointer]:
+                              - generic [ref=f9e1017]: Operadora
+                          - columnheader [ref=f9e1021]:
+                            - button "Ordenar por Propostas" [ref=f9e1022] [cursor=pointer]:
+                              - generic [ref=f9e1023]: Propostas
+                          - columnheader [ref=f9e1027]:
+                            - button "Ordenar por Vendas" [ref=f9e1028] [cursor=pointer]:
+                              - generic [ref=f9e1029]: Vendas
+                          - columnheader [ref=f9e1033]:
+                            - button "Ordenar por Conversão" [ref=f9e1034] [cursor=pointer]:
+                              - generic [ref=f9e1035]: Conversão
+                          - columnheader [ref=f9e1039]:
+                            - button "Ordenar por Mensalidade" [ref=f9e1040] [cursor=pointer]:
+                              - generic [ref=f9e1041]: Mensalidade
+                          - columnheader [ref=f9e1045]:
+                            - button "Ordenar por Comissão" [ref=f9e1046] [cursor=pointer]:
+                              - generic [ref=f9e1047]: Comissão
+                      - rowgroup [ref=f9e1051]:
+                        - row [ref=f9e1052]:
+                          - cell "Amil" [ref=f9e1053]
+                          - cell "—" [ref=f9e1054]
+                          - cell "4" [ref=f9e1055]
+                          - cell "—" [ref=f9e1056]
+                          - cell "R$ 5 mil" [ref=f9e1057]
+                          - cell "R$ 10 mil" [ref=f9e1058]
+            - region [ref=f9e1059]:
+              - generic [ref=f9e1060]:
+                - generic [ref=f9e1062]:
+                  - paragraph [ref=f9e1063]: Carteira recente
+                  - heading "Propostas recentes" [level=2] [ref=f9e1064]
+                  - paragraph [ref=f9e1065]: Leads atualmente em etapas cujo nome contém proposta ou cotação. O CRM não possui uma entidade separada de proposta.
+                - region "Tabela com rolagem horizontal" [ref=f9e1067]:
+                  - table [ref=f9e1068]:
+                    - rowgroup [ref=f9e1075]:
+                      - row [ref=f9e1076]:
+                        - columnheader [ref=f9e1077]:
+                          - button "Ordenar por Cliente" [ref=f9e1078] [cursor=pointer]:
+                            - generic [ref=f9e1079]: Cliente
+                        - columnheader [ref=f9e1083]:
+                          - button "Ordenar por Estágio atual" [ref=f9e1084] [cursor=pointer]:
+                            - generic [ref=f9e1085]: Estágio atual
+                        - columnheader [ref=f9e1089]:
+                          - button "Ordenar por Última atividade" [ref=f9e1090] [cursor=pointer]:
+                            - generic [ref=f9e1091]: Última atividade
+                        - columnheader [ref=f9e1095]:
+                          - button "Ordenar por Responsável" [ref=f9e1096] [cursor=pointer]:
+                            - generic [ref=f9e1097]: Responsável
+                        - columnheader [ref=f9e1101]:
+                          - button "Ordenar por Valor registrado" [ref=f9e1102] [cursor=pointer]:
+                            - generic [ref=f9e1103]: Valor registrado
+                    - rowgroup [ref=f9e1107]:
+                      - row [ref=f9e1108]:
+                        - cell [ref=f9e1109]:
+                          - button "Contato Demonstração 03" [ref=f9e1110] [cursor=pointer]
+                        - cell "Proposta enviada" [ref=f9e1114]
+                        - cell "25/10/2026" [ref=f9e1117]
+                        - cell "Operador Demonstração" [ref=f9e1118]
+                        - cell "—" [ref=f9e1119]
+                      - row [ref=f9e1120]:
+                        - cell [ref=f9e1121]:
+                          - button "Contato Demonstração 07" [ref=f9e1122] [cursor=pointer]
+                        - cell "Proposta enviada" [ref=f9e1126]
+                        - cell "25/10/2026" [ref=f9e1129]
+                        - cell "Operador Demonstração" [ref=f9e1130]
+                        - cell "—" [ref=f9e1131]
+          - generic [ref=f9e1132]:
+            - generic [ref=f9e1134]:
+              - paragraph [ref=f9e1135]: Orquestração
+              - heading "Automações e atendimento que exigem gestão" [level=2] [ref=f9e1136]
+              - paragraph [ref=f9e1137]: "Ação segura: a seleção do fluxo e qualquer agendamento continuam no espaço de Automação."
+            - generic [ref=f9e1138]:
+              - generic [ref=f9e1139]:
+                - paragraph [ref=f9e1140]: Contato Inicial elegível
+                - paragraph [ref=f9e1141]: "0"
+                - paragraph [ref=f9e1142]: sem bloqueio de automação
+              - generic [ref=f9e1143]:
+                - paragraph [ref=f9e1144]: Excluídos de automação
+                - paragraph [ref=f9e1145]: "0"
+                - paragraph [ref=f9e1146]: requerem tratamento humano
+            - generic [ref=f9e1147]:
+              - button "Revisar elegíveis" [ref=f9e1148] [cursor=pointer]
+              - button "Organizar follow-ups" [ref=f9e1152] [cursor=pointer]
+              - button "Revisar fluxos e IA" [ref=f9e1156] [cursor=pointer]
+            - paragraph [ref=f9e1160]: O acompanhamento detalhado das automações ainda não está disponível neste painel. Para investigar uma falha, peça ajuda ao responsável pelas automações.
+          - generic [ref=f9e1161]:
+            - tablist [ref=f9e1164]:
+              - tab "Leads por status" [selected] [ref=f9e1165] [cursor=pointer]
+              - tab "Por operadora" [ref=f9e1167] [cursor=pointer]
+            - generic [ref=f9e1170]:
+              - generic [ref=f9e1172]:
+                - heading "Distribuição de leads por status" [level=3] [ref=f9e1173]
+                - paragraph [ref=f9e1174]: Mapa de concentração por etapa do funil ativo.
+              - generic [ref=f9e1175]:
+                - img [ref=f9e1178]:
+                  - generic [ref=f9e1180] [cursor=pointer]
+                  - generic [ref=f9e1181] [cursor=pointer]
+                  - generic [ref=f9e1182] [cursor=pointer]
+                  - generic [ref=f9e1183] [cursor=pointer]
+                  - generic [ref=f9e1185]: "8"
+                  - generic [ref=f9e1186]: TOTAL
+                - generic [ref=f9e1187]:
+                  - generic [ref=f9e1188]:
+                    - generic [ref=f9e1189]: "Maior concentração: Contato inicial"
+                    - generic [ref=f9e1190]: 8 total
+                  - button "Contato inicial 25%" [ref=f9e1191] [cursor=pointer]:
+                    - generic [ref=f9e1193]: Contato inicial
+                    - generic [ref=f9e1194]: 25%
+                  - button "Em atendimento 25%" [ref=f9e1195] [cursor=pointer]:
+                    - generic [ref=f9e1197]: Em atendimento
+                    - generic [ref=f9e1198]: 25%
+                  - button "Proposta enviada 25%" [ref=f9e1199] [cursor=pointer]:
+                    - generic [ref=f9e1201]: Proposta enviada
+                    - generic [ref=f9e1202]: 25%
+                  - generic [ref=f9e1203]: Ver mais (1)
+          - generic [ref=f9e1208]:
+            - generic [ref=f9e1209]:
+              - paragraph [ref=f9e1210]: Lembretes de reajuste não sincronizados
+              - generic [ref=f9e1211]: O calendário continua disponível, mas alguns lembretes podem não ter sido gravados na Agenda.
+            - button "Tentar novamente" [ref=f9e1213] [cursor=pointer]
+          - generic [ref=f9e1214]:
+            - generic [ref=f9e1215]:
+              - generic [ref=f9e1216]:
+                - heading "Calendário de eventos" [level=3] [ref=f9e1217]
+                - paragraph [ref=f9e1218]: Reajustes e aniversários organizados por mês, semana ou dia.
+              - generic [ref=f9e1220]:
+                - generic [ref=f9e1221]:
+                  - generic [ref=f9e1222]: "0"
+                  - text: no mês
+                - generic [ref=f9e1223]: 0 reajustes
+                - generic [ref=f9e1225]: 0 aniversários
+            - generic [ref=f9e1227]:
+              - generic [ref=f9e1228]:
+                - generic [ref=f9e1229]:
+                  - button "Mês anterior" [ref=f9e1230] [cursor=pointer]
+                  - generic [ref=f9e1234]:
+                    - heading "outubro de 2026" [level=4] [ref=f9e1235]
+                    - paragraph [ref=f9e1238]: Visão operacional do mês
+                  - button "Próximo mês" [ref=f9e1239] [cursor=pointer]
+                - generic [ref=f9e1243]:
+                  - button "Hoje" [ref=f9e1244] [cursor=pointer]
+                  - button "Semana" [ref=f9e1245] [cursor=pointer]
+                  - button "Mês" [ref=f9e1246] [cursor=pointer]
+                - generic [ref=f9e1247]:
+                  - generic [ref=f9e1248]: D
+                  - generic [ref=f9e1249]: S
+                  - generic [ref=f9e1250]: T
+                  - generic [ref=f9e1251]: Q
+                  - generic [ref=f9e1252]: Q
+                  - generic [ref=f9e1253]: S
+                  - generic [ref=f9e1254]: S
+                  - button "1 de outubro de 2026, 0 eventos" [ref=f9e1259] [cursor=pointer]:
+                    - generic [ref=f9e1260]: "1"
+                  - button "2 de outubro de 2026, 0 eventos" [ref=f9e1262] [cursor=pointer]:
+                    - generic [ref=f9e1263]: "2"
+                  - button "3 de outubro de 2026, 0 eventos" [ref=f9e1265] [cursor=pointer]:
+                    - generic [ref=f9e1266]: "3"
+                  - button "4 de outubro de 2026, 0 eventos" [ref=f9e1268] [cursor=pointer]:
+                    - generic [ref=f9e1269]: "4"
+                  - button "5 de outubro de 2026, 0 eventos" [ref=f9e1271] [cursor=pointer]:
+                    - generic [ref=f9e1272]: "5"
+                  - button "6 de outubro de 2026, 0 eventos" [ref=f9e1274] [cursor=pointer]:
+                    - generic [ref=f9e1275]: "6"
+                  - button "7 de outubro de 2026, 0 eventos" [ref=f9e1277] [cursor=pointer]:
+                    - generic [ref=f9e1278]: "7"
+                  - button "8 de outubro de 2026, 0 eventos" [ref=f9e1280] [cursor=pointer]:
+                    - generic [ref=f9e1281]: "8"
+                  - button "9 de outubro de 2026, 0 eventos" [ref=f9e1283] [cursor=pointer]:
+                    - generic [ref=f9e1284]: "9"
+                  - button "10 de outubro de 2026, 0 eventos" [ref=f9e1286] [cursor=pointer]:
+                    - generic [ref=f9e1287]: "10"
+                  - button "11 de outubro de 2026, 0 eventos" [ref=f9e1289] [cursor=pointer]:
+                    - generic [ref=f9e1290]: "11"
+                  - button "12 de outubro de 2026, 0 eventos" [ref=f9e1292] [cursor=pointer]:
+                    - generic [ref=f9e1293]: "12"
+                  - button "13 de outubro de 2026, 0 eventos" [ref=f9e1295] [cursor=pointer]:
+                    - generic [ref=f9e1296]: "13"
+                  - button "14 de outubro de 2026, 0 eventos" [ref=f9e1298] [cursor=pointer]:
+                    - generic [ref=f9e1299]: "14"
+                  - button "15 de outubro de 2026, 0 eventos" [ref=f9e1301] [cursor=pointer]:
+                    - generic [ref=f9e1302]: "15"
+                  - button "16 de outubro de 2026, 0 eventos" [ref=f9e1304] [cursor=pointer]:
+                    - generic [ref=f9e1305]: "16"
+                  - button "17 de outubro de 2026, 0 eventos" [ref=f9e1307] [cursor=pointer]:
+                    - generic [ref=f9e1308]: "17"
+                  - button "18 de outubro de 2026, 0 eventos" [ref=f9e1310] [cursor=pointer]:
+                    - generic [ref=f9e1311]: "18"
+                  - button "19 de outubro de 2026, 0 eventos" [ref=f9e1313] [cursor=pointer]:
+                    - generic [ref=f9e1314]: "19"
+                  - button "20 de outubro de 2026, 0 eventos" [ref=f9e1316] [cursor=pointer]:
+                    - generic [ref=f9e1317]: "20"
+                  - button "21 de outubro de 2026, 0 eventos" [ref=f9e1319] [cursor=pointer]:
+                    - generic [ref=f9e1320]: "21"
+                  - button "22 de outubro de 2026, 0 eventos" [ref=f9e1322] [cursor=pointer]:
+                    - generic [ref=f9e1323]: "22"
+                  - button "23 de outubro de 2026, 0 eventos" [ref=f9e1325] [cursor=pointer]:
+                    - generic [ref=f9e1326]: "23"
+                  - button "24 de outubro de 2026, 0 eventos" [ref=f9e1328] [cursor=pointer]:
+                    - generic [ref=f9e1329]: "24"
+                  - button "25 de outubro de 2026, 0 eventos" [ref=f9e1331] [cursor=pointer]:
+                    - generic [ref=f9e1332]: "25"
+                  - button "26 de outubro de 2026, 0 eventos" [ref=f9e1334] [cursor=pointer]:
+                    - generic [ref=f9e1335]: "26"
+                  - button "27 de outubro de 2026, 0 eventos" [ref=f9e1337] [cursor=pointer]:
+                    - generic [ref=f9e1338]: "27"
+                  - button "28 de outubro de 2026, 0 eventos" [pressed] [ref=f9e1340] [cursor=pointer]:
+                    - generic [ref=f9e1341]: "28"
+                  - button "29 de outubro de 2026, 0 eventos" [ref=f9e1343] [cursor=pointer]:
+                    - generic [ref=f9e1344]: "29"
+                  - button "30 de outubro de 2026, 0 eventos" [ref=f9e1346] [cursor=pointer]:
+                    - generic [ref=f9e1347]: "30"
+                  - button "31 de outubro de 2026, 0 eventos" [ref=f9e1349] [cursor=pointer]:
+                    - generic [ref=f9e1350]: "31"
+              - generic [ref=f9e1352]:
+                - generic [ref=f9e1353]:
+                  - generic [ref=f9e1354]:
+                    - paragraph [ref=f9e1355]: outubro de 2026
+                    - paragraph [ref=f9e1356]: Agenda comercial e relacional
+                  - generic [ref=f9e1357]: 0 eventos
+                - paragraph [ref=f9e1359]: Nenhum evento no período selecionado.

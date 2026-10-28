@@ -1,0 +1,264 @@
+- generic [ref=f46e1]:
+  - generic [ref=f46e668]:
+    - navigation "Navegação principal" [ref=f46e1397]:
+      - button "Início" [ref=f46e1398] [cursor=pointer]
+      - button "Leads" [ref=f46e1405] [cursor=pointer]
+      - button "WhatsApp" [ref=f46e1412] [cursor=pointer]
+      - button "Contratos" [ref=f46e1416] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f46e1421] [cursor=pointer]:
+        - generic [ref=f46e1423]: Mais
+    - generic [ref=f46e774]:
+      - banner [ref=f46e775]:
+        - generic [ref=f46e1424]:
+          - img "Kifer Saúde" [ref=f46e1425]:
+            - generic [ref=f46e1426]: kifersaúde
+          - generic [ref=f46e1427]:
+            - button "Abrir menu" [ref=f46e1428] [cursor=pointer]
+            - generic [ref=f46e1431]: OD
+      - main [ref=f46e793]:
+        - generic [ref=f46e795]:
+          - generic [ref=f46e796]:
+            - generic [ref=f46e797]:
+              - generic [ref=f46e798]:
+                - heading "Gestão de leads" [level=1] [ref=f46e802]
+                - paragraph [ref=f46e803]: Acompanhe a carteira, priorize follow-ups e mantenha o funil em ritmo constante.
+              - button "Novo lead" [ref=f46e810] [cursor=pointer]
+            - tablist [ref=f46e816]:
+              - tab "Lista" [selected] [ref=f46e817] [cursor=pointer]
+              - tab "Kanban" [ref=f46e820] [cursor=pointer]
+          - generic [ref=f46e827]:
+            - generic [ref=f46e828]:
+              - textbox "Buscar leads" [ref=f46e831]:
+                - /placeholder: Buscar por nome, telefone ou e-mail...
+              - generic [ref=f46e832]:
+                - button "Mostrar filtros de leads" [expanded] [ref=f46e1433] [cursor=pointer]
+                - button "Mais opções dos leads" [ref=f46e834] [cursor=pointer]:
+                  - generic [ref=f46e835]: Exportar
+            - generic [ref=f46e840]:
+              - button "Limpar filtros" [ref=f46e1827] [cursor=pointer]
+              - generic [ref=f46e841]:
+                - button "Todos os status" [ref=f46e843] [cursor=pointer]
+                - button "Todos os responsáveis" [ref=f46e851] [cursor=pointer]
+                - button "Todas as origens" [ref=f46e861] [cursor=pointer]
+                - button "Todos os tipos" [ref=f46e870] [cursor=pointer]
+                - button "Filtros avançados" [expanded] [ref=f46e879] [cursor=pointer]
+              - group "Ordenação dos leads" [ref=f46e890]:
+                - generic [ref=f46e891]: Ordenar por
+                - generic [ref=f46e892]:
+                  - button "Data de criação" [ref=f46e894] [cursor=pointer]
+                  - button "Ordem decrescente" [ref=f46e901] [cursor=pointer]
+          - generic [ref=f46e905]:
+            - generic [ref=f46e911]:
+              - paragraph [ref=f46e1441]: 8 leads encontrados
+              - generic [ref=f46e920] [cursor=pointer]:
+                - checkbox "Selecionar página" [ref=f46e921]
+                - generic [ref=f46e922]: Selecionar página
+            - generic [ref=f46e1442]:
+              - article "Contato Demonstração 01" [ref=f46e1443]:
+                - generic [ref=f46e1444]:
+                  - button "Abrir lead Contato Demonstração 01" [ref=f46e1445] [cursor=pointer]:
+                    - generic [ref=f46e1446]: CD
+                    - generic [ref=f46e1448]:
+                      - generic [ref=f46e1449]: Contato Demonstração 01
+                      - generic [ref=f46e1450]: contato01@exemplo.invalid
+                  - generic [ref=f46e1451]:
+                    - checkbox "Selecionar lead Contato Demonstração 01" [ref=f46e1452] [cursor=pointer]
+                    - button "Remover dos favoritos" [pressed] [ref=f46e1453] [cursor=pointer]
+                - generic [ref=f46e1457]:
+                  - button "Contato inicial" [ref=f46e1459] [cursor=pointer]
+                  - paragraph [ref=f46e1463]: Site · Individual
+                - generic [ref=f46e1464]:
+                  - generic [ref=f46e1465]:
+                    - generic [ref=f46e1466]: Próximo follow-up
+                    - paragraph [ref=f46e1467]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1470]:
+                    - button "Ver e editar lead" [ref=f46e1471] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1476] [cursor=pointer]
+              - article "Contato Demonstração 02" [ref=f46e1482]:
+                - generic [ref=f46e1483]:
+                  - button "Abrir lead Contato Demonstração 02" [ref=f46e1484] [cursor=pointer]:
+                    - generic [ref=f46e1485]: CD
+                    - generic [ref=f46e1487]:
+                      - generic [ref=f46e1488]: Contato Demonstração 02
+                      - generic [ref=f46e1489]: contato02@exemplo.invalid
+                  - generic [ref=f46e1490]:
+                    - checkbox "Selecionar lead Contato Demonstração 02" [ref=f46e1491] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1492] [cursor=pointer]
+                - generic [ref=f46e1496]:
+                  - button "Em atendimento" [ref=f46e1498] [cursor=pointer]
+                  - paragraph [ref=f46e1502]: Indicação · Individual
+                - generic [ref=f46e1503]:
+                  - generic [ref=f46e1504]:
+                    - generic [ref=f46e1505]: Próximo follow-up
+                    - paragraph [ref=f46e1506]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1509]:
+                    - button "Ver e editar lead" [ref=f46e1510] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1515] [cursor=pointer]
+              - article "Contato Demonstração 03" [ref=f46e1521]:
+                - generic [ref=f46e1522]:
+                  - button "Abrir lead Contato Demonstração 03" [ref=f46e1523] [cursor=pointer]:
+                    - generic [ref=f46e1524]: CD
+                    - generic [ref=f46e1526]:
+                      - generic [ref=f46e1527]: Contato Demonstração 03
+                      - generic [ref=f46e1528]: contato03@exemplo.invalid
+                  - generic [ref=f46e1529]:
+                    - checkbox "Selecionar lead Contato Demonstração 03" [ref=f46e1530] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1531] [cursor=pointer]
+                - generic [ref=f46e1535]:
+                  - button "Proposta enviada" [ref=f46e1537] [cursor=pointer]
+                  - paragraph [ref=f46e1541]: Campanha de demonstração · Individual
+                - generic [ref=f46e1542]:
+                  - generic [ref=f46e1543]:
+                    - generic [ref=f46e1544]: Próximo follow-up
+                    - paragraph [ref=f46e1545]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1548]:
+                    - button "Ver e editar lead" [ref=f46e1549] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1554] [cursor=pointer]
+              - article "Contato Demonstração 04" [ref=f46e1560]:
+                - generic [ref=f46e1561]:
+                  - button "Abrir lead Contato Demonstração 04" [ref=f46e1562] [cursor=pointer]:
+                    - generic [ref=f46e1563]: CD
+                    - generic [ref=f46e1565]:
+                      - generic [ref=f46e1566]: Contato Demonstração 04
+                      - generic [ref=f46e1567]: contato04@exemplo.invalid
+                  - generic [ref=f46e1568]:
+                    - checkbox "Selecionar lead Contato Demonstração 04" [ref=f46e1569] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1570] [cursor=pointer]
+                - generic [ref=f46e1574]:
+                  - button "Contratado" [ref=f46e1576] [cursor=pointer]
+                  - paragraph [ref=f46e1580]: Site · Individual
+                - generic [ref=f46e1581]:
+                  - generic [ref=f46e1582]:
+                    - generic [ref=f46e1583]: Próximo follow-up
+                    - paragraph [ref=f46e1584]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1587]:
+                    - button "Ver e editar lead" [ref=f46e1588] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1593] [cursor=pointer]
+              - article "Contato Demonstração 05" [ref=f46e1599]:
+                - generic [ref=f46e1600]:
+                  - button "Abrir lead Contato Demonstração 05" [ref=f46e1601] [cursor=pointer]:
+                    - generic [ref=f46e1602]: CD
+                    - generic [ref=f46e1604]:
+                      - generic [ref=f46e1605]: Contato Demonstração 05
+                      - generic [ref=f46e1606]: contato05@exemplo.invalid
+                  - generic [ref=f46e1607]:
+                    - checkbox "Selecionar lead Contato Demonstração 05" [ref=f46e1608] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1609] [cursor=pointer]
+                - generic [ref=f46e1613]:
+                  - button "Contato inicial" [ref=f46e1615] [cursor=pointer]
+                  - paragraph [ref=f46e1619]: Indicação · Individual
+                - generic [ref=f46e1620]:
+                  - generic [ref=f46e1621]:
+                    - generic [ref=f46e1622]: Próximo follow-up
+                    - paragraph [ref=f46e1623]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1626]:
+                    - button "Ver e editar lead" [ref=f46e1627] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1632] [cursor=pointer]
+              - article "Contato Demonstração 06" [ref=f46e1638]:
+                - generic [ref=f46e1639]:
+                  - button "Abrir lead Contato Demonstração 06" [ref=f46e1640] [cursor=pointer]:
+                    - generic [ref=f46e1641]: CD
+                    - generic [ref=f46e1643]:
+                      - generic [ref=f46e1644]: Contato Demonstração 06
+                      - generic [ref=f46e1645]: contato06@exemplo.invalid
+                  - generic [ref=f46e1646]:
+                    - checkbox "Selecionar lead Contato Demonstração 06" [ref=f46e1647] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1648] [cursor=pointer]
+                - generic [ref=f46e1652]:
+                  - button "Em atendimento" [ref=f46e1654] [cursor=pointer]
+                  - paragraph [ref=f46e1658]: Campanha de demonstração · Individual
+                - generic [ref=f46e1659]:
+                  - generic [ref=f46e1660]:
+                    - generic [ref=f46e1661]: Próximo follow-up
+                    - paragraph [ref=f46e1662]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1665]:
+                    - button "Ver e editar lead" [ref=f46e1666] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1671] [cursor=pointer]
+              - article "Contato Demonstração 07" [ref=f46e1677]:
+                - generic [ref=f46e1678]:
+                  - button "Abrir lead Contato Demonstração 07" [ref=f46e1679] [cursor=pointer]:
+                    - generic [ref=f46e1680]: CD
+                    - generic [ref=f46e1682]:
+                      - generic [ref=f46e1683]: Contato Demonstração 07
+                      - generic [ref=f46e1684]: contato07@exemplo.invalid
+                  - generic [ref=f46e1685]:
+                    - checkbox "Selecionar lead Contato Demonstração 07" [ref=f46e1686] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1687] [cursor=pointer]
+                - generic [ref=f46e1691]:
+                  - button "Proposta enviada" [ref=f46e1693] [cursor=pointer]
+                  - paragraph [ref=f46e1697]: Site · Individual
+                - generic [ref=f46e1698]:
+                  - generic [ref=f46e1699]:
+                    - generic [ref=f46e1700]: Próximo follow-up
+                    - paragraph [ref=f46e1701]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1704]:
+                    - button "Ver e editar lead" [ref=f46e1705] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1710] [cursor=pointer]
+              - article "Contato Demonstração 08" [ref=f46e1716]:
+                - generic [ref=f46e1717]:
+                  - button "Abrir lead Contato Demonstração 08" [ref=f46e1718] [cursor=pointer]:
+                    - generic [ref=f46e1719]: CD
+                    - generic [ref=f46e1721]:
+                      - generic [ref=f46e1722]: Contato Demonstração 08
+                      - generic [ref=f46e1723]: contato08@exemplo.invalid
+                  - generic [ref=f46e1724]:
+                    - checkbox "Selecionar lead Contato Demonstração 08" [ref=f46e1725] [cursor=pointer]
+                    - button "Marcar como favorito" [ref=f46e1726] [cursor=pointer]
+                - generic [ref=f46e1730]:
+                  - button "Contratado" [ref=f46e1732] [cursor=pointer]
+                  - paragraph [ref=f46e1736]: Indicação · Individual
+                - generic [ref=f46e1737]:
+                  - generic [ref=f46e1738]:
+                    - generic [ref=f46e1739]: Próximo follow-up
+                    - paragraph [ref=f46e1740]: 26/10/2026 às 11:00
+                  - group "Ações do lead" [ref=f46e1743]:
+                    - button "Ver e editar lead" [ref=f46e1744] [cursor=pointer]
+                    - button "Mais ações do lead" [ref=f46e1749] [cursor=pointer]
+            - navigation "Paginação" [ref=f46e1311]:
+              - generic [ref=f46e1312]:
+                - generic [ref=f46e1313]:
+                  - generic [ref=f46e1314]: Itens por página
+                  - combobox [aria-hidden] [ref=f46e1315]
+                  - button "Itens por página" [ref=f46e1317] [cursor=pointer]:
+                    - generic [ref=f46e1318]: "25"
+                - generic [ref=f46e1321]: 1–8 de 8
+              - generic [ref=f46e1322]:
+                - button "Pagina anterior" [disabled] [ref=f46e1323]
+                - button "1" [ref=f46e1327] [cursor=pointer]
+                - button "Próxima página" [disabled] [ref=f46e1328]
+  - dialog [ref=f46e1831]:
+    - generic [ref=f46e1832]:
+      - generic [ref=f46e1833]:
+        - heading "Filtros avançados" [level=2] [ref=f46e1834]
+        - paragraph [ref=f46e1835]: Refine a carteira por tags, canais e datas.
+      - button "Fechar" [ref=f46e1836] [cursor=pointer]
+    - generic [ref=f46e1841]:
+      - button "Todas as tags" [ref=f46e1843] [cursor=pointer]
+      - button "Todos os canais" [ref=f46e1852] [cursor=pointer]
+      - 'button "Criação: Qualquer data" [ref=f46e1864] [cursor=pointer]':
+        - generic [ref=f46e1867]:
+          - generic [ref=f46e1868]: "Criação:"
+          - text: Qualquer data
+      - 'button "Último contato: Qualquer data" [expanded] [active] [ref=f46e1873] [cursor=pointer]':
+        - generic [ref=f46e1876]:
+          - generic [ref=f46e1877]: "Último contato:"
+          - text: Qualquer data
+      - 'button "Próximo follow-up: Qualquer data" [ref=f46e1882] [cursor=pointer]':
+        - generic [ref=f46e1886]:
+          - generic [ref=f46e1887]: "Próximo follow-up:"
+          - text: Qualquer data
+    - generic [ref=f46e1891]:
+      - button "Cancelar" [ref=f46e1892] [cursor=pointer]
+      - button "Aplicar filtros" [ref=f46e1893] [cursor=pointer]
+  - dialog "Selecionar intervalo de Último contato" [ref=f46e1894]:
+    - generic [ref=f46e1895]:
+      - generic [ref=f46e1896]: De
+      - button "De" [ref=f46e1900] [cursor=pointer]:
+        - generic [ref=f46e1903]: Selecionar
+    - generic [ref=f46e1904]:
+      - generic [ref=f46e1905]: Até
+      - button "Até" [ref=f46e1909] [cursor=pointer]:
+        - generic [ref=f46e1912]: Selecionar
+    - generic [ref=f46e1913]:
+      - button "Limpar" [ref=f46e1914] [cursor=pointer]
+      - button "Concluído" [ref=f46e1915] [cursor=pointer]

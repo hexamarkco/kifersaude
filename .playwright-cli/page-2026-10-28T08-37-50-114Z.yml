@@ -1,0 +1,155 @@
+- generic [ref=f7e1]:
+  - generic [ref=f7e9]:
+    - navigation "Navegação principal" [ref=f7e402]:
+      - button "Início" [ref=f7e403] [cursor=pointer]
+      - button "Leads" [ref=f7e410] [cursor=pointer]
+      - button "WhatsApp" [ref=f7e417] [cursor=pointer]
+      - button "Contratos" [ref=f7e421] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f7e426] [cursor=pointer]:
+        - generic [ref=f7e428]: Mais
+    - generic [ref=f7e115]:
+      - banner [ref=f7e116]:
+        - generic [ref=f7e429]:
+          - img "Kifer Saúde" [ref=f7e430]:
+            - generic [ref=f7e431]: kifersaúde
+          - generic [ref=f7e432]:
+            - button "Abrir menu" [ref=f7e433] [cursor=pointer]
+            - generic [ref=f7e436]: OD
+      - main [ref=f7e134]:
+        - generic [ref=f7e136]:
+          - generic [ref=f7e138]:
+            - generic [ref=f7e139]:
+              - paragraph [ref=f7e140]: Kifer Saúde / produtividade
+              - heading "Agenda e tarefas" [level=1] [ref=f7e143]
+              - paragraph [ref=f7e144]: Organize seus compromissos e priorize os retornos comerciais.
+            - group "Ações da agenda" [ref=f7e146]:
+              - button "Organizar follow-ups" [ref=f7e147] [cursor=pointer]
+              - button "Nova tarefa" [ref=f7e151] [cursor=pointer]
+          - generic [ref=f7e154]:
+            - tablist [ref=f7e156]:
+              - tab "Calendário" [ref=f7e157] [cursor=pointer]
+              - tab "Pendentes 3" [selected] [ref=f7e159] [cursor=pointer]:
+                - generic [ref=f7e160]: Pendentes
+                - generic [ref=f7e161]: "3"
+              - tab "Concluídos" [ref=f7e162] [cursor=pointer]
+            - generic [ref=f7e164]:
+              - generic [ref=f7e165]:
+                - textbox "Buscar tarefas e lembretes" [ref=f7e167]:
+                  - /placeholder: Buscar tarefa, lembrete ou lead...
+                - generic [ref=f7e168]:
+                  - button "Ocultar filtros da agenda" [expanded] [ref=f7e622] [cursor=pointer]:
+                    - generic [ref=f7e170]: Filtros
+                  - button "Marcar itens filtrados como lidos" [ref=f7e172] [cursor=pointer]:
+                    - generic [ref=f7e173]: Marcar lidos
+              - generic [ref=f7e623]:
+                - button "Todos os tipos" [ref=f7e625] [cursor=pointer]
+                - button "Todas prioridades" [ref=f7e634] [cursor=pointer]
+                - button "Todos" [ref=f7e642] [cursor=pointer]
+          - generic [ref=f7e438]:
+            - generic [ref=f7e440]:
+              - paragraph [ref=f7e441]: Acompanhamento
+              - heading "Pendentes" [level=2] [ref=f7e442]
+              - paragraph [ref=f7e443]: 3 item(ns) aguardam atendimento; 3 estão atrasados.
+            - generic [ref=f7e444]:
+              - button "Abrir edicao do lead Contato Demonstração 01" [ref=f7e445] [cursor=pointer]:
+                - generic [ref=f7e446]:
+                  - generic [ref=f7e452]:
+                    - generic [ref=f7e453]:
+                      - heading "Retorno de demonstração 1" [level=3] [ref=f7e454]
+                      - paragraph [ref=f7e455]: Revisar proposta fictícia
+                    - generic [ref=f7e456]:
+                      - generic [ref=f7e457]:
+                        - generic "Lead favorito" [ref=f7e461]:
+                          - img "Lead favorito" [ref=f7e462]
+                        - generic [ref=f7e464]: Contato Demonstração 01
+                      - generic [ref=f7e466]: follow_up
+                      - generic [ref=f7e467]: Atrasado
+                    - generic [ref=f7e468]: 25/10/2026 às 11:00
+                  - group "Ações do lembrete" [ref=f7e474]:
+                    - button "Telefone não disponível" [disabled] [ref=f7e475]
+                    - button "Agendar dias úteis e marcar atual como lido" [ref=f7e482]
+                    - button "Marcar como lido" [ref=f7e488]
+                    - button "Reagendar item" [ref=f7e492]
+                    - button "Marcar lead como perdido e limpar lembretes" [ref=f7e496]
+                    - button "Excluir item" [ref=f7e501]
+              - button "Abrir edicao do lead Contato Demonstração 02" [ref=f7e506] [cursor=pointer]:
+                - generic [ref=f7e507]:
+                  - generic [ref=f7e513]:
+                    - generic [ref=f7e514]:
+                      - heading "Retorno de demonstração 2" [level=3] [ref=f7e515]
+                      - paragraph [ref=f7e516]: Revisar proposta fictícia
+                    - generic [ref=f7e517]:
+                      - generic [ref=f7e518]: Contato Demonstração 02
+                      - generic [ref=f7e524]: follow_up
+                      - generic [ref=f7e525]: Atrasado
+                    - generic [ref=f7e526]: 26/10/2026 às 11:00
+                  - group "Ações do lembrete" [ref=f7e532]:
+                    - button "Telefone não disponível" [disabled] [ref=f7e533]
+                    - button "Agendar dias úteis e marcar atual como lido" [ref=f7e540]
+                    - button "Marcar como lido" [ref=f7e546]
+                    - button "Reagendar item" [ref=f7e550]
+                    - button "Marcar lead como perdido e limpar lembretes" [ref=f7e554]
+                    - button "Excluir item" [ref=f7e559]
+              - button "Abrir edicao do lead Contato Demonstração 03" [ref=f7e564] [cursor=pointer]:
+                - generic [ref=f7e565]:
+                  - generic [ref=f7e571]:
+                    - generic [ref=f7e572]:
+                      - heading "Retorno de demonstração 3" [level=3] [ref=f7e573]
+                      - paragraph [ref=f7e574]: Revisar proposta fictícia
+                    - generic [ref=f7e575]:
+                      - generic [ref=f7e576]: Contato Demonstração 03
+                      - generic [ref=f7e582]: follow_up
+                      - generic [ref=f7e583]: Atrasado
+                    - generic [ref=f7e584]: 27/10/2026 às 11:00
+                  - group "Ações do lembrete" [ref=f7e590]:
+                    - button "Telefone não disponível" [disabled] [ref=f7e591]
+                    - button "Agendar dias úteis e marcar atual como lido" [ref=f7e598]
+                    - button "Marcar como lido" [ref=f7e604]
+                    - button "Reagendar item" [ref=f7e608]
+                    - button "Marcar lead como perdido e limpar lembretes" [ref=f7e612]
+                    - button "Excluir item" [ref=f7e617]
+  - dialog "Organizar follow-ups da agenda" [ref=f7e687]:
+    - generic [ref=f7e688]:
+      - generic [ref=f7e689]:
+        - heading "Organizar follow-ups" [level=2] [ref=f7e690]
+        - paragraph [ref=f7e691]: "Monte uma fila diária: até o limite definido por dia, todos no mesmo horário, em ordem de prioridade."
+      - button "Fechar" [active] [ref=f7e692] [cursor=pointer]
+    - generic [ref=f7e696]:
+      - generic [ref=f7e697]:
+        - generic [ref=f7e699]:
+          - heading "Configuração da fila" [level=3] [ref=f7e700]
+          - paragraph [ref=f7e701]: Defina capacidade, início e critério de priorização.
+        - generic [ref=f7e702]:
+          - generic [ref=f7e703]:
+            - generic [ref=f7e704]: Limite diário
+            - spinbutton "Limite diário" [ref=f7e708]: "20"
+          - generic [ref=f7e709]:
+            - generic [ref=f7e710]: Horário único da fila
+            - button "Horário único da fila" [ref=f7e714] [cursor=pointer]:
+              - generic [ref=f7e718]: 09:00
+          - generic [ref=f7e719]:
+            - generic [ref=f7e720]: Data inicial
+            - button "Data inicial" [ref=f7e724] [cursor=pointer]:
+              - generic [ref=f7e727]: 28/10/2026
+          - generic [ref=f7e728]:
+            - generic [ref=f7e729]: Modo
+            - combobox [aria-hidden] [ref=f7e732]
+            - button "Modo" [ref=f7e734] [cursor=pointer]:
+              - generic [ref=f7e735]: Equilibrado
+        - generic [ref=f7e738]:
+          - generic [ref=f7e739] [cursor=pointer]:
+            - checkbox "Somente dias úteis" [checked] [ref=f7e740]
+            - generic [ref=f7e741]: Somente dias úteis
+          - generic [ref=f7e742] [cursor=pointer]:
+            - checkbox "Incluir atrasados" [checked] [ref=f7e743]
+            - generic [ref=f7e744]: Incluir atrasados
+          - generic [ref=f7e745] [cursor=pointer]:
+            - checkbox "Preservar follow-ups de hoje" [checked] [ref=f7e746]
+            - generic [ref=f7e747]: Preservar follow-ups de hoje
+      - generic [ref=f7e749]:
+        - paragraph [ref=f7e755]: Aguardando configuração
+        - paragraph [ref=f7e756]: Configure a fila e gere uma prévia. Nada será alterado antes da confirmação.
+    - generic [ref=f7e757]:
+      - button "Fechar" [ref=f7e758] [cursor=pointer]
+      - button "Gerar prévia" [ref=f7e759] [cursor=pointer]
+      - button "Aplicar" [disabled] [ref=f7e763]

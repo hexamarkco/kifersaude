@@ -1,0 +1,133 @@
+- generic [ref=f15e9]:
+  - complementary [ref=f15e10]:
+    - generic [ref=f15e11]:
+      - generic [ref=f15e12]: K
+      - navigation [ref=f15e15]:
+        - generic [ref=f15e16]:
+          - button "Dashboard" [ref=f15e17] [cursor=pointer]
+          - button "3 CRM" [ref=f15e463] [cursor=pointer]:
+            - generic [ref=f15e26]:
+              - generic [ref=f15e27]: "3"
+              - generic: CRM
+          - button "3 Comunicação" [ref=f15e465] [cursor=pointer]:
+            - generic [ref=f15e33]:
+              - generic [ref=f15e34]: "3"
+              - generic: Comunicação
+          - button "Financeiro" [ref=f15e38] [cursor=pointer]
+          - button "Automações e IA" [ref=f15e44] [cursor=pointer]
+          - button "Configurações" [ref=f15e50] [cursor=pointer]
+      - generic [ref=f15e55]:
+        - button "Expandir" [ref=f15e56] [cursor=pointer]
+        - button "3 Notificações" [ref=f15e467] [cursor=pointer]:
+          - generic [ref=f15e468]: "3"
+          - generic: Notificações
+        - button "Ativar tema escuro" [ref=f15e67] [cursor=pointer]:
+          - generic: Escuro
+        - button "Sair" [ref=f15e70] [cursor=pointer]
+  - generic [ref=f15e74]:
+    - banner [ref=f15e75]:
+      - generic [ref=f15e76]:
+        - navigation "Breadcrumb" [ref=f15e77]:
+          - list [ref=f15e78]:
+            - listitem [ref=f15e79]:
+              - button "CRM" [ref=f15e80] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f15e81]
+            - listitem [ref=f15e84]: Configurações
+        - generic [ref=f15e85]:
+          - generic [ref=f15e86]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f15e87] [cursor=pointer]
+          - generic [ref=f15e91]: OD
+    - main [ref=f15e93]:
+      - generic [ref=f15e95]:
+        - generic [ref=f15e96]:
+          - generic [ref=f15e97]:
+            - generic [ref=f15e98]:
+              - paragraph [ref=f15e99]: Administração
+              - heading "Origens dos leads" [level=1] [ref=f15e469]
+              - paragraph [ref=f15e103]: Ajuste o sistema, os cadastros e os acessos da equipe.
+            - generic [ref=f15e104]: 4 áreas disponíveis
+          - tablist "Áreas de configurações" [ref=f15e111]:
+            - tab "Geral" [selected] [ref=f15e112] [cursor=pointer]
+            - tab "Usuários" [ref=f15e117] [cursor=pointer]
+            - tab "Links" [ref=f15e124] [cursor=pointer]
+            - tab "Formulários" [ref=f15e129] [cursor=pointer]
+        - main [ref=f15e134]:
+          - generic [ref=f15e135]:
+            - generic [ref=f15e136]:
+              - generic [ref=f15e137]:
+                - generic [ref=f15e139]:
+                  - paragraph [ref=f15e140]: Configuração geral
+                  - heading "Regras, catálogo e cadastros" [level=2] [ref=f15e141]
+                  - paragraph [ref=f15e142]: Encontre e ajuste uma área por vez, sem perder espaço útil para o conteúdo.
+                - textbox "Buscar por permissões, leads ou contratos" [ref=f15e145]
+              - tablist [ref=f15e147]:
+                - tab "Preferências do sistema" [ref=f15e148] [cursor=pointer]
+                - tab "Perfis e acessos" [ref=f15e153] [cursor=pointer]
+                - tab "Leads" [selected] [ref=f15e158] [cursor=pointer]
+                - tab "Contratos" [ref=f15e163] [cursor=pointer]
+            - generic [ref=f15e290]:
+              - generic [ref=f15e292]:
+                - heading "Configurações de leads" [level=2] [ref=f15e293]
+                - paragraph [ref=f15e294]: Etapas do funil, origens e cadastros auxiliares.
+              - generic [ref=f15e295]:
+                - tablist "Categorias das configurações de leads" [ref=f15e297]:
+                  - tab "Funil" [ref=f15e298] [cursor=pointer]
+                  - tab "Origens" [active] [selected] [ref=f15e304] [cursor=pointer]
+                  - tab "Tipos de contratação" [ref=f15e312] [cursor=pointer]
+                  - tab "Responsáveis pelos leads" [ref=f15e317] [cursor=pointer]
+                - generic [ref=f15e471]:
+                  - generic [ref=f15e472]:
+                    - generic [ref=f15e473]:
+                      - heading "Origens dos leads" [level=3] [ref=f15e474]
+                      - paragraph [ref=f15e475]: Defina os canais de entrada e quais deles podem ser vistos por observadores.
+                    - button "Adicionar origem" [ref=f15e477] [cursor=pointer]
+                  - generic [ref=f15e480]:
+                    - textbox "Buscar em Origens dos leads" [ref=f15e483]:
+                      - /placeholder: Buscar por nome
+                    - status [ref=f15e484]: 3 itens
+                  - generic [ref=f15e485]:
+                    - generic [ref=f15e486]:
+                      - button "Ordenar por Origem" [pressed] [ref=f15e487] [cursor=pointer]:
+                        - generic [ref=f15e488]: Origem
+                      - button "Ordenar por Disponível" [ref=f15e491] [cursor=pointer]:
+                        - generic [ref=f15e492]: Disponível
+                      - button "Ordenar por Observadores" [ref=f15e496] [cursor=pointer]:
+                        - generic [ref=f15e497]: Observadores
+                      - generic [ref=f15e501]: Ações
+                    - list "Origens dos leads" [ref=f15e502]:
+                      - listitem [ref=f15e503]:
+                        - generic [ref=f15e504]: Campanha de demonstração
+                        - generic [ref=f15e505]:
+                          - generic [ref=f15e506]:
+                            - switch "Desativar origem Campanha de demonstração" [checked] [ref=f15e508]
+                            - generic [ref=f15e511]: Ativa
+                          - generic "Visível para observadores" [ref=f15e512]:
+                            - switch "Ocultar Campanha de demonstração para observadores" [checked] [ref=f15e514]
+                            - generic [ref=f15e517]: Observadores
+                          - group "Ações da origem Campanha de demonstração" [ref=f15e518]:
+                            - button "Editar origem Campanha de demonstração" [ref=f15e519] [cursor=pointer]
+                            - button "Excluir origem Campanha de demonstração" [ref=f15e524] [cursor=pointer]
+                      - listitem [ref=f15e529]:
+                        - generic [ref=f15e530]: Indicação
+                        - generic [ref=f15e531]:
+                          - generic [ref=f15e532]:
+                            - switch "Desativar origem Indicação" [checked] [ref=f15e534]
+                            - generic [ref=f15e537]: Ativa
+                          - generic "Visível para observadores" [ref=f15e538]:
+                            - switch "Ocultar Indicação para observadores" [checked] [ref=f15e540]
+                            - generic [ref=f15e543]: Observadores
+                          - group "Ações da origem Indicação" [ref=f15e544]:
+                            - button "Editar origem Indicação" [ref=f15e545] [cursor=pointer]
+                            - button "Excluir origem Indicação" [ref=f15e550] [cursor=pointer]
+                      - listitem [ref=f15e555]:
+                        - generic [ref=f15e556]: Site
+                        - generic [ref=f15e557]:
+                          - generic [ref=f15e558]:
+                            - switch "Desativar origem Site" [checked] [ref=f15e560]
+                            - generic [ref=f15e563]: Ativa
+                          - generic "Visível para observadores" [ref=f15e564]:
+                            - switch "Ocultar Site para observadores" [checked] [ref=f15e566]
+                            - generic [ref=f15e569]: Observadores
+                          - group "Ações da origem Site" [ref=f15e570]:
+                            - button "Editar origem Site" [ref=f15e571] [cursor=pointer]
+                            - button "Excluir origem Site" [ref=f15e576] [cursor=pointer]

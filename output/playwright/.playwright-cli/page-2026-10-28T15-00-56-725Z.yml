@@ -1,0 +1,97 @@
+- generic [ref=f13e1]:
+  - generic [ref=f13e5]:
+    - banner [ref=f13e6]:
+      - generic [ref=f13e7]:
+        - generic [ref=f13e8]:
+          - paragraph [ref=f13e9]: Administração
+          - heading "Usuários e permissões" [level=1] [ref=f13e12]
+          - paragraph [ref=f13e13]: Gerencie as contas que podem acessar a operação.
+        - button "Novo usuário" [ref=f13e15] [cursor=pointer]
+      - tablist "Áreas de configurações" [ref=f13e20]:
+        - tab "Geral" [ref=f13e21] [cursor=pointer]
+        - tab "Usuários" [selected] [ref=f13e26] [cursor=pointer]
+        - tab "Links" [ref=f13e33] [cursor=pointer]
+        - tab "Formulários" [ref=f13e38] [cursor=pointer]
+    - main [ref=f13e43]:
+      - generic [ref=f13e44]:
+        - generic [ref=f13e45]:
+          - searchbox "Buscar por usuário, e-mail ou perfil" [ref=f13e48]
+          - status [ref=f13e49]: 3 usuários
+        - region "Tabela com rolagem horizontal" [ref=f13e179]:
+          - table [ref=f13e180]:
+            - rowgroup [ref=f13e186]:
+              - row [ref=f13e187]:
+                - columnheader [ref=f13e188]:
+                  - button "Ordenar por Usuário" [ref=f13e189] [cursor=pointer]:
+                    - generic [ref=f13e190]: Usuário
+                - columnheader [ref=f13e193]:
+                  - button "Ordenar por Perfil de acesso" [ref=f13e194] [cursor=pointer]:
+                    - generic [ref=f13e195]: Perfil de acesso
+                - columnheader [ref=f13e199]:
+                  - button "Ordenar por Criado em" [ref=f13e200] [cursor=pointer]:
+                    - generic [ref=f13e201]: Criado em
+                - columnheader "Ações" [ref=f13e205]
+            - rowgroup [ref=f13e206]:
+              - row [ref=f13e207]:
+                - cell "@Ana Demonstração ana.demonstracao@example.invalid" [ref=f13e208]:
+                  - generic [ref=f13e214]:
+                    - generic [ref=f13e215]: "@Ana Demonstração"
+                    - generic [ref=f13e216]: ana.demonstracao@example.invalid
+                - cell "Administrador" [ref=f13e217]
+                - cell "25/10/2026" [ref=f13e219]
+                - cell [ref=f13e220]:
+                  - group "Ações do usuário" [ref=f13e221]:
+                    - button "Editar Ana Demonstração" [ref=f13e222] [cursor=pointer]
+              - row [ref=f13e227]:
+                - cell "@Bruno Exemplo bruno.exemplo@example.invalid" [ref=f13e228]:
+                  - generic [ref=f13e234]:
+                    - generic [ref=f13e235]: "@Bruno Exemplo"
+                    - generic [ref=f13e236]: bruno.exemplo@example.invalid
+                - cell "Gestor comercial" [ref=f13e237]
+                - cell "24/10/2026" [ref=f13e239]
+                - cell [ref=f13e240]:
+                  - group "Ações do usuário" [ref=f13e241]:
+                    - button "Editar Bruno Exemplo" [ref=f13e242] [cursor=pointer]
+                    - button "Excluir Bruno Exemplo" [ref=f13e247] [cursor=pointer]
+              - row [ref=f13e252]:
+                - cell "@Carla Teste carla.teste@example.invalid" [ref=f13e253]:
+                  - generic [ref=f13e259]:
+                    - generic [ref=f13e260]: "@Carla Teste"
+                    - generic [ref=f13e261]: carla.teste@example.invalid
+                - cell "Observador" [ref=f13e262]
+                - cell "23/10/2026" [ref=f13e264]
+                - cell [ref=f13e265]:
+                  - group "Ações do usuário" [ref=f13e266]:
+                    - button "Editar Carla Teste" [ref=f13e267] [cursor=pointer]
+                    - button "Excluir Carla Teste" [ref=f13e272] [cursor=pointer]
+  - dialog [ref=f13e280]:
+    - generic [ref=f13e281]:
+      - generic [ref=f13e282]:
+        - heading "Editar usuário" [level=2] [ref=f13e283]
+        - paragraph [ref=f13e284]: Atualize os dados e o perfil de acesso do usuário.
+      - button "Fechar" [active] [ref=f13e285] [cursor=pointer]
+    - generic [ref=f13e289]:
+      - generic [ref=f13e291]:
+        - generic [ref=f13e292]:
+          - generic [ref=f13e293]: Usuário
+          - textbox "Usuário" [ref=f13e297]:
+            - /placeholder: nome.usuario
+            - text: Bruno Exemplo
+        - generic [ref=f13e298]:
+          - generic [ref=f13e299]: E-mail
+          - textbox "E-mail" [ref=f13e303]:
+            - /placeholder: usuario@email.com
+            - text: bruno.exemplo@example.invalid
+        - generic [ref=f13e304]:
+          - generic [ref=f13e305]: Nova senha
+          - generic [ref=f13e308]:
+            - textbox "Nova senha" [ref=f13e309]:
+              - /placeholder: Deixe em branco para manter
+            - button "Mostrar senha" [ref=f13e311] [cursor=pointer]
+          - paragraph [ref=f13e316]: Deixe em branco para manter a senha atual.
+        - generic [ref=f13e317]:
+          - generic [ref=f13e318]: Perfil
+          - button "Gestor comercial" [ref=f13e322] [cursor=pointer]
+      - generic [ref=f13e329]:
+        - button "Cancelar" [ref=f13e330] [cursor=pointer]
+        - button "Salvar alterações" [ref=f13e331] [cursor=pointer]

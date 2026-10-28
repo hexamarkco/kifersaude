@@ -1,0 +1,191 @@
+- generic [ref=f11e1]:
+  - generic [ref=f11e9]:
+    - navigation "Navegação principal" [ref=f11e10]:
+      - button "Início" [ref=f11e11] [cursor=pointer]
+      - button "Leads" [ref=f11e18] [cursor=pointer]
+      - button "WhatsApp" [ref=f11e25] [cursor=pointer]
+      - button "Contratos" [ref=f11e29] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f11e34] [cursor=pointer]:
+        - generic [ref=f11e36]: Mais
+    - main [ref=f11e38]:
+      - generic [ref=f11e41]:
+        - generic [ref=f11e50]:
+          - paragraph [ref=f11e51]: WhatsApp Indisponível
+          - paragraph [ref=f11e52]: Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.
+        - generic [ref=f11e54]:
+          - generic [ref=f11e688]:
+            - button "Voltar para a lista de conversas" [ref=f11e689] [cursor=pointer]
+            - generic [ref=f11e693]:
+              - generic [ref=f11e694]:
+                - paragraph [ref=f11e696]:
+                  - button "Remover dos favoritos" [pressed] [ref=f11e697] [cursor=pointer]
+                  - generic [ref=f11e701]: Contato Demonstração 01
+                - button "Abrir ações da conversa" [ref=f11e702] [cursor=pointer]
+              - generic [ref=f11e708]:
+                - generic [ref=f11e709]: Contato privado
+                - button "+ Salvar contato" [ref=f11e710] [cursor=pointer]
+                - generic [ref=f11e711]: "Próximo lembrete atrasado: Retorno de demonstração 1 · 25/10/2026 às 11:00"
+          - generic [ref=f11e715]:
+            - generic [ref=f11e716]: domingo
+            - generic [ref=f11e721]:
+              - paragraph [ref=f11e723]: Olá, gostaria de informações sobre o plano.
+              - generic [ref=f11e724]: 25/10, 09:00
+            - generic [ref=f11e730]:
+              - paragraph [ref=f11e732]: Claro! Este atendimento é uma demonstração.
+              - generic [ref=f11e733]:
+                - generic [ref=f11e734]:
+                  - generic [ref=f11e735]: 25/10, 09:00
+                  - 'generic "Status: Vista" [ref=f11e736]'
+                - button "Mais acoes da mensagem"
+            - generic [ref=f11e743]:
+              - paragraph [ref=f11e745]: Pode me explicar as opções disponíveis?
+              - generic [ref=f11e746]: 25/10, 09:00
+            - generic [ref=f11e752]:
+              - generic [ref=f11e754]:
+                - button [ref=f11e756] [cursor=pointer]:
+                  - img "imagem-demonstracao.png" [ref=f11e757]
+                - paragraph [ref=f11e758]: Imagem fictícia para documentação
+              - generic [ref=f11e759]: 25/10, 09:00
+          - generic [ref=f11e764]:
+            - group "Ações de composição da mensagem" [ref=f11e765]:
+              - button "Anexar" [ref=f11e767] [cursor=pointer]
+              - button "Emoji, GIF e figurinha" [ref=f11e770] [cursor=pointer]
+              - button "Ações com IA" [ref=f11e776] [cursor=pointer]
+            - textbox "Digite uma mensagem" [ref=f11e781]
+            - button "Gravar áudio" [disabled] [ref=f11e783]
+  - dialog [ref=f11e913]:
+    - generic [ref=f11e914]:
+      - generic [ref=f11e915]:
+        - paragraph [ref=f11e916]: Info do chat
+        - heading "Contato Demonstração 01" [level=2] [ref=f11e917]
+        - paragraph [ref=f11e918]: Lead, contratos e próximos acompanhamentos
+      - button "Fechar" [active] [ref=f11e919] [cursor=pointer]
+    - generic [ref=f11e923]:
+      - tablist "Seções de informações do chat" [ref=f11e925]:
+        - tab "Dados do lead" [selected] [ref=f11e926] [cursor=pointer]
+        - tab "Análise do atendimento" [ref=f11e928] [cursor=pointer]
+      - generic [ref=f11e932]:
+        - generic [ref=f11e933]:
+          - generic [ref=f11e939]:
+            - paragraph [ref=f11e940]: Lead vinculado
+            - paragraph [ref=f11e941]: Informações comerciais desta conversa
+          - button "Desvincular" [ref=f11e942] [cursor=pointer]
+        - complementary [ref=f11e947]:
+          - generic [ref=f11e948]:
+            - generic [ref=f11e949]:
+              - generic [ref=f11e950]: CD
+              - generic [ref=f11e952]:
+                - paragraph [ref=f11e953]: Lead vinculado
+                - heading "Remover dos favoritos Contato Demonstração 01" [level=3] [ref=f11e954]:
+                  - button "Remover dos favoritos" [pressed] [ref=f11e955] [cursor=pointer]
+                  - generic [ref=f11e959]: Contato Demonstração 01
+            - button "Ver completo" [ref=f11e961] [cursor=pointer]
+          - generic [ref=f11e967]:
+            - generic [ref=f11e968]:
+              - heading "Status e responsável" [level=4] [ref=f11e973]
+              - generic [ref=f11e974]:
+                - generic [ref=f11e975]:
+                  - paragraph [ref=f11e976]: Status
+                  - button [ref=f11e979] [cursor=pointer]
+                - generic [ref=f11e982]:
+                  - paragraph [ref=f11e983]: Responsável
+                  - button "Responsável" [ref=f11e986] [cursor=pointer]
+            - generic [ref=f11e995]:
+              - heading "Observações" [level=4] [ref=f11e1000]
+              - generic [ref=f11e1001]: Registro fictício para documentação visual. Nenhum contato real.
+            - generic [ref=f11e1002]:
+              - heading "Contratos" [level=4] [ref=f11e1007]
+              - generic [ref=f11e1008]:
+                - generic [ref=f11e1009]:
+                  - generic [ref=f11e1010]:
+                    - generic [ref=f11e1011]:
+                      - paragraph [ref=f11e1012]: DEMO-001
+                      - paragraph [ref=f11e1013]: Amil • Individual
+                      - paragraph [ref=f11e1014]: Plano Demonstração
+                    - generic [ref=f11e1015]: Ativo
+                  - paragraph [ref=f11e1016]: "Mensalidade total: R$ 850,00"
+                - generic [ref=f11e1017]:
+                  - generic [ref=f11e1018]:
+                    - generic [ref=f11e1019]:
+                      - paragraph [ref=f11e1020]: DEMO-002
+                      - paragraph [ref=f11e1021]: Amil • Individual
+                      - paragraph [ref=f11e1022]: Plano Demonstração
+                    - generic [ref=f11e1023]: Ativo
+                  - paragraph [ref=f11e1024]: "Mensalidade total: R$ 1.120,00"
+                - generic [ref=f11e1025]:
+                  - generic [ref=f11e1026]:
+                    - generic [ref=f11e1027]:
+                      - paragraph [ref=f11e1028]: DEMO-003
+                      - paragraph [ref=f11e1029]: Amil • Individual
+                      - paragraph [ref=f11e1030]: Plano Demonstração
+                    - generic [ref=f11e1031]: Ativo
+                  - paragraph [ref=f11e1032]: "Mensalidade total: R$ 1.390,00"
+                - generic [ref=f11e1033]:
+                  - generic [ref=f11e1034]:
+                    - generic [ref=f11e1035]:
+                      - paragraph [ref=f11e1036]: DEMO-004
+                      - paragraph [ref=f11e1037]: Amil • Individual
+                      - paragraph [ref=f11e1038]: Plano Demonstração
+                    - generic [ref=f11e1039]: Ativo
+                  - paragraph [ref=f11e1040]: "Mensalidade total: R$ 1.660,00"
+        - generic [ref=f11e1041]:
+          - generic [ref=f11e1042]:
+            - generic [ref=f11e1043]:
+              - paragraph [ref=f11e1044]: Agenda do chat
+              - heading "Acompanhamento contextual" [level=3] [ref=f11e1045]
+              - paragraph [ref=f11e1046]: Lembretes do lead e dos contratos ligados a esta conversa, com foco no próximo passo operacional.
+            - generic [ref=f11e1047]:
+              - button "Agendar" [ref=f11e1048] [cursor=pointer]
+              - button "Atualizar" [ref=f11e1052] [cursor=pointer]
+          - generic [ref=f11e1059]:
+            - generic [ref=f11e1060]:
+              - generic [ref=f11e1061]:
+                - generic [ref=f11e1062]:
+                  - paragraph [ref=f11e1063]: Atrasados
+                  - paragraph [ref=f11e1064]: Precisam de ação imediata.
+                - generic [ref=f11e1065]: "3"
+              - generic [ref=f11e1066]:
+                - generic [ref=f11e1068]:
+                  - generic [ref=f11e1069]:
+                    - generic [ref=f11e1070]:
+                      - paragraph [ref=f11e1071]: Retorno de demonstração 1
+                      - generic [ref=f11e1072]: Atrasado
+                    - paragraph [ref=f11e1073]: 25/10/2026 às 11:00
+                    - paragraph [ref=f11e1077]: Revisar proposta fictícia
+                  - generic [ref=f11e1078]:
+                    - button "Concluir" [ref=f11e1079] [cursor=pointer]
+                    - button "Reagendar" [ref=f11e1083] [cursor=pointer]
+                - generic [ref=f11e1089]:
+                  - generic [ref=f11e1090]:
+                    - generic [ref=f11e1091]:
+                      - paragraph [ref=f11e1092]: Retorno de demonstração 2
+                      - generic [ref=f11e1093]: Atrasado
+                    - paragraph [ref=f11e1094]: 26/10/2026 às 11:00
+                    - paragraph [ref=f11e1098]: Revisar proposta fictícia
+                  - generic [ref=f11e1099]:
+                    - button "Concluir" [ref=f11e1100] [cursor=pointer]
+                    - button "Reagendar" [ref=f11e1104] [cursor=pointer]
+                - generic [ref=f11e1110]:
+                  - generic [ref=f11e1111]:
+                    - generic [ref=f11e1112]:
+                      - paragraph [ref=f11e1113]: Retorno de demonstração 3
+                      - generic [ref=f11e1114]: Atrasado
+                    - paragraph [ref=f11e1115]: 27/10/2026 às 11:00
+                    - paragraph [ref=f11e1119]: Revisar proposta fictícia
+                  - generic [ref=f11e1120]:
+                    - button "Concluir" [ref=f11e1121] [cursor=pointer]
+                    - button "Reagendar" [ref=f11e1125] [cursor=pointer]
+            - generic [ref=f11e1130]:
+              - generic [ref=f11e1131]:
+                - generic [ref=f11e1132]:
+                  - paragraph [ref=f11e1133]: Hoje
+                  - paragraph [ref=f11e1134]: Compromissos do dia atual.
+                - generic [ref=f11e1135]: "0"
+              - generic [ref=f11e1136]: Nenhum lembrete nesta seção.
+            - generic [ref=f11e1137]:
+              - generic [ref=f11e1138]:
+                - generic [ref=f11e1139]:
+                  - paragraph [ref=f11e1140]: Futuros
+                  - paragraph [ref=f11e1141]: Próximos acompanhamentos agendados.
+                - generic [ref=f11e1142]: "0"
+              - generic [ref=f11e1143]: Nenhum lembrete nesta seção.

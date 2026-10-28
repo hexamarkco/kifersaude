@@ -1,0 +1,53 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Administração
+          - heading "Usuários e permissões" [level=1] [ref=e12]
+          - paragraph [ref=e13]: Gerencie as contas que podem acessar a operação.
+        - button "Novo usuário" [ref=e15] [cursor=pointer]
+      - tablist "Áreas de configurações" [ref=e20]:
+        - tab "Geral" [ref=e21] [cursor=pointer]
+        - tab "Usuários" [selected] [ref=e26] [cursor=pointer]
+        - tab "Links" [ref=e33] [cursor=pointer]
+        - tab "Formulários" [ref=e38] [cursor=pointer]
+    - main [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - searchbox "Buscar por usuário, e-mail ou perfil" [ref=e48]
+          - status [ref=e49]: 3 usuários
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - generic [ref=e157]:
+              - paragraph [ref=e158]: "@Ana Demonstração"
+              - paragraph [ref=e159]: ana.demonstracao@example.invalid
+              - generic [ref=e160]: Administrador
+            - generic [ref=e162]:
+              - paragraph [ref=e163]: Você
+              - group "Ações de Ana Demonstração" [ref=e164]:
+                - button "Editar Ana Demonstração" [ref=e165] [cursor=pointer]
+          - generic [ref=e170]:
+            - generic [ref=e176]:
+              - paragraph [ref=e177]: "@Bruno Exemplo"
+              - paragraph [ref=e178]: bruno.exemplo@example.invalid
+              - generic [ref=e179]: Gestor comercial
+            - group "Ações de Bruno Exemplo" [ref=e182]:
+              - button "Editar Bruno Exemplo" [ref=e183] [cursor=pointer]
+              - button "Excluir Bruno Exemplo" [ref=e188] [cursor=pointer]
+          - generic [ref=e193]:
+            - generic [ref=e199]:
+              - paragraph [ref=e200]: "@Carla Teste"
+              - paragraph [ref=e201]: carla.teste@example.invalid
+              - generic [ref=e202]: Observador
+            - group "Ações de Carla Teste" [ref=e205]:
+              - button "Editar Carla Teste" [ref=e206] [cursor=pointer]
+              - button "Excluir Carla Teste" [ref=e211] [cursor=pointer]
+  - dialog [ref=e219]:
+    - generic [ref=e220]:
+      - heading "Excluir usuário" [level=2] [ref=e222]
+      - button "Fechar" [active] [ref=e223] [cursor=pointer]
+    - generic [ref=e227]: Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
+    - generic [ref=e231]:
+      - button "Cancelar" [ref=e232] [cursor=pointer]
+      - button "Excluir usuário" [ref=e233] [cursor=pointer]

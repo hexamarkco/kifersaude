@@ -1,0 +1,193 @@
+- generic [ref=f8e1]:
+  - generic [ref=f8e3]:
+    - complementary [ref=f8e4]:
+      - generic [ref=f8e5]:
+        - img "Kifer Saúde CRM" [ref=f8e7]:
+          - generic [ref=f8e8]: kifersaúde
+          - generic [ref=f8e9]: CRM
+        - navigation [ref=f8e10]:
+          - generic [ref=f8e11]:
+            - button "Dashboard" [ref=f8e12] [cursor=pointer]
+            - button "CRM 3" [ref=f8e21] [cursor=pointer]:
+              - generic [ref=f8e22]: CRM
+              - generic [ref=f8e30]: "3"
+            - button "Comunicação 3" [ref=f8e32] [cursor=pointer]:
+              - generic [ref=f8e33]: Comunicação
+              - generic [ref=f8e40]: "3"
+            - button "Financeiro" [ref=f8e42] [cursor=pointer]
+            - button "Automações e IA" [ref=f8e51] [cursor=pointer]
+            - button "Configurações" [ref=f8e58] [cursor=pointer]
+        - generic [ref=f8e64]:
+          - button "Recolher" [ref=f8e65] [cursor=pointer]
+          - button "3 Notificações" [ref=f8e70] [cursor=pointer]:
+            - generic [ref=f8e77]: "3"
+            - generic [ref=f8e78]: Notificações
+          - button "Ativar tema escuro" [ref=f8e79] [cursor=pointer]:
+            - generic [ref=f8e82]: Escuro
+          - button "Sair" [ref=f8e83] [cursor=pointer]
+    - generic [ref=f8e88]:
+      - banner [ref=f8e89]:
+        - generic [ref=f8e90]:
+          - navigation "Breadcrumb" [ref=f8e91]:
+            - list [ref=f8e92]:
+              - listitem [ref=f8e93]:
+                - button "CRM" [ref=f8e94] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f8e95]
+              - listitem [ref=f8e98]: Dashboard
+          - generic [ref=f8e99]:
+            - generic [ref=f8e100]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=f8e101] [cursor=pointer]
+            - generic [ref=f8e105]: OD
+      - main [ref=f8e107]:
+        - generic [ref=f8e109]:
+          - generic [ref=f8e110]:
+            - generic [ref=f8e112]:
+              - paragraph [ref=f8e113]: Operação comercial
+              - heading "Dashboard" [level=1] [ref=f8e116]
+              - paragraph [ref=f8e117]: Veja o que pede atenção e escolha o próximo passo da operação.
+            - generic [ref=f8e119]:
+              - button "Todo o período" [ref=f8e123] [cursor=pointer]
+              - button "Filtros avançados" [expanded] [active] [ref=f8e131] [cursor=pointer]
+          - region "Indicadores do período" [ref=f8e135]:
+            - generic [ref=f8e137]:
+              - paragraph [ref=f8e138]: Resultado
+              - heading "Indicadores do período" [level=2] [ref=f8e139]
+              - paragraph [ref=f8e140]: "Recorte ativo: todo o histórico disponível."
+            - generic [ref=f8e141]:
+              - generic [ref=f8e142]:
+                - heading "Vendas" [level=3] [ref=f8e146]
+                - generic [ref=f8e147]: "4"
+                - generic [ref=f8e148]: 8 leads recebidos
+              - generic [ref=f8e149]:
+                - heading "Valor mensal vendido" [level=3] [ref=f8e153]
+                - generic [ref=f8e154]: R$ 5.020,00
+                - generic [ref=f8e155]: Mensalidade registrada
+              - generic [ref=f8e156]:
+                - heading "Comissão prevista" [level=3] [ref=f8e160]
+                - generic [ref=f8e161]: R$ 10.040,00
+                - generic [ref=f8e162]: Sem forecast adicional
+              - generic [ref=f8e163]:
+                - heading "Conversão" [level=3] [ref=f8e167]
+                - generic [ref=f8e168]: 0%
+                - generic [ref=f8e169]: Leads com contrato
+            - group [ref=f8e170]:
+              - generic "Ver 2 indicadores complementares" [ref=f8e171] [cursor=pointer]
+          - generic [ref=f8e175]:
+            - generic [ref=f8e177]:
+              - generic [ref=f8e178]:
+                - generic [ref=f8e179]:
+                  - paragraph [ref=f8e180]: Performance comercial
+                  - heading "Evolução mensal" [level=2] [ref=f8e181]
+                  - paragraph [ref=f8e182]: Compare o ritmo de entrada, fechamento e comissão dentro dos filtros ativos.
+                - generic [ref=f8e184]:
+                  - tablist "Métrica da evolução mensal" [ref=f8e186]:
+                    - tab "Leads" [selected] [ref=f8e187] [cursor=pointer]
+                    - tab "Contratos" [ref=f8e189] [cursor=pointer]
+                    - tab "Comissões" [ref=f8e191] [cursor=pointer]
+                  - button "Últimos 6 meses" [ref=f8e194] [cursor=pointer]
+              - generic [ref=f8e201]:
+                - generic [ref=f8e202]:
+                  - generic [ref=f8e203]:
+                    - generic [ref=f8e204]:
+                      - paragraph [ref=f8e205]: Leads recebidos
+                      - paragraph [ref=f8e206]: Novas oportunidades adicionadas ao CRM.
+                    - generic [ref=f8e207]:
+                      - generic [ref=f8e209]: "8"
+                      - generic [ref=f8e210]: out. de 26
+                  - generic [ref=f8e211]:
+                    - generic [ref=f8e212]:
+                      - generic [ref=f8e213]:
+                        - paragraph [ref=f8e214]: Série temporal
+                        - paragraph [ref=f8e215]: Tendência suavizada do indicador selecionado
+                      - generic [ref=f8e216]: Série atual
+                    - img "Evolução mensal do indicador selecionado" [ref=f8e219]:
+                      - generic [ref=f8e220]: "8"
+                      - generic [ref=f8e222]: "6"
+                      - generic [ref=f8e224]: "4"
+                      - generic [ref=f8e226]: "2"
+                      - generic [ref=f8e228]: "0"
+                      - 'generic "out. de 26: 8" [ref=f8e230]':
+                        - generic [ref=f8e233]: "8"
+                        - generic [ref=f8e234]: out. de 26
+                - complementary "Resumo da evolução mensal" [ref=f8e235]:
+                  - generic [ref=f8e236]:
+                    - paragraph [ref=f8e242]: Último mês
+                    - paragraph [ref=f8e243]: "8"
+                    - paragraph [ref=f8e244]: Sem comparação
+                    - paragraph [ref=f8e245]: out. de 26
+                  - generic [ref=f8e246]:
+                    - paragraph [ref=f8e251]: Média do período
+                    - paragraph [ref=f8e252]: "8"
+                    - paragraph [ref=f8e253]: Base dos últimos 1 meses
+                    - paragraph [ref=f8e254]: Média mensal
+                  - generic [ref=f8e255]:
+                    - paragraph [ref=f8e260]: Melhor mês
+                    - paragraph [ref=f8e261]: "8"
+                    - paragraph [ref=f8e262]: out. de 26 foi o pico
+                    - paragraph [ref=f8e263]: out. de 26
+            - region "Resumo da operação diária" [ref=f8e264]:
+              - generic [ref=f8e265]:
+                - generic [ref=f8e266]:
+                  - generic [ref=f8e267]:
+                    - generic [ref=f8e268]:
+                      - paragraph [ref=f8e269]: Prioridades de hoje
+                      - paragraph [ref=f8e270]: Sinais de follow-up, próxima etapa e atividade recente.
+                    - generic [ref=f8e271]:
+                      - button "Abrir agenda" [ref=f8e272] [cursor=pointer]
+                      - button "Abrir leads" [ref=f8e276] [cursor=pointer]
+                  - list [ref=f8e280]:
+                    - listitem [ref=f8e281]:
+                      - button "Contato Demonstração 01 Follow-up vencido Contato inicial" [ref=f8e282] [cursor=pointer]:
+                        - generic [ref=f8e283]: Contato Demonstração 01
+                        - generic [ref=f8e287]:
+                          - generic [ref=f8e288]: Follow-up vencido
+                          - generic [ref=f8e291]: Contato inicial
+                    - listitem [ref=f8e293]:
+                      - button "Contato Demonstração 02 Follow-up vencido Em atendimento" [ref=f8e294] [cursor=pointer]:
+                        - generic [ref=f8e295]: Contato Demonstração 02
+                        - generic [ref=f8e299]:
+                          - generic [ref=f8e300]: Follow-up vencido
+                          - generic [ref=f8e303]: Em atendimento
+                    - listitem [ref=f8e305]:
+                      - button "Contato Demonstração 03 Follow-up vencido Proposta enviada" [ref=f8e306] [cursor=pointer]:
+                        - generic [ref=f8e307]: Contato Demonstração 03
+                        - generic [ref=f8e311]:
+                          - generic [ref=f8e312]: Follow-up vencido
+                          - generic [ref=f8e315]: Proposta enviada
+                    - listitem [ref=f8e317]:
+                      - button "Contato Demonstração 04 Etapa avançada Contratado" [ref=f8e318] [cursor=pointer]:
+                        - generic [ref=f8e319]: Contato Demonstração 04
+                        - generic [ref=f8e323]:
+                          - generic [ref=f8e324]: Etapa avançada
+                          - generic [ref=f8e328]: Contratado
+                - generic [ref=f8e330]:
+                  - button [ref=f8e331] [cursor=pointer]:
+                    - paragraph [ref=f8e332]: "3"
+                    - paragraph [ref=f8e333]: Atrasados
+                  - button [ref=f8e334] [cursor=pointer]:
+                    - paragraph [ref=f8e335]: "0"
+                    - paragraph [ref=f8e336]: Pendentes
+                  - button [ref=f8e337] [cursor=pointer]:
+                    - paragraph [ref=f8e338]: "8"
+                    - paragraph [ref=f8e339]: Sem próximo passo
+          - generic [ref=f8e341]:
+            - generic [ref=f8e342]:
+              - paragraph [ref=f8e343]: Aprofundar
+              - heading "Análises e operação da equipe" [level=2] [ref=f8e344]
+              - paragraph [ref=f8e345]: Resultados detalhados, produção, distribuição, automações e calendário.
+            - button "Abrir análises" [ref=f8e347] [cursor=pointer]
+  - dialog "Filtros avançados do dashboard" [ref=f8e348]:
+    - generic [ref=f8e349]:
+      - generic [ref=f8e350]:
+        - heading "Filtros do dashboard" [level=2] [ref=f8e351]
+        - paragraph [ref=f8e352]: Os indicadores são atualizados conforme os filtros são ajustados.
+      - button "Fechar" [ref=f8e353] [cursor=pointer]
+    - generic [ref=f8e357]:
+      - button "Todas as origens" [ref=f8e359] [cursor=pointer]
+      - button "Todos os responsáveis" [ref=f8e369] [cursor=pointer]
+      - button "Todas as operadoras" [ref=f8e380] [cursor=pointer]
+      - button "Todos os tipos" [ref=f8e390] [cursor=pointer]
+      - button "Todos os estágios" [ref=f8e399] [cursor=pointer]
+    - generic [ref=f8e408]:
+      - button "Limpar filtros" [ref=f8e409] [cursor=pointer]
+      - button "Concluído" [ref=f8e410] [cursor=pointer]

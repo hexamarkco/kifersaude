@@ -1,0 +1,65 @@
+- generic [ref=f11e1]:
+  - generic [ref=f11e9]:
+    - navigation "Navegação principal" [ref=f11e10]:
+      - button "Início" [ref=f11e11] [cursor=pointer]
+      - button "Leads" [ref=f11e18] [cursor=pointer]
+      - button "WhatsApp" [ref=f11e25] [cursor=pointer]
+      - button "Contratos" [ref=f11e29] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f11e34] [cursor=pointer]:
+        - generic [ref=f11e36]: Mais
+    - main [ref=f11e38]:
+      - generic [ref=f11e41]:
+        - generic [ref=f11e50]:
+          - paragraph [ref=f11e51]: WhatsApp Indisponível
+          - paragraph [ref=f11e52]: Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.
+        - generic [ref=f11e54]:
+          - generic [ref=f11e688]:
+            - button "Voltar para a lista de conversas" [ref=f11e689] [cursor=pointer]
+            - generic [ref=f11e693]:
+              - generic [ref=f11e694]:
+                - paragraph [ref=f11e696]:
+                  - button "Remover dos favoritos" [pressed] [ref=f11e697] [cursor=pointer]
+                  - generic [ref=f11e701]: Contato Demonstração 01
+                - button "Abrir ações da conversa" [expanded] [active] [ref=f11e702] [cursor=pointer]
+              - generic [ref=f11e708]:
+                - generic [ref=f11e709]: Contato privado
+                - button "+ Salvar contato" [ref=f11e710] [cursor=pointer]
+                - generic [ref=f11e711]: "Próximo lembrete atrasado: Retorno de demonstração 1 · 25/10/2026 às 11:00"
+          - generic [ref=f11e715]:
+            - generic [ref=f11e716]: domingo
+            - generic [ref=f11e721]:
+              - paragraph [ref=f11e723]: Olá, gostaria de informações sobre o plano.
+              - generic [ref=f11e724]: 25/10, 09:00
+            - generic [ref=f11e730]:
+              - paragraph [ref=f11e732]: Claro! Este atendimento é uma demonstração.
+              - generic [ref=f11e733]:
+                - generic [ref=f11e734]:
+                  - generic [ref=f11e735]: 25/10, 09:00
+                  - 'generic "Status: Vista" [ref=f11e736]'
+                - button "Mais acoes da mensagem"
+            - generic [ref=f11e743]:
+              - paragraph [ref=f11e745]: Pode me explicar as opções disponíveis?
+              - generic [ref=f11e746]: 25/10, 09:00
+            - generic [ref=f11e752]:
+              - generic [ref=f11e754]:
+                - button [ref=f11e756] [cursor=pointer]:
+                  - img "imagem-demonstracao.png" [ref=f11e757]
+                - paragraph [ref=f11e758]: Imagem fictícia para documentação
+              - generic [ref=f11e759]: 25/10, 09:00
+          - generic [ref=f11e764]:
+            - group "Ações de composição da mensagem" [ref=f11e765]:
+              - button "Anexar" [ref=f11e767] [cursor=pointer]
+              - button "Emoji, GIF e figurinha" [ref=f11e770] [cursor=pointer]
+              - button "Ações com IA" [ref=f11e776] [cursor=pointer]
+            - textbox "Digite uma mensagem" [ref=f11e781]
+            - button "Gravar áudio" [disabled] [ref=f11e783]
+  - menu "Ações da conversa" [ref=f11e870]:
+    - generic [ref=f11e871]:
+      - menuitem "Ativar IA neste chat" [ref=f11e872] [cursor=pointer]
+      - menuitem "Arquivos da conversa" [ref=f11e877] [cursor=pointer]
+      - menuitem "Pesquisar neste chat" [ref=f11e881] [cursor=pointer]
+      - menuitem "Mensagens agendadas desta conversa" [ref=f11e886] [cursor=pointer]
+      - menuitem "Copiar conversa formatada" [ref=f11e892] [cursor=pointer]
+      - menuitem "Recuperar histórico antigo" [disabled] [ref=f11e897]
+      - menuitem "Gerar follow-up com IA" [ref=f11e902] [cursor=pointer]
+      - menuitem "Informações do lead" [ref=f11e906] [cursor=pointer]

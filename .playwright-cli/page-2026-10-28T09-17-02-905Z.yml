@@ -1,0 +1,103 @@
+- generic [ref=f9e3]:
+  - navigation "Navegação principal" [ref=f9e429]:
+    - button "Início" [ref=f9e430] [cursor=pointer]
+    - button "Leads" [ref=f9e437] [cursor=pointer]
+    - button "WhatsApp" [ref=f9e444] [cursor=pointer]
+    - button "Contratos" [ref=f9e448] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f9e453] [cursor=pointer]:
+      - generic [ref=f9e455]: Mais
+  - generic [ref=f9e109]:
+    - banner [ref=f9e110]:
+      - generic [ref=f9e456]:
+        - img "Kifer Saúde" [ref=f9e457]:
+          - generic [ref=f9e458]: kifersaúde
+        - generic [ref=f9e459]:
+          - button "Abrir menu" [ref=f9e460] [cursor=pointer]
+          - generic [ref=f9e463]: OD
+    - main [ref=f9e128]:
+      - generic [ref=f9e130]:
+        - generic [ref=f9e132]:
+          - generic [ref=f9e133]:
+            - paragraph [ref=f9e134]: Kifer Saúde / produtividade
+            - heading "Agenda e tarefas" [level=1] [ref=f9e137]
+            - paragraph [ref=f9e138]: Organize seus compromissos e priorize os retornos comerciais.
+          - group "Ações da agenda" [ref=f9e140]:
+            - button "Organizar follow-ups" [ref=f9e141] [cursor=pointer]:
+              - generic [ref=f9e142]: Organizar
+            - button "Nova tarefa" [ref=f9e145] [cursor=pointer]
+        - generic [ref=f9e148]:
+          - tablist [ref=f9e150]:
+            - tab "Calendário" [ref=f9e151] [cursor=pointer]
+            - tab "Pendentes" [active] [selected] [ref=f9e466] [cursor=pointer]
+            - tab "Concluídos" [ref=f9e156] [cursor=pointer]
+          - generic [ref=f9e159]:
+            - textbox "Buscar tarefas e lembretes" [ref=f9e161]:
+              - /placeholder: Buscar tarefa ou lead...
+            - generic [ref=f9e162]:
+              - button "Mostrar filtros da agenda" [ref=f9e163] [cursor=pointer]:
+                - generic [ref=f9e164]: Filtros
+              - button "Marcar itens filtrados como lidos" [ref=f9e166] [cursor=pointer]:
+                - generic [ref=f9e167]: Marcar lidos
+        - generic [ref=f9e467]:
+          - generic [ref=f9e469]:
+            - paragraph [ref=f9e470]: Acompanhamento
+            - heading "Pendentes" [level=2] [ref=f9e471]
+            - paragraph [ref=f9e472]: 3 itens aguardam atendimento; 3 estão atrasados.
+          - generic [ref=f9e473]:
+            - button "Abrir edicao do lead Contato Demonstração 01" [ref=f9e474] [cursor=pointer]:
+              - generic [ref=f9e475]:
+                - generic [ref=f9e480]:
+                  - generic [ref=f9e481]:
+                    - heading "Retorno de demonstração 1" [level=3] [ref=f9e482]
+                    - paragraph [ref=f9e483]: Revisar proposta fictícia
+                  - generic [ref=f9e484]:
+                    - generic [ref=f9e485]:
+                      - generic "Lead favorito" [ref=f9e489]:
+                        - img "Lead favorito" [ref=f9e490]
+                      - generic [ref=f9e492]: Contato Demonstração 01
+                    - generic [ref=f9e493]: Follow-up
+                    - generic [ref=f9e494]: Atrasado
+                  - generic [ref=f9e495]: 25/10/2026 às 11:00
+                - group "Ações do lembrete" [ref=f9e501]:
+                  - button "Telefone não disponível" [disabled] [ref=f9e502]
+                  - button "Agendar dias úteis e marcar atual como lido" [ref=f9e509]
+                  - button "Marcar como lido" [ref=f9e515]
+                  - button "Reagendar item" [ref=f9e519]
+                  - button "Marcar lead como perdido e limpar lembretes" [ref=f9e523]
+                  - button "Excluir item" [ref=f9e528]
+            - button "Abrir edicao do lead Contato Demonstração 02" [ref=f9e533] [cursor=pointer]:
+              - generic [ref=f9e534]:
+                - generic [ref=f9e539]:
+                  - generic [ref=f9e540]:
+                    - heading "Retorno de demonstração 2" [level=3] [ref=f9e541]
+                    - paragraph [ref=f9e542]: Revisar proposta fictícia
+                  - generic [ref=f9e543]:
+                    - generic [ref=f9e544]: Contato Demonstração 02
+                    - generic [ref=f9e549]: Follow-up
+                    - generic [ref=f9e550]: Atrasado
+                  - generic [ref=f9e551]: 26/10/2026 às 11:00
+                - group "Ações do lembrete" [ref=f9e557]:
+                  - button "Telefone não disponível" [disabled] [ref=f9e558]
+                  - button "Agendar dias úteis e marcar atual como lido" [ref=f9e565]
+                  - button "Marcar como lido" [ref=f9e571]
+                  - button "Reagendar item" [ref=f9e575]
+                  - button "Marcar lead como perdido e limpar lembretes" [ref=f9e579]
+                  - button "Excluir item" [ref=f9e584]
+            - button "Abrir edicao do lead Contato Demonstração 03" [ref=f9e589] [cursor=pointer]:
+              - generic [ref=f9e590]:
+                - generic [ref=f9e595]:
+                  - generic [ref=f9e596]:
+                    - heading "Retorno de demonstração 3" [level=3] [ref=f9e597]
+                    - paragraph [ref=f9e598]: Revisar proposta fictícia
+                  - generic [ref=f9e599]:
+                    - generic [ref=f9e600]: Contato Demonstração 03
+                    - generic [ref=f9e605]: Follow-up
+                    - generic [ref=f9e606]: Atrasado
+                  - generic [ref=f9e607]: 27/10/2026 às 11:00
+                - group "Ações do lembrete" [ref=f9e613]:
+                  - button "Telefone não disponível" [disabled] [ref=f9e614]
+                  - button "Agendar dias úteis e marcar atual como lido" [ref=f9e621]
+                  - button "Marcar como lido" [ref=f9e627]
+                  - button "Reagendar item" [ref=f9e631]
+                  - button "Marcar lead como perdido e limpar lembretes" [ref=f9e635]
+                  - button "Excluir item" [ref=f9e640]

@@ -1,0 +1,8 @@
+import { createRoot } from 'react-dom/client';
+import { useState } from 'react';
+import BlogPostsList from '../../../src/features/blog/components/BlogPostsList';
+import '../../../src/index.css';
+const posts = [{id:'1',title:'Como escolher um plano de saúde',slug:'escolher-plano',excerpt:'Orientações para comparar coberturas e escolher seu plano.',content:'',category:'Guia',read_time:'4 min',author_id:'demo',published:true,created_at:'2026-10-24T12:00:00',updated_at:'2026-10-24T12:00:00',views_count:124},{id:'2',title:'Entenda a carência dos planos',slug:'carencia',excerpt:'Saiba como funcionam os prazos de carência.',content:'',category:'Artigo',read_time:'3 min',author_id:'demo',published:false,created_at:'2026-10-23T12:00:00',updated_at:'2026-10-23T12:00:00',views_count:0}];
+posts.push(...Array.from({length:10},(_,i)=>({...posts[1],id:`demo-${i}`,title:`Artigo demonstrativo ${i+3}`})));
+function Preview() { const [search,setSearch]=useState(''); const [status,setStatus]=useState(''); return <div className="painel-theme kifer-ds min-h-screen bg-[var(--bg-canvas)] px-4 py-5 sm:px-8 lg:px-12"><BlogPostsList posts={posts.filter(p=>p.title.toLowerCase().includes(search.toLowerCase()) && (!status || p.published === (status === 'published')))} statusFilter={status} onStatusFilterChange={setStatus} summary={{published:1,drafts:11,views:124,updated:12}} searchTerm={search} onSearchTermChange={setSearch} hasPostsSnapshot loading={false} loadError={false} loadingPhase="hidden" onRetry={()=>{}} onCreatePost={()=>{}} onDeletePost={()=>{}} onEditPost={()=>{}} onPreviewPost={()=>{}} onTogglePublish={()=>{}} /></div> }
+createRoot(document.getElementById('root')!).render(<Preview />);

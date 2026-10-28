@@ -1,0 +1,129 @@
+- generic [ref=f36e9]:
+  - navigation "Navegação principal" [ref=f36e10]:
+    - button "Início" [ref=f36e11] [cursor=pointer]
+    - button "Leads" [ref=f36e18] [cursor=pointer]
+    - button "WhatsApp" [ref=f36e25] [cursor=pointer]
+    - button "Contratos" [ref=f36e29] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f36e34] [cursor=pointer]:
+      - generic [ref=f36e36]: Mais
+  - generic [ref=f36e37]:
+    - banner [ref=f36e38]:
+      - generic [ref=f36e39]:
+        - img "Kifer Saúde" [ref=f36e40]:
+          - generic [ref=f36e41]: kifersaúde
+        - generic [ref=f36e42]:
+          - button "Abrir menu" [ref=f36e43] [cursor=pointer]
+          - generic [ref=f36e46]: OD
+    - main [ref=f36e48]:
+      - generic [ref=f36e528]:
+        - generic [ref=f36e529]:
+          - button "Gestão de leads" [ref=f36e531] [cursor=pointer]
+          - generic [ref=f36e536]:
+            - paragraph [ref=f36e537]: Atualizar cadastro
+            - heading "Editar lead" [level=1] [ref=f36e540]
+            - paragraph [ref=f36e541]: Atualize os dados comerciais e o próximo acompanhamento.
+        - generic [ref=f36e542]:
+          - generic [ref=f36e543]:
+            - generic [ref=f36e545]:
+              - group "Dados de contato" [ref=f36e546]:
+                - generic [ref=f36e547]:
+                  - generic [aria-hidden] [ref=f36e548]: "01"
+                  - generic [ref=f36e549]: Dados de contato
+                - paragraph [ref=f36e550]: Informações básicas para identificação e contato.
+                - generic [ref=f36e551]:
+                  - generic [ref=f36e552]:
+                    - generic [ref=f36e553]: Nome completo *
+                    - textbox "Nome completo *" [ref=f36e557]:
+                      - /placeholder: Nome do contato
+                      - text: Contato Demonstração 01
+                  - generic [ref=f36e558]:
+                    - generic [ref=f36e559]: Telefone *
+                    - textbox "Telefone *" [ref=f36e563]:
+                      - /placeholder: (21) 99999-9999
+                  - generic [ref=f36e564]:
+                    - generic [ref=f36e565]: E-mail
+                    - textbox "E-mail" [ref=f36e569]:
+                      - /placeholder: contato@empresa.com
+                      - text: contato01@exemplo.invalid
+              - group "Localização" [ref=f36e570]:
+                - generic [ref=f36e571]:
+                  - generic [aria-hidden] [ref=f36e572]: "02"
+                  - generic [ref=f36e573]: Localização
+                - paragraph [ref=f36e574]: Endereço e região do contato.
+                - generic [ref=f36e575]:
+                  - generic [ref=f36e576]:
+                    - generic [ref=f36e577]: CEP
+                    - generic [ref=f36e580]:
+                      - textbox "CEP" [ref=f36e581]:
+                        - /placeholder: 00000-000
+                      - button "Buscar CEP" [ref=f36e583] [cursor=pointer]
+                  - generic [ref=f36e588]:
+                    - generic [ref=f36e589]: Endereço
+                    - textbox "Endereço" [ref=f36e593]:
+                      - /placeholder: Rua, avenida, número e complemento
+                      - text: Endereço de demonstração
+                  - generic [ref=f36e594]:
+                    - generic [ref=f36e595]: Estado
+                    - button "Rio de Janeiro (RJ)" [ref=f36e599] [cursor=pointer]
+                  - generic [ref=f36e607]:
+                    - generic [ref=f36e609]:
+                      - generic [ref=f36e610]: Cidade
+                      - 'button "Ajuda: Cidade" [ref=f36e612]'
+                    - button "Rio de Janeiro" [ref=f36e616] [cursor=pointer]
+                    - paragraph [ref=f36e625]: Cidade filtrada pelo estado selecionado.
+              - group "Qualificação e origem" [ref=f36e626]:
+                - generic [ref=f36e627]:
+                  - generic [aria-hidden] [ref=f36e628]: "03"
+                  - generic [ref=f36e629]: Qualificação e origem
+                - paragraph [ref=f36e630]: Organize o contato no funil comercial.
+                - generic [ref=f36e631]:
+                  - generic [ref=f36e632]:
+                    - generic [ref=f36e633]: Origem do lead *
+                    - button "Site" [ref=f36e637] [cursor=pointer]
+                  - generic [ref=f36e645]:
+                    - generic [ref=f36e646]: Tipo de contratação
+                    - button "Individual" [ref=f36e650] [cursor=pointer]
+                  - generic [ref=f36e658]:
+                    - generic [ref=f36e659]: Operadora atual
+                    - textbox "Operadora atual" [ref=f36e663]: Amil
+                  - generic [ref=f36e664]:
+                    - generic [ref=f36e665]: Status *
+                    - button "Contato inicial" [ref=f36e669] [cursor=pointer]
+              - group "Responsável e acompanhamento" [ref=f36e676]:
+                - generic [ref=f36e677]:
+                  - generic [aria-hidden] [ref=f36e678]: "04"
+                  - generic [ref=f36e679]: Responsável e acompanhamento
+                - paragraph [ref=f36e680]: Prazos, preferências de automação e contexto do atendimento.
+                - generic [ref=f36e681]:
+                  - generic [ref=f36e682]:
+                    - generic [ref=f36e683]: Responsável *
+                    - button "Operador Demonstração" [ref=f36e687] [cursor=pointer]
+                  - generic [ref=f36e696]:
+                    - generic [ref=f36e697]: Data de criação
+                    - button "Data de criação" [ref=f36e701] [cursor=pointer]:
+                      - generic [ref=f36e704]: 25/10/2026
+                  - generic [ref=f36e705]:
+                    - generic [ref=f36e706]: Próximo follow-up
+                    - button "Próximo follow-up" [ref=f36e710] [cursor=pointer]:
+                      - generic [ref=f36e713]: 26/10/2026 11:00
+                  - generic [ref=f36e714]:
+                    - generic [ref=f36e716]:
+                      - generic [ref=f36e717]: Limite diário de envios
+                      - 'button "Ajuda: Limite diário de envios" [ref=f36e719]'
+                    - spinbutton "Limite diário de envios" [ref=f36e723]: "1"
+                    - paragraph [ref=f36e724]: Defina um limite específico para este lead ou deixe vazio para usar o limite padrão.
+                  - generic [ref=f36e725]:
+                    - generic [ref=f36e726]: Observações
+                    - textbox "Observações" [ref=f36e729]: Registro fictício para documentação visual. Nenhum contato real.
+            - group "Ações do formulário" [ref=f36e731]:
+              - button "Cancelar" [ref=f36e732] [cursor=pointer]
+              - button "Salvar alterações" [ref=f36e733] [cursor=pointer]
+          - complementary [ref=f36e734]:
+            - generic [ref=f36e735]:
+              - heading "Orientações" [level=2] [ref=f36e738]
+              - generic [ref=f36e740]:
+                - paragraph [ref=f36e741]: Campos obrigatórios
+                - generic [ref=f36e742]: Nome completo, telefone, origem, status e responsável.
+              - generic [ref=f36e743]:
+                - heading "Próximo acompanhamento" [level=3] [ref=f36e744]
+                - paragraph [ref=f36e745]: Ao informar data e horário, o CRM cria um lembrete vinculado a este lead.

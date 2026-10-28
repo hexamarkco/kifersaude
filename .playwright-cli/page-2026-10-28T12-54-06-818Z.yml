@@ -1,0 +1,55 @@
+- generic [ref=f6e9]:
+  - navigation "Navegação principal" [ref=f6e10]:
+    - button "Início" [ref=f6e11] [cursor=pointer]
+    - button "Leads" [ref=f6e18] [cursor=pointer]
+    - button "WhatsApp" [ref=f6e25] [cursor=pointer]
+    - button "Contratos" [ref=f6e29] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f6e34] [cursor=pointer]:
+      - generic [ref=f6e36]: Mais
+  - main [ref=f6e38]:
+    - generic [ref=f6e41]:
+      - heading "WhatsApp Inbox" [level=1] [ref=f6e42]
+      - generic [ref=f6e105]:
+        - paragraph [ref=f6e106]: WhatsApp Indisponível
+        - paragraph [ref=f6e107]: Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.
+      - generic [ref=f6e162]:
+        - generic [ref=f6e164]:
+          - button "Voltar para a lista de conversas" [ref=f6e165] [cursor=pointer]
+          - generic [ref=f6e169]:
+            - generic [ref=f6e170]:
+              - paragraph [ref=f6e172]:
+                - button "Remover dos favoritos" [pressed] [ref=f6e173] [cursor=pointer]
+                - generic [ref=f6e177]: Contato Demonstração 01
+              - button "Abrir ações da conversa" [ref=f6e178] [cursor=pointer]
+            - generic [ref=f6e184]:
+              - generic [ref=f6e185]: Contato privado
+              - button "+ Salvar contato" [ref=f6e186] [cursor=pointer]
+              - generic [ref=f6e187]: "Próximo lembrete atrasado: Retorno de demonstração 1 · 25/10/2026 às 11:00"
+        - generic [ref=f6e191]:
+          - generic [ref=f6e192]: domingo
+          - generic [ref=f6e197]:
+            - paragraph [ref=f6e199]: Olá, gostaria de informações sobre o plano.
+            - generic [ref=f6e200]: 25/10, 09:00
+          - generic [ref=f6e206]:
+            - paragraph [ref=f6e208]: Claro! Este atendimento é uma demonstração.
+            - generic [ref=f6e209]:
+              - generic [ref=f6e210]:
+                - generic [ref=f6e211]: 25/10, 09:00
+                - 'generic "Status: Vista" [ref=f6e212]'
+              - button "Mais acoes da mensagem"
+          - generic [ref=f6e219]:
+            - paragraph [ref=f6e221]: Pode me explicar as opções disponíveis?
+            - generic [ref=f6e222]: 25/10, 09:00
+          - generic [ref=f6e228]:
+            - generic [ref=f6e230]:
+              - button [ref=f6e232] [cursor=pointer]:
+                - img "imagem-demonstracao.png" [ref=f6e233]
+              - paragraph [ref=f6e234]: Imagem fictícia para documentação
+            - generic [ref=f6e235]: 25/10, 09:00
+        - generic [ref=f6e240]:
+          - group "Ações de composição da mensagem" [ref=f6e241]:
+            - button "Anexar" [ref=f6e243] [cursor=pointer]
+            - button "Emoji, GIF e figurinha" [ref=f6e246] [cursor=pointer]
+            - button "Ações com IA" [ref=f6e252] [cursor=pointer]
+          - textbox "Digite uma mensagem" [ref=f6e257]
+          - button "Gravar áudio" [disabled] [ref=f6e259]

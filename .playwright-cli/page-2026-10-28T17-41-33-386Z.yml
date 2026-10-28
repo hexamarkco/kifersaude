@@ -1,0 +1,59 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - paragraph [ref=e8]: Conteúdo público
+          - heading "Blog" [level=1] [ref=e11]
+          - paragraph [ref=e12]: Gerencie artigos publicados no site, rascunhos e metadados de busca.
+        - button "Novo post" [ref=e14] [cursor=pointer]
+    - textbox "Buscar artigos" [ref=e20]:
+      - /placeholder: Buscar por título ou categoria...
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - heading "Biblioteca de artigos" [level=2] [ref=e23]
+        - paragraph [ref=e24]: Consulte e gerencie as publicações do site.
+      - region "Rolagem de Biblioteca de artigos" [ref=e25]:
+        - table "Biblioteca de artigos" [ref=e26]:
+          - rowgroup [ref=e27]:
+            - row [ref=e28]:
+              - columnheader "Artigo" [ref=e29]
+              - columnheader "Categoria" [ref=e30]
+              - columnheader "Status" [ref=e31]
+              - columnheader "Visualizações" [ref=e32]
+              - columnheader "Criado em" [ref=e33]
+              - columnheader "Ações" [ref=e34]
+          - rowgroup [ref=e35]:
+            - row [ref=e36]:
+              - cell [ref=e37]:
+                - generic [ref=e39]:
+                  - paragraph [ref=e40]: Como escolher um plano de saúde
+                  - paragraph [ref=e41]: Orientações para comparar coberturas e escolher seu plano.
+                  - paragraph [ref=e42]: 4 min
+              - cell "Guia" [ref=e43]
+              - cell "Publicado" [ref=e45]
+              - cell "124" [ref=e47]
+              - cell "24/10/2026" [ref=e48]
+              - cell [ref=e49]:
+                - group "Ações de Como escolher um plano de saúde" [ref=e50]:
+                  - button "Visualizar" [ref=e51] [cursor=pointer]
+                  - button "Mais ações de como escolher um plano de saúde" [expanded] [ref=e57] [cursor=pointer]
+            - row [ref=e63]:
+              - cell [ref=e64]:
+                - generic [ref=e66]:
+                  - paragraph [ref=e67]: Entenda a carência dos planos
+                  - paragraph [ref=e68]: Saiba como funcionam os prazos de carência.
+                  - paragraph [ref=e69]: 3 min
+              - cell "Artigo" [ref=e70]
+              - cell "Rascunho" [ref=e72]
+              - cell "0" [ref=e74]
+              - cell "23/10/2026" [ref=e75]
+              - cell [ref=e76]:
+                - group "Ações de Entenda a carência dos planos" [ref=e77]:
+                  - button "Visualizar" [ref=e78] [cursor=pointer]
+                  - button "Mais ações de entenda a carência dos planos" [ref=e84] [cursor=pointer]
+  - menu "Ações de Como escolher um plano de saúde" [ref=e97]:
+    - generic [ref=e98]:
+      - menuitem "Despublicar" [active] [ref=e99] [cursor=pointer]
+      - menuitem "Editar" [ref=e103] [cursor=pointer]
+      - menuitem "Excluir" [ref=e106] [cursor=pointer]

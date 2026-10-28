@@ -1,0 +1,174 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - img "Kifer Saúde CRM" [ref=f2e7]:
+        - generic [ref=f2e8]: kifersaúde
+        - generic [ref=f2e9]: CRM
+      - navigation [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - button "Dashboard" [ref=f2e12] [cursor=pointer]
+          - generic [ref=f2e20]:
+            - button "CRM 3" [ref=f2e775] [cursor=pointer]:
+              - generic [ref=f2e22]: CRM
+              - generic [ref=f2e776]: "3"
+            - generic [ref=f2e30]:
+              - button "Leads" [ref=f2e31] [cursor=pointer]
+              - button "Contratos" [ref=f2e39] [cursor=pointer]
+              - button "Agenda 3" [ref=f2e777] [cursor=pointer]:
+                - generic [ref=f2e46]: Agenda
+                - generic [ref=f2e778]: "3"
+          - button "Comunicação 3" [ref=f2e779] [cursor=pointer]:
+            - generic [ref=f2e52]: Comunicação
+            - generic [ref=f2e780]: "3"
+          - button "Financeiro" [ref=f2e60] [cursor=pointer]
+          - button "Automações e IA" [ref=f2e69] [cursor=pointer]
+          - button "Configurações" [ref=f2e76] [cursor=pointer]
+      - generic [ref=f2e82]:
+        - button "Recolher" [ref=f2e83] [cursor=pointer]
+        - button "3 Notificações" [ref=f2e781] [cursor=pointer]:
+          - generic [ref=f2e782]: "3"
+          - generic [ref=f2e95]: Notificações
+        - button "Ativar tema escuro" [active] [ref=f2e817] [cursor=pointer]:
+          - generic [ref=f2e99]: Escuro
+        - button "Sair" [ref=f2e100] [cursor=pointer]
+  - generic [ref=f2e105]:
+    - banner [ref=f2e106]:
+      - generic [ref=f2e107]:
+        - navigation "Breadcrumb" [ref=f2e108]:
+          - list [ref=f2e109]:
+            - listitem [ref=f2e110]:
+              - button "CRM" [ref=f2e111] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f2e112]
+            - listitem [ref=f2e115]: Contratos
+        - generic [ref=f2e116]:
+          - generic [ref=f2e117]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f2e820] [cursor=pointer]
+          - generic [ref=f2e122]: OD
+    - main [ref=f2e124]:
+      - generic [ref=f2e463]:
+        - button "Gestão de contratos" [ref=f2e464] [cursor=pointer]
+        - generic [ref=f2e469]:
+          - generic [ref=f2e470]:
+            - paragraph [ref=f2e471]: Contratos
+            - heading "Novo contrato" [level=1] [ref=f2e474]
+            - paragraph [ref=f2e475]: Registre os dados comerciais, financeiros e de vigência do contrato.
+          - button "Importar de arquivo" [ref=f2e477] [cursor=pointer]
+        - generic [ref=f2e483]:
+          - group "Informações do Contrato" [ref=f2e484]:
+            - paragraph [ref=f2e486]: Identifique o contrato, o vínculo comercial e o plano contratado.
+            - generic [ref=f2e487]:
+              - generic [ref=f2e488]:
+                - generic [ref=f2e489]: Código do Contrato *
+                - textbox "Código do Contrato *" [ref=f2e493]:
+                  - /placeholder: Informe o código fornecido pela operadora
+              - generic [ref=f2e494]:
+                - generic [ref=f2e495]: Lead Vinculado
+                - button "Nenhum" [ref=f2e500] [cursor=pointer]
+              - generic [ref=f2e508]:
+                - generic [ref=f2e509]: Status *
+                - button "Ativo" [ref=f2e513] [cursor=pointer]
+              - generic [ref=f2e520]:
+                - generic [ref=f2e521]: Modalidade *
+                - button "Individual" [ref=f2e525] [cursor=pointer]
+              - generic [ref=f2e532]:
+                - generic [ref=f2e534]:
+                  - generic [ref=f2e535]: Operadora *
+                  - 'button "Ajuda: Operadora *" [ref=f2e537]'
+                - button "Selecione uma operadora" [ref=f2e542] [cursor=pointer]
+                - paragraph [ref=f2e550]: Comissão e bônus serão preenchidos automaticamente
+              - generic [ref=f2e551]:
+                - generic [ref=f2e552]: Produto/Plano *
+                - textbox "Produto/Plano *" [ref=f2e556]
+              - generic [ref=f2e557]:
+                - generic [ref=f2e558]: Abrangência
+                - button "Nacional" [ref=f2e562] [cursor=pointer]
+              - generic [ref=f2e569]:
+                - generic [ref=f2e570]: Acomodação
+                - button "Apartamento" [ref=f2e574] [cursor=pointer]
+          - group "Vigência e valores" [ref=f2e581]:
+            - paragraph [ref=f2e583]: Registre as datas importantes e o valor mensal do contrato.
+            - generic [ref=f2e584]:
+              - generic [ref=f2e585]:
+                - generic [ref=f2e586]: Data de Início
+                - button "Data de Início" [ref=f2e590] [cursor=pointer]:
+                  - generic [ref=f2e593]: Selecionar data
+              - generic [ref=f2e594]:
+                - generic [ref=f2e595]: Fim da fidelidade
+                - textbox "Fim da fidelidade" [ref=f2e599]:
+                  - /placeholder: Selecionar mês
+              - generic [ref=f2e600]:
+                - generic [ref=f2e601]: Mês de reajuste
+                - button "Selecione" [ref=f2e605] [cursor=pointer]
+              - generic [ref=f2e612]:
+                - generic [ref=f2e613]: Carência
+                - button "Padrão" [ref=f2e617] [cursor=pointer]
+              - generic [ref=f2e624]:
+                - generic [ref=f2e625]: Mensalidade Base (R$)
+                - textbox "Mensalidade Base (R$)" [ref=f2e629]:
+                  - /placeholder: 0,00
+          - group "Comissão e recebimento" [ref=f2e630]:
+            - paragraph [ref=f2e632]: Confira o cálculo da comissão e defina como e quando será recebida.
+            - generic [ref=f2e633]:
+              - generic [ref=f2e634]:
+                - generic [ref=f2e635]: Multiplicador de Comissão
+                - generic [ref=f2e638]:
+                  - generic [ref=f2e639]:
+                    - generic [ref=f2e640]: "Valor do multiplicador:"
+                    - generic [ref=f2e641]: 2.8x
+                  - slider [ref=f2e643] [cursor=pointer]: "2.8"
+                  - generic [ref=f2e644]:
+                    - generic [ref=f2e645]: Digite o multiplicador
+                    - spinbutton [ref=f2e647]: "2.8"
+                  - generic [ref=f2e648]:
+                    - generic [ref=f2e649]: 0x
+                    - generic [ref=f2e650]: 2.8x (padrão)
+                    - generic [ref=f2e651]: 10x
+              - generic [ref=f2e652]:
+                - generic [ref=f2e654]:
+                  - generic [ref=f2e655]: Comissão Prevista (R$)
+                  - 'button "Ajuda: Comissão Prevista (R$)" [ref=f2e657]'
+                - textbox "Comissão Prevista (R$)" [ref=f2e661]:
+                  - /placeholder: 0,00
+                - paragraph [ref=f2e662]: Calculada automaticamente com base no multiplicador
+              - generic [ref=f2e663]:
+                - generic [ref=f2e664]: Previsão Recebimento Comissão
+                - button "Previsão Recebimento Comissão" [ref=f2e668] [cursor=pointer]:
+                  - generic [ref=f2e671]: Selecionar data
+              - generic [ref=f2e672]:
+                - generic [ref=f2e673]: Forma de recebimento da comissão
+                - generic [ref=f2e675]:
+                  - checkbox "Receber comissão adiantada (pagamento único) Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a comissão em parcelas com percentuais e datas específicas." [checked] [ref=f2e676] [cursor=pointer]
+                  - generic [ref=f2e677]:
+                    - paragraph [ref=f2e678]: Receber comissão adiantada (pagamento único)
+                    - paragraph [ref=f2e679]: Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a comissão em parcelas com percentuais e datas específicas.
+          - group "Vidas e bonificações" [ref=f2e680]:
+            - paragraph [ref=f2e682]: Informe a quantidade de pessoas cobertas e configure os bônus aplicáveis.
+            - generic [ref=f2e684]:
+              - generic [ref=f2e685]:
+                - generic [ref=f2e687]:
+                  - generic [ref=f2e688]: Quantidade de Vidas *
+                  - 'button "Ajuda: Quantidade de Vidas *" [ref=f2e690]'
+                - spinbutton "Quantidade de Vidas *" [ref=f2e694]: "1"
+                - paragraph [ref=f2e695]: Titular + dependentes
+              - generic [ref=f2e696]:
+                - generic [ref=f2e697] [cursor=pointer]:
+                  - checkbox "Aplicar Bônus por Vida" [ref=f2e698]
+                  - generic [ref=f2e699]: Aplicar Bônus por Vida
+                - paragraph [ref=f2e700]: Pagamento único por vida do contrato
+          - group "Responsáveis e observações" [ref=f2e701]:
+            - paragraph [ref=f2e703]: Defina as pessoas responsáveis pelo relacionamento e registre notas internas.
+            - generic [ref=f2e705]:
+              - generic [ref=f2e706]:
+                - generic [ref=f2e707]: Responsável *
+                - button "Operador Demonstração" [ref=f2e711] [cursor=pointer]
+              - generic [ref=f2e719]:
+                - generic [ref=f2e720]: Responsável pela venda (produção)
+                - combobox [aria-hidden] [ref=f2e723]
+                - button "Escolha no fechamento" [ref=f2e725] [cursor=pointer]
+                - paragraph [ref=f2e729]: O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.
+              - generic [ref=f2e730]:
+                - generic [ref=f2e731]: Observações Internas
+                - textbox "Observações Internas" [ref=f2e734]
+        - group "Ações do formulário" [ref=f2e736]:
+          - button "Cancelar" [ref=f2e737] [cursor=pointer]
+          - button "Continuar para titular" [ref=f2e738] [cursor=pointer]

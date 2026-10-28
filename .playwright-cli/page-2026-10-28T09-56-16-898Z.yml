@@ -1,0 +1,102 @@
+- generic [ref=f14e9]:
+  - navigation "Navegação principal" [ref=f14e10]:
+    - button "Início" [ref=f14e11] [cursor=pointer]
+    - button "Leads" [ref=f14e18] [cursor=pointer]
+    - button "WhatsApp" [ref=f14e25] [cursor=pointer]
+    - button "Contratos" [ref=f14e29] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f14e34] [cursor=pointer]:
+      - generic [ref=f14e36]: Mais
+  - generic [ref=f14e37]:
+    - banner [ref=f14e38]:
+      - generic [ref=f14e39]:
+        - img "Kifer Saúde" [ref=f14e40]:
+          - generic [ref=f14e41]: kifersaúde
+        - generic [ref=f14e42]:
+          - button "Abrir menu" [ref=f14e43] [cursor=pointer]
+          - generic [ref=f14e46]: OD
+    - main [ref=f14e48]:
+      - generic [ref=f14e433]:
+        - button "Gestão de leads" [ref=f14e434] [cursor=pointer]
+        - generic [ref=f14e439]:
+          - generic [ref=f14e440]:
+            - paragraph [ref=f14e441]: Relacionamento
+            - generic [ref=f14e442]:
+              - button "Remover dos favoritos" [pressed] [ref=f14e443] [cursor=pointer]
+              - generic [ref=f14e447]:
+                - heading "Contato Demonstração 01" [level=1] [ref=f14e448]
+                - generic [ref=f14e449]: Contato inicial
+            - paragraph [ref=f14e450]: "Responsável: Operador Demonstração"
+          - generic [ref=f14e452]:
+            - button "Editar lead" [ref=f14e453] [cursor=pointer]
+            - group "Ações do lead" [ref=f14e458]:
+              - button "Mais ações do lead" [ref=f14e460] [cursor=pointer]
+        - tablist "Seções do lead" [ref=f14e467]:
+          - tab "Visão geral" [selected] [ref=f14e468] [cursor=pointer]
+          - tab "Histórico" [ref=f14e470] [cursor=pointer]
+          - tab "Follow-ups" [ref=f14e472] [cursor=pointer]
+          - tab "Dados do lead" [ref=f14e474] [cursor=pointer]
+        - generic [ref=f14e476]:
+          - generic [ref=f14e477]:
+            - heading "Dados do contato" [level=2] [ref=f14e480]
+            - generic [ref=f14e481]:
+              - generic [ref=f14e482]:
+                - term [ref=f14e483]: Nome
+                - definition [ref=f14e484]: Contato Demonstração 01
+              - generic [ref=f14e485]:
+                - term [ref=f14e486]: Telefone
+                - definition [ref=f14e487]: Não informado
+              - generic [ref=f14e488]:
+                - term [ref=f14e489]: E-mail
+                - definition [ref=f14e490]: contato01@exemplo.invalid
+              - generic [ref=f14e491]:
+                - term [ref=f14e492]: Origem
+                - definition [ref=f14e493]: Site
+              - generic [ref=f14e494]:
+                - term [ref=f14e495]: Tipo
+                - definition [ref=f14e496]: Individual
+              - generic [ref=f14e497]:
+                - term [ref=f14e498]: Responsável
+                - definition [ref=f14e499]: Operador Demonstração
+              - generic [ref=f14e500]:
+                - term [ref=f14e501]: Cidade
+                - definition [ref=f14e502]: Rio de Janeiro
+              - generic [ref=f14e503]:
+                - term [ref=f14e504]: Próximo retorno
+                - definition [ref=f14e505]: 26/10/2026 às 11:00
+          - region [ref=f14e507]:
+            - heading "Linha do tempo" [level=3] [ref=f14e510]
+            - generic [ref=f14e516]:
+              - generic [ref=f14e523]:
+                - generic [ref=f14e524]:
+                  - paragraph [ref=f14e525]: "Lembrete: Retorno de demonstração 1"
+                  - generic [ref=f14e526]: Pendente
+                - paragraph [ref=f14e527]: Revisar proposta fictícia
+                - time [ref=f14e528]: 25/10/2026 às 11:00
+              - generic [ref=f14e534]:
+                - generic [ref=f14e535]:
+                  - paragraph [ref=f14e536]: observacao
+                  - generic [ref=f14e537]: Operador Demonstração
+                - paragraph [ref=f14e538]: Conversa demonstrativa registrada.
+                - time [ref=f14e539]: 25/10/2026 às 09:00
+              - generic [ref=f14e546]:
+                - generic [ref=f14e547]:
+                  - paragraph [ref=f14e548]: "Status: Contato inicial -> Em atendimento"
+                  - generic [ref=f14e549]: Operador Demonstração
+                - paragraph [ref=f14e550]: Histórico fictício
+                - time [ref=f14e551]: 25/10/2026 às 09:00
+          - generic [ref=f14e552]:
+            - heading "Ações rápidas" [level=2] [ref=f14e555]
+            - button "Agendar follow-up" [ref=f14e556] [cursor=pointer]
+            - button "Registrar interação" [ref=f14e561] [cursor=pointer]
+            - button "Converter em contrato" [ref=f14e564] [cursor=pointer]
+        - generic [ref=f14e569]:
+          - generic [ref=f14e570]:
+            - heading "Interações" [level=3] [ref=f14e572]
+            - button "Nova interação" [ref=f14e574] [cursor=pointer]
+          - generic [ref=f14e579]:
+            - generic [ref=f14e580]:
+              - generic [ref=f14e581]:
+                - generic [ref=f14e582]: observacao
+                - generic [ref=f14e583]: Operador Demonstração
+              - time [ref=f14e584]: 25/10/2026 às 09:00
+            - paragraph [ref=f14e585]: Conversa demonstrativa registrada.

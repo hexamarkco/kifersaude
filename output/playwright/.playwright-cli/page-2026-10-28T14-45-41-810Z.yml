@@ -1,0 +1,13 @@
+- generic [ref=e3]:
+  - generic [ref=e4]: "[plugin:vite:import-analysis] Failed to resolve import \"../../contexts/AuthContext\" from \"src/features/config/ConfigPageScreen.tsx\". Does the file exist?"
+  - generic [ref=e5]: C:/Users/Nick Martins/Documents/GitHub/kifersaude/src/features/config/ConfigPageScreen.tsx:4:24
+  - generic [ref=e6]: "18 | import { AlertCircle } from \"lucide-react\"; 19 | import { Navigate, useLocation } from \"react-router-dom\"; 20 | import { useAuth } from \"../../contexts/AuthContext\"; | ^ 21 | import { useConfig } from \"../../contexts/ConfigContext\"; 22 | import { Alert, PageHeader, Tabs } from \"../../design-system\";"
+  - generic [ref=e7]: at TransformPluginContext._formatError (file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41) at TransformPluginContext.error (file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16) at normalizeUrl (file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23) at process.processTicksAndRejections (node:internal/process/task_queues:103:5) at async file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39 at async Promise.all (index 5) at async TransformPluginContext.transform (file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7) at async PluginContainer.transform (file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18) at async loadAndTransform (file:///C:/Users/Nick%20Martins/Documents/GitHub/kifersaude/node_modules/.deno/vite@5.4.21/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27
+  - generic [ref=e8]:
+    - text: Click outside, press Esc key, or fix the code to dismiss.You can also disable this overlay by setting
+    - code [ref=e9]: server.hmr.overlay
+    - text: to
+    - code [ref=e10]: "false"
+    - text: in
+    - code [ref=e11]: vite.config.mts
+    - text: .

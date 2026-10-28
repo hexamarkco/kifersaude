@@ -1,0 +1,144 @@
+- generic [ref=f18e3]:
+  - complementary [ref=f18e210]:
+    - generic [ref=f18e211]:
+      - generic [ref=f18e212]: K
+      - navigation [ref=f18e215]:
+        - generic [ref=f18e216]:
+          - button "Dashboard" [ref=f18e217] [cursor=pointer]
+          - button "3 CRM" [ref=f18e225] [cursor=pointer]:
+            - generic [ref=f18e226]:
+              - generic [ref=f18e227]: "3"
+              - generic: CRM
+          - button "3 Comunicação" [ref=f18e233] [cursor=pointer]:
+            - generic [ref=f18e234]:
+              - generic [ref=f18e235]: "3"
+              - generic: Comunicação
+          - button "Financeiro" [ref=f18e240] [cursor=pointer]
+          - button "Automações e IA" [ref=f18e246] [cursor=pointer]
+          - button "Configurações" [ref=f18e252] [cursor=pointer]
+      - generic [ref=f18e257]:
+        - button "Expandir" [ref=f18e258] [cursor=pointer]
+        - button "3 Notificações" [ref=f18e262] [cursor=pointer]:
+          - generic [ref=f18e269]: "3"
+          - generic: Notificações
+        - button "Ativar tema escuro" [ref=f18e270] [cursor=pointer]:
+          - generic: Escuro
+        - button "Sair" [ref=f18e273] [cursor=pointer]
+  - generic [ref=f18e31]:
+    - banner [ref=f18e32]:
+      - generic [ref=f18e277]:
+        - navigation "Breadcrumb" [ref=f18e278]:
+          - list [ref=f18e279]:
+            - listitem [ref=f18e280]:
+              - button "CRM" [ref=f18e281] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f18e282]
+            - listitem [ref=f18e285]: Configurações
+        - generic [ref=f18e286]:
+          - generic [ref=f18e287]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f18e288] [cursor=pointer]
+          - generic [ref=f18e292]: OD
+    - main [ref=f18e42]:
+      - generic [ref=f18e44]:
+        - generic [ref=f18e45]:
+          - generic [ref=f18e47]:
+            - paragraph [ref=f18e48]: Administração
+            - heading "Configurações gerais" [level=1] [ref=f18e429]
+            - paragraph [ref=f18e52]: Defina como datas, sessões e notificações se comportam no CRM.
+          - tablist "Áreas de configurações" [ref=f18e55]:
+            - tab "Geral" [selected] [ref=f18e56] [cursor=pointer]
+            - tab "Usuários" [ref=f18e61] [cursor=pointer]
+            - tab "Links" [ref=f18e68] [cursor=pointer]
+            - tab "Formulários" [ref=f18e73] [cursor=pointer]
+        - main [ref=f18e78]:
+          - generic [ref=f18e294]:
+            - generic [ref=f18e295]:
+              - tablist "Seções das configurações gerais" [ref=f18e297]:
+                - tab "Preferências do sistema" [active] [selected] [ref=f18e298] [cursor=pointer]
+                - tab "Perfis e acessos" [ref=f18e300] [cursor=pointer]
+                - tab "Leads" [ref=f18e302] [cursor=pointer]
+                - tab "Contratos" [ref=f18e304] [cursor=pointer]
+              - textbox "Buscar nas configurações gerais" [ref=f18e308]:
+                - /placeholder: Buscar em configurações, leads ou contratos
+            - generic [ref=f18e430]:
+              - generic [ref=f18e431]:
+                - generic [ref=f18e432]:
+                  - paragraph [ref=f18e433]: Configuração do sistema
+                  - heading "Preferências do sistema" [level=2] [ref=f18e434]
+                  - paragraph [ref=f18e435]: Defina como datas, sessões e notificações se comportam no CRM.
+                - button "Restaurar padrões" [ref=f18e438] [cursor=pointer]
+              - generic [ref=f18e443]:
+                - generic [ref=f18e444]:
+                  - generic [ref=f18e445]:
+                    - generic [ref=f18e453]:
+                      - heading "Localização e formato" [level=3] [ref=f18e454]
+                      - paragraph [ref=f18e455]: Escolha a forma de exibir datas e o horário de referência do sistema.
+                    - generic [ref=f18e456]:
+                      - generic [ref=f18e457]:
+                        - generic [ref=f18e458]: Formato de data
+                        - combobox [aria-hidden] [ref=f18e461]
+                        - button "Formato de data" [ref=f18e463] [cursor=pointer]:
+                          - generic [ref=f18e464]: Selecione
+                        - paragraph [ref=f18e467]: Usado nas datas exibidas no CRM.
+                      - generic [ref=f18e468]:
+                        - generic [ref=f18e469]: Fuso horário do sistema
+                        - combobox [aria-hidden] [ref=f18e472]
+                        - button "Fuso horário do sistema" [ref=f18e474] [cursor=pointer]:
+                          - generic [ref=f18e475]: São Paulo (UTC-3)
+                        - paragraph [ref=f18e478]: Referência para follow-ups com IA e outras rotinas locais.
+                  - generic [ref=f18e479]:
+                    - generic [ref=f18e485]:
+                      - heading "Sessão e acesso" [level=3] [ref=f18e486]
+                      - paragraph [ref=f18e487]: Ajuste o período de sessão para este ambiente.
+                    - generic [ref=f18e488]:
+                      - generic [ref=f18e489]: Tempo de sessão (minutos)
+                      - spinbutton "Tempo de sessão (minutos)" [ref=f18e493]: "120"
+                      - paragraph [ref=f18e494]: "Padrão recomendado: 480 minutos (8 horas). Limite de 30 a 1.440 minutos."
+                  - generic [ref=f18e495]:
+                    - generic [ref=f18e503]:
+                      - heading "Notificações" [level=3] [ref=f18e504]
+                      - paragraph [ref=f18e505]: Controle o som e a frequência de verificação.
+                    - generic [ref=f18e506]:
+                      - generic [ref=f18e513]:
+                        - paragraph [ref=f18e514]: Sons de notificação
+                        - paragraph [ref=f18e515]: Reproduzir um alerta sonoro quando houver notificações.
+                      - switch "Sons de notificação" [ref=f18e517]
+                    - generic [ref=f18e520]:
+                      - generic [ref=f18e521]:
+                        - generic [ref=f18e525]:
+                          - generic [ref=f18e526]: Volume das notificações
+                          - generic [ref=f18e527]: 0%
+                        - slider "Volume das notificações 0%" [disabled] [ref=f18e529]: "0"
+                        - paragraph [ref=f18e530]: Ajuste o volume do alerta sonoro; 0% é silencioso e 100% é o máximo.
+                      - generic [ref=f18e531]:
+                        - generic [ref=f18e532]: Intervalo de verificação (segundos)
+                        - spinbutton "Intervalo de verificação (segundos)" [ref=f18e540]: "300"
+                        - paragraph [ref=f18e541]: "Padrão recomendado: 30 segundos."
+                - generic [ref=f18e542]:
+                  - heading "Estrutura e parametrização" [level=3] [ref=f18e543]
+                  - paragraph [ref=f18e544]: Acesse os cadastros que alimentam os formulários e a operação do CRM.
+                  - generic [ref=f18e545]:
+                    - button "Abrir etapas do funil" [ref=f18e546] [cursor=pointer]:
+                      - generic [ref=f18e547]:
+                        - generic [ref=f18e548]: Etapas do funil
+                        - generic [ref=f18e549]: Nome, cor e etapa inicial dos leads
+                      - generic [ref=f18e550]: "5"
+                    - button "Abrir origens dos leads" [ref=f18e554] [cursor=pointer]:
+                      - generic [ref=f18e555]:
+                        - generic [ref=f18e556]: Origens dos leads
+                        - generic [ref=f18e557]: Canais de entrada e visibilidade
+                      - generic [ref=f18e558]: "3"
+                    - button "Abrir responsáveis pelos leads" [ref=f18e562] [cursor=pointer]:
+                      - generic [ref=f18e563]:
+                        - generic [ref=f18e564]: Responsáveis pelos leads
+                        - generic [ref=f18e565]: Equipe disponível para atribuição
+                      - generic [ref=f18e566]: "1"
+                    - button "Abrir configurações de contratos" [ref=f18e570] [cursor=pointer]:
+                      - generic [ref=f18e571]:
+                        - generic [ref=f18e572]: Regras de contratos
+                        - generic [ref=f18e573]: Status, modalidade e condições
+                      - generic [ref=f18e574]: "12"
+              - generic [ref=f18e578]:
+                - generic [ref=f18e579]:
+                  - generic [ref=f18e580]: Salvo
+                  - paragraph [ref=f18e581]: Suas preferências estão atualizadas.
+                - button "Salvar preferências" [disabled] [ref=f18e582]

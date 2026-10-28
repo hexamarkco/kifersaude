@@ -1,0 +1,77 @@
+- generic [ref=f13e1]:
+  - generic [ref=f13e5]:
+    - banner [ref=f13e6]:
+      - generic [ref=f13e7]:
+        - generic [ref=f13e8]:
+          - paragraph [ref=f13e9]: Administração
+          - heading "Usuários e permissões" [level=1] [ref=f13e12]
+          - paragraph [ref=f13e13]: Gerencie as contas que podem acessar a operação.
+        - button "Novo usuário" [ref=f13e15] [cursor=pointer]
+      - tablist "Áreas de configurações" [ref=f13e20]:
+        - tab "Geral" [ref=f13e21] [cursor=pointer]
+        - tab "Usuários" [selected] [ref=f13e26] [cursor=pointer]
+        - tab "Links" [ref=f13e33] [cursor=pointer]
+        - tab "Formulários" [ref=f13e38] [cursor=pointer]
+    - main [ref=f13e43]:
+      - generic [ref=f13e44]:
+        - generic [ref=f13e45]:
+          - searchbox "Buscar por usuário, e-mail ou perfil" [ref=f13e48]
+          - status [ref=f13e49]: 3 usuários
+        - generic [ref=f13e51]:
+          - generic [ref=f13e52]:
+            - generic [ref=f13e58]:
+              - paragraph [ref=f13e59]: "@Ana Demonstração"
+              - paragraph [ref=f13e60]: ana.demonstracao@example.invalid
+              - generic [ref=f13e61]: Administrador
+            - generic [ref=f13e63]:
+              - paragraph [ref=f13e64]: Você
+              - group "Ações de Ana Demonstração" [ref=f13e65]:
+                - button "Editar Ana Demonstração" [ref=f13e66] [cursor=pointer]
+          - generic [ref=f13e71]:
+            - generic [ref=f13e77]:
+              - paragraph [ref=f13e78]: "@Bruno Exemplo"
+              - paragraph [ref=f13e79]: bruno.exemplo@example.invalid
+              - generic [ref=f13e80]: Gestor comercial
+            - group "Ações de Bruno Exemplo" [ref=f13e83]:
+              - button "Editar Bruno Exemplo" [ref=f13e84] [cursor=pointer]
+              - button "Excluir Bruno Exemplo" [ref=f13e89] [cursor=pointer]
+          - generic [ref=f13e94]:
+            - generic [ref=f13e100]:
+              - paragraph [ref=f13e101]: "@Carla Teste"
+              - paragraph [ref=f13e102]: carla.teste@example.invalid
+              - generic [ref=f13e103]: Observador
+            - group "Ações de Carla Teste" [ref=f13e106]:
+              - button "Editar Carla Teste" [ref=f13e107] [cursor=pointer]
+              - button "Excluir Carla Teste" [ref=f13e112] [cursor=pointer]
+  - dialog [ref=f13e120]:
+    - generic [ref=f13e121]:
+      - generic [ref=f13e122]:
+        - heading "Novo usuário" [level=2] [ref=f13e123]
+        - paragraph [ref=f13e124]: Crie um novo usuário e associe a um perfil dinâmico de acesso.
+      - button "Fechar" [ref=f13e125] [cursor=pointer]
+    - generic [ref=f13e129]:
+      - generic [ref=f13e131]:
+        - generic [ref=f13e132]:
+          - generic [ref=f13e133]: Usuário
+          - textbox "Usuário" [ref=f13e137]:
+            - /placeholder: nome.usuario
+        - generic [ref=f13e138]:
+          - generic [ref=f13e139]: E-mail
+          - textbox "E-mail" [ref=f13e143]:
+            - /placeholder: usuario@email.com
+        - generic [ref=f13e144]:
+          - generic [ref=f13e145]: Senha
+          - generic [ref=f13e148]:
+            - textbox "Senha" [ref=f13e149]:
+              - /placeholder: Digite uma senha temporária
+            - button "Mostrar senha" [ref=f13e151] [cursor=pointer]
+        - generic [ref=f13e156]:
+          - generic [ref=f13e157]: Perfil
+          - button "Observador" [expanded] [active] [ref=f13e161] [cursor=pointer]
+      - generic [ref=f13e168]:
+        - button "Cancelar" [ref=f13e169] [cursor=pointer]
+        - button "Criar usuário" [ref=f13e170] [cursor=pointer]
+  - listbox "Selecione um perfil" [ref=f13e171]:
+    - option "Administrador" [ref=f13e172] [cursor=pointer]
+    - option "Gestor comercial" [ref=f13e174] [cursor=pointer]
+    - option "Observador" [selected] [ref=f13e176] [cursor=pointer]

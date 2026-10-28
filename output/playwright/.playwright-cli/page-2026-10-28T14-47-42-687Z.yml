@@ -1,0 +1,65 @@
+- generic [ref=f11e5]:
+  - banner [ref=f11e6]:
+    - generic [ref=f11e8]:
+      - paragraph [ref=f11e9]: Administração
+      - heading "Usuários e permissões" [level=1] [ref=f11e12]
+      - paragraph [ref=f11e13]: Gerencie as contas que podem acessar a operação.
+    - tablist "Áreas de configurações" [ref=f11e16]:
+      - tab "Geral" [ref=f11e17] [cursor=pointer]
+      - tab "Usuários" [selected] [ref=f11e22] [cursor=pointer]
+      - tab "Links" [ref=f11e29] [cursor=pointer]
+      - tab "Formulários" [ref=f11e34] [cursor=pointer]
+  - main [ref=f11e39]:
+    - generic [ref=f11e40]:
+      - generic [ref=f11e41]:
+        - button "Novo usuário" [ref=f11e42] [cursor=pointer]
+        - generic [ref=f11e46]:
+          - searchbox "Buscar por usuário, e-mail ou perfil" [ref=f11e49]
+          - status [ref=f11e50]: 3 usuários
+      - region "Tabela com rolagem horizontal" [ref=f11e53]:
+        - table [ref=f11e54]:
+          - rowgroup [ref=f11e60]:
+            - row [ref=f11e61]:
+              - columnheader [ref=f11e62]:
+                - button "Ordenar por Usuário" [ref=f11e63] [cursor=pointer]:
+                  - generic [ref=f11e64]: Usuário
+              - columnheader [ref=f11e67]:
+                - button "Ordenar por Perfil de acesso" [ref=f11e68] [cursor=pointer]:
+                  - generic [ref=f11e69]: Perfil de acesso
+              - columnheader [ref=f11e73]:
+                - button "Ordenar por Criado em" [ref=f11e74] [cursor=pointer]:
+                  - generic [ref=f11e75]: Criado em
+              - columnheader "Ações" [ref=f11e79]
+          - rowgroup [ref=f11e80]:
+            - row [ref=f11e81]:
+              - cell "@Ana Demonstração ana.demonstracao@example.invalid" [ref=f11e82]:
+                - generic [ref=f11e88]:
+                  - generic [ref=f11e89]: "@Ana Demonstração"
+                  - generic [ref=f11e90]: ana.demonstracao@example.invalid
+              - cell "Administrador" [ref=f11e91]
+              - cell "25/10/2026" [ref=f11e93]
+              - cell [ref=f11e94]:
+                - group "Ações do usuário" [ref=f11e95]:
+                  - button "Editar Ana Demonstração" [ref=f11e96] [cursor=pointer]
+            - row [ref=f11e101]:
+              - cell "@Bruno Exemplo bruno.exemplo@example.invalid" [ref=f11e102]:
+                - generic [ref=f11e108]:
+                  - generic [ref=f11e109]: "@Bruno Exemplo"
+                  - generic [ref=f11e110]: bruno.exemplo@example.invalid
+              - cell "Gestor comercial" [ref=f11e111]
+              - cell "24/10/2026" [ref=f11e113]
+              - cell [ref=f11e114]:
+                - group "Ações do usuário" [ref=f11e115]:
+                  - button "Editar Bruno Exemplo" [ref=f11e116] [cursor=pointer]
+                  - button "Excluir Bruno Exemplo" [ref=f11e121] [cursor=pointer]
+            - row [ref=f11e126]:
+              - cell "@Carla Teste carla.teste@example.invalid" [ref=f11e127]:
+                - generic [ref=f11e133]:
+                  - generic [ref=f11e134]: "@Carla Teste"
+                  - generic [ref=f11e135]: carla.teste@example.invalid
+              - cell "Observador" [ref=f11e136]
+              - cell "23/10/2026" [ref=f11e138]
+              - cell [ref=f11e139]:
+                - group "Ações do usuário" [ref=f11e140]:
+                  - button "Editar Carla Teste" [ref=f11e141] [cursor=pointer]
+                  - button "Excluir Carla Teste" [ref=f11e146] [cursor=pointer]

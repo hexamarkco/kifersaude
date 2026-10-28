@@ -1,0 +1,44 @@
+- generic [ref=f4e5]:
+  - banner [ref=f4e6]:
+    - generic [ref=f4e7]:
+      - generic [ref=f4e8]:
+        - paragraph [ref=f4e9]: Administração
+        - heading "Usuários e permissões" [level=1] [ref=f4e12]
+        - paragraph [ref=f4e13]: Gerencie as contas que podem acessar a operação.
+      - button "Novo usuário" [ref=f4e15] [cursor=pointer]
+    - tablist "Áreas de configurações" [ref=f4e20]:
+      - tab "Geral" [ref=f4e21] [cursor=pointer]
+      - tab "Usuários" [selected] [ref=f4e26] [cursor=pointer]
+      - tab "Links" [ref=f4e33] [cursor=pointer]
+      - tab "Formulários" [ref=f4e38] [cursor=pointer]
+  - main [ref=f4e43]:
+    - generic [ref=f4e44]:
+      - generic [ref=f4e45]:
+        - searchbox "Buscar por usuário, e-mail ou perfil" [ref=f4e48]
+        - status [ref=f4e49]: 3 usuários
+      - generic [ref=f4e51]:
+        - generic [ref=f4e52]:
+          - generic [ref=f4e58]:
+            - paragraph [ref=f4e59]: "@Ana Demonstração"
+            - paragraph [ref=f4e60]: ana.demonstracao@example.invalid
+            - generic [ref=f4e61]: Administrador
+          - generic [ref=f4e63]:
+            - paragraph [ref=f4e64]: Você
+            - group "Ações de Ana Demonstração" [ref=f4e65]:
+              - button "Editar Ana Demonstração" [ref=f4e66] [cursor=pointer]
+        - generic [ref=f4e71]:
+          - generic [ref=f4e77]:
+            - paragraph [ref=f4e78]: "@Bruno Exemplo"
+            - paragraph [ref=f4e79]: bruno.exemplo@example.invalid
+            - generic [ref=f4e80]: Gestor comercial
+          - group "Ações de Bruno Exemplo" [ref=f4e83]:
+            - button "Editar Bruno Exemplo" [ref=f4e84] [cursor=pointer]
+            - button "Excluir Bruno Exemplo" [ref=f4e89] [cursor=pointer]
+        - generic [ref=f4e94]:
+          - generic [ref=f4e100]:
+            - paragraph [ref=f4e101]: "@Carla Teste"
+            - paragraph [ref=f4e102]: carla.teste@example.invalid
+            - generic [ref=f4e103]: Observador
+          - group "Ações de Carla Teste" [ref=f4e106]:
+            - button "Editar Carla Teste" [ref=f4e107] [cursor=pointer]
+            - button "Excluir Carla Teste" [ref=f4e112] [cursor=pointer]

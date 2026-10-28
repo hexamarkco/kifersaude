@@ -1,0 +1,89 @@
+- generic [ref=f18e3]:
+  - complementary [ref=f18e210]:
+    - generic [ref=f18e211]:
+      - generic [ref=f18e212]: K
+      - navigation [ref=f18e215]:
+        - generic [ref=f18e216]:
+          - button "Dashboard" [ref=f18e217] [cursor=pointer]
+          - button "3 CRM" [ref=f18e225] [cursor=pointer]:
+            - generic [ref=f18e226]:
+              - generic [ref=f18e227]: "3"
+              - generic: CRM
+          - button "3 Comunicação" [ref=f18e233] [cursor=pointer]:
+            - generic [ref=f18e234]:
+              - generic [ref=f18e235]: "3"
+              - generic: Comunicação
+          - button "Financeiro" [ref=f18e240] [cursor=pointer]
+          - button "Automações e IA" [ref=f18e246] [cursor=pointer]
+          - button "Configurações" [ref=f18e252] [cursor=pointer]
+      - generic [ref=f18e257]:
+        - button "Expandir" [ref=f18e258] [cursor=pointer]
+        - button "3 Notificações" [ref=f18e262] [cursor=pointer]:
+          - generic [ref=f18e269]: "3"
+          - generic: Notificações
+        - button "Ativar tema escuro" [ref=f18e270] [cursor=pointer]:
+          - generic: Escuro
+        - button "Sair" [ref=f18e273] [cursor=pointer]
+  - generic [ref=f18e31]:
+    - banner [ref=f18e32]:
+      - generic [ref=f18e277]:
+        - navigation "Breadcrumb" [ref=f18e278]:
+          - list [ref=f18e279]:
+            - listitem [ref=f18e280]:
+              - button "CRM" [ref=f18e281] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f18e282]
+            - listitem [ref=f18e285]: Configurações
+        - generic [ref=f18e286]:
+          - generic [ref=f18e287]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f18e288] [cursor=pointer]
+          - generic [ref=f18e292]: OD
+    - main [ref=f18e42]:
+      - generic [ref=f18e44]:
+        - generic [ref=f18e45]:
+          - generic [ref=f18e47]:
+            - paragraph [ref=f18e48]: Administração
+            - heading "Usuários e permissões" [level=1] [ref=f18e1079]
+            - paragraph [ref=f18e52]: Gerencie as contas que podem acessar a operação.
+          - tablist "Áreas de configurações" [ref=f18e55]:
+            - tab "Geral" [ref=f18e56] [cursor=pointer]
+            - tab "Usuários" [active] [selected] [ref=f18e61] [cursor=pointer]
+            - tab "Links" [ref=f18e68] [cursor=pointer]
+            - tab "Formulários" [ref=f18e73] [cursor=pointer]
+        - main [ref=f18e78]:
+          - generic [ref=f18e1080]:
+            - generic [ref=f18e1081]:
+              - generic [ref=f18e1082]:
+                - paragraph [ref=f18e1083]: Equipe e acessos
+                - heading "Usuários" [level=2] [ref=f18e1084]
+                - paragraph [ref=f18e1085]: Gerencie contas e os perfis de acesso da equipe.
+              - button "Novo usuário" [ref=f18e1087] [cursor=pointer]
+            - generic [ref=f18e1091]:
+              - searchbox "Buscar por usuário, e-mail ou perfil" [ref=f18e1094]
+              - generic [ref=f18e1096]:
+                - generic [ref=f18e1097]: "1"
+                - generic [ref=f18e1098]: usuário
+            - region "Tabela com rolagem horizontal" [ref=f18e1101]:
+              - table [ref=f18e1102]:
+                - rowgroup [ref=f18e1108]:
+                  - row [ref=f18e1109]:
+                    - columnheader [ref=f18e1110]:
+                      - button "Ordenar por Usuário" [ref=f18e1111] [cursor=pointer]:
+                        - generic [ref=f18e1112]: Usuário
+                    - columnheader [ref=f18e1115]:
+                      - button "Ordenar por Perfil de acesso" [ref=f18e1116] [cursor=pointer]:
+                        - generic [ref=f18e1117]: Perfil de acesso
+                    - columnheader [ref=f18e1121]:
+                      - button "Ordenar por Criado em" [ref=f18e1122] [cursor=pointer]:
+                        - generic [ref=f18e1123]: Criado em
+                    - columnheader "Ações" [ref=f18e1127]
+                - rowgroup [ref=f18e1128]:
+                  - row [ref=f18e1129]:
+                    - cell "@Operador Demonstração operador@exemplo.invalid" [ref=f18e1130]:
+                      - generic [ref=f18e1136]:
+                        - generic [ref=f18e1137]: "@Operador Demonstração"
+                        - generic [ref=f18e1138]: operador@exemplo.invalid
+                    - cell "Administrador" [ref=f18e1139]
+                    - cell "25/10/2026" [ref=f18e1141]
+                    - cell [ref=f18e1142]:
+                      - group "Ações do usuário" [ref=f18e1143]:
+                        - button "Editar Operador Demonstração" [ref=f18e1144] [cursor=pointer]

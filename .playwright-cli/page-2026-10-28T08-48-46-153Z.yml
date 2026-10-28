@@ -1,0 +1,44 @@
+- generic [ref=f7e9]:
+  - navigation "Navegação principal" [ref=f7e402]:
+    - button "Início" [ref=f7e403] [cursor=pointer]
+    - button "Leads" [ref=f7e410] [cursor=pointer]
+    - button "WhatsApp" [ref=f7e417] [cursor=pointer]
+    - button "Contratos" [ref=f7e421] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f7e426] [cursor=pointer]:
+      - generic [ref=f7e428]: Mais
+  - generic [ref=f7e115]:
+    - banner [ref=f7e116]:
+      - generic [ref=f7e429]:
+        - img "Kifer Saúde" [ref=f7e430]:
+          - generic [ref=f7e431]: kifersaúde
+        - generic [ref=f7e432]:
+          - button "Abrir menu" [ref=f7e433] [cursor=pointer]
+          - generic [ref=f7e436]: OD
+    - main [ref=f7e134]:
+      - generic [ref=f7e136]:
+        - generic [ref=f7e138]:
+          - generic [ref=f7e139]:
+            - paragraph [ref=f7e140]: Kifer Saúde / produtividade
+            - heading "Agenda e tarefas" [level=1] [ref=f7e143]
+            - paragraph [ref=f7e144]: Organize seus compromissos e priorize os retornos comerciais.
+          - group "Ações da agenda" [ref=f7e146]:
+            - button "Organizar follow-ups" [ref=f7e147] [cursor=pointer]
+            - button "Nova tarefa" [ref=f7e151] [cursor=pointer]
+        - generic [ref=f7e154]:
+          - tablist [ref=f7e156]:
+            - tab "Calendário" [ref=f7e157] [cursor=pointer]
+            - tab "Pendentes" [ref=f7e1008] [cursor=pointer]
+            - tab "Concluídos" [active] [selected] [ref=f7e162] [cursor=pointer]
+          - generic [ref=f7e165]:
+            - textbox "Buscar tarefas e lembretes" [ref=f7e167]:
+              - /placeholder: Buscar tarefa, lembrete ou lead...
+            - button "Mostrar filtros da agenda" [ref=f7e993] [cursor=pointer]:
+              - generic [ref=f7e170]: Filtros
+        - generic [ref=f7e1009]:
+          - generic [ref=f7e1011]:
+            - paragraph [ref=f7e1012]: Histórico
+            - heading "Concluídos" [level=2] [ref=f7e1193]
+            - paragraph [ref=f7e1014]: 0 item(ns) concluído(s) correspondem aos filtros atuais.
+          - generic [ref=f7e1194]:
+            - paragraph [ref=f7e1199]: Nenhum item concluído
+            - paragraph [ref=f7e1200]: Ajuste os filtros para consultar outros itens da agenda.

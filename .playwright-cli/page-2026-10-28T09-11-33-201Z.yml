@@ -1,0 +1,199 @@
+- generic [ref=f9e3]:
+  - complementary [ref=f9e4]:
+    - generic [ref=f9e5]:
+      - img "Kifer Saúde CRM" [ref=f9e7]:
+        - generic [ref=f9e8]: kifersaúde
+        - generic [ref=f9e9]: CRM
+      - navigation [ref=f9e10]:
+        - generic [ref=f9e11]:
+          - button "Dashboard" [ref=f9e12] [cursor=pointer]
+          - generic [ref=f9e20]:
+            - button "CRM 3" [ref=f9e21] [cursor=pointer]:
+              - generic [ref=f9e22]: CRM
+              - generic [ref=f9e30]: "3"
+            - generic [ref=f9e31]:
+              - button "Leads" [ref=f9e32] [cursor=pointer]
+              - button "Contratos" [ref=f9e40] [cursor=pointer]
+              - button "Agenda 3" [ref=f9e46] [cursor=pointer]:
+                - generic [ref=f9e47]: Agenda
+                - generic [ref=f9e51]: "3"
+          - button "Comunicação 3" [ref=f9e53] [cursor=pointer]:
+            - generic [ref=f9e54]: Comunicação
+            - generic [ref=f9e61]: "3"
+          - button "Financeiro" [ref=f9e63] [cursor=pointer]
+          - button "Automações e IA" [ref=f9e72] [cursor=pointer]
+          - button "Configurações" [ref=f9e79] [cursor=pointer]
+      - generic [ref=f9e85]:
+        - button "Recolher" [ref=f9e86] [cursor=pointer]
+        - button "3 Notificações" [ref=f9e91] [cursor=pointer]:
+          - generic [ref=f9e98]: "3"
+          - generic [ref=f9e99]: Notificações
+        - button "Ativar tema escuro" [active] [ref=f9e408] [cursor=pointer]:
+          - generic [ref=f9e103]: Escuro
+        - button "Sair" [ref=f9e104] [cursor=pointer]
+  - generic [ref=f9e109]:
+    - banner [ref=f9e110]:
+      - generic [ref=f9e111]:
+        - navigation "Breadcrumb" [ref=f9e112]:
+          - list [ref=f9e113]:
+            - listitem [ref=f9e114]:
+              - button "CRM" [ref=f9e115] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f9e116]
+            - listitem [ref=f9e119]: Agenda
+        - generic [ref=f9e120]:
+          - generic [ref=f9e121]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f9e411] [cursor=pointer]
+          - generic [ref=f9e126]: OD
+    - main [ref=f9e128]:
+      - generic [ref=f9e130]:
+        - generic [ref=f9e132]:
+          - generic [ref=f9e133]:
+            - paragraph [ref=f9e134]: Kifer Saúde / produtividade
+            - heading "Agenda e tarefas" [level=1] [ref=f9e137]
+            - paragraph [ref=f9e138]: Organize seus compromissos e priorize os retornos comerciais.
+          - group "Ações da agenda" [ref=f9e140]:
+            - button "Organizar follow-ups" [ref=f9e141] [cursor=pointer]
+            - button "Nova tarefa" [ref=f9e145] [cursor=pointer]
+        - generic [ref=f9e148]:
+          - tablist [ref=f9e150]:
+            - tab "Calendário" [selected] [ref=f9e151] [cursor=pointer]
+            - tab "Pendentes 3" [ref=f9e153] [cursor=pointer]:
+              - generic [ref=f9e154]: Pendentes
+              - generic [ref=f9e155]: "3"
+            - tab "Concluídos" [ref=f9e156] [cursor=pointer]
+          - generic [ref=f9e159]:
+            - textbox "Buscar tarefas e lembretes" [ref=f9e161]:
+              - /placeholder: Buscar tarefa, lembrete ou lead...
+            - generic [ref=f9e162]:
+              - button "Mostrar filtros da agenda" [ref=f9e163] [cursor=pointer]:
+                - generic [ref=f9e164]: Filtros
+              - button "Marcar itens filtrados como lidos" [ref=f9e166] [cursor=pointer]:
+                - generic [ref=f9e167]: Marcar lidos
+        - generic [ref=f9e169]:
+          - generic [ref=f9e170]:
+            - generic [ref=f9e171]:
+              - button "Mês anterior" [ref=f9e172] [cursor=pointer]
+              - generic [ref=f9e176]:
+                - heading "outubro de 2026" [level=3] [ref=f9e177]
+                - paragraph [ref=f9e178]: 3 compromissos neste mês
+              - button "Hoje" [ref=f9e179] [cursor=pointer]
+              - button "Próximo mês" [ref=f9e180] [cursor=pointer]
+            - generic [ref=f9e185]:
+              - generic [ref=f9e186]: Dom
+              - generic [ref=f9e187]: Seg
+              - generic [ref=f9e188]: Ter
+              - generic [ref=f9e189]: Qua
+              - generic [ref=f9e190]: Qui
+              - generic [ref=f9e191]: Sex
+              - generic [ref=f9e192]: Sab
+              - button "1 de outubro de 2026, 0 itens" [ref=f9e197] [cursor=pointer]:
+                - generic [ref=f9e198]: "1"
+              - button "2 de outubro de 2026, 0 itens" [ref=f9e200] [cursor=pointer]:
+                - generic [ref=f9e201]: "2"
+              - button "3 de outubro de 2026, 0 itens" [ref=f9e203] [cursor=pointer]:
+                - generic [ref=f9e204]: "3"
+              - button "4 de outubro de 2026, 0 itens" [ref=f9e206] [cursor=pointer]:
+                - generic [ref=f9e207]: "4"
+              - button "5 de outubro de 2026, 0 itens" [ref=f9e209] [cursor=pointer]:
+                - generic [ref=f9e210]: "5"
+              - button "6 de outubro de 2026, 0 itens" [ref=f9e212] [cursor=pointer]:
+                - generic [ref=f9e213]: "6"
+              - button "7 de outubro de 2026, 0 itens" [ref=f9e215] [cursor=pointer]:
+                - generic [ref=f9e216]: "7"
+              - button "8 de outubro de 2026, 0 itens" [ref=f9e218] [cursor=pointer]:
+                - generic [ref=f9e219]: "8"
+              - button "9 de outubro de 2026, 0 itens" [ref=f9e221] [cursor=pointer]:
+                - generic [ref=f9e222]: "9"
+              - button "10 de outubro de 2026, 0 itens" [ref=f9e224] [cursor=pointer]:
+                - generic [ref=f9e225]: "10"
+              - button "11 de outubro de 2026, 0 itens" [ref=f9e227] [cursor=pointer]:
+                - generic [ref=f9e228]: "11"
+              - button "12 de outubro de 2026, 0 itens" [ref=f9e230] [cursor=pointer]:
+                - generic [ref=f9e231]: "12"
+              - button "13 de outubro de 2026, 0 itens" [ref=f9e233] [cursor=pointer]:
+                - generic [ref=f9e234]: "13"
+              - button "14 de outubro de 2026, 0 itens" [ref=f9e236] [cursor=pointer]:
+                - generic [ref=f9e237]: "14"
+              - button "15 de outubro de 2026, 0 itens" [ref=f9e239] [cursor=pointer]:
+                - generic [ref=f9e240]: "15"
+              - button "16 de outubro de 2026, 0 itens" [ref=f9e242] [cursor=pointer]:
+                - generic [ref=f9e243]: "16"
+              - button "17 de outubro de 2026, 0 itens" [ref=f9e245] [cursor=pointer]:
+                - generic [ref=f9e246]: "17"
+              - button "18 de outubro de 2026, 0 itens" [ref=f9e248] [cursor=pointer]:
+                - generic [ref=f9e249]: "18"
+              - button "19 de outubro de 2026, 0 itens" [ref=f9e251] [cursor=pointer]:
+                - generic [ref=f9e252]: "19"
+              - button "20 de outubro de 2026, 0 itens" [ref=f9e254] [cursor=pointer]:
+                - generic [ref=f9e255]: "20"
+              - button "21 de outubro de 2026, 0 itens" [ref=f9e257] [cursor=pointer]:
+                - generic [ref=f9e258]: "21"
+              - button "22 de outubro de 2026, 0 itens" [ref=f9e260] [cursor=pointer]:
+                - generic [ref=f9e261]: "22"
+              - button "23 de outubro de 2026, 0 itens" [ref=f9e263] [cursor=pointer]:
+                - generic [ref=f9e264]: "23"
+              - button "24 de outubro de 2026, 0 itens" [ref=f9e266] [cursor=pointer]:
+                - generic [ref=f9e267]: "24"
+              - button "25 de outubro de 2026, 1 item" [ref=f9e269] [cursor=pointer]:
+                - generic [ref=f9e270]:
+                  - generic [ref=f9e271]: "25"
+                  - generic "1 pendente, 0 concluídos" [ref=f9e272]: "1"
+              - button "26 de outubro de 2026, 1 item" [ref=f9e273] [cursor=pointer]:
+                - generic [ref=f9e274]:
+                  - generic [ref=f9e275]: "26"
+                  - generic "1 pendente, 0 concluídos" [ref=f9e276]: "1"
+              - button "27 de outubro de 2026, 1 item" [pressed] [ref=f9e277] [cursor=pointer]:
+                - generic [ref=f9e278]:
+                  - generic [ref=f9e279]: "27"
+                  - generic "1 pendente, 0 concluídos" [ref=f9e280]: "1"
+              - button "28 de outubro de 2026, 0 itens" [ref=f9e281] [cursor=pointer]:
+                - generic [ref=f9e282]: "28"
+              - button "29 de outubro de 2026, 0 itens" [ref=f9e284] [cursor=pointer]:
+                - generic [ref=f9e285]: "29"
+              - button "30 de outubro de 2026, 0 itens" [ref=f9e287] [cursor=pointer]:
+                - generic [ref=f9e288]: "30"
+              - button "31 de outubro de 2026, 0 itens" [ref=f9e290] [cursor=pointer]:
+                - generic [ref=f9e291]: "31"
+            - generic [ref=f9e293]:
+              - generic [ref=f9e294]: Pendentes
+              - generic [ref=f9e297]: Concluídos
+          - generic [ref=f9e301]:
+            - generic [ref=f9e303]:
+              - generic [ref=f9e305]:
+                - paragraph [ref=f9e306]: Dia selecionado
+                - heading "27 de outubro de 2026" [level=2] [ref=f9e329]
+                - paragraph [ref=f9e308]: "1 item: 1 pendente, 1 atrasado, 0 concluídos."
+              - generic [ref=f9e309]:
+                - generic [ref=f9e311]:
+                  - generic [ref=f9e312]: "1"
+                  - generic [ref=f9e313]: Atrasados
+                - generic [ref=f9e315]:
+                  - generic [ref=f9e316]: "0"
+                  - generic [ref=f9e317]: Pendentes
+                - generic [ref=f9e319]:
+                  - generic [ref=f9e320]: "0"
+                  - generic [ref=f9e321]: Concluídos
+            - generic [ref=f9e330]:
+              - generic [ref=f9e331]:
+                - generic [ref=f9e333]:
+                  - heading "Atrasados" [level=3] [ref=f9e334]
+                  - paragraph [ref=f9e335]: Exigem atenção primeiro
+                - generic [ref=f9e336]: "1"
+              - button "Abrir edicao do lead Contato Demonstração 03" [ref=f9e338] [cursor=pointer]:
+                - generic [ref=f9e339]:
+                  - generic [ref=f9e344]:
+                    - generic [ref=f9e345]:
+                      - heading "Retorno de demonstração 3" [level=3] [ref=f9e346]
+                      - paragraph [ref=f9e347]: Revisar proposta fictícia
+                    - generic [ref=f9e348]:
+                      - generic [ref=f9e349]: Contato Demonstração 03
+                      - generic [ref=f9e354]: Follow-up
+                      - generic [ref=f9e355]: Atrasado
+                    - generic [ref=f9e356]: 27/10/2026 às 11:00
+                  - group "Ações do lembrete" [ref=f9e362]:
+                    - button "Telefone não disponível" [disabled] [ref=f9e363]
+                    - button "Agendar dias úteis e marcar atual como lido" [ref=f9e370]
+                    - button "Marcar como lido" [ref=f9e376]
+                    - button "Reagendar item" [ref=f9e380]
+                    - button "Marcar lead como perdido e limpar lembretes" [ref=f9e384]
+                    - button "Excluir item" [ref=f9e389]

@@ -1,0 +1,216 @@
+- generic [ref=f2e15]:
+  - complementary [ref=f2e16]:
+    - generic [ref=f2e17]:
+      - img "Kifer Saúde CRM" [ref=f2e19]:
+        - generic [ref=f2e20]: kifersaúde
+        - generic [ref=f2e21]: CRM
+      - navigation [ref=f2e22]:
+        - generic [ref=f2e23]:
+          - button "Dashboard" [ref=f2e24] [cursor=pointer]
+          - generic [ref=f2e32]:
+            - button "CRM 3" [ref=f2e999] [cursor=pointer]:
+              - generic [ref=f2e34]: CRM
+              - generic [ref=f2e1000]: "3"
+            - generic [ref=f2e42]:
+              - button "Leads" [ref=f2e43] [cursor=pointer]
+              - button "Contratos" [ref=f2e51] [cursor=pointer]
+              - button "Agenda 3" [ref=f2e1001] [cursor=pointer]:
+                - generic [ref=f2e58]: Agenda
+                - generic [ref=f2e1002]: "3"
+          - button "Comunicação 3" [ref=f2e1003] [cursor=pointer]:
+            - generic [ref=f2e64]: Comunicação
+            - generic [ref=f2e1004]: "3"
+          - button "Financeiro" [ref=f2e72] [cursor=pointer]
+          - button "Automações e IA" [ref=f2e81] [cursor=pointer]
+          - button "Configurações" [ref=f2e88] [cursor=pointer]
+      - generic [ref=f2e94]:
+        - button "Recolher" [ref=f2e95] [cursor=pointer]
+        - button "3 Notificações" [ref=f2e1005] [cursor=pointer]:
+          - generic [ref=f2e1006]: "3"
+          - generic [ref=f2e107]: Notificações
+        - button "Ativar tema escuro" [ref=f2e2080] [cursor=pointer]:
+          - generic [ref=f2e111]: Escuro
+        - button "Sair" [ref=f2e112] [cursor=pointer]
+  - generic [ref=f2e117]:
+    - banner [ref=f2e118]:
+      - navigation "Breadcrumb" [ref=f2e119]:
+        - list [ref=f2e120]:
+          - listitem [ref=f2e121]:
+            - button "CRM" [ref=f2e122] [cursor=pointer]
+          - listitem [aria-hidden] [ref=f2e123]
+          - listitem [ref=f2e126]: Contratos
+      - generic [ref=f2e127]:
+        - generic [ref=f2e128]: Operador Demonstração
+        - button "Ativar tema escuro" [active] [ref=f2e2083] [cursor=pointer]
+        - generic [ref=f2e133]: OD
+    - main [ref=f2e135]:
+      - generic [ref=f2e1531]:
+        - generic [ref=f2e1533]:
+          - generic [ref=f2e1534]:
+            - paragraph [ref=f2e1535]: Kifer Saúde / Operação comercial
+            - heading "Gestão de contratos" [level=1] [ref=f2e1538]
+            - paragraph [ref=f2e1539]: Gerencie clientes, vigências, titulares e dependentes em um só lugar.
+          - generic [ref=f2e1541]:
+            - group "Ações dos contratos" [ref=f2e1542]:
+              - button "Importar contratos em massa" [ref=f2e1543] [cursor=pointer]
+            - button "Novo contrato" [ref=f2e1549] [cursor=pointer]
+        - generic "Resumo da carteira de contratos" [ref=f2e1553]:
+          - generic [ref=f2e1554]:
+            - heading "Contratos ativos" [level=3] [ref=f2e1558]
+            - generic [ref=f2e1559]: "4"
+            - generic [ref=f2e1560]: Contratos vigentes
+          - generic [ref=f2e1561]:
+            - heading "Em implantação" [level=3] [ref=f2e1565]
+            - generic [ref=f2e1566]: "0"
+            - generic [ref=f2e1567]: Em análise ou emissão
+          - generic [ref=f2e1568]:
+            - heading "Próximos vencimentos" [level=3] [ref=f2e1572]
+            - generic [ref=f2e1573]: "4"
+            - generic [ref=f2e1574]: Nos próximos 30 dias
+          - generic [ref=f2e1575]:
+            - heading "Mensalidade total" [level=3] [ref=f2e1579]
+            - generic [ref=f2e1580]: R$ 5.020,00
+            - generic [ref=f2e1581]: Soma dos valores informados
+        - generic [ref=f2e1582]:
+          - generic [ref=f2e1583]:
+            - textbox "Buscar contratos" [ref=f2e1586]:
+              - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+            - button "Exportar" [ref=f2e1588] [cursor=pointer]
+          - generic [ref=f2e1593]:
+            - button "Todos os status" [ref=f2e1595] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f2e1603] [cursor=pointer]
+            - button "Todos os períodos" [ref=f2e1614] [cursor=pointer]
+            - button "Mais filtros" [ref=f2e1621] [cursor=pointer]
+        - generic [ref=f2e1625]:
+          - generic [ref=f2e1626]:
+            - generic [ref=f2e1627]:
+              - paragraph [ref=f2e1628]: Carteira contratual
+              - heading "Contratos em acompanhamento" [level=3] [ref=f2e1629]
+              - paragraph [ref=f2e1630]: Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial.
+            - generic [ref=f2e1632]:
+              - generic [ref=f2e1634]:
+                - generic [ref=f2e1635]: "4"
+                - generic [ref=f2e1636]: resultados
+              - generic [ref=f2e1638]:
+                - generic [ref=f2e1639]: 1/1
+                - generic [ref=f2e1640]: páginas
+          - region "Rolagem de Carteira de contratos" [ref=f2e1874]:
+            - table "Carteira de contratos" [ref=f2e1875]:
+              - rowgroup [ref=f2e1884]:
+                - row [ref=f2e1885]:
+                  - columnheader [ref=f2e1886]:
+                    - button "Ordenar por Contrato" [ref=f2e1887] [cursor=pointer]:
+                      - generic [ref=f2e1888]: Contrato
+                  - columnheader [ref=f2e1892]:
+                    - button "Ordenar por Status" [ref=f2e1893] [cursor=pointer]:
+                      - generic [ref=f2e1894]: Status
+                  - columnheader [ref=f2e1898]:
+                    - button "Ordenar por Operadora e plano" [ref=f2e1899] [cursor=pointer]:
+                      - generic [ref=f2e1900]: Operadora e plano
+                  - columnheader [ref=f2e1904]:
+                    - button "Ordenar por Financeiro" [ref=f2e1905] [cursor=pointer]:
+                      - generic [ref=f2e1906]: Financeiro
+                  - columnheader [ref=f2e1910]:
+                    - button "Ordenar por Datas críticas" [ref=f2e1911] [cursor=pointer]:
+                      - generic [ref=f2e1912]: Datas críticas
+                  - columnheader [ref=f2e1916]:
+                    - button "Ordenar por Responsável" [ref=f2e1917] [cursor=pointer]:
+                      - generic [ref=f2e1918]: Responsável
+                  - columnheader "Ações" [ref=f2e1922]
+              - rowgroup [ref=f2e1923]:
+                - row [ref=f2e1924]:
+                  - cell [ref=f2e1925]:
+                    - button "DEMO-001 Titular Demonstração 01" [ref=f2e1926] [cursor=pointer]:
+                      - generic [ref=f2e1927]: DEMO-001
+                      - generic [ref=f2e1928]: Titular Demonstração 01
+                  - cell [ref=f2e1929]:
+                    - 'button "Alterar status do contrato DEMO-001: Ativo" [ref=f2e1931] [cursor=pointer]':
+                      - generic [ref=f2e1932]: Ativo
+                  - cell "Amil Plano Demonstração Individual" [ref=f2e1936]:
+                    - generic [ref=f2e1937]: Amil
+                    - generic [ref=f2e1938]: Plano Demonstração
+                    - generic [ref=f2e1939]: Individual
+                  - 'cell "R$ 850,00 Comissão: R$ 1.700,00" [ref=f2e1940]':
+                    - generic [ref=f2e1941]: R$ 850,00
+                    - generic [ref=f2e1942]: "Comissão: R$ 1.700,00"
+                  - cell "Comissão" [ref=f2e1943]
+                  - cell "Operador Demonstração" [ref=f2e1948]
+                  - cell [ref=f2e1949]:
+                    - group "Ações do contrato DEMO-001" [ref=f2e1950]:
+                      - button "Abrir contrato" [ref=f2e1951] [cursor=pointer]
+                      - button "Mais ações do contrato demo-001" [ref=f2e1957] [cursor=pointer]
+                - row [ref=f2e1963]:
+                  - cell [ref=f2e1964]:
+                    - button "DEMO-002 Titular Demonstração 02" [ref=f2e1965] [cursor=pointer]:
+                      - generic [ref=f2e1966]: DEMO-002
+                      - generic [ref=f2e1967]: Titular Demonstração 02
+                  - cell [ref=f2e1968]:
+                    - 'button "Alterar status do contrato DEMO-002: Ativo" [ref=f2e1970] [cursor=pointer]':
+                      - generic [ref=f2e1971]: Ativo
+                  - cell "Amil Plano Demonstração Individual" [ref=f2e1975]:
+                    - generic [ref=f2e1976]: Amil
+                    - generic [ref=f2e1977]: Plano Demonstração
+                    - generic [ref=f2e1978]: Individual
+                  - 'cell "R$ 1.120,00 Comissão: R$ 2.240,00" [ref=f2e1979]':
+                    - generic [ref=f2e1980]: R$ 1.120,00
+                    - generic [ref=f2e1981]: "Comissão: R$ 2.240,00"
+                  - cell "Comissão" [ref=f2e1982]
+                  - cell "Operador Demonstração" [ref=f2e1987]
+                  - cell [ref=f2e1988]:
+                    - group "Ações do contrato DEMO-002" [ref=f2e1989]:
+                      - button "Abrir contrato" [ref=f2e1990] [cursor=pointer]
+                      - button "Mais ações do contrato demo-002" [ref=f2e1996] [cursor=pointer]
+                - row [ref=f2e2002]:
+                  - cell [ref=f2e2003]:
+                    - button "DEMO-003 Titular Demonstração 03" [ref=f2e2004] [cursor=pointer]:
+                      - generic [ref=f2e2005]: DEMO-003
+                      - generic [ref=f2e2006]: Titular Demonstração 03
+                  - cell [ref=f2e2007]:
+                    - 'button "Alterar status do contrato DEMO-003: Ativo" [ref=f2e2009] [cursor=pointer]':
+                      - generic [ref=f2e2010]: Ativo
+                  - cell "Amil Plano Demonstração Individual" [ref=f2e2014]:
+                    - generic [ref=f2e2015]: Amil
+                    - generic [ref=f2e2016]: Plano Demonstração
+                    - generic [ref=f2e2017]: Individual
+                  - 'cell "R$ 1.390,00 Comissão: R$ 2.780,00" [ref=f2e2018]':
+                    - generic [ref=f2e2019]: R$ 1.390,00
+                    - generic [ref=f2e2020]: "Comissão: R$ 2.780,00"
+                  - cell "Comissão" [ref=f2e2021]
+                  - cell "Operador Demonstração" [ref=f2e2026]
+                  - cell [ref=f2e2027]:
+                    - group "Ações do contrato DEMO-003" [ref=f2e2028]:
+                      - button "Abrir contrato" [ref=f2e2029] [cursor=pointer]
+                      - button "Mais ações do contrato demo-003" [ref=f2e2035] [cursor=pointer]
+                - row [ref=f2e2041]:
+                  - cell [ref=f2e2042]:
+                    - button "DEMO-004 Titular Demonstração 04" [ref=f2e2043] [cursor=pointer]:
+                      - generic [ref=f2e2044]: DEMO-004
+                      - generic [ref=f2e2045]: Titular Demonstração 04
+                  - cell [ref=f2e2046]:
+                    - 'button "Alterar status do contrato DEMO-004: Ativo" [ref=f2e2048] [cursor=pointer]':
+                      - generic [ref=f2e2049]: Ativo
+                  - cell "Amil Plano Demonstração Individual" [ref=f2e2053]:
+                    - generic [ref=f2e2054]: Amil
+                    - generic [ref=f2e2055]: Plano Demonstração
+                    - generic [ref=f2e2056]: Individual
+                  - 'cell "R$ 1.660,00 Comissão: R$ 3.320,00" [ref=f2e2057]':
+                    - generic [ref=f2e2058]: R$ 1.660,00
+                    - generic [ref=f2e2059]: "Comissão: R$ 3.320,00"
+                  - cell "Comissão" [ref=f2e2060]
+                  - cell "Operador Demonstração" [ref=f2e2065]
+                  - cell [ref=f2e2066]:
+                    - group "Ações do contrato DEMO-004" [ref=f2e2067]:
+                      - button "Abrir contrato" [ref=f2e2068] [cursor=pointer]
+                      - button "Mais ações do contrato demo-004" [ref=f2e2074] [cursor=pointer]
+          - navigation "Paginação" [ref=f2e1818]:
+            - generic [ref=f2e1819]:
+              - generic [ref=f2e1820]:
+                - generic [ref=f2e1821]: Itens por página
+                - combobox [aria-hidden] [ref=f2e1822]
+                - button "Itens por página" [ref=f2e1824] [cursor=pointer]:
+                  - generic [ref=f2e1825]: "25"
+              - generic [ref=f2e1828]: 1–4 de 4
+            - generic [ref=f2e1829]:
+              - button "Pagina anterior" [disabled] [ref=f2e1830]
+              - button "1" [ref=f2e1834] [cursor=pointer]
+              - button "Próxima página" [disabled] [ref=f2e1835]

@@ -1,0 +1,221 @@
+- generic [ref=f2e15]:
+  - complementary [ref=f2e16]:
+    - generic [ref=f2e17]:
+      - img "Kifer Saúde CRM" [ref=f2e19]:
+        - generic [ref=f2e20]: kifersaúde
+        - generic [ref=f2e21]: CRM
+      - navigation [ref=f2e22]:
+        - generic [ref=f2e23]:
+          - button "Dashboard" [ref=f2e24] [cursor=pointer]
+          - generic [ref=f2e32]:
+            - button "CRM 3" [ref=f2e999] [cursor=pointer]:
+              - generic [ref=f2e34]: CRM
+              - generic [ref=f2e1000]: "3"
+            - generic [ref=f2e42]:
+              - button "Leads" [ref=f2e43] [cursor=pointer]
+              - button "Contratos" [ref=f2e51] [cursor=pointer]
+              - button "Agenda 3" [ref=f2e1001] [cursor=pointer]:
+                - generic [ref=f2e58]: Agenda
+                - generic [ref=f2e1002]: "3"
+          - button "Comunicação 3" [ref=f2e1003] [cursor=pointer]:
+            - generic [ref=f2e64]: Comunicação
+            - generic [ref=f2e1004]: "3"
+          - button "Financeiro" [ref=f2e72] [cursor=pointer]
+          - button "Automações e IA" [ref=f2e81] [cursor=pointer]
+          - button "Configurações" [ref=f2e88] [cursor=pointer]
+      - generic [ref=f2e94]:
+        - button "Recolher" [ref=f2e95] [cursor=pointer]
+        - button "3 Notificações" [ref=f2e1005] [cursor=pointer]:
+          - generic [ref=f2e1006]: "3"
+          - generic [ref=f2e107]: Notificações
+        - button "Ativar tema claro" [active] [ref=f2e2090] [cursor=pointer]:
+          - generic [ref=f2e111]: Claro
+        - button "Sair" [ref=f2e112] [cursor=pointer]
+  - generic [ref=f2e117]:
+    - banner [ref=f2e118]:
+      - navigation "Breadcrumb" [ref=f2e119]:
+        - list [ref=f2e120]:
+          - listitem [ref=f2e121]:
+            - button "CRM" [ref=f2e122] [cursor=pointer]
+          - listitem [aria-hidden] [ref=f2e123]
+          - listitem [ref=f2e126]: Contratos
+      - generic [ref=f2e127]:
+        - generic [ref=f2e128]: Operador Demonstração
+        - button "Ativar tema claro" [ref=f2e2097] [cursor=pointer]
+        - generic [ref=f2e133]: OD
+    - main [ref=f2e135]:
+      - generic [ref=f2e1531]:
+        - generic [ref=f2e1533]:
+          - generic [ref=f2e1534]:
+            - paragraph [ref=f2e1535]: Kifer Saúde / Operação comercial
+            - heading "Gestão de contratos" [level=1] [ref=f2e1538]
+            - paragraph [ref=f2e1539]: Gerencie clientes, vigências, titulares e dependentes em um só lugar.
+          - generic [ref=f2e1541]:
+            - group "Ações dos contratos" [ref=f2e1542]:
+              - button "Importar contratos em massa" [ref=f2e1543] [cursor=pointer]
+            - button "Novo contrato" [ref=f2e1549] [cursor=pointer]
+        - generic "Resumo da carteira de contratos" [ref=f2e1553]:
+          - generic [ref=f2e1554]:
+            - heading "Contratos ativos" [level=3] [ref=f2e1558]
+            - generic [ref=f2e1559]: "4"
+            - generic [ref=f2e1560]: Contratos vigentes
+          - generic [ref=f2e1561]:
+            - heading "Em implantação" [level=3] [ref=f2e1565]
+            - generic [ref=f2e1566]: "0"
+            - generic [ref=f2e1567]: Em análise ou emissão
+          - generic [ref=f2e1568]:
+            - heading "Próximos vencimentos" [level=3] [ref=f2e1572]
+            - generic [ref=f2e1573]: "4"
+            - generic [ref=f2e1574]: Nos próximos 30 dias
+          - generic [ref=f2e1575]:
+            - heading "Mensalidade total" [level=3] [ref=f2e1579]
+            - generic [ref=f2e1580]: R$ 5.020,00
+            - generic [ref=f2e1581]: Soma dos valores informados
+        - generic [ref=f2e1582]:
+          - generic [ref=f2e1583]:
+            - textbox "Buscar contratos" [ref=f2e1586]:
+              - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+            - button "Exportar" [ref=f2e1588] [cursor=pointer]
+          - generic [ref=f2e1593]:
+            - button "Todos os status" [ref=f2e1595] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f2e1603] [cursor=pointer]
+            - button "Todos os períodos" [ref=f2e1614] [cursor=pointer]
+            - button "Mais filtros" [ref=f2e1621] [cursor=pointer]
+        - generic [ref=f2e1625]:
+          - generic [ref=f2e1626]:
+            - generic [ref=f2e1627]:
+              - paragraph [ref=f2e1628]: Carteira contratual
+              - heading "Contratos em acompanhamento" [level=3] [ref=f2e1629]
+              - paragraph [ref=f2e1630]: Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial.
+            - generic [ref=f2e1632]:
+              - generic [ref=f2e1634]:
+                - generic [ref=f2e1635]: "4"
+                - generic [ref=f2e1636]: resultados
+              - generic [ref=f2e1638]:
+                - generic [ref=f2e1639]: 1/1
+                - generic [ref=f2e1640]: páginas
+          - generic [ref=f2e1641]:
+            - generic [ref=f2e1642]:
+              - generic [ref=f2e1643]:
+                - button [ref=f2e1645] [cursor=pointer]:
+                  - heading "DEMO-001" [level=3] [ref=f2e1646]
+                  - paragraph [ref=f2e1647]: Titular Demonstração 01
+                - 'button "Alterar status do contrato DEMO-001: Ativo" [ref=f2e1649] [cursor=pointer]':
+                  - generic [ref=f2e1650]: Ativo
+              - generic [ref=f2e1654]:
+                - generic [ref=f2e1655]:
+                  - generic [ref=f2e1656]: Operadora
+                  - generic [ref=f2e1657]: Amil
+                - generic [ref=f2e1658]:
+                  - generic [ref=f2e1659]: Plano
+                  - generic [ref=f2e1660]: Plano Demonstração
+                - generic [ref=f2e1661]:
+                  - generic [ref=f2e1662]: Mensalidade
+                  - generic [ref=f2e1663]: R$ 850,00
+                - generic [ref=f2e1664]:
+                  - generic [ref=f2e1665]: Responsável
+                  - generic [ref=f2e1666]: Operador Demonstração
+              - generic [ref=f2e1667]:
+                - generic [ref=f2e1668]: Fim da fidelidade
+                - generic [ref=f2e1669]: 31/10/2027
+              - group [ref=f2e1670]:
+                - generic "Mais informações" [ref=f2e1671] [cursor=pointer]
+              - group "Ações do contrato DEMO-001" [ref=f2e1673]:
+                - button "Abrir contrato" [ref=f2e1674] [cursor=pointer]
+                - button "Mais ações do contrato demo-001" [ref=f2e1680] [cursor=pointer]
+            - generic [ref=f2e1686]:
+              - generic [ref=f2e1687]:
+                - button [ref=f2e1689] [cursor=pointer]:
+                  - heading "DEMO-002" [level=3] [ref=f2e1690]
+                  - paragraph [ref=f2e1691]: Titular Demonstração 02
+                - 'button "Alterar status do contrato DEMO-002: Ativo" [ref=f2e1693] [cursor=pointer]':
+                  - generic [ref=f2e1694]: Ativo
+              - generic [ref=f2e1698]:
+                - generic [ref=f2e1699]:
+                  - generic [ref=f2e1700]: Operadora
+                  - generic [ref=f2e1701]: Amil
+                - generic [ref=f2e1702]:
+                  - generic [ref=f2e1703]: Plano
+                  - generic [ref=f2e1704]: Plano Demonstração
+                - generic [ref=f2e1705]:
+                  - generic [ref=f2e1706]: Mensalidade
+                  - generic [ref=f2e1707]: R$ 1.120,00
+                - generic [ref=f2e1708]:
+                  - generic [ref=f2e1709]: Responsável
+                  - generic [ref=f2e1710]: Operador Demonstração
+              - generic [ref=f2e1711]:
+                - generic [ref=f2e1712]: Fim da fidelidade
+                - generic [ref=f2e1713]: 31/10/2027
+              - group [ref=f2e1714]:
+                - generic "Mais informações" [ref=f2e1715] [cursor=pointer]
+              - group "Ações do contrato DEMO-002" [ref=f2e1717]:
+                - button "Abrir contrato" [ref=f2e1718] [cursor=pointer]
+                - button "Mais ações do contrato demo-002" [ref=f2e1724] [cursor=pointer]
+            - generic [ref=f2e1730]:
+              - generic [ref=f2e1731]:
+                - button [ref=f2e1733] [cursor=pointer]:
+                  - heading "DEMO-003" [level=3] [ref=f2e1734]
+                  - paragraph [ref=f2e1735]: Titular Demonstração 03
+                - 'button "Alterar status do contrato DEMO-003: Ativo" [ref=f2e1737] [cursor=pointer]':
+                  - generic [ref=f2e1738]: Ativo
+              - generic [ref=f2e1742]:
+                - generic [ref=f2e1743]:
+                  - generic [ref=f2e1744]: Operadora
+                  - generic [ref=f2e1745]: Amil
+                - generic [ref=f2e1746]:
+                  - generic [ref=f2e1747]: Plano
+                  - generic [ref=f2e1748]: Plano Demonstração
+                - generic [ref=f2e1749]:
+                  - generic [ref=f2e1750]: Mensalidade
+                  - generic [ref=f2e1751]: R$ 1.390,00
+                - generic [ref=f2e1752]:
+                  - generic [ref=f2e1753]: Responsável
+                  - generic [ref=f2e1754]: Operador Demonstração
+              - generic [ref=f2e1755]:
+                - generic [ref=f2e1756]: Fim da fidelidade
+                - generic [ref=f2e1757]: 31/10/2027
+              - group [ref=f2e1758]:
+                - generic "Mais informações" [ref=f2e1759] [cursor=pointer]
+              - group "Ações do contrato DEMO-003" [ref=f2e1761]:
+                - button "Abrir contrato" [ref=f2e1762] [cursor=pointer]
+                - button "Mais ações do contrato demo-003" [ref=f2e1768] [cursor=pointer]
+            - generic [ref=f2e1774]:
+              - generic [ref=f2e1775]:
+                - button [ref=f2e1777] [cursor=pointer]:
+                  - heading "DEMO-004" [level=3] [ref=f2e1778]
+                  - paragraph [ref=f2e1779]: Titular Demonstração 04
+                - 'button "Alterar status do contrato DEMO-004: Ativo" [ref=f2e1781] [cursor=pointer]':
+                  - generic [ref=f2e1782]: Ativo
+              - generic [ref=f2e1786]:
+                - generic [ref=f2e1787]:
+                  - generic [ref=f2e1788]: Operadora
+                  - generic [ref=f2e1789]: Amil
+                - generic [ref=f2e1790]:
+                  - generic [ref=f2e1791]: Plano
+                  - generic [ref=f2e1792]: Plano Demonstração
+                - generic [ref=f2e1793]:
+                  - generic [ref=f2e1794]: Mensalidade
+                  - generic [ref=f2e1795]: R$ 1.660,00
+                - generic [ref=f2e1796]:
+                  - generic [ref=f2e1797]: Responsável
+                  - generic [ref=f2e1798]: Operador Demonstração
+              - generic [ref=f2e1799]:
+                - generic [ref=f2e1800]: Fim da fidelidade
+                - generic [ref=f2e1801]: 31/10/2027
+              - group [ref=f2e1802]:
+                - generic "Mais informações" [ref=f2e1803] [cursor=pointer]
+              - group "Ações do contrato DEMO-004" [ref=f2e1805]:
+                - button "Abrir contrato" [ref=f2e1806] [cursor=pointer]
+                - button "Mais ações do contrato demo-004" [ref=f2e1812] [cursor=pointer]
+          - navigation "Paginação" [ref=f2e1818]:
+            - generic [ref=f2e1819]:
+              - generic [ref=f2e1820]:
+                - generic [ref=f2e1821]: Itens por página
+                - combobox [aria-hidden] [ref=f2e1822]
+                - button "Itens por página" [ref=f2e1824] [cursor=pointer]:
+                  - generic [ref=f2e1825]: "25"
+              - generic [ref=f2e1828]: 1–4 de 4
+            - generic [ref=f2e1829]:
+              - button "Pagina anterior" [disabled] [ref=f2e1830]
+              - button "1" [ref=f2e1834] [cursor=pointer]
+              - button "Próxima página" [disabled] [ref=f2e1835]

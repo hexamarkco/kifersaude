@@ -1,0 +1,62 @@
+- generic [ref=f10e3]:
+  - navigation "Navegação principal" [ref=f10e4]:
+    - button "Início" [ref=f10e5] [cursor=pointer]
+    - button "Leads" [ref=f10e12] [cursor=pointer]
+    - button "WhatsApp" [ref=f10e19] [cursor=pointer]
+    - button "Contratos" [ref=f10e23] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f10e28] [cursor=pointer]:
+      - generic [ref=f10e30]: Mais
+  - main [ref=f10e32]:
+    - generic [ref=f10e35]:
+      - generic [ref=f10e150]:
+        - generic [ref=f10e151]:
+          - heading "WhatsApp Inbox" [level=1] [ref=f10e154]
+          - paragraph [ref=f10e155]: Atenda seus leads e acompanhe cada conversa em um único lugar.
+        - button "Nova conversa" [ref=f10e157] [cursor=pointer]
+      - generic [ref=f10e44]:
+        - paragraph [ref=f10e45]: WhatsApp Indisponível
+        - paragraph [ref=f10e46]: Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.
+      - generic [ref=f10e160]:
+        - generic [ref=f10e162]:
+          - generic [ref=f10e163]:
+            - paragraph [ref=f10e164]: Conversas
+            - group "Ações das conversas" [ref=f10e165]:
+              - button "Chats arquivados" [ref=f10e166] [cursor=pointer]
+              - button "Agenda do WhatsApp" [ref=f10e172] [cursor=pointer]
+              - button "Mensagens agendadas" [ref=f10e176] [cursor=pointer]
+              - button "Painel WhatsApp" [ref=f10e182] [cursor=pointer]
+          - searchbox "Buscar por nome ou telefone" [ref=f10e196]
+          - generic [ref=f10e197]:
+            - button "Todas" [pressed] [ref=f10e198] [cursor=pointer]
+            - button "Filtros" [ref=f10e200] [cursor=pointer]
+        - generic [ref=f10e203]:
+          - generic [ref=f10e204]:
+            - button "CD Lead favorito Contato Demonstração 01 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f10e206] [cursor=pointer]:
+              - generic [ref=f10e207]: CD
+              - generic [ref=f10e209]:
+                - generic [ref=f10e210]:
+                  - generic [ref=f10e212]:
+                    - generic "Lead favorito" [ref=f10e213]:
+                      - img "Lead favorito" [ref=f10e214]
+                    - paragraph [ref=f10e216]: Contato Demonstração 01
+                  - generic [ref=f10e217]: 25/10, 09:00
+                - paragraph [ref=f10e219]: Olá! Gostaria de conhecer o plano demonstrativo.
+            - button "Abrir menu da conversa" [ref=f10e220] [cursor=pointer]
+          - generic [ref=f10e224]:
+            - button "CD Contato Demonstração 02 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f10e226] [cursor=pointer]:
+              - generic [ref=f10e227]: CD
+              - generic [ref=f10e229]:
+                - generic [ref=f10e230]:
+                  - paragraph [ref=f10e233]: Contato Demonstração 02
+                  - generic [ref=f10e234]: 25/10, 09:00
+                - paragraph [ref=f10e236]: Olá! Gostaria de conhecer o plano demonstrativo.
+            - button "Abrir menu da conversa" [ref=f10e237] [cursor=pointer]
+          - generic [ref=f10e241]:
+            - button "CD Contato Demonstração 03 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f10e243] [cursor=pointer]:
+              - generic [ref=f10e244]: CD
+              - generic [ref=f10e246]:
+                - generic [ref=f10e247]:
+                  - paragraph [ref=f10e250]: Contato Demonstração 03
+                  - generic [ref=f10e251]: 25/10, 09:00
+                - paragraph [ref=f10e253]: Olá! Gostaria de conhecer o plano demonstrativo.
+            - button "Abrir menu da conversa" [ref=f10e254] [cursor=pointer]

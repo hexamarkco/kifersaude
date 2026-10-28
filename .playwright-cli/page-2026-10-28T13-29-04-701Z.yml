@@ -1,0 +1,80 @@
+- generic [ref=f11e1]:
+  - generic [ref=f11e9]:
+    - navigation "Navegação principal" [ref=f11e10]:
+      - button "Início" [ref=f11e11] [cursor=pointer]
+      - button "Leads" [ref=f11e18] [cursor=pointer]
+      - button "WhatsApp" [ref=f11e25] [cursor=pointer]
+      - button "Contratos" [ref=f11e29] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f11e34] [cursor=pointer]:
+        - generic [ref=f11e36]: Mais
+    - main [ref=f11e38]:
+      - generic [ref=f11e41]:
+        - generic [ref=f11e223]:
+          - generic [ref=f11e224]:
+            - heading "WhatsApp Inbox" [level=1] [ref=f11e227]
+            - paragraph [ref=f11e228]: Atenda seus leads e acompanhe cada conversa em um único lugar.
+          - button "Nova conversa" [ref=f11e230] [cursor=pointer]
+        - generic [ref=f11e50]:
+          - paragraph [ref=f11e51]: WhatsApp Indisponível
+          - paragraph [ref=f11e52]: Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.
+        - generic [ref=f11e233]:
+          - generic [ref=f11e235]:
+            - generic [ref=f11e236]:
+              - paragraph [ref=f11e237]: Conversas
+              - group "Ações das conversas" [ref=f11e238]:
+                - button "Chats arquivados" [ref=f11e239] [cursor=pointer]
+                - button "Agenda do WhatsApp" [ref=f11e245] [cursor=pointer]
+                - button "Mensagens agendadas" [ref=f11e249] [cursor=pointer]
+                - button "Painel WhatsApp" [ref=f11e255] [cursor=pointer]
+            - searchbox "Buscar por nome ou telefone" [ref=f11e269]
+            - generic [ref=f11e270]:
+              - button "Todas" [pressed] [ref=f11e271] [cursor=pointer]
+              - button "Filtros" [ref=f11e273] [cursor=pointer]
+          - generic [ref=f11e276]:
+            - generic [ref=f11e277]:
+              - button "CD Lead favorito Contato Demonstração 01 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f11e279] [cursor=pointer]:
+                - generic [ref=f11e280]: CD
+                - generic [ref=f11e282]:
+                  - generic [ref=f11e283]:
+                    - generic [ref=f11e285]:
+                      - generic "Lead favorito" [ref=f11e286]:
+                        - img "Lead favorito" [ref=f11e287]
+                      - paragraph [ref=f11e289]: Contato Demonstração 01
+                    - generic [ref=f11e290]: 25/10, 09:00
+                  - paragraph [ref=f11e292]: Olá! Gostaria de conhecer o plano demonstrativo.
+              - button "Abrir menu da conversa" [ref=f11e293] [cursor=pointer]
+            - generic [ref=f11e297]:
+              - button "CD Contato Demonstração 02 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f11e299] [cursor=pointer]:
+                - generic [ref=f11e300]: CD
+                - generic [ref=f11e302]:
+                  - generic [ref=f11e303]:
+                    - paragraph [ref=f11e306]: Contato Demonstração 02
+                    - generic [ref=f11e307]: 25/10, 09:00
+                  - paragraph [ref=f11e309]: Olá! Gostaria de conhecer o plano demonstrativo.
+              - button "Abrir menu da conversa" [ref=f11e310] [cursor=pointer]
+            - generic [ref=f11e314]:
+              - button "CD Contato Demonstração 03 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f11e316] [cursor=pointer]:
+                - generic [ref=f11e317]: CD
+                - generic [ref=f11e319]:
+                  - generic [ref=f11e320]:
+                    - paragraph [ref=f11e323]: Contato Demonstração 03
+                    - generic [ref=f11e324]: 25/10, 09:00
+                  - paragraph [ref=f11e326]: Olá! Gostaria de conhecer o plano demonstrativo.
+              - button "Abrir menu da conversa" [ref=f11e327] [cursor=pointer]
+  - dialog [ref=f11e645]:
+    - generic [ref=f11e646]:
+      - generic [ref=f11e647]:
+        - heading "Novo chat" [level=2] [ref=f11e648]
+        - paragraph [ref=f11e649]: Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente.
+      - button "Fechar" [active] [ref=f11e650] [cursor=pointer]
+    - generic [ref=f11e655]:
+      - tablist [ref=f11e657]:
+        - tab "Contatos salvos" [selected] [ref=f11e658] [cursor=pointer]
+        - tab "CRM" [ref=f11e660] [cursor=pointer]
+        - tab "Número" [ref=f11e662] [cursor=pointer]
+      - generic [ref=f11e664]:
+        - textbox "Buscar em contatos salvos" [ref=f11e666]
+        - generic [ref=f11e667]:
+          - generic [ref=f11e668]: Contatos salvos
+          - generic [ref=f11e669]: "0"
+        - generic [ref=f11e670]: Nenhum contato salvo encontrado.

@@ -1,0 +1,383 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - navigation "Navegação principal" [ref=f1e1775]:
+      - button "Início" [ref=f1e1776] [cursor=pointer]
+      - button "Leads" [ref=f1e1783] [cursor=pointer]
+      - button "WhatsApp" [ref=f1e1790] [cursor=pointer]
+      - button "Contratos" [ref=f1e1794] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f1e1799] [cursor=pointer]:
+        - generic [ref=f1e1801]: Mais
+    - main [ref=f1e135]:
+      - generic [ref=f1e1326]:
+        - generic [ref=f1e1328]:
+          - generic [ref=f1e1329]:
+            - paragraph [ref=f1e1330]: Operação contratual
+            - heading "Gestão de contratos" [level=1] [ref=f1e1333]
+            - paragraph [ref=f1e1334]: Gerencie clientes, vigências, titulares e dependentes em um só lugar.
+          - generic [ref=f1e1336]:
+            - button "Importar em massa" [ref=f1e1337] [cursor=pointer]
+            - button "Novo contrato" [ref=f1e1344] [cursor=pointer]
+        - generic "Resumo da carteira de contratos" [ref=f1e1348]:
+          - generic [ref=f1e1349]:
+            - heading "Contratos ativos" [level=3] [ref=f1e1353]
+            - generic [ref=f1e1354]: "4"
+            - generic [ref=f1e1355]: Contratos vigentes
+          - generic [ref=f1e1356]:
+            - heading "Em implantação" [level=3] [ref=f1e1360]
+            - generic [ref=f1e1361]: "0"
+            - generic [ref=f1e1362]: Em análise ou emissão
+          - generic [ref=f1e1363]:
+            - heading "Próximas datas críticas" [level=3] [ref=f1e1367]
+            - generic [ref=f1e1368]: "4"
+            - generic [ref=f1e1369]: Nos próximos 30 dias
+          - generic [ref=f1e1370]:
+            - heading "Mensalidade total" [level=3] [ref=f1e1374]
+            - generic [ref=f1e1375]: R$ 5.020,00
+            - generic [ref=f1e1376]: Soma dos valores informados
+        - generic [ref=f1e1377]:
+          - generic [ref=f1e1378]:
+            - textbox "Buscar contratos" [ref=f1e1381]:
+              - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+            - button "Exportar" [ref=f1e1383] [cursor=pointer]
+          - generic [ref=f1e1388]:
+            - button "Todos os status" [ref=f1e1390] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f1e1398] [cursor=pointer]
+            - button "Todos os períodos" [ref=f1e1409] [cursor=pointer]
+            - button "Mais filtros" [ref=f1e1416] [cursor=pointer]
+        - generic [ref=f1e1420]:
+          - generic [ref=f1e1421]:
+            - generic [ref=f1e1422]:
+              - paragraph [ref=f1e1423]: Carteira contratual
+              - heading "Contratos em acompanhamento" [level=3] [ref=f1e1424]
+              - paragraph [ref=f1e1425]: Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial.
+            - generic [ref=f1e1427]:
+              - generic [ref=f1e1429]:
+                - generic [ref=f1e1430]: "4"
+                - generic [ref=f1e1431]: resultados
+              - generic [ref=f1e1433]:
+                - generic [ref=f1e1434]: 1/1
+                - generic [ref=f1e1435]: páginas
+          - generic [ref=f1e1802]:
+            - generic [ref=f1e1803]:
+              - generic [ref=f1e1804]:
+                - button [ref=f1e1806] [cursor=pointer]:
+                  - heading "DEMO-001" [level=3] [ref=f1e1807]
+                  - paragraph [ref=f1e1808]: Titular Demonstração 01
+                - 'button "Alterar status do contrato DEMO-001: Ativo" [ref=f1e1810] [cursor=pointer]':
+                  - generic [ref=f1e1811]: Ativo
+              - generic [ref=f1e1815]:
+                - generic [ref=f1e1816]:
+                  - generic [ref=f1e1817]: Operadora
+                  - generic [ref=f1e1818]: Amil
+                - generic [ref=f1e1819]:
+                  - generic [ref=f1e1820]: Plano
+                  - generic [ref=f1e1821]: Plano Demonstração
+                - generic [ref=f1e1822]:
+                  - generic [ref=f1e1823]: Mensalidade
+                  - generic [ref=f1e1824]: R$ 850,00
+                - generic [ref=f1e1825]:
+                  - generic [ref=f1e1826]: Responsável
+                  - generic [ref=f1e1827]: Operador Demonstração
+              - generic [ref=f1e1828]:
+                - generic [ref=f1e1829]: Fim da fidelidade
+                - generic [ref=f1e1830]: 31/10/2027
+              - group [ref=f1e1831]:
+                - generic "Mais informações" [ref=f1e1832] [cursor=pointer]
+              - group "Ações do contrato DEMO-001" [ref=f1e1834]:
+                - button "Abrir contrato" [ref=f1e1835] [cursor=pointer]
+                - button "Mais ações do contrato demo-001" [ref=f1e1841] [cursor=pointer]
+            - generic [ref=f1e1847]:
+              - generic [ref=f1e1848]:
+                - button [ref=f1e1850] [cursor=pointer]:
+                  - heading "DEMO-002" [level=3] [ref=f1e1851]
+                  - paragraph [ref=f1e1852]: Titular Demonstração 02
+                - 'button "Alterar status do contrato DEMO-002: Ativo" [ref=f1e1854] [cursor=pointer]':
+                  - generic [ref=f1e1855]: Ativo
+              - generic [ref=f1e1859]:
+                - generic [ref=f1e1860]:
+                  - generic [ref=f1e1861]: Operadora
+                  - generic [ref=f1e1862]: Amil
+                - generic [ref=f1e1863]:
+                  - generic [ref=f1e1864]: Plano
+                  - generic [ref=f1e1865]: Plano Demonstração
+                - generic [ref=f1e1866]:
+                  - generic [ref=f1e1867]: Mensalidade
+                  - generic [ref=f1e1868]: R$ 1.120,00
+                - generic [ref=f1e1869]:
+                  - generic [ref=f1e1870]: Responsável
+                  - generic [ref=f1e1871]: Operador Demonstração
+              - generic [ref=f1e1872]:
+                - generic [ref=f1e1873]: Fim da fidelidade
+                - generic [ref=f1e1874]: 31/10/2027
+              - group [ref=f1e1875]:
+                - generic "Mais informações" [ref=f1e1876] [cursor=pointer]
+              - group "Ações do contrato DEMO-002" [ref=f1e1878]:
+                - button "Abrir contrato" [ref=f1e1879] [cursor=pointer]
+                - button "Mais ações do contrato demo-002" [ref=f1e1885] [cursor=pointer]
+            - generic [ref=f1e1891]:
+              - generic [ref=f1e1892]:
+                - button [ref=f1e1894] [cursor=pointer]:
+                  - heading "DEMO-003" [level=3] [ref=f1e1895]
+                  - paragraph [ref=f1e1896]: Titular Demonstração 03
+                - 'button "Alterar status do contrato DEMO-003: Ativo" [ref=f1e1898] [cursor=pointer]':
+                  - generic [ref=f1e1899]: Ativo
+              - generic [ref=f1e1903]:
+                - generic [ref=f1e1904]:
+                  - generic [ref=f1e1905]: Operadora
+                  - generic [ref=f1e1906]: Amil
+                - generic [ref=f1e1907]:
+                  - generic [ref=f1e1908]: Plano
+                  - generic [ref=f1e1909]: Plano Demonstração
+                - generic [ref=f1e1910]:
+                  - generic [ref=f1e1911]: Mensalidade
+                  - generic [ref=f1e1912]: R$ 1.390,00
+                - generic [ref=f1e1913]:
+                  - generic [ref=f1e1914]: Responsável
+                  - generic [ref=f1e1915]: Operador Demonstração
+              - generic [ref=f1e1916]:
+                - generic [ref=f1e1917]: Fim da fidelidade
+                - generic [ref=f1e1918]: 31/10/2027
+              - group [ref=f1e1919]:
+                - generic "Mais informações" [ref=f1e1920] [cursor=pointer]
+              - group "Ações do contrato DEMO-003" [ref=f1e1922]:
+                - button "Abrir contrato" [ref=f1e1923] [cursor=pointer]
+                - button "Mais ações do contrato demo-003" [ref=f1e1929] [cursor=pointer]
+            - generic [ref=f1e1935]:
+              - generic [ref=f1e1936]:
+                - button [ref=f1e1938] [cursor=pointer]:
+                  - heading "DEMO-004" [level=3] [ref=f1e1939]
+                  - paragraph [ref=f1e1940]: Titular Demonstração 04
+                - 'button "Alterar status do contrato DEMO-004: Ativo" [ref=f1e1942] [cursor=pointer]':
+                  - generic [ref=f1e1943]: Ativo
+              - generic [ref=f1e1947]:
+                - generic [ref=f1e1948]:
+                  - generic [ref=f1e1949]: Operadora
+                  - generic [ref=f1e1950]: Amil
+                - generic [ref=f1e1951]:
+                  - generic [ref=f1e1952]: Plano
+                  - generic [ref=f1e1953]: Plano Demonstração
+                - generic [ref=f1e1954]:
+                  - generic [ref=f1e1955]: Mensalidade
+                  - generic [ref=f1e1956]: R$ 1.660,00
+                - generic [ref=f1e1957]:
+                  - generic [ref=f1e1958]: Responsável
+                  - generic [ref=f1e1959]: Operador Demonstração
+              - generic [ref=f1e1960]:
+                - generic [ref=f1e1961]: Fim da fidelidade
+                - generic [ref=f1e1962]: 31/10/2027
+              - group [ref=f1e1963]:
+                - generic "Mais informações" [ref=f1e1964] [cursor=pointer]
+              - group "Ações do contrato DEMO-004" [ref=f1e1966]:
+                - button "Abrir contrato" [ref=f1e1967] [cursor=pointer]
+                - button "Mais ações do contrato demo-004" [ref=f1e1973] [cursor=pointer]
+          - navigation "Paginação" [ref=f1e1643]:
+            - generic [ref=f1e1644]:
+              - generic [ref=f1e1645]:
+                - generic [ref=f1e1646]: Itens por página
+                - combobox [aria-hidden] [ref=f1e1647]
+                - button "Itens por página" [ref=f1e1649] [cursor=pointer]:
+                  - generic [ref=f1e1650]: "25"
+              - generic [ref=f1e1653]: 1–4 de 4
+            - generic [ref=f1e1654]:
+              - button "Pagina anterior" [disabled] [ref=f1e1655]
+              - button "1" [ref=f1e1659] [cursor=pointer]
+              - button "Próxima página" [disabled] [ref=f1e1660]
+  - dialog "Detalhes do contrato" [ref=f1e1722]:
+    - generic [ref=f1e1723]:
+      - generic [ref=f1e1725]:
+        - generic [ref=f1e1726]:
+          - heading "Detalhes do contrato" [level=2] [ref=f1e1727]
+          - paragraph [ref=f1e1728]: Visualização e ações do registro
+        - group "Ações do contrato" [ref=f1e1729]:
+          - button "Mais ações do contrato" [ref=f1e1731] [cursor=pointer]
+      - button "Fechar" [ref=f1e1737] [cursor=pointer]
+    - generic [ref=f1e1741]:
+      - generic [ref=f1e1742]:
+        - generic [ref=f1e1743]:
+          - paragraph [ref=f1e1744]: Mensalidade
+          - paragraph [ref=f1e1745]: R$ 850,00
+        - generic [ref=f1e1746]:
+          - paragraph [ref=f1e1747]: Vigência
+          - paragraph [ref=f1e1748]: 10/2027
+        - generic [ref=f1e1749]:
+          - paragraph [ref=f1e1750]: Vidas
+          - paragraph [ref=f1e1751]: "2"
+        - generic [ref=f1e1752]:
+          - paragraph [ref=f1e1753]: Status
+          - paragraph [ref=f1e1754]: Ativo
+      - region [ref=f1e1755]:
+        - heading "Titular e beneficiários" [level=4] [ref=f1e1756]
+        - generic [ref=f1e1757]:
+          - generic [ref=f1e1759]:
+            - paragraph [ref=f1e1760]: Titular Demonstração 01
+            - paragraph [ref=f1e1761]: Titular
+          - generic [ref=f1e1763]:
+            - paragraph [ref=f1e1764]: Dependente Demonstração
+            - paragraph [ref=f1e1765]: Filho(a)
+      - region [ref=f1e1766]:
+        - heading "Informações do plano" [level=4] [ref=f1e1767]
+        - paragraph [ref=f1e1768]: Amil · Individual · Nacional · Apartamento
+      - group [ref=f1e1769]:
+        - generic "Ver informações financeiras, documentos e histórico" [active] [ref=f1e1770] [cursor=pointer]
+        - generic [ref=f1e1980]:
+          - generic [ref=f1e1981]:
+            - generic [ref=f1e1982]:
+              - generic [ref=f1e1983]:
+                - generic [ref=f1e1984]: Status
+                - generic [ref=f1e1985]: Ativo
+              - generic [ref=f1e1986]:
+                - generic [ref=f1e1987]: Modalidade
+                - generic [ref=f1e1988]: Individual
+              - generic [ref=f1e1989]:
+                - generic [ref=f1e1990]: Responsável
+                - generic [ref=f1e1991]: Operador Demonstração
+              - generic [ref=f1e1992]:
+                - generic [ref=f1e1993]: Mensalidade
+                - generic [ref=f1e1994]: R$ 850,00
+            - generic [ref=f1e1995]:
+              - generic [ref=f1e1996]:
+                - paragraph [ref=f1e1997]: Comissão prevista
+                - paragraph [ref=f1e1998]: R$ 1.700,00
+                - paragraph [ref=f1e1999]: Previsto 27/10/2026
+              - generic [ref=f1e2000]:
+                - paragraph [ref=f1e2001]: Bônus total
+                - paragraph [ref=f1e2002]: Não aplicado
+              - generic [ref=f1e2003]:
+                - paragraph [ref=f1e2004]: Reajuste anual
+                - paragraph [ref=f1e2005]: 01/10/2027
+                - paragraph [ref=f1e2006]: Mês de reajuste 10
+            - generic [ref=f1e2007]:
+              - generic [ref=f1e2008]: Datas-chave
+              - generic [ref=f1e2009]:
+                - generic [ref=f1e2010]:
+                  - generic [ref=f1e2011]: Fim da fidelidade
+                  - generic [ref=f1e2012]: 31/10/2027
+                  - generic [ref=f1e2013]: em 368 dias
+                - generic [ref=f1e2014]:
+                  - generic [ref=f1e2015]: Próximo reajuste anual
+                  - generic [ref=f1e2016]: 01/10/2027
+                  - generic [ref=f1e2017]: em 338 dias
+                - generic [ref=f1e2018]:
+                  - generic [ref=f1e2019]: Prev. comissão
+                  - generic [ref=f1e2020]: 27/10/2026
+                  - generic [ref=f1e2021]: hoje
+            - generic [ref=f1e2022]:
+              - generic [ref=f1e2023]: Linha do tempo do contrato
+              - generic [ref=f1e2024]:
+                - generic [ref=f1e2025]:
+                  - generic [ref=f1e2026]: Início de vigência
+                  - generic [ref=f1e2027]: 30/09/2026
+                - generic [ref=f1e2028]:
+                  - generic [ref=f1e2029]: Contrato criado
+                  - generic [ref=f1e2030]: 25/10/2026
+                - generic [ref=f1e2031]:
+                  - generic [ref=f1e2032]: Recebimento de comissão
+                  - generic [ref=f1e2033]: 27/10/2026
+                - generic [ref=f1e2034]:
+                  - generic [ref=f1e2035]: Próximo reajuste anual
+                  - generic [ref=f1e2036]: 01/10/2027
+                - generic [ref=f1e2037]:
+                  - generic [ref=f1e2038]: Fim da fidelidade
+                  - generic [ref=f1e2039]: 31/10/2027
+            - generic [ref=f1e2041]:
+              - generic [ref=f1e2044]: Multiplicador de comissão
+              - generic [ref=f1e2045]: 2x
+              - generic [ref=f1e2046]: "(padrão: 2.8x)"
+            - generic [ref=f1e2048]:
+              - generic [ref=f1e2049]: Comissão prevista
+              - generic [ref=f1e2050]: R$ 1.700,00
+          - generic [ref=f1e2051]:
+            - generic [ref=f1e2052]:
+              - heading "Titulares (1)" [level=4] [ref=f1e2053]
+              - generic [ref=f1e2058]:
+                - button "Preparar titular para importação" [ref=f1e2059] [cursor=pointer]
+                - button "Adicionar titular" [ref=f1e2063] [cursor=pointer]
+            - generic [ref=f1e2069]:
+              - generic [ref=f1e2070]:
+                - heading "Titular Demonstração 01" [level=5] [ref=f1e2071]
+                - generic [ref=f1e2072]:
+                  - generic [ref=f1e2073]: CPF
+                  - generic [ref=f1e2075]:
+                    - generic [ref=f1e2076]: Data nasc.
+                    - text: 01/01/1990
+                  - generic [ref=f1e2077]: Telefone
+                  - generic [ref=f1e2079]:
+                    - generic [ref=f1e2080]: E-mail
+                    - text: titular1@exemplo.invalid
+                  - generic [ref=f1e2081]:
+                    - generic [ref=f1e2082]: Cidade
+                    - text: Rio de Janeiro/RJ
+              - generic [ref=f1e2083]:
+                - button "Editar titular Titular Demonstração 01" [ref=f1e2084] [cursor=pointer]
+                - button "Remover titular Titular Demonstração 01" [ref=f1e2089] [cursor=pointer]
+          - generic [ref=f1e2094]:
+            - generic [ref=f1e2095]:
+              - heading "Dependentes (1)" [level=4] [ref=f1e2096]
+              - button "Adicionar" [ref=f1e2103] [cursor=pointer]
+            - generic [ref=f1e2108]:
+              - generic [ref=f1e2109]:
+                - generic [ref=f1e2110]:
+                  - paragraph [ref=f1e2111]: Titular
+                  - paragraph [ref=f1e2112]: Titular Demonstração 01
+                - button "Adicionar dependente" [ref=f1e2113] [cursor=pointer]
+              - generic [ref=f1e2118]:
+                - generic [ref=f1e2119]:
+                  - heading "Dependente Demonstração" [level=5] [ref=f1e2120]
+                  - generic [ref=f1e2121]:
+                    - generic [ref=f1e2122]:
+                      - generic [ref=f1e2123]: Relação
+                      - text: Filho(a)
+                    - generic [ref=f1e2124]:
+                      - generic [ref=f1e2125]: Data nasc.
+                      - text: 01/01/2015
+                    - generic [ref=f1e2126]:
+                      - generic [ref=f1e2127]: Valor
+                      - text: R$ 300,00
+                - generic [ref=f1e2128]:
+                  - button "Editar dependente Dependente Demonstração" [ref=f1e2129] [cursor=pointer]
+                  - button "Remover dependente Dependente Demonstração" [ref=f1e2134] [cursor=pointer]
+          - generic [ref=f1e2139]:
+            - generic [ref=f1e2140]:
+              - heading "Documentos" [level=4] [ref=f1e2141]
+              - generic [ref=f1e2142]: 0 arquivo(s)
+            - generic [ref=f1e2143]:
+              - generic [ref=f1e2144]:
+                - paragraph [ref=f1e2145]: "Titular: Titular Demonstração 01"
+                - paragraph [ref=f1e2146]: Sem documentos enviados.
+              - generic [ref=f1e2147]:
+                - paragraph [ref=f1e2148]: "Dependente: Dependente Demonstração"
+                - paragraph [ref=f1e2149]: Sem documentos enviados.
+          - generic [ref=f1e2150]:
+            - generic [ref=f1e2151]:
+              - heading "Auditoria" [level=4] [ref=f1e2152]
+              - generic [ref=f1e2153]: 3 evento(s)
+            - generic [ref=f1e2154]:
+              - generic [ref=f1e2155]:
+                - paragraph [ref=f1e2157]: Contrato criado
+                - generic [ref=f1e2158]: 25/10/2026, 09:00
+              - generic [ref=f1e2159]:
+                - paragraph [ref=f1e2161]: Contrato atualizado
+                - generic [ref=f1e2162]: 25/10/2026, 09:00
+              - generic [ref=f1e2163]:
+                - generic [ref=f1e2164]:
+                  - paragraph [ref=f1e2165]: "Interação: observacao"
+                  - paragraph [ref=f1e2166]: Conversa demonstrativa registrada.
+                - generic [ref=f1e2167]: 25/10/2026, 09:00
+          - generic [ref=f1e2168]:
+            - generic [ref=f1e2169]:
+              - heading "Histórico de interações" [level=4] [ref=f1e2170]
+              - button "Nova interação" [ref=f1e2171] [cursor=pointer]
+            - generic [ref=f1e2176]:
+              - generic [ref=f1e2177]:
+                - generic [ref=f1e2178]:
+                  - generic [ref=f1e2179]: observacao
+                  - generic [ref=f1e2180]: Operador Demonstração
+                - generic [ref=f1e2181]:
+                  - generic [ref=f1e2182]: 25/10/2026 as 09:00
+                  - generic [ref=f1e2183]:
+                    - button "Editar interação de Operador Demonstração" [ref=f1e2184] [cursor=pointer]
+                    - button "Remover interação de Operador Demonstração" [ref=f1e2189] [cursor=pointer]
+              - paragraph [ref=f1e2194]: Conversa demonstrativa registrada.
+    - generic [ref=f1e1772]:
+      - button "Cancelar" [ref=f1e1773] [cursor=pointer]
+      - button "Editar contrato" [ref=f1e1774] [cursor=pointer]

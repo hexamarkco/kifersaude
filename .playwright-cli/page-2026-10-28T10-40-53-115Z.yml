@@ -1,0 +1,162 @@
+- generic [ref=f35e3]:
+  - complementary [ref=f35e4]:
+    - generic [ref=f35e5]:
+      - img "Kifer Saúde CRM" [ref=f35e7]:
+        - generic [ref=f35e8]: kifersaúde
+        - generic [ref=f35e9]: CRM
+      - navigation [ref=f35e10]:
+        - generic [ref=f35e11]:
+          - button "Dashboard" [ref=f35e12] [cursor=pointer]
+          - generic [ref=f35e20]:
+            - button "CRM 3" [ref=f35e759] [cursor=pointer]:
+              - generic [ref=f35e22]: CRM
+              - generic [ref=f35e760]: "3"
+            - generic [ref=f35e30]:
+              - button "Leads" [ref=f35e31] [cursor=pointer]
+              - button "Contratos" [ref=f35e39] [cursor=pointer]
+              - button "Agenda 3" [ref=f35e761] [cursor=pointer]:
+                - generic [ref=f35e46]: Agenda
+                - generic [ref=f35e762]: "3"
+          - button "Comunicação 3" [ref=f35e763] [cursor=pointer]:
+            - generic [ref=f35e52]: Comunicação
+            - generic [ref=f35e764]: "3"
+          - button "Financeiro" [ref=f35e60] [cursor=pointer]
+          - button "Automações e IA" [ref=f35e69] [cursor=pointer]
+          - button "Configurações" [ref=f35e76] [cursor=pointer]
+      - generic [ref=f35e82]:
+        - button "Recolher" [ref=f35e83] [cursor=pointer]
+        - button "3 Notificações" [ref=f35e765] [cursor=pointer]:
+          - generic [ref=f35e766]: "3"
+          - generic [ref=f35e95]: Notificações
+        - button "Ativar tema escuro" [ref=f35e96] [cursor=pointer]:
+          - generic [ref=f35e99]: Escuro
+        - button "Sair" [ref=f35e100] [cursor=pointer]
+  - generic [ref=f35e105]:
+    - banner [ref=f35e106]:
+      - generic [ref=f35e107]:
+        - navigation "Breadcrumb" [ref=f35e108]:
+          - list [ref=f35e109]:
+            - listitem [ref=f35e110]:
+              - button "CRM" [ref=f35e111] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f35e112]
+            - listitem [ref=f35e115]: Leads
+        - generic [ref=f35e116]:
+          - generic [ref=f35e117]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f35e118] [cursor=pointer]
+          - generic [ref=f35e122]: OD
+    - main [ref=f35e124]:
+      - generic [ref=f35e767]:
+        - generic [ref=f35e768]:
+          - button "Gestão de leads" [ref=f35e770] [cursor=pointer]
+          - generic [ref=f35e774]:
+            - generic [ref=f35e775]:
+              - paragraph [ref=f35e776]: Atualizar cadastro
+              - heading "Editar lead" [level=1] [ref=f35e779]
+              - paragraph [ref=f35e780]: Atualize os dados comerciais e o próximo acompanhamento.
+            - group "Ações da página" [ref=f35e783]:
+              - button "Salvar alterações" [ref=f35e784] [cursor=pointer]
+        - generic [ref=f35e785]:
+          - generic [ref=f35e786]:
+            - generic [ref=f35e788]:
+              - group "Dados de contato" [ref=f35e789]:
+                - generic [ref=f35e790]:
+                  - generic [aria-hidden] [ref=f35e791]: "01"
+                  - generic [ref=f35e792]: Dados de contato
+                - paragraph [ref=f35e793]: Informações básicas para identificação e contato.
+                - generic [ref=f35e794]:
+                  - generic [ref=f35e795]:
+                    - generic [ref=f35e796]: Nome completo *
+                    - textbox "Nome completo *" [ref=f35e800]:
+                      - /placeholder: Nome do contato
+                      - text: Contato Demonstração 01
+                  - generic [ref=f35e801]:
+                    - generic [ref=f35e802]: Telefone *
+                    - textbox "Telefone *" [ref=f35e806]:
+                      - /placeholder: (21) 99999-9999
+                  - generic [ref=f35e807]:
+                    - generic [ref=f35e808]: E-mail
+                    - textbox "E-mail" [ref=f35e812]:
+                      - /placeholder: contato@empresa.com
+                      - text: contato01@exemplo.invalid
+              - group "Localização" [ref=f35e813]:
+                - generic [ref=f35e814]:
+                  - generic [aria-hidden] [ref=f35e815]: "02"
+                  - generic [ref=f35e816]: Localização
+                - paragraph [ref=f35e817]: Endereço e região do contato.
+                - generic [ref=f35e818]:
+                  - generic [ref=f35e819]:
+                    - generic [ref=f35e820]: CEP
+                    - generic [ref=f35e823]:
+                      - textbox "CEP" [ref=f35e824]:
+                        - /placeholder: 00000-000
+                      - button "Buscar CEP" [ref=f35e826] [cursor=pointer]
+                  - generic [ref=f35e831]:
+                    - generic [ref=f35e832]: Endereço
+                    - textbox "Endereço" [ref=f35e836]:
+                      - /placeholder: Rua, avenida, número e complemento
+                      - text: Endereço de demonstração
+                  - generic [ref=f35e837]:
+                    - generic [ref=f35e838]: Estado
+                    - button "Rio de Janeiro (RJ)" [ref=f35e842] [cursor=pointer]
+                  - generic [ref=f35e850]:
+                    - generic [ref=f35e852]:
+                      - generic [ref=f35e853]: Cidade
+                      - 'button "Ajuda: Cidade" [ref=f35e855]'
+                    - button "Rio de Janeiro" [ref=f35e859] [cursor=pointer]
+                    - paragraph [ref=f35e868]: Cidade filtrada pelo estado selecionado.
+              - group "Qualificação e origem" [ref=f35e869]:
+                - generic [ref=f35e870]:
+                  - generic [aria-hidden] [ref=f35e871]: "03"
+                  - generic [ref=f35e872]: Qualificação e origem
+                - paragraph [ref=f35e873]: Organize o contato no funil comercial.
+                - generic [ref=f35e874]:
+                  - generic [ref=f35e875]:
+                    - generic [ref=f35e876]: Origem do lead *
+                    - button "Site" [ref=f35e880] [cursor=pointer]
+                  - generic [ref=f35e888]:
+                    - generic [ref=f35e889]: Tipo de contratação
+                    - button "Individual" [ref=f35e893] [cursor=pointer]
+                  - generic [ref=f35e901]:
+                    - generic [ref=f35e902]: Operadora atual
+                    - textbox "Operadora atual" [ref=f35e906]: Amil
+                  - generic [ref=f35e907]:
+                    - generic [ref=f35e908]: Status *
+                    - button "Contato inicial" [ref=f35e912] [cursor=pointer]
+              - group "Responsável e acompanhamento" [ref=f35e919]:
+                - generic [ref=f35e920]:
+                  - generic [aria-hidden] [ref=f35e921]: "04"
+                  - generic [ref=f35e922]: Responsável e acompanhamento
+                - paragraph [ref=f35e923]: Prazos, preferências de automação e contexto do atendimento.
+                - generic [ref=f35e924]:
+                  - generic [ref=f35e925]:
+                    - generic [ref=f35e926]: Responsável *
+                    - button "Operador Demonstração" [ref=f35e930] [cursor=pointer]
+                  - generic [ref=f35e939]:
+                    - generic [ref=f35e940]: Data de criação
+                    - button "Data de criação" [ref=f35e944] [cursor=pointer]:
+                      - generic [ref=f35e947]: 25/10/2026
+                  - generic [ref=f35e948]:
+                    - generic [ref=f35e949]: Próximo follow-up
+                    - button "Próximo follow-up" [ref=f35e953] [cursor=pointer]:
+                      - generic [ref=f35e956]: 26/10/2026 11:00
+                  - generic [ref=f35e957]:
+                    - generic [ref=f35e959]:
+                      - generic [ref=f35e960]: Limite diário de envios
+                      - 'button "Ajuda: Limite diário de envios" [ref=f35e962]'
+                    - spinbutton "Limite diário de envios" [ref=f35e966]: "1"
+                    - paragraph [ref=f35e967]: Defina um limite específico para este lead ou deixe vazio para usar o limite padrão.
+                  - generic [ref=f35e968]:
+                    - generic [ref=f35e969]: Observações
+                    - textbox "Observações" [ref=f35e972]: Registro fictício para documentação visual. Nenhum contato real.
+            - group "Ações do formulário" [ref=f35e974]:
+              - button "Cancelar" [ref=f35e975] [cursor=pointer]
+              - button "Salvar alterações" [ref=f35e976] [cursor=pointer]
+          - complementary [ref=f35e977]:
+            - generic [ref=f35e978]:
+              - heading "Orientações" [level=2] [ref=f35e981]
+              - generic [ref=f35e983]:
+                - paragraph [ref=f35e984]: Campos obrigatórios
+                - generic [ref=f35e985]: Nome completo, telefone, origem, status e responsável.
+              - generic [ref=f35e986]:
+                - heading "Próximo acompanhamento" [level=3] [ref=f35e987]
+                - paragraph [ref=f35e988]: Ao informar data e horário, o CRM cria um lembrete vinculado a este lead.

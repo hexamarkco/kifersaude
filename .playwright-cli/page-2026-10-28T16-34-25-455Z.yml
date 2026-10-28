@@ -1,0 +1,62 @@
+- generic [ref=f1e1]:
+  - main [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - generic [ref=f1e7]:
+          - paragraph [ref=f1e8]: Performance comercial
+          - heading "Evolução mensal" [level=2] [ref=f1e9]
+          - paragraph [ref=f1e10]: Compare o ritmo de entrada, fechamento e comissão dentro dos filtros ativos.
+        - generic [ref=f1e12]:
+          - tablist "Métrica da evolução mensal" [ref=f1e14]:
+            - tab "Leads" [ref=f1e15] [cursor=pointer]
+            - tab "Contratos" [selected] [ref=f1e17] [cursor=pointer]
+            - tab "Comissões" [ref=f1e19] [cursor=pointer]
+          - button "Últimos 6 meses" [expanded] [active] [ref=f1e22] [cursor=pointer]
+      - generic [ref=f1e29]:
+        - generic [ref=f1e30]:
+          - generic [ref=f1e31]:
+            - generic [ref=f1e32]:
+              - paragraph [ref=f1e33]: Contratos fechados
+              - paragraph [ref=f1e34]: Contratos registrados no período de cada mês.
+            - generic [ref=f1e35]:
+              - generic [ref=f1e37]: "81"
+              - generic [ref=f1e38]: Out de 26
+          - generic [ref=f1e39]:
+            - generic [ref=f1e40]:
+              - generic [ref=f1e41]:
+                - paragraph [ref=f1e42]: Série temporal
+                - paragraph [ref=f1e43]: Tendência suavizada do indicador selecionado
+              - generic [ref=f1e44]: Série atual
+            - img "Evolução mensal do indicador selecionado" [ref=f1e47]:
+              - generic [ref=f1e48]: "251"
+              - generic [ref=f1e50]: "188"
+              - generic [ref=f1e52]: "126"
+              - generic [ref=f1e54]: "63"
+              - generic [ref=f1e56]: "0"
+              - 'generic "Mai de 26: 251" [ref=f1e60]': Mai de 26
+              - 'generic "Jun de 26: 142" [ref=f1e63]': Jun de 26
+              - 'generic "Jul de 26: 178" [ref=f1e66]': Jul de 26
+              - 'generic "Ago de 26: 166" [ref=f1e69]': Ago de 26
+              - 'generic "Set de 26: 137" [ref=f1e72]': Set de 26
+              - 'generic "Out de 26: 81" [ref=f1e75]':
+                - generic [ref=f1e78]: "81"
+                - generic [ref=f1e79]: Out de 26
+        - complementary "Resumo da evolução mensal" [ref=f1e80]:
+          - generic [ref=f1e81]:
+            - paragraph [ref=f1e90]: Último mês
+            - paragraph [ref=f1e91]: "81"
+            - paragraph [ref=f1e92]: "-41.7% vs Set de 26"
+            - paragraph [ref=f1e93]: Out de 26
+          - generic [ref=f1e94]:
+            - paragraph [ref=f1e99]: Média do período
+            - paragraph [ref=f1e100]: "159"
+            - paragraph [ref=f1e101]: Base dos últimos 6 meses
+            - paragraph [ref=f1e102]: Média mensal
+          - generic [ref=f1e103]:
+            - paragraph [ref=f1e108]: Melhor mês
+            - paragraph [ref=f1e109]: "251"
+            - paragraph [ref=f1e110]: Mai de 26 foi o pico
+            - paragraph [ref=f1e111]: Mai de 26
+  - listbox "Últimos 6 meses" [ref=f1e112]:
+    - option "Últimos 6 meses" [selected] [ref=f1e113] [cursor=pointer]
+    - option "Últimos 12 meses" [ref=f1e115] [cursor=pointer]

@@ -1,0 +1,150 @@
+- generic [ref=f11e9]:
+  - complementary [ref=f11e155]:
+    - generic [ref=f11e156]:
+      - generic [ref=f11e157]: K
+      - navigation [ref=f11e160]:
+        - generic [ref=f11e161]:
+          - button "Dashboard" [ref=f11e162] [cursor=pointer]
+          - button "3 CRM" [ref=f11e170] [cursor=pointer]:
+            - generic [ref=f11e171]:
+              - generic [ref=f11e172]: "3"
+              - generic: CRM
+          - button "3 Comunicação" [ref=f11e178] [cursor=pointer]:
+            - generic [ref=f11e179]:
+              - generic [ref=f11e180]: "3"
+              - generic: Comunicação
+          - button "Financeiro" [ref=f11e185] [cursor=pointer]
+          - button "Automações e IA" [ref=f11e191] [cursor=pointer]
+          - button "Configurações" [ref=f11e197] [cursor=pointer]
+      - generic [ref=f11e202]:
+        - button "Expandir" [ref=f11e203] [cursor=pointer]
+        - button "3 Notificações" [ref=f11e207] [cursor=pointer]:
+          - generic [ref=f11e214]: "3"
+          - generic: Notificações
+        - button "Ativar tema claro" [active] [ref=f11e860] [cursor=pointer]:
+          - generic: Claro
+        - button "Sair" [ref=f11e218] [cursor=pointer]
+  - main [ref=f11e38]:
+    - generic [ref=f11e41]:
+      - generic [ref=f11e223]:
+        - generic [ref=f11e224]:
+          - heading "WhatsApp Inbox" [level=1] [ref=f11e227]
+          - paragraph [ref=f11e228]: Atenda seus leads e acompanhe cada conversa em um único lugar.
+        - button "Nova conversa" [ref=f11e230] [cursor=pointer]
+      - generic [ref=f11e50]:
+        - paragraph [ref=f11e51]: WhatsApp Indisponível
+        - paragraph [ref=f11e52]: Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.
+      - generic [ref=f11e53]:
+        - generic [ref=f11e233]:
+          - generic [ref=f11e235]:
+            - generic [ref=f11e236]:
+              - paragraph [ref=f11e237]: Conversas
+              - group "Ações das conversas" [ref=f11e238]:
+                - button "Chats arquivados" [ref=f11e239] [cursor=pointer]
+                - button "Agenda do WhatsApp" [ref=f11e245] [cursor=pointer]
+                - button "Mensagens agendadas" [ref=f11e249] [cursor=pointer]
+                - button "Painel WhatsApp" [ref=f11e255] [cursor=pointer]
+            - searchbox "Buscar por nome ou telefone" [ref=f11e269]
+            - generic [ref=f11e270]:
+              - button "Todas" [pressed] [ref=f11e271] [cursor=pointer]
+              - button "Filtros" [ref=f11e273] [cursor=pointer]
+          - generic [ref=f11e276]:
+            - generic [ref=f11e277]:
+              - button "CD Lead favorito Contato Demonstração 01 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f11e279] [cursor=pointer]:
+                - generic [ref=f11e280]: CD
+                - generic [ref=f11e282]:
+                  - generic [ref=f11e283]:
+                    - generic [ref=f11e285]:
+                      - generic "Lead favorito" [ref=f11e286]:
+                        - img "Lead favorito" [ref=f11e287]
+                      - paragraph [ref=f11e289]: Contato Demonstração 01
+                    - generic [ref=f11e290]: 25/10, 09:00
+                  - paragraph [ref=f11e292]: Olá! Gostaria de conhecer o plano demonstrativo.
+              - button "Abrir menu da conversa" [ref=f11e293] [cursor=pointer]
+            - generic [ref=f11e297]:
+              - button "CD Contato Demonstração 02 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f11e299] [cursor=pointer]:
+                - generic [ref=f11e300]: CD
+                - generic [ref=f11e302]:
+                  - generic [ref=f11e303]:
+                    - paragraph [ref=f11e306]: Contato Demonstração 02
+                    - generic [ref=f11e307]: 25/10, 09:00
+                  - paragraph [ref=f11e309]: Olá! Gostaria de conhecer o plano demonstrativo.
+              - button "Abrir menu da conversa" [ref=f11e310] [cursor=pointer]
+            - generic [ref=f11e314]:
+              - button "CD Contato Demonstração 03 25/10, 09:00 Olá! Gostaria de conhecer o plano demonstrativo." [ref=f11e316] [cursor=pointer]:
+                - generic [ref=f11e317]: CD
+                - generic [ref=f11e319]:
+                  - generic [ref=f11e320]:
+                    - paragraph [ref=f11e323]: Contato Demonstração 03
+                    - generic [ref=f11e324]: 25/10, 09:00
+                  - paragraph [ref=f11e326]: Olá! Gostaria de conhecer o plano demonstrativo.
+              - button "Abrir menu da conversa" [ref=f11e327] [cursor=pointer]
+        - generic [ref=f11e54]:
+          - generic [ref=f11e687]:
+            - generic [ref=f11e693]:
+              - paragraph [ref=f11e696]:
+                - button "Remover dos favoritos" [pressed] [ref=f11e697] [cursor=pointer]
+                - generic [ref=f11e701]: Contato Demonstração 01
+              - generic [ref=f11e708]:
+                - generic [ref=f11e709]: Contato privado
+                - button "+ Salvar contato" [ref=f11e710] [cursor=pointer]
+                - generic [ref=f11e711]: "Próximo lembrete atrasado: Retorno de demonstração 1 · 25/10/2026 às 11:00"
+            - group "Ações da conversa" [ref=f11e789]:
+              - button "Ativar IA neste chat" [ref=f11e790] [cursor=pointer]
+              - button "Arquivos da conversa" [ref=f11e795] [cursor=pointer]
+              - button "Pesquisar mensagens neste chat" [ref=f11e799] [cursor=pointer]
+              - button "Ver mensagens agendadas desta conversa" [ref=f11e804] [cursor=pointer]
+              - button "Copiar conversa formatada" [ref=f11e810] [cursor=pointer]
+              - button "Recuperar mensagens antigas do chat" [disabled] [ref=f11e815]
+              - button "Gerar follow-up com IA" [ref=f11e820] [cursor=pointer]
+              - button "Abrir informações do lead" [ref=f11e824] [cursor=pointer]:
+                - generic "3 lembretes pendentes" [ref=f11e829]: "3"
+          - generic [ref=f11e715]:
+            - generic [ref=f11e716]: domingo
+            - generic [ref=f11e721]:
+              - paragraph [ref=f11e723]: Olá, gostaria de informações sobre o plano.
+              - generic [ref=f11e724]: 25/10, 09:00
+            - generic [ref=f11e730]:
+              - paragraph [ref=f11e732]: Claro! Este atendimento é uma demonstração.
+              - generic [ref=f11e733]:
+                - generic [ref=f11e734]:
+                  - generic [ref=f11e735]: 25/10, 09:00
+                  - 'generic "Status: Vista" [ref=f11e736]'
+                - button "Mais acoes da mensagem"
+            - generic [ref=f11e743]:
+              - paragraph [ref=f11e745]: Pode me explicar as opções disponíveis?
+              - generic [ref=f11e746]: 25/10, 09:00
+            - generic [ref=f11e752]:
+              - generic [ref=f11e754]:
+                - button [ref=f11e756] [cursor=pointer]:
+                  - img "imagem-demonstracao.png" [ref=f11e757]
+                - paragraph [ref=f11e758]: Imagem fictícia para documentação
+              - generic [ref=f11e759]: 25/10, 09:00
+          - generic [ref=f11e764]:
+            - group "Ações de composição da mensagem" [ref=f11e765]:
+              - button "Anexar" [ref=f11e767] [cursor=pointer]
+              - button "Emoji, GIF e figurinha" [ref=f11e770] [cursor=pointer]
+              - button "Ações com IA" [ref=f11e776] [cursor=pointer]
+            - textbox "Digite uma mensagem" [ref=f11e781]
+            - button "Gravar áudio" [disabled] [ref=f11e783]
+        - complementary "Informações do contato" [ref=f11e374]:
+          - heading "Informações do contato" [level=2] [ref=f11e376]
+          - generic [ref=f11e377]:
+            - generic [ref=f11e830]:
+              - generic [ref=f11e831]: CD
+              - paragraph [ref=f11e833]: Contato Demonstração 01
+              - paragraph [ref=f11e834]: Lead vinculado ao atendimento
+              - generic [ref=f11e835]: Status não informado
+            - generic [ref=f11e836]:
+              - generic [ref=f11e837]:
+                - paragraph [ref=f11e838]: Responsável
+                - paragraph [ref=f11e839]: Ainda não atribuído
+              - generic [ref=f11e840]:
+                - paragraph [ref=f11e841]: Último contato
+                - generic [ref=f11e842]: 25/10/2026 às 09:00
+              - generic [ref=f11e846]:
+                - paragraph [ref=f11e847]: Lembretes pendentes
+                - generic [ref=f11e848]: "3"
+            - generic [ref=f11e853]:
+              - button "Informações e agenda" [ref=f11e854] [cursor=pointer]
+              - button "Abrir no CRM" [ref=f11e859] [cursor=pointer]

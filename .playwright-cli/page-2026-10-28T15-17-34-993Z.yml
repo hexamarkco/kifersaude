@@ -1,0 +1,44 @@
+- generic [ref=f2e5]:
+  - banner [ref=f2e6]:
+    - generic [ref=f2e7]:
+      - generic [ref=f2e8]:
+        - paragraph [ref=f2e9]: Administração
+        - heading "Usuários e permissões" [level=1] [ref=f2e12]
+        - paragraph [ref=f2e13]: Gerencie as contas que podem acessar a operação.
+      - button "Novo usuário" [ref=f2e15] [cursor=pointer]
+    - tablist "Áreas de configurações" [ref=f2e20]:
+      - tab "Geral" [ref=f2e21] [cursor=pointer]
+      - tab "Usuários" [selected] [ref=f2e26] [cursor=pointer]
+      - tab "Links" [ref=f2e33] [cursor=pointer]
+      - tab "Formulários" [ref=f2e38] [cursor=pointer]
+  - main [ref=f2e43]:
+    - generic [ref=f2e44]:
+      - generic [ref=f2e45]:
+        - searchbox "Buscar por usuário, e-mail ou perfil" [ref=f2e48]
+        - status [ref=f2e49]: 3 usuários
+      - generic [ref=f2e150]:
+        - generic [ref=f2e151]:
+          - generic [ref=f2e157]:
+            - paragraph [ref=f2e158]: "@Ana Demonstração"
+            - paragraph [ref=f2e159]: ana.demonstracao@example.invalid
+            - generic [ref=f2e160]: Administrador
+          - generic [ref=f2e162]:
+            - paragraph [ref=f2e163]: Você
+            - group "Ações de Ana Demonstração" [ref=f2e164]:
+              - button "Editar Ana Demonstração" [ref=f2e165] [cursor=pointer]
+        - generic [ref=f2e170]:
+          - generic [ref=f2e176]:
+            - paragraph [ref=f2e177]: "@Bruno Exemplo"
+            - paragraph [ref=f2e178]: bruno.exemplo@example.invalid
+            - generic [ref=f2e179]: Gestor comercial
+          - group "Ações de Bruno Exemplo" [ref=f2e182]:
+            - button "Editar Bruno Exemplo" [ref=f2e183] [cursor=pointer]
+            - button "Excluir Bruno Exemplo" [active] [ref=f2e188] [cursor=pointer]
+        - generic [ref=f2e193]:
+          - generic [ref=f2e199]:
+            - paragraph [ref=f2e200]: "@Carla Teste"
+            - paragraph [ref=f2e201]: carla.teste@example.invalid
+            - generic [ref=f2e202]: Observador
+          - group "Ações de Carla Teste" [ref=f2e205]:
+            - button "Editar Carla Teste" [ref=f2e206] [cursor=pointer]
+            - button "Excluir Carla Teste" [ref=f2e211] [cursor=pointer]

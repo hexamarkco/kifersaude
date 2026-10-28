@@ -1,0 +1,76 @@
+- generic [ref=f9e3]:
+  - complementary [ref=f9e4]:
+    - generic [ref=f9e5]:
+      - img "Kifer Saúde CRM" [ref=f9e7]:
+        - generic [ref=f9e8]: kifersaúde
+        - generic [ref=f9e9]: CRM
+      - navigation [ref=f9e10]:
+        - generic [ref=f9e11]:
+          - button "Dashboard" [ref=f9e12] [cursor=pointer]
+          - generic [ref=f9e20]:
+            - button "CRM 3" [ref=f9e21] [cursor=pointer]:
+              - generic [ref=f9e22]: CRM
+              - generic [ref=f9e30]: "3"
+            - generic [ref=f9e31]:
+              - button "Leads" [ref=f9e32] [cursor=pointer]
+              - button "Contratos" [ref=f9e40] [cursor=pointer]
+              - button "Agenda 3" [ref=f9e46] [cursor=pointer]:
+                - generic [ref=f9e47]: Agenda
+                - generic [ref=f9e51]: "3"
+          - button "Comunicação 3" [ref=f9e53] [cursor=pointer]:
+            - generic [ref=f9e54]: Comunicação
+            - generic [ref=f9e61]: "3"
+          - button "Financeiro" [ref=f9e63] [cursor=pointer]
+          - button "Automações e IA" [ref=f9e72] [cursor=pointer]
+          - button "Configurações" [ref=f9e79] [cursor=pointer]
+      - generic [ref=f9e85]:
+        - button "Recolher" [ref=f9e86] [cursor=pointer]
+        - button "3 Notificações" [ref=f9e91] [cursor=pointer]:
+          - generic [ref=f9e98]: "3"
+          - generic [ref=f9e99]: Notificações
+        - button "Ativar tema escuro" [active] [ref=f9e654] [cursor=pointer]:
+          - generic [ref=f9e103]: Escuro
+        - button "Sair" [ref=f9e104] [cursor=pointer]
+  - generic [ref=f9e109]:
+    - banner [ref=f9e110]:
+      - generic [ref=f9e111]:
+        - navigation "Breadcrumb" [ref=f9e112]:
+          - list [ref=f9e113]:
+            - listitem [ref=f9e114]:
+              - button "CRM" [ref=f9e115] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f9e116]
+            - listitem [ref=f9e119]: Agenda
+        - generic [ref=f9e120]:
+          - generic [ref=f9e121]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f9e657] [cursor=pointer]
+          - generic [ref=f9e126]: OD
+    - main [ref=f9e128]:
+      - generic [ref=f9e130]:
+        - generic [ref=f9e132]:
+          - generic [ref=f9e133]:
+            - paragraph [ref=f9e134]: Kifer Saúde / produtividade
+            - heading "Agenda e tarefas" [level=1] [ref=f9e137]
+            - paragraph [ref=f9e138]: Organize seus compromissos e priorize os retornos comerciais.
+          - group "Ações da agenda" [ref=f9e140]:
+            - button "Organizar follow-ups" [ref=f9e141] [cursor=pointer]
+            - button "Nova tarefa" [ref=f9e145] [cursor=pointer]
+        - generic [ref=f9e148]:
+          - tablist [ref=f9e150]:
+            - tab "Calendário" [ref=f9e151] [cursor=pointer]
+            - tab "Pendentes 3" [ref=f9e653] [cursor=pointer]:
+              - generic [ref=f9e154]: Pendentes
+              - generic [ref=f9e155]: "3"
+            - tab "Concluídos" [selected] [ref=f9e156] [cursor=pointer]
+          - generic [ref=f9e159]:
+            - textbox "Buscar tarefas e lembretes" [ref=f9e161]:
+              - /placeholder: Buscar tarefa ou lead...
+            - button "Mostrar filtros da agenda" [ref=f9e163] [cursor=pointer]:
+              - generic [ref=f9e164]: Filtros
+        - generic [ref=f9e467]:
+          - generic [ref=f9e469]:
+            - paragraph [ref=f9e470]: Histórico
+            - heading "Concluídos" [level=2] [ref=f9e645]
+            - paragraph [ref=f9e472]: Nenhum item concluído corresponde aos filtros atuais.
+          - generic [ref=f9e646]:
+            - paragraph [ref=f9e651]: Nenhum item concluído
+            - paragraph [ref=f9e652]: Ajuste os filtros para consultar outros itens da agenda.

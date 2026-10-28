@@ -1,0 +1,132 @@
+- generic [ref=f15e9]:
+  - complementary [ref=f15e10]:
+    - generic [ref=f15e11]:
+      - generic [ref=f15e12]: K
+      - navigation [ref=f15e15]:
+        - generic [ref=f15e16]:
+          - button "Dashboard" [ref=f15e17] [cursor=pointer]
+          - button "CRM" [ref=f15e25] [cursor=pointer]
+          - button "Comunicação" [ref=f15e32] [cursor=pointer]
+          - button "Financeiro" [ref=f15e38] [cursor=pointer]
+          - button "Automações e IA" [ref=f15e44] [cursor=pointer]
+          - button "Configurações" [ref=f15e50] [cursor=pointer]
+      - generic [ref=f15e55]:
+        - button "Expandir" [ref=f15e56] [cursor=pointer]
+        - button [ref=f15e60] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f15e67] [cursor=pointer]:
+          - generic: Escuro
+        - button "Sair" [ref=f15e70] [cursor=pointer]
+  - generic [ref=f15e74]:
+    - banner [ref=f15e75]:
+      - generic [ref=f15e76]:
+        - navigation "Breadcrumb" [ref=f15e77]:
+          - list [ref=f15e78]:
+            - listitem [ref=f15e79]:
+              - button "CRM" [ref=f15e80] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f15e81]
+            - listitem [ref=f15e84]: Configurações
+        - generic [ref=f15e85]:
+          - generic [ref=f15e86]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f15e87] [cursor=pointer]
+          - generic [ref=f15e91]: OD
+    - main [ref=f15e93]:
+      - generic [ref=f15e95]:
+        - generic [ref=f15e96]:
+          - generic [ref=f15e97]:
+            - generic [ref=f15e98]:
+              - paragraph [ref=f15e99]: Administração
+              - heading "Configurações de leads" [level=1] [ref=f15e289]
+              - paragraph [ref=f15e103]: Ajuste o sistema, os cadastros e os acessos da equipe.
+            - generic [ref=f15e104]: 4 áreas disponíveis
+          - tablist "Áreas de configurações" [ref=f15e111]:
+            - tab "Geral" [selected] [ref=f15e112] [cursor=pointer]
+            - tab "Usuários" [ref=f15e117] [cursor=pointer]
+            - tab "Links" [ref=f15e124] [cursor=pointer]
+            - tab "Formulários" [ref=f15e129] [cursor=pointer]
+        - main [ref=f15e134]:
+          - generic [ref=f15e135]:
+            - generic [ref=f15e136]:
+              - generic [ref=f15e137]:
+                - generic [ref=f15e139]:
+                  - paragraph [ref=f15e140]: Configuração geral
+                  - heading "Regras, catálogo e cadastros" [level=2] [ref=f15e141]
+                  - paragraph [ref=f15e142]: Encontre e ajuste uma área por vez, sem perder espaço útil para o conteúdo.
+                - textbox "Buscar por permissões, leads ou contratos" [ref=f15e145]
+              - tablist [ref=f15e147]:
+                - tab "Preferências do sistema" [ref=f15e148] [cursor=pointer]
+                - tab "Perfis e acessos" [ref=f15e153] [cursor=pointer]
+                - tab "Leads" [active] [selected] [ref=f15e158] [cursor=pointer]
+                - tab "Contratos" [ref=f15e163] [cursor=pointer]
+            - generic [ref=f15e290]:
+              - generic [ref=f15e292]:
+                - heading "Configurações de leads" [level=2] [ref=f15e293]
+                - paragraph [ref=f15e294]: Etapas do funil, origens e cadastros auxiliares.
+              - generic [ref=f15e295]:
+                - tablist "Categorias das configurações de leads" [ref=f15e297]:
+                  - tab "Funil" [selected] [ref=f15e298] [cursor=pointer]
+                  - tab "Origens" [ref=f15e304] [cursor=pointer]
+                  - tab "Tipos de contratação" [ref=f15e312] [cursor=pointer]
+                  - tab "Responsáveis pelos leads" [ref=f15e317] [cursor=pointer]
+                - generic [ref=f15e325]:
+                  - generic [ref=f15e326]:
+                    - generic [ref=f15e327]:
+                      - heading "Etapas do funil" [level=3] [ref=f15e328]
+                      - paragraph [ref=f15e329]: Organize os nomes, as cores e a etapa inicial dos novos leads.
+                    - button "Adicionar etapa" [ref=f15e331] [cursor=pointer]
+                  - generic [ref=f15e334]:
+                    - textbox "Buscar em Etapas do funil" [ref=f15e337]:
+                      - /placeholder: Buscar por nome
+                    - status [ref=f15e338]: 5 itens
+                  - paragraph [ref=f15e339]: Nome e ordem são salvos ao sair do campo. A estrela indica a etapa padrão.
+                  - generic [ref=f15e340]:
+                    - generic [ref=f15e341]:
+                      - button "Ordenar por Etapa" [ref=f15e342] [cursor=pointer]:
+                        - generic [ref=f15e343]: Etapa
+                      - button "Ordenar por Ordem" [pressed] [ref=f15e347] [cursor=pointer]:
+                        - generic [ref=f15e348]: Ordem
+                      - button "Ordenar por Cor" [ref=f15e351] [cursor=pointer]:
+                        - generic [ref=f15e352]: Cor
+                      - button "Ordenar por Padrão" [ref=f15e356] [cursor=pointer]:
+                        - generic [ref=f15e357]: Padrão
+                      - generic [ref=f15e361]: Ações
+                    - list "Etapas do funil" [ref=f15e362]:
+                      - listitem [ref=f15e363]:
+                        - textbox "Nome da etapa Contato inicial" [ref=f15e365]: Contato inicial
+                        - generic [ref=f15e366]:
+                          - spinbutton "Ordem da etapa Contato inicial" [ref=f15e369]: "0"
+                          - textbox "Cor do status Contato inicial" [ref=f15e372]: "#c5501f"
+                          - group "Ações da etapa" [ref=f15e373]:
+                            - button "Contato inicial é o status padrão" [disabled] [ref=f15e374]
+                            - button "Excluir status Contato inicial" [ref=f15e378] [cursor=pointer]
+                      - listitem [ref=f15e383]:
+                        - textbox "Nome da etapa Em atendimento" [ref=f15e385]: Em atendimento
+                        - generic [ref=f15e386]:
+                          - spinbutton "Ordem da etapa Em atendimento" [ref=f15e389]: "1"
+                          - textbox "Cor do status Em atendimento" [ref=f15e392]: "#b8860b"
+                          - group "Ações da etapa" [ref=f15e393]:
+                            - button "Definir Em atendimento como padrão" [ref=f15e394] [cursor=pointer]
+                            - button "Excluir status Em atendimento" [ref=f15e398] [cursor=pointer]
+                      - listitem [ref=f15e403]:
+                        - textbox "Nome da etapa Proposta enviada" [ref=f15e405]: Proposta enviada
+                        - generic [ref=f15e406]:
+                          - spinbutton "Ordem da etapa Proposta enviada" [ref=f15e409]: "2"
+                          - textbox "Cor do status Proposta enviada" [ref=f15e412]: "#2563eb"
+                          - group "Ações da etapa" [ref=f15e413]:
+                            - button "Definir Proposta enviada como padrão" [ref=f15e414] [cursor=pointer]
+                            - button "Excluir status Proposta enviada" [ref=f15e418] [cursor=pointer]
+                      - listitem [ref=f15e423]:
+                        - textbox "Nome da etapa Contratado" [ref=f15e425]: Contratado
+                        - generic [ref=f15e426]:
+                          - spinbutton "Ordem da etapa Contratado" [ref=f15e429]: "3"
+                          - textbox "Cor do status Contratado" [ref=f15e432]: "#16805d"
+                          - group "Ações da etapa" [ref=f15e433]:
+                            - button "Definir Contratado como padrão" [ref=f15e434] [cursor=pointer]
+                            - button "Excluir status Contratado" [ref=f15e438] [cursor=pointer]
+                      - listitem [ref=f15e443]:
+                        - textbox "Nome da etapa Sem interesse" [ref=f15e445]: Sem interesse
+                        - generic [ref=f15e446]:
+                          - spinbutton "Ordem da etapa Sem interesse" [ref=f15e449]: "4"
+                          - textbox "Cor do status Sem interesse" [ref=f15e452]: "#9a5454"
+                          - group "Ações da etapa" [ref=f15e453]:
+                            - button "Definir Sem interesse como padrão" [ref=f15e454] [cursor=pointer]
+                            - button "Excluir status Sem interesse" [ref=f15e458] [cursor=pointer]

@@ -1,6 +1,5 @@
-import { Text } from '../design-system';
 import { useMemo, useRef, useState } from 'react';
-import { Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
+import { AlertCircle, Clock, Tag } from 'lucide-react';
 import type { Lead } from '../features/leads';
 import { touchLeadContact } from '../features/leads';
 import {
@@ -13,7 +12,6 @@ import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import { LeadFavoriteBadge } from './LeadFavoriteStar';
 import {
-  Alert,
   Button,
   DateTimePicker,
   Dialog,
@@ -26,6 +24,7 @@ import {
   Input,
   Textarea,
   FilterSelect,
+  Text,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -187,39 +186,35 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="sm">
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="form" className="kds-lead-reminder-dialog">
       <DialogHeader onClose={saving ? undefined : onClose}>
-        <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription className="flex items-center gap-1.5"><LeadFavoriteBadge favorito={lead.favorito} />{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
+        <div>
+          <DialogTitle>Agendar novo lembrete</DialogTitle>
+          <DialogDescription className="flex items-center gap-1.5">
+            <LeadFavoriteBadge favorito={lead.favorito} />
+            {formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}
+          </DialogDescription>
+        </div>
       </DialogHeader>
-      <DialogBody className="space-y-5">
-      <div className="space-y-6">
-        <Alert tone="accent">
-          <div className="flex items-start gap-3">
-            <Clock className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <div>
-              <Text className="font-semibold">
-                {promptMessage ?? 'Defina o próximo lembrete para continuar o acompanhamento manual do lead.'}
-              </Text>
-              <Text className="mt-1 text-xs">
-                Escolha o melhor momento e personalize as informações conforme necessário.
-              </Text>
-            </div>
-          </div>
-        </Alert>
+      <DialogBody>
+        <div className="space-y-4">
+          <Text as="p" size="sm" tone="muted" className="kds-lead-reminder-intro">
+            <Clock className="kds-lead-reminder-intro-icon h-4 w-4" aria-hidden="true" />
+            {promptMessage ?? 'Defina o próximo lembrete para continuar o acompanhamento manual do lead.'}
+          </Text>
 
-        <div className="grid grid-cols-1 gap-4">
-          <Field label="Título *">
-            <Input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Ex: Follow-up com o cliente"
-              required
-              leftIcon={Calendar}
-            />
-          </Field>
+          <div className="kds-lead-reminder-fields">
+            <Field label="Título *" className="kds-lead-reminder-title">
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Ex: Follow-up com o cliente"
+                title={title}
+                required
+              />
+            </Field>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Tipo do lembrete">
+            <Field label="Tipo do lembrete" className="kds-lead-reminder-type">
               <FilterSelect
                 icon={Tag}
                 value={type}
@@ -232,7 +227,7 @@ export default function ReminderSchedulerModal({
                 }))}
               />
             </Field>
-            <Field label="Prioridade">
+            <Field label="Prioridade" className="kds-lead-reminder-priority">
               <FilterSelect
                 icon={AlertCircle}
                 value={priority}
@@ -245,31 +240,34 @@ export default function ReminderSchedulerModal({
                 }))}
               />
             </Field>
+
+            <Field label="Data e hora *" className="kds-lead-reminder-datetime">
+              <DateTimePicker
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(event) => setScheduledFor(event.target.value)}
+                placeholder="Selecionar data e hora"
+              />
+            </Field>
+
+            <Field label="Responsável" hint="Responsável atual pelo lead" className="kds-lead-reminder-owner">
+              <Input value={lead.responsavel?.trim() || 'Não definido'} readOnly />
+            </Field>
+
+            <Field label="Observações" className="kds-lead-reminder-observations">
+              <Textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+                placeholder="Anote detalhes importantes para o próximo contato"
+              />
+            </Field>
           </div>
-
-          <Field label="Data e hora *">
-            <DateTimePicker
-              type="datetime-local"
-              value={scheduledFor}
-              onChange={(event) => setScheduledFor(event.target.value)}
-              placeholder="Selecionar data e hora"
-            />
-          </Field>
-
-          <Field label="Observacoes">
-            <Textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              rows={3}
-              placeholder="Anote detalhes importantes para o próximo contato"
-            />
-          </Field>
         </div>
-      </div>
       </DialogBody>
       <DialogFooter>
-        <Button variant="ghost" onClick={onClose} disabled={saving}>Agora nao</Button>
-        <Button variant="primary" onClick={handleSchedule} disabled={saving} loading={saving}>{saving ? 'Salvando...' : 'Agendar lembrete'}</Button>
+        <Button variant="secondary" onClick={onClose} disabled={saving}>Cancelar</Button>
+        <Button className="kds-lead-reminder-submit" variant="primary" onClick={handleSchedule} disabled={saving} loading={saving}>{saving ? 'Agendando...' : 'Agendar lembrete'}</Button>
       </DialogFooter>
     </Dialog>
   );

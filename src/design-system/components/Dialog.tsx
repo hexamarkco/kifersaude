@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { cx } from '../../lib/cx';
 import { useDesignSystemAppearance } from '../appearanceContext';
 
-export type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'wide' | 'full';
+export type DialogSize = 'sm' | 'md' | 'form' | 'lg' | 'xl' | 'wide' | 'full';
 export type DialogPresentation = 'standard' | 'workspace';
 
 export type DialogProps = HTMLAttributes<HTMLDivElement> & {
@@ -20,6 +20,7 @@ export type DialogProps = HTMLAttributes<HTMLDivElement> & {
 const sizeClasses: Record<DialogSize, string> = {
   sm: 'max-w-md',
   md: 'max-w-2xl',
+  form: 'max-w-xl',
   lg: 'max-w-3xl',
   xl: 'max-w-6xl',
   wide: 'kds-dialog-wide',

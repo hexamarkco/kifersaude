@@ -1180,15 +1180,23 @@
       "route": "/painel/leads",
       "kind": "states",
       "components": [
-        "src/components/ReminderSchedulerModal.tsx"
+        "src/components/ReminderSchedulerModal.tsx",
+        "src/design-system/components/Dialog.tsx",
+        "src/pages/dev/showcase/ComponentCatalog.tsx"
       ],
       "references": [
         "references/desktop/state--leads-agendar.png",
         "references/mobile/state--leads-agendar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-reminder/README.md",
+        "validacao/revisao-visual/leads-reminder/coverage.json"
+      ],
+      "notes": [
+        "O modal segue a composição compacta da referência, com duas colunas em desktop e campos empilhados no mobile. O CRM não armazena um responsável separado para lembretes; o responsável do lead é apresentado como somente leitura, sem criar uma regra ou campo persistido.",
+        "Os controles de tipo e data/hora foram abertos em 320 px; Escape fechou o datepicker sem alterar o valor. Nenhum lembrete foi gravado."
+      ]
     },
     {
       "id": "state--leads-excluir-confirmacao",
@@ -2586,8 +2594,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 29,
-    "remaining_manifest_contexts": 131,
+    "reviewed_contexts": 30,
+    "remaining_manifest_contexts": 130,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

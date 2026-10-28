@@ -1114,6 +1114,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-dialog { max-height: calc(100dvh - var(--space-4)); border-radius: var(--radius-dialog); box-shadow: var(--shadow-modal); }
 .painel-theme.kifer-ds .kds-dialog:not(.kds-drawer) { max-width: min(calc(100% - var(--space-4)), var(--dialog-width, var(--dialog-width-md))); }
 .kds-dialog[data-size='sm'] { --dialog-width: var(--dialog-width-sm); }
+.kds-dialog[data-size='form'] { --dialog-width: var(--dialog-width-form); }
 .kds-dialog[data-size='lg'] { --dialog-width: var(--dialog-width-lg); }
 .kds-dialog[data-size='xl'], .kds-dialog[data-size='wide'] { --dialog-width: var(--dialog-width-xl); }
 .kds-dialog[data-size='full'], .kds-dialog.kds-dialog-workspace { --dialog-width: var(--dialog-width-full); }
@@ -1136,6 +1137,13 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-filter-multi-action { min-width: 7rem; }
 .painel-theme.kifer-ds .kds-dialog-header, .painel-theme.kifer-ds .kds-dialog-footer { flex-shrink: 0; padding: var(--space-5); }
 .painel-theme.kifer-ds .kds-dialog-body { padding: var(--space-5); overflow-x: hidden; }
+.painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-body { padding-block: var(--space-4); }
+.painel-theme.kifer-ds .kds-lead-reminder-intro { display: flex; align-items: flex-start; gap: var(--space-2); }
+.painel-theme.kifer-ds .kds-lead-reminder-intro-icon { flex: 0 0 auto; color: var(--brand-primary); }
+.painel-theme.kifer-ds .kds-lead-reminder-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.painel-theme.kifer-ds .kds-lead-reminder-title .kds-input { text-overflow: ellipsis; }
+.painel-theme.kifer-ds .kds-lead-reminder-observations textarea { min-height: 5.5rem; }
+.painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-footer { gap: var(--space-2); }
 .painel-theme.kifer-ds .kds-drawer { max-height: 100dvh; border-radius: 0; }
 .painel-theme.kifer-ds .kds-popover { max-width: calc(100vw - var(--space-4)); max-height: calc(100dvh - var(--space-4)); overflow: auto; overscroll-behavior: contain; }
 .painel-theme.kifer-ds .kds-dp-popover { width: min(19.5rem, calc(100vw - var(--space-4))); }
@@ -1168,12 +1176,18 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   .painel-theme.kifer-ds .kds-dashboard-more-metrics > .kds-disclosure-trigger { width: 100%; }
 }
 @media (max-width: 640px) {
+  .painel-theme.kifer-ds .kds-lead-reminder-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-footer > .kds-button { width: 100%; min-width: 0; white-space: nowrap; }
   .painel-theme.kifer-ds .kds-dialog-container:has(.kds-dialog.kds-filter-multi-dialog) { align-items: flex-start !important; justify-content: center; padding: min(16vh, 8.75rem) var(--space-4) var(--space-4) !important; }
   .painel-theme.kifer-ds .kds-dialog.kds-filter-multi-dialog { height: auto !important; width: min(calc(100vw - var(--space-8)), 22rem); max-width: min(calc(100vw - var(--space-8)), 22rem) !important; max-height: calc(100dvh - 10rem) !important; flex: 0 1 auto; border-radius: var(--radius-dialog) !important; }
   .painel-theme.kifer-ds .kds-filter-multi-dialog .kds-dialog-header { padding: var(--space-2) var(--space-3); }
   .painel-theme.kifer-ds .kds-filter-multi-body { padding: 0 var(--space-2); }
   .painel-theme.kifer-ds .kds-filter-multi-footer { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); padding: var(--space-2) var(--space-3); }
   .painel-theme.kifer-ds .kds-filter-multi-action { min-width: 0; padding-inline: var(--space-2); font: var(--type-body-sm); white-space: nowrap; }
+}
+@media (max-width: 360px) {
+  .painel-theme.kifer-ds .kds-lead-reminder-submit { padding-inline: var(--space-2); font: var(--type-body-sm); font-weight: var(--font-weight-semibold); white-space: nowrap; }
 }
 @media (max-width: 1279px) { .kds-dashboard-primary-grid { grid-template-columns: minmax(0, 1fr); } }
 .kds-responsive-collection { container: collection / inline-size; min-width: 0; width: 100%; }

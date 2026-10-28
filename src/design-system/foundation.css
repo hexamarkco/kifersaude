@@ -26,6 +26,7 @@
   --radius-dialog: var(--radius-xl);
   --dialog-width-sm: 28rem;
   --dialog-width-md: 42rem;
+  --dialog-width-form: 37rem;
   --dialog-width-lg: 48rem;
   --dialog-width-xl: 72rem;
   --dialog-width-full: 90rem;

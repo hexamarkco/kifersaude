@@ -1,0 +1,103 @@
+{
+  "created_at": "2026-10-28",
+  "contexts": [
+    "state--leads-agendar"
+  ],
+  "references": {
+    "state--leads-agendar": [
+      "../../../references/desktop/state--leads-agendar.png",
+      "../../../references/mobile/state--leads-agendar.png"
+    ]
+  },
+  "components": [
+    "src/components/ReminderSchedulerModal.tsx",
+    "src/design-system/components/Dialog.tsx",
+    "src/design-system/foundation.css",
+    "src/design-system/operational.css",
+    "src/pages/dev/showcase/ComponentCatalog.tsx"
+  ],
+  "screenshots": [
+    "desktop-lembrete-1920.png",
+    "tablet-lembrete-768.png",
+    "mobile-lembrete-390.png",
+    "mobile-320-lembrete.png",
+    "desktop-dark-lembrete.png",
+    "mobile-320-tipo-menu.png",
+    "mobile-320-datepicker.png"
+  ],
+  "screenshot_count": 7,
+  "fixture": "Leads sintéticos de demonstração em sessão local; nenhum registro real",
+  "verification": {
+    "matchesReferenceLayout": true,
+    "reusableDialogFormSize": "37rem (592px)",
+    "desktopTabletColumns": 2,
+    "mobileColumns": 1,
+    "actionsRemainVisibleOnMobile": true,
+    "ownerFieldIsReadOnly": true,
+    "ownerFieldReason": "O modelo real de lembrete não persiste um responsável separado; é exibido o responsável atual do Lead.",
+    "typeMenuOpenedAt320": true,
+    "datepickerOpenedAt320": true,
+    "escapeClosesDatepickerWithoutChangingValue": true,
+    "cancelClosesDialogWithoutSaving": true,
+    "dataChangesOrExternalActions": false,
+    "responsiveMeasurements": [
+      {
+        "viewport": "1920x1080",
+        "theme": "claro",
+        "documentScrollWidth": 1910,
+        "dialog": { "x": 659, "y": 286, "width": 592, "height": 507 },
+        "horizontalOverflow": false,
+        "dialogInsideViewport": true
+      },
+      {
+        "viewport": "768x1024",
+        "theme": "claro",
+        "documentScrollWidth": 758,
+        "dialog": { "x": 83, "y": 258, "width": 592, "height": 507 },
+        "horizontalOverflow": false,
+        "dialogInsideViewport": true
+      },
+      {
+        "viewport": "390x844",
+        "theme": "claro",
+        "documentScrollWidth": 380,
+        "dialog": { "x": 0, "y": 0, "width": 380, "height": 844 },
+        "footerButtonsVisibleSideBySide": true,
+        "horizontalOverflow": false,
+        "dialogInsideViewport": true
+      },
+      {
+        "viewport": "320x640",
+        "theme": "claro",
+        "documentScrollWidth": 310,
+        "dialog": { "x": 0, "y": 0, "width": 310, "height": 640 },
+        "dialogBodyClientWidth": 298,
+        "dialogBodyScrollWidth": 298,
+        "footerButtonsVisibleSideBySide": true,
+        "horizontalOverflow": false,
+        "dialogInsideViewport": true
+      },
+      {
+        "viewport": "320x640",
+        "theme": "claro",
+        "state": "datepicker-open",
+        "documentScrollWidth": 310,
+        "datepicker": { "x": 8, "y": 8, "width": 304, "height": 461 },
+        "horizontalOverflow": false,
+        "popoverInsideViewport": true
+      },
+      {
+        "viewport": "1920x1080",
+        "theme": "escuro",
+        "dialogWidth": 592,
+        "horizontalOverflow": false,
+        "dialogInsideViewport": true
+      }
+    ],
+    "localDevelopmentConsole": [
+      "Aviso de ciclo de vida do react-side-effect.",
+      "Timeout do handshake Realtime da sessão sintética local.",
+      "Exceção transitória de contexto durante hot reload; recarregar restaurou a aplicação."
+    ]
+  }
+}

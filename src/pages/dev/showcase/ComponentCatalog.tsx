@@ -1498,13 +1498,13 @@ function Overlays() {
         <Specimen
           title="Modal de formulário"
           description="Uma anotação curta cabe no modal. Cadastros completos usam FormPage."
-          source="Dialog / Field / Textarea / FormActions"
+          source="Dialog size=form / Field / Textarea / FormActions"
         >
           <Button onClick={() => setDialog(true)}>
             <Plus />
             Adicionar anotação
           </Button>
-          <Dialog open={dialog} onOpenChange={setDialog} size="md">
+          <Dialog open={dialog} onOpenChange={setDialog} size="form">
             <DialogHeader onClose={() => setDialog(false)}>
               <DialogTitle>Adicionar anotação</DialogTitle>
               <DialogDescription>

@@ -20,6 +20,7 @@ import {
   FilterSelect,
   KpiCard,
   PageHeader,
+  ResponsiveCollection,
   Surface,
   RecordActions,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -65,6 +66,12 @@ export default function BlogPostsList({
   summary,
 }: BlogPostsListProps) {
   const showSummary = hasPostsSnapshot || (!loading && !loadError);
+  const getActions = (post: BlogPost) => [
+    { label: "Visualizar", icon: Eye, onClick: () => onPreviewPost(post) },
+    { label: post.published ? "Despublicar" : "Publicar", icon: post.published ? Eye : EyeOff, onClick: () => onTogglePublish(post) },
+    { label: "Editar", icon: Edit2, onClick: () => onEditPost(post) },
+    { label: "Excluir", icon: Trash2, destructive: true, onClick: () => onDeletePost(post.id) },
+  ];
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
@@ -80,10 +87,10 @@ export default function BlogPostsList({
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <KpiCard padding="sm" title="Artigos publicados" value={showSummary ? String(summary.published) : '—'} />
-        <KpiCard padding="sm" title="Rascunhos" value={showSummary ? String(summary.drafts) : '—'} />
-        <KpiCard padding="sm" title="Visualizações" value={showSummary ? summary.views.toLocaleString('pt-BR') : '—'} />
-        <KpiCard padding="sm" title="Atualizados no mês" value={showSummary ? String(summary.updated) : '—'} />
+        <KpiCard padding="sm" title={<span className="block min-h-10 text-sm">Artigos publicados</span>} value={showSummary ? String(summary.published) : '—'} />
+        <KpiCard padding="sm" title={<span className="block min-h-10 text-sm">Rascunhos</span>} value={showSummary ? String(summary.drafts) : '—'} />
+        <KpiCard padding="sm" title={<span className="block min-h-10 text-sm">Visualizações</span>} value={showSummary ? summary.views.toLocaleString('pt-BR') : '—'} />
+        <KpiCard padding="sm" title={<span className="block min-h-10 text-sm">Atualizados no mês</span>} value={showSummary ? String(summary.updated) : '—'} />
       </div>
 
       <Surface className="space-y-6">
@@ -127,7 +134,7 @@ export default function BlogPostsList({
               <Text className="text-[var(--text-secondary)]">Nenhum post encontrado</Text>
             </Surface>
           ) : (
-            <Table aria-label="Biblioteca de artigos" className="min-w-[800px]" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
+            <ResponsiveCollection table={<Table aria-label="Biblioteca de artigos" className="min-w-[800px]" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
               <TableHeader><TableRow>
                 <TableHead>Artigo</TableHead><TableHead>Categoria</TableHead>
                 <TableHead>Status</TableHead><TableHead>Visualizações</TableHead>
@@ -151,17 +158,34 @@ export default function BlogPostsList({
                     <TableCell>{post.views_count}</TableCell>
                     <TableCell className="whitespace-nowrap">{new Date(post.created_at).toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell align="right">
-                      <RecordActions label={`Ações de ${post.title}`} actions={[
-                        { label: "Visualizar", icon: Eye, onClick: () => onPreviewPost(post) },
-                        { label: post.published ? "Despublicar" : "Publicar", icon: post.published ? Eye : EyeOff, onClick: () => onTogglePublish(post) },
-                        { label: "Editar", icon: Edit2, onClick: () => onEditPost(post) },
-                        { label: "Excluir", icon: Trash2, destructive: true, onClick: () => onDeletePost(post.id) },
-                      ]} />
+                      <RecordActions label={`Ações de ${post.title}`} actions={getActions(post)} />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table>} cards={<div className="grid gap-3">
+              {posts.map((post) => (
+                <Surface key={post.id} padding="sm" className="space-y-3">
+                  {post.cover_image_url && <Image src={post.cover_image_url} alt="" className="h-20 w-full rounded-md object-cover" />}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Text className="break-words font-semibold">{post.title}</Text>
+                      <Text size="sm" tone="muted" className="line-clamp-2 break-words">{post.excerpt}</Text>
+                    </div>
+                    <RecordActions label={`Ações de ${post.title}`} visibleCount={0} actions={getActions(post)} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="accent" size="sm">{post.category}</Badge>
+                    <Badge tone={post.published ? "success" : "neutral"} size="sm">{post.published ? "Publicado" : "Rascunho"}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--border-subtle)] pt-3">
+                    <Text size="sm" tone="muted">Criado {new Date(post.created_at).toLocaleDateString("pt-BR")}</Text>
+                    <Text size="sm" tone="muted">{post.views_count} visualizações</Text>
+                    <Text size="sm" tone="muted">{post.read_time}</Text>
+                  </div>
+                </Surface>
+              ))}
+            </div>} />
           )}
         </PanelAdaptiveLoadingFrame>
       </Surface>

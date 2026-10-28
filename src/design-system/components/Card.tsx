@@ -61,7 +61,7 @@ export function CardIcon({ tone = 'terracotta', className, children, ...props }:
   );
 }
 
-export type CrmCardProps = CardProps & {
+export type CrmCardProps = Omit<CardProps, 'title'> & {
   eyebrow?: ReactNode;
   title?: ReactNode;
   subtitle?: ReactNode;

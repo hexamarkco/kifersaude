@@ -60,6 +60,22 @@ test('filters articles by publication status without changing the totals', async
   } finally { view.unmount(); }
 });
 
+test('opens the article preview from the compact collection menu', async () => {
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    assert.ok(menuButton);
+    act(() => menuButton.click());
+    const preview = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Visualizar'));
+    assert.ok(preview);
+    act(() => preview.click());
+    assert.ok(document.body.querySelector('[role="dialog"][aria-label="Prévia do artigo"]'));
+    assert.equal(calls.save, 0);
+    assert.equal(calls.publish, 0);
+  } finally { view.unmount(); }
+});
+
 test('opens the article editor and returns without saving', async () => {
   const view = render(<BlogTabScreen />);
   try {

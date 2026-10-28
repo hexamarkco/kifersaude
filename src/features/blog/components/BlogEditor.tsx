@@ -1,8 +1,7 @@
 import { FieldLabel, Image, Text, Heading } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { ArrowLeft, Image as ImageIcon, Loader, Save, Tag, Upload } from "lucide-react";
-import { useMemo, useRef, type ChangeEvent } from "react";
-import type ReactQuill from "react-quill";
+import { useMemo, useRef, type ChangeEvent, type ElementRef } from "react";
 import { RichTextEditor } from '../../../design-system';
 
 import {
@@ -56,7 +55,7 @@ export default function BlogEditor({
   const titleRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
   const excerptRef = useRef<HTMLTextAreaElement>(null);
-  const editorRef = useRef<ReactQuill>(null);
+  const editorRef = useRef<ElementRef<typeof RichTextEditor>>(null);
   const modules = useMemo(
     () => ({
       toolbar: BLOG_EDITOR_TOOLBAR,

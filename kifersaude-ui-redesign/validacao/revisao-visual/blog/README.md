@@ -4,9 +4,11 @@ A [referência desktop](../../../references/desktop/page--blog.png) foi comparad
 
 Capturas da prévia isolada: [1920 px](lista-preview-1920.png), [768 px](lista-preview-768.png), [390 px](lista-preview-390.png), [320 px](lista-preview-320.png) e [tema escuro em 1920 px](lista-preview-dark.png). Não representam o shell autenticado nem dados reais.
 
-O Playwright registrou largura do documento igual à viewport em todas as quatro dimensões. A tabela possui rolagem local em larguras menores; a busca reduziu a fixture para um resultado e o menu exibiu despublicar, editar e excluir. Não foram executadas ações de escrita.
+Na primeira prévia, o Playwright registrou largura do documento igual à viewport em todas as quatro dimensões. A tabela usava rolagem local em larguras menores; a busca reduziu a fixture para um resultado e o menu exibiu despublicar, editar e excluir. Não foram executadas ações de escrita.
 
 Após inclusão dos indicadores e filtro, novas capturas: [1920 px](indicadores-1920.png), [768 px](indicadores-768.png), [390 px](indicadores-390.png), [320 px](indicadores-320.png) e [tema escuro](indicadores-dark.png). A largura do documento permaneceu igual à viewport; selecionar publicados retornou um artigo e os totais permaneceram 1, 1, 124 e 2 na fixture.
+
+A coleção foi posteriormente adaptada para cartões nas áreas estreitas, usando `ResponsiveCollection`. A tabela permanece no desktop; os cartões mantêm dados e ações sem rolagem lateral. Evidências: [desktop](responsivo-1920.png), [tablet](responsivo-768.png), [390 px](responsivo-390.png), [320 px](responsivo-320.png), [menu em 320 px](responsivo-menu-320.png) e [tema escuro em 320 px](responsivo-dark-320.png). O menu exibiu visualização, publicação, edição e exclusão; não foram executadas escritas. As quatro larguras ficaram sem overflow do documento.
 
 Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais e paginação, estados de carregamento, vazio e erro em navegador, teclado e foco, criação, edição, prévia, exclusão e permissões. A listagem permanece pendente no manifesto.
 

@@ -1,0 +1,291 @@
+{
+  "date": "2026-10-27",
+  "environment": "local, dados fictícios, integrações e escritas bloqueadas",
+  "screenshots": [
+    "trend-desktop.png",
+    "trend-tablet.png",
+    "trend-mobile.png",
+    "trend-mobile-320.png",
+    "desktop-dashboard.png",
+    "desktop-agenda.png",
+    "desktop-status.png",
+    "desktop-contract-loading.png",
+    "desktop-contract-detail.png",
+    "desktop-field-help.png",
+    "tablet-dashboard.png",
+    "tablet-agenda.png",
+    "tablet-status.png",
+    "tablet-contract-loading.png",
+    "tablet-contract-detail.png",
+    "tablet-field-help.png",
+    "mobile-dashboard.png",
+    "mobile-agenda.png",
+    "mobile-status.png",
+    "mobile-contract-loading.png",
+    "mobile-contract-detail.png",
+    "mobile-field-help.png",
+    "mobile-320-dashboard.png",
+    "mobile-320-agenda.png",
+    "mobile-320-status.png",
+    "mobile-320-contract-loading.png",
+    "mobile-320-contract-detail.png",
+    "mobile-320-field-help.png",
+    "desktop-dashboard-dark.png",
+    "desktop-agenda-dark.png",
+    "desktop-contratos-dark.png",
+    "desktop-contract-error-dark.png",
+    "tablet-dashboard-dark.png",
+    "tablet-agenda-dark.png",
+    "tablet-contratos-dark.png",
+    "tablet-contract-error-dark.png",
+    "mobile-dashboard-dark.png",
+    "mobile-agenda-dark.png",
+    "mobile-contratos-dark.png",
+    "mobile-contract-error-dark.png",
+    "mobile-320-dashboard-dark.png",
+    "mobile-320-agenda-dark.png",
+    "mobile-320-contratos-dark.png",
+    "mobile-320-contract-error-dark.png"
+  ],
+  "results": {
+    "chart": {
+      "records": [
+        {
+          "device": "desktop",
+          "width": 1226,
+          "height": 453,
+          "viewBox": "0 0 1226 453",
+          "lastX": 1202,
+          "overflow": false
+        },
+        {
+          "device": "tablet",
+          "width": 388,
+          "height": 250,
+          "viewBox": "0 0 388 250",
+          "lastX": 364,
+          "overflow": false
+        },
+        {
+          "device": "mobile",
+          "width": 272,
+          "height": 250,
+          "viewBox": "0 0 272 250",
+          "lastX": 248,
+          "overflow": false
+        },
+        {
+          "device": "mobile-320",
+          "width": 202,
+          "height": 250,
+          "viewBox": "0 0 202 250",
+          "lastX": 178,
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "light": {
+      "records": [
+        {
+          "id": "desktop-dashboard",
+          "overflow": false
+        },
+        {
+          "id": "desktop-agenda",
+          "overflow": false
+        },
+        {
+          "id": "desktop-status",
+          "overflow": false
+        },
+        {
+          "id": "desktop-contract-loading",
+          "overflow": false
+        },
+        {
+          "id": "desktop-contract-detail",
+          "overflow": false
+        },
+        {
+          "id": "desktop-field-help",
+          "overflow": false
+        },
+        {
+          "id": "tablet-dashboard",
+          "overflow": false
+        },
+        {
+          "id": "tablet-agenda",
+          "overflow": false
+        },
+        {
+          "id": "tablet-status",
+          "overflow": false
+        },
+        {
+          "id": "tablet-contract-loading",
+          "overflow": false
+        },
+        {
+          "id": "tablet-contract-detail",
+          "overflow": false
+        },
+        {
+          "id": "tablet-field-help",
+          "overflow": false
+        },
+        {
+          "id": "mobile-dashboard",
+          "overflow": false
+        },
+        {
+          "id": "mobile-agenda",
+          "overflow": false
+        },
+        {
+          "id": "mobile-status",
+          "overflow": false
+        },
+        {
+          "id": "mobile-contract-loading",
+          "overflow": false
+        },
+        {
+          "id": "mobile-contract-detail",
+          "overflow": false
+        },
+        {
+          "id": "mobile-field-help",
+          "overflow": false
+        },
+        {
+          "id": "mobile-320-dashboard",
+          "overflow": false
+        },
+        {
+          "id": "mobile-320-agenda",
+          "overflow": false
+        },
+        {
+          "id": "mobile-320-status",
+          "overflow": false
+        },
+        {
+          "id": "mobile-320-contract-loading",
+          "overflow": false
+        },
+        {
+          "id": "mobile-320-contract-detail",
+          "overflow": false
+        },
+        {
+          "id": "mobile-320-field-help",
+          "overflow": false
+        }
+      ],
+      "errors": []
+    },
+    "dark": {
+      "records": [
+        {
+          "device": "desktop",
+          "id": "dashboard",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "desktop",
+          "id": "agenda",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "desktop",
+          "id": "contratos",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "desktop",
+          "id": "contract-error-retry",
+          "theme": "dark",
+          "recovered": true
+        },
+        {
+          "device": "tablet",
+          "id": "dashboard",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "tablet",
+          "id": "agenda",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "tablet",
+          "id": "contratos",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "tablet",
+          "id": "contract-error-retry",
+          "theme": "dark",
+          "recovered": true
+        },
+        {
+          "device": "mobile",
+          "id": "dashboard",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "mobile",
+          "id": "agenda",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "mobile",
+          "id": "contratos",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "mobile",
+          "id": "contract-error-retry",
+          "theme": "dark",
+          "recovered": true
+        },
+        {
+          "device": "mobile-320",
+          "id": "dashboard",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "mobile-320",
+          "id": "agenda",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "mobile-320",
+          "id": "contratos",
+          "theme": "dark",
+          "overflow": false
+        },
+        {
+          "device": "mobile-320",
+          "id": "contract-error-retry",
+          "theme": "dark",
+          "recovered": true
+        }
+      ],
+      "errors": []
+    }
+  }
+}

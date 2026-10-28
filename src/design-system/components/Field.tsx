@@ -1,11 +1,14 @@
 import { cloneElement, isValidElement, useId, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
 
+import { Info } from 'lucide-react';
 import { cx } from '../../lib/cx';
+import Tooltip from './Tooltip';
 
 export type FieldProps = HTMLAttributes<HTMLDivElement> & {
   label?: ReactNode;
   htmlFor?: string;
   description?: string;
+  descriptionPlacement?: 'below' | 'tooltip';
   hint?: ReactNode;
   error?: string;
   success?: string;
@@ -22,7 +25,7 @@ type FieldControlProps = {
   'aria-invalid'?: boolean;
 };
 
-export default function Field({ label, htmlFor, description, hint, error, success, required = false, disabled = false, children, className, ...props }: FieldProps) {
+export default function Field({ label, htmlFor, description, descriptionPlacement = 'below', hint, error, success, required = false, disabled = false, children, className, ...props }: FieldProps) {
   const generatedId = useId();
   const child = isValidElement<FieldControlProps>(children) ? children as ReactElement<FieldControlProps> : null;
   const controlId = htmlFor ?? child?.props.id ?? `field-${generatedId.replace(/:/g, '')}`;
@@ -43,12 +46,22 @@ export default function Field({ label, htmlFor, description, hint, error, succes
         <div className="kds-field-copy">
           <div className="kds-field-label-row">
             {label && <label className="kds-field-label" htmlFor={controlId}>{label}{required && <span className="kds-field-required" aria-hidden="true"> *</span>}</label>}
-
+            {description && descriptionPlacement === 'tooltip' && (
+              <Tooltip content={description} side="top" delayMs={0}>
+                <button
+                  type="button"
+                  className="kds-field-description-trigger"
+                  aria-label={`Ajuda: ${typeof label === 'string' ? label : 'campo'}`}
+                >
+                  <Info aria-hidden="true" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
       )}
       {control}
-      {description && <p id={descriptionId} className="kds-field-description">{description}</p>}
+      {description && <p id={descriptionId} className={descriptionPlacement === 'tooltip' ? 'sr-only' : 'kds-field-description'}>{description}</p>}
       {hint && !error && !success && <p id={messageId} className="kds-field-description">{hint}</p>}
       {error && <p id={messageId} className="kds-field-error" role="alert">{error}</p>}
       {!error && success && <p id={messageId} className="kds-field-success" role="status">{success}</p>}

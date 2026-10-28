@@ -1,5 +1,5 @@
 import { Text, FieldLabel } from '../../../design-system';
-import { IconButton, DropdownOption, Select } from '../../../design-system';
+import { Button, DropdownOption, Select } from '../../../design-system';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Badge, Popover, PopoverContent, PopoverTrigger, type PanelTone } from '../../../design-system';
@@ -27,19 +27,18 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
   return (
     <Popover open={open && !saving} onOpenChange={setOpen}>
       <PopoverTrigger>
-        <IconButton variant="ghost" size="sm"
+        <Button variant="ghost" size="sm"
           type="button"
           disabled={saving || options.length === 0}
           aria-label={`Alterar status do contrato ${code}: ${label}`}
           aria-expanded={open && !saving}
           aria-busy={saving}
-          className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Badge tone={tone} size="sm" className="gap-1">
             {saving ? 'Atualizando...' : label}
-            <ChevronDown className="" aria-hidden="true" />
+            <ChevronDown className="kds-control-icon" aria-hidden="true" />
           </Badge>
-        </IconButton>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" aria-label={`Status do contrato ${code}`}>
         {operatorError && <Text role="alert" className="p-2 text-xs">{operatorError}</Text>}

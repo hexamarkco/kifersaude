@@ -778,6 +778,23 @@ export default function ContractDetails({
     }
   };
 
+  const pendingContent = loading ? (
+    <LoadingState label="Carregando dados do contrato" />
+  ) : loadError ? (
+    <Alert tone="danger" role="alert">
+      <Text>Não foi possível carregar este contrato. Tente buscar as informações novamente.</Text>
+      <Button variant="secondary" size="sm" onClick={() => void loadData()}><RefreshCw className="kds-control-icon" aria-hidden="true" />Tentar novamente</Button>
+    </Alert>
+  ) : null;
+
+  if (pendingContent && presentation === 'page') return (
+    <section className="kds-record-detail kds-detail-workspace" aria-busy={loading}>
+      <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
+      <PageHeader eyebrow="Contratos" title={`Ficha do contrato ${contract.codigo_contrato}`} />
+      {pendingContent}
+    </section>
+  );
+
   if (loading) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">

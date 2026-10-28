@@ -541,6 +541,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           </Field>
           <Field
             label="Cidade"
+            descriptionPlacement="tooltip"
             description={
               formData.estado
                 ? loadingCities
@@ -758,6 +759,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           <Field
             label="Limite diário de envios"
             htmlFor="lead-daily-send-limit"
+            descriptionPlacement="tooltip"
             description="Defina um limite específico para este lead ou deixe vazio para usar o limite padrão."
           >
             <Input

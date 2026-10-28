@@ -761,7 +761,7 @@ export default function ContractsManager({
                   <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />
                   <SortableTableHead label="Status" sortDirection={sorting.key === "status" ? sorting.direction : null} onSort={() => sortBy("status")} />
                   <SortableTableHead label="Operadora e plano" sortDirection={sorting.key === "plan" ? sorting.direction : null} onSort={() => sortBy("plan")} />
-                  <SortableTableHead label="Financeiro" align="right" sortDirection={sorting.key === "monthly" ? sorting.direction : null} onSort={() => sortBy("monthly")} />
+                  <SortableTableHead label="Financeiro" sortDirection={sorting.key === "monthly" ? sorting.direction : null} onSort={() => sortBy("monthly")} />
                   <SortableTableHead label="Datas críticas" sortDirection={sorting.key === "renewal" ? sorting.direction : null} onSort={() => sortBy("renewal")} />
                   <SortableTableHead label="Responsável" sortDirection={sorting.key === "owner" ? sorting.direction : null} onSort={() => sortBy("owner")} />
                   <TableHead align="right">Ações</TableHead>

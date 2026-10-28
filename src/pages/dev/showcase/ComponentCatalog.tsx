@@ -498,7 +498,7 @@ function Forms() {
           description="As três alturas canônicas, com e sem ícone e descrição."
           source="Input / SearchInput / Field"
         >
-          <Field label="Nome do contato">
+          <Field label="Nome do contato" description="Use o nome pelo qual a pessoa prefere ser chamada." descriptionPlacement="tooltip">
             <Input placeholder="Ex.: Ana Paula Ribeiro" size="sm" />
           </Field>
           <Field label="E-mail">

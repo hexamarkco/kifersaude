@@ -120,7 +120,7 @@ export function DashboardTrendSection({
           <div className="flex flex-wrap items-center justify-end gap-2">
             <SegmentedControl
               className="max-w-full"
-              aria-label="Métrica da evolução mensal"
+              ariaLabel="Métrica da evolução mensal"
               items={DASHBOARD_METRIC_TABS}
               value={selectedMetric}
               onChange={onSelectedMetricChange}

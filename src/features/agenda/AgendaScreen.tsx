@@ -1498,7 +1498,7 @@ export default function AgendaScreen() {
             <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
               <OperationalMetricChip value={pendingFilteredCount} label="pendentes" tone="accent" />
               <OperationalMetricChip value={overdueFilteredCount} label="atrasados" tone="danger" active={overdueFilteredCount > 0} />
-              <ButtonGroup size="md" aria-label="Ações da agenda">
+              <div role="group" aria-label="Ações da agenda" className="flex flex-wrap items-center gap-2">
                 <IconButton
                   onClick={() => setOrganizerOpen(true)}
                   variant="secondary"
@@ -1513,7 +1513,7 @@ export default function AgendaScreen() {
                   <Plus className="kds-control-icon" />
                   Nova tarefa
                 </Button>
-              </ButtonGroup>
+              </div>
             </div>
           )}
         />

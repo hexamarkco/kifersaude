@@ -1377,7 +1377,7 @@ export default function ContractForm({
 
               <Field
                 label="Operadora *"
-                description="Comissão e bônus serão preenchidos automaticamente"
+                descriptionPlacement="tooltip" description="Comissão e bônus serão preenchidos automaticamente"
               >
                 <div className="space-y-2">
                   <FilterSelect
@@ -1711,7 +1711,7 @@ export default function ContractForm({
 
               <Field
                 label="Comissão Prevista (R$)"
-                description="Calculada automaticamente com base no multiplicador"
+                descriptionPlacement="tooltip" description="Calculada automaticamente com base no multiplicador"
               >
                 <Input
                   type="text"
@@ -1775,7 +1775,7 @@ export default function ContractForm({
                     {formData.taxa_adesao_tipo === "percentual_mensalidade" && (
                       <Field
                         label="Percentual da mensalidade"
-                        description="Use 0%, 100% ou qualquer outro percentual adequado."
+                        descriptionPlacement="tooltip" description="Use 0%, 100% ou qualquer outro percentual adequado."
                       >
                         <div className="flex items-center gap-2">
                           <Input
@@ -1799,7 +1799,7 @@ export default function ContractForm({
                     {formData.taxa_adesao_tipo === "valor_fixo" && (
                       <Field
                         label="Valor fixo"
-                        description="Ex.: R$ 50,00, R$ 100,00 ou R$ 200,00."
+                        descriptionPlacement="tooltip" description="Ex.: R$ 50,00, R$ 100,00 ou R$ 200,00."
                       >
                         <Input
                           type="text"
@@ -2018,7 +2018,7 @@ export default function ContractForm({
             </div>
 
             <div className="mb-4 mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-              <Field label="Quantidade de Vidas *" description="Titular + dependentes">
+              <Field label="Quantidade de Vidas *" descriptionPlacement="tooltip" description="Titular + dependentes">
                 <Input
                   type="number"
                   min="1"
@@ -2194,7 +2194,7 @@ export default function ContractForm({
               formData.previsao_pagamento_bonificacao) && (
               <Field
                 label="Previsão Pagamento Bonificação"
-                description="Informe quando a bonificação deverá ser recebida."
+                descriptionPlacement="tooltip" description="Informe quando a bonificação deverá ser recebida."
                 className="mb-4"
               >
                 <DateTimePicker

@@ -1491,7 +1491,8 @@
 }
 
 .kds-tabs-list-pill .kds-tab {
-  flex: 1 1 0%;
+  flex: 1 0 auto;
+  white-space: nowrap;
   border-color: transparent;
   border-radius: var(--radius-control);
   background: transparent;

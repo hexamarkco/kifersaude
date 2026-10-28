@@ -256,6 +256,13 @@
   background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
 }
 
+@media (min-width: 640px) {
+  .painel-theme.kifer-ds .kds-agenda-calendar .kds-calendar-day { aspect-ratio: 1.25 / 1; }
+}
+@media (min-width: 1536px) {
+  .painel-theme.kifer-ds .kds-agenda-calendar .kds-calendar-day { aspect-ratio: 1.4 / 1; }
+}
+
 .kds-calendar-event-count {
   position: absolute;
   top: -0.35rem;
@@ -1360,30 +1367,43 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-record-form > .kds-page-action-bar { background: var(--bg-surface); padding: var(--space-4); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); }
 @media(max-width: 767px) { .kds-record-form .kds-page-action-bar-sticky { bottom: calc(4.5rem + env(safe-area-inset-bottom)); } }
 
-.kds-agenda-search-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: var(--space-2); }
+.kds-agenda-search-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: var(--space-2); }
+.kds-agenda-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.painel-theme.kifer-ds .kds-agenda-reminder-icon { border-radius: var(--radius-control); }
+.kds-agenda-secondary-filters.is-open { border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); background: var(--bg-surface); padding: var(--space-3); }
 .kds-rich-text-preview .ql-container.ql-snow { border: 0; font: inherit; }
 .kds-rich-text-preview .ql-editor { padding: 0; min-height: 0; overflow-wrap: anywhere; }
 .kds-dashboard-trend-main, .kds-monthly-trend-chart { display: flex; flex-direction: column; min-width: 0; }
 .kds-monthly-trend-chart { flex: 1; }
 .kds-monthly-trend-plot { position: relative; flex: 1; min-width: 0; }
 .kds-monthly-trend-plot > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.painel-theme.kifer-ds .kds-agenda-filter-toggle { display: none; }
-.kds-agenda-secondary-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-3); }
+.painel-theme.kifer-ds .kds-agenda-filter-toggle { display: inline-flex; }
+.kds-agenda-secondary-filters { display: none; grid-template-columns: repeat(3,minmax(0,1fr)); align-items: start; gap: var(--space-3); }
+.kds-agenda-secondary-filters.is-open { display: grid; }
+.kds-agenda-clear-filters { grid-column: 1 / -1; justify-self: end; }
+@media(max-width: 1023px) { .kds-agenda-secondary-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-primary-kpis { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 @media(max-width: 767px) {
- .painel-theme.kifer-ds .kds-agenda-filter-toggle { display: inline-flex; }
- .painel-theme.kifer-ds .kds-agenda-secondary-filters:not(.is-open) { display: none; }
  .kds-agenda-secondary-filters { grid-template-columns: minmax(0,1fr); }
  .kds-ai-workspace > aside { height: clamp(11rem,30dvh,20rem); }
 }
+.painel-theme.kifer-ds .kds-agenda-organize-label-compact { display: none; }
 
 /* Numeric calendar cells do not inherit the horizontal padding of text buttons. */
 .painel-theme.kifer-ds :is(.kds-calendar-day,.calendar-day) { padding: 0; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 @media(max-width: 639px) {
- .painel-theme.kifer-ds .kds-agenda-filter-actions { display: flex; flex-wrap: wrap; }
- .painel-theme.kifer-ds .kds-agenda-filter-actions .kds-button:not(.kds-agenda-clear-filters) { flex: 1 0 auto; padding-inline: var(--space-2); white-space: nowrap; }
+ .kds-agenda-search-row { grid-template-columns: minmax(0,1fr); }
+ .kds-agenda-toolbar-actions { justify-content: flex-end; }
+ .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { padding-inline: var(--space-2); }
 }
-
+@media(max-width: 379px) {
+ .painel-theme.kifer-ds .kds-agenda-header-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); width: 100%; gap: var(--space-2); }
+ .painel-theme.kifer-ds .kds-agenda-header-actions > .kds-button { min-width: 0; justify-content: center; padding-inline: var(--space-2); white-space: nowrap; font-size: 0.8125rem; }
+ .painel-theme.kifer-ds .kds-agenda-organize-label-full { display: none; }
+ .painel-theme.kifer-ds .kds-agenda-organize-label-compact { display: inline; }
+ .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-list { gap: 0; }
+ .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { font-size: 0.75rem; }
+}
 @media(max-width: 639px) {
  .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) { grid-template-columns: repeat(2,minmax(0,1fr)); }
  .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) .kds-card-icon { display: none; }
@@ -1395,8 +1415,17 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
  .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card-kpi { padding: var(--space-2); row-gap: var(--space-1); }
  .painel-theme.kifer-ds .kds-dashboard-more-metrics { margin-top: var(--space-2); }
  .painel-theme.kifer-ds .kds-dashboard-filter-label { display: none; }
+ .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-list { overflow-x: hidden; }
+ .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { flex: 1 1 0; gap: var(--space-1); padding-inline: var(--space-1); font-size: 0.75rem; }
+ .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-badge { display: none; }
+ .painel-theme.kifer-ds .kds-agenda-create-action { padding-inline: var(--space-2); }
+ .painel-theme.kifer-ds .kds-agenda-calendar-header { display: grid; grid-template-columns: 2.5rem minmax(0,1fr) 2.5rem; grid-template-areas: "previous heading next" "today today today"; gap: var(--space-2) var(--space-1); }
+ .painel-theme.kifer-ds .kds-agenda-previous-month { grid-area: previous; }
+ .painel-theme.kifer-ds .kds-agenda-calendar-heading { grid-area: heading; }
+ .painel-theme.kifer-ds .kds-agenda-calendar-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .painel-theme.kifer-ds .kds-agenda-today { grid-area: today; justify-self: center; }
+ .painel-theme.kifer-ds .kds-agenda-next-month { grid-area: next; }
 }
-
 /* Reference-aligned record actions and contact cards. */
 .kds-record-actions { flex: none; }
 .kds-record-actions > .kds-popover-trigger { display: inline-flex; }

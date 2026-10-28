@@ -108,9 +108,14 @@
         "references/desktop/page--agenda.png",
         "references/mobile/page--agenda.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "Calendário mensal, navegação por data, indicadores e painel do dia comparados com a referência. Mantém as ações e os lembretes reais do CRM."
+      ]
     },
     {
       "id": "page--inbox",
@@ -924,9 +929,14 @@
         "references/desktop/extra--agenda-tarefas.png",
         "references/mobile/extra--agenda-tarefas.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "Lista Pendentes usa os lembretes existentes e ações reais; não há responsável ou entidade de tarefa independente no fluxo atual, portanto esses campos da referência não foram inventados."
+      ]
     },
     {
       "id": "extra--agenda-concluidos",
@@ -939,9 +949,14 @@
         "references/desktop/extra--agenda-concluidos.png",
         "references/mobile/extra--agenda-concluidos.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "A aba consulta itens efetivamente marcados como lidos. A fixture sintética não contém itens concluídos; estado vazio documentado sem preencher com registros fictícios."
+      ]
     },
     {
       "id": "extra--automacoes-fluxo-detalhes",
@@ -1424,9 +1439,14 @@
         "references/desktop/state--agenda-criar.png",
         "references/mobile/state--agenda-criar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "Formulário real solicita título e descrição; data/horário seguem o padrão já existente. Validação foi capturada sem persistir um novo registro."
+      ]
     },
     {
       "id": "state--agenda-organizar",
@@ -1439,9 +1459,14 @@
         "references/desktop/state--agenda-organizar.png",
         "references/mobile/state--agenda-organizar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "Drawer de configuração da fila foi comparado com a referência. A prévia e a aplicação chamam o serviço e não foram acionadas durante a captura."
+      ]
     },
     {
       "id": "state--agenda-reagendar",
@@ -1454,9 +1479,14 @@
         "references/desktop/state--agenda-reagendar.png",
         "references/mobile/state--agenda-reagendar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "O reagendamento real seleciona uma data no calendário, sem modal de intervalo. A seleção visual foi cancelada e não foi persistida."
+      ]
     },
     {
       "id": "state--agenda-tipos",
@@ -1469,9 +1499,14 @@
         "references/desktop/state--agenda-tipos.png",
         "references/mobile/state--agenda-tipos.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/agenda/README.md",
+        "validacao/revisao-visual/agenda/coverage.json"
+      ],
+      "notes": [
+        "Filtro real é seleção única da taxonomia dos lembretes carregados; rótulos como follow_up são apresentados como Follow-up sem mudar o valor persistido."
+      ]
     },
     {
       "id": "state--inbox-agenda",
@@ -2496,8 +2531,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 11,
-    "remaining_manifest_contexts": 149,
+    "reviewed_contexts": 20,
+    "remaining_manifest_contexts": 140,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

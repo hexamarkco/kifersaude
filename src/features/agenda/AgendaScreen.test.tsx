@@ -104,3 +104,17 @@ test('reabrir um encerrado histórico limpa a conclusão sem abrir o modal de pr
     assert.equal(mocks.create.mock.calls.length, 0);
   } finally { view.unmount(); }
 });
+
+test('não renderiza um badge de prioridade vazio em lembretes sem prioridade cadastrada', async () => {
+  resetMocks();
+  mocks.reminders = [{ ...pendingReminder(), prioridade: '', tipo: 'follow_up' }];
+  const view = render(<AgendaScreen />);
+  try {
+    await act(async () => {});
+    const emptyBadges = Array.from(document.querySelectorAll('.kds-badge-sm'))
+      .filter((badge) => !badge.textContent?.trim());
+    assert.deepEqual(emptyBadges, []);
+    assert.ok(document.body.textContent?.includes('Follow-up'));
+    assert.ok(!document.body.textContent?.includes('follow_up'));
+  } finally { view.unmount(); }
+});

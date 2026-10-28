@@ -1,0 +1,593 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Agenda e tarefas",
+  "route": "/painel/agenda",
+  "contexts": [
+    "page--agenda",
+    "extra--agenda-tarefas",
+    "extra--agenda-concluidos",
+    "state--agenda-criar",
+    "state--agenda-organizar",
+    "state--agenda-reagendar",
+    "state--agenda-tipos"
+  ],
+  "status": "revisado_com_adaptacoes",
+  "references": [
+    "references/desktop/page--agenda.png",
+    "references/mobile/page--agenda.png",
+    "references/desktop/extra--agenda-tarefas.png",
+    "references/mobile/extra--agenda-tarefas.png",
+    "references/desktop/extra--agenda-concluidos.png",
+    "references/mobile/extra--agenda-concluidos.png",
+    "references/desktop/state--agenda-criar.png",
+    "references/mobile/state--agenda-criar.png",
+    "references/desktop/state--agenda-organizar.png",
+    "references/mobile/state--agenda-organizar.png",
+    "references/desktop/state--agenda-reagendar.png",
+    "references/mobile/state--agenda-reagendar.png",
+    "references/desktop/state--agenda-tipos.png",
+    "references/mobile/state--agenda-tipos.png"
+  ],
+  "viewport_sizes": [
+    "1920x1080",
+    "768x1024",
+    "390x844",
+    "320x640"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "checks": {
+    "no_horizontal_overflow": true,
+    "themes_verified_at_all_viewports": true,
+    "calendar_and_pending_views": "Calendário, tarefas pendentes e concluídas foram verificadas. Busca, filtros, alternância de status, navegação de mês e ações existentes foram conferidas sem criar registros persistentes.",
+    "create_task": "Formulário real validado visualmente; o CRM solicita título e descrição e define o horário padrão internamente. Nenhum campo da referência foi inventado.",
+    "organizer": "Configuração real da fila foi aberta e capturada. Geração de prévia e aplicação não foram executadas porque chamam o serviço de organização.",
+    "reschedule": "O CRM oferece seleção de data diretamente no calendário; a data foi selecionada apenas como estado visual e a alteração foi cancelada antes de qualquer confirmação.",
+    "completed_state": "A aba Concluídos usa o estado persistido lido. A fixture não contém itens concluídos e a tela vazia foi registrada sem fabricar dados.",
+    "type_filter": "O CRM filtra pela taxonomia dos lembretes carregados em seleção única; não existe o seletor de canal de origem múltiplo mostrado pela referência.",
+    "interactions": "Busca, expansão/recolhimento de filtros, seletor de tipo, criação e validação obrigatória foram observados. Ações que escrevem ou chamam serviços externos foram canceladas ou não executadas.",
+    "safety": "Fixture Playwright sintética; nenhuma escrita, integração externa, envio ou ação mutável foi executada.",
+    "browser_console": "O transporte Realtime local expirou durante o carregamento da fixture e uma dependência registrou o aviso preexistente de ciclo de vida. A agenda carregou e as interações de leitura funcionaram.",
+    "measured_document_widths": {
+      "1920x1080": 1910,
+      "768x1024": 758,
+      "390x844": 380,
+      "320x640": 310
+    },
+    "mobile_navigation": "Navegação fixa permanece visível e alcançável. Em 320px, cabeçalho, busca, filtros e navegação mensal foram compactados; o conteúdo restante rola verticalmente."
+  },
+  "screenshots": [
+    {
+      "path": "validacao/revisao-visual/agenda/desktop/calendar-dark-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/desktop/calendar-dark-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/desktop/calendar-light-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/desktop/calendar-light-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile-320/calendar-dark-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1651,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile-320/calendar-dark-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile-320/calendar-light-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1651,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile-320/calendar-light-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile/calendar-dark-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1576,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile/calendar-dark-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile/calendar-light-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1576,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/mobile/calendar-light-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-dark-320-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 933,
+      "theme": "dark",
+      "state": "completed-empty",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-dark-320-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "dark",
+      "state": "completed-empty",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-dark-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1179,
+      "theme": "dark",
+      "state": "completed-empty",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-dark-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "state": "completed-empty",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-light-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1179,
+      "theme": "light",
+      "state": "completed-empty",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-light-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "completed-empty",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-light-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "completed-empty",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/completed-empty-light-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "completed-empty",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-dark-320-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1747,
+      "theme": "dark",
+      "state": "create-task-form",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-dark-320-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "dark",
+      "state": "create-task-form",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-light-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1600,
+      "theme": "light",
+      "state": "create-task-form",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-light-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "create-task-form",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-light-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "create-task-form",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-light-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "create-task-form",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/create-task-required-320.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "light",
+      "state": "create-task-required-validation",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/filters-open-dark-320-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1747,
+      "theme": "dark",
+      "state": "expanded-filters",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/filters-open-dark-320-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "dark",
+      "state": "expanded-filters",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/organize-light-390-bottom.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "organizer-configuration",
+      "capture": "scroll-position",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/organize-light-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1600,
+      "theme": "light",
+      "state": "organizer-configuration",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/organize-light-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "organizer-configuration",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/organize-light-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "organizer-configuration",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/organize-light-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "organizer-configuration",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-dark-320-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1553,
+      "theme": "dark",
+      "state": "pending-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-dark-320-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "dark",
+      "state": "pending-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-dark-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1600,
+      "theme": "dark",
+      "state": "pending-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-dark-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "state": "pending-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-dark-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "pending-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-dark-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "pending-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-light-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1600,
+      "theme": "light",
+      "state": "pending-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-light-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "pending-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-light-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "pending-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/pending-light-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "pending-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/reschedule-select-date-light-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1915,
+      "theme": "light",
+      "state": "reschedule-inline-date-selection",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/reschedule-select-date-light-390-instruction.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "reschedule-inline-date-selection-instruction",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/reschedule-select-date-light-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "reschedule-inline-date-selection",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/type-filter-open-light-390-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1770,
+      "theme": "light",
+      "state": "type-filter-options",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/states/type-filter-open-light-390-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "type-filter-options",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/tablet/calendar-dark-full.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1361,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 758
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/tablet/calendar-dark-viewport.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 758
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/tablet/calendar-light-full.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1361,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "fullPage",
+      "document_scroll_width": 758
+    },
+    {
+      "path": "validacao/revisao-visual/agenda/tablet/calendar-light-viewport.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "state": "calendar-with-synthetic-reminders",
+      "capture": "viewport",
+      "document_scroll_width": 758
+    }
+  ]
+}

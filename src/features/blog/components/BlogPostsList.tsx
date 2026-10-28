@@ -103,11 +103,6 @@ export default function BlogPostsList({
       </div>
 
       <Surface className="space-y-6">
-        {loadError && (
-          <Alert tone="danger" role="alert" title="Não foi possível carregar os artigos" action={<Button type="button" variant="secondary" onClick={onRetry} disabled={loading}>Tentar novamente</Button>}>
-            {hasPostsSnapshot ? "Os artigos exibidos podem estar desatualizados." : "Tente novamente para consultar os artigos."}
-          </Alert>
-        )}
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="min-w-0 flex-1">
           <Input
@@ -129,6 +124,11 @@ export default function BlogPostsList({
           <Heading level={2} size="lg">Biblioteca de artigos</Heading>
           <Text size="sm" tone="muted">Consulte e gerencie as publicações do site.</Text>
         </div>
+        {loadError && (
+          <Alert tone="danger" role="alert" title="Não foi possível carregar os artigos" action={<Button type="button" variant="secondary" onClick={onRetry} disabled={loading}>Tentar novamente</Button>}>
+            {hasPostsSnapshot ? "Os artigos exibidos podem estar desatualizados." : "Tente novamente para consultar os artigos."}
+          </Alert>
+        )}
         <PanelAdaptiveLoadingFrame
           loading={loading}
           phase={loadingPhase}

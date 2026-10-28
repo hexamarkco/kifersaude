@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { Skeleton } from './LoadingState';
+import { ResponsiveCollection } from './Application';
+import Table, { TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table';
+import { Surface } from './Surface';
 
 type PanelCardProps = {
   children: ReactNode;
@@ -461,29 +464,16 @@ export function WhatsAppPageSkeleton() {
 
 export function BlogTabSkeletonList() {
   return (
-    <div className="space-y-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <article key={`blog-admin-row-${index}`} className="kds-card kds-card-default p-4">
-          <div className="flex items-start gap-4">
-            <Skeleton className="h-20 w-32 rounded-lg" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Skeleton variant="line" className="h-5 w-20" />
-                <Skeleton variant="line" className="h-5 w-20" />
-                <Skeleton variant="line" className="h-5 w-16" />
-              </div>
-              <Skeleton className="h-5 w-4/5" />
-              <Skeleton variant="line" className="h-4 w-full" />
-              <Skeleton variant="line" className="h-4 w-2/3" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-9 w-9 rounded-md" />
-              <Skeleton className="h-9 w-9 rounded-md" />
-              <Skeleton className="h-9 w-9 rounded-md" />
-            </div>
-          </div>
-        </article>
-      ))}
+    <div role="status" aria-label="Carregando artigos">
+      <ResponsiveCollection table={<Table aria-label="Artigos em carregamento" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
+        <TableHeader><TableRow>{Array.from({ length: 6 }, (_, index) => <TableHead key={index}><Skeleton variant="line" className="h-3 w-16" /></TableHead>)}</TableRow></TableHeader>
+        <TableBody>{Array.from({ length: 4 }, (_, row) => <TableRow key={row}>
+          {Array.from({ length: 6 }, (_, column) => <TableCell key={column}><Skeleton variant="line" className={column === 0 ? 'h-4 w-4/5' : 'h-4 w-16'} /></TableCell>)}
+        </TableRow>)}</TableBody>
+      </Table>} cards={<div className="grid gap-3">{Array.from({ length: 4 }, (_, index) => <Surface key={index} padding="sm" className="space-y-3">
+        <Skeleton variant="line" className="h-4 w-3/4" /><Skeleton variant="line" className="h-4 w-full" />
+        <Skeleton variant="line" className="h-4 w-1/2" /><Skeleton variant="line" className="h-4 w-2/3" />
+      </Surface>)}</div>} />
     </div>
   );
 }

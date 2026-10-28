@@ -12,7 +12,9 @@ A coleção foi posteriormente adaptada para cartões nas áreas estreitas, usan
 
 Com 12 artigos fictícios, a paginação local mostrou os dois últimos na segunda página e voltou à primeira após limpar uma busca sem resultado. Evidências: [desktop](paginacao-1920.png), [tablet](paginacao-768.png), [390 px](paginacao-390.png), [320 px](paginacao-320.png) e [busca sem resultado](busca-vazia-320.png). Não houve overflow do documento nessas larguras.
 
-Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais, estados de carregamento, vazio sem artigos e erro em navegador, teclado e foco, criação, edição, prévia, exclusão e permissões. A listagem permanece pendente no manifesto.
+Em montagem isolada da tela real com `AuthProvider`, as chamadas externas foram interceptadas: a leitura de artigos recebeu respostas fictícias e demais chamadas externas foram bloqueadas. Foram observados [carregamento desktop](carregamento-1920.png), [carregamento em 320 px](carregamento-320.png), [biblioteca vazia desktop](vazio-1920.png), [vazia em 320 px](vazio-320.png) e [falha de leitura](erro-1920.png), seguida de nova tentativa bem-sucedida. O esqueleto acompanha a tabela ou os cartões e a falha fica na biblioteca. A prévia abriu com conteúdo fictício em [1920 px](previa-1920.png), [768 px](previa-768.png), [390 px](previa-390.png), [320 px](previa-320.png) e [tema escuro em 320 px](previa-dark-320.png). Escape devolveu o foco ao menu no mobile. A simulação registrou três leituras interceptadas e nenhuma tentativa de escrita; não equivale à rota autenticada real.
+
+Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais, estados de carregamento, vazio e erro em outras combinações de tamanho e tema, teclado completo, criação, edição, exclusão e permissões. A listagem e a prévia permanecem pendentes no manifesto.
 
 ## Editor — revisão parcial
 

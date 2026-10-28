@@ -65,3 +65,7 @@ Medições, verificações e lista de caminhos também estão em [`coverage.json
 
 - Comparar edição, confirmação de exclusão, importação individual e os estados adicionais descritos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).
 - Não marcar o módulo nem o redesign global como concluídos enquanto esses itens estiverem pendentes.
+
+## Alinhamento com Leads — em andamento
+
+A tabela de contratos passou a alinhar as linhas ao centro e usar o mesmo estado vazio da listagem de Leads. O menu de status agora mostra indicadores de cor por opção como em Leads, mantendo a seleção de responsável pela venda e permissões próprias de contratos. A prévia isolada com dados fictícios verificou seleção e Escape, sem chamadas externas, e não apresentou overflow em [desktop](status-leads/desktop.png), [tablet](status-leads/tablet.png), [mobile](status-leads/mobile.png) e [320 px](status-leads/mobile-320.png); [tema escuro em 320 px](status-leads/mobile-320-dark.png). A comparação visual integrada entre as duas tabelas, outros menus e os demais detalhes solicitados continua pendente; esta prévia não valida a listagem completa.

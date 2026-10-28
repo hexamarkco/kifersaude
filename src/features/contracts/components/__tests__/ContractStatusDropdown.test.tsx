@@ -21,6 +21,7 @@ test('seletor de status usa o badge operacional e mantém a seleção interativa
         { value: 'Ativo', label: 'Ativo' },
         { value: 'Cancelado', label: 'Cancelado' },
       ]}
+      getOptionTone={(value) => value === 'Ativo' ? 'success' : 'danger'}
       onChange={onChange}
     />,
   );
@@ -35,6 +36,7 @@ test('seletor de status usa o badge operacional e mantém a seleção interativa
   assert.ok(document.body.querySelector('[role="dialog"][aria-label="Status do contrato CON-001"]'));
   const cancelledOption = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="option"]')).find((option) => option.textContent?.trim() === 'Cancelado');
   assert.ok(cancelledOption);
+  assert.ok(cancelledOption.querySelector('.kds-op-status-dot-only'));
   act(() => cancelledOption.click());
   assert.equal(changedStatuses[0], 'Cancelado');
 });

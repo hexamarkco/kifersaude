@@ -6,6 +6,7 @@ import {
   FieldLabel,
   getPanelToneStyle,
   OperationalStatusBadge,
+  OperationalStatusDot,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -25,10 +26,11 @@ type Props = {
   options: Array<{ value: string; label: string }>;
   operators?: ProductionOperator[];
   operatorError?: string | null;
+  getOptionTone?: (status: string) => PanelTone;
   onChange: (status: string, saleOperator?: string) => Promise<void>;
 };
 
-export default function ContractStatusDropdown({ status, code, tone, canEdit, saving, options, operators = [], operatorError, onChange }: Props) {
+export default function ContractStatusDropdown({ status, code, tone, canEdit, saving, options, operators = [], operatorError, getOptionTone, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [saleOperator, setSaleOperator] = useState('');
   const label = normalizeSentenceCase(status) ?? status;
@@ -71,7 +73,7 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
               void onChange(option.value, saleOperator || undefined);
             }}
           >
-            {option.label}
+            <OperationalStatusDot statusColor={getPanelToneStyle(getOptionTone?.(option.value) ?? 'neutral').color ?? null} className="mr-2" />{option.label}
           </DropdownOption>
         ))}
       </PopoverContent>

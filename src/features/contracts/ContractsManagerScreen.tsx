@@ -35,6 +35,7 @@ import {
   Badge,
   Button,
   Alert,
+  EmptyState,
   Input,
   OperationalMetricChip,
   PageHeader,
@@ -897,11 +898,7 @@ export default function ContractsManager({
                 {filteredContracts.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7}>
-                      <Surface variant="muted" className="py-12 text-center">
-                        <FileText className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
-                        <Heading level={3} className="mb-2 text-lg font-medium text-[var(--text-primary)]">Nenhum contrato encontrado</Heading>
-                        <Text className="text-[var(--text-secondary)]">Tente ajustar os filtros ou adicione um novo contrato.</Text>
-                      </Surface>
+                      <EmptyState icon={<FileText className="h-8 w-8" />} title="Nenhum contrato encontrado" description="Tente ajustar os filtros ou adicione um novo contrato." />
                     </TableCell>
                   </TableRow>
                 )}
@@ -909,7 +906,7 @@ export default function ContractsManager({
                   const bonusValue = getBonusValue(contract);
 
                   return (
-                    <TableRow key={contract.id} className="align-top">
+                    <TableRow key={contract.id} className="align-middle">
                     <TableCell className="overflow-hidden">
                       <ActionSurface variant="plain" padding="none"
                         type="button"
@@ -921,11 +918,12 @@ export default function ContractsManager({
                         <span className="mt-1 block max-w-full truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
                       </ActionSurface>
                     </TableCell>
-                    <TableCell className="align-top">
+                    <TableCell>
                       <ContractStatusDropdown
                         status={contract.status}
                         code={contract.codigo_contrato}
                         tone={getStatusTone(contract.status)}
+                        getOptionTone={getStatusTone}
                         canEdit={canEditContracts}
                         saving={savingIds.has(contract.id)}
                         options={statusOptions}
@@ -934,7 +932,7 @@ export default function ContractsManager({
                         onChange={(status, saleOperator) => canEditContracts ? changeStatus(contract, status, saleOperator) : Promise.resolve()}
                       />
                     </TableCell>
-                    <TableCell className="align-top">
+                    <TableCell>
                       <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
                       <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}</span>
                       <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
@@ -947,7 +945,7 @@ export default function ContractsManager({
                       <div className="flex flex-wrap gap-1">{renderDateBadges(contract, true)}</div>
                     </TableCell>
                     <TableCell>{formatContractEntityName(contract.responsavel) || "Não atribuído"}</TableCell>
-                      <TableCell align="right" className="align-top">
+                      <TableCell align="right">
                         <RecordActions actions={getContractActions(contract)} visibleCount={1} label={`Ações do contrato ${contract.codigo_contrato}`} />
                       </TableCell>
                     </TableRow>
@@ -976,6 +974,7 @@ export default function ContractsManager({
                       status={contract.status}
                       code={contract.codigo_contrato}
                       tone={getStatusTone(contract.status)}
+                      getOptionTone={getStatusTone}
                       canEdit={canEditContracts}
                       saving={savingIds.has(contract.id)}
                       options={statusOptions}

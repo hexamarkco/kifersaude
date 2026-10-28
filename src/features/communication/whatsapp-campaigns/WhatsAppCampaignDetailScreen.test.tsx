@@ -146,6 +146,10 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
     </MemoryRouter>,
   );
   await waitForText('Campanha de teste');
+  assert.ok(document.body.textContent?.includes('Status do disparo'));
+  assert.ok(document.body.textContent?.includes('Público selecionado'));
+  assert.ok(document.body.textContent?.includes('Destinatários'));
+  assert.ok(Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).some((button) => button.textContent?.includes('Processar lote')));
 
   serviceMocks.listCampaignTargets.mockClear();
   serviceMocks.getCampaignTargetStatusCounts.mockClear();

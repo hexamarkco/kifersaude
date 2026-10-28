@@ -1,7 +1,7 @@
 import { ButtonGroup } from '../../../design-system';
 import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, BarChart3, Filter, PauseCircle, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, Ban, Filter, PauseCircle, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -12,7 +12,10 @@ import {
   EmptyState,
   IconButton,
   Input,
+  KpiCard,
   PageHeader,
+  PageActions,
+  SectionHeader,
   Table,
   TableBody,
   TableCell,
@@ -45,6 +48,23 @@ const campaignStatusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   paused: 'Pausado',
   completed: 'Concluído',
   cancelled: 'Cancelado',
+};
+
+const campaignStatusTones: Record<CommWhatsAppCampaign['status'], 'neutral' | 'accent' | 'success' | 'warning' | 'danger'> = {
+  draft: 'neutral',
+  scheduled: 'accent',
+  queued: 'warning',
+  running: 'success',
+  paused: 'warning',
+  completed: 'success',
+  cancelled: 'danger',
+};
+
+const audienceSourceLabels: Record<CommWhatsAppCampaign['audience_source'], string> = {
+  crm: 'Base do CRM',
+  csv: 'Planilha CSV',
+  manual: 'Lista manual',
+  mixed: 'CRM e lista manual',
 };
 
 const targetStatusLabels: Record<CommWhatsAppCampaignTargetStatus, string> = {
@@ -558,6 +578,23 @@ export default function WhatsAppCampaignDetailScreen() {
     }
   };
 
+  const campaignActions = campaign ? {
+    secondary: [
+      ...(['queued', 'running', 'scheduled'].includes(campaign.status)
+        ? [{ label: 'Pausar', icon: PauseCircle, onClick: () => void runAction('pause'), loading: actionLoading === 'pause' }]
+        : []),
+      ...(['queued', 'running', 'scheduled', 'paused'].includes(campaign.status)
+        ? [{ label: 'Processar lote', icon: Send, onClick: () => void runAction('process'), loading: actionLoading === 'process' }]
+        : []),
+    ],
+    primary: campaign.status === 'paused'
+      ? { label: 'Retomar', icon: PlayCircle, onClick: () => void runAction('resume'), loading: actionLoading === 'resume' }
+      : undefined,
+    destructive: ['draft', 'scheduled', 'queued', 'running', 'paused'].includes(campaign.status)
+      ? { label: 'Cancelar', icon: Ban, onClick: () => void runAction('cancel'), loading: actionLoading === 'cancel' }
+      : undefined,
+  } : null;
+
   if (!campaignId) {
     return <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell text-sm text-[var(--text-secondary)]">Disparo não informado.</div>;
   }
@@ -631,57 +668,61 @@ export default function WhatsAppCampaignDetailScreen() {
         <Card className="h-48 animate-pulse" />
       ) : campaign ? (
         <>
-          <Card className="comm-campaign-toolbar space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0 flex-1 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="accent">{campaignStatusLabels[campaign.status]}</Badge>
-                  <Badge tone="neutral">{campaign.audience_source.toUpperCase()}</Badge>
-                  <Badge tone="neutral">{formatContactInterval(computeContactIntervalMinutes(campaign.contact_interval_minutes, campaign.daily_send_limit, campaign.send_window_start, campaign.send_window_end, campaign.total_targets))}</Badge>
-                </div>
-                <div className="grid gap-3 text-sm text-[color:var(--panel-text-soft)] sm:grid-cols-2 lg:grid-cols-4">
-                  <Info label="Agendado" value={formatDateTime(campaign.scheduled_at)} />
-                  <Info label="Janela" value={formatWindow(campaign)} />
-                  <Info label="Criado" value={formatDateTime(campaign.created_at)} />
-                  <Info label="Atualizado" value={formatDateTime(campaign.updated_at)} />
-                </div>
-              </div>
-              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                {['queued', 'running', 'scheduled'].includes(campaign.status) && (
-                  <Button variant="secondary" className="w-full sm:w-auto" loading={actionLoading === 'pause'} onClick={() => void runAction('pause')}>
-                    {actionLoading !== 'pause' && <PauseCircle className="kds-control-icon" />}
-                    Pausar
-                  </Button>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard padding="sm" title="Destinatários" value={campaign.total_targets || targetsTotal} />
+            <KpiCard padding="sm" title="Pendentes" value={targetCounts.pending + targetCounts.scheduled + targetCounts.sending} />
+            <KpiCard padding="sm" title="Enviadas" value={targetCounts.sent} />
+            <KpiCard padding="sm" title="Responderam" value={respondedCount} />
+          </div>
+
+          <Card className="comm-campaign-toolbar">
+            <div className="grid gap-6 xl:grid-cols-2">
+              <section className="min-w-0 space-y-3">
+                <SectionHeader
+                  title="Status do disparo"
+                  description="Etapa atual e andamento das mensagens."
+                  action={<Badge tone={campaignStatusTones[campaign.status]}>{campaignStatusLabels[campaign.status]}</Badge>}
+                />
+                <dl className="divide-y divide-[color:var(--panel-border-subtle)]">
+                  <CampaignFact label="Programação" value={campaign.scheduled_at ? formatDateTime(campaign.scheduled_at) : 'Sem agendamento definido'} />
+                  <CampaignFact
+                    label="Enviados"
+                    value={`${targetCounts.sent.toLocaleString('pt-BR')} contato(s)`}
+                    detail={`${(targetCounts.pending + targetCounts.scheduled + targetCounts.sending).toLocaleString('pt-BR')} ainda na fila`}
+                  />
+                  <CampaignFact
+                    label="Respostas"
+                    value={`${respondedCount.toLocaleString('pt-BR')} contato(s)`}
+                    detail={`${conversionRate}% dos contatos com tentativa`}
+                  />
+                </dl>
+                {campaignActions && (
+                  <PageActions
+                    secondary={campaignActions.secondary}
+                    primary={campaignActions.primary}
+                    destructive={campaignActions.destructive}
+                    busy={Boolean(actionLoading)}
+                  />
                 )}
-                {campaign.status === 'paused' && (
-                  <Button variant="primary" className="w-full sm:w-auto" loading={actionLoading === 'resume'} onClick={() => void runAction('resume')}>
-                    {actionLoading !== 'resume' && <PlayCircle className="kds-control-icon" />}
-                    Retomar
-                  </Button>
-                )}
-                {['queued', 'running', 'scheduled', 'paused'].includes(campaign.status) && (
-                  <Button variant="secondary" className="w-full sm:w-auto" loading={actionLoading === 'process'} onClick={() => void runAction('process')}>
-                    {actionLoading !== 'process' && <Send className="kds-control-icon" />}
-                    Processar lote
-                  </Button>
-                )}
-                {['draft', 'scheduled', 'queued', 'running', 'paused'].includes(campaign.status) && (
-                  <Button variant="danger" className="w-full sm:w-auto" loading={actionLoading === 'cancel'} onClick={() => void runAction('cancel')}>
-                    {actionLoading !== 'cancel' && <Ban className="kds-control-icon" />}
-                    Cancelar
-                  </Button>
-                )}
-              </div>
+              </section>
+
+              <section className="min-w-0 space-y-3">
+                <SectionHeader
+                  title="Público selecionado"
+                  description="Origem e condições de envio desta campanha."
+                  action={<Badge tone="neutral">{audienceSourceLabels[campaign.audience_source]}</Badge>}
+                />
+                <dl className="divide-y divide-[color:var(--panel-border-subtle)]">
+                  <CampaignFact label="Contatos selecionados" value={`${(campaign.total_targets || targetsTotal).toLocaleString('pt-BR')} contato(s)`} />
+                  <CampaignFact label="Janela de envio" value={formatWindow(campaign)} />
+                  <CampaignFact
+                    label="Intervalo por contato"
+                    value={formatContactInterval(computeContactIntervalMinutes(campaign.contact_interval_minutes, campaign.daily_send_limit, campaign.send_window_start, campaign.send_window_end, campaign.total_targets))}
+                  />
+                </dl>
+              </section>
             </div>
           </Card>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <Metric label="Total" value={campaign.total_targets || targetsTotal} />
-            <Metric label="Pendentes" value={targetCounts.pending + targetCounts.scheduled + targetCounts.sending} />
-            <Metric label="Enviados" value={targetCounts.sent} />
-            <Metric label="Responderam" value={respondedCount} />
-            <Metric label="Precisam de atenção" value={targetCounts.failed + targetCounts.invalid} />
-          </div>
 
           {pendingWhatsAppValidation > 0 && (
             <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">
@@ -693,13 +734,15 @@ export default function WhatsAppCampaignDetailScreen() {
           )}
 
           <Card className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Relatório</Heading>
-                <Text className="text-sm text-[color:var(--panel-text-soft)]">Veja os resultados e o que precisa ser conferido antes de continuar os envios.</Text>
-              </div>
-              <BarChart3 className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
-            </div>
+            <SectionHeader
+              title="Relatório"
+              description="Veja os resultados e o que precisa ser conferido antes de continuar os envios."
+              action={(
+                <Badge tone={targetCounts.failed + targetCounts.invalid > 0 ? 'danger' : 'neutral'}>
+                  {(targetCounts.failed + targetCounts.invalid).toLocaleString('pt-BR')} com atenção
+                </Badge>
+              )}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric label="Taxa de resposta" value={`${conversionRate}%`} />
               <Metric label="Taxa de falha" value={`${failureRate}%`} />
@@ -842,6 +885,18 @@ export default function WhatsAppCampaignDetailScreen() {
       ) : (
         <Card className="p-6 text-sm text-[color:var(--panel-text-soft)]">Disparo não encontrado.</Card>
       )}
+    </div>
+  );
+}
+
+function CampaignFact({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+      <dt className="text-xs font-medium text-[color:var(--panel-text-muted)]">{label}</dt>
+      <dd className="min-w-0 sm:text-right">
+        <Text className="text-sm font-medium text-[color:var(--panel-text)]">{value}</Text>
+        {detail && <Text className="text-xs text-[color:var(--panel-text-muted)]">{detail}</Text>}
+      </dd>
     </div>
   );
 }

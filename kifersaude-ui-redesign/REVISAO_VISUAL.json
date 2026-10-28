@@ -319,7 +319,9 @@
       ],
       "status": "pendente",
       "evidence": [],
-      "notes": []
+      "notes": [
+        "A lista desktop foi atualizada com indicadores baseados nos dados existentes, filtros, tabela paginada e ação explícita para editar. O componente foi conferido em preview isolado com dados sintéticos; a rota autenticada ainda precisa de revisão visual integrada."
+      ]
     },
     {
       "id": "page--config-integrations",

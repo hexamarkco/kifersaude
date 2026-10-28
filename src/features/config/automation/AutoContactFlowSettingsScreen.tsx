@@ -16,7 +16,6 @@ import {
   MessageCircle,
   Mic,
   Plus,
-  Search,
   Save,
   ShieldCheck,
   Tag,
@@ -64,6 +63,7 @@ import type { IntegrationSetting } from "../domain/types";
 import type { Lead, LeadStatusConfig } from "../../leads";
 import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
+import AutomationFlowsWorkspace from "./components/AutomationFlowsWorkspace";
 import { MessageListEditor } from "./components/MessageListEditor";
 import { VariableAutocompleteTextarea } from '../../../design-system';
 import { AutomationFlowsSkeleton } from '../../../design-system';
@@ -75,7 +75,6 @@ import {
   sendAutomationFlowTest,
 } from "./data/automationApi";
 import {
-  ActionSurface,
   Alert,
   Badge,
   Button,
@@ -911,6 +910,10 @@ export default function AutoContactFlowSettingsScreen() {
       taggedFlows,
     };
   }, [flowDrafts, messageTemplatesDraft]);
+  const activeFlowCount = useMemo(
+    () => flowDrafts.filter((flow) => flow.ativo !== false).length,
+    [flowDrafts],
+  );
   const messageTypeLabels: Record<TemplateMessageType, string> = {
     text: "Texto",
     image: "Imagem",
@@ -1695,20 +1698,9 @@ export default function AutoContactFlowSettingsScreen() {
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
-      <div className="panel-page-shell space-y-6">
+      <div className="space-y-6">
         <div className="space-y-6">
-          <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <Text className="kds-op-section-label">Automação comercial</Text>
-                <Heading level={2} className="kds-section-title kds-section-title-h2 mt-1">Fluxos e mensagens</Heading>
-                <Text className="kds-section-description mt-1">Organize os fluxos, a biblioteca de templates e os parâmetros operacionais por tarefa.</Text>
-              </div>
-              <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                {autoSaveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} />}
-                {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
-              </div>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <SegmentedControl
               items={[
                 { id: "flows", label: "Fluxos", icon: ClipboardList },
@@ -1720,6 +1712,18 @@ export default function AutoContactFlowSettingsScreen() {
               className="kds-automation-workspace-tabs"
               listClassName="flex-nowrap overflow-x-auto"
             />
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <span role="status" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                {autoSaveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} aria-hidden="true" />}
+                {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
+              </span>
+              {activeWorkspace === "flows" && (
+                <Button onClick={handleAddFlow}>
+                  <Plus className="kds-control-icon" aria-hidden="true" />
+                  Novo fluxo
+                </Button>
+              )}
+            </div>
           </div>
 
           {activeWorkspace === "operation" && (
@@ -1924,15 +1928,6 @@ export default function AutoContactFlowSettingsScreen() {
           )}
 
           {activeWorkspace === "flows" && <>
-            <div className="space-y-1">
-              <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
-                Fluxos e templates
-              </Heading>
-              <Text className="text-xs text-[var(--text-muted)]">
-                Crie, organize e acompanhe os fluxos e templates usados na
-                automação.
-              </Text>
-            </div>
             {autoContactSettings?.enabled === false && (
               <Alert tone="warning" className="mt-4 flex-row items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
@@ -1942,127 +1937,23 @@ export default function AutoContactFlowSettingsScreen() {
                 </span>
               </Alert>
             )}
-
-            <Card variant="muted" padding="sm" className="mt-6 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
-                    Fluxos de automação
-                  </Heading>
-                  <Text className="text-xs text-[var(--text-muted)] mt-1">
-                    Monte sequências com espera configurável (segundos, minutos,
-                    horas ou dias), envio de templates e condição de
-                    encerramento.
-                  </Text>
-                </div>
-                <Button onClick={handleAddFlow} variant="secondary" size="sm">
-                  <Plus className="kds-control-icon" />
-                  Novo fluxo
-                </Button>
-              </div>
-
-              {flowDrafts.length === 0 ? (
-                <Surface variant="default" padding="sm" className="text-sm">
-                  Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
-                </Surface>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_auto]">
-                    <Input
-                      type="text"
-                      value={flowSearch}
-                      onChange={(event) => setFlowSearch(event.target.value)}
-                      leftIcon={Search}
-                      className="bg-[color:var(--bg-surface)]"
-                      placeholder="Buscar fluxo por nome, condição ou tag"
-                    />
-                    <div>
-                      <FilterSelect
-                        icon={Tag}
-                        value={flowTagFilter}
-                        onChange={(value) => setFlowTagFilter(value)}
-                        placeholder="Todas as tags"
-                        includePlaceholderOption={false}
-                        options={[
-                          { value: "all", label: "Todas as tags" },
-                          ...availableTags.map((tagItem) => ({
-                            value: tagItem,
-                            label: tagItem,
-                          })),
-                        ]}
-                      />
-                    </div>
-                    <div className="text-xs text-[var(--text-muted)] flex items-center justify-end">
-                      {filteredFlows.length} fluxo
-                      {filteredFlows.length === 1 ? "" : "s"} encontrado
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {filteredFlows.map((flow, index) => (
-                      <ActionSurface
-                        key={flow.id}
-                        onClick={() => setActiveFlowId(flow.id)}
-                        variant="default"
-                        padding="sm"
-                        className="text-left"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-xs font-semibold text-[var(--text-subtle)] uppercase">
-                              Fluxo {index + 1}
-                            </div>
-                            <div className="text-sm font-semibold text-[var(--text-primary)] mt-1">
-                              {flow.name || "Fluxo sem nome"}
-                            </div>
-                            <div className="text-xs text-[var(--text-muted)] mt-1">
-                              Condições:{" "}
-                              <span className="font-medium text-[var(--text-secondary)]">
-                                {getFlowConditionPreview(flow)}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-[color:var(--bg-inset)] text-[var(--text-muted)]">
-                            {flow.steps.length} etapa
-                            {flow.steps.length === 1 ? "" : "s"}
-                          </span>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                          <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-0.5">
-                            Saída: {(flow.exitConditions ?? []).length || 0}{" "}
-                            condição
-                            {(flow.exitConditions ?? []).length === 1
-                              ? ""
-                              : "s"}
-                          </span>
-                          <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-0.5">
-                            {flow.finalStatus
-                              ? `Finaliza em ${flow.finalStatus}`
-                              : "Sem status final"}
-                          </span>
-                          <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-0.5">
-                            {(flow.conditions ?? []).length} condição
-                            {(flow.conditions ?? []).length === 1 ? "" : "s"}
-                          </span>
-                        </div>
-                        {(flow.tags ?? []).length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--text-muted)]">
-                            {(flow.tags ?? []).map((tagItem) => (
-                              <span
-                                key={tagItem}
-                                className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] px-2 py-0.5"
-                              >
-                                #{tagItem}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </ActionSurface>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+            <AutomationFlowsWorkspace
+              flows={filteredFlows}
+              totalFlows={metrics.totalFlows}
+              activeFlows={activeFlowCount}
+              totalSteps={metrics.totalSteps}
+              totalTemplates={metrics.totalTemplates}
+              dailyAutomationCount={dailyAutomationCount}
+              dailyAutomationLoading={dailyAutomationLoading}
+              dailyAutomationError={dailyAutomationError}
+              search={flowSearch}
+              onSearchChange={setFlowSearch}
+              tagFilter={flowTagFilter}
+              onTagFilterChange={setFlowTagFilter}
+              availableTags={availableTags}
+              getConditionPreview={getFlowConditionPreview}
+              onEditFlow={setActiveFlowId}
+            />
               {activeFlow && (
                 <DialogShell
                   isOpen
@@ -3501,7 +3392,6 @@ Os horários já consideram a janela do fluxo,
                   </div>
                 </DialogShell>
               )}
-            </Card>
 
             <Alert tone="info" className="mt-8">
               <div className="font-semibold mb-2">Variáveis disponíveis:</div>

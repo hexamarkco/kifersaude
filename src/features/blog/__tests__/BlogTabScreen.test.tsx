@@ -12,9 +12,12 @@ vi.mock('../data/blogRepository', () => ({
   deleteBlogPost: async () => { calls.remove += 1; },
   setBlogPostPublished: async () => { calls.publish += 1; },
 }));
-vi.mock('../../../design-system/components/RichTextEditor', () => ({
-  default: ({ value, readOnly }: { value: string; readOnly?: boolean }) => <div data-testid="preview-content" data-readonly={readOnly}>{value}</div>,
-}));
+vi.mock('../../../design-system/components/RichTextEditor', async () => {
+  const { forwardRef } = await import('react');
+  return { default: forwardRef<HTMLDivElement, { value: string; readOnly?: boolean }>(
+    ({ value, readOnly }, ref) => <div ref={ref} data-testid="preview-content" data-readonly={readOnly}>{value}</div>,
+  ) };
+});
 
 test('previews the selected article read-only without publishing, saving or opening a missing route', async () => {
   const originalOpen = window.open;
@@ -67,6 +70,13 @@ test('opens the article editor and returns without saving', async () => {
     assert.ok(view.container.querySelector('input[placeholder="Digite o título do post"]'));
     assert.ok(view.container.querySelector('input[placeholder="url-amigavel-do-post"]'));
     assert.ok(view.container.textContent?.includes('SEO (otimização para Google)'));
+    const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Criar post'));
+    assert.ok(save);
+    act(() => save.click());
+    assert.equal(view.container.querySelector('input[placeholder="Digite o título do post"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(document.activeElement, view.container.querySelector('input[placeholder="Digite o título do post"]'));
+    assert.ok(view.container.textContent?.includes('Escreva o conteúdo do artigo.'));
+    assert.equal(calls.save, 0);
     const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Cancelar');
     assert.ok(cancel);
     act(() => cancel.click());

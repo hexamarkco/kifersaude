@@ -16,4 +16,6 @@ As referências de [criação desktop](../../../references/desktop/state--blog-c
 
 Capturas isoladas: [1920 px](editor-1920.png), [768 px](editor-768.png), [390 px](editor-390.png), [320 px](editor-320.png) e [tema escuro](editor-dark.png). O documento não apresentou overflow nessas larguras. Em prévia sem persistência, a digitação do título gerou o slug esperado, o editor rico recebeu texto e o ícone de ajuda recebeu foco visível por teclado. Os controles de seleção de arquivo agora podem receber foco; a prévia confirmou foco no primeiro controle e no respectivo rótulo. Não houve upload ou salvamento.
 
-Ainda faltam revisão integrada autenticada, preenchimento e validação completos, upload, edição de artigo existente, cancelamento e confirmação de salvamento, permissões e estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.
+Na prévia isolada, salvar vazio apresentou os quatro erros existentes junto aos campos e levou o foco ao título; ao preenchê-lo, os erros de título e slug desapareceram. Capturas: [1920 px](validacao-1920.png), [768 px](validacao-768.png), [390 px](validacao-390.png) e [320 px](validacao-320.png). O documento não apresentou overflow; não houve persistência.
+
+Ainda faltam revisão integrada autenticada, validação completa com dados reais simulados, upload, edição de artigo existente, cancelamento e confirmação de salvamento, permissões e estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.

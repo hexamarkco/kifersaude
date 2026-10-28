@@ -40,6 +40,7 @@ export default function BlogTabScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showEditor, setShowEditor] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -84,6 +85,7 @@ export default function BlogTabScreen() {
 
   const closeEditor = useCallback(() => {
     setShowEditor(false);
+    setValidationAttempted(false);
     setEditingPost(null);
     resetForm();
   }, [resetForm]);
@@ -112,6 +114,7 @@ export default function BlogTabScreen() {
       !formData.excerpt ||
       !formData.content
     ) {
+      setValidationAttempted(true);
       toast.warning("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -278,6 +281,7 @@ export default function BlogTabScreen() {
           onFormDataChange={setFormData}
           onSave={handleSave}
           onTitleChange={handleTitleChange}
+          validationAttempted={validationAttempted}
           uploadingContent={uploadingContent}
           uploadingCover={uploadingCover}
         />

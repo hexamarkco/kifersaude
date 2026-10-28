@@ -1,7 +1,8 @@
 import { FieldLabel, Image, Text, Heading } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { ArrowLeft, Image as ImageIcon, Loader, Save, Tag, Upload } from "lucide-react";
-import { useMemo, type ChangeEvent } from "react";
+import { useMemo, useRef, type ChangeEvent } from "react";
+import type ReactQuill from "react-quill";
 import { RichTextEditor } from '../../../design-system';
 
 import {
@@ -35,6 +36,7 @@ type BlogEditorProps = {
   onTitleChange: (title: string) => void;
   uploadingContent: boolean;
   uploadingCover: boolean;
+  validationAttempted: boolean;
 };
 
 export default function BlogEditor({
@@ -49,13 +51,25 @@ export default function BlogEditor({
   onTitleChange,
   uploadingContent,
   uploadingCover,
+  validationAttempted,
 }: BlogEditorProps) {
+  const titleRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
+  const excerptRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<ReactQuill>(null);
   const modules = useMemo(
     () => ({
       toolbar: BLOG_EDITOR_TOOLBAR,
     }),
     [],
   );
+  const handleSaveClick = () => {
+    onSave();
+    if (!formData.title) titleRef.current?.focus();
+    else if (!formData.slug) slugRef.current?.focus();
+    else if (!formData.excerpt) excerptRef.current?.focus();
+    else if (!formData.content) editorRef.current?.focus();
+  };
 
   return (
     <div className="panel-page-shell space-y-6">
@@ -80,16 +94,18 @@ export default function BlogEditor({
           <Text size="sm" tone="muted">Defina como o artigo será identificado no site.</Text>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Título *">
+        <Field label="Título" required error={validationAttempted && !formData.title ? "Informe o título do artigo." : undefined}>
           <Input
+            ref={titleRef}
             type="text"
             value={formData.title}
             onChange={(event) => onTitleChange(event.target.value)}
             placeholder="Digite o título do post"
           />
         </Field>
-        <Field label="Slug (URL) *" descriptionPlacement="tooltip" description={`URL: /blog/${formData.slug || "slug-do-post"}`}>
+        <Field label="Slug (URL)" required error={validationAttempted && !formData.slug ? "Informe a URL do artigo." : undefined} descriptionPlacement="tooltip" description={`URL: /blog/${formData.slug || "slug-do-post"}`}>
           <Input
+            ref={slugRef}
             type="text"
             value={formData.slug}
             onChange={(event) =>
@@ -200,8 +216,9 @@ export default function BlogEditor({
           </div>
         </Field>
 
-        <Field label="Resumo (descrição curta) *" description={`${formData.excerpt.length}/160 caracteres (ideal para SEO)`}>
+        <Field label="Resumo (descrição curta)" required error={validationAttempted && !formData.excerpt ? "Informe um resumo do artigo." : undefined} description={`${formData.excerpt.length}/160 caracteres (ideal para SEO)`}>
           <Textarea
+            ref={excerptRef}
             value={formData.excerpt}
             onChange={(event) =>
               onFormDataChange({
@@ -220,7 +237,8 @@ export default function BlogEditor({
           <Heading level={2} size="lg">Conteúdo</Heading>
           <Text size="sm" tone="muted">Escreva e formate o texto que será publicado.</Text>
         </div>
-        <Field label="Conteúdo do artigo *">
+        <Field label="Conteúdo do artigo *" error={validationAttempted && !formData.content ? "Escreva o conteúdo do artigo." : undefined}>
+          <div role="group" aria-label="Conteúdo do artigo">
           <div className="mb-3">
             <FieldLabel className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
               <FileInput
@@ -253,6 +271,7 @@ export default function BlogEditor({
           </div>
 
             <RichTextEditor
+              ref={editorRef}
               theme="snow"
               value={formData.content}
               onChange={onContentChange}
@@ -265,6 +284,7 @@ export default function BlogEditor({
             Use o editor para formatar o texto. Adicione títulos (H2, H3),
             listas, links e imagens.
           </Text>
+          </div>
         </Field>
 
         <Surface variant="muted" className="pt-6">
@@ -321,7 +341,7 @@ export default function BlogEditor({
           </FieldLabel>
         </div>
 
-        <PageActions placement="form" primary={{ label: editingPost ? "Atualizar post" : "Criar post", icon: Save, onClick: onSave }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
+        <PageActions placement="form" primary={{ label: editingPost ? "Atualizar post" : "Criar post", icon: Save, onClick: handleSaveClick }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
       </Surface>
     </div>
   );

@@ -28,6 +28,7 @@ import {
   Field,
   Input,
   LoadingState,
+  PageActions,
   SectionHeader,
   Switch,
   Textarea,
@@ -152,6 +153,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   const contactStep = steps.find((step) => step.step_type === "contact") ?? null;
 
   const handleSaveSettings = async () => {
+    if (savingSettings) return;
     const title = settings.title.trim();
     const slug = settings.slug.trim();
 
@@ -165,25 +167,30 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     }
 
     setSavingSettings(true);
-    const { data, error } = await formsService.updateForm(form.id, {
-      title,
-      slug,
-      description: settings.description.trim() || null,
-      success_headline: settings.success_headline.trim() || "Recebemos sua solicitação!",
-      success_message: settings.success_message.trim() || "Nossa equipe vai entrar em contato em breve.",
-      request_geolocation: settings.request_geolocation,
-      whatsapp_redirect: settings.whatsapp_redirect,
-      whatsapp_message_template: settings.whatsapp_redirect ? settings.whatsapp_message_template.trim() || null : null,
-      is_published: settings.is_published,
-    });
+    try {
+      const { data, error } = await formsService.updateForm(form.id, {
+        title,
+        slug,
+        description: settings.description.trim() || null,
+        success_headline: settings.success_headline.trim() || "Recebemos sua solicitação!",
+        success_message: settings.success_message.trim() || "Nossa equipe vai entrar em contato em breve.",
+        request_geolocation: settings.request_geolocation,
+        whatsapp_redirect: settings.whatsapp_redirect,
+        whatsapp_message_template: settings.whatsapp_redirect ? settings.whatsapp_message_template.trim() || null : null,
+        is_published: settings.is_published,
+      });
 
-    if (error || !data) {
-      toast.error(error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível salvar as configurações.");
-    } else {
-      onFormUpdated(data);
-      toast.success("Configurações salvas.");
+      if (error || !data) {
+        toast.error(error?.code === "23505" ? "Já existe um formulário com esse endereço." : "Não foi possível salvar as configurações.");
+      } else {
+        onFormUpdated(data);
+        toast.success("Configurações salvas.");
+      }
+    } catch {
+      toast.error("Não foi possível salvar as configurações.");
+    } finally {
+      setSavingSettings(false);
     }
-    setSavingSettings(false);
   };
 
   const startStepMutation = () => {
@@ -330,15 +337,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <IconButton variant="secondary" onClick={onBack} disabled={stepMutationInFlight} size="sm" aria-label="Voltar para formulários" title="Voltar">
+        <IconButton variant="secondary" onClick={onBack} disabled={stepMutationInFlight || savingSettings} size="sm" aria-label="Voltar para formulários" title="Voltar">
           <ArrowLeft aria-hidden="true" />
         </IconButton>
-        <SectionHeader eyebrow="Formulário" title={form.title} description={`/forms/${form.slug}`} className="flex-1" />
+        <SectionHeader eyebrow="Editor de formulário" title={form.title} description={`/forms/${form.slug}`} className="flex-1" action={<PageActions primary={{ label: savingSettings ? "Salvando..." : "Salvar configurações", icon: Save, loading: savingSettings, onClick: () => void handleSaveSettings() }} />} />
       </div>
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Heading level={3} className="kds-card-title">Configurações</Heading>
+          <div><Heading level={3} className="kds-card-title">Dados e publicação</Heading><Text className="kds-card-subtitle">Configure o endereço, a mensagem de confirmação e o acesso público.</Text></div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyLink()}>
               <Copy className="kds-control-icon" />
@@ -404,10 +411,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
               onChange={(event) => setSettings((prev) => ({ ...prev, is_published: event.target.checked }))}
               label={settings.is_published ? "Publicado" : "Rascunho (não acessível publicamente)"}
             />
-            <Button onClick={() => void handleSaveSettings()} loading={savingSettings}>
-              {!savingSettings && <Save className="kds-control-icon" />}
-              <span>{savingSettings ? "Salvando..." : "Salvar configurações"}</span>
-            </Button>
+            <PageActions placement="form" primary={{ label: savingSettings ? "Salvando..." : "Salvar configurações", icon: Save, loading: savingSettings, onClick: () => void handleSaveSettings() }} />
           </div>
         </div>
       </Card>

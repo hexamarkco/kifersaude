@@ -1,4 +1,4 @@
-import { Avatar, Text, FieldLabel, Image, Video } from '../../../../design-system';
+import { Text, FieldLabel, Image, Video } from '../../../../design-system';
 import { ActionSurface, IconButton } from '../../../../design-system';
 import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Loader2, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
@@ -389,7 +389,6 @@ export function InboxChatListItem({
     >
       <div className="px-4 py-3">
         <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} className="whatsapp-inbox-chat-select min-w-0 w-full text-left">
-          <Avatar name={getSafeChatDisplayName(chat, connectedUserName)} tone="brand" size="sm" aria-hidden="true" />
           <div className="kds-inbox-chat-copy">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">

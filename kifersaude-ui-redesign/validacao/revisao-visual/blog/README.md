@@ -28,4 +28,6 @@ Na prévia isolada, salvar vazio apresentou os quatro erros existentes junto aos
 
 Em montagem isolada da tela real, a gravação foi interceptada e simulada. Durante a resposta pendente, os campos, o editor e as ações ficaram bloqueados; a falha manteve os dados e permitiu nova tentativa, que retornou sucesso simulado. Evidências: [salvando em 1920 px](salvando-1920.png), [768 px](salvando-768.png), [390 px](salvando-390.png), [320 px](salvando-320.png) e [erro em 320 px](salvar-erro-320.png). Nenhuma gravação chegou ao serviço real.
 
+Durante o envio de imagem, salvar e sair ficam desabilitados com uma orientação para aguardar. O estado foi simulado no componente real em [1920 px](upload-1920.png), [768 px](upload-768.png), [390 px](upload-390.png) e [320 px](upload-320.png), sem overflow do documento ou envio de arquivo. A resposta do serviço de upload continua pendente de validação simulada integrada.
+
 Ainda faltam revisão integrada autenticada, validação completa, upload, permissões e outros estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.

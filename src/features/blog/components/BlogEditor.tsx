@@ -54,6 +54,7 @@ export default function BlogEditor({
   validationAttempted,
   saving,
 }: BlogEditorProps) {
+  const uploading = uploadingCover || uploadingContent;
   const titleRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
   const excerptRef = useRef<HTMLTextAreaElement>(null);
@@ -83,7 +84,7 @@ export default function BlogEditor({
             type="button"
             onClick={onClose}
             variant="secondary"
-            disabled={saving}
+            disabled={saving || uploading}
             size="md">
             <ArrowLeft className="kds-control-icon" aria-hidden="true" /> Voltar para artigos
           </Button>
@@ -346,7 +347,7 @@ export default function BlogEditor({
         </div>
 
         </fieldset>
-        <PageActions placement="form" busy={saving} primary={{ label: saving ? "Salvando..." : "Salvar", icon: Save, loading: saving, onClick: handleSaveClick }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
+        <PageActions placement="form" busy={saving || uploading} message={uploading ? "Aguarde o envio da imagem para salvar ou sair." : undefined} primary={{ label: saving ? "Salvando..." : "Salvar", icon: Save, loading: saving, onClick: handleSaveClick }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
       </Surface>
     </div>
   );

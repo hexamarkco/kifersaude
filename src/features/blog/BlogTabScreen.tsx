@@ -110,7 +110,7 @@ export default function BlogTabScreen() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (savingRef.current) return;
+    if (savingRef.current || uploadingCover || uploadingContent) return;
     if (
       !formData.title ||
       !formData.slug ||
@@ -141,7 +141,7 @@ export default function BlogTabScreen() {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [closeEditor, editingPost, formData, loadPosts, user?.id]);
+  }, [closeEditor, editingPost, formData, loadPosts, uploadingContent, uploadingCover, user?.id]);
 
   const handleEdit = useCallback((post: BlogPost) => {
     setEditingPost(post);

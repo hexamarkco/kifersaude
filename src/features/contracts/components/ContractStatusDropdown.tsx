@@ -1,8 +1,18 @@
-import { Text, FieldLabel } from '../../../design-system';
-import { Button, DropdownOption, Select } from '../../../design-system';
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Badge, Popover, PopoverContent, PopoverTrigger, type PanelTone } from '../../../design-system';
+import {
+  ActionSurface,
+  DropdownOption,
+  FieldLabel,
+  getPanelToneStyle,
+  OperationalStatusBadge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Select,
+  Text,
+  type PanelTone,
+} from '../../../design-system';
 import { normalizeSentenceCase } from '../../../lib/textNormalization';
 import type { ProductionOperator } from '../../production';
 
@@ -22,23 +32,27 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
   const [open, setOpen] = useState(false);
   const [saleOperator, setSaleOperator] = useState('');
   const label = normalizeSentenceCase(status) ?? status;
-  if (!canEdit) return <Badge tone={tone} size="sm">{label}</Badge>;
+  const statusColor = getPanelToneStyle(tone).color ?? 'var(--text-muted)';
+  if (!canEdit) return <OperationalStatusBadge statusColor={statusColor}>{label}</OperationalStatusBadge>;
 
   return (
     <Popover open={open && !saving} onOpenChange={setOpen}>
-      <PopoverTrigger>
-        <Button variant="ghost" size="sm"
+      <PopoverTrigger className="inline-flex">
+        <ActionSurface
+          variant="plain"
+          padding="none"
           type="button"
+          style={{ '--op-status-color': statusColor } as CSSProperties}
+          className={`kds-op-status-badge kds-op-status-trigger w-fit max-w-full ${saving || options.length === 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+          aria-haspopup="dialog"
           disabled={saving || options.length === 0}
           aria-label={`Alterar status do contrato ${code}: ${label}`}
           aria-expanded={open && !saving}
           aria-busy={saving}
         >
-          <Badge tone={tone} size="sm" className="gap-1">
-            {saving ? 'Atualizando...' : label}
-            <ChevronDown className="kds-control-icon" aria-hidden="true" />
-          </Badge>
-        </Button>
+          <span>{saving ? 'Atualizando...' : label}</span>
+          {!saving && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
+        </ActionSurface>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" aria-label={`Status do contrato ${code}`}>
         {operatorError && <Text role="alert" className="p-2 text-xs">{operatorError}</Text>}

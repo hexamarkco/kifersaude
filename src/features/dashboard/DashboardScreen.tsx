@@ -2316,25 +2316,28 @@ export default function DashboardScreen({
           onRetry={loadData}
         />
         <DashboardResultOverview analysis={dashboardCommercial} showFinancialMetrics={!isObserver} />
-            <div className="grid grid-cols-1 gap-4" data-panel-animate>
-              <DashboardTrendSection
-                selectedMetric={selectedMetric}
-                chartRangeInMonths={chartRangeInMonths}
-                displayedMonthlySeries={displayedMonthlySeries}
-                latestMonthlyPoint={latestMonthlyPoint}
-                previousMonthlyPoint={previousMonthlyPoint}
-                highestMonthlyPoint={highestMonthlyPoint}
-                averageMonthlyValue={averageMonthlyValue}
-                onSelectedMetricChange={setSelectedMetric}
-                onChartRangeChange={setChartRangeInMonths}
-              />
-            </div>
-        <DashboardDailyOverview
-          analysis={dashboardCommercial}
-          showFinancialMetrics={!isObserver}
-          onNavigateToLead={handleNavigateToLead}
-          onNavigateToTab={onNavigateToTab}
-        />
+        <div className="kds-dashboard-primary-grid">
+          <div className="grid grid-cols-1 gap-4" data-panel-animate>
+            <DashboardTrendSection
+              selectedMetric={selectedMetric}
+              chartRangeInMonths={chartRangeInMonths}
+              displayedMonthlySeries={displayedMonthlySeries}
+              latestMonthlyPoint={latestMonthlyPoint}
+              previousMonthlyPoint={previousMonthlyPoint}
+              highestMonthlyPoint={highestMonthlyPoint}
+              averageMonthlyValue={averageMonthlyValue}
+              onSelectedMetricChange={setSelectedMetric}
+              onChartRangeChange={setChartRangeInMonths}
+            />
+          </div>
+          <DashboardDailyOverview
+            analysis={dashboardCommercial}
+            showFinancialMetrics={!isObserver}
+            onNavigateToLead={handleNavigateToLead}
+            onNavigateToTab={onNavigateToTab}
+            compact
+          />
+        </div>
         <Surface variant="muted" padding="sm" data-panel-animate>
           <SectionHeader
             eyebrow="Aprofundar"

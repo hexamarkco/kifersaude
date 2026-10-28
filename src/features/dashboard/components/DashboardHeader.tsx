@@ -89,7 +89,7 @@ export function DashboardHeader({
       data-panel-animate
       className="border-b border-[var(--border-subtle)] pb-5"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="kds-dashboard-filter-actions flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
           <div className="w-full sm:w-52">
             <FilterSelect
@@ -136,13 +136,15 @@ export function DashboardHeader({
         <Button
           type="button"
           variant="secondary"
+          aria-label="Filtros avançados"
           aria-expanded={filtersOpen}
           aria-controls="dashboard-advanced-filters"
           onClick={() => setFiltersOpen((open) => !open)}
           className="shrink-0"
         >
           <SlidersHorizontal aria-hidden="true" />
-          Filtros avançados
+          <span className="hidden sm:inline">Filtros avançados</span>
+          <span className="kds-dashboard-filter-label sm:hidden">Filtros</span>
           {activeFilterCount > 0 && <Badge tone="info" size="sm">{activeFilterCount}</Badge>}
         </Button>
       </div>

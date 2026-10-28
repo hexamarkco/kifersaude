@@ -2,20 +2,16 @@ import { Text } from '../../../design-system';
 import {
   AlertTriangle,
   ArrowRight,
-  Briefcase,
   CalendarClock,
   CheckCircle2,
   Clock3,
   DollarSign,
   FileWarning,
-  Gauge,
   Hourglass,
   ListTodo,
   MoveRight,
   PackageOpen,
   Target,
-  TrendingUp,
-  WalletCards,
 } from 'lucide-react';
 
 import {
@@ -23,6 +19,7 @@ import {
   Badge,
   Button,
   Card,
+  DisclosureTrigger,
   EmptyState,
   KpiCard,
   OperationalStatusBadge,
@@ -58,6 +55,7 @@ type DashboardDailyOverviewProps = {
   showFinancialMetrics: boolean;
   onNavigateToLead: (leadId: string) => void;
   onNavigateToTab?: (tab: string, options?: TabNavigationOptions) => void;
+  compact?: boolean;
 };
 
 const currency = (value: number) =>
@@ -391,30 +389,40 @@ export function DashboardDailyOverview({
   showFinancialMetrics,
   onNavigateToLead,
   onNavigateToTab,
+  compact = false,
 }: DashboardDailyOverviewProps) {
   const openAgenda = () => onNavigateToTab?.('agenda');
   const openLeads = () => onNavigateToTab?.('leads');
   const opportunities = analysis.opportunities.slice(0, 4);
 
   return (
-    <section className="space-y-4" aria-label="Resumo da operação diária" data-panel-animate>
-      <SectionHeader
-        eyebrow="Ação comercial"
-        title="O que pede atenção"
-        description="Pendências e oportunidades prioritárias para definir o próximo movimento."
-        as="h2"
-      />
+    <section className={`space-y-4 ${compact ? 'h-full' : ''}`} aria-label="Resumo da operação diária" data-panel-animate>
+      {!compact && (
+        <SectionHeader
+          eyebrow="Ação comercial"
+          title="O que pede atenção"
+          description="Pendências e oportunidades prioritárias para definir o próximo movimento."
+          as="h2"
+        />
+      )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
+      <div className={compact ? 'grid h-full grid-cols-1 content-start gap-4' : 'grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]'}>
         <Surface padding="md" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Text className="text-sm font-semibold text-[var(--text-primary)]">Prioridades da carteira</Text>
+              <Text className="text-sm font-semibold text-[var(--text-primary)]">{compact ? 'Prioridades de hoje' : 'Prioridades da carteira'}</Text>
               <Text className="mt-1 text-xs text-[var(--text-muted)]">Sinais de follow-up, próxima etapa e atividade recente.</Text>
             </div>
-            <Button type="button" variant="text" size="sm" onClick={openLeads}>
-              Abrir leads <ArrowRight aria-hidden="true" />
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {compact && (
+                <Button type="button" variant="secondary" size="sm" onClick={openAgenda}>
+                  Abrir agenda <ArrowRight aria-hidden="true" />
+                </Button>
+              )}
+              <Button type="button" variant="text" size="sm" onClick={openLeads}>
+                Abrir leads <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
           </div>
 
           {opportunities.length > 0 ? (
@@ -448,54 +456,71 @@ export function DashboardDailyOverview({
           )}
         </Surface>
 
-        <div className="space-y-4">
-          <Surface padding="md" className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <Text className="text-sm font-semibold text-[var(--text-primary)]">Agenda</Text>
-                <Text className="mt-1 text-xs text-[var(--text-muted)]">Itens que precisam de acompanhamento.</Text>
+        {compact ? (
+          <div className="grid grid-cols-2 gap-2 border-t border-[var(--border-subtle)] pt-3 sm:grid-cols-3">
+            <ActionSurface variant={analysis.agenda.overdue > 0 ? 'danger' : 'muted'} padding="sm" onClick={openAgenda} className="text-left">
+              <Text className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</Text>
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Atrasados</Text>
+            </ActionSurface>
+            <ActionSurface variant="info" padding="sm" onClick={openAgenda} className="text-left">
+              <Text className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</Text>
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Pendentes</Text>
+            </ActionSurface>
+            <ActionSurface variant="muted" padding="sm" onClick={openLeads} className="text-left col-span-2 sm:col-span-1">
+              <Text className="text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.followUp.withoutNextStep}</Text>
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Sem próximo passo</Text>
+            </ActionSurface>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Surface padding="md" className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Text className="text-sm font-semibold text-[var(--text-primary)]">Agenda</Text>
+                  <Text className="mt-1 text-xs text-[var(--text-muted)]">Itens que precisam de acompanhamento.</Text>
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={openAgenda}>
+                  Abrir agenda <ArrowRight aria-hidden="true" />
+                </Button>
               </div>
-              <Button type="button" variant="secondary" size="sm" onClick={openAgenda}>
-                Abrir agenda <ArrowRight aria-hidden="true" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <ActionSurface variant={analysis.agenda.overdue > 0 ? 'danger' : 'muted'} padding="sm" onClick={openAgenda} className="text-left">
-                <Text className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</Text>
-                <Text className="text-xs font-medium text-[var(--text-secondary)]">Atrasados</Text>
-              </ActionSurface>
-              <ActionSurface variant="info" padding="sm" onClick={openAgenda} className="text-left">
-                <Text className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</Text>
-                <Text className="text-xs font-medium text-[var(--text-secondary)]">Pendentes</Text>
-              </ActionSurface>
-            </div>
-            <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
-              <span className="text-sm text-[var(--text-secondary)]">Sem próximo passo</span>
-              <Button type="button" variant="text" size="sm" onClick={openLeads}>
-                {analysis.followUp.withoutNextStep} leads <ArrowRight aria-hidden="true" />
-              </Button>
-            </div>
-          </Surface>
+              <div className="grid grid-cols-2 gap-3">
+                <ActionSurface variant={analysis.agenda.overdue > 0 ? 'danger' : 'muted'} padding="sm" onClick={openAgenda} className="text-left">
+                  <Text className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.overdue}</Text>
+                  <Text className="text-xs font-medium text-[var(--text-secondary)]">Atrasados</Text>
+                </ActionSurface>
+                <ActionSurface variant="info" padding="sm" onClick={openAgenda} className="text-left">
+                  <Text className="text-2xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.agenda.pending}</Text>
+                  <Text className="text-xs font-medium text-[var(--text-secondary)]">Pendentes</Text>
+                </ActionSurface>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+                <span className="text-sm text-[var(--text-secondary)]">Sem próximo passo</span>
+                <Button type="button" variant="text" size="sm" onClick={openLeads}>
+                  {analysis.followUp.withoutNextStep} leads <ArrowRight aria-hidden="true" />
+                </Button>
+              </div>
+            </Surface>
 
-          <Surface variant="strong" padding="sm" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
-            <div>
-              <Text className="text-xs text-[var(--text-muted)]">Vendas no período</Text>
-              <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.salesCount}</Text>
-            </div>
-            <div>
-              <Text className="text-xs text-[var(--text-muted)]">Conversão</Text>
-              <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.conversion)}</Text>
-            </div>
-            <div className="col-span-2 sm:col-span-1 xl:col-span-2 2xl:col-span-1">
-              <Text className="text-xs text-[var(--text-muted)]">{showFinancialMetrics ? 'Valor mensal vendido' : 'Leads recebidos'}</Text>
-              <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">
-                {showFinancialMetrics
-                  ? analysis.dataCoverage.monthlyRevenue ? compactCurrency(analysis.monthlyRevenue) : '—'
-                  : analysis.leadsReceived}
-              </Text>
-            </div>
-          </Surface>
-        </div>
+            <Surface variant="strong" padding="sm" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+              <div>
+                <Text className="text-xs text-[var(--text-muted)]">Vendas no período</Text>
+                <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{analysis.salesCount}</Text>
+              </div>
+              <div>
+                <Text className="text-xs text-[var(--text-muted)]">Conversão</Text>
+                <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">{percent(analysis.conversion)}</Text>
+              </div>
+              <div className="col-span-2 sm:col-span-1 xl:col-span-2 2xl:col-span-1">
+                <Text className="text-xs text-[var(--text-muted)]">{showFinancialMetrics ? 'Valor mensal vendido' : 'Leads recebidos'}</Text>
+                <Text className="mt-1 text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+                  {showFinancialMetrics
+                    ? analysis.dataCoverage.monthlyRevenue ? compactCurrency(analysis.monthlyRevenue) : '—'
+                    : analysis.leadsReceived}
+                </Text>
+              </div>
+            </Surface>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -503,15 +528,74 @@ export function DashboardDailyOverview({
 
 export function DashboardResultOverview({ analysis, showFinancialMetrics }: Pick<DashboardCommercialSectionsProps, 'analysis' | 'showFinancialMetrics'>) {
   const periodLabel = analysis.currentRange?.label ?? 'todo o histórico disponível';
-  return (<section data-panel-animate aria-label="Indicadores do período">
-        <SectionHeader eyebrow="Resultado" title="Indicadores do período" description={`Recorte ativo: ${periodLabel}.`} as="h2" />
-        <div className="kds-kpi-grid kds-dashboard-kpi-grid mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <KpiCard padding="sm" icon={<Briefcase className="h-4 w-4" aria-hidden="true" />} title="Vendas" subtitle="Contratos fechados" value={<span className="tabular-nums">{analysis.salesCount}</span>} trend={<KpiTrend>{`${analysis.leadsReceived} leads recebidos`}</KpiTrend>} className="h-full" />
-          <KpiCard padding="sm" icon={<DollarSign className="h-4 w-4" aria-hidden="true" />} title="Valor mensal vendido" subtitle="Contratos do período" value={<span className="tabular-nums">{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? currency(analysis.monthlyRevenue) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? 'Mensalidade registrada' : 'Sem mensalidade cadastrada'}</KpiTrend>} className="h-full" />
-          {showFinancialMetrics && <KpiCard padding="sm" icon={<WalletCards className="h-4 w-4" aria-hidden="true" />} title="Comissão prevista" subtitle="Vendas do período" value={<span className="tabular-nums">{analysis.dataCoverage.commissionExpected ? currency(analysis.commissionExpected) : '—'}</span>} trend={<KpiTrend tone={analysis.dataCoverage.commissionExpected ? 'neutral' : 'warning'}>{analysis.dataCoverage.commissionExpected ? 'Sem forecast adicional' : 'Sem comissão cadastrada'}</KpiTrend>} className="h-full" />}
-          {showFinancialMetrics && <KpiCard padding="sm" icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} title="Comissão recebida" subtitle="Parcelas pagas" value={<span className="tabular-nums">{analysis.commissionReceived === null ? '—' : currency(analysis.commissionReceived)}</span>} trend={<KpiTrend tone={analysis.commissionReceived === null ? 'warning' : 'success'}>{analysis.commissionReceived === null ? 'Sem parcelas pagas registradas' : 'Base de parcelas pagas'}</KpiTrend>} className="h-full" />}
-          <KpiCard padding="sm" icon={<Gauge className="h-4 w-4" aria-hidden="true" />} title="Ticket médio" subtitle="Mensalidade por venda" value={<span className="tabular-nums">{showFinancialMetrics && analysis.averageTicket !== null ? currency(analysis.averageTicket) : '—'}</span>} trend={<KpiTrend>{showFinancialMetrics ? 'Sem meta configurada' : 'Restrito ao perfil'}</KpiTrend>} className="h-full" />
-          <KpiCard padding="sm" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} title="Conversão" subtitle="Leads → contratos" value={<span className="tabular-nums">{percent(analysis.conversion)}</span>} trend={<KpiTrend>{analysis.conversion === null ? 'Base insuficiente' : 'Contratos vinculados ao lead'}</KpiTrend>} className="h-full" />
+  const additionalMetricCount = showFinancialMetrics ? 2 : 1;
+
+  return (
+    <section data-panel-animate aria-label="Indicadores do período">
+      <SectionHeader eyebrow="Resultado" title="Indicadores do período" description={`Recorte ativo: ${periodLabel}.`} as="h2" />
+      <div className="kds-kpi-grid kds-dashboard-kpi-grid kds-dashboard-primary-kpis mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          padding="sm"
+          title="Vendas"
+          value={<span className="tabular-nums">{analysis.salesCount}</span>}
+          trend={<KpiTrend>{`${analysis.leadsReceived} leads recebidos`}</KpiTrend>}
+          className="h-full"
+        />
+        <KpiCard
+          padding="sm"
+          title="Valor mensal vendido"
+          value={<span className="tabular-nums">{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? currency(analysis.monthlyRevenue) : '—'}</span>}
+          trend={<KpiTrend>{showFinancialMetrics && analysis.dataCoverage.monthlyRevenue ? 'Mensalidade registrada' : 'Sem mensalidade cadastrada'}</KpiTrend>}
+          className="h-full"
+        />
+        {showFinancialMetrics ? (
+          <KpiCard
+            padding="sm"
+            title="Comissão prevista"
+            value={<span className="tabular-nums">{analysis.dataCoverage.commissionExpected ? currency(analysis.commissionExpected) : '—'}</span>}
+            trend={<KpiTrend tone={analysis.dataCoverage.commissionExpected ? 'neutral' : 'warning'}>{analysis.dataCoverage.commissionExpected ? 'Sem forecast adicional' : 'Sem comissão cadastrada'}</KpiTrend>}
+            className="h-full"
+          />
+        ) : (
+          <KpiCard
+            padding="sm"
+            title="Leads recebidos"
+            value={<span className="tabular-nums">{analysis.leadsReceived}</span>}
+            trend={<KpiTrend>Recebidos no período</KpiTrend>}
+            className="h-full"
+          />
+        )}
+        <KpiCard
+          padding="sm"
+          title="Conversão"
+          value={<span className="tabular-nums">{percent(analysis.conversion)}</span>}
+          trend={<KpiTrend>{analysis.conversion === null ? 'Base insuficiente' : 'Leads com contrato'}</KpiTrend>}
+          className="h-full"
+        />
+      </div>
+      <details className="kds-dashboard-more-metrics">
+        <DisclosureTrigger size="sm">Ver {additionalMetricCount} indicadores complementares</DisclosureTrigger>
+        <div className="kds-kpi-grid kds-dashboard-secondary-kpis mt-3 grid gap-3 sm:grid-cols-2">
+          {showFinancialMetrics && (
+            <KpiCard
+              padding="sm"
+              title="Comissão recebida"
+              subtitle="Parcelas pagas"
+              value={<span className="tabular-nums">{analysis.commissionReceived === null ? '—' : currency(analysis.commissionReceived)}</span>}
+              trend={<KpiTrend tone={analysis.commissionReceived === null ? 'warning' : 'success'}>{analysis.commissionReceived === null ? 'Sem parcelas pagas registradas' : 'Base de parcelas pagas'}</KpiTrend>}
+              className="h-full"
+            />
+          )}
+          <KpiCard
+            padding="sm"
+            title="Ticket médio"
+            subtitle="Mensalidade por venda"
+            value={<span className="tabular-nums">{showFinancialMetrics && analysis.averageTicket !== null ? currency(analysis.averageTicket) : '—'}</span>}
+            trend={<KpiTrend>{showFinancialMetrics ? 'Sem meta configurada' : 'Restrito ao perfil'}</KpiTrend>}
+            className="h-full"
+          />
         </div>
-      </section>);
+      </details>
+    </section>
+  );
 }

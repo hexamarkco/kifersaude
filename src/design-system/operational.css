@@ -975,6 +975,10 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--section-gap); }
 .kds-detail-layout-aside { display: grid; grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr); gap: var(--layout-gap); }
 .kds-dashboard-indicators { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--section-gap); min-width: 0; }
+.kds-dashboard-primary-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(20rem, 1fr); gap: var(--layout-gap); align-items: stretch; min-width: 0; }
+.kds-dashboard-primary-grid > * { min-width: 0; }
+.kds-dashboard-more-metrics { margin-top: var(--space-3); }
+.kds-dashboard-more-metrics > .kds-disclosure-trigger { width: max-content; max-width: 100%; }
 .kds-list-summary { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); color: var(--text-secondary); font: var(--type-body-sm); }
 .painel-theme.kifer-ds .kds-page-container { padding: var(--page-gutter); }
 .painel-theme.kifer-ds :where(.kds-card-title, .kds-section-title, .kds-dialog-title) { font: var(--type-ui-heading); }
@@ -1056,6 +1060,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 @media (max-width: 767px) {
   .painel-theme.kifer-ds,
   .modal-theme-host.painel-theme.kifer-ds { --control-height-sm: var(--touch-target); --control-height-md: var(--touch-target); --control-font-md: 1rem; --layout-gap: var(--space-4); }
+  .painel-theme.kifer-ds .kds-dashboard-filter-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); }
+  .painel-theme.kifer-ds .kds-dashboard-filter-actions > :first-child { min-width: 0; }
+  .painel-theme.kifer-ds .kds-dashboard-filter-actions > button { width: auto; }
   .kds-form-fields, .kds-detail-layout-aside { grid-template-columns: minmax(0, 1fr); }
   .kds-page-action-buttons { width: 100%; }
   .kds-page-action-buttons > button { flex: 1 1 6.5rem; }
@@ -1064,7 +1071,12 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   .kds-form-section { padding: var(--space-4); }
   .painel-theme.kifer-ds :where(.kds-dialog-close, .kds-pagination-button, .kds-pagination-page, .kds-dropdown-option) { min-height: var(--touch-target); min-width: var(--touch-target); }
   .painel-theme.kifer-ds .kds-dialog-footer > .kds-button { flex: 1 1 7rem; }
+  .painel-theme.kifer-ds .kds-dashboard-kpi-grid { gap: var(--space-2); }
+  .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card-kpi { padding: var(--space-3); row-gap: var(--space-2); }
+  .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-card-title { min-block-size: auto; }
+  .painel-theme.kifer-ds .kds-dashboard-more-metrics > .kds-disclosure-trigger { width: 100%; }
 }
+@media (max-width: 1279px) { .kds-dashboard-primary-grid { grid-template-columns: minmax(0, 1fr); } }
 .kds-responsive-collection { container: collection / inline-size; min-width: 0; width: 100%; }
 .kds-collection-table, .kds-collection-cards { min-width: 0; }
 .kds-collection-cards { display: none; }
@@ -1319,7 +1331,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-monthly-trend-plot > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .painel-theme.kifer-ds .kds-agenda-filter-toggle { display: none; }
 .kds-agenda-secondary-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-3); }
-@media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-kpi-grid { grid-template-columns: repeat(6,minmax(0,1fr)); } }
+@media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-primary-kpis { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 @media(max-width: 767px) {
  .painel-theme.kifer-ds .kds-agenda-filter-toggle { display: inline-flex; }
  .painel-theme.kifer-ds .kds-agenda-secondary-filters:not(.is-open) { display: none; }
@@ -1335,11 +1347,16 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 }
 
 @media(max-width: 639px) {
- .painel-theme.kifer-ds .kds-dashboard-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
- .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-card-icon { display: none; }
- .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-kpi-value { font-size: clamp(1rem,4.75vw,1.25rem); }
- .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card { padding: var(--space-3); }
- .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card { row-gap: var(--space-3); }
+ .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) .kds-card-icon { display: none; }
+ .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) .kds-kpi-value { font-size: clamp(1rem,4.75vw,1.25rem); }
+ .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) > .kds-card { padding: var(--space-3); }
+ .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) > .kds-card { row-gap: var(--space-3); }
+}
+@media(max-width: 359px) {
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card-kpi { padding: var(--space-2); row-gap: var(--space-1); }
+ .painel-theme.kifer-ds .kds-dashboard-more-metrics { margin-top: var(--space-2); }
+ .painel-theme.kifer-ds .kds-dashboard-filter-label { display: none; }
 }
 
 /* Reference-aligned record actions and contact cards. */

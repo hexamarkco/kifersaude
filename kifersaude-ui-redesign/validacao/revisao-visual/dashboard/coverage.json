@@ -1,0 +1,118 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Dashboard",
+  "route": "/painel/dashboard",
+  "status": "partial",
+  "target": [
+    "references/desktop/page--dashboard.png",
+    "references/mobile/page--dashboard.png"
+  ],
+  "reviewed_contexts": [
+    "page--dashboard"
+  ],
+  "pending_contexts": [
+    "state--dashboard-filtros",
+    "state--dashboard-periodo",
+    "state--dashboard-analises"
+  ],
+  "visual_review": {
+    "widths": [
+      "1920x1080",
+      "768x1024",
+      "390x844",
+      "320x844"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "dark_theme_widths": [
+      "1920x1080",
+      "390x844"
+    ],
+    "screenshots": [
+      {
+        "path": "screenshots/desktop/dashboard-dark-full.png",
+        "width": 1920,
+        "height": 1549
+      },
+      {
+        "path": "screenshots/desktop/dashboard-dark-viewport.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/desktop/dashboard-full.png",
+        "width": 1920,
+        "height": 1549
+      },
+      {
+        "path": "screenshots/desktop/dashboard-indicadores-complementares.png",
+        "width": 1920,
+        "height": 1747
+      },
+      {
+        "path": "screenshots/desktop/dashboard-viewport.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/mobile-320/dashboard-full.png",
+        "width": 320,
+        "height": 3513
+      },
+      {
+        "path": "screenshots/mobile-320/dashboard-viewport.png",
+        "width": 320,
+        "height": 844
+      },
+      {
+        "path": "screenshots/mobile/dashboard-dark-full.png",
+        "width": 390,
+        "height": 3275
+      },
+      {
+        "path": "screenshots/mobile/dashboard-dark-viewport.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "path": "screenshots/mobile/dashboard-full.png",
+        "width": 390,
+        "height": 3275
+      },
+      {
+        "path": "screenshots/mobile/dashboard-indicadores-complementares-viewport.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "path": "screenshots/mobile/dashboard-indicadores-complementares.png",
+        "width": 390,
+        "height": 3470
+      },
+      {
+        "path": "screenshots/mobile/dashboard-viewport.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "path": "screenshots/tablet/dashboard-full.png",
+        "width": 768,
+        "height": 2504
+      },
+      {
+        "path": "screenshots/tablet/dashboard-viewport.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  "checks": {
+    "no_horizontal_overflow": true,
+    "mobile_fixed_navigation_obscures_primary_kpis": false,
+    "complementary_metrics_disclosure": "interativo e preserva acesso a todos os seis indicadores",
+    "fixture": "Dados sintéticos; série mensal contém um ponto nesta sessão.",
+    "browser_console": "Aviso de ciclo de vida legado em dependência e timeout de Realtime no ambiente de captura."
+  }
+}

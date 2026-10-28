@@ -20,9 +20,16 @@
         "references/desktop/page--dashboard.png",
         "references/mobile/page--dashboard.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/dashboard/README.md",
+        "validacao/revisao-visual/dashboard/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências em desktop, tablet, mobile e 320 px; sem overflow horizontal. Temas claro/escuro conferidos em desktop e mobile.",
+        "Quatro indicadores principais ficam em destaque e os dois indicadores complementares reais permanecem acessíveis pelo disclosure do design system; cálculos, valores e permissões foram preservados.",
+        "A fixture é sintética e contém um ponto na série mensal. Filtros, seletor de período e análises/modais permanecem em contextos de estado pendentes."
+      ]
     },
     {
       "id": "page--leads-listagem",

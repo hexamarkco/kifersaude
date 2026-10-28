@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { test } from 'vitest';
 
 import type { DashboardCommercialAnalysis } from '../shared/dashboardTypes';
-import { DashboardDailyOverview } from './DashboardCommercialSections';
+import { DashboardDailyOverview, DashboardResultOverview } from './DashboardCommercialSections';
 
 const analysis = {
   agenda: { pending: 3, overdue: 1, completed: 2, items: [] },
@@ -70,6 +70,77 @@ test('prioriza oportunidades e encaminha para lead, agenda e carteira', async ()
 
     assert.deepEqual(navigatedLeads, ['lead-1']);
     assert.deepEqual(navigatedTabs, ['agenda', 'leads']);
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
+test('modo compacto apresenta prioridades sem repetir o cabeçalho da seção', async () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => {
+      root.render(
+        <DashboardDailyOverview
+          analysis={analysis}
+          showFinancialMetrics={false}
+          onNavigateToLead={() => undefined}
+          compact
+        />,
+      );
+    });
+
+    assert.equal(container.textContent?.includes('Prioridades de hoje'), true);
+    assert.equal(container.textContent?.includes('O que pede atenção'), false);
+    assert.equal(container.textContent?.includes('Ana Silva'), true);
+    assert.equal(container.textContent?.includes('Atrasados'), true);
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});
+
+test('mantém quatro indicadores principais e revela os complementares ao solicitar', async () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  const resultAnalysis = {
+    ...analysis,
+    commissionExpected: 2400,
+    commissionReceived: null,
+    averageTicket: 300,
+    currentRange: { label: 'Últimos 30 dias' },
+    dataCoverage: { monthlyRevenue: true, commissionExpected: true },
+  } as unknown as DashboardCommercialAnalysis;
+
+  try {
+    await act(async () => {
+      root.render(<DashboardResultOverview analysis={resultAnalysis} showFinancialMetrics />);
+    });
+
+    const primaryMetrics = container.querySelector('.kds-dashboard-primary-kpis');
+    const additionalMetrics = container.querySelector('.kds-dashboard-secondary-kpis');
+    assert.ok(primaryMetrics);
+    assert.ok(additionalMetrics);
+    assert.equal(primaryMetrics.querySelectorAll('.kds-card-kpi').length, 4);
+    assert.equal(additionalMetrics.querySelectorAll('.kds-card-kpi').length, 2);
+
+    const details = container.querySelector('details');
+    const trigger = details?.querySelector('summary');
+    assert.ok(details);
+    assert.ok(trigger);
+    assert.equal(details.open, false);
+
+    await act(async () => {
+      trigger.click();
+    });
+
+    assert.equal(details.open, true);
+    assert.equal(additionalMetrics.textContent?.includes('Comissão recebida'), true);
+    assert.equal(additionalMetrics.textContent?.includes('Ticket médio'), true);
   } finally {
     act(() => root.unmount());
     container.remove();

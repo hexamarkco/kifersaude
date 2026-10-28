@@ -144,11 +144,10 @@ export default function BlogTabScreen() {
   }, []);
 
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (post: BlogPost) => {
       const confirmed = await requestConfirmation({
-        title: "Excluir post",
-        description:
-          "Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.",
+        title: "Excluir post?",
+        description: `O artigo “${post.title}” será excluído permanentemente. Esta ação não pode ser desfeita.`,
         confirmLabel: "Excluir post",
         cancelLabel: "Cancelar",
         tone: "danger",
@@ -159,7 +158,7 @@ export default function BlogTabScreen() {
       }
 
       try {
-        await deleteBlogPost(id);
+        await deleteBlogPost(post.id);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         toast.error(`Não foi possível excluir o post: ${message}`);

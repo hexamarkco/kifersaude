@@ -38,7 +38,7 @@ type BlogPostsListProps = {
   loadingPhase: AdaptiveLoadingPhase;
   onRetry: () => void;
   onCreatePost: () => void;
-  onDeletePost: (id: string) => void;
+  onDeletePost: (post: BlogPost) => void;
   onEditPost: (post: BlogPost) => void;
   onPreviewPost: (post: BlogPost) => void;
   onSearchTermChange: (value: string) => void;
@@ -79,7 +79,7 @@ export default function BlogPostsList({
     { label: "Visualizar", icon: Eye, onClick: () => onPreviewPost(post) },
     { label: post.published ? "Despublicar" : "Publicar", icon: post.published ? Eye : EyeOff, onClick: () => onTogglePublish(post) },
     { label: "Editar", icon: Edit2, onClick: () => onEditPost(post) },
-    { label: "Excluir", icon: Trash2, destructive: true, onClick: () => onDeletePost(post.id) },
+    { label: "Excluir", icon: Trash2, destructive: true, onClick: () => onDeletePost(post) },
   ];
   return (
     <div className="panel-page-shell space-y-6">

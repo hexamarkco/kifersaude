@@ -76,6 +76,27 @@ test('opens the article preview from the compact collection menu', async () => {
   } finally { view.unmount(); }
 });
 
+test('identifies the article in the deletion confirmation and cancels without deleting', async () => {
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    assert.ok(menuButton);
+    act(() => menuButton.click());
+    const remove = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Excluir'));
+    assert.ok(remove);
+    act(() => remove.click());
+    const dialog = document.body.querySelector('[role="dialog"]');
+    assert.ok(dialog);
+    assert.ok(dialog.textContent?.includes('Orientação para escolher um plano'));
+    const cancel = Array.from(dialog.querySelectorAll('button')).find(button => button.textContent === 'Cancelar');
+    assert.ok(cancel);
+    act(() => cancel.click());
+    assert.equal(document.body.querySelector('[role="dialog"]'), null);
+    assert.equal(calls.remove, 0);
+  } finally { view.unmount(); }
+});
+
 test('opens the article editor and returns without saving', async () => {
   const view = render(<BlogTabScreen />);
   try {

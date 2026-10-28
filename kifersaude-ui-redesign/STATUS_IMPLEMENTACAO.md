@@ -1,6 +1,8 @@
 # Implementação e validação — Kifer Saúde
 
-Os **160 contextos** do manifesto estão implementados e validados: **47 páginas, 19 contextos adicionais e 94 estados**, nas quatro resoluções. Não há contexto visual pendente no manifesto. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups estão registradas no mapeamento.
+**Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
+
+A rodada anterior registrou **160 contextos** do manifesto: **47 páginas, 19 contextos adicionais e 94 estados**, nas quatro resoluções. As evidências abaixo documentam essa rodada e não representam aprovação visual final da nova meta. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Entregas
 
@@ -37,7 +39,7 @@ O único ajuste no diretório de migrations foi o baseline documental de um slug
 - [Galeria de comparação aplicada](GALERIA_APLICADA.html)
 - [Mapeamento completo](MAPEAMENTO.json)
 
-## Checklist por contexto
+## Checklist histórico por contexto — rodada anterior
 
 | Contexto | Rota | Estado | Evidências |
 |---|---|---|---|

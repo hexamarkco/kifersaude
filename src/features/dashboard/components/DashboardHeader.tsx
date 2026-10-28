@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Filter, Layers3, SlidersHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
 
 import {
   Badge,
   Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
   Input,
   PageHeader,
   FilterSelect,
-  Surface,
 } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
@@ -73,6 +81,16 @@ export function DashboardHeader({
   isCustomEndInvalid,
 }: DashboardHeaderProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= 767,
+  );
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobileViewport(window.innerWidth <= 767);
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
+
   const activeFilterCount = [
     dashboardOriginFilter,
     dashboardOwnerFilter,
@@ -80,6 +98,94 @@ export function DashboardHeader({
     dashboardContractTypeFilter,
     dashboardStatusFilter,
   ].filter(Boolean).length;
+
+  const filterTrigger = () => (
+    <Button
+      type="button"
+      variant="secondary"
+      aria-label="Filtros avançados"
+      aria-haspopup="dialog"
+      aria-expanded={filtersOpen}
+      aria-controls="dashboard-advanced-filters"
+      onClick={() => setFiltersOpen((open) => !open)}
+      className="shrink-0"
+    >
+      <SlidersHorizontal aria-hidden="true" />
+      <span className="hidden sm:inline">Filtros avançados</span>
+      <span className="kds-dashboard-filter-label sm:hidden">Filtros</span>
+      {activeFilterCount > 0 && <Badge tone="info" size="sm">{activeFilterCount}</Badge>}
+    </Button>
+  );
+
+  const filterTitleCopy = (
+    <DialogTitle>Filtros do dashboard</DialogTitle>
+  );
+
+  const filterFieldControls = (
+    <>
+      <FilterSelect
+        icon={Target}
+        value={dashboardOriginFilter}
+        onChange={onOriginFilterChange}
+        placeholder="Todas as origens"
+        neutralValues={['']}
+        options={visibleLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome }))}
+      />
+      <FilterSelect
+        icon={Users}
+        value={dashboardOwnerFilter}
+        onChange={onOwnerFilterChange}
+        placeholder="Todos os responsáveis"
+        options={responsavelOptions.map((option) => ({ value: option.value, label: option.label }))}
+      />
+      <FilterSelect
+        icon={Stethoscope}
+        value={dashboardOperatorFilter}
+        onChange={onOperatorFilterChange}
+        placeholder="Todas as operadoras"
+        neutralValues={['']}
+        options={operatorOptions.map((operator) => ({ value: operator, label: operator }))}
+      />
+      <FilterSelect
+        icon={Tag}
+        value={dashboardContractTypeFilter}
+        onChange={onContractTypeFilterChange}
+        placeholder="Todos os tipos"
+        neutralValues={['']}
+        options={contractTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
+      />
+      <FilterSelect
+        icon={Layers3}
+        value={dashboardStatusFilter}
+        onChange={onStatusFilterChange}
+        placeholder="Todos os estágios"
+        neutralValues={['']}
+        options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
+      />
+    </>
+  );
+
+  const filterActions = (
+    <>
+      <Button
+        type="button"
+        variant="text"
+        size="sm"
+        onClick={() => {
+          onOriginFilterChange('');
+          onOwnerFilterChange('');
+          onOperatorFilterChange('');
+          onContractTypeFilterChange('');
+          onStatusFilterChange('');
+        }}
+      >
+        Limpar filtros
+      </Button>
+      <Button type="button" variant="secondary" onClick={() => setFiltersOpen(false)}>
+        Concluído
+      </Button>
+    </>
+  );
 
   return (
     <PageHeader
@@ -133,70 +239,45 @@ export function DashboardHeader({
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          aria-label="Filtros avançados"
-          aria-expanded={filtersOpen}
-          aria-controls="dashboard-advanced-filters"
-          onClick={() => setFiltersOpen((open) => !open)}
-          className="shrink-0"
-        >
-          <SlidersHorizontal aria-hidden="true" />
-          <span className="hidden sm:inline">Filtros avançados</span>
-          <span className="kds-dashboard-filter-label sm:hidden">Filtros</span>
-          {activeFilterCount > 0 && <Badge tone="info" size="sm">{activeFilterCount}</Badge>}
-        </Button>
+        {isMobileViewport ? (
+          filterTrigger()
+        ) : (
+          <>
+            {filterTrigger()}
+            <Dialog
+              id="dashboard-advanced-filters"
+              open={filtersOpen}
+              onOpenChange={setFiltersOpen}
+              size="sm"
+              aria-label="Filtros avançados do dashboard"
+              className="kds-dashboard-filter-dialog"
+            >
+              <DialogHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
+                {filterTitleCopy}
+              </DialogHeader>
+              <DialogBody className="kds-dashboard-filter-fields">{filterFieldControls}</DialogBody>
+              <DialogFooter className="kds-dashboard-filter-footer">{filterActions}</DialogFooter>
+            </Dialog>
+          </>
+        )}
       </div>
 
-      {filtersOpen && (
-        <Surface
+      {isMobileViewport && (
+        <Drawer
           id="dashboard-advanced-filters"
-          variant="muted"
-          padding="sm"
-          className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5"
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          side="right"
+          size="sm"
           aria-label="Filtros avançados do dashboard"
+          className="kds-dashboard-filter-drawer"
         >
-          <FilterSelect
-            icon={Target}
-            value={dashboardOriginFilter}
-            onChange={onOriginFilterChange}
-            placeholder="Todas as origens"
-            neutralValues={['']}
-            options={visibleLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome }))}
-          />
-          <FilterSelect
-            icon={Users}
-            value={dashboardOwnerFilter}
-            onChange={onOwnerFilterChange}
-            placeholder="Todos os responsáveis"
-            options={responsavelOptions.map((option) => ({ value: option.value, label: option.label }))}
-          />
-          <FilterSelect
-            icon={Stethoscope}
-            value={dashboardOperatorFilter}
-            onChange={onOperatorFilterChange}
-            placeholder="Todas as operadoras"
-            neutralValues={['']}
-            options={operatorOptions.map((operator) => ({ value: operator, label: operator }))}
-          />
-          <FilterSelect
-            icon={Tag}
-            value={dashboardContractTypeFilter}
-            onChange={onContractTypeFilterChange}
-            placeholder="Todos os tipos"
-            neutralValues={['']}
-            options={contractTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
-          />
-          <FilterSelect
-            icon={Layers3}
-            value={dashboardStatusFilter}
-            onChange={onStatusFilterChange}
-            placeholder="Todos os estágios"
-            neutralValues={['']}
-            options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
-          />
-        </Surface>
+          <DrawerHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
+            {filterTitleCopy}
+          </DrawerHeader>
+          <DrawerBody className="kds-dashboard-filter-fields">{filterFieldControls}</DrawerBody>
+          <DrawerFooter className="kds-dashboard-filter-footer">{filterActions}</DrawerFooter>
+        </Drawer>
       )}
     </PageHeader>
   );

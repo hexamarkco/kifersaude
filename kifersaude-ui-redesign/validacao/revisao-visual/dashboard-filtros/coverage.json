@@ -1,0 +1,179 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Dashboard — filtros avançados",
+  "route": "/painel/dashboard",
+  "context": "state--dashboard-filtros",
+  "status": "revisado_com_adaptacoes",
+  "references": [
+    "references/desktop/state--dashboard-filtros.png",
+    "references/mobile/state--dashboard-filtros.png"
+  ],
+  "viewport_sizes": [
+    "1920x1080",
+    "768x1024",
+    "390x844",
+    "320x640"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "checks": {
+    "no_horizontal_overflow": true,
+    "themes_verified_at_all_viewports": true,
+    "desktop_dialog": "KDS Dialog com fundo modal, 352x372 px em 1920x1080, alinhado no canto superior direito conforme a referência.",
+    "mobile_drawer": "KDS Drawer lateral usa a largura útil e altura completa do viewport; o corpo dos filtros rola sem deslocar as ações.",
+    "filters": "Cinco FilterSelect reais; seleção aplica imediatamente; limpar restaura os cinco critérios.",
+    "origin_selection": "Selecionar Site atualiza a rota, os indicadores e o contador de filtros ativos.",
+    "keyboard": "Escape fecha o seletor, depois o Drawer e restaura o foco ao acionador.",
+    "fixture": "Dados sintéticos locais; sem gravações reais, exclusões ou comunicações externas.",
+    "browser_console": "A fixture registrou aviso de ciclo de vida legado da dependência e timeout de Realtime; sem erro de interação do painel."
+  },
+  "screenshots": [
+    {
+      "path": "desktop/filter-origin-options.png",
+      "viewport": "1920x1080",
+      "theme": "light",
+      "capture": "dropdown-options",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "desktop/filters-dark-full.png",
+      "viewport": "1920x1080",
+      "theme": "dark",
+      "capture": "full-page",
+      "width": 1920,
+      "height": 1549
+    },
+    {
+      "path": "desktop/filters-dark-viewport.png",
+      "viewport": "1920x1080",
+      "theme": "dark",
+      "capture": "viewport",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "desktop/filters-full.png",
+      "viewport": "1920x1080",
+      "theme": "light",
+      "capture": "full-page",
+      "width": 1920,
+      "height": 1549
+    },
+    {
+      "path": "desktop/filters-viewport.png",
+      "viewport": "1920x1080",
+      "theme": "light",
+      "capture": "viewport",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "mobile-320/filter-origin-options.png",
+      "viewport": "320x640",
+      "theme": "light",
+      "capture": "dropdown-options",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "mobile-320/filters-dark-full.png",
+      "viewport": "320x640",
+      "theme": "dark",
+      "capture": "full-page",
+      "width": 320,
+      "height": 3513
+    },
+    {
+      "path": "mobile-320/filters-dark-viewport.png",
+      "viewport": "320x640",
+      "theme": "dark",
+      "capture": "viewport",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "mobile-320/filters-full.png",
+      "viewport": "320x640",
+      "theme": "light",
+      "capture": "full-page",
+      "width": 320,
+      "height": 3513
+    },
+    {
+      "path": "mobile-320/filters-viewport.png",
+      "viewport": "320x640",
+      "theme": "light",
+      "capture": "viewport",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "mobile/filters-dark-full.png",
+      "viewport": "390x844",
+      "theme": "dark",
+      "capture": "full-page",
+      "width": 390,
+      "height": 3275
+    },
+    {
+      "path": "mobile/filters-dark-viewport.png",
+      "viewport": "390x844",
+      "theme": "dark",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "mobile/filters-full.png",
+      "viewport": "390x844",
+      "theme": "light",
+      "capture": "full-page",
+      "width": 390,
+      "height": 3275
+    },
+    {
+      "path": "mobile/filters-viewport.png",
+      "viewport": "390x844",
+      "theme": "light",
+      "capture": "viewport",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "tablet/filters-dark-full.png",
+      "viewport": "768x1024",
+      "theme": "dark",
+      "capture": "full-page",
+      "width": 768,
+      "height": 2504
+    },
+    {
+      "path": "tablet/filters-dark-viewport.png",
+      "viewport": "768x1024",
+      "theme": "dark",
+      "capture": "viewport",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "tablet/filters-full.png",
+      "viewport": "768x1024",
+      "theme": "light",
+      "capture": "full-page",
+      "width": 768,
+      "height": 2504
+    },
+    {
+      "path": "tablet/filters-viewport.png",
+      "viewport": "768x1024",
+      "theme": "light",
+      "capture": "viewport",
+      "width": 768,
+      "height": 1024
+    }
+  ],
+  "screenshot_count": 18
+}

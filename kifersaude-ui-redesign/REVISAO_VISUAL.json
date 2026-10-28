@@ -28,7 +28,7 @@
       "notes": [
         "Comparada com as referências em desktop, tablet, mobile e 320 px; sem overflow horizontal. Temas claro/escuro conferidos em desktop e mobile.",
         "Quatro indicadores principais ficam em destaque e os dois indicadores complementares reais permanecem acessíveis pelo disclosure do design system; cálculos, valores e permissões foram preservados.",
-        "A fixture é sintética e contém um ponto na série mensal. Filtros, seletor de período e análises/modais permanecem em contextos de estado pendentes."
+        "A fixture é sintética e contém um ponto na série mensal. Filtros avançados foram revisados no contexto state--dashboard-filtros; seletor de período e análises/modais permanecem pendentes."
       ]
     },
     {
@@ -1037,9 +1037,16 @@
         "references/desktop/state--dashboard-filtros.png",
         "references/mobile/state--dashboard-filtros.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/dashboard-filtros/README.md",
+        "validacao/revisao-visual/dashboard-filtros/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências desktop/mobile; captura e comportamento conferidos em desktop 1920x1080, tablet 768x1024, mobile 390x844 e 320x640, nos temas claro e escuro.",
+        "Desktop usa Dialog modal compacto no canto superior direito; mobile usa Drawer de viewport completa. Os cinco filtros reais mantêm aplicação imediata, seleção, limpeza e permissões existentes.",
+        "Sem overflow horizontal. Seleção da origem, limpeza, Escape e restauração de foco verificados com fixture sintética; nenhuma escrita real ou comunicação externa."
+      ]
     },
     {
       "id": "state--dashboard-periodo",
@@ -2461,8 +2468,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 6,
-    "remaining_manifest_contexts": 154,
+    "reviewed_contexts": 9,
+    "remaining_manifest_contexts": 151,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

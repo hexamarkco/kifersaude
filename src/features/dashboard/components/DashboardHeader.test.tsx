@@ -50,14 +50,51 @@ test('mantém período acessível e recolhe filtros avançados com contador de f
     await act(async () => { advancedButton.click(); });
 
     assert.equal(findAdvancedFilterButton()?.getAttribute('aria-expanded'), 'true');
-    assert.equal(container.textContent?.includes('Todos os responsáveis'), true);
-    assert.equal(container.textContent?.includes('Indicação'), true);
+    const filterDialog = document.querySelector('[aria-label="Filtros avançados do dashboard"]');
+    assert.equal(filterDialog?.getAttribute('role'), 'dialog');
+    assert.equal(filterDialog?.id, 'dashboard-advanced-filters');
+    assert.ok(document.querySelector('.kds-dialog-backdrop'));
+    assert.equal(filterDialog?.textContent?.includes('Todos os responsáveis'), true);
+    assert.equal(filterDialog?.textContent?.includes('Indicação'), true);
     assert.equal(findAdvancedFilterButton()?.textContent?.includes('1'), true);
 
     await act(async () => { findAdvancedFilterButton()?.click(); });
-    assert.equal(container.textContent?.includes('Todas as origens'), false);
+    assert.equal(document.querySelector('[aria-label="Filtros avançados do dashboard"]'), null);
   } finally {
     act(() => root.unmount());
     container.remove();
+  }
+});
+
+test('apresenta filtros em drawer modal no mobile e fecha com Escape', async () => {
+  const originalWidth = window.innerWidth;
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => { root.render(<DashboardHeader {...props} />); });
+    const trigger = Array.from(container.querySelectorAll('button'))
+      .find((button) => button.getAttribute('aria-label') === 'Filtros avançados');
+    assert.ok(trigger);
+
+    trigger.focus();
+    await act(async () => { trigger.click(); });
+
+    const filterDialog = document.querySelector('[aria-label="Filtros avançados do dashboard"]');
+    assert.equal(filterDialog?.getAttribute('aria-modal'), 'true');
+    assert.equal(filterDialog?.classList.contains('kds-drawer'), true);
+    assert.equal(filterDialog?.textContent?.includes('Todos os estágios'), true);
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    assert.equal(document.querySelector('[aria-label="Filtros avançados do dashboard"]'), null);
+    assert.equal(document.activeElement, trigger);
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
   }
 });

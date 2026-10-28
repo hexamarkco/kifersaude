@@ -8,10 +8,10 @@
     "references/mobile/page--dashboard.png"
   ],
   "reviewed_contexts": [
-    "page--dashboard"
+    "page--dashboard",
+    "state--dashboard-filtros"
   ],
   "pending_contexts": [
-    "state--dashboard-filtros",
     "state--dashboard-periodo",
     "state--dashboard-analises"
   ],

@@ -14,7 +14,7 @@
 
 - A referência estática mostra quatro indicadores e uma série mensal mais populada. O dashboard real oferece seis métricas; as duas complementares ficam recolhidas para preservar a hierarquia sem remover informação. A fixture Playwright é sintética e contém somente um mês, então o gráfico tem um ponto; isso não representa a série histórica de produção.
 - A sessão local usa dados de demonstração. Nenhum registro foi criado, alterado ou excluído e nenhuma comunicação foi enviada. O console do ambiente reportou o aviso de ciclo de vida `UNSAFE_componentWillMount` de uma dependência e timeout da conexão Realtime de teste; nenhuma ação do dashboard dependeu dessa conexão durante a captura.
-- Os estados avançados de filtros, seletor de período e análises/modais ainda exigem comparação própria com `state--dashboard-filtros`, `state--dashboard-periodo` e `state--dashboard-analises`.
+- Os filtros avançados foram comparados e revisados com adaptações em [`state--dashboard-filtros`](../dashboard-filtros/README.md). O seletor de período e as análises/modais ainda exigem comparação própria com `state--dashboard-periodo` e `state--dashboard-analises`.
 
 ## Capturas
 
@@ -44,8 +44,8 @@ As páginas foram capturadas com Playwright após esperar fontes e imagens e des
 
 - Playwright: viewport e página completa em desktop, tablet, mobile e mobile compacto; claro em todas as larguras; escuro em desktop e mobile; disclosure interativo.
 - Sem overflow horizontal medido; em 390 px e 320 px o disclosure termina acima da navegação inferior fixa.
-- Testes do `DashboardDailyOverview` passaram; também passaram typecheck, lint, auditorias arquitetural, visual e do design system, build/verificação do bundle e suíte completa (**1.727 testes em 328 arquivos**). O build mantém o aviso conhecido de chunk vendor acima de 500 kB.
+- Testes do `DashboardDailyOverview` passaram; também passaram typecheck, lint, auditorias arquitetural, visual e do design system, build/verificação do bundle e suíte completa (**1.728 testes em 328 arquivos**). O build mantém o aviso conhecido de chunk vendor acima de 500 kB.
 
 ## Pendências do dashboard
 
-- Comparar e validar separadamente os estados de filtros avançados, seletor de período e análises/modais indicados em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json). A página principal não encerra esses contextos nem o redesign integral.
+- Comparar e validar separadamente o seletor de período e as análises/modais indicados em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json). A página principal e os filtros não encerram esses contextos nem o redesign integral.

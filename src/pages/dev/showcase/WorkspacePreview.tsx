@@ -240,7 +240,28 @@ export function ContactForm({
     />
   );
   return header ? (
-    <FormPage header={header} onSubmit={submit} noValidate actions={actions}>
+    <FormPage
+      id="ds-contact-form"
+      header={header}
+      onSubmit={submit}
+      noValidate
+      actions={actions}
+      aside={
+        <Card className="kds-form-guidance" padding="md">
+          <SectionHeader title="Orientações" as="h2" />
+          <Alert tone="accent" title="Campos obrigatórios">
+            Nome, e-mail e telefone são validados antes de salvar.
+          </Alert>
+          <div>
+            <SectionHeader title="Salvamento" as="h3" />
+            <Text size="sm">
+              Os dados desta demonstração ficam somente nesta prévia e podem ser
+              descartados ao cancelar.
+            </Text>
+          </div>
+        </Card>
+      }
+    >
       {fields}
     </FormPage>
   ) : (
@@ -660,6 +681,14 @@ export default function WorkspacePreview({
             label: 'Editar contato',
             icon: Pencil,
             onClick: () => setView('edit'),
+          }}
+        />
+      ) : view === 'create' || view === 'edit' ? (
+        <PageActions
+          primary={{
+            label: view === 'edit' ? 'Salvar alterações' : 'Criar contato',
+            type: 'submit',
+            form: 'ds-contact-form',
           }}
         />
       ) : undefined,

@@ -1,5 +1,15 @@
-import { FormSection, FormActions, PageHeader, Text, FieldLabel } from '../design-system';
-import { IconButton } from '../design-system';
+import {
+  Alert,
+  Card,
+  FieldLabel,
+  FormActions,
+  FormPage,
+  FormSection,
+  IconButton,
+  PageActions,
+  SectionHeader,
+  Text,
+} from '../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
@@ -453,8 +463,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
     }
   };
 
-  const formContent = (
-    <form id="lead-form" onSubmit={handleSubmit}>
+const formFields = (
       <div className="kds-lead-form-grid">
         <FormSection step="01" title="Dados de contato" description="Informações básicas para identificação e contato.">
           <Field label="Nome completo *" htmlFor="lead-nome" className="md:col-span-2">
@@ -809,14 +818,75 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           </Field>
         </FormSection>
       </div>
+  );
+  const submitLabel = lead ? 'Salvar alterações' : 'Salvar lead';
+  const formContent = (
+    <form id="lead-form" onSubmit={handleSubmit}>
+      {formFields}
     </form>
   );
-  if (presentation === 'page') return <section className="kds-lead-form-page">
-    <Button variant="text" size="sm" onClick={onClose} disabled={saving} className="kds-lead-form-back"><ArrowLeft className="kds-control-icon" />Gestão de leads</Button>
-    <PageHeader eyebrow={lead ? 'Atualizar cadastro' : 'Novo cadastro'} title={lead ? 'Editar lead' : 'Novo lead'} description={lead ? 'Atualize os dados comerciais e o próximo acompanhamento.' : 'Registre o contato e configure o primeiro acompanhamento.'} />
-    {formContent}
-    <FormActions onCancel={onClose} submitLabel={lead ? 'Salvar alterações' : 'Salvar lead'} loading={saving} form="lead-form" sticky />
-  </section>;
+  if (presentation === 'page') return (
+    <FormPage
+      className="kds-lead-form-page"
+      id="lead-form"
+      onSubmit={handleSubmit}
+      header={{
+        eyebrow: lead ? 'Atualizar cadastro' : 'Novo cadastro',
+        title: lead ? 'Editar lead' : 'Novo lead',
+        description: lead
+          ? 'Atualize os dados comerciais e o próximo acompanhamento.'
+          : 'Registre o contato e configure o primeiro acompanhamento.',
+        breadcrumbs: (
+          <Button
+            variant="text"
+            size="sm"
+            onClick={onClose}
+            disabled={saving}
+            className="kds-lead-form-back"
+          >
+            <ArrowLeft className="kds-control-icon" />
+            Gestão de leads
+          </Button>
+        ),
+        actions: (
+          <PageActions
+            primary={{
+              label: submitLabel,
+              type: 'submit',
+              form: 'lead-form',
+              loading: saving,
+            }}
+          />
+        ),
+      }}
+      noValidate
+      actions={
+        <FormActions
+          onCancel={onClose}
+          submitLabel={submitLabel}
+          loading={saving}
+          form="lead-form"
+          sticky
+        />
+      }
+      aside={
+        <Card className="kds-form-guidance" padding="md">
+          <SectionHeader title="Orientações" as="h2" />
+          <Alert tone="accent" title="Campos obrigatórios">
+            Nome completo, telefone, origem, status e responsável.
+          </Alert>
+          <div>
+            <SectionHeader title="Próximo acompanhamento" as="h3" />
+            <Text size="sm" className="kds-form-guidance-copy">
+              Ao informar data e horário, o CRM cria um lembrete vinculado a este lead.
+            </Text>
+          </div>
+        </Card>
+      }
+    >
+      {formFields}
+    </FormPage>
+  );
 
   return (
     <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-lead-form-dialog">

@@ -1,0 +1,111 @@
+{
+  "created_at": "2026-10-28",
+  "contexts": [
+    "extra--leads-edicao-pagina"
+  ],
+  "references": {
+    "extra--leads-edicao-pagina": [
+      "../../../references/desktop/extra--leads-edicao-pagina.png",
+      "../../../references/mobile/extra--leads-edicao-pagina.png"
+    ]
+  },
+  "themes": [
+    "claro",
+    "escuro"
+  ],
+  "viewports": [
+    {
+      "height": 1080,
+      "width": 1920,
+      "name": "desktop"
+    },
+    {
+      "height": 1024,
+      "width": 768,
+      "name": "tablet"
+    },
+    {
+      "height": 844,
+      "width": 390,
+      "name": "mobile"
+    },
+    {
+      "height": 640,
+      "width": 320,
+      "name": "mobile-320"
+    }
+  ],
+  "screenshot_count": 7,
+  "screenshots": [
+    "lead-edit-desktop-light.png",
+    "lead-edit-tablet-light.png",
+    "lead-edit-mobile-light.png",
+    "lead-edit-390-initial-light.png",
+    "lead-edit-mobile-320-light.png",
+    "lead-edit-320-initial-light.png",
+    "lead-edit-desktop-dark.png"
+  ],
+  "verification": {
+    "full_page_and_initial_viewports": true,
+    "form_groups": [
+      "Dados de contato",
+      "Localização",
+      "Qualificação e origem",
+      "Responsável e acompanhamento"
+    ],
+    "header_save_submits_the_same_form": true,
+    "cancel_and_save_actions_present": true,
+    "mobile_action_bar_above_bottom_navigation": true,
+    "guidance_side_panel_present": true,
+    "guidance_below_form_at_tablet_and_mobile": true,
+    "tablet_fields_use_single_column": true,
+    "horizontal_overflow": false,
+    "fixtures": "Contato Demonstração 01 (dados sintéticos locais)",
+    "destructive_or_external_actions": false,
+    "responsive_measurements": [
+      {
+        "documentScrollWidth": 1910,
+        "full_page": true,
+        "formGroups": 4,
+        "guidanceAside": true,
+        "viewport": "1920x1080",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 758,
+        "full_page": true,
+        "formGroups": 4,
+        "guidanceAside": true,
+        "fieldsPerGroup": 1,
+        "viewport": "768x1024",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 380,
+        "full_page": true,
+        "formGroups": 4,
+        "guidanceAside": true,
+        "actionPosition": "fixed above bottom navigation",
+        "viewport": "390x844",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 310,
+        "full_page": true,
+        "formGroups": 4,
+        "guidanceAside": true,
+        "actionPosition": "fixed above bottom navigation",
+        "viewport": "320x640",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 1910,
+        "full_page": true,
+        "formGroups": 4,
+        "guidanceAside": true,
+        "viewport": "1920x1080",
+        "theme": "escuro"
+      }
+    ]
+  }
+}

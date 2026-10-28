@@ -28,7 +28,7 @@ export type FormPageProps = PageLayoutProps &
   Pick<
     FormHTMLAttributes<HTMLFormElement>,
     'id' | 'onSubmit' | 'noValidate'
-  > & { actions: ReactNode };
+  > & { actions: ReactNode; aside?: ReactNode };
 
 function PageFrame({ header, children, className }: PageLayoutProps) {
   return (
@@ -88,6 +88,7 @@ export function DetailPage({ children, aside, ...props }: DetailPageProps) {
 export function FormPage({
   children,
   actions,
+  aside,
   id,
   onSubmit,
   noValidate,
@@ -95,15 +96,23 @@ export function FormPage({
 }: FormPageProps) {
   return (
     <PageFrame {...props}>
-      <form
-        id={id}
-        onSubmit={onSubmit}
-        noValidate={noValidate}
-        className="kds-form-page"
+      <div
+        className={cx(
+          'kds-form-layout',
+          Boolean(aside) && 'kds-form-layout-aside',
+        )}
       >
-        <div className="kds-form-sections">{children}</div>
-        {actions}
-      </form>
+        <form
+          id={id}
+          onSubmit={onSubmit}
+          noValidate={noValidate}
+          className="kds-form-page"
+        >
+          <div className="kds-form-sections">{children}</div>
+          {actions}
+        </form>
+        {aside && <aside className="kds-form-aside">{aside}</aside>}
+      </div>
     </PageFrame>
   );
 }

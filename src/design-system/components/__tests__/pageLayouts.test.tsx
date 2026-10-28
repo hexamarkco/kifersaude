@@ -117,6 +117,51 @@ test('form page submits once with grouped fields and cancel keeps native non-sub
   view.unmount();
 });
 
+test('form page supports a responsive guidance aside and a header submit action', () => {
+  let submits = 0;
+  const view = render(
+    <FormPage
+      id="contact-form"
+      header={{
+        title: 'Editar contato',
+        actions: (
+          <PageActions
+            primary={{
+              label: 'Salvar alterações',
+              type: 'submit',
+              form: 'contact-form',
+            }}
+          />
+        ),
+      }}
+      onSubmit={(event) => {
+        event.preventDefault();
+        submits++;
+      }}
+      actions={<FormActions onCancel={() => undefined} />}
+      aside={<p>Confira os campos antes de salvar.</p>}
+    >
+      <FormSection title="Identificação">
+        <Field label="Nome">
+          <Input />
+        </Field>
+      </FormSection>
+    </FormPage>,
+  );
+  const layout = view.container.querySelector('.kds-form-layout-aside')!;
+  const aside = layout.querySelector('aside')!;
+  const form = layout.querySelector('form')!;
+  assert.ok(
+    form.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  assert.equal(aside.textContent, 'Confira os campos antes de salvar.');
+  act(() => {
+    (view.container.querySelector('.kds-page-header .kds-button') as HTMLButtonElement).click();
+  });
+  assert.equal(submits, 1);
+  view.unmount();
+});
+
 test('detail page exposes supplementary content as an aside and keeps status with identification', () => {
   const view = render(
     <DetailPage

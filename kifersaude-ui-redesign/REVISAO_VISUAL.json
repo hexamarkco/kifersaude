@@ -779,9 +779,15 @@
         "references/desktop/extra--leads-edicao-pagina.png",
         "references/mobile/extra--leads-edicao-pagina.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/lead-edit/README.md",
+        "validacao/revisao-visual/lead-edit/coverage.json"
+      ],
+      "notes": [
+        "Comparado com as referências desktop e mobile em 1920, 768, 390 e 320 px. O aside de orientação vai após o formulário no mobile para manter sua leitura completa; campos ficam em uma coluna no tablet estreito.",
+        "Usa o contato sintético Contato Demonstração 01. A barra móvel oferece cancelar e salvar sem alterar dados durante a validação. O estado de edição em modal permanece pendente."
+      ]
     },
     {
       "id": "extra--leads-filtros-avancados",
@@ -2543,8 +2549,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 22,
-    "remaining_manifest_contexts": 138,
+    "reviewed_contexts": 23,
+    "remaining_manifest_contexts": 137,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

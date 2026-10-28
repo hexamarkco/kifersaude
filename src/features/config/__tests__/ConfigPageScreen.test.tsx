@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
+import { act } from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { test, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ modules: new Set<string>() }));
+const mocks = vi.hoisted(() => ({ modules: new Set<string>(), canEdit: false }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ role: 'custom' }) }));
-vi.mock('../../../contexts/ConfigContext', () => ({ useConfig: () => ({ getRoleModulePermission: (_role: string, module: string) => ({ can_view: mocks.modules.has(module), can_edit: false }) }) }));
+vi.mock('../../../contexts/ConfigContext', () => ({ useConfig: () => ({ getRoleModulePermission: (_role: string, module: string) => ({ can_view: mocks.modules.has(module), can_edit: mocks.canEdit }) }) }));
 vi.mock('../ai/AiConfigScreen', () => ({ default: () => <p>Área de IA</p> }));
 vi.mock('../automation/AutomationSettingsScreen', () => ({ default: () => <p>Área de automações</p> }));
 vi.mock('../integrations/IntegrationsScreen', () => ({ default: () => <p>Área de integrações</p> }));
 vi.mock('../general/SystemSettingsScreen', () => ({ default: () => <p>Área geral</p> }));
-vi.mock('../users/UsersScreen', () => ({ default: () => <p>Área de usuários</p> }));
+vi.mock('../users/UsersScreen', () => ({ default: ({ createDialogOpen }: { createDialogOpen: boolean }) => <><p>Área de usuários</p>{createDialogOpen && <div role="dialog">Criar usuário</div>}</> }));
 vi.mock('../links/LinksScreen', () => ({ default: () => <p>Área de links</p> }));
 vi.mock('../forms/FormsScreen', () => ({ default: () => <p>Área de formulários</p> }));
 
@@ -21,8 +22,9 @@ function LocationProbe() {
   return <output data-location>{location.pathname}{location.search}</output>;
 }
 
-const renderAt = (path: string, modules: string[]) => {
+const renderAt = (path: string, modules: string[], canEdit = false) => {
   mocks.modules = new Set(modules);
+  mocks.canEdit = canEdit;
   return render(<MemoryRouter initialEntries={[path]}>
     <Routes>
       <Route path="/painel/config" element={<ConfigPageScreen />} />
@@ -89,4 +91,24 @@ test('sem permissão não monta nenhuma tela de automação, integração ou IA'
     assert.equal(view.container.textContent?.includes('Área de IA'), false);
     assert.equal(view.container.querySelectorAll('[role="tab"]').length, 0);
   } finally { view.unmount(); }
+});
+
+test('ação de criar usuário aparece somente com permissão de edição e fecha ao sair da aba', () => {
+  const view = renderAt('/painel/config?tab=users', ['config-users', 'config-system'], true);
+  try {
+    const createButton = [...view.container.querySelectorAll('button')].find((button) => button.textContent?.includes('Novo usuário'));
+    assert.ok(createButton);
+    act(() => createButton.click());
+    assert.ok(view.container.querySelector('[role="dialog"]'));
+
+    const generalTab = [...view.container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((tab) => tab.textContent?.includes('Geral'));
+    assert.ok(generalTab);
+    act(() => generalTab.click());
+    assert.equal(view.container.querySelector('[role="dialog"]'), null);
+  } finally { view.unmount(); }
+
+  const restrictedView = renderAt('/painel/config?tab=users', ['config-users']);
+  try {
+    assert.equal([...restrictedView.container.querySelectorAll('button')].some((button) => button.textContent?.includes('Novo usuário')), false);
+  } finally { restrictedView.unmount(); }
 });

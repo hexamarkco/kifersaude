@@ -8,6 +8,8 @@ import {
   DesignSystemProvider,
   DetailPage,
   Dialog,
+  DialogBody,
+  DialogFooter,
   DialogTitle,
   Field,
   FormActions,
@@ -307,6 +309,46 @@ test('floating content flips and stays inside a narrow visible viewport', () => 
   });
   assert.ok(keyboard.top >= 308);
   assert.ok(keyboard.top + 200 <= 642);
+});
+
+test('listbox inside a modal stays below its field without covering the footer', () => {
+  const view = render(
+    <Dialog open onOpenChange={() => {}}>
+      <DialogBody>
+        <Popover defaultOpen>
+          <PopoverTrigger>
+            <button>Perfil</button>
+          </PopoverTrigger>
+          <PopoverContent aria-label="Perfis" role="listbox">
+            <button>Administrador</button>
+            <button>Operador</button>
+          </PopoverContent>
+        </Popover>
+      </DialogBody>
+      <DialogFooter>Salvar</DialogFooter>
+    </Dialog>,
+  );
+
+  const trigger = document.querySelector<HTMLElement>('.kds-popover-trigger');
+  const body = document.querySelector<HTMLElement>('.kds-dialog-body');
+  const popover = document.querySelector<HTMLElement>('.kds-popover');
+  assert.ok(trigger && body && popover);
+  Object.defineProperty(body, 'getBoundingClientRect', {
+    value: () => ({ top: 100, left: 20, right: 380, bottom: 340, width: 360, height: 240 }),
+  });
+  Object.defineProperty(trigger, 'getBoundingClientRect', {
+    value: () => ({ top: 190, left: 40, right: 320, bottom: 230, width: 280, height: 40 }),
+  });
+  Object.defineProperty(popover, 'getBoundingClientRect', {
+    value: () => ({ top: 0, left: 0, right: 240, bottom: 150, width: 240, height: 150 }),
+  });
+  act(() => window.dispatchEvent(new Event('resize')));
+
+  assert.equal(popover.style.top, '238px');
+  assert.equal(popover.style.maxHeight, '94px');
+  assert.ok(Number.parseFloat(popover.style.top) >= 100);
+  assert.ok(Number.parseFloat(popover.style.top) + Number.parseFloat(popover.style.maxHeight) <= 332);
+  view.unmount();
 });
 
 test('nested popovers keep the parent open on child interaction and Escape closes one layer', () => {

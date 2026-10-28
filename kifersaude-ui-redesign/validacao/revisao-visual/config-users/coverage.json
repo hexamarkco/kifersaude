@@ -1,0 +1,84 @@
+{
+  "updated_at": "2026-10-28",
+  "route": "/painel/config?tab=users",
+  "references": [
+    "../../../references/desktop/page--config-users.png",
+    "../../../references/mobile/page--config-users.png",
+    "../../../references/desktop/state--usuarios-criar.png",
+    "../../../references/mobile/state--usuarios-criar.png",
+    "../../../references/desktop/state--usuarios-editar.png",
+    "../../../references/mobile/state--usuarios-editar.png"
+  ],
+  "capture_method": "Playwright sobre ConfigPageScreen e UsersScreen reais, com contexto e repository isolados",
+  "capture_policy": {
+    "full_page": "Listagens; diálogos capturados no viewport completo com todo o conteúdo visível",
+    "fonts": "carregadas antes da captura",
+    "motion": "reduced motion",
+    "fixture": "três contas sintéticas com e-mails example.invalid",
+    "writes": "nenhuma operação de criar, editar ou excluir confirmada",
+    "shell": "shell global autenticado não incluído na prévia isolada"
+  },
+  "interactions": [
+    { "name": "Busca por usuário", "result": "filtra a lista e atualiza a contagem" },
+    { "name": "Busca sem correspondências", "result": "mostra estado vazio específico da busca" },
+    { "name": "Novo usuário", "result": "abre formulário real; Cancelar fecha sem gravar" },
+    { "name": "Perfil durante criação", "viewports": ["1920x1080", "390x844", "320x640"], "result": "seletor real aberto; opções alcançáveis e rodapé visível" },
+    { "name": "Editar usuário", "result": "abre valores sintéticos; Cancelar fecha sem alterar" },
+    { "name": "Confirmar exclusão", "viewports": ["1920x1080", "768x1024", "390x844", "320x640"], "result": "modal compacto; foi fechado sem confirmar exclusão" }
+  ],
+  "responsive_checks": [
+    { "viewport": "1920x1080", "document_width": 1920, "horizontal_overflow": false, "theme": "light" },
+    { "viewport": "768x1024", "document_width": 768, "horizontal_overflow": false, "theme": "light" },
+    { "viewport": "390x844", "document_width": 390, "horizontal_overflow": false, "theme": "light" },
+    { "viewport": "320x640", "document_width": 320, "horizontal_overflow": false, "theme": "light" },
+    { "viewport": "1920x1080", "theme": "dark" },
+    { "viewport": "390x844", "theme": "dark" }
+  ],
+  "dialog_measurements": [
+    { "viewport": "320x640", "confirmation_dialog": "x=16, y=154.89, width=288, height=330.22" },
+    { "viewport": "390x844", "confirmation_dialog": "x=16, y=277.31, width=358, height=289.38" },
+    { "viewport": "768x1024", "confirmation_dialog": "x=160, y=371.31, width=448, height=281.38" }
+  ],
+  "screenshots": [
+    "dark/desktop/page--config-users.png",
+    "dark/mobile/page--config-users.png",
+    "desktop/page--config-users-busca-vazia.png",
+    "desktop/page--config-users.png",
+    "desktop/state--usuarios-criar-perfil.png",
+    "desktop/state--usuarios-criar.png",
+    "desktop/state--usuarios-editar.png",
+    "desktop/state--usuarios-excluir-confirmacao.png",
+    "mobile/page--config-users-busca-vazia.png",
+    "mobile/page--config-users.png",
+    "mobile/state--usuarios-criar-perfil.png",
+    "mobile/state--usuarios-criar.png",
+    "mobile/state--usuarios-editar.png",
+    "mobile/state--usuarios-excluir-confirmacao.png",
+    "mobile-320/page--config-users-busca-vazia.png",
+    "mobile-320/page--config-users.png",
+    "mobile-320/state--usuarios-criar-perfil.png",
+    "mobile-320/state--usuarios-criar.png",
+    "mobile-320/state--usuarios-editar.png",
+    "mobile-320/state--usuarios-excluir-confirmacao.png",
+    "tablet/page--config-users.png",
+    "tablet/state--usuarios-criar.png",
+    "tablet/state--usuarios-editar.png",
+    "tablet/state--usuarios-excluir-confirmacao.png"
+  ],
+  "known_differences": [
+    "A referência mostra filtros, exportação e paginação não disponíveis na feature real; não foram adicionados.",
+    "A criação real exige senha temporária; a edição mantém a senha quando o campo opcional fica em branco.",
+    "A prévia não contém o shell global autenticado do CRM; a integração de navegação fora da tela de configurações permanece por validar."
+  ],
+  "validation": {
+    "focused_tests": "26/26 passed",
+    "full_tests": "1746/1746 passed in 330 files with a 15s test timeout; the previously timing-out Design System contract test also passed in isolation",
+    "typecheck": "passed",
+    "lint": "passed",
+    "architecture_check": "passed",
+    "migration_check": "passed",
+    "visual_hardcode_audit": "passed",
+    "design_system_audit": "passed",
+    "production_build": "passed; existing vendor chunk warning above 500 kB"
+  }
+}

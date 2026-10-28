@@ -267,9 +267,14 @@
         "references/desktop/page--config-users.png",
         "references/mobile/page--config-users.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-users/README.md",
+        "validacao/revisao-visual/config-users/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências desktop/mobile usando a tela real. Busca, contagem, listagem e cartões responsivos preservam os dados e ações disponíveis; filtros, exportação e paginação da referência não foram inventados. A prévia usa dados sintéticos e não inclui o shell autenticado global."
+      ]
     },
     {
       "id": "page--config-links",
@@ -1867,9 +1872,14 @@
         "references/desktop/state--usuarios-criar.png",
         "references/mobile/state--usuarios-criar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-users/README.md",
+        "validacao/revisao-visual/config-users/coverage.json"
+      ],
+      "notes": [
+        "Formulário real revisado em desktop, tablet e mobile com perfil dinâmico e senha temporária obrigatória. Cancelar não grava dados; a fixture permaneceu sintética."
+      ]
     },
     {
       "id": "state--usuarios-editar",
@@ -1882,9 +1892,14 @@
         "references/desktop/state--usuarios-editar.png",
         "references/mobile/state--usuarios-editar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-users/README.md",
+        "validacao/revisao-visual/config-users/coverage.json"
+      ],
+      "notes": [
+        "Formulário real revisado em desktop, tablet e mobile; senha em branco mantém a senha existente. Cancelar não altera dados. A confirmação de exclusão também foi verificada em quatro larguras e fechada sem confirmar."
+      ]
     },
     {
       "id": "state--links-criar",

@@ -1596,6 +1596,18 @@ html,
     border-radius: 0 !important;
   }
 
+  .painel-theme .kds-dialog.kds-dialog-confirmation {
+    width: min(calc(100vw - 2rem), var(--dialog-width, var(--dialog-width-md)));
+    max-width: min(calc(100vw - 2rem), var(--dialog-width, var(--dialog-width-md))) !important;
+    max-height: calc(100dvh - 2rem) !important;
+    align-self: center;
+    border-radius: var(--radius-dialog) !important;
+  }
+
+  .painel-theme .kds-dialog-confirmation .kds-dialog-body {
+    flex: 0 1 auto;
+  }
+
   .painel-theme .kds-dialog-container {
     align-items: stretch !important;
     padding: 0 !important;

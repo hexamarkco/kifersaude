@@ -98,7 +98,7 @@ export function PopoverContent({
   const appearance = useDesignSystemAppearance();
   const { open, setOpen, triggerRef, id, parentId } = usePopoverContext();
   const contentRef = useRef<HTMLDivElement>(null);
-  const position = useOverlayPosition(open, triggerRef, contentRef, side, align, sideOffset);
+  const position = useOverlayPosition(open, triggerRef, contentRef, side, align, sideOffset, 'dialog-body');
   const [theme, setTheme] = useState('theme-light');
 
   useEffect(() => {

@@ -3,7 +3,9 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
-import { Alert, PageHeader, Tabs, type TabItem } from "../../design-system";
+import { Alert, Button, PageHeader, Tabs, type TabItem } from "../../design-system";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 import AiConfigScreen from "./ai/AiConfigScreen";
 import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
 import FormsScreen from "./forms/FormsScreen";
@@ -20,6 +22,7 @@ const ALL_TAB_IDS = CONFIG_TAB_DEFINITIONS.map((t) => t.id);
 export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigArea }) {
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = useConfigParam("tab", ALL_TAB_IDS, area === "automation" ? "automation" : "system");
 
@@ -85,17 +88,25 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
               : section === 'contracts'
                 ? contractManager?.description ?? 'Organize as opções usadas no cadastro de contratos.'
                 : 'Defina como datas, sessões e notificações se comportam no CRM.';
+  const headerActions = activeAllowedTab === 'users' && getRoleModulePermission(role, 'config-users').can_edit
+    ? <Button onClick={() => setCreateUserDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo usuário</Button>
+    : undefined;
+  const handleTabChange = (nextTab: ConfigTabType) => {
+    if (nextTab !== 'users') setCreateUserDialogOpen(false);
+    setActiveTab(nextTab);
+  };
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
       <PageHeader
         eyebrow="Administração"
         title={title}
         description={description}
+        actions={headerActions}
       >
         <Tabs
           items={allowedTabs}
           value={activeAllowedTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           variant="underline"
           size={area === "automation" ? "sm" : "md"}
           ariaLabel={area === "automation" ? "Áreas de automações e IA" : "Áreas de configurações"}
@@ -106,7 +117,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
 
       <main className="min-w-0">
           {activeAllowedTab === "system" && <SystemSettingsScreen />}
-          {activeAllowedTab === "users" && <UsersScreen />}
+          {activeAllowedTab === "users" && <UsersScreen createDialogOpen={createUserDialogOpen} onCreateDialogOpenChange={setCreateUserDialogOpen} />}
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
           {activeAllowedTab === "ai" && <AiConfigScreen />}

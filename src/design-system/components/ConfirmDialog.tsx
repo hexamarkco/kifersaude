@@ -63,6 +63,7 @@ export function ConfirmDialog({
       closeOnOverlay={!busy}
       closeOnEscape={!busy}
       size="sm"
+      className="kds-dialog-confirmation"
     >
       <DialogHeader onClose={busy ? undefined : () => onOpenChange(false)}>
         <DialogTitle>{title}</DialogTitle>

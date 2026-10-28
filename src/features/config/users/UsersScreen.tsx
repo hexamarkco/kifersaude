@@ -7,7 +7,6 @@ import {
   Users,
   Shield,
   Trash2,
-  Plus,
   AlertCircle,
   User as UserIcon,
   Pencil,
@@ -36,8 +35,6 @@ import {
   DialogTitle,
   Field,
   Input,
-  OperationalMetricChip,
-  SectionHeader,
   Table,
   TableBody,
   TableCell,
@@ -47,6 +44,7 @@ import {
   TableRow,
   FilterSelect,
   IconButton,
+  Surface,
   useTableSorting,
   useSortedTableRows,
 } from "../../../design-system";
@@ -58,13 +56,17 @@ import {
   updateUser,
 } from "./data/usersRepository";
 
-export default function UsersScreen() {
+type UsersScreenProps = {
+  createDialogOpen: boolean;
+  onCreateDialogOpenChange: (open: boolean) => void;
+};
+
+export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange }: UsersScreenProps) {
   const { user, refreshProfile, role: currentRole } = useAuth();
   const { accessProfiles, getRoleModulePermission } = useConfig();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [usersLoadError, setUsersLoadError] = useState(false);
-  const [showAddUser, setShowAddUser] = useState(false);
   const [newUserUsername, setNewUserUsername] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
@@ -163,7 +165,7 @@ export default function UsersScreen() {
     setNewUserPassword("");
     setNewUserPasswordVisible(false);
     setNewUserRole(profileOptions[0]?.value ?? "observer");
-    setShowAddUser(false);
+    onCreateDialogOpenChange(false);
   };
 
   const resetEditForm = () => {
@@ -311,6 +313,11 @@ export default function UsersScreen() {
   };
 
   const hasUsersSnapshot = users.length > 0;
+  const emptyUsersMessage = usersLoadError
+    ? "A lista de usuários não pôde ser carregada."
+    : searchTerm.trim()
+      ? "Nenhum usuário encontrado para esta busca."
+      : "Nenhum usuário cadastrado";
   const currentUserManagementId = user?.id ?? null;
 
   if (!canManageUsers) {
@@ -334,19 +341,7 @@ export default function UsersScreen() {
       overlayLabel="Atualizando usuários..."
       stageClassName="min-h-[420px]"
     >
-      <div className="space-y-5">
-        <SectionHeader
-          eyebrow="Equipe e acessos"
-          title="Usuários"
-          description="Gerencie contas e os perfis de acesso da equipe."
-          action={
-            <Button onClick={() => setShowAddUser(true)} variant="primary" className="w-full sm:w-auto">
-              <Plus className="kds-control-icon" />
-              <span>Novo usuário</span>
-            </Button>
-          }
-        />
-
+      <div className="space-y-4">
         {usersLoadError ? (
           <Alert
             tone="danger"
@@ -362,8 +357,8 @@ export default function UsersScreen() {
           </Alert>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="w-full sm:max-w-sm">
+        <Surface padding="sm" className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="w-full min-w-0 sm:flex-1">
             <Input
               type="search"
               value={searchTerm}
@@ -372,8 +367,10 @@ export default function UsersScreen() {
               placeholder="Buscar por usuário, e-mail ou perfil"
             />
           </div>
-          <OperationalMetricChip value={filteredUsers.length} label={filteredUsers.length === 1 ? "usuário" : "usuários"} />
-        </div>
+          <Text className="shrink-0 text-xs text-[var(--text-muted)]" role="status">
+            {filteredUsers.length} {filteredUsers.length === 1 ? "usuário" : "usuários"}
+          </Text>
+        </Surface>
 
 
         <div className="space-y-3">
@@ -392,7 +389,7 @@ export default function UsersScreen() {
                 {filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="py-12 text-center text-[var(--text-muted)]">
-                      {usersLoadError ? "A lista de usuários não pôde ser carregada." : "Nenhum usuário cadastrado"}
+                      {emptyUsersMessage}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -432,10 +429,10 @@ export default function UsersScreen() {
 
           <div className="space-y-3 lg:hidden">
             {filteredUsers.length === 0 ? (
-              <Card variant="muted" padding="md" className="py-12 text-center">
+              <Card variant="default" padding="md" className="py-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-muted)] opacity-40" />
                 <Text className="text-[color:var(--text-muted)]">
-                  {usersLoadError ? "A lista de usuários não pôde ser carregada." : "Nenhum usuário cadastrado"}
+                  {emptyUsersMessage}
                 </Text>
               </Card>
             ) : (
@@ -449,19 +446,19 @@ export default function UsersScreen() {
                 return (
                   <Card
                     key={userProfile.id}
-                    className="flex items-center justify-between gap-4"
-                    variant="muted"
+                    className="flex flex-col gap-3"
+                    variant="default"
                     padding="sm"
                   >
-                    <div className="flex items-center space-x-4">
-                      <CardIcon>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <CardIcon className="shrink-0">
                         <UserIcon className="h-5 w-5" />
                       </CardIcon>
-                      <div>
-                        <Text className="font-medium text-[color:var(--text-primary)]">
+                      <div className="min-w-0">
+                        <Text className="break-words font-medium text-[color:var(--text-primary)]">
                           @{userProfile.username}
                         </Text>
-                        <Text className="text-sm text-[color:var(--text-muted)]">
+                        <Text className="break-words text-sm text-[color:var(--text-muted)] [overflow-wrap:anywhere]">
                           {userProfile.email}
                         </Text>
                         <div className="mt-1">
@@ -472,30 +469,36 @@ export default function UsersScreen() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <ButtonGroup aria-label="Ações do usuário">
-                      <IconButton
-                        type="button"
-                        onClick={() => startEditingUser(userProfile)}
-                        disabled={actionLoading}
-                        variant="icon"
-                        
-                        title="Editar usuário"
-                       size="sm" aria-label="Editar usuário">
-                        <Pencil aria-hidden="true" />
-                      </IconButton>
-                      {!isCurrentUser ? (
+                    <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+                      {isCurrentUser ? (
+                        <Text className="text-sm italic text-[color:var(--text-muted)]">Você</Text>
+                      ) : <span aria-hidden="true" />}
+                      <ButtonGroup aria-label={`Ações de ${userProfile.username}`}>
                         <IconButton
-                          onClick={() => void handleDeleteUser(userProfile.id)}
+                          type="button"
+                          onClick={() => startEditingUser(userProfile)}
                           disabled={actionLoading}
-                          variant="danger"
-                          title="Excluir usuário"
-                         size="md" aria-label="Excluir usuário">
-                          <Trash2 aria-hidden="true" />
+                          variant="icon"
+                          title="Editar usuário"
+                          size="md"
+                          aria-label={`Editar ${userProfile.username}`}
+                        >
+                          <Pencil aria-hidden="true" />
                         </IconButton>
-                      ) : null}
+                        {!isCurrentUser ? (
+                          <IconButton
+                            type="button"
+                            onClick={() => void handleDeleteUser(userProfile.id)}
+                            disabled={actionLoading}
+                            variant="danger"
+                            title="Excluir usuário"
+                            size="md"
+                            aria-label={`Excluir ${userProfile.username}`}
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </IconButton>
+                        ) : null}
                       </ButtonGroup>
-                      {isCurrentUser && <span className="text-sm italic text-[color:var(--text-muted)]">Você</span>}
                     </div>
                   </Card>
                 );
@@ -504,7 +507,7 @@ export default function UsersScreen() {
           </div>
         </div>
 
-        <Dialog open={showAddUser} onOpenChange={(open) => !open && resetCreateForm()} size="lg">
+        <Dialog open={createDialogOpen} onOpenChange={(open) => !open && resetCreateForm()} size="lg">
           <DialogHeader onClose={resetCreateForm}>
             <DialogTitle>Novo usuário</DialogTitle>
             <DialogDescription>Crie um novo usuário e associe a um perfil dinâmico de acesso.</DialogDescription>

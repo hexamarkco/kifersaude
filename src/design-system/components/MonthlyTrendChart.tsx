@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { cx } from '../../lib/cx';
 
 type MonthlyTrendPoint = {
   label: string;
@@ -10,6 +11,7 @@ export type MonthlyTrendChartProps = {
   color?: string;
   height?: number;
   formatValue?: (value: number) => string;
+  className?: string;
 };
 
 const PADDING = {
@@ -25,6 +27,7 @@ export default function MonthlyTrendChart({
   color = 'var(--brand-primary)',
   height = 280,
   formatValue = (value) => value.toLocaleString('pt-BR'),
+  className,
 }: MonthlyTrendChartProps) {
   const plotRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 720, height });
@@ -119,7 +122,10 @@ export default function MonthlyTrendChart({
   }
 
   return (
-    <div className="kds-monthly-trend-chart rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5">
+    <div
+      className={cx('kds-monthly-trend-chart rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5', className)}
+      style={{ '--kds-monthly-trend-min-height': `${height}px` } as CSSProperties}
+    >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
@@ -135,7 +141,7 @@ export default function MonthlyTrendChart({
         </div>
       </div>
 
-      <div ref={plotRef} className="kds-monthly-trend-plot" style={{ minHeight: height }}>
+      <div ref={plotRef} className="kds-monthly-trend-plot">
       <svg viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label="Evolução mensal do indicador selecionado">
           {chart.points.map((point, index) => (
             <line

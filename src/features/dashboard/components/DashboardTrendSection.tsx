@@ -117,9 +117,9 @@ export function DashboardTrendSection({
         title="Evolução mensal"
         description="Compare o ritmo de entrada, fechamento e comissão dentro dos filtros ativos."
         action={(
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="kds-dashboard-trend-controls">
             <SegmentedControl
-              className="max-w-full"
+              className="kds-dashboard-trend-metrics"
               ariaLabel="Métrica da evolução mensal"
               items={DASHBOARD_METRIC_TABS}
               value={selectedMetric}
@@ -170,6 +170,7 @@ export function DashboardTrendSection({
             color={DASHBOARD_METRIC_COLORS[selectedMetric]}
             formatValue={formatSelectedMetricValue}
             height={250}
+            className="kds-dashboard-monthly-trend-chart"
           />
         </div>
 

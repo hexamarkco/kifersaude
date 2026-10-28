@@ -9,6 +9,7 @@
 - Os cards KPI usam `KpiCard` sem ícones decorativos, com títulos, números e textos de apoio alinhados. No mobile compacto, o período e filtros ficam na mesma linha; a ação de filtros conserva nome acessível e fica apenas com ícone abaixo de 360 px.
 - A agenda mantém ações para abrir agenda e leads; atrasados, pendentes e oportunidades sem próximo passo continuam acionáveis na composição compacta.
 - Em 390 px e 320 px, a primeira dobra dos indicadores e do disclosure não é coberta pela navegação fixa. Não foi encontrado overflow horizontal em 1920, 768, 390 ou 320 px.
+- Refinamento desktop posterior: o gráfico da evolução mensal cresce para aproveitar a altura da coluna junto aos três indicadores laterais; em largura desktop, os rótulos do seletor de métrica mantêm largura integral. Playwright conferiu o componente real em preview isolado com dados sintéticos em 1920, 1366 e 1280 px, além de 390 px; temas claro e escuro em 1920 px, abas e seletor de período interativos e sem overflow horizontal. Como a rota completa requer autenticação que não estava disponível, esta conferência não substitui uma nova aprovação visual do Dashboard integrado.
 
 ## Diferenças e limitações
 

@@ -15,8 +15,11 @@ test('fits the plot to its container without shrinking labels or dropping data p
     disconnect() { disconnected = true; }
   };
   const data = ['Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out'].map((label, index) => ({ label, value: 250 - index * 30 }));
-  const view = render(<MonthlyTrendChart data={data} height={250} />);
+  const view = render(<MonthlyTrendChart className="dashboard-chart" data={data} height={250} />);
   try {
+    const chart = view.container.querySelector('.kds-monthly-trend-chart');
+    assert.ok(chart?.classList.contains('dashboard-chart'));
+    assert.equal((chart as HTMLElement | null)?.style.getPropertyValue('--kds-monthly-trend-min-height'), '250px');
     const plot = view.container.querySelector('.kds-monthly-trend-plot');
     assert.ok(plot);
     let width = 1200;

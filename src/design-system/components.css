@@ -62,6 +62,10 @@
   overflow-wrap: anywhere;
 }
 
+.kds-table-row.align-middle > .kds-table-cell {
+  vertical-align: middle;
+}
+
 .kds-table-sm .kds-table-head,
 .kds-table-sm .kds-table-cell {
   min-height: 2.5rem;

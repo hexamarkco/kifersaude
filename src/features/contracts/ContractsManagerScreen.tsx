@@ -938,8 +938,7 @@ export default function ContractsManager({
                     </TableCell>
                     <TableCell>
                       <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
-                      <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}</span>
-                      <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
+                      <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}{contract.modalidade ? ` · ${formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}` : ""}</span>
                     </TableCell>
                     <TableCell>
                       <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>

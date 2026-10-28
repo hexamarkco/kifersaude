@@ -1,6 +1,6 @@
-import { ButtonGroup, Heading, Text } from '../../../design-system';
+import { Heading, Text } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, ExternalLink, FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Edit2, ExternalLink, FileText, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formsService } from "../../../lib/formsService";
@@ -8,7 +8,6 @@ import type { PublicForm } from "../../public-content";
 import { toast } from "../../../lib/toast";
 import {
   Alert,
-  Badge,
   Button,
   Card,
   Dialog,
@@ -21,7 +20,8 @@ import {
   LoadingState,
   SectionHeader,
   Switch,
-  IconButton,
+  RecordActions, ResponsiveCollection, Surface, EmptyState,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../../../design-system";
 import FormEditorScreen from "./FormEditorScreen";
 
@@ -41,6 +41,7 @@ export default function FormsScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [forms, setForms] = useState<PublicForm[]>([]);
+  const [search, setSearch] = useState("");
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -217,7 +218,8 @@ export default function FormsScreen() {
     <SectionHeader
       eyebrow="Página pública"
       title="Formulários de captação"
-      description="Crie formulários multi-etapas em /forms/xyz para captar leads com perguntas de múltipla escolha, texto e geolocalização opcional."
+      description="Crie e organize formulários para captar leads no site."
+      action={!loadError ? <Button onClick={() => { setCreateTitle(""); setCreateSlug(""); setSlugTouched(false); setIsCreateModalOpen(true); }}><Plus className="kds-control-icon" aria-hidden="true" />Novo formulário</Button> : undefined}
     />
   );
 
@@ -255,110 +257,44 @@ export default function FormsScreen() {
     );
   }
 
+  const visibleForms = forms.filter(form => `${form.title} ${form.slug}`.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR")));
+
   return (
     <div className="space-y-6">
       {pageHeader}
 
       <Card>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Heading level={3} className="kds-card-title">Seus formulários</Heading>
-            <Text className="kds-card-subtitle">Cada formulário publicado cria um lead automaticamente ao ser enviado.</Text>
-          </div>
-          <Button
-            onClick={() => {
-              setCreateTitle("");
-              setCreateSlug("");
-              setSlugTouched(false);
-              setIsCreateModalOpen(true);
-            }}
-          >
-            <Plus className="kds-control-icon" />
-            <span>Novo formulário</span>
-          </Button>
+        <Input aria-label="Buscar formulários" value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por nome ou endereço..." leftIcon={Search} />
+      </Card>
+      <Card className="space-y-4">
+        <div>
+          <Heading level={3} className="kds-card-title">Seus formulários</Heading>
+          <Text className="kds-card-subtitle">Cada formulário publicado cria um lead automaticamente ao ser enviado.</Text>
         </div>
-
-        {forms.length === 0 ? (
-          <Text className="text-sm text-[var(--text-muted)]">
-            Nenhum formulário cadastrado ainda. Clique em "Novo formulário" para começar.
-          </Text>
-        ) : (
-          <div className="space-y-3">
-            {forms.map((form) => {
-              const isBusy = busyIds.has(form.id);
-              const publicUrl = `${window.location.origin}/forms/${form.slug}`;
-
-              return (
-                <Card
-                  key={form.id}
-                  variant="muted"
-                  padding="sm"
-                  className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-                >
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{form.title}</Text>
-                        <Badge tone={form.is_published ? "success" : "neutral"} size="sm">
-                          {form.is_published ? "Publicado" : "Rascunho"}
-                        </Badge>
-                      </div>
-                      <Text className="truncate text-xs text-[var(--text-secondary)]" title={publicUrl}>
-                        /forms/{form.slug}
-                      </Text>
-                      <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
-                        {form.submission_count} envio{form.submission_count === 1 ? "" : "s"}
-                      </Text>
-                    </div>
-                  </div>
-
-                  <ButtonGroup size="md" aria-label="Ações do formulário">
-                    <Switch
-                      checked={form.is_published}
-                      onChange={() => void handleTogglePublish(form)}
-                      disabled={isBusy}
-                      label={form.is_published ? "Publicado" : "Rascunho"}
-                    />
-                    <IconButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void handleCopyLink(form)}
-                      aria-label={`Copiar link de ${form.title}`}
-                      title="Copiar link"
-                    >
-                      <Copy />
-                    </IconButton>
-                    <IconButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
-                      aria-label={`Abrir formulário ${form.title}`}
-                      title="Abrir formulário público"
-                    >
-                      <ExternalLink />
-                    </IconButton>
-                    <Button variant="secondary" size="sm" onClick={() => setSelectedFormId(form.id)}>
-                      Editar
-                    </Button>
-                    <IconButton
-                      variant="danger"
-                      disabled={isBusy}
-                      size="sm"
-                      onClick={() => void handleDelete(form)}
-                      aria-label={`Excluir formulário ${form.title}`}
-                      title="Excluir formulário"
-                    >
-                      <Trash2 />
-                    </IconButton>
-                  </ButtonGroup>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+        {visibleForms.length === 0 ? (
+          <EmptyState icon={<FileText aria-hidden="true" />} title={search.trim() ? "Nenhum formulário encontrado" : "Nenhum formulário cadastrado"}
+            description={search.trim() ? "Ajuste a busca para encontrar um formulário." : "Crie um formulário para começar a captar leads."}
+            action={search.trim() ? <Button variant="secondary" onClick={() => setSearch("")}>Limpar busca</Button> : undefined} />
+        ) : (() => {
+          const actions = (form: PublicForm) => [
+            { label: "Editar", icon: Edit2, onClick: () => setSelectedFormId(form.id) },
+            { label: "Copiar link", icon: Copy, onClick: () => void handleCopyLink(form) },
+            { label: "Abrir formulário", icon: ExternalLink, onClick: () => window.open(`${window.location.origin}/forms/${form.slug}`, "_blank", "noopener,noreferrer") },
+            { label: "Excluir", icon: Trash2, destructive: true, disabled: busyIds.has(form.id), onClick: () => void handleDelete(form) },
+          ];
+          return <ResponsiveCollection table={<Table aria-label="Formulários de captação" className="min-w-[700px]" columnWidths={['42%', '18%', '25%', '15%']}>
+            <TableHeader><TableRow><TableHead>Formulário</TableHead><TableHead>Envios</TableHead><TableHead>Publicação</TableHead><TableHead align="right">Ações</TableHead></TableRow></TableHeader>
+            <TableBody>{visibleForms.map(form => <TableRow key={form.id}>
+              <TableCell><Text className="font-semibold">{form.title}</Text><Text size="sm" tone="muted">/forms/{form.slug}</Text></TableCell>
+              <TableCell>{form.submission_count}</TableCell>
+              <TableCell><Switch checked={form.is_published} onChange={() => void handleTogglePublish(form)} disabled={busyIds.has(form.id)} label={form.is_published ? "Publicado" : "Rascunho"} /></TableCell>
+              <TableCell align="right"><RecordActions label={`Ações de ${form.title}`} actions={actions(form)} /></TableCell>
+            </TableRow>)}</TableBody>
+          </Table>} cards={<div className="grid gap-3">{visibleForms.map(form => <Surface key={form.id} padding="sm" className="space-y-3">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><Text className="break-words font-semibold">{form.title}</Text><Text size="sm" tone="muted" className="break-all">/forms/{form.slug}</Text></div><RecordActions label={`Ações de ${form.title}`} visibleCount={0} actions={actions(form)} /></div>
+            <div className="flex flex-wrap items-center justify-between gap-3"><Text size="sm" tone="muted">{form.submission_count} envio{form.submission_count === 1 ? "" : "s"}</Text><Switch checked={form.is_published} onChange={() => void handleTogglePublish(form)} disabled={busyIds.has(form.id)} label={form.is_published ? "Publicado" : "Rascunho"} /></div>
+          </Surface>)}</div>} />;
+        })()}
       </Card>
 
       <Dialog

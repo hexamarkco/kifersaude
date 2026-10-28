@@ -1,7 +1,7 @@
 import { ButtonGroup, Heading, Text, FieldLabel as DsFieldLabel } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, CalendarClock, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -22,7 +22,6 @@ import {
   Field,
   Input,
   IconButton,
-  OperationalMetricChip,
   PageHeader,
   PageActions,
   Select,
@@ -31,6 +30,17 @@ import {
   Textarea,
   Tooltip,
   FilterMultiSelect,
+  EmptyState,
+  KpiCard,
+  LoadingState,
+  Pagination,
+  RecordActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../../../design-system';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
@@ -188,14 +198,18 @@ const statusTones: Record<CommWhatsAppCampaign['status'], 'neutral' | 'accent' |
   cancelled: 'danger',
 };
 
-const statusIconClasses: Record<CommWhatsAppCampaign['status'], string> = {
-  draft: 'bg-[var(--bg-hover)] text-[var(--text-muted)]',
-  scheduled: 'bg-[var(--info-soft)] text-[var(--info-text)]',
-  queued: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
-  running: 'bg-[var(--success-soft)] text-[var(--success-text)]',
-  paused: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
-  completed: 'bg-[var(--success-soft)] text-[var(--success-text)]',
-  cancelled: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
+const audienceSourceLabels: Record<CommWhatsAppCampaignAudienceSource, string> = {
+  crm: 'Base do CRM',
+  csv: 'Planilha CSV',
+  manual: 'Lista manual',
+  mixed: 'CRM e lista manual',
+};
+
+const formatCampaignDate = (value: string | null) => {
+  if (!value) return 'Data não definida';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data não definida';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(date);
 };
 
 const splitCsvLine = (line: string) => {
@@ -262,6 +276,8 @@ export default function WhatsAppCampaignsScreen() {
   const navigate = useNavigate();
   const { leadStatuses, options } = useConfig();
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
+  const [currentCampaignPage, setCurrentCampaignPage] = useState(1);
+  const [campaignsPerPage, setCampaignsPerPage] = useState(10);
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
   const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
@@ -332,6 +348,15 @@ export default function WhatsAppCampaignsScreen() {
     () => stages.flatMap((stage) => (stage.kind === 'message' ? stage.messages : [])),
     [stages],
   );
+  const campaignTotalPages = Math.max(1, Math.ceil(campaigns.length / campaignsPerPage));
+  const paginatedCampaigns = useMemo(
+    () => campaigns.slice((currentCampaignPage - 1) * campaignsPerPage, currentCampaignPage * campaignsPerPage),
+    [campaigns, campaignsPerPage, currentCampaignPage],
+  );
+
+  useEffect(() => {
+    if (currentCampaignPage > campaignTotalPages) setCurrentCampaignPage(campaignTotalPages);
+  }, [campaignTotalPages, currentCampaignPage]);
 
   const firstMessageText = flatMessages.find((item) => item.messageText.trim())?.messageText.trim() || messageText.trim();
   const visibleVariableSuggestions = useMemo(() => {
@@ -964,6 +989,37 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
+  const getCampaignActions = (campaign: CommWhatsAppCampaign) => [
+    {
+      label: 'Ver detalhes',
+      icon: Eye,
+      onClick: () => navigate(`/painel/disparos/${campaign.id}`),
+    },
+    {
+      label: 'Editar',
+      icon: Pencil,
+      onClick: () => {
+        setCampaignActionId(campaign.id);
+        void openEditCampaignModal(campaign);
+      },
+      loading: loadingCampaignEdit && campaignActionId === campaign.id,
+    },
+    ...(['draft', 'scheduled', 'paused'].includes(campaign.status)
+      ? [{
+          label: 'Ativar',
+          icon: PlayCircle,
+          onClick: () => void openActivationPreview(campaign),
+          loading: loadingActivationPreview && campaignActionId === campaign.id,
+        }]
+      : []),
+    {
+      label: 'Excluir',
+      icon: Trash2,
+      onClick: () => setCampaignPendingDelete(campaign),
+      destructive: true,
+    },
+  ];
+
   if (campaignModalOpen) return (
     <section className="comm-terracotta comm-terracotta-campaigns kds-record-form kds-campaign-workspace panel-page-shell kds-detail-workspace">
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={closeCampaignModal} disabled={saving}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Disparos WhatsApp</Button>
@@ -1435,19 +1491,21 @@ export default function WhatsAppCampaignsScreen() {
         title="Disparos WhatsApp"
         description="Crie campanhas para seus contatos, defina as mensagens e acompanhe os envios. Você também pode importar uma lista de uma planilha CSV."
         actions={(
-          <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 lg:justify-end">
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Send className="h-3.5 w-3.5" aria-hidden="true" />} label="campanhas" value={stats.total} />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PauseCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="rascunhos" value={stats.drafts} />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />} label="agendadas" value={stats.scheduled} tone="accent" />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />} label="ativas" value={stats.active} tone="success" active={stats.active > 0} />
-            <OperationalMetricChip className="kds-mobile-compact-metric" icon={<Bot className="h-3.5 w-3.5" aria-hidden="true" />} label="sugestoes IA" value={stats.aiSuggestionsPending} tone="warning" active={stats.aiSuggestionsPending > 0} />
-            <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
+          <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 sm:justify-end">
+            <Button className="w-full whitespace-nowrap sm:w-auto" onClick={openNewCampaignModal}>
               <Plus className="kds-control-icon" />
               Novo disparo
             </Button>
           </div>
         )}
       />
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Resumo das campanhas">
+        <KpiCard padding="sm" title="Campanhas" value={loading ? '—' : stats.total} trend="Total cadastrado" className="h-full" />
+        <KpiCard padding="sm" title="Rascunhos" value={loading ? '—' : stats.drafts} trend="Aguardam revisão" className="h-full" />
+        <KpiCard padding="sm" title="Agendadas" value={loading ? '—' : stats.scheduled} trend="Com horário de envio" className="h-full" />
+        <KpiCard padding="sm" title="Ativas ou pausadas" value={loading ? '—' : stats.active} trend="Na fila, em execução ou pausadas" className="h-full" />
+      </div>
 
       <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
 
@@ -1633,90 +1691,154 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       <Card className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</Heading>
-              <Text className="text-sm text-[color:var(--panel-text-soft)]">Base criada para processamento automático.</Text>
-            </div>
-            <MessageCircle className="h-5 w-5 text-[color:var(--panel-accent-strong)]" />
-          </div>
+        <div>
+          <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</Heading>
+          <Text className="text-sm text-[color:var(--panel-text-soft)]">Acompanhe o público, os envios e o status de cada disparo.</Text>
+        </div>
 
-          {loadError ? (
-            <Alert
-              tone="warning"
-              title={loadError === 'all' ? 'Não foi possível carregar as campanhas.' : 'Alguns dados das campanhas não foram atualizados.'}
-              action={(
-                <Button type="button" variant="secondary" size="sm" onClick={() => void loadCampaigns()} loading={loading}>
-                  Tentar novamente
-                </Button>
-              )}
-            >
-              Os dados que carregaram continuam disponíveis. Nenhuma campanha foi excluída.
-            </Alert>
-          ) : null}
+        {loadError && campaigns.length > 0 ? (
+          <Alert
+            tone="warning"
+            title="Alguns dados das campanhas não foram atualizados."
+            action={(
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadCampaigns()} loading={loading}>
+                Tentar novamente
+              </Button>
+            )}
+          >
+            Os dados disponíveis continuam na lista. Nenhuma campanha foi excluída.
+          </Alert>
+        ) : null}
 
-          {loading ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-surface-soft)]" />)}
+        {loading ? (
+          <LoadingState compact label="Carregando campanhas" />
+        ) : loadError === 'all' && campaigns.length === 0 ? (
+          <EmptyState
+            className="rounded-[var(--kds-radius-lg)]"
+            icon={<Send aria-hidden="true" />}
+            title="Não foi possível carregar as campanhas."
+            description="Tente atualizar os dados. Nenhuma campanha foi excluída."
+            action={(
+              <Button type="button" variant="secondary" onClick={() => void loadCampaigns()} loading={loading}>
+                Tentar novamente
+              </Button>
+            )}
+          />
+        ) : campaigns.length === 0 ? (
+          <EmptyState
+            className="rounded-[var(--kds-radius-lg)]"
+            icon={<Send aria-hidden="true" />}
+            title="Nenhum disparo criado ainda."
+            description="Crie o primeiro rascunho para validar o público e as mensagens."
+            action={<Button onClick={openNewCampaignModal}><Plus className="kds-control-icon" />Novo disparo</Button>}
+          />
+        ) : (
+          <>
+            <div className="hidden xl:block">
+              <Table
+                size="sm"
+                aria-label="Campanhas recentes"
+                columnWidths={['31%', '17%', '17%', '13%', '12%', '10%']}
+              >
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campanha</TableHead>
+                    <TableHead>Público</TableHead>
+                    <TableHead>Enviadas</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead align="right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedCampaigns.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell>
+                        <ActionSurface
+                          variant="plain"
+                          padding="none"
+                          className="flex max-w-full flex-col items-start gap-1 text-left"
+                          onClick={() => navigate(`/painel/disparos/${campaign.id}`)}
+                        >
+                          <span className="max-w-full truncate font-medium text-[color:var(--panel-text)]">{campaign.name}</span>
+                          <span className="max-w-full truncate text-xs text-[color:var(--panel-text-muted)]">{campaign.message_text || 'Sem mensagem definida.'}</span>
+                        </ActionSurface>
+                      </TableCell>
+                      <TableCell>
+                        <span className="block font-medium text-[color:var(--panel-text)]">{campaign.total_targets.toLocaleString('pt-BR')} contatos</span>
+                        <span className="text-xs text-[color:var(--panel-text-muted)]">{audienceSourceLabels[campaign.audience_source]}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="block font-medium text-[color:var(--panel-text)]">{campaign.sent_targets.toLocaleString('pt-BR')} enviados</span>
+                        <span className="text-xs text-[color:var(--panel-text-muted)]">{campaign.responded_targets.toLocaleString('pt-BR')} respostas</span>
+                      </TableCell>
+                      <TableCell><Badge tone={statusTones[campaign.status]} size="sm">{statusLabels[campaign.status]}</Badge></TableCell>
+                      <TableCell>
+                        <span className="block text-[color:var(--panel-text)]">{formatCampaignDate(campaign.scheduled_at ?? campaign.created_at)}</span>
+                        <span className="text-xs text-[color:var(--panel-text-muted)]">{campaign.scheduled_at ? 'Envio agendado' : 'Criada'}</span>
+                      </TableCell>
+                      <TableCell align="right">
+                        <RecordActions actions={getCampaignActions(campaign)} visibleCount={0} label={`Ações da campanha ${campaign.name}`} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          ) : loadError === 'all' && campaigns.length === 0 ? (
-            <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">
-              <Text className="text-sm font-medium text-[color:var(--panel-text)]">Não foi possível carregar as campanhas.</Text>
-              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Tente atualizar novamente. Nenhuma campanha foi excluída.</Text>
-            </div>
-          ) : campaigns.length === 0 ? (
-            <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[color:var(--panel-border)] p-6 text-center">
-              <Text className="text-sm font-medium text-[color:var(--panel-text)]">Nenhum disparo criado ainda.</Text>
-              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Crie o primeiro rascunho para validar público e mensagem.</Text>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-              {campaigns.map((campaign) => (
-                <article key={campaign.id} className="comm-campaign-list-item rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4">
+
+            <div className="grid gap-3 xl:hidden">
+              {paginatedCampaigns.map((campaign) => (
+                <Surface key={campaign.id} padding="sm" className="comm-campaign-list-item space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 gap-3">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${statusIconClasses[campaign.status]}`}>
-                        <Send className="h-4 w-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <Heading level={3} className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{campaign.name}</Heading>
-                        <Text className="mt-1 line-clamp-2 text-xs text-[color:var(--panel-text-soft)]">{campaign.message_text || 'Sem mensagem definida.'}</Text>
-                      </div>
+                    <ActionSurface
+                      variant="plain"
+                      padding="none"
+                      className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
+                      onClick={() => navigate(`/painel/disparos/${campaign.id}`)}
+                    >
+                      <span className="max-w-full truncate font-medium text-[color:var(--panel-text)]">{campaign.name}</span>
+                      <span className="line-clamp-2 text-xs text-[color:var(--panel-text-muted)]">{campaign.message_text || 'Sem mensagem definida.'}</span>
+                    </ActionSurface>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge tone={statusTones[campaign.status]} size="sm">{statusLabels[campaign.status]}</Badge>
+                      <RecordActions actions={getCampaignActions(campaign)} visibleCount={0} label={`Ações da campanha ${campaign.name}`} />
                     </div>
-                    <Badge tone={statusTones[campaign.status]} size="sm" className="shrink-0">{statusLabels[campaign.status]}</Badge>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-                    <MiniStat label="Alvos" value={campaign.total_targets} />
-                    <MiniStat label="Enviados" value={campaign.sent_targets} />
-                    <MiniStat label="Resp." value={campaign.responded_targets} />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[color:var(--panel-border-subtle)] pt-3 text-sm">
+                    <div>
+                      <span className="block text-xs text-[color:var(--panel-text-muted)]">Público</span>
+                      <span className="font-medium text-[color:var(--panel-text)]">{campaign.total_targets.toLocaleString('pt-BR')} contatos</span>
+                      <span className="block text-xs text-[color:var(--panel-text-muted)]">{audienceSourceLabels[campaign.audience_source]}</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs text-[color:var(--panel-text-muted)]">Enviadas</span>
+                      <span className="font-medium text-[color:var(--panel-text)]">{campaign.sent_targets.toLocaleString('pt-BR')} enviados</span>
+                      <span className="block text-xs text-[color:var(--panel-text-muted)]">{campaign.responded_targets.toLocaleString('pt-BR')} respostas</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="block text-xs text-[color:var(--panel-text-muted)]">{campaign.scheduled_at ? 'Envio agendado' : 'Criada'}</span>
+                      <span className="text-[color:var(--panel-text)]">{formatCampaignDate(campaign.scheduled_at ?? campaign.created_at)}</span>
+                    </div>
                   </div>
-                  <div className="kds-campaign-card-actions mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => navigate(`/painel/disparos/${campaign.id}`)}>
-                      <Eye className="kds-control-icon" />
-                      Detalhe
-                    </Button>
-                    <Button size="sm" variant="ghost" loading={loadingCampaignEdit && campaignActionId === campaign.id} onClick={() => {
-                      setCampaignActionId(campaign.id);
-                      void openEditCampaignModal(campaign);
-                    }}>
-                      {!(loadingCampaignEdit && campaignActionId === campaign.id) && <Pencil className="kds-control-icon" />}
-                      Editar
-                    </Button>
-                    {['draft', 'scheduled', 'paused'].includes(campaign.status) && (
-                      <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id && loadingActivationPreview} onClick={() => void openActivationPreview(campaign)}>
-                        {!(campaignActionId === campaign.id && loadingActivationPreview) && <PlayCircle className="kds-control-icon" />}
-                        Ativar
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" onClick={() => setCampaignPendingDelete(campaign)}>
-                      <Trash2 className="kds-control-icon" />
-                      Excluir
-                    </Button>
-                  </div>
-                </article>
+                </Surface>
               ))}
             </div>
-          )}
+
+            {campaigns.length > campaignsPerPage && (
+              <Pagination
+                currentPage={currentCampaignPage}
+                totalPages={campaignTotalPages}
+                itemsPerPage={campaignsPerPage}
+                totalItems={campaigns.length}
+                onPageChange={setCurrentCampaignPage}
+                onItemsPerPageChange={(itemsPerPage) => {
+                  setCampaignsPerPage(itemsPerPage);
+                  setCurrentCampaignPage(1);
+                }}
+              />
+            )}
+          </>
+        )}
       </Card>
 
       <ConfirmDialog
@@ -1748,15 +1870,6 @@ function AudienceButton({ active, icon: Icon, label, onClick }: { active: boolea
       <Icon className="h-4 w-4" />
       {label}
     </ActionSurface>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: number }) {
-  return (
-    <span className="rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] px-2 py-2">
-      <span className="block font-semibold text-[color:var(--panel-text)]">{value}</span>
-      <span className="block text-[color:var(--panel-text-muted)]">{label}</span>
-    </span>
   );
 }
 

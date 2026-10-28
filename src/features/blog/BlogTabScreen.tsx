@@ -36,6 +36,7 @@ export default function BlogTabScreen() {
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
@@ -55,8 +56,10 @@ export default function BlogTabScreen() {
       const nextPosts = await listBlogPosts();
       if (requestId !== postsRequestIdRef.current) return;
       setPosts(nextPosts);
+      setLoadError(false);
     } catch (error) {
       if (requestId === postsRequestIdRef.current) {
+        setLoadError(true);
         const message = error instanceof Error ? error.message : String(error);
         toast.error(`Não foi possível carregar os posts: ${message}`);
       }
@@ -268,7 +271,9 @@ export default function BlogTabScreen() {
         <BlogPostsList
           hasPostsSnapshot={hasPostsSnapshot}
           loading={loading}
+          loadError={loadError}
           loadingPhase={loadingUi.phase}
+          onRetry={() => void loadPosts()}
           onCreatePost={() => setShowEditor(true)}
           onDeletePost={handleDelete}
           onEditPost={handleEdit}

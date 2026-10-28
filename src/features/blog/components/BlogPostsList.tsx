@@ -13,6 +13,7 @@ import { BlogTabSkeletonList } from '../../../design-system';
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Badge,
+  Alert,
   Button,
   Input,
   PageHeader,
@@ -25,7 +26,9 @@ import type { BlogPost } from "../shared/blogTypes";
 type BlogPostsListProps = {
   hasPostsSnapshot: boolean;
   loading: boolean;
+  loadError: boolean;
   loadingPhase: AdaptiveLoadingPhase;
+  onRetry: () => void;
   onCreatePost: () => void;
   onDeletePost: (id: string) => void;
   onEditPost: (post: BlogPost) => void;
@@ -39,7 +42,9 @@ type BlogPostsListProps = {
 export default function BlogPostsList({
   hasPostsSnapshot,
   loading,
+  loadError,
   loadingPhase,
+  onRetry,
   onCreatePost,
   onDeletePost,
   onEditPost,
@@ -64,6 +69,11 @@ export default function BlogPostsList({
       />
 
       <Surface className="space-y-6">
+        {loadError && (
+          <Alert tone="danger" role="alert" title="Não foi possível carregar os artigos" action={<Button type="button" variant="secondary" onClick={onRetry} disabled={loading}>Tentar novamente</Button>}>
+            {hasPostsSnapshot ? "Os artigos exibidos podem estar desatualizados." : "Tente novamente para consultar os artigos."}
+          </Alert>
+        )}
         <Surface variant="muted" padding="sm">
           <Input
               type="text"
@@ -82,7 +92,7 @@ export default function BlogPostsList({
           overlayLabel="Atualizando posts..."
           stageClassName="min-h-[360px]"
         >
-          {posts.length === 0 ? (
+          {posts.length === 0 && loadError ? null : posts.length === 0 ? (
             <Surface variant="muted" className="py-12 text-center">
               <FileText className="mx-auto mb-3 h-12 w-12 text-[var(--text-muted)]" />
               <Text className="text-[var(--text-secondary)]">Nenhum post encontrado</Text>

@@ -1280,12 +1280,11 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 @media(max-width: 479px) { .kds-detail-data-grid-compact { grid-template-columns: minmax(0,1fr); } }
 
 /* The inbox is an operational workspace; all communication controls remain real. */
-.painel-theme.kifer-ds .whatsapp-inbox-shell { padding: var(--space-5) var(--page-gutter) !important; }
-.kds-inbox-page-header { margin-bottom: var(--space-5); }
+.painel-theme.kifer-ds .whatsapp-inbox-shell { padding: 0 !important; }
 .painel-theme.kifer-ds .whatsapp-inbox-heading { font-family: var(--font-sans); }
 .painel-theme.kifer-ds .whatsapp-inbox-panel { background: var(--bg-surface); box-shadow: none; }
-.painel-theme.kifer-ds .whatsapp-inbox-sidebar { border-radius: var(--radius-panel) 0 0 var(--radius-panel); }
-.painel-theme.kifer-ds .whatsapp-inbox-thread { border-radius: 0 var(--radius-panel) var(--radius-panel) 0; }
+.painel-theme.kifer-ds .whatsapp-inbox-sidebar { border-radius: 0; }
+.painel-theme.kifer-ds .whatsapp-inbox-thread { border-radius: 0; }
 .painel-theme.kifer-ds .whatsapp-inbox-sidebar-header, .painel-theme.kifer-ds .whatsapp-inbox-thread-header { background: var(--bg-surface); padding: var(--space-4); }
 .painel-theme.kifer-ds .whatsapp-inbox-messages { background: var(--bg-canvas); }
 .painel-theme.kifer-ds .whatsapp-inbox-thread .message-bubble-inbound { background: var(--bg-surface); }
@@ -1296,9 +1295,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-inbox-chat-copy { min-width: 0; }
 @media(min-width: 1024px) { .kds-inbox-workspace-grid { grid-template-columns: 20rem minmax(0,1fr); } }
 @media(max-width: 767px) {
-  .painel-theme.kifer-ds .whatsapp-inbox-shell { padding: var(--space-3) !important; }
-  .whatsapp-inbox-shell.is-conversation-open > div > .kds-inbox-page-header { display: none; }
-  .painel-theme.kifer-ds .whatsapp-inbox-sidebar, .painel-theme.kifer-ds .whatsapp-inbox-thread { border-radius: var(--radius-panel); }
   .painel-theme.kifer-ds .whatsapp-inbox-chat-select { gap: var(--space-2); }
   .painel-theme.kifer-ds .whatsapp-inbox-sidebar-header { padding: var(--space-3); }
 }

@@ -1,0 +1,341 @@
+{
+  "results": [
+    {
+      "device": "desktop",
+      "theme": "light",
+      "state": "lista",
+      "x": 240,
+      "y": 0,
+      "width": 1680,
+      "height": 1080,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 1680,
+        "height": 1080
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-desktop-light-lista.png"
+    },
+    {
+      "device": "desktop",
+      "theme": "light",
+      "state": "conversa",
+      "x": 240,
+      "y": 0,
+      "width": 1680,
+      "height": 1080,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 1680,
+        "height": 1080
+      },
+      "composer": {
+        "y": 996,
+        "bottom": 1079,
+        "height": 83
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-desktop-light-conversa.png"
+    },
+    {
+      "device": "desktop",
+      "theme": "dark",
+      "state": "lista",
+      "x": 240,
+      "y": 0,
+      "width": 1680,
+      "height": 1080,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 1680,
+        "height": 1080
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-desktop-dark-lista.png"
+    },
+    {
+      "device": "desktop",
+      "theme": "dark",
+      "state": "conversa",
+      "x": 240,
+      "y": 0,
+      "width": 1680,
+      "height": 1080,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 1680,
+        "height": 1080
+      },
+      "composer": {
+        "y": 996,
+        "bottom": 1079,
+        "height": 83
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-desktop-dark-conversa.png"
+    },
+    {
+      "device": "tablet",
+      "theme": "light",
+      "state": "lista",
+      "x": 240,
+      "y": 0,
+      "width": 528,
+      "height": 1024,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 528,
+        "height": 1024
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-tablet-light-lista.png"
+    },
+    {
+      "device": "tablet",
+      "theme": "light",
+      "state": "conversa",
+      "x": 240,
+      "y": 0,
+      "width": 528,
+      "height": 1024,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 528,
+        "height": 1024
+      },
+      "composer": {
+        "y": 940,
+        "bottom": 1023,
+        "height": 83
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-tablet-light-conversa.png"
+    },
+    {
+      "device": "tablet",
+      "theme": "dark",
+      "state": "lista",
+      "x": 240,
+      "y": 0,
+      "width": 528,
+      "height": 1024,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 528,
+        "height": 1024
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-tablet-dark-lista.png"
+    },
+    {
+      "device": "tablet",
+      "theme": "dark",
+      "state": "conversa",
+      "x": 240,
+      "y": 0,
+      "width": 528,
+      "height": 1024,
+      "parent": {
+        "x": 240,
+        "y": 0,
+        "width": 528,
+        "height": 1024
+      },
+      "composer": {
+        "y": 940,
+        "bottom": 1023,
+        "height": 83
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-tablet-dark-conversa.png"
+    },
+    {
+      "device": "mobile",
+      "theme": "light",
+      "state": "lista",
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 768,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 768
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-light-lista.png"
+    },
+    {
+      "device": "mobile",
+      "theme": "light",
+      "state": "conversa",
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 768,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 768
+      },
+      "composer": {
+        "y": 682,
+        "bottom": 767,
+        "height": 85
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-light-conversa.png"
+    },
+    {
+      "device": "mobile",
+      "theme": "dark",
+      "state": "lista",
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 768,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 768
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-dark-lista.png"
+    },
+    {
+      "device": "mobile",
+      "theme": "dark",
+      "state": "conversa",
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 768,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 768
+      },
+      "composer": {
+        "y": 682,
+        "bottom": 767,
+        "height": 85
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-dark-conversa.png"
+    },
+    {
+      "device": "mobile-320",
+      "theme": "light",
+      "state": "lista",
+      "x": 0,
+      "y": 0,
+      "width": 320,
+      "height": 564,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 564
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-320-light-lista.png"
+    },
+    {
+      "device": "mobile-320",
+      "theme": "light",
+      "state": "conversa",
+      "x": 0,
+      "y": 0,
+      "width": 320,
+      "height": 564,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 564
+      },
+      "composer": {
+        "y": 478,
+        "bottom": 563,
+        "height": 85
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-320-light-conversa.png"
+    },
+    {
+      "device": "mobile-320",
+      "theme": "dark",
+      "state": "lista",
+      "x": 0,
+      "y": 0,
+      "width": 320,
+      "height": 564,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 564
+      },
+      "composer": null,
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-320-dark-lista.png"
+    },
+    {
+      "device": "mobile-320",
+      "theme": "dark",
+      "state": "conversa",
+      "x": 0,
+      "y": 0,
+      "width": 320,
+      "height": 564,
+      "parent": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 564
+      },
+      "composer": {
+        "y": 478,
+        "bottom": 563,
+        "height": 85
+      },
+      "overflow": false,
+      "verticalOverflow": false,
+      "screenshot": "inbox-mobile-320-dark-conversa.png"
+    }
+  ],
+  "errors": []
+}

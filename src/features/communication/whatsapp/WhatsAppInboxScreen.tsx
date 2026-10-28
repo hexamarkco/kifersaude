@@ -1,4 +1,4 @@
-import { Text } from '../../../design-system';
+import { Heading, Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -6,7 +6,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
-  PageHeader,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { PositionedPopover as PanelPopoverShell } from '../../../design-system';
@@ -2010,7 +2009,7 @@ export default function WhatsAppInboxScreen() {
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
     <div className={`comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0 ${selectedChat ? 'is-conversation-open' : ''}`}>
       <div className="flex h-full min-h-0 flex-col gap-0">
-        <PageHeader className="kds-inbox-page-header" eyebrow="Comunicação" title="WhatsApp Inbox" description="Atenda seus leads e acompanhe cada conversa em um único lugar." actions={<Button onClick={() => setStartChatModalOpen(true)}>Nova conversa</Button>} />
+        <Heading level={1} className="sr-only">WhatsApp Inbox</Heading>
         {operationalBanner && (
           <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3.5`}>
             <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
@@ -2021,7 +2020,7 @@ export default function WhatsAppInboxScreen() {
           </section>
         )}
 
-        <section className="kds-inbox-workspace-grid grid h-full min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="kds-inbox-workspace-grid grid min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
         <WhatsAppInboxSidebar
           leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}

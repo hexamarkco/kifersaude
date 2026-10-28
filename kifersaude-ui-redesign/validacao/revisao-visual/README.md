@@ -1,0 +1,19 @@
+# Revisão visual comparativa
+
+As referências em [`../../references/`](../../references/) definem a meta visual para páginas, diálogos, drawers, menus e estados do CRM. Esta rodada compara código real com essas referências; as capturas anteriores em `validacao/consolidacao/` continuam sendo evidência histórica.
+
+## Cobertura atual
+
+- **5 de 160 contextos** revisados; 155 permanecem sem comparação concluída.
+- **201 screenshots** nesta nova rodada: Leads e Contratos.
+- A descoberta de telas e overlays fora do manifesto continua pendente.
+- O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
+
+## Módulos
+
+- [Leads — listagem, Kanban e criação revisados; detalhe e outros overlays pendentes](leads/README.md)
+- [Contratos — drawer de detalhe e importação em lote revisados; listagem pendente por diferença no shell mobile](contracts/README.md)
+
+## Critério
+
+Um contexto só recebe `revisado_com_adaptacoes` depois da comparação com a referência, captura nas larguras e temas especificados e registro das diferenças causadas pelos dados ou fluxos reais. Capturas de um estado, sem comparação, não aprovam a interface.

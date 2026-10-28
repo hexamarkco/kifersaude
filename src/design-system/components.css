@@ -118,11 +118,14 @@
   z-index: 130;
 }
 
+.kds-dialog-overlay.modal-theme-host.painel-theme.kifer-ds {
+  background: transparent;
+}
+
 .kds-dialog-backdrop {
   position: fixed;
   inset: 0;
   background: var(--overlay);
-  backdrop-filter: blur(2px);
 }
 
 .kds-dialog-container {

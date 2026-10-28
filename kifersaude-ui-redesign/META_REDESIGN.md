@@ -10,10 +10,11 @@ Todas as páginas reais, modais, drawers, menus, formulários e estados devem co
 
 1. Preservar o código atual para campos, funcionalidades, validações, permissões, cálculos, integrações, dados e persistência.
 2. Aplicar as orientações posteriores do usuário, incluindo raios semi-arredondados, controles consistentes, alinhamento dos textos, dicas nos ícones de informação e inbox ocupando toda a área disponível.
-3. Para listagem, Kanban e cadastro de leads, priorizar `previous-approved/`.
-4. Para os demais módulos, usar `references/desktop/` e `references/mobile/`, consultando `manifest.json`, `GALERIA.html` e os PNGs correspondentes.
-5. Usar `audit-samples/` para conferir que nenhuma ação ou campo desapareceu.
-6. Toda solução visual deve usar os componentes e tokens oficiais do `/design-system`. Documentar no showcase qualquer padrão reutilizável novo. Manter o site institucional separado do shell do CRM.
+3. Em 28/10/2026, o usuário confirmou explicitamente que `kifersaude-ui-redesign/references/` é o resultado visual esperado para o design system e o layout de todas as páginas e modais.
+4. Para listagem, Kanban e cadastro de leads, priorizar `previous-approved/` quando houver uma versão aprovada específica; ela continua sujeita à direção visual geral confirmada acima.
+5. Para os demais módulos, usar `references/desktop/` e `references/mobile/`, consultando `manifest.json`, `GALERIA.html` e os PNGs correspondentes.
+6. Usar `audit-samples/` para conferir que nenhuma ação ou campo desapareceu.
+7. Toda solução visual deve usar os componentes e tokens oficiais do `/design-system`. Documentar no showcase qualquer padrão reutilizável novo. Manter o site institucional separado do shell do CRM.
 
 ## Execução e conclusão por interface
 

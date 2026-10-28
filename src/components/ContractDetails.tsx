@@ -45,6 +45,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
+  Card,
+  RecordActions,
   Field,
   LoadingState,
   Surface,
@@ -98,7 +104,7 @@ const detailEmptyIconClass =
 
 type ContractDetailsProps = {
   contract: Contract;
-  presentation?: 'dialog' | 'page';
+  presentation?: 'dialog' | 'page' | 'drawer';
   onClose: () => void;
   onUpdate: () => void;
   onDelete?: (contract: Contract) => void;
@@ -787,6 +793,33 @@ export default function ContractDetails({
     </Alert>
   ) : null;
 
+  if (presentation === 'drawer' && (loading || loadError)) return (
+    <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
+      <DrawerHeader onClose={onClose}>
+        <DialogTitle>Detalhes do contrato</DialogTitle>
+        <DialogDescription>
+          {loading ? 'Buscando as informações mais recentes.' : `Contrato ${contract.codigo_contrato}`}
+        </DialogDescription>
+      </DrawerHeader>
+      <DrawerBody className="space-y-4">
+        {loading ? (
+          <LoadingState label="Carregando dados do contrato" />
+        ) : (
+          <Alert tone="danger" role="alert" className="items-start">
+            <div className="min-w-0 flex-1">
+              <Text className="font-medium">Não foi possível carregar os dados atualizados deste contrato.</Text>
+              <Text className="mt-1 text-sm">Os dados não foram considerados vazios. Tente novamente.</Text>
+              <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={() => void loadData()}>
+                <RefreshCw className="kds-control-icon" aria-hidden="true" />
+                Tentar novamente
+              </Button>
+            </div>
+          </Alert>
+        )}
+      </DrawerBody>
+    </Drawer>
+  );
+
   if (pendingContent && presentation === 'page') return (
     <section className="kds-record-detail kds-detail-workspace" aria-busy={loading}>
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
@@ -843,7 +876,7 @@ export default function ContractDetails({
 
   const detailContent = (<>
 
-      <div className="mb-4 flex items-center justify-end gap-2">
+      {presentation !== 'drawer' && <div className="mb-4 flex items-center justify-end gap-2">
         {canEditContracts && (
           <Button
             onClick={() => setShowEditForm(true)}
@@ -864,7 +897,7 @@ export default function ContractDetails({
             <span className="hidden sm:inline">Excluir</span>
           </Button>
         )}
-      </div>
+      </div>}
 
       <div className="p-1">
         <div className={`mb-6 ${detailPanelMutedClass} p-4`}>
@@ -1905,6 +1938,123 @@ export default function ContractDetails({
       )}
       {ConfirmationDialog}
 </>);
+  if (presentation === 'drawer') {
+    const participants = [
+      ...holders.map((holder) => ({ id: holder.id, name: holder.nome_completo, role: 'Titular' })),
+      ...dependents.map((dependent) => ({ id: dependent.id, name: dependent.nome_completo, role: dependent.relacao || 'Dependente' })),
+    ];
+    const fidelityEnd = getFidelityEndDate(contract.data_renovacao);
+    const tenureValue = fidelityEnd
+      ? fidelityEnd.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })
+      : contract.data_inicio
+        ? formatDateOnly(contract.data_inicio)
+        : 'Não informado';
+    const lifeCount = contract.vidas ?? participants.length;
+    const planDetails = [
+      normalizeOperadoraLabel(contract.operadora),
+      formatContractModalityLabel(contract.modalidade) ?? contract.modalidade,
+      contract.abrangencia,
+      contract.acomodacao,
+      contract.carencia ? `Carências: ${contract.carencia}` : null,
+    ].filter(Boolean);
+
+    return (
+      <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
+        <DrawerHeader onClose={onClose}>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <DialogTitle>Detalhes do contrato</DialogTitle>
+              <DialogDescription>Visualização e ações do registro</DialogDescription>
+            </div>
+            {canEditContracts && onDelete && (
+              <RecordActions
+                actions={[{ label: 'Excluir contrato', icon: Trash2, onClick: () => onDelete(contract), destructive: true }]}
+                visibleCount={0}
+                label="Ações do contrato"
+              />
+            )}
+          </div>
+        </DrawerHeader>
+        <DrawerBody className="space-y-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Mensalidade</Text>
+              <Text className="whitespace-nowrap text-sm font-semibold text-[var(--text-primary)] sm:text-base">
+                {contract.mensalidade_total
+                  ? contract.mensalidade_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                  : 'Não informada'}
+              </Text>
+            </Card>
+            <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Vigência</Text>
+              <Text className="break-words text-lg font-semibold text-[var(--text-primary)]">{tenureValue}</Text>
+            </Card>
+            <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Vidas</Text>
+              <Text className="break-words text-lg font-semibold text-[var(--text-primary)]">{lifeCount || 'Não informadas'}</Text>
+            </Card>
+            <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
+              <Text className="text-xs font-medium text-[var(--text-secondary)]">Status</Text>
+              <Text className="break-words text-lg font-semibold text-[var(--text-primary)]">
+                {normalizeSentenceCase(contract.status) ?? contract.status}
+              </Text>
+            </Card>
+          </div>
+
+          <section aria-labelledby="contract-drawer-participants-title" className="space-y-2">
+            <Heading id="contract-drawer-participants-title" level={4} className="text-sm font-semibold text-[var(--text-primary)]">
+              Titular e beneficiários
+            </Heading>
+            {participants.length > 0 ? (
+              <div className="divide-y divide-[var(--border-subtle)]">
+                {participants.map((participant) => (
+                  <div key={participant.id} className="flex min-w-0 items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{participant.name}</Text>
+                      <Text className="mt-1 text-xs text-[var(--text-muted)]">{participant.role}</Text>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Text className="py-2 text-sm text-[var(--text-secondary)]">Nenhum titular ou beneficiário cadastrado.</Text>
+            )}
+          </section>
+
+          <section aria-labelledby="contract-drawer-plan-title" className="border-t border-[var(--border-subtle)] pt-4">
+            <Heading id="contract-drawer-plan-title" level={4} className="text-sm font-semibold text-[var(--text-primary)]">
+              Informações do plano
+            </Heading>
+            <Text className="mt-1 text-sm text-[var(--text-secondary)]">
+              {planDetails.join(' · ') || 'Informações do plano ainda não cadastradas.'}
+            </Text>
+          </section>
+
+          {documentsLoadError && (
+            <Alert tone="warning" role="alert" className="text-sm">
+              Os dados do contrato foram carregados, mas não foi possível verificar os documentos anexados.
+            </Alert>
+          )}
+
+          <details className="kds-contract-detail-expanded border-t border-[var(--border-subtle)] pt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">
+              Ver informações financeiras, documentos e histórico
+            </summary>
+            <div className="mt-4">{detailContent}</div>
+          </details>
+        </DrawerBody>
+        <DrawerFooter className="flex items-center justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          {canEditContracts && (
+            <Button type="button" onClick={() => setShowEditForm(true)}>
+              Editar contrato
+            </Button>
+          )}
+        </DrawerFooter>
+      </Drawer>
+    );
+  }
+
   if (presentation === 'page') return <section className="kds-record-detail kds-detail-workspace">
     <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
     <PageHeader eyebrow="Contratos" title={`Ficha do contrato ${contract.codigo_contrato}`} description={`${normalizeOperadoraLabel(contract.operadora)} · ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`} />

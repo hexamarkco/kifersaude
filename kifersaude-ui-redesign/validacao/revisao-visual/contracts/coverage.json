@@ -1,0 +1,303 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Contratos",
+  "route": "/painel/contratos",
+  "status": "partial",
+  "target": [
+    "references/desktop/page--contratos-listagem.png",
+    "references/mobile/page--contratos-listagem.png",
+    "references/desktop/state--contratos-detalhes.png",
+    "references/mobile/state--contratos-detalhes.png",
+    "references/desktop/state--contratos-importacao.png",
+    "references/mobile/state--contratos-importacao.png"
+  ],
+  "reviewed_contexts": [
+    "state--contratos-detalhes",
+    "state--contratos-importacao"
+  ],
+  "pending_contexts": [
+    "page--contratos-listagem",
+    "state--contratos-criar",
+    "state--contratos-editar",
+    "state--contratos-excluir-confirmacao",
+    "state--contratos-importacao-individual",
+    "menus e estados adicionais encontrados na aplicação"
+  ],
+  "visual_review": {
+    "widths": [
+      "1920x1080",
+      "768x1024",
+      "390x844",
+      "320x640"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "screenshots": 50,
+    "drawer_internal_scroll_verified_at_320px": true,
+    "importer_internal_scroll_verified_at_320px": true,
+    "document_horizontal_overflow": false,
+    "list_page_approval_blocked_by": "O shell mobile não mostra o cabeçalho de marca, menu e perfil da referência."
+  },
+  "interaction_safety": {
+    "synthetic_fixture_data": true,
+    "valid_json_preview_opened": true,
+    "invalid_json_state_opened": true,
+    "import_action_submitted": false,
+    "contract_created_updated_or_deleted": false,
+    "external_integrations_called": false
+  },
+  "screenshots": [
+    {
+      "path": "screenshots/desktop/contrato-calendario-aberto.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/contrato-criar-pagina-dark.png",
+      "width": 1920,
+      "height": 1814
+    },
+    {
+      "path": "screenshots/desktop/contrato-criar-pagina.png",
+      "width": 1920,
+      "height": 1814
+    },
+    {
+      "path": "screenshots/desktop/contrato-status-aberto.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/detalhes-drawer-dark.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/detalhes-drawer.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/filtro-status-aberto.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/filtros-expandidos.png",
+      "width": 1920,
+      "height": 1166
+    },
+    {
+      "path": "screenshots/desktop/importacao-modal-carregando.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/importacao-modal-dark.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/importacao-modal-erro.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/importacao-modal-validado.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/importacao-modal.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/listagem-dark.png",
+      "width": 1920,
+      "height": 1114
+    },
+    {
+      "path": "screenshots/desktop/listagem.png",
+      "width": 1920,
+      "height": 1114
+    },
+    {
+      "path": "screenshots/mobile-320/contrato-criar-pagina-viewport.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/contrato-criar-pagina.png",
+      "width": 320,
+      "height": 2870
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-drawer-dark.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-drawer.png",
+      "width": 320,
+      "height": 720
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-expandido-final-dark.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-expandido-final.png",
+      "width": 320,
+      "height": 720
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-expandido-topo.png",
+      "width": 320,
+      "height": 720
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-footer.png",
+      "width": 308,
+      "height": 85
+    },
+    {
+      "path": "screenshots/mobile-320/importacao-modal-dark.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/importacao-modal-scroll-bottom.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/importacao-modal.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/listagem-dark.png",
+      "width": 320,
+      "height": 2613
+    },
+    {
+      "path": "screenshots/mobile-320/listagem-viewport-after.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/listagem-viewport-dark.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/listagem-viewport.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/listagem.png",
+      "width": 320,
+      "height": 2613
+    },
+    {
+      "path": "screenshots/mobile/contrato-criar-pagina-viewport.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/contrato-criar-pagina.png",
+      "width": 390,
+      "height": 2802
+    },
+    {
+      "path": "screenshots/mobile/detalhes-drawer-dark.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/detalhes-drawer.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/importacao-modal-dark.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/importacao-modal-erro.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/importacao-modal-validado.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/importacao-modal.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/listagem-dark.png",
+      "width": 390,
+      "height": 2482
+    },
+    {
+      "path": "screenshots/mobile/listagem-viewport-dark.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/listagem-viewport.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/listagem.png",
+      "width": 390,
+      "height": 2482
+    },
+    {
+      "path": "screenshots/tablet/contrato-criar-pagina.png",
+      "width": 768,
+      "height": 2025
+    },
+    {
+      "path": "screenshots/tablet/detalhes-drawer-dark.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/tablet/detalhes-drawer.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/tablet/importacao-modal-dark.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/tablet/importacao-modal.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/tablet/listagem-dark.png",
+      "width": 768,
+      "height": 2462
+    },
+    {
+      "path": "screenshots/tablet/listagem.png",
+      "width": 768,
+      "height": 2462
+    }
+  ]
+}

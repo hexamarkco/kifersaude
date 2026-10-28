@@ -100,7 +100,8 @@ export function ContractBulkJsonImportDialog({
       onOpenChange={(open) => !open && !loading && !importing && onClose()}
       closeOnOverlay={!loading && !importing}
       closeOnEscape={!loading && !importing}
-      size="lg"
+      size="md"
+      className="kds-contract-bulk-import-dialog"
     >
       <DialogHeader onClose={loading || importing ? undefined : onClose}>
         <DialogTitle>Importar contratos em massa</DialogTitle>
@@ -163,16 +164,16 @@ export function ContractBulkJsonImportDialog({
         )}
         {error && <Alert tone="danger" title="Não foi possível importar o arquivo">{error}</Alert>}
       </DialogBody>
-      <DialogFooter>
+      <DialogFooter className="kds-contract-bulk-import-footer">
         <Button type="button" variant="secondary" onClick={onClose} disabled={loading || importing}>Cancelar</Button>
         {payload ? (
           <Button type="button" onClick={() => void handleImport()} disabled={importing}>
-            {importing ? <Loader2 className="animate-spin" /> : <CheckCircle2 className="kds-control-icon" />}
+            {importing ? <Loader2 className="kds-control-icon animate-spin" /> : <CheckCircle2 className="kds-control-icon" />}
             {importing ? 'Importando contratos...' : `Importar ${payload.contracts.length} contrato(s)`}
           </Button>
         ) : (
           <Button type="button" disabled={!file || Boolean(error) || loading} onClick={() => void handleValidate()}>
-            {loading ? <Loader2 className="animate-spin" /> : <FileUp className="kds-control-icon" />}
+            {loading && <Loader2 className="kds-control-icon animate-spin" />}
             {loading ? 'Validando JSON...' : 'Validar arquivo'}
           </Button>
         )}

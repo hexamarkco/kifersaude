@@ -1,4 +1,4 @@
-import { ButtonGroup, Heading, Text } from '../../design-system';
+import { Heading, Text } from '../../design-system';
 import { ActionSurface } from '../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -16,11 +16,11 @@ import {
   Filter,
   FileText,
   Eye,
-  AlertCircle,
   Trash2,
   Users,
   Calendar,
   FileUp,
+  Download,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
@@ -54,7 +54,8 @@ import {
   type PanelTone,
   FilterSelect,
   Pagination,
-  IconButton,
+  KpiCard,
+  RecordActions,
   useTableSorting,
   useSortedTableRows,
 } from "../../design-system";
@@ -64,6 +65,7 @@ import { ContractsPageSkeleton } from '../../design-system';
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { toast } from "../../lib/toast";
+import { downloadXlsx } from "../../lib/xlsxExport";
 import { getContractBonusSummary } from "../../lib/contractBonus";
 import {
   normalizeOperadoraLabel,
@@ -109,6 +111,7 @@ export default function ContractsManager({
   >("todos");
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(
     null,
   );
@@ -486,6 +489,84 @@ export default function ContractsManager({
     setCurrentPage(1);
   };
 
+  const portfolioSummary = useMemo(() => {
+    const implementationStatuses = new Set([
+      'rascunho',
+      'em análise',
+      'documentos pendentes',
+      'proposta enviada',
+      'aguardando assinatura',
+      'emitido',
+    ]);
+    return contracts.reduce(
+      (summary, contract) => {
+        const status = contract.status.trim().toLocaleLowerCase('pt-BR');
+        if (status === 'ativo') summary.active += 1;
+        if (implementationStatuses.has(status)) summary.implementation += 1;
+        if (hasUpcomingImportantDate(contract)) summary.upcoming += 1;
+        summary.monthlyTotal += contract.mensalidade_total ?? 0;
+        return summary;
+      },
+      { active: 0, implementation: 0, upcoming: 0, monthlyTotal: 0 },
+    );
+  }, [contracts]);
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+      filterStatus !== 'todos' ||
+      filterResponsavel !== 'todos' ||
+      filterOperadora !== 'todas' ||
+      dateProximityFilter !== 'todos',
+  );
+
+  const handleExportContracts = () => {
+    const headers = [
+      'Contrato',
+      'Cliente',
+      'Status',
+      'Operadora',
+      'Plano',
+      'Modalidade',
+      'Mensalidade',
+      'Comissão prevista',
+      'Responsável',
+      'Início',
+      'Fim da fidelidade',
+    ];
+    const rows = filteredContracts.map((contract) => [
+      contract.codigo_contrato,
+      getContractDisplayName(contract),
+      contract.status,
+      normalizeOperadoraLabel(contract.operadora),
+      formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano,
+      formatContractModalityLabel(contract.modalidade) ?? contract.modalidade,
+      contract.mensalidade_total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '',
+      contract.comissao_prevista?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) ?? '',
+      contract.responsavel,
+      contract.data_inicio ? formatDate(contract.data_inicio) ?? '' : '',
+      contract.data_renovacao ? formatDate(contract.data_renovacao, 'monthYear') ?? '' : '',
+    ]);
+    const today = new Date().toISOString().slice(0, 10);
+    downloadXlsx(`contratos-${today}.xlsx`, headers, rows, 'Contratos');
+  };
+
+  const getContractActions = (contract: Contract) => [
+    {
+      label: 'Abrir contrato',
+      icon: Eye,
+      onClick: () => setSelectedContract(contract),
+    },
+    ...(canEditContracts
+      ? [{
+          label: 'Excluir contrato',
+          icon: Trash2,
+          onClick: () => void handleDeleteContract(contract),
+          destructive: true,
+          loading: deletingContractIds.has(contract.id),
+        }]
+      : []),
+  ];
+
   const getStatusTone = (status: string): PanelTone => {
     const tones: Record<string, PanelTone> = {
       Rascunho: "neutral",
@@ -580,17 +661,19 @@ export default function ContractsManager({
         ref={contractsRootRef}
         className="kds-contracts-page panel-dashboard-immersive panel-page-shell space-y-5"
       >
-        {!showForm && !selectedContract && <>
+        {!showForm && <>
         <PageHeader
-          eyebrow="Operação contratual"
-          title="Gestão de Contratos"
-          description="Organize contratos ativos, datas críticas e responsáveis com a mesma leitura operacional do dashboard comercial."
+          className="kds-contracts-header"
+          eyebrow="Kifer Saúde / Operação comercial"
+          title="Gestão de contratos"
+          description="Gerencie clientes, vigências, titulares e dependentes em um só lugar."
           actions={canEditContracts ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" variant="secondary" onClick={() => setShowBulkImport(true)}>
-                <FileUp className="kds-control-icon" />
-                <span>Importar em massa</span>
-              </Button>
+            <div className="kds-contracts-header-actions">
+              <RecordActions
+                actions={[{ label: 'Importar contratos em massa', icon: FileUp, onClick: () => setShowBulkImport(true) }]}
+                visibleCount={1}
+                label="Ações dos contratos"
+              />
               <Button
                 onClick={() => {
                   setEditingContract(null);
@@ -604,6 +687,37 @@ export default function ContractsManager({
           ) : undefined}
           data-panel-animate
         />
+
+        <div className="kds-kpi-grid kds-contracts-summary-grid grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Resumo da carteira de contratos">
+          <KpiCard
+            padding="sm"
+            title="Contratos ativos"
+            value={<span className="tabular-nums">{portfolioSummary.active}</span>}
+            trend="Contratos vigentes"
+            className="h-full"
+          />
+          <KpiCard
+            padding="sm"
+            title="Em implantação"
+            value={<span className="tabular-nums">{portfolioSummary.implementation}</span>}
+            trend="Em análise ou emissão"
+            className="h-full"
+          />
+          <KpiCard
+            padding="sm"
+            title="Próximos vencimentos"
+            value={<span className="tabular-nums">{portfolioSummary.upcoming}</span>}
+            trend="Nos próximos 30 dias"
+            className="h-full"
+          />
+          <KpiCard
+            padding="sm"
+            title="Mensalidade total"
+            value={<span className="tabular-nums">{portfolioSummary.monthlyTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>}
+            trend="Soma dos valores informados"
+            className="h-full"
+          />
+        </div>
 
         {contractsLoadError && (
           <Alert
@@ -633,39 +747,38 @@ export default function ContractsManager({
           </Alert>
         )}
 
-        <Surface className="kds-record-filters space-y-5" data-panel-animate>
-          <Toolbar>
+        <Surface className="kds-record-filters space-y-3" data-panel-animate>
+          <Toolbar className="kds-contracts-search-toolbar">
             <ToolbarSearch className="relative">
               <Input
                 type="text"
                 leftIcon={Search}
-                placeholder="Buscar por codigo, empresa, CNPJ, beneficiario, operadora ou plano..."
+                placeholder="Buscar por cliente, contrato, CNPJ ou plano..."
+                aria-label="Buscar contratos"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-contracts-toolbar-actions">
-              <Button
-                type="button"
-                onClick={resetFilters}
-                variant="soft"
-                size="md"
-                className="whitespace-nowrap kds-mobile-icon-action"
-                aria-label="Limpar filtros"
-                title="Limpar filtros"
-              >
-                <Filter className="kds-control-icon" />
-                <span className="kds-mobile-icon-action-label">Limpar</span>
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  onClick={resetFilters}
+                  variant="secondary"
+                  size="md"
+                  className="whitespace-nowrap"
+                >
+                  Limpar filtros
+                </Button>
+              )}
+              <Button type="button" variant="secondary" onClick={handleExportContracts} className="kds-contract-export">
+                <Download className="kds-control-icon" aria-hidden="true" />
+                Exportar
               </Button>
-              <OperationalMetricChip
-                value={filteredContracts.length}
-                label="contratos"
-                className="kds-toolbar-inline-metric"
-              />
             </ToolbarActions>
           </Toolbar>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="kds-contracts-filter-grid grid grid-cols-2 gap-3 xl:grid-cols-4">
             <FilterSelect
               icon={Filter}
               value={filterStatus}
@@ -709,41 +822,54 @@ export default function ContractsManager({
             />
 
             <FilterSelect
-              icon={FileText}
-              value={filterOperadora}
-              onChange={(value) => setFilterOperadora(value)}
-              placeholder="Todas as operadoras"
-              includePlaceholderOption={false}
-              options={[
-                { value: "todas", label: "Todas as operadoras" },
-                ...operadoraOptions.map((operadora) => ({
-                  value: operadora,
-                  label: operadora,
-                })),
-              ]}
-            />
-
-            <FilterSelect
               icon={Calendar}
               value={dateProximityFilter}
               onChange={(value) =>
                 setDateProximityFilter(value as "todos" | "proximos-30")
               }
-              placeholder="Todas as datas"
+              placeholder="Todos os períodos"
               includePlaceholderOption={false}
               options={[
-                { value: "todos", label: "Todas as datas" },
+                { value: "todos", label: "Todos os períodos" },
                 { value: "proximos-30", label: "Próximos 30 dias" },
               ]}
             />
+            <Button
+              type="button"
+              variant={advancedFiltersOpen || filterOperadora !== 'todas' ? 'soft' : 'secondary'}
+              aria-expanded={advancedFiltersOpen}
+              aria-controls="contracts-advanced-filters"
+              onClick={() => setAdvancedFiltersOpen((open) => !open)}
+            >
+              <Filter className="kds-control-icon" aria-hidden="true" />
+              Mais filtros{filterOperadora !== 'todas' ? ' · 1' : ''}
+            </Button>
           </div>
+          {advancedFiltersOpen && (
+            <div id="contracts-advanced-filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <FilterSelect
+                icon={FileText}
+                value={filterOperadora}
+                onChange={(value) => setFilterOperadora(value)}
+                placeholder="Todas as operadoras"
+                includePlaceholderOption={false}
+                options={[
+                  { value: "todas", label: "Todas as operadoras" },
+                  ...operadoraOptions.map((operadora) => ({
+                    value: operadora,
+                    label: operadora,
+                  })),
+                ]}
+              />
+            </div>
+          )}
         </Surface>
 
         <Surface className="kds-record-results" data-panel-animate>
           <SectionHeader
             eyebrow="Carteira contratual"
             title="Contratos em acompanhamento"
-            description="Monitore vigencia, reajustes, titulares e previsoes financeiras sem perder contexto do responsavel comercial."
+            description="Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial."
             as="h3"
             className="mb-4"
             action={(
@@ -755,7 +881,7 @@ export default function ContractsManager({
           />
 
           <div className="hidden lg:block">
-            <Table size="sm" stickyHeader className="min-w-[75rem]" columnWidths={['20%', '15%', '17%', '16%', '14%', '9%', '9%']}>
+            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="min-w-[75rem]" columnWidths={['18%', '12%', '18%', '16%', '15%', '10%', '11%']}>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />
@@ -783,7 +909,7 @@ export default function ContractsManager({
                   const bonusValue = getBonusValue(contract);
 
                   return (
-                    <TableRow key={contract.id} className="align-middle">
+                    <TableRow key={contract.id} className="align-top">
                     <TableCell className="overflow-hidden">
                       <ActionSurface variant="plain" padding="none"
                         type="button"
@@ -795,7 +921,7 @@ export default function ContractsManager({
                         <span className="mt-1 block max-w-full truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
                       </ActionSurface>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-top">
                       <ContractStatusDropdown
                         status={contract.status}
                         code={contract.codigo_contrato}
@@ -807,11 +933,11 @@ export default function ContractsManager({
                         operatorError={productionOperatorsError}
                         onChange={(status, saleOperator) => canEditContracts ? changeStatus(contract, status, saleOperator) : Promise.resolve()}
                       />
-                      <span className="mt-2 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-top">
                       <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
                       <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}</span>
+                      <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
                     </TableCell>
                     <TableCell>
                       <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
@@ -821,11 +947,8 @@ export default function ContractsManager({
                       <div className="flex flex-wrap gap-1">{renderDateBadges(contract, true)}</div>
                     </TableCell>
                     <TableCell>{formatContractEntityName(contract.responsavel) || "Não atribuído"}</TableCell>
-                      <TableCell align="right">
-                        <ButtonGroup size="md" aria-label="Ações do contrato">
-                          <IconButton onClick={() => setSelectedContract(contract)} variant="secondary" title="Abrir contrato" aria-label="Abrir contrato" size="md"><Eye aria-hidden="true" /></IconButton>
-                          {canEditContracts && <IconButton onClick={() => handleDeleteContract(contract)} variant="danger" title="Excluir contrato" aria-label="Excluir contrato" size="md" loading={deletingContractIds.has(contract.id)}><Trash2 aria-hidden="true" /></IconButton>}
-                        </ButtonGroup>
+                      <TableCell align="right" className="align-top">
+                        <RecordActions actions={getContractActions(contract)} visibleCount={1} label={`Ações do contrato ${contract.codigo_contrato}`} />
                       </TableCell>
                     </TableRow>
                   );
@@ -839,165 +962,73 @@ export default function ContractsManager({
               const bonusValue = getBonusValue(contract);
 
               return (
-                <Surface
-                  key={contract.id}
-                  variant="muted"
-                  padding="sm"
-                  className="transition-colors sm:p-4"
-                >
-                  <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex-1 space-y-3">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <Heading level={3} className="text-lg font-semibold text-[var(--text-primary)]">
+                <Surface key={contract.id} variant="default" padding="sm" className="space-y-3">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <ActionSurface variant="plain" padding="none" onClick={() => setSelectedContract(contract)} className="block max-w-full text-left">
+                        <Heading level={3} className="truncate text-base font-semibold text-[var(--text-primary)]">
                           {contract.codigo_contrato}
                         </Heading>
-                        <ContractStatusDropdown
-                          status={contract.status}
-                          code={contract.codigo_contrato}
-                          tone={getStatusTone(contract.status)}
-                          canEdit={canEditContracts}
-                          saving={savingIds.has(contract.id)}
-                          options={statusOptions}
-                          operators={productionOperators}
-                          operatorError={productionOperatorsError}
-                          onChange={(status, saleOperator) => canEditContracts ? changeStatus(contract, status, saleOperator) : Promise.resolve()}
-                        />
-                        <Badge tone="neutral" size="sm" className="px-3 py-1 text-xs">
-                          {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}
-                        </Badge>
-                        {contract.comissao_multiplicador &&
-                          contract.comissao_multiplicador !== 2.8 && (
-                            <Badge tone="warning" size="sm" className="gap-1 px-3 py-1 text-xs">
-                              <AlertCircle className="h-3 w-3" />
-                              <span>{contract.comissao_multiplicador}x</span>
-                            </Badge>
-                          )}
-                        {renderDateBadges(contract)}
-                      </div>
-                      <div className="mb-3">
-                        <span className="font-medium text-[var(--text-secondary)]">
-                          {getContractDisplayName(contract)}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-[var(--text-secondary)] xl:grid-cols-5">
-                        <div>
-                          <span className="font-medium">Operadora:</span>{" "}
-                          {normalizeOperadoraLabel(contract.operadora)}
-                        </div>
-                        <div>
-                          <span className="font-medium">Plano:</span>{" "}
-                          {formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}
-                        </div>
-                        {contract.mensalidade_total && (
-                          <div>
-                            <span className="font-medium">Mensalidade:</span> R${" "}
-                            {contract.mensalidade_total.toLocaleString(
-                              "pt-BR",
-                              { minimumFractionDigits: 2 },
-                            )}
-                          </div>
-                        )}
-                        {contract.comissao_prevista && (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">Comissão:</span>
-                            <span>
-                              R${" "}
-                              {contract.comissao_prevista.toLocaleString(
-                                "pt-BR",
-                                { minimumFractionDigits: 2 },
-                              )}
-                            </span>
-                            {contract.comissao_recebimento_adiantado ===
-                            false ? (
-                              <Badge tone="warning" size="sm">
-                                Parcelada
-                              </Badge>
-                            ) : contract.comissao_recebimento_adiantado ? (
-                              <Badge tone="success" size="sm">
-                                Adiantada
-                              </Badge>
-                            ) : null}
-                          </div>
-                        )}
-                        {bonusValue !== null && (
-                          <div>
-                            <span className="font-medium">Bonificação:</span> R${" "}
-                            {bonusValue.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </div>
-                        )}
-                        {contract.data_renovacao && (
-                          <div>
-                            <span className="font-medium">Fim da fidelidade:</span>{" "}
-                            {formatDate(contract.data_renovacao, "monthYear")}
-                          </div>
-                        )}
-                        {contract.mes_reajuste && (
-                          <div>
-                            <span className="font-medium">Mês de reajuste:</span>{" "}
-                            {formatDate(
-                              contract.mes_reajuste?.toString(),
-                              "monthOnly",
-                            )}
-                          </div>
-                        )}
-                        {contract.previsao_recebimento_comissao && (
-                          <div>
-                            <span className="font-medium">Prev. comissão:</span>{" "}
-                            {formatDate(contract.previsao_recebimento_comissao)}
-                          </div>
-                        )}
-                        {contract.previsao_pagamento_bonificacao && (
-                          <div>
-                            <span className="font-medium">Prev. bonificação:</span>{" "}
-                            {formatDate(
-                              contract.previsao_pagamento_bonificacao,
-                            )}
-                          </div>
-                        )}
-                      </div>
+                        <Text className="mt-1 truncate text-sm text-[var(--text-secondary)]">{getContractDisplayName(contract)}</Text>
+                      </ActionSurface>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-[var(--text-muted)] lg:block lg:text-right">
-                      <div>
-                        Responsável:{" "}
-                        <span className="font-medium text-[var(--text-secondary)]">
-                          {formatContractEntityName(contract.responsavel) ?? contract.responsavel}
-                        </span>
-                      </div>
-                      <div className="mt-1">
-                        Criado:{" "}
-                        {new Date(contract.created_at).toLocaleDateString(
-                          "pt-BR",
-                        )}
-                      </div>
+                    <ContractStatusDropdown
+                      status={contract.status}
+                      code={contract.codigo_contrato}
+                      tone={getStatusTone(contract.status)}
+                      canEdit={canEditContracts}
+                      saving={savingIds.has(contract.id)}
+                      options={statusOptions}
+                      operators={productionOperators}
+                      operatorError={productionOperatorsError}
+                      onChange={(status, saleOperator) => canEditContracts ? changeStatus(contract, status, saleOperator) : Promise.resolve()}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="min-w-0">
+                      <span className="block text-xs text-[var(--text-muted)]">Operadora</span>
+                      <span className="block truncate font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-xs text-[var(--text-muted)]">Plano</span>
+                      <span className="block truncate font-medium text-[var(--text-secondary)]">{formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-xs text-[var(--text-muted)]">Mensalidade</span>
+                      <span className="block truncate font-semibold text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não informada'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-xs text-[var(--text-muted)]">Responsável</span>
+                      <span className="block truncate font-medium text-[var(--text-secondary)]">{formatContractEntityName(contract.responsavel) || 'Não atribuído'}</span>
                     </div>
                   </div>
-                  <div className="border-t border-[var(--border-subtle)] pt-4">
-                    <ButtonGroup aria-label="Ações do contrato" className="overflow-x-auto">
-                    <Button
-                      onClick={() => setSelectedContract(contract)}
-                      variant="soft"
-                      size="sm"
 
-                    >
-                      <Eye className="kds-control-icon" />
-                      <span>Abrir</span>
-                    </Button>
-                    {canEditContracts && (
-                      <Button
-                        onClick={() => handleDeleteContract(contract)}
-                        variant="danger"
-                        size="sm"
+                  {contract.data_renovacao && (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+                      <span>Fim da fidelidade</span>
+                      <Badge tone="neutral" size="sm">{formatDate(contract.data_renovacao, 'monthYear')}</Badge>
+                    </div>
+                  )}
 
-                        type="button"
-                        loading={deletingContractIds.has(contract.id)}
-                      >
-                        <Trash2 className="kds-control-icon" />
-                        <span>Excluir</span>
-                      </Button>
-                    )}
-                  </ButtonGroup>
+                  <details className="kds-contract-card-details border-t border-[var(--border-subtle)] pt-2">
+                    <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">Mais informações</summary>
+                    <div className="mt-3 space-y-3 text-sm text-[var(--text-secondary)]">
+                      <div className="grid grid-cols-2 gap-3">
+                        <span>Modalidade: {formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}</span>
+                        <span>Criado em: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</span>
+                        {contract.comissao_prevista && <span>Comissão prevista: R$ {contract.comissao_prevista.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
+                        {bonusValue !== null && <span>Bônus: R$ {bonusValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
+                        {contract.mes_reajuste && <span>Mês de reajuste: {formatDate(contract.mes_reajuste.toString(), 'monthOnly')}</span>}
+                        {contract.previsao_recebimento_comissao && <span>Prev. comissão: {formatDate(contract.previsao_recebimento_comissao)}</span>}
+                        {contract.previsao_pagamento_bonificacao && <span>Prev. bonificação: {formatDate(contract.previsao_pagamento_bonificacao)}</span>}
+                      </div>
+                      {renderDateBadges(contract)}
+                    </div>
+                  </details>
+
+                  <div className="flex justify-end border-t border-[var(--border-subtle)] pt-2">
+                    <RecordActions actions={getContractActions(contract)} visibleCount={1} label={`Ações do contrato ${contract.codigo_contrato}`} />
                   </div>
                 </Surface>
               );
@@ -1058,7 +1089,7 @@ export default function ContractsManager({
 
         {selectedContract && (
           <ContractDetails
-            presentation="page"
+            presentation="drawer"
             key={selectedContract.id}
             contract={selectedContract}
             onClose={() => setSelectedContract(null)}

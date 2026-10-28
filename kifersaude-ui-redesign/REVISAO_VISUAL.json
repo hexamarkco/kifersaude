@@ -60,7 +60,9 @@
       ],
       "status": "pendente",
       "evidence": [],
-      "notes": []
+      "notes": [
+        "A densidade da listagem e a grade 2×2 dos indicadores/filtros foram refinadas; continua pendente porque o shell mobile atual não exibe o cabeçalho de marca, menu e perfil mostrado na referência mobile. Registrar e resolver essa diferença na revisão da base compartilhada antes de aprovar a listagem."
+      ]
     },
     {
       "id": "page--comissoes",
@@ -1255,9 +1257,14 @@
         "references/desktop/state--contratos-detalhes.png",
         "references/mobile/state--contratos-detalhes.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
+      "notes": [
+        "Drawer comparado às referências em desktop e mobile, tema claro/escuro e larguras de 768, 390 e 320 px. Dados de participante não possuem status individual persistido; a interface exibe somente campos reais. Informações financeiras, documentos e histórico ficam recolhidos para preservar densidade sem remover conteúdo."
+      ]
     },
     {
       "id": "state--contratos-importacao",
@@ -1270,9 +1277,14 @@
         "references/desktop/state--contratos-importacao.png",
         "references/mobile/state--contratos-importacao.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
+      "notes": [
+        "Importador comparado em 1920, 768, 390 e 320 px nos temas claro/escuro. O fluxo mantém a importação real por lote JSON e seu modelo/validação, em vez dos campos genéricos do mockup. Foram capturados estados vazio, carregando, inválido e prévia válida com dados sintéticos; o comando de importação não foi executado."
+      ]
     },
     {
       "id": "state--contratos-excluir-confirmacao",
@@ -2432,9 +2444,9 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 3,
-    "remaining_manifest_contexts": 157,
-    "evidence": "validacao/revisao-visual/leads/README.md",
+    "reviewed_contexts": 5,
+    "remaining_manifest_contexts": 155,
+    "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }
 }

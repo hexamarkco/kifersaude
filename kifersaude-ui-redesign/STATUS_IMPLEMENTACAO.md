@@ -6,13 +6,15 @@ A rodada anterior registrou **160 contextos** do manifesto: **47 páginas, 19 co
 
 ## Revisão comparativa em andamento — 28/10/2026
 
-- As referências em `references/` e `previous-approved/` são o alvo visual do redesign. O inventário anterior de 160 contextos é cobertura histórica, não evidência de que o redesign já foi revisado contra essas referências.
+- As referências em `references/` e `previous-approved/` são o alvo visual do redesign; em 28/10 o usuário confirmou que elas definem o resultado esperado para todas as páginas e modais. O inventário anterior de 160 contextos é cobertura histórica, não evidência de que o redesign já foi revisado contra essas referências.
 - Nova comparação concluída em 3 contextos: listagem de Leads, Kanban e criação. A listagem, o Kanban e a criação foram conferidos em 1920×1080, 768×1024, 390×844 e 320×640, nos temas claro e escuro: 62 combinações, 124 capturas de viewport/página inteira, nenhum overflow horizontal.
-- A evidência desta rodada contém 151 screenshots, resultados de loading/vazio/erro e permissões, além de smoke tests de detalhe, edição, lembrete, exclusão e conversão. Esses smoke tests não encerram a comparação visual dos respectivos modais/páginas.
-- Restam 157 dos 160 contextos do manifesto sem nova revisão visual. Também permanece pendente a descoberta de telas e overlays que não constem do manifesto. O detalhe do lead e seus modais seguem pendentes.
+- A evidência comparativa agora contém 5 contextos revisados e 201 screenshots: os 151 registros de Leads mais 50 capturas de Contratos. Detalhe e importação em lote foram comparados às referências. Smoke tests de detalhe, edição, lembrete, exclusão e conversão não encerram a comparação visual dos respectivos modais/páginas.
+- Restam 155 dos 160 contextos do manifesto sem nova revisão visual. Também permanece pendente a descoberta de telas e overlays que não constem do manifesto. O detalhe do lead e seus modais seguem pendentes.
+- Contratos: o drawer de detalhes e o importador JSON em lote foram revisados em quatro larguras e dois temas. A listagem segue pendente porque o shell mobile atual omite o cabeçalho de marca, menu e perfil visível na referência; essa diferença deve ser resolvida na base compartilhada antes da aprovação visual da listagem.
+- Nesta entrega, typecheck, lint, arquitetura, auditorias de design system/estilos, build e bundle passaram; a suíte completa passou **1.724/1.724 testes em 327 arquivos**. O ESLint agora ignora `local-artifacts/`, diretório já excluído do Git, para não analisar capturas/scripts temporários. O build manteve apenas o aviso existente de chunk vendor acima de 500 kB.
 - O rodapé do formulário mobile foi ajustado após a captura inicial: permanece no fluxo e só se fixa no fim, sem cobrir campos nem navegação inferior em 390×844 e 320×640.
 - Typecheck, lint, arquitetura e build passaram; as auditorias incluídas no build aprovaram. A suíte completa passou 1.724/1.724 testes em 327 arquivos com `--testTimeout=10000`; em 5 segundos, o teste do contrato do design system excedeu o limite apenas durante a suíte concorrente, mas passou isolado em 2,9 segundos.
-- A cobertura por contexto e as pendências atuais estão em [REVISAO_VISUAL.json](REVISAO_VISUAL.json); comparação e imagens de Leads em [revisão visual — Leads](validacao/revisao-visual/leads/README.md).
+- A cobertura por contexto e as pendências atuais estão em [REVISAO_VISUAL.json](REVISAO_VISUAL.json); comparações e imagens em [revisão visual — Leads](validacao/revisao-visual/leads/README.md) e [revisão visual — Contratos](validacao/revisao-visual/contracts/README.md).
 
 ## Base implementada anteriormente
 

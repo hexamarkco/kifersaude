@@ -5,10 +5,11 @@ import { test, vi } from 'vitest';
 import BlogTabScreen from '../BlogTabScreen';
 
 const calls = vi.hoisted(() => ({ save: 0, remove: 0, publish: 0, open: 0 }));
+const saveControl = vi.hoisted(() => ({ pending: null as Promise<void> | null, fail: false }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'operator-demo' } }) }));
 vi.mock('../data/blogRepository', () => ({
   listBlogPosts: async () => [{ id: 'demo', title: 'Orientação para escolher um plano', slug: 'orientacao', excerpt: 'Resumo da publicação', content: '<p>Conteúdo do artigo real.</p>', category: 'Guias', read_time: '3 min', published: false, created_at: '2026-10-20T12:00:00Z', views_count: 0 }],
-  saveBlogPost: async () => { calls.save += 1; },
+  saveBlogPost: async () => { calls.save += 1; if (saveControl.pending) await saveControl.pending; if (saveControl.fail) throw new Error('falha simulada'); },
   deleteBlogPost: async () => { calls.remove += 1; },
   setBlogPostPublished: async () => { calls.publish += 1; },
 }));
@@ -107,7 +108,7 @@ test('opens the article editor and returns without saving', async () => {
     assert.ok(view.container.querySelector('input[placeholder="Digite o título do post"]'));
     assert.ok(view.container.querySelector('input[placeholder="url-amigavel-do-post"]'));
     assert.ok(view.container.textContent?.includes('SEO (otimização para Google)'));
-    const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Criar post'));
+    const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
     assert.ok(save);
     act(() => save.click());
     assert.equal(view.container.querySelector('input[placeholder="Digite o título do post"]')?.getAttribute('aria-invalid'), 'true');
@@ -120,4 +121,53 @@ test('opens the article editor and returns without saving', async () => {
     assert.ok(view.container.textContent?.includes('Biblioteca de artigos'));
     assert.equal(calls.save, 0);
   } finally { view.unmount(); }
+});
+
+test('locks the editor during save and returns to the list after success', async () => {
+  calls.save = 0;
+  let resolveSave: (() => void) | undefined;
+  saveControl.pending = new Promise<void>(resolve => { resolveSave = resolve; });
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    const menu = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    assert.ok(menu);
+    act(() => menu.click());
+    const edit = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Editar'));
+    assert.ok(edit);
+    act(() => edit.click());
+    const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
+    assert.ok(save);
+    act(() => { save.click(); save.click(); });
+    assert.equal(calls.save, 1);
+    assert.ok(view.container.querySelector('button[aria-busy="true"]')?.textContent?.includes('Salvando'));
+    assert.ok(view.container.querySelector('fieldset')?.disabled);
+    const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Cancelar');
+    assert.ok(cancel?.disabled);
+    assert.ok(resolveSave);
+    await act(async () => { resolveSave?.(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.ok(view.container.textContent?.includes('Biblioteca de artigos'));
+    assert.equal(calls.save, 1);
+  } finally { view.unmount(); saveControl.pending = null; calls.save = 0; }
+});
+
+test('keeps article data and enables retry when saving fails', async () => {
+  saveControl.fail = true;
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    const menu = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    assert.ok(menu);
+    act(() => menu.click());
+    const edit = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Editar'));
+    assert.ok(edit);
+    act(() => edit.click());
+    const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
+    assert.ok(save);
+    await act(async () => { save.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(view.container.querySelector<HTMLInputElement>('input[placeholder="Digite o título do post"]')?.value, 'Orientação para escolher um plano');
+    const retry = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
+    assert.ok(retry);
+    assert.equal(retry.disabled, false);
+  } finally { view.unmount(); saveControl.fail = false; calls.save = 0; }
 });

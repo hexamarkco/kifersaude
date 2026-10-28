@@ -41,12 +41,14 @@ export default function BlogTabScreen() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [validationAttempted, setValidationAttempted] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingContent, setUploadingContent] = useState(false);
   const [formData, setFormData] = useState(createEmptyBlogFormData);
   const postsRequestIdRef = useRef(0);
+  const savingRef = useRef(false);
   const loadingUi = useAdaptiveLoading(loading);
 
   const loadPosts = useCallback(async () => {
@@ -108,6 +110,7 @@ export default function BlogTabScreen() {
   }, []);
 
   const handleSave = useCallback(async () => {
+    if (savingRef.current) return;
     if (
       !formData.title ||
       !formData.slug ||
@@ -124,17 +127,20 @@ export default function BlogTabScreen() {
       formData,
     });
 
+    savingRef.current = true;
+    setSaving(true);
     try {
       await saveBlogPost(postData, editingPost?.id);
-    } catch (error) {
+      toast.success(editingPost ? "Post atualizado." : "Post criado.");
+      closeEditor();
+      await loadPosts();
+    } catch {
       const action = editingPost ? "atualizar" : "criar";
-      const message = error instanceof Error ? error.message : String(error);
-      toast.error(`Não foi possível ${action} o post: ${message}`);
-      return;
+      toast.error(`Não foi possível ${action} o post. Tente novamente.`);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-
-    closeEditor();
-    await loadPosts();
   }, [closeEditor, editingPost, formData, loadPosts, user?.id]);
 
   const handleEdit = useCallback((post: BlogPost) => {
@@ -280,6 +286,7 @@ export default function BlogTabScreen() {
           onFormDataChange={setFormData}
           onSave={handleSave}
           onTitleChange={handleTitleChange}
+          saving={saving}
           validationAttempted={validationAttempted}
           uploadingContent={uploadingContent}
           uploadingCover={uploadingCover}

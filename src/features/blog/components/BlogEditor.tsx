@@ -36,6 +36,7 @@ type BlogEditorProps = {
   uploadingContent: boolean;
   uploadingCover: boolean;
   validationAttempted: boolean;
+  saving: boolean;
 };
 
 export default function BlogEditor({
@@ -51,6 +52,7 @@ export default function BlogEditor({
   uploadingContent,
   uploadingCover,
   validationAttempted,
+  saving,
 }: BlogEditorProps) {
   const titleRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
@@ -81,6 +83,7 @@ export default function BlogEditor({
             type="button"
             onClick={onClose}
             variant="secondary"
+            disabled={saving}
             size="md">
             <ArrowLeft className="kds-control-icon" aria-hidden="true" /> Voltar para artigos
           </Button>
@@ -88,6 +91,7 @@ export default function BlogEditor({
       />
 
       <Surface className="space-y-6">
+        <fieldset disabled={saving} className="min-w-0 space-y-6">
         <div>
           <Heading level={2} size="lg">Informações do artigo</Heading>
           <Text size="sm" tone="muted">Defina como o artigo será identificado no site.</Text>
@@ -271,6 +275,7 @@ export default function BlogEditor({
 
             <RichTextEditor
               ref={editorRef}
+              readOnly={saving}
               theme="snow"
               value={formData.content}
               onChange={onContentChange}
@@ -340,7 +345,8 @@ export default function BlogEditor({
           </FieldLabel>
         </div>
 
-        <PageActions placement="form" primary={{ label: editingPost ? "Atualizar post" : "Criar post", icon: Save, onClick: handleSaveClick }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
+        </fieldset>
+        <PageActions placement="form" busy={saving} primary={{ label: saving ? "Salvando..." : "Salvar", icon: Save, loading: saving, onClick: handleSaveClick }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
       </Surface>
     </div>
   );

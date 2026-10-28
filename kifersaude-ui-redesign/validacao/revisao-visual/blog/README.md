@@ -26,4 +26,6 @@ Capturas isoladas: [1920 px](editor-1920.png), [768 px](editor-768.png), [390 px
 
 Na prévia isolada, salvar vazio apresentou os quatro erros existentes junto aos campos e levou o foco ao título; ao preenchê-lo, os erros de título e slug desapareceram. Capturas: [1920 px](validacao-1920.png), [768 px](validacao-768.png), [390 px](validacao-390.png) e [320 px](validacao-320.png). O documento não apresentou overflow; não houve persistência.
 
-Ainda faltam revisão integrada autenticada, validação completa com dados reais simulados, upload, edição de artigo existente, cancelamento e confirmação de salvamento, permissões e estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.
+Em montagem isolada da tela real, a gravação foi interceptada e simulada. Durante a resposta pendente, os campos, o editor e as ações ficaram bloqueados; a falha manteve os dados e permitiu nova tentativa, que retornou sucesso simulado. Evidências: [salvando em 1920 px](salvando-1920.png), [768 px](salvando-768.png), [390 px](salvando-390.png), [320 px](salvando-320.png) e [erro em 320 px](salvar-erro-320.png). Nenhuma gravação chegou ao serviço real.
+
+Ainda faltam revisão integrada autenticada, validação completa, upload, permissões e outros estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.

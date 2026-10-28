@@ -1,4 +1,5 @@
 import { Text, Image, Heading } from '../../../design-system';
+import { useState } from 'react';
 import {
   Edit2,
   Eye,
@@ -19,6 +20,8 @@ import {
   Input,
   FilterSelect,
   KpiCard,
+  EmptyState,
+  Pagination,
   PageHeader,
   ResponsiveCollection,
   Surface,
@@ -65,6 +68,12 @@ export default function BlogPostsList({
   statusFilter,
   summary,
 }: BlogPostsListProps) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagePosts = posts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const hasFilters = Boolean(searchTerm.trim() || statusFilter);
   const showSummary = hasPostsSnapshot || (!loading && !loadError);
   const getActions = (post: BlogPost) => [
     { label: "Visualizar", icon: Eye, onClick: () => onPreviewPost(post) },
@@ -105,12 +114,12 @@ export default function BlogPostsList({
               type="text"
               aria-label="Buscar artigos"
               value={searchTerm}
-              onChange={(event) => onSearchTermChange(event.target.value)}
+              onChange={(event) => { setPage(1); onSearchTermChange(event.target.value); }}
               placeholder="Buscar por título ou categoria..."
               leftIcon={Search}
           />
           </div>
-          <FilterSelect icon={Filter} placeholder="Todos os status" value={statusFilter} onChange={onStatusFilterChange}
+          <FilterSelect icon={Filter} placeholder="Todos os status" value={statusFilter} onChange={(value) => { setPage(1); onStatusFilterChange(value); }}
             options={[{ value: 'published', label: 'Publicado' }, { value: 'draft', label: 'Rascunho' }]} />
         </div>
       </Surface>
@@ -128,12 +137,14 @@ export default function BlogPostsList({
           overlayLabel="Atualizando posts..."
           stageClassName="min-h-[360px]"
         >
-          {posts.length === 0 && loadError ? null : posts.length === 0 ? (
-            <Surface variant="muted" className="py-12 text-center">
-              <FileText className="mx-auto mb-3 h-12 w-12 text-[var(--text-muted)]" />
-              <Text className="text-[var(--text-secondary)]">Nenhum post encontrado</Text>
-            </Surface>
+          {posts.length === 0 && loadError && !hasPostsSnapshot ? null : posts.length === 0 ? (
+            <EmptyState icon={<FileText aria-hidden="true" />} title="Nenhum post encontrado"
+              description={hasFilters ? "Ajuste a busca ou os filtros para encontrar artigos." : "Crie um artigo para começar a biblioteca."}
+              action={hasFilters
+                ? <Button type="button" variant="secondary" onClick={() => { setPage(1); onSearchTermChange(''); onStatusFilterChange(''); }}>Limpar filtros</Button>
+                : <Button type="button" onClick={onCreatePost}><Plus className="kds-control-icon" aria-hidden="true" /> Novo post</Button>} />
           ) : (
+            <>
             <ResponsiveCollection table={<Table aria-label="Biblioteca de artigos" className="min-w-[800px]" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
               <TableHeader><TableRow>
                 <TableHead>Artigo</TableHead><TableHead>Categoria</TableHead>
@@ -141,7 +152,7 @@ export default function BlogPostsList({
                 <TableHead>Criado em</TableHead><TableHead align="right">Ações</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {posts.map((post) => (
+                {pagePosts.map((post) => (
                   <TableRow key={post.id}>
                     <TableCell className="min-w-64">
                       <div className="flex items-start gap-3">
@@ -164,7 +175,7 @@ export default function BlogPostsList({
                 ))}
               </TableBody>
             </Table>} cards={<div className="grid gap-3">
-              {posts.map((post) => (
+              {pagePosts.map((post) => (
                 <Surface key={post.id} padding="sm" className="space-y-3">
                   {post.cover_image_url && <Image src={post.cover_image_url} alt="" className="h-20 w-full rounded-md object-cover" />}
                   <div className="flex items-start justify-between gap-3">
@@ -186,6 +197,9 @@ export default function BlogPostsList({
                 </Surface>
               ))}
             </div>} />
+            <Pagination currentPage={currentPage} totalPages={totalPages} itemsPerPage={pageSize} totalItems={posts.length}
+              onPageChange={setPage} onItemsPerPageChange={(value) => { setPageSize(value); setPage(1); }} />
+            </>
           )}
         </PanelAdaptiveLoadingFrame>
       </Surface>

@@ -10,7 +10,9 @@ Após inclusão dos indicadores e filtro, novas capturas: [1920 px](indicadores-
 
 A coleção foi posteriormente adaptada para cartões nas áreas estreitas, usando `ResponsiveCollection`. A tabela permanece no desktop; os cartões mantêm dados e ações sem rolagem lateral. Evidências: [desktop](responsivo-1920.png), [tablet](responsivo-768.png), [390 px](responsivo-390.png), [320 px](responsivo-320.png), [menu em 320 px](responsivo-menu-320.png) e [tema escuro em 320 px](responsivo-dark-320.png). O menu exibiu visualização, publicação, edição e exclusão; não foram executadas escritas. As quatro larguras ficaram sem overflow do documento.
 
-Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais e paginação, estados de carregamento, vazio e erro em navegador, teclado e foco, criação, edição, prévia, exclusão e permissões. A listagem permanece pendente no manifesto.
+Com 12 artigos fictícios, a paginação local mostrou os dois últimos na segunda página e voltou à primeira após limpar uma busca sem resultado. Evidências: [desktop](paginacao-1920.png), [tablet](paginacao-768.png), [390 px](paginacao-390.png), [320 px](paginacao-320.png) e [busca sem resultado](busca-vazia-320.png). Não houve overflow do documento nessas larguras.
+
+Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais, estados de carregamento, vazio sem artigos e erro em navegador, teclado e foco, criação, edição, prévia, exclusão e permissões. A listagem permanece pendente no manifesto.
 
 ## Editor — revisão parcial
 

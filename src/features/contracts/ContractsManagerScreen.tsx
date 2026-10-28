@@ -786,6 +786,7 @@ export default function ContractsManager({
               onChange={(value) => setFilterStatus(value)}
               placeholder="Todos os status"
               includePlaceholderOption={false}
+              neutralValues={["todos"]}
               options={[
                 { value: "todos", label: "Todos os status" },
                 { value: "Rascunho", label: "Rascunho" },
@@ -813,6 +814,7 @@ export default function ContractsManager({
               onChange={(value) => setFilterResponsavel(value)}
               placeholder="Todos os responsáveis"
               includePlaceholderOption={false}
+              neutralValues={["todos"]}
               options={[
                 { value: "todos", label: "Todos os responsáveis" },
                 ...responsavelFilterOptions.map((option) => ({
@@ -830,6 +832,7 @@ export default function ContractsManager({
               }
               placeholder="Todos os períodos"
               includePlaceholderOption={false}
+              neutralValues={["todos"]}
               options={[
                 { value: "todos", label: "Todos os períodos" },
                 { value: "proximos-30", label: "Próximos 30 dias" },
@@ -854,6 +857,7 @@ export default function ContractsManager({
                 onChange={(value) => setFilterOperadora(value)}
                 placeholder="Todas as operadoras"
                 includePlaceholderOption={false}
+                neutralValues={["todas"]}
                 options={[
                   { value: "todas", label: "Todas as operadoras" },
                   ...operadoraOptions.map((operadora) => ({

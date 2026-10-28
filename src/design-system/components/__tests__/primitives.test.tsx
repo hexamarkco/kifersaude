@@ -14,6 +14,7 @@ import {
   Drawer,
   DrawerBody,
   FilterMultiSelect,
+  FilterSelect,
   Field,
   IconButton,
   Input,
@@ -31,6 +32,24 @@ const click = (element: Element | null) => {
 const keyDown = (element: EventTarget, key: string) => {
   act(() => element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
 };
+
+test('filtro distingue a opção neutra de uma seleção ativa', () => {
+  function Example() {
+    const [value, setValue] = useState('todos');
+    return <FilterSelect icon={Filter} placeholder="Todos os status" value={value} onChange={setValue} includePlaceholderOption={false} neutralValues={['todos']} options={[{ value: 'todos', label: 'Todos os status' }, { value: 'ativo', label: 'Ativo' }]} />;
+  }
+  const view = render(<Example />);
+  try {
+    const trigger = view.container.querySelector<HTMLButtonElement>('.kds-filter-trigger')!;
+    assert.equal(trigger.classList.contains('is-active'), false);
+    click(trigger);
+    click(Array.from(document.body.querySelectorAll('[role="option"]')).find(option => option.textContent?.trim() === 'Ativo') ?? null);
+    assert.equal(trigger.classList.contains('is-active'), true);
+    click(trigger);
+    click(Array.from(document.body.querySelectorAll('[role="option"]')).find(option => option.textContent?.trim() === 'Todos os status') ?? null);
+    assert.equal(trigger.classList.contains('is-active'), false);
+  } finally { view.unmount(); }
+});
 
 test('controls share the sm/md/lg scale and loading semantics', () => {
   const { container, unmount } = render(

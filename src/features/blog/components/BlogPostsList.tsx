@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  Filter,
   Plus,
   Search,
   Trash2,
@@ -16,6 +17,8 @@ import {
   Alert,
   Button,
   Input,
+  FilterSelect,
+  KpiCard,
   PageHeader,
   Surface,
   RecordActions,
@@ -35,9 +38,12 @@ type BlogPostsListProps = {
   onEditPost: (post: BlogPost) => void;
   onPreviewPost: (post: BlogPost) => void;
   onSearchTermChange: (value: string) => void;
+  onStatusFilterChange: (value: string) => void;
   onTogglePublish: (post: BlogPost) => void;
   posts: BlogPost[];
   searchTerm: string;
+  statusFilter: string;
+  summary: { published: number; drafts: number; views: number; updated: number };
 };
 
 export default function BlogPostsList({
@@ -51,10 +57,14 @@ export default function BlogPostsList({
   onEditPost,
   onPreviewPost,
   onSearchTermChange,
+  onStatusFilterChange,
   onTogglePublish,
   posts,
   searchTerm,
+  statusFilter,
+  summary,
 }: BlogPostsListProps) {
+  const showSummary = hasPostsSnapshot || (!loading && !loadError);
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
@@ -69,13 +79,21 @@ export default function BlogPostsList({
         )}
       />
 
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <KpiCard padding="sm" title="Artigos publicados" value={showSummary ? String(summary.published) : '—'} />
+        <KpiCard padding="sm" title="Rascunhos" value={showSummary ? String(summary.drafts) : '—'} />
+        <KpiCard padding="sm" title="Visualizações" value={showSummary ? summary.views.toLocaleString('pt-BR') : '—'} />
+        <KpiCard padding="sm" title="Atualizados no mês" value={showSummary ? String(summary.updated) : '—'} />
+      </div>
+
       <Surface className="space-y-6">
         {loadError && (
           <Alert tone="danger" role="alert" title="Não foi possível carregar os artigos" action={<Button type="button" variant="secondary" onClick={onRetry} disabled={loading}>Tentar novamente</Button>}>
             {hasPostsSnapshot ? "Os artigos exibidos podem estar desatualizados." : "Tente novamente para consultar os artigos."}
           </Alert>
         )}
-        <Surface variant="muted" padding="sm">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="min-w-0 flex-1">
           <Input
               type="text"
               aria-label="Buscar artigos"
@@ -84,7 +102,10 @@ export default function BlogPostsList({
               placeholder="Buscar por título ou categoria..."
               leftIcon={Search}
           />
-        </Surface>
+          </div>
+          <FilterSelect icon={Filter} placeholder="Todos os status" value={statusFilter} onChange={onStatusFilterChange}
+            options={[{ value: 'published', label: 'Publicado' }, { value: 'draft', label: 'Rascunho' }]} />
+        </div>
       </Surface>
 
       <Surface className="space-y-4">

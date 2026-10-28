@@ -38,6 +38,7 @@ export default function BlogTabScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
@@ -246,9 +247,22 @@ export default function BlogTabScreen() {
   );
 
   const filteredPosts = useMemo(
-    () => filterBlogPosts(posts, searchTerm),
-    [posts, searchTerm],
+    () => filterBlogPosts(posts, searchTerm).filter(post =>
+      !statusFilter || post.published === (statusFilter === "published")),
+    [posts, searchTerm, statusFilter],
   );
+  const summary = useMemo(() => {
+    const now = new Date();
+    return {
+      published: posts.filter(post => post.published).length,
+      drafts: posts.filter(post => !post.published).length,
+      views: posts.reduce((total, post) => total + (post.views_count || 0), 0),
+      updated: posts.filter(post => {
+        const date = new Date(post.updated_at);
+        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+      }).length,
+    };
+  }, [posts]);
   const hasPostsSnapshot = posts.length > 0;
 
   return (
@@ -279,9 +293,12 @@ export default function BlogTabScreen() {
           onEditPost={handleEdit}
           onPreviewPost={setPreviewPost}
           onSearchTermChange={setSearchTerm}
+          onStatusFilterChange={setStatusFilter}
           onTogglePublish={handleTogglePublish}
           posts={filteredPosts}
           searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          summary={summary}
         />
       )}
       {ConfirmationDialog}

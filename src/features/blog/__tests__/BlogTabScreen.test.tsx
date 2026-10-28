@@ -40,3 +40,19 @@ test('previews the selected article read-only without publishing, saving or open
     assert.deepEqual(calls, { save: 0, remove: 0, publish: 0, open: 0 });
   } finally { view.unmount(); window.open = originalOpen; }
 });
+
+test('filters articles by publication status without changing the totals', async () => {
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    const filter = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Todos os status'));
+    assert.ok(filter);
+    act(() => filter.click());
+    const option = Array.from(document.body.querySelectorAll('[role="option"]')).find(element => element.textContent?.includes('Publicado')) as HTMLButtonElement | undefined;
+    assert.ok(option);
+    act(() => option.click());
+    assert.ok(view.container.textContent?.includes('Nenhum post encontrado'));
+    assert.deepEqual(Array.from(view.container.querySelectorAll('.kds-kpi-value')).map(element => element.textContent), ['0', '1', '0', '0']);
+    assert.equal(view.container.querySelectorAll('tbody tr').length, 0);
+  } finally { view.unmount(); }
+});

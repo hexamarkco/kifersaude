@@ -840,13 +840,14 @@ export default function ContractsManager({
             />
             <Button
               type="button"
+              className="kds-contracts-advanced-trigger"
               variant={advancedFiltersOpen || filterOperadora !== 'todas' ? 'soft' : 'secondary'}
               aria-expanded={advancedFiltersOpen}
               aria-controls="contracts-advanced-filters"
               onClick={() => setAdvancedFiltersOpen((open) => !open)}
             >
               <Filter className="kds-control-icon" aria-hidden="true" />
-              Mais filtros{filterOperadora !== 'todas' ? ' · 1' : ''}
+              Filtros avançados{filterOperadora !== 'todas' ? ' · 1' : ''}
             </Button>
           </div>
           {advancedFiltersOpen && (

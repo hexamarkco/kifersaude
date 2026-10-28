@@ -1484,6 +1484,12 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-record-results .kds-table-head { background: var(--bg-canvas-subtle); }
 .kds-contracts-results > .kds-contracts-results-header { padding: var(--space-4) var(--space-3) 0; }
 .kds-contracts-results > .kds-contracts-results-pagination { padding: var(--space-3); }
+@media (min-width: 1280px) {
+  .kds-record-filters .kds-contracts-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }
+}
+@media (max-width: 480px) {
+  .kds-record-filters .kds-contracts-filter-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .painel-theme.kifer-ds .kds-record-form :is(h3,h4), .painel-theme.kifer-ds .kds-record-detail :is(h3,h4) { font-family: var(--font-sans); }
 .painel-theme.kifer-ds .kds-record-form > .kds-page-action-bar { background: var(--bg-surface); padding: var(--space-4); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); }
 @media(max-width: 767px) { .kds-record-form .kds-page-action-bar-sticky { bottom: calc(4.5rem + env(safe-area-inset-bottom)); } }

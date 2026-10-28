@@ -23,6 +23,13 @@ test('contract workspace keeps the same production fields and form submission ta
     fieldCount = form.querySelectorAll('input,select,textarea').length; assert.ok(fieldCount > 10);
     assert.equal(page.container.querySelector('[role="dialog"]'), null);
     assert.ok(page.container.textContent?.includes('Informações do Contrato'));
+    assert.deepEqual([...form.querySelectorAll('fieldset > legend span:last-child')].map(legend => legend.textContent), [
+      'Informações do Contrato',
+      'Vigência e valores',
+      'Comissão e recebimento',
+      'Vidas e bonificações',
+      'Responsáveis e observações',
+    ]);
     const submit = page.container.querySelector('button[type="submit"]'); assert.equal(submit?.getAttribute('form'), 'contract-form');
     const cancel = [...page.container.querySelectorAll('button')].find(button => button.textContent === 'Cancelar');assert.ok(cancel);await act(async () => cancel.click());assert.equal(canceled,1);
   } finally { page.unmount(); }
@@ -31,5 +38,6 @@ test('contract workspace keeps the same production fields and form submission ta
     await act(async () => { await Promise.resolve(); });
     const contextual = document.querySelector('[role="dialog"] form#contract-form');assert.ok(contextual);
     assert.equal(contextual.querySelectorAll('input,select,textarea').length,fieldCount);
+    assert.equal(contextual.querySelectorAll('fieldset').length, 5);
   } finally { dialog.unmount(); }
 });

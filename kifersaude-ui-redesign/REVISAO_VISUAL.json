@@ -1246,9 +1246,15 @@
         "references/desktop/state--contratos-criar.png",
         "references/mobile/state--contratos-criar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
+      "notes": [
+        "Comparada com a referência de criação em desktop e mobile, em 1920, 768, 390 e 320 px e nos temas claro/escuro. A referência mostra um modal curto; a criação real contém campos comerciais, financeiros, de comissão, vidas, bônus e responsáveis, por isso permanece em página completa conforme o padrão para formulários longos.",
+        "Os campos reais foram organizados em cinco FormSection reutilizáveis; página e consumidor contextual conservam o mesmo conjunto de campos e o mesmo identificador de envio. Nenhum contrato foi criado, atualizado ou excluído; sem overflow horizontal e sem sobreposição do rodapé com a navegação móvel."
+      ]
     },
     {
       "id": "state--contratos-detalhes",

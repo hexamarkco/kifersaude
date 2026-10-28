@@ -1,4 +1,4 @@
-import { Heading, Text, FieldLabel } from '../design-system';
+import { Text, FieldLabel } from '../design-system';
 import { Slider, Select } from '../design-system';
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
@@ -47,7 +47,6 @@ import {
   AlertCircle,
   Search,
   Calendar,
-  Building2,
   WalletCards,
   FileUp,
   RefreshCw,
@@ -75,6 +74,7 @@ import {
   FilterSelect,
   PageHeader,
   FormActions,
+  FormSection,
 } from "../design-system";
 import { configService } from "../features/config";
 import { useConfig } from "../contexts/ConfigContext";
@@ -1201,13 +1201,12 @@ export default function ContractForm({
         <form
           id="contract-form"
           onSubmit={handleSubmit}
+          className="kds-form-page"
         >
-          <Surface variant="muted" padding="sm" className="mb-4">
-            <Heading level={4} className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">
-              <Building2 className="mr-2 h-5 w-5 text-[var(--brand-primary)]" />
-              Informações do Contrato
-            </Heading>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormSection
+            title="Informações do Contrato"
+            description="Identifique o contrato, o vínculo comercial e o plano contratado."
+          >
               <Field label="Código do Contrato *">
                 <Input
                   type="text"
@@ -1458,7 +1457,12 @@ export default function ContractForm({
                   />
                 )}
               </Field>
+          </FormSection>
 
+          <FormSection
+            title="Vigência e valores"
+            description="Registre as datas importantes e o valor mensal do contrato."
+          >
               <Field label="Data de Início">
                 <DateTimePicker
                   type="date"
@@ -1650,6 +1654,12 @@ export default function ContractForm({
                 </div>
               )}
 
+          </FormSection>
+
+          <FormSection
+            title="Comissão e recebimento"
+            description="Confira o cálculo da comissão e defina como e quando será recebida."
+          >
               <Field label="Multiplicador de Comissão" className="md:col-span-2">
                 <Surface variant="strong" padding="sm" className="sm:p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -2015,8 +2025,12 @@ export default function ContractForm({
                   </div>
                 )}
               </div>
-            </div>
+          </FormSection>
 
+          <FormSection
+            title="Vidas e bonificações"
+            description="Informe a quantidade de pessoas cobertas e configure os bônus aplicáveis."
+          >
             <div className="mb-4 mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
               <Field label="Quantidade de Vidas *" descriptionPlacement="tooltip" description="Titular + dependentes">
                 <Input
@@ -2210,7 +2224,12 @@ export default function ContractForm({
                 />
               </Field>
             )}
+          </FormSection>
 
+          <FormSection
+            title="Responsáveis e observações"
+            description="Defina as pessoas responsáveis pelo relacionamento e registre notas internas."
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <Field label="Responsável *">
                 {responsavelOptions.length > 0 ? (
@@ -2256,7 +2275,7 @@ export default function ContractForm({
                 />
               </Field>
             </div>
-          </Surface>
+          </FormSection>
         </form>
 </>);
   const title = contract ? 'Editar contrato' : leadToConvert ? 'Converter lead em contrato' : 'Novo contrato';

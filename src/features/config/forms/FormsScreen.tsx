@@ -1,6 +1,6 @@
 import { Heading, Text } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, Edit2, ExternalLink, FileText, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Copy, Edit2, ExternalLink, FileText, Filter, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formsService } from "../../../lib/formsService";
@@ -16,8 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
+  FilterSelect,
   Input,
   LoadingState,
+  Pagination,
   SectionHeader,
   Switch,
   RecordActions, ResponsiveCollection, Surface, EmptyState,
@@ -42,6 +44,9 @@ export default function FormsScreen() {
   const [loadError, setLoadError] = useState(false);
   const [forms, setForms] = useState<PublicForm[]>([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -257,14 +262,24 @@ export default function FormsScreen() {
     );
   }
 
-  const visibleForms = forms.filter(form => `${form.title} ${form.slug}`.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR")));
+  const filteredForms = forms.filter(form =>
+    `${form.title} ${form.slug}`.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR")) &&
+    (statusFilter === "" || form.is_published === (statusFilter === "published")),
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredForms.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleForms = filteredForms.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const hasFilters = Boolean(search.trim() || statusFilter);
 
   return (
     <div className="space-y-6">
       {pageHeader}
 
       <Card>
-        <Input aria-label="Buscar formulários" value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por nome ou endereço..." leftIcon={Search} />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="min-w-0 flex-1"><Input aria-label="Buscar formulários" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome ou endereço..." leftIcon={Search} /></div>
+          <FilterSelect icon={Filter} placeholder="Todos os status" value={statusFilter} onChange={value => { setStatusFilter(value); setPage(1); }} options={[{ value: "published", label: "Publicado" }, { value: "draft", label: "Rascunho" }]} />
+        </div>
       </Card>
       <Card className="space-y-4">
         <div>
@@ -272,9 +287,9 @@ export default function FormsScreen() {
           <Text className="kds-card-subtitle">Cada formulário publicado cria um lead automaticamente ao ser enviado.</Text>
         </div>
         {visibleForms.length === 0 ? (
-          <EmptyState icon={<FileText aria-hidden="true" />} title={search.trim() ? "Nenhum formulário encontrado" : "Nenhum formulário cadastrado"}
-            description={search.trim() ? "Ajuste a busca para encontrar um formulário." : "Crie um formulário para começar a captar leads."}
-            action={search.trim() ? <Button variant="secondary" onClick={() => setSearch("")}>Limpar busca</Button> : undefined} />
+          <EmptyState icon={<FileText aria-hidden="true" />} title={hasFilters ? "Nenhum formulário encontrado" : "Nenhum formulário cadastrado"}
+            description={hasFilters ? "Ajuste a busca ou o status para encontrar um formulário." : "Crie um formulário para começar a captar leads."}
+            action={hasFilters ? <Button variant="secondary" onClick={() => { setSearch(""); setStatusFilter(""); setPage(1); }}>Limpar filtros</Button> : undefined} />
         ) : (() => {
           const actions = (form: PublicForm) => [
             { label: "Editar", icon: Edit2, onClick: () => setSelectedFormId(form.id) },
@@ -295,6 +310,7 @@ export default function FormsScreen() {
             <div className="flex flex-wrap items-center justify-between gap-3"><Text size="sm" tone="muted">{form.submission_count} envio{form.submission_count === 1 ? "" : "s"}</Text><Switch checked={form.is_published} onChange={() => void handleTogglePublish(form)} disabled={busyIds.has(form.id)} label={form.is_published ? "Publicado" : "Rascunho"} /></div>
           </Surface>)}</div>} />;
         })()}
+        {filteredForms.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredForms.length} itemsPerPage={pageSize} onPageChange={setPage} onItemsPerPageChange={value => { setPageSize(value); setPage(1); }} />}
       </Card>
 
       <Dialog

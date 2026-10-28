@@ -1,4 +1,4 @@
-import { ButtonGroup, Text, Image, Heading } from '../../../design-system';
+import { Text, Image, Heading } from '../../../design-system';
 import {
   Edit2,
   Eye,
@@ -18,7 +18,8 @@ import {
   Input,
   PageHeader,
   Surface,
-  IconButton,
+  RecordActions,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../../../design-system";
 import type { AdaptiveLoadingPhase } from "../../../hooks/useAdaptiveLoading";
 import type { BlogPost } from "../shared/blogTypes";
@@ -77,13 +78,20 @@ export default function BlogPostsList({
         <Surface variant="muted" padding="sm">
           <Input
               type="text"
+              aria-label="Buscar artigos"
               value={searchTerm}
               onChange={(event) => onSearchTermChange(event.target.value)}
               placeholder="Buscar por título ou categoria..."
               leftIcon={Search}
           />
         </Surface>
+      </Surface>
 
+      <Surface className="space-y-4">
+        <div>
+          <Heading level={2} size="lg">Biblioteca de artigos</Heading>
+          <Text size="sm" tone="muted">Consulte e gerencie as publicações do site.</Text>
+        </div>
         <PanelAdaptiveLoadingFrame
           loading={loading}
           phase={loadingPhase}
@@ -98,106 +106,41 @@ export default function BlogPostsList({
               <Text className="text-[var(--text-secondary)]">Nenhum post encontrado</Text>
             </Surface>
           ) : (
-            <div className="space-y-4">
-              {posts.map((post) => (
-                <Surface
-                  key={post.id}
-                  variant="default"
-                  padding="sm"
-                >
-                    <div className="flex items-start gap-4">
-                    {post.cover_image_url ? (
-                      <Surface padding="none" className="h-20 w-32 flex-shrink-0 overflow-hidden">
-                        <Image
-                          src={post.cover_image_url}
-                          alt={post.title}
-                          className="h-full w-full object-cover"
-                        />
-                      </Surface>
-                    ) : (
-                      <Surface variant="warning" padding="none" className="flex h-20 w-32 flex-shrink-0 items-center justify-center">
-                        <FileText className="h-8 w-8" />
-                      </Surface>
-                    )}
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-center gap-2">
-                            <Badge tone="accent" size="sm">
-                              {post.category}
-                            </Badge>
-                            <Badge tone={post.published ? "success" : "neutral"} size="sm">
-                              {post.published ? "Publicado" : "Rascunho"}
-                            </Badge>
-                            <span className="text-xs text-[var(--text-muted)]">
-                              {post.read_time}
-                            </span>
-                          </div>
-
-                          <Heading level={3} className="mb-1 truncate text-lg font-bold text-[var(--text-primary)]">
-                            {post.title}
-                          </Heading>
-                          <Text className="mb-2 line-clamp-2 text-sm text-[var(--text-secondary)]">
-                            {post.excerpt}
-                          </Text>
-
-                          <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-                            <span>Visualizações: {post.views_count}</span>
-                            <span>
-                              Criado{" "}
-                              {new Date(post.created_at).toLocaleDateString(
-                                "pt-BR",
-                              )}
-                            </span>
-                          </div>
+            <Table aria-label="Biblioteca de artigos" className="min-w-[800px]" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
+              <TableHeader><TableRow>
+                <TableHead>Artigo</TableHead><TableHead>Categoria</TableHead>
+                <TableHead>Status</TableHead><TableHead>Visualizações</TableHead>
+                <TableHead>Criado em</TableHead><TableHead align="right">Ações</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell className="min-w-64">
+                      <div className="flex items-start gap-3">
+                        {post.cover_image_url && <Image src={post.cover_image_url} alt="" className="h-12 w-16 shrink-0 rounded-md object-cover" />}
+                        <div className="min-w-0">
+                          <Text className="font-semibold">{post.title}</Text>
+                          <Text size="sm" tone="muted" className="line-clamp-2">{post.excerpt}</Text>
+                          <Text size="sm" tone="muted">{post.read_time}</Text>
                         </div>
-
-                        <ButtonGroup size="md" aria-label="Ações da publicação">
-                          <IconButton
-                            type="button"
-                            onClick={() => onPreviewPost(post)}
-                            variant="icon"
-                            title="Visualizar"
-                           size="md" aria-label="Visualizar">
-                            <Eye aria-hidden="true" />
-                          </IconButton>
-                          <IconButton
-                            type="button"
-                            onClick={() => onTogglePublish(post)}
-                            variant={post.published ? "success" : "secondary"}
-                            title={post.published ? "Despublicar" : "Publicar"}
-                            aria-label={`${post.published ? "Despublicar" : "Publicar"} ${post.title}`}
-                            size="md">
-                            {post.published ? (
-                              <Eye aria-hidden="true" />
-                            ) : (
-                              <EyeOff aria-hidden="true" />
-                            )}
-                          </IconButton>
-                          <IconButton
-                            type="button"
-                            onClick={() => onEditPost(post)}
-                            variant="secondary"
-                            title="Editar"
-                           size="md" aria-label="Editar">
-                            <Edit2 aria-hidden="true" />
-                          </IconButton>
-                          <IconButton
-                            type="button"
-                            onClick={() => onDeletePost(post.id)}
-                            variant="danger"
-                            title="Excluir"
-                           size="md" aria-label="Excluir">
-                            <Trash2 aria-hidden="true" />
-                          </IconButton>
-                        </ButtonGroup>
                       </div>
-                    </div>
-                  </div>
-                </Surface>
-              ))}
-            </div>
+                    </TableCell>
+                    <TableCell><Badge tone="accent" size="sm">{post.category}</Badge></TableCell>
+                    <TableCell><Badge tone={post.published ? "success" : "neutral"} size="sm">{post.published ? "Publicado" : "Rascunho"}</Badge></TableCell>
+                    <TableCell>{post.views_count}</TableCell>
+                    <TableCell className="whitespace-nowrap">{new Date(post.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell align="right">
+                      <RecordActions label={`Ações de ${post.title}`} actions={[
+                        { label: "Visualizar", icon: Eye, onClick: () => onPreviewPost(post) },
+                        { label: post.published ? "Despublicar" : "Publicar", icon: post.published ? Eye : EyeOff, onClick: () => onTogglePublish(post) },
+                        { label: "Editar", icon: Edit2, onClick: () => onEditPost(post) },
+                        { label: "Excluir", icon: Trash2, destructive: true, onClick: () => onDeletePost(post.id) },
+                      ]} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </PanelAdaptiveLoadingFrame>
       </Surface>

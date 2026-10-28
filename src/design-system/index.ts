@@ -1,3 +1,5 @@
+export { RecordActions } from './components/RecordActions';
+export type { RecordAction, RecordActionsProps } from './components/RecordActions';
 export { default as Alert } from './components/Alert';
 export { default as FieldLabel } from './components/FieldLabel';
 export type { FieldLabelProps } from './components/FieldLabel';

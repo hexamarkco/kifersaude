@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronDown,
   HelpCircle,
+  Eye,
   FileText,
   Filter,
   LayoutDashboard,
@@ -66,6 +67,7 @@ import {
   FilterSelect,
   FormActions,
   PageActions,
+  RecordActions,
   Heading,
   IconButton,
   Inline,
@@ -350,6 +352,11 @@ function Actions() {
           source="ButtonGroup size / orientation / IconButton"
         >
           <div className="grid grid-cols-1 gap-3">
+            <RecordActions label="Ações do contato demonstrativo" actions={[
+              { label: 'Abrir contato', icon: Eye, onClick: () => toast({ variant: 'info', description: 'Contato demonstrativo aberto.' }) },
+              { label: 'Editar contato', icon: Pencil, onClick: () => toast({ variant: 'info', description: 'Edição demonstrativa selecionada.' }) },
+              { label: 'Excluir contato', icon: Trash2, destructive: true, onClick: () => setDeleteConfirm(true) },
+            ]} />
             <ButtonGroup aria-label="Ações do registro demonstrativo">
               <IconButton variant="secondary" aria-label="Editar registro demonstrativo" onClick={() => toast({ variant: 'info', description: 'Edição demonstrativa selecionada.' })}><Pencil /></IconButton>
               <IconButton variant="danger" aria-label="Excluir registro demonstrativo" onClick={() => setDeleteConfirm(true)}><Trash2 /></IconButton>

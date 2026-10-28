@@ -1,6 +1,6 @@
 import { Text, Heading, FieldLabel } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, Mail, Phone, Users } from "lucide-react";
+import { ArrowRight, Calendar, FileText, Mail, Phone, UserCircle, Users } from "lucide-react";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
@@ -12,6 +12,7 @@ import {
   EmptyState,
   Input,
   LoadingState,
+  RecordActions,
   OperationalMetricChip,
   OperationalStatusDot,
   Surface,
@@ -275,29 +276,28 @@ export default function LeadKanbanBoard({
           Os leads já carregados foram preservados. Tente novamente para atualizar as colunas.
         </Alert>
       )}
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="kds-kanban-header mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Text className="kds-op-section-label">
             Funil visual
           </Text>
           <Heading level={3} className="kds-op-panel-title mt-2">
-            Contatos por etapa do atendimento
+            Contatos por etapa
           </Heading>
           <Text className="kds-op-lead-muted mt-1 text-sm">
-            Arraste cards entre colunas para atualizar o status sem sair da
-            visão do funil.
+            Arraste os cards entre etapas para atualizar o status.
           </Text>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="kds-kanban-summary flex flex-wrap gap-2">
           <OperationalMetricChip value={statusColumns.length} label="etapas ativas" />
           <OperationalMetricChip value={localLeads.length} label="leads visíveis" />
         </div>
       </div>
 
-      <div className="rounded-2xl bg-[var(--bg-hover)] p-3 sm:p-4">
+      <div className="kds-kanban-workspace">
         <div className="kds-kanban-scroll overflow-x-auto pb-4 snap-x snap-mandatory">
-          <div className="flex min-w-max gap-4">
+          <div className="kds-kanban-track">
             {statusColumns.map((column) => {
               const columnLeads = leadsByStatusName.get(column.nome) ?? [];
               const chipColor = column.cor || "var(--brand-primary)";
@@ -335,7 +335,7 @@ export default function LeadKanbanBoard({
                     <OperationalMetricChip value={columnLeads.length} active={isOverLimit} tone={isOverLimit ? "danger" : "neutral"} />
                   </div>
 
-                  <div className="mb-4 rounded-xl bg-[var(--bg-hover)]">
+                  <div className="kds-kanban-wip">
                     <FieldLabel className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium">
                       <span className="kds-op-lead-muted">
                         Limite WIP
@@ -343,6 +343,7 @@ export default function LeadKanbanBoard({
                       <div className="w-20">
                         <Input
                           type="number"
+                          aria-label={`Limite WIP de ${column.nome}`}
                           min={0}
                           value={wipLimit}
                           onChange={(event) =>
@@ -366,90 +367,44 @@ export default function LeadKanbanBoard({
                         const responsavelLabel = getResponsavelLabel(lead);
 
                         return (
-                          <ActionSurface
+                          <Surface
                             key={lead.id}
                             padding="sm"
                             draggable
                             onDragStart={() => setDraggedLead(lead)}
-                            onClick={() => onLeadClick?.(lead)}
-                            aria-label={`Abrir detalhes de ${lead.nome_completo}`}
                             className="kds-kanban-card cursor-move transition-colors"
                           >
-                            <div className="mb-3 flex items-center gap-1.5">
+                            <div className="kds-kanban-card-heading">
                               <LeadFavoriteToggle
                                 leadId={lead.id}
                                 favorito={Boolean(lead.favorito)}
                                 size="sm"
                                 onToggled={(next) => {
                                   loadLeadsRequestIdRef.current += 1;
-                                  setLocalLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)));
+                                  setLocalLeads((current) => current.map((item) => item.id === lead.id ? { ...item, favorito: next } : item));
                                 }}
                               />
-                              <Heading level={5}
-                                className="kds-op-lead-title truncate"
-                              >
-                                {lead.nome_completo}
-                              </Heading>
+                              <ActionSurface variant="plain" padding="none" onClick={() => onLeadClick?.(lead)} aria-label={`Abrir detalhes de ${lead.nome_completo}`}>
+                                <Heading level={5} className="kds-op-lead-title">{lead.nome_completo}</Heading>
+                              </ActionSurface>
                             </div>
-
-                            <div
-                              className="kds-op-lead-meta space-y-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                                <span className="truncate">{lead.telefone}</span>
+                            <div className="kds-op-lead-meta space-y-2">
+                              {lead.telefone && <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{lead.telefone}</span></div>}
+                              {lead.email && <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate" title={lead.email}>{lead.email}</span></div>}
+                              <div className="flex items-center gap-2"><UserCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span>{responsavelLabel}</span></div>
+                              {lead.proximo_retorno && <div className="kds-op-lead-accent flex items-center gap-2"><Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span>{formatDateTimeFullBR(lead.proximo_retorno)}</span></div>}
+                            </div>
+                            <div className="kds-kanban-card-footer">
+                              <div className="min-w-0">
+                                <span className="block truncate">{lead.origem || 'Sem origem'}</span>
+                                {lead.data_criacao && <span className="block">{new Date(lead.data_criacao).toLocaleDateString('pt-BR')}</span>}
                               </div>
-                              {lead.email && (
-                                <div className="flex items-center gap-2">
-                                  <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="truncate">{lead.email}</span>
-                                </div>
-                              )}
-                              {lead.proximo_retorno && (
-                                <div
-                                  className="kds-op-lead-accent flex items-center gap-2"
-                                >
-                                  <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span>{formatDateTimeFullBR(lead.proximo_retorno)}</span>
-                                </div>
-                              )}
+                              <RecordActions label="Ações do lead" actions={[
+                                { label: 'Abrir detalhes do lead', icon: ArrowRight, onClick: () => onLeadClick?.(lead) },
+                                ...(onConvertToContract ? [{ label: 'Converter em contrato', icon: FileText, onClick: () => onConvertToContract(lead) }] : []),
+                              ]} />
                             </div>
-
-                            <div
-                              className="kds-op-lead-actions kds-op-lead-muted mt-4 flex items-center justify-between gap-3 pt-3 text-xs"
-                            >
-                              <span>
-                                <span className="mr-1">Responsável:</span>
-                                <strong
-                                  className="kds-op-lead-strong"
-                                >
-                                  {responsavelLabel}
-                                </strong>
-                              </span>
-                              <span>
-                                {lead.data_criacao
-                                  ? new Date(lead.data_criacao).toLocaleDateString(
-                                      "pt-BR",
-                                    )
-                                  : ""}
-                              </span>
-                            </div>
-
-                            {onConvertToContract && (
-                              <Button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  onConvertToContract(lead);
-                                }}
-                                variant="soft"
-                                size="sm"
-                                className="mt-4 w-full justify-center"
-                              >
-                                Converter em contrato
-                              </Button>
-                            )}
-                          </ActionSurface>
+                          </Surface>
                         );
                       })
                     )}

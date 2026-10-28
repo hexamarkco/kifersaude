@@ -460,6 +460,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           <Field label="Nome completo *" htmlFor="lead-nome" className="md:col-span-2">
             <Input
               id="lead-nome"
+              placeholder="Nome do contato"
               type="text"
               required
               leftIcon={UserCircle}
@@ -472,6 +473,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           <Field label="Telefone *" htmlFor="lead-telefone">
             <Input
               id="lead-telefone"
+              placeholder="(21) 99999-9999"
               type="tel"
               required
               leftIcon={Phone}
@@ -485,6 +487,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           <Field label="E-mail" htmlFor="lead-email">
             <Input
               id="lead-email"
+              placeholder="contato@empresa.com"
               type="email"
               leftIcon={Mail}
               value={formData.email}
@@ -522,6 +525,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
           <Field label="Endereço" htmlFor="lead-endereco">
             <Input
               id="lead-endereco"
+              placeholder="Rua, avenida, número e complemento"
               type="text"
               leftIcon={MapPinned}
               value={formData.endereco}

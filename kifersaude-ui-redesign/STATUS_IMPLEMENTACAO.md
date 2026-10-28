@@ -4,7 +4,17 @@
 
 A rodada anterior registrou **160 contextos** do manifesto: **47 páginas, 19 contextos adicionais e 94 estados**, nas quatro resoluções. As evidências abaixo documentam essa rodada e não representam aprovação visual final da nova meta. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
-## Entregas
+## Revisão comparativa em andamento — 28/10/2026
+
+- As referências em `references/` e `previous-approved/` são o alvo visual do redesign. O inventário anterior de 160 contextos é cobertura histórica, não evidência de que o redesign já foi revisado contra essas referências.
+- Nova comparação concluída em 3 contextos: listagem de Leads, Kanban e criação. A listagem, o Kanban e a criação foram conferidos em 1920×1080, 768×1024, 390×844 e 320×640, nos temas claro e escuro: 62 combinações, 124 capturas de viewport/página inteira, nenhum overflow horizontal.
+- A evidência desta rodada contém 151 screenshots, resultados de loading/vazio/erro e permissões, além de smoke tests de detalhe, edição, lembrete, exclusão e conversão. Esses smoke tests não encerram a comparação visual dos respectivos modais/páginas.
+- Restam 157 dos 160 contextos do manifesto sem nova revisão visual. Também permanece pendente a descoberta de telas e overlays que não constem do manifesto. O detalhe do lead e seus modais seguem pendentes.
+- O rodapé do formulário mobile foi ajustado após a captura inicial: permanece no fluxo e só se fixa no fim, sem cobrir campos nem navegação inferior em 390×844 e 320×640.
+- Typecheck, lint, arquitetura e build passaram; as auditorias incluídas no build aprovaram. A suíte completa passou 1.724/1.724 testes em 327 arquivos com `--testTimeout=10000`; em 5 segundos, o teste do contrato do design system excedeu o limite apenas durante a suíte concorrente, mas passou isolado em 2,9 segundos.
+- A cobertura por contexto e as pendências atuais estão em [REVISAO_VISUAL.json](REVISAO_VISUAL.json); comparação e imagens de Leads em [revisão visual — Leads](validacao/revisao-visual/leads/README.md).
+
+## Base implementada anteriormente
 
 - Base compartilhada: bege/branco/terracota, Inter operacional, Playfair editorial, superfícies flat, raios semânticos, densidade, sidebar, topbar, navegação mobile e temas claro/escuro.
 - Leads: listagem/Kanban segundo as referências aprovadas; criação/edição em página; detalhe com visão geral, histórico, follow-ups e dados; filtros, exportação, seletores, calendário em etapas, conversão e confirmações preservados.
@@ -15,7 +25,7 @@ A rodada anterior registrou **160 contextos** do manifesto: **47 páginas, 19 co
 - Configurações, IA, blog e páginas públicas: componentes compartilhados, títulos contextuais e identidade consistente. Prévia de artigo funcional em somente leitura; site institucional sem shell de CRM.
 - Mobile: menu completo acessível a partir de Mais, com notificações, tema e saída; fechamento por Escape, foco contido e retorno do foco ao acionador.
 
-## Verificações
+## Verificações históricas da rodada anterior
 
 - Playwright: 1920×1080, 768×1024, 390×844 e 320×640; 640 relações de contexto/resolução do manifesto e verificações adicionais de tema, permissões e ações finais.
 - Overflow do documento medido em cada captura; ficha de contrato verificada também pelos limites dos elementos internos, para detectar cortes ocultos por containers.

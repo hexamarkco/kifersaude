@@ -1,4 +1,5 @@
-import { ActionSurface, Avatar, DisclosureTrigger, ButtonGroup, Heading, Text, FieldLabel, TextLink } from '../../design-system';
+import { LeadListCard } from './components/LeadListCard';
+import { ActionSurface, Avatar, DisclosureTrigger, Heading, Text, FieldLabel } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -42,6 +43,7 @@ import {
   ArrowUp,
   ArrowDown,
   Contact,
+  MoreHorizontal,
 } from "lucide-react";
 import LeadForm from "../../components/LeadForm";
 import LeadDetails from "../../components/LeadDetails";
@@ -82,6 +84,8 @@ import {
   FilterMultiSelect,
   DateRangeFilter,
   Pagination,
+  RecordActions,
+  LinkButton,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
@@ -790,7 +794,7 @@ export default function LeadsManager({
   const contentSectionDescription =
     viewMode === "kanban"
       ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
-      : "Analise cada lead com contexto, próximos follow-ups e ações rápidas no mesmo fluxo.";
+      : "Atualize o status, acompanhe prazos e acesse ações rápidas.";
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1513,7 +1517,7 @@ export default function LeadsManager({
               </Button>
             )}
           >
-            {leadsLoadError} Os dados já carregados foram preservados.
+            {leadsLoadError}{hasLeadsSnapshot ? ' Os dados já carregados foram preservados.' : ' Tente novamente para acessar a carteira.'}
           </Alert>
         )}
         {leadContractsLoadError && (
@@ -1537,48 +1541,36 @@ export default function LeadsManager({
             {leadContractsLoadError}
           </Alert>
         )}
+        {(!leadsLoadError || hasLeadsSnapshot) && <>
         <Surface className="kds-leads-filters space-y-5" data-panel-animate>
           <Toolbar className="kds-leads-search-toolbar">
             <ToolbarSearch className="relative">
               <Input
                 type="text"
                 leftIcon={Search}
-                placeholder="Buscar por nome, telefone, e-mail ou use status:origem:responsável:tag:canal..."
+                placeholder="Buscar por nome, telefone ou e-mail..."
+                aria-label="Buscar leads"
+                title="Busque por nome, telefone ou e-mail. Também é possível combinar status:, origem:, responsável:, tag: e canal:."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-leads-toolbar-actions">
               <IconButton variant="secondary" className="kds-leads-mobile-filter-toggle" aria-label="Mostrar filtros de leads" aria-expanded={mobileFiltersOpen} aria-controls="leads-filter-controls" onClick={() => setMobileFiltersOpen(open => !open)}><Filter aria-hidden="true" /></IconButton>
-              <Button
-                type="button"
-                onClick={resetFilters}
-                variant="soft"
-                size="md"
-                className="kds-leads-clear-filters whitespace-nowrap kds-mobile-icon-action"
-                aria-label="Limpar filtros"
-                title="Limpar filtros"
-              >
-                <Filter className="kds-control-icon" />
-                <span className="kds-mobile-icon-action-label">Limpar</span>
-              </Button>
               <Popover>
                 <PopoverTrigger className="inline-flex">
-                  <Button type="button" variant="secondary" size="md" className="whitespace-nowrap kds-mobile-icon-action" aria-label="Opções de exportação" title="Exportar">
-                    <Download className="kds-control-icon" />
+                  <Button type="button" variant="secondary" size="md" className="whitespace-nowrap kds-mobile-icon-action" aria-label="Mais opções dos leads" title="Exportar e outras opções">
+                    <Download className="kds-control-icon kds-leads-desktop-icon" />
+                    <MoreHorizontal className="kds-control-icon kds-leads-mobile-icon" />
                     <span className="kds-mobile-icon-action-label">Exportar</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-56 space-y-1 p-2" aria-label="Opções de exportação">
+                <PopoverContent align="end" className="w-56 space-y-1 p-2" aria-label="Mais opções dos leads">
                   <Button variant="ghost" type="button" onClick={handleExportCurrentPage} className="kds-popover-menu-item">Exportar página atual</Button>
                   <Button variant="ghost" type="button" onClick={handleExportFilteredLeads} className="kds-popover-menu-item">Exportar todos os resultados</Button>
+                  <LinkButton href="/painel/api" variant="ghost" className="kds-popover-menu-item kds-leads-mobile-docs">Documentação de integração</LinkButton>
                 </PopoverContent>
               </Popover>
-              <OperationalMetricChip
-                value={filteredLeads.length}
-                label="leads"
-                className="kds-toolbar-inline-metric"
-              />
             </ToolbarActions>
           </Toolbar>
 
@@ -1622,9 +1614,6 @@ export default function LeadsManager({
                 const { id, ...props } = filter;
                 return <FilterMultiSelect key={id} {...props} />;
               })}
-            </div>
-
-            <div className="kds-leads-filter-secondary">
               <details className="kds-leads-advanced-filters group">
                 <DisclosureTrigger icon={Filter} className="kds-leads-advanced-summary">
                       Filtros avançados
@@ -1691,6 +1680,23 @@ export default function LeadsManager({
                   })}
                 </Surface>
               </details>
+            </div>
+
+            <div className="kds-leads-filter-secondary">
+              <div className="kds-leads-filter-count"><Text size="sm">{filteredLeads.length} leads na carteira</Text>
+              <Button
+                type="button"
+                onClick={resetFilters}
+                variant="text"
+                size="sm"
+                className="kds-leads-clear-filters whitespace-nowrap kds-mobile-icon-action"
+                aria-label="Limpar filtros"
+                title="Limpar filtros"
+              >
+                <span className="kds-mobile-icon-action-label">Limpar filtros</span>
+              </Button>
+              </div>
+
 
               <div className="kds-leads-sort-field" role="group" aria-label="Ordenação dos leads">
                 <span className="kds-leads-sort-label">Ordenar por</span>
@@ -1753,6 +1759,7 @@ export default function LeadsManager({
               </div>
 
               <div className="kds-leads-list-summary flex flex-wrap gap-2">
+                <Text className="kds-leads-mobile-result-count">{filteredLeads.length} leads encontrados</Text>
                 <OperationalMetricChip
                   value={filteredLeads.length}
                   label="resultados"
@@ -1890,9 +1897,9 @@ export default function LeadsManager({
                 </Surface>
             )}
             <div className="hidden lg:block">
-              <Table size="sm" stickyHeader className="min-w-[80rem]" columnWidths={canSelectLeads
-                ? ['3.5%', '20.5%', '14%', '12%', '10%', '14%', '10%', '16%']
-                : ['24%', '14%', '12%', '10%', '14%', '10%', '16%']}>
+              <Table size="sm" stickyHeader className="min-w-[70rem]" columnWidths={canSelectLeads
+                ? ['3.5%', '23.5%', '14%', '14%', '11%', '14%', '11%', '9%']
+                : ['27%', '14%', '14%', '11%', '14%', '11%', '9%']}>
                 <TableHeader>
                   <TableRow>
                     {canSelectLeads && <TableHead align="center" className="w-12" aria-label="Selecionar" />}
@@ -1970,12 +1977,14 @@ export default function LeadsManager({
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
-                          <ButtonGroup size="md" aria-label="Ações do lead">
-                            <IconButton onClick={() => setSelectedLead(lead)} variant="secondary" title="Ver detalhes do lead" aria-label="Ver detalhes do lead" size="md"><Contact aria-hidden="true" /></IconButton>
-                            {canEditLeads && <IconButton onClick={() => openReminderScheduler(lead)} variant="soft" title="Agendar lembrete" aria-label="Agendar lembrete" size="md"><Bell aria-hidden="true" /></IconButton>}
-                            {canEditLeads && <IconButton onClick={() => handleConvertToContract(lead)} variant="soft" title="Converter em contrato" aria-label="Converter em contrato" size="md"><FileText aria-hidden="true" /></IconButton>}
-                            {canEditLeads && <IconButton onClick={() => handleDeleteLead(lead)} variant="danger" title="Excluir lead" aria-label="Excluir lead" size="md" loading={deletingLeadIds.has(lead.id)}><Trash2 aria-hidden="true" /></IconButton>}
-                          </ButtonGroup>
+                          <RecordActions label="Ações do lead" actions={[
+                            { label: 'Ver detalhes do lead', icon: Contact, onClick: () => setSelectedLead(lead) },
+                            ...(canEditLeads ? [
+                              { label: 'Agendar lembrete', icon: Bell, onClick: () => openReminderScheduler(lead) },
+                              { label: 'Converter em contrato', icon: FileText, onClick: () => handleConvertToContract(lead) },
+                              { label: 'Excluir lead', icon: Trash2, destructive: true, loading: deletingLeadIds.has(lead.id), onClick: () => handleDeleteLead(lead) },
+                            ] : []),
+                          ]} />
                         </TableCell>
                       </TableRow>
                     );
@@ -1986,183 +1995,27 @@ export default function LeadsManager({
 
             <div className="kds-op-lead-list lg:hidden">
               {paginatedLeads.map((lead) => (
-                <Surface
+                <LeadListCard
                   key={lead.id}
-                  variant="muted"
-                  padding="sm"
-                  className="kds-op-lead-card transition-colors sm:p-4"
-                >
-                  <div className="min-w-0">
-                    <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            {canSelectLeads && (
-                              <Checkbox
-                                checked={selectedLeadIdsSet.has(lead.id)}
-                                onChange={() => toggleLeadSelection(lead.id)}
-                                aria-label={`Selecionar lead ${lead.nome_completo}`}
-                              />
-                            )}
-                            <LeadFavoriteToggle
-                              leadId={lead.id}
-                              favorito={Boolean(lead.favorito)}
-                              size="sm"
-                              onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
-                            />
-                            <Heading level={3} className="kds-op-lead-title">
-                              {lead.nome_completo}
-                            </Heading>
-                            {leadContractIds.has(lead.id) && (
-                              <Badge tone="info" title="Contrato cadastrado para este lead">
-                                <FileText className="h-3.5 w-3.5" />
-                                Contrato
-                              </Badge>
-                            )}
-                            {canEditLeads ? (
-                              <StatusDropdown
-                                currentStatus={lead.status ?? ""}
-                                leadId={lead.id}
-                                onStatusChange={handleStatusChange}
-                                disabled={isBulkUpdating}
-                                statusOptions={activeLeadStatuses}
-                              />
-                            ) : (
-                              <OperationalStatusBadge statusColor={getStatusColor(lead.status)}>
-                                {lead.status ?? "Sem status"}
-                              </OperationalStatusBadge>
-                            )}
-                          </div>
-                          <details className="kds-lead-card-context"><DisclosureTrigger size="sm">Dados do contato</DisclosureTrigger><div className="kds-op-lead-meta grid grid-cols-2 gap-x-3 gap-y-2.5">
-                            <div className="col-span-2 min-[480px]:col-span-1 flex items-center gap-2 break-words">
-                              {lead.telefone && (
-                                <TextLink
-                                  href={
-                                    getWhatsappLink(lead.telefone) || undefined
-                                  }
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="kds-op-icon-chip kds-op-icon-chip-success inline-flex h-8 w-8 items-center justify-center transition-colors"
-                                  aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
-                                >
-                                  <MessageCircle className="w-4 h-4" />
-                                </TextLink>
-                              )}
-                              <span>{lead.telefone}</span>
-                            </div>
-                            {lead.email && (
-                              <div className="col-span-2 min-[480px]:col-span-1 flex min-w-0 items-center gap-2">
-                                <IconButton
-                                  type="button"
-                                  onClick={() => handleEmailContact(lead)}
-                                  variant="icon"
-                                  className="kds-op-icon-chip"
-                                  title="Enviar e-mail"
-                                  aria-label={`Enviar e-mail para ${lead.nome_completo}`}
-                                 size="sm">
-                                  <Mail aria-hidden="true" />
-                                </IconButton>
-                                <span className="min-w-0 truncate">{lead.email}</span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="font-medium">Origem</span>{" "}
-                              {lead.origem}
-                            </div>
-                            <div>
-                              <span className="font-medium">Tipo</span>{" "}
-                              {lead.tipo_contratacao}
-                            </div>
-                            <div>
-                              <span className="font-medium">Responsável</span>{" "}
-                              <span className="kds-op-lead-strong">
-                                {lead.responsavel}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="font-medium">Criado</span>{" "}
-                              {new Date(lead.data_criacao).toLocaleDateString(
-                                "pt-BR",
-                              )}
-                            </div>
-                          </div></details>
-                          {lead.cidade && (
-                            <div className="kds-op-lead-meta mt-2.5">
-                              <span className="font-medium">Cidade</span>{" "}
-                              {lead.cidade}
-                            </div>
-                          )}
-                          {lead.proximo_retorno && (
-                            <div className="kds-op-lead-accent mt-2.5 flex items-center space-x-2 text-sm">
-                              <Calendar className="h-4 w-4" />
-                              <span className="kds-op-lead-accent font-medium">
-                                Follow-up{" "}
-                                {formatDateTimeFullBR(
-                                  lead.proximo_retorno,
-                                )}
-                              </span>
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  <div className="kds-op-lead-actions mt-3 pt-3">
-                    <ButtonGroup aria-label="Ações do lead" className="overflow-x-auto">
-                    <Button
-                      onClick={() => setSelectedLead(lead)}
-                      variant="secondary"
-                      size="sm"
-                      className="kds-op-inline-action"
-                      aria-label={
-                        canEditLeads
-                          ? "Ver e editar lead"
-                          : "Ver detalhes do lead"
-                      }
-                    >
-                      <MessageCircle className="kds-control-icon" />
-                      <span className="hidden sm:inline">
-                        {canEditLeads ? "Ver/Editar" : "Ver Detalhes"}
-                      </span>
-                    </Button>
-                    {canEditLeads && (
-                      <>
-                        <Button
-                          onClick={() => handleConvertToContract(lead)}
-                          variant="soft"
-                          size="sm"
-                          className="kds-op-inline-action"
-                          aria-label="Converter em contrato"
-                        >
-                          <FileText className="kds-control-icon" />
-                          <span className="hidden sm:inline">Converter</span>
-                        </Button>
-                        <Button
-                          onClick={() => openReminderScheduler(lead)}
-                          variant="soft"
-                          size="sm"
-                          className="kds-op-inline-action"
-                          aria-label="Agendar lembrete"
-                          type="button"
-                        >
-                          <Bell className="kds-control-icon" />
-                          <span className="hidden sm:inline">
-                            Agendar lembrete
-                          </span>
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteLead(lead)}
-                          variant="danger"
-                          size="sm"
-                          className="kds-op-inline-action"
-                          aria-label="Excluir lead"
-                          type="button"
-                          loading={deletingLeadIds.has(lead.id)}
-                        >
-                          <Trash2 className="kds-control-icon" />
-                          <span className="hidden sm:inline">Excluir</span>
-                        </Button>
-                      </>
-                    )}
-                  </ButtonGroup>
-                  </div>
-                </Surface>
+                  lead={lead}
+                  selected={selectedLeadIdsSet.has(lead.id)}
+                  canSelect={canSelectLeads}
+                  hasContract={leadContractIds.has(lead.id)}
+                  whatsappHref={getWhatsappLink(lead.telefone) || undefined}
+                  onSelect={() => toggleLeadSelection(lead.id)}
+                  onOpen={() => setSelectedLead(lead)}
+                  onFavoriteChange={(next) => setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, favorito: next } : item))}
+                  status={canEditLeads ? <StatusDropdown currentStatus={lead.status ?? ''} leadId={lead.id} onStatusChange={handleStatusChange} disabled={isBulkUpdating} statusOptions={activeLeadStatuses} /> : <OperationalStatusBadge statusColor={getStatusColor(lead.status)}>{lead.status ?? 'Sem status'}</OperationalStatusBadge>}
+                  actions={[
+                    { label: canEditLeads ? 'Ver e editar lead' : 'Ver detalhes do lead', icon: MessageCircle, onClick: () => setSelectedLead(lead) },
+                    ...(lead.email ? [{ label: 'Enviar e-mail', icon: Mail, onClick: () => { void handleEmailContact(lead); } }] : []),
+                    ...(canEditLeads ? [
+                      { label: 'Agendar lembrete', icon: Bell, onClick: () => openReminderScheduler(lead) },
+                      { label: 'Converter em contrato', icon: FileText, onClick: () => handleConvertToContract(lead) },
+                      { label: 'Excluir lead', icon: Trash2, destructive: true, loading: deletingLeadIds.has(lead.id), onClick: () => handleDeleteLead(lead) },
+                    ] : []),
+                  ]}
+                />
               ))}
 
               {filteredLeads.length === 0 && (
@@ -2187,7 +2040,7 @@ export default function LeadsManager({
             )}
           </Surface>
         )}
-
+        </>}
 
         </>}
         {selectedLead && (

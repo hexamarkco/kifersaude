@@ -1,0 +1,30 @@
+[
+  {
+    "atFormEnd": {
+      "barBottom": 759.58,
+      "bottomNavTop": 772,
+      "overlappingBottomNavigation": false,
+      "barTop": 689.58,
+      "overlappingFields": 0
+    },
+    "viewport": "390x844",
+    "initial": {
+      "overlappingFields": 0,
+      "position": "sticky"
+    }
+  },
+  {
+    "atFormEnd": {
+      "barBottom": 555.75,
+      "bottomNavTop": 568,
+      "overlappingBottomNavigation": false,
+      "barTop": 485.75,
+      "overlappingFields": 0
+    },
+    "viewport": "320x640",
+    "initial": {
+      "overlappingFields": 0,
+      "position": "sticky"
+    }
+  }
+]

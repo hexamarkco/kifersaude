@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import Button, { ButtonGroup, type ButtonProps } from './Button';
+import Button, { type ButtonProps } from './Button';
 import { cx } from '../../lib/cx';
 
 export type PageAction = Pick<
@@ -60,7 +60,7 @@ export function PageActions({
           {action(destructive, 'destructive')}
         </div>
       )}
-      <ButtonGroup
+      <div
         className="kds-page-action-buttons"
         role="group"
         aria-label={
@@ -69,7 +69,7 @@ export function PageActions({
       >
         {secondary.map((item) => action(item, 'secondary'))}
         {primary && action(primary, 'primary')}
-      </ButtonGroup>
+      </div>
     </div>
   );
 }

@@ -66,10 +66,14 @@ export function PanelLoadingStage({ phase, className }: PanelLoadingStageProps) 
 
 export function PanelAdaptiveLoadingFrame({
   loading,
+  phase,
+  hasContent,
+  skeleton,
   stageClassName,
   children,
 }: PanelAdaptiveLoadingFrameProps) {
   if (loading) {
+    if (!hasContent && phase === 'skeleton') return <>{skeleton}</>;
     return <Spinner className={stageClassName} />;
   }
 

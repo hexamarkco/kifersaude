@@ -2,8 +2,8 @@
 .painel-theme.kifer-ds,
 .modal-theme-host.painel-theme.kifer-ds {
   /* Operational scale, shared by pages and portal content. Editorial headings remain available. */
-  --type-ui-title: 600 clamp(1.375rem, 2vw, 1.75rem) / 1.25 var(--font-sans);
-  --type-ui-section: 600 1.125rem / 1.4 var(--font-sans);
+  --type-ui-title: 700 clamp(1.375rem, 2vw, 1.75rem) / 1.25 var(--font-sans);
+  --type-ui-section: 700 1.125rem / 1.4 var(--font-sans);
   --type-ui-heading: 600 1rem / 1.4 var(--font-sans);
   --layout-gap: var(--space-6);
   --space-unit: 0.25rem;
@@ -193,7 +193,7 @@
   --type-body: var(--font-weight-regular) 0.875rem / 1.55 var(--font-sans);
   --type-body-lg: var(--font-weight-regular) 1rem / 1.6 var(--font-sans);
   --type-body-xl: var(--font-weight-regular) 1.125rem / 1.55 var(--font-sans);
-  --type-label: var(--font-weight-medium) 0.75rem / 1.3 var(--font-sans);
+  --type-label: var(--font-weight-semibold) 0.75rem / 1.3 var(--font-sans);
   --type-caption: var(--font-weight-regular) 0.75rem / 1.45 var(--font-sans);
   --type-button: var(--font-weight-semibold) 0.875rem / 1 var(--font-sans);
   --type-table: var(--font-weight-regular) 0.8125rem / 1.5 var(--font-sans);

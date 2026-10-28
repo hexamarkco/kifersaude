@@ -96,6 +96,7 @@ export default function ContractsManager({
   const { options, getRoleModulePermission } = useConfig();
   const canEditContracts = getRoleModulePermission(role, "contracts").can_edit;
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [hasContractsSnapshot, setHasContractsSnapshot] = useState(false);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Record<string, ContractHolder[]>>({});
   const [dependentsByContract, setDependentsByContract] = useState<
@@ -245,6 +246,7 @@ export default function ContractsManager({
       }
 
       setContracts(snapshot.contracts);
+      setHasContractsSnapshot(true);
       setHolders(snapshot.holdersByContractId);
       setDependentsByContract(snapshot.dependentsByContractId);
       setContractsLoadError(null);
@@ -648,8 +650,6 @@ export default function ContractsManager({
     sectionStagger,
   ]);
 
-  const hasContractsSnapshot = contracts.length > 0;
-
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
@@ -690,7 +690,7 @@ export default function ContractsManager({
           data-panel-animate
         />
 
-        <div className="kds-kpi-grid kds-contracts-summary-grid grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Resumo da carteira de contratos">
+        {(!contractsLoadError || hasContractsSnapshot) && <div className="kds-kpi-grid kds-contracts-summary-grid grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Resumo da carteira de contratos">
           <KpiCard
             padding="sm"
             title="Contratos ativos"
@@ -719,7 +719,7 @@ export default function ContractsManager({
             trend="Soma dos valores informados"
             className="h-full"
           />
-        </div>
+        </div>}
 
         {contractsLoadError && (
           <Alert
@@ -731,7 +731,7 @@ export default function ContractsManager({
               </Button>
             )}
           >
-            Os dados exibidos anteriormente foram preservados. Tente novamente para atualizar a carteira.
+            {hasContractsSnapshot ? 'Os dados exibidos anteriormente foram preservados. Tente novamente para atualizar a carteira.' : 'Tente novamente para acessar a carteira.'}
           </Alert>
         )}
 
@@ -749,6 +749,7 @@ export default function ContractsManager({
           </Alert>
         )}
 
+        {(!contractsLoadError || hasContractsSnapshot) && <>
         <Surface className="kds-record-filters space-y-3" data-panel-animate>
           <Toolbar className="kds-contracts-search-toolbar">
             <ToolbarSearch className="relative">
@@ -1055,6 +1056,7 @@ export default function ContractsManager({
           )}
         </Surface>
 
+        </>}
         </>}
         {showForm && (
           <ContractForm

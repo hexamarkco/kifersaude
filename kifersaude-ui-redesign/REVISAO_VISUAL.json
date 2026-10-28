@@ -229,9 +229,16 @@
         "references/desktop/page--login.png",
         "references/mobile/page--login.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/login/README.md",
+        "validacao/revisao-visual/login/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências desktop/mobile e conferida com capturas full-page em 1920×1080, 768×1024, 390×844 e 320×640. A largura do documento correspondeu à viewport em todas as resoluções.",
+        "A rota pública permanece sem navegação ou identidade de operador fictícias da referência; o login usa o shell público real. O campo continua como Usuário porque o contrato de autenticação recebe username. Autocomplete, ordem de Tab, foco visível e campos obrigatórios verificados sem enviar credenciais.",
+        "O shell fixa o tema claro. Estados de carregamento e erro retornados pela autenticação não foram exercitados para evitar chamadas ao serviço real; permanecem como validação adicional pendente."
+      ]
     },
     {
       "id": "page--config-system",
@@ -2649,8 +2656,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 31,
-    "remaining_manifest_contexts": 129,
+    "reviewed_contexts": 38,
+    "remaining_manifest_contexts": 122,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

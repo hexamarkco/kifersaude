@@ -1,0 +1,62 @@
+{
+  "route": "/login",
+  "status": "revisado_com_adaptacoes",
+  "theme": "light (fixed by PublicShell)",
+  "captures": [
+    "page--login-desktop-1920.png",
+    "page--login-tablet-768.png",
+    "page--login-mobile-390.png",
+    "page--login-mobile-320.png",
+    "state--login-foco-usuario.png"
+  ],
+  "viewports": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "document_width": 1920,
+      "document_height": 1080,
+      "card": { "x": 745, "y": 313.8125, "width": 430, "height": 452.375 },
+      "title_font_size": 28
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "document_width": 768,
+      "document_height": 1024,
+      "card": { "x": 169, "y": 289.5625, "width": 430, "height": 444.875 },
+      "title_font_size": 22
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "document_width": 390,
+      "document_height": 844,
+      "card": { "x": 16, "y": 183.8125, "width": 358, "height": 476.375 },
+      "title_font_size": 22
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "document_width": 320,
+      "document_height": 640,
+      "card": { "x": 16, "y": 72.0625, "width": 288, "height": 495.875 },
+      "title_font_size": 22
+    }
+  ],
+  "keyboard": {
+    "tab_order": ["username", "password", "submit"],
+    "all_controls_focus_visible": true
+  },
+  "validation": {
+    "username_required": true,
+    "password_required": true,
+    "auth_submission_performed": false
+  },
+  "pending": [
+    "Visual review of loading and authentication error feedback using an isolated auth mock."
+  ],
+  "differences_from_reference": [
+    "The pre-authenticated page omits the CRM sidebar, header, and demo operator shown in the reference.",
+    "The CRM accepts a username, so the field is labeled Usuário instead of E-mail."
+  ]
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, AlertCircle } from 'lucide-react';
+import { ArrowRight, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Alert,
@@ -46,14 +46,14 @@ export default function LoginPage() {
       className="kds-login-page flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-6 sm:py-12"
     >
       <div className="w-full">
-        <Surface padding="lg">
+        <Surface padding="lg" className="kds-login-card">
           <div className="kds-login-heading">
             <BrandWordmark />
-            <Heading level={1} size="lg">Bem-vindo ao CRM</Heading>
-            <Text>Entre com seu usuário e senha para acessar o sistema.</Text>
+            <Heading family="interface" level={1} size="display">Bem-vindo ao CRM</Heading>
+            <Text size="sm">Entre com seu usuário e senha para acessar o sistema.</Text>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert tone="danger">
                 <div className="flex items-center gap-3">
@@ -70,8 +70,9 @@ export default function LoginPage() {
                 leftIcon={User}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
                 required
-                size="lg"
+                size="md"
                 placeholder="seu.usuario"
               />
             </Field>
@@ -83,8 +84,9 @@ export default function LoginPage() {
                 leftIcon={Lock}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
-                size="lg"
+                size="md"
                 placeholder="********"
               />
             </Field>
@@ -92,13 +94,15 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              fullWidth
-              size="lg"
-              
+              size="md"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? 'Entrando...' : <>Entrar no CRM <ArrowRight className="kds-control-icon" aria-hidden="true" /></>}
             </Button>
           </form>
+
+          <Text size="sm" tone="muted" className="kds-login-access-note">
+            Acesso exclusivo para pessoas autorizadas.
+          </Text>
         </Surface>
       </div>
     </PublicShell>

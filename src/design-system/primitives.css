@@ -654,6 +654,8 @@
 .kds-public-card { border-radius: var(--radius-panel); box-shadow: none; background: var(--bg-surface); }
 .kds-login-heading { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); }
 .kds-login-heading .kds-workspace-brand { margin-bottom: var(--space-4); }
+.kds-login-page .kds-login-card { width: 100%; max-width: 26.875rem; margin-inline: auto; padding: var(--space-8); }
+.kds-login-page .kds-login-access-note { margin-top: var(--space-4); }
 .kds-login-page .kds-surface { background: var(--bg-surface); }
 .kds-public-home-hero { background: var(--bg-canvas); }
 .kds-public-home-hero::before, .kds-public-home-hero::after { display: none; }

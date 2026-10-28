@@ -1497,13 +1497,11 @@ html,
   border-color: var(--border-subtle);
 }
 
-.terracota-mobile-menu-trigger,
 .terracota-mobile-menu-backdrop {
   display: none;
 }
 
-.terracota-sidebar .kds-sidebar-item:focus-visible,
-.terracota-mobile-menu-trigger:focus-visible {
+.terracota-sidebar .kds-sidebar-item:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
@@ -1529,32 +1527,6 @@ html,
     font-size: 1rem !important;
   }
 
-  .terracota-mobile-menu-trigger {
-    position: fixed;
-    top: max(0.5rem, env(safe-area-inset-top));
-    left: 0.5rem;
-    z-index: 60;
-    display: inline-flex;
-    height: 2rem;
-    width: 2rem;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--kds-radius-md);
-    background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
-    color: var(--brand-primary);
-    box-shadow: var(--shadow-card);
-    backdrop-filter: blur(10px);
-    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
-  }
-
-  .terracota-mobile-menu-trigger:hover {
-    border-color: var(--brand-primary-border);
-    background: var(--brand-primary-muted);
-    color: var(--brand-primary-hover);
-    box-shadow: var(--shadow-card-hover);
-  }
-
   .terracota-mobile-menu-backdrop {
     position: fixed;
     inset: 0;
@@ -1566,19 +1538,19 @@ html,
 
   .terracota-sidebar {
     z-index: 70;
-    top: auto !important;
+    top: 0 !important;
     right: 0;
     bottom: 0;
     left: 0;
     width: 100% !important;
     max-width: 100%;
-    height: min(82dvh, 42rem) !important;
-    max-height: min(82dvh, 42rem);
-    border-top: 1px solid var(--border-default);
+    height: 100dvh !important;
+    max-height: 100dvh;
+    border-top: 0;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
-    border-radius: var(--kds-radius-xl) var(--kds-radius-xl) 0 0;
+    border-radius: 0;
     visibility: hidden;
     pointer-events: none;
     transform: translateY(105%);
@@ -1595,6 +1567,10 @@ html,
 
   .terracota-sidebar-collapse-toggle {
     display: none;
+  }
+
+  .terracota-sidebar-navigation {
+    min-height: 0;
   }
 
   .terracota-content-shell {
@@ -2030,6 +2006,10 @@ html,
     gap: var(--space-2);
   }
 
+  .painel-theme .kds-page-actions > .kds-contracts-header-actions {
+    justify-content: flex-start;
+  }
+
   .painel-theme .kds-contracts-header-actions > .kds-record-actions,
   .painel-theme .kds-contracts-header-actions > .kds-button {
     width: auto;
@@ -2038,6 +2018,7 @@ html,
 
   .painel-theme .kds-contracts-header-actions > .kds-button {
     min-width: 0;
+    order: -1;
   }
 
   .kds-contracts-summary-grid {
@@ -2203,7 +2184,7 @@ html,
   .comm-media-picker-sticker-card,
   .comm-media-picker-sticker-add,
   .terracota-sidebar,
-  .terracota-mobile-menu-trigger {
+  .kds-workspace-mobile-menu-button {
     animation: none !important;
     transition: none !important;
     transform: none !important;

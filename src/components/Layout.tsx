@@ -103,6 +103,7 @@ export default function Layout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuOpenedFromRef = useRef<'header' | 'more'>('header');
   const mobileMoreTriggerRef = useRef<HTMLButtonElement>(null);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
@@ -933,7 +934,9 @@ export default function Layout({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const menu = sidebarRef.current;
-    const menuTrigger = mobileMoreTriggerRef.current ?? mobileMenuTriggerRef.current;
+    const menuTrigger = mobileMenuOpenedFromRef.current === 'more'
+      ? mobileMoreTriggerRef.current
+      : mobileMenuTriggerRef.current;
     const focusableSelector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
     const focusable = () => Array.from(menu?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
       .filter(item => item.getClientRects().length > 0 && getComputedStyle(item).visibility !== 'hidden');
@@ -975,17 +978,6 @@ export default function Layout({
       theme={themeMode}
       className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell terracota-shell theme-${themeMode} relative isolate flex ${useFullBleedContent ? 'h-[100dvh] max-h-[100dvh]' : 'min-h-screen'} ${activeTab === 'whatsapp-inbox' ? 'is-whatsapp-inbox-active' : ''}`}
     >
-      <ActionSurface variant="plain" padding="none"
-        ref={mobileMenuTriggerRef}
-        type="button"
-        className="terracota-mobile-menu-trigger"
-        onClick={() => setIsMobileMenuOpen((current) => !current)}
-        aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-        aria-expanded={isMobileMenuOpen}
-        aria-controls="painel-navigation"
-      >
-        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </ActionSurface>
       {isMobileMenuOpen && (
         <ActionSurface variant="plain" padding="none"
           type="button"
@@ -1259,7 +1251,7 @@ export default function Layout({
                 </ActionSurface>
               );
             })}
-            <ActionSurface variant="plain" padding="none" type="button" role="menuitem" className="terracota-mobile-more-item" onClick={() => { setIsMobileMoreOpen(false); setIsMobileMenuOpen(true); }}>
+            <ActionSurface variant="plain" padding="none" type="button" role="menuitem" className="terracota-mobile-more-item" onClick={() => { mobileMenuOpenedFromRef.current = 'more'; setIsMobileMoreOpen(false); setIsMobileMenuOpen(true); }}>
               <Menu className="h-4 w-4" aria-hidden="true" />
               <span>Menu completo</span>
             </ActionSurface>
@@ -1331,6 +1323,12 @@ export default function Layout({
           title={tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'CRM'}
           username={userProfile?.username}
           theme={themeMode}
+          mobileMenuOpen={isMobileMenuOpen}
+          mobileMenuButtonRef={mobileMenuTriggerRef}
+          onToggleMobileMenu={() => {
+            mobileMenuOpenedFromRef.current = 'header';
+            setIsMobileMenuOpen((current) => !current);
+          }}
           onNavigateHome={() => onTabChange('dashboard')}
           onToggleTheme={toggleThemeMode}
         />}

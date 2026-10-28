@@ -778,6 +778,7 @@ function Forms() {
 
 function Navigation() {
   const [workspaceTheme, setWorkspaceTheme] = useState<'light' | 'dark'>('light');
+  const [workspaceMobileMenuOpen, setWorkspaceMobileMenuOpen] = useState(false);
   const [active, setActive] = useState('contacts');
   const [tab, setTab] = useState('summary');
   const [page, setPage] = useState(1);
@@ -800,7 +801,18 @@ function Navigation() {
           description="Links reais com indicação da seção atual. Também usada na navegação deste showcase."
           source="NavigationList · components/NavigationList.tsx"
         >
-          <BrandWordmark caption="CRM" /><DesignSystemProvider theme={workspaceTheme}><WorkspaceHeader title="Gestão de leads" username="Operador Demonstração" theme={workspaceTheme} onNavigateHome={() => setActive('summary')} onToggleTheme={() => setWorkspaceTheme(theme => theme === 'light' ? 'dark' : 'light')} /></DesignSystemProvider>
+          <BrandWordmark caption="CRM" className="kds-workspace-brand-preview" />
+          <DesignSystemProvider theme={workspaceTheme}>
+            <WorkspaceHeader
+              title="Gestão de leads"
+              username="Operador Demonstração"
+              theme={workspaceTheme}
+              mobileMenuOpen={workspaceMobileMenuOpen}
+              onToggleMobileMenu={() => setWorkspaceMobileMenuOpen((open) => !open)}
+              onNavigateHome={() => setActive('summary')}
+              onToggleTheme={() => setWorkspaceTheme((theme) => theme === 'light' ? 'dark' : 'light')}
+            />
+          </DesignSystemProvider>
           <NavigationList
             items={items.map((item) => ({
               ...item,

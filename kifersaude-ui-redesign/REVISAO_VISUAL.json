@@ -58,10 +58,14 @@
         "references/desktop/page--contratos-listagem.png",
         "references/mobile/page--contratos-listagem.png"
       ],
-      "status": "pendente",
-      "evidence": [],
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
       "notes": [
-        "A densidade da listagem e a grade 2×2 dos indicadores/filtros foram refinadas; continua pendente porque o shell mobile atual não exibe o cabeçalho de marca, menu e perfil mostrado na referência mobile. Registrar e resolver essa diferença na revisão da base compartilhada antes de aprovar a listagem."
+        "Comparada às referências em desktop, tablet, mobile e mobile compacto nos temas claro e escuro. O shell mobile agora exibe marca, menu completo e perfil no cabeçalho; o menu ocupa a tela disponível e conserva navegação rolável sem sobrepor o rodapé em 320 px.",
+        "Mantidos os quatro registros sintéticos da fixture e as ações reais de importação, criação, busca e filtros; a contagem de dados difere da referência estática, que contém oito registros."
       ]
     },
     {
@@ -2444,8 +2448,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 5,
-    "remaining_manifest_contexts": 155,
+    "reviewed_contexts": 6,
+    "remaining_manifest_contexts": 154,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

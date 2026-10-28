@@ -1,6 +1,6 @@
 # Revisão visual — Contratos
 
-**Status parcial do módulo.** O drawer de detalhes e o importador JSON em lote foram comparados com as referências. A listagem e o cadastro continuam pendentes; o redesign integral do CRM segue em andamento.
+**Status parcial do módulo.** A listagem, o drawer de detalhes e o importador JSON em lote foram comparados com as referências e revisados com adaptações. O cadastro e alguns estados continuam pendentes; o redesign integral do CRM segue em andamento.
 
 ## Referências
 
@@ -12,14 +12,14 @@
 
 - **Drawer de detalhes — revisado com adaptações.** A largura, a hierarquia de resumo, participantes, plano e ações se aproximam da referência. Informações financeiras, documentos e histórico ficam recolhidos, preservando os dados reais e reduzindo ruído. A base atual não armazena status individual para cada participante, então esses status do mockup não são inventados.
 - **Importação em lote — revisada com adaptações.** A estrutura compacta de formato, escolha do arquivo e ações segue a referência. O fluxo real exige JSON, oferece modelo e validação prévia e limita o lote; esses requisitos são mantidos em vez de substituir a funcionalidade por campos genéricos do mockup.
-- **Listagem — pendente.** A densidade, a grade 2×2 de indicadores e os filtros compactos foram aproximados. O cabeçalho mobile global ainda difere da referência: faltam a marca, o acionador do menu e o perfil no topo. Resolver essa diferença no shell compartilhado e então repetir a comparação antes de aprovar a listagem.
+- **Listagem — revisada com adaptações.** A grade de indicadores e os filtros compactos seguem a referência; no mobile, o título e a ação principal ficam alinhados à esquerda. O shell inclui marca, menu e perfil no topo. O menu móvel ocupa a tela disponível e mantém todos os itens acessíveis sem sobrepor o rodapé em 320 × 640. A fixture local contém quatro contratos sintéticos, enquanto a referência estática contém oito; as ações reais de importação, criação e filtros foram preservadas.
 - **Cadastro — pendente de comparação.** As páginas foram capturadas, mas esta rodada ainda não comparou seus grupos de campos e estados com a referência correspondente.
 
 ## Segurança e funcionamento
 
 Capturas usam dados sintéticos do ambiente local. Foram abertos o drawer e o importador; a importação de arquivo foi validada com fixtures locais, mas o comando final de importação não foi acionado. Nenhum contrato foi criado, alterado ou excluído, e nenhuma integração externa foi chamada.
 
-O drawer foi rolado até o conteúdo final em 320 px, preservando o rodapé fixo; Escape e cancelar fecham sem gravar. O importador foi conferido nos temas claro/escuro e nas larguras de 1920, 768, 390 e 320 px. O estado de arquivo inválido e a prévia válida foram gerados com dados sintéticos.
+O drawer foi rolado até o conteúdo final em 320 px, preservando o rodapé fixo; Escape e cancelar fecham sem gravar. O importador foi conferido nos temas claro/escuro e nas larguras de 1920, 768, 390 e 320 px. O estado de arquivo inválido e a prévia válida foram gerados com dados sintéticos. O menu do shell foi testado por teclado: Escape fecha e devolve foco ao acionador.
 
 ## Capturas
 
@@ -43,6 +43,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 ### Mobile (390 × 844)
 
 - Listagem: [página](screenshots/mobile/listagem.png), [viewport](screenshots/mobile/listagem-viewport.png), [página escura](screenshots/mobile/listagem-dark.png), [viewport escuro](screenshots/mobile/listagem-viewport-dark.png)
+- Menu completo: [claro](screenshots/mobile/menu-completo-390.png), [escuro](screenshots/mobile/menu-completo-390-dark.png)
 - Drawer: [claro](screenshots/mobile/detalhes-drawer.png), [escuro](screenshots/mobile/detalhes-drawer-dark.png)
 - Cadastro: [página](screenshots/mobile/contrato-criar-pagina.png), [viewport](screenshots/mobile/contrato-criar-pagina-viewport.png)
 - Importação: [vazia](screenshots/mobile/importacao-modal.png), [escura](screenshots/mobile/importacao-modal-dark.png), [arquivo inválido](screenshots/mobile/importacao-modal-erro.png), [prévia válida](screenshots/mobile/importacao-modal-validado.png)
@@ -50,6 +51,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 ### Mobile compacto (320 × 640)
 
 - Listagem: [página](screenshots/mobile-320/listagem.png), [viewport](screenshots/mobile-320/listagem-viewport.png), [viewport após ajuste](screenshots/mobile-320/listagem-viewport-after.png), [escura](screenshots/mobile-320/listagem-dark.png), [viewport escuro](screenshots/mobile-320/listagem-viewport-dark.png)
+- Menu completo: [claro](screenshots/mobile-320/menu-completo.png), [escuro](screenshots/mobile-320/menu-completo-dark.png)
 - Drawer: [claro](screenshots/mobile-320/detalhes-drawer.png), [escuro](screenshots/mobile-320/detalhes-drawer-dark.png), [conteúdo expandido no topo](screenshots/mobile-320/detalhes-expandido-topo.png), [conteúdo expandido no final](screenshots/mobile-320/detalhes-expandido-final.png), [final no tema escuro](screenshots/mobile-320/detalhes-expandido-final-dark.png), [rodapé](screenshots/mobile-320/detalhes-footer.png)
 - Cadastro: [página](screenshots/mobile-320/contrato-criar-pagina.png), [viewport](screenshots/mobile-320/contrato-criar-pagina-viewport.png)
 - Importação: [vazia](screenshots/mobile-320/importacao-modal.png), [escura](screenshots/mobile-320/importacao-modal-dark.png), [fim do conteúdo rolável](screenshots/mobile-320/importacao-modal-scroll-bottom.png)
@@ -58,6 +60,5 @@ Medições, verificações e lista de caminhos também estão em [`coverage.json
 
 ## Pendências deste módulo
 
-- Ajustar o shell mobile compartilhado ao cabeçalho das referências e refazer a revisão da listagem.
 - Comparar cadastro, edição, confirmação de exclusão, importação individual e os estados adicionais descritos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).
 - Não marcar o módulo nem o redesign global como concluídos enquanto esses itens estiverem pendentes.

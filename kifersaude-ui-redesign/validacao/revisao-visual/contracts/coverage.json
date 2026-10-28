@@ -34,11 +34,13 @@
       "light",
       "dark"
     ],
-    "screenshots": 50,
+    "screenshots": 54,
     "drawer_internal_scroll_verified_at_320px": true,
     "importer_internal_scroll_verified_at_320px": true,
     "document_horizontal_overflow": false,
-    "list_page_approval_blocked_by": "O shell mobile não mostra o cabeçalho de marca, menu e perfil da referência."
+    "mobile_workspace_header_matches_reference": true,
+    "mobile_menu_fills_viewport_without_covering_navigation_or_footer": true,
+    "mobile_menu_escape_restores_focus_to_trigger": true
   },
   "interaction_safety": {
     "synthetic_fixture_data": true,
@@ -182,7 +184,7 @@
     {
       "path": "screenshots/mobile-320/listagem-dark.png",
       "width": 320,
-      "height": 2613
+      "height": 2674
     },
     {
       "path": "screenshots/mobile-320/listagem-viewport-after.png",
@@ -202,7 +204,17 @@
     {
       "path": "screenshots/mobile-320/listagem.png",
       "width": 320,
-      "height": 2613
+      "height": 2674
+    },
+    {
+      "path": "screenshots/mobile-320/menu-completo-dark.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/menu-completo.png",
+      "width": 320,
+      "height": 640
     },
     {
       "path": "screenshots/mobile/contrato-criar-pagina-viewport.png",
@@ -247,7 +259,7 @@
     {
       "path": "screenshots/mobile/listagem-dark.png",
       "width": 390,
-      "height": 2482
+      "height": 2543
     },
     {
       "path": "screenshots/mobile/listagem-viewport-dark.png",
@@ -262,7 +274,17 @@
     {
       "path": "screenshots/mobile/listagem.png",
       "width": 390,
-      "height": 2482
+      "height": 2543
+    },
+    {
+      "path": "screenshots/mobile/menu-completo-390-dark.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/menu-completo-390.png",
+      "width": 390,
+      "height": 844
     },
     {
       "path": "screenshots/tablet/contrato-criar-pagina.png",

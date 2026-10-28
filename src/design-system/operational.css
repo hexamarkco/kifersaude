@@ -432,7 +432,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   gap: var(--space-3);
 }
 
-.kds-leads-advanced-filters {
+.kds-leads-advanced-trigger {
   grid-column: 1;
   justify-self: start;
   width: fit-content;
@@ -440,20 +440,29 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   min-width: 0;
 }
 
-.kds-leads-advanced-filters[open] {
-  width: 100%;
-  max-width: none;
+.kds-leads-filter-fields {
+  min-width: 0;
 }
 
-.kds-leads-advanced-summary {
-  width: fit-content;
-  max-width: 100%;
+.kds-leads-advanced-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
-.kds-leads-advanced-panel {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: none;
+.kds-leads-advanced-fields > * {
+  min-width: 0;
+}
+
+.kds-leads-filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.kds-leads-filter-action {
+  min-width: 7rem;
 }
 
 .kds-leads-sort-field {
@@ -770,19 +779,23 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .kds-leads-advanced-filters,
-  .kds-leads-advanced-filters[open] {
+  .kds-leads-advanced-trigger {
     grid-column: 1;
     width: 100%;
     max-width: 100%;
   }
 
-  .kds-leads-advanced-summary {
-    width: 100%;
+  .kds-leads-advanced-fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .kds-leads-advanced-panel {
-    max-width: 100%;
+  .kds-leads-filter-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kds-leads-filter-action {
+    width: 100%;
   }
 
   .kds-leads-sort-field {
@@ -1539,8 +1552,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 @media(min-width: 1024px) {
   .kds-leads-filters .kds-leads-filter-grid { grid-template-columns: repeat(4,minmax(0,1fr)) auto; }
 }
-.kds-leads-filter-grid > .kds-leads-advanced-filters { grid-column: auto; }
-.kds-leads-filter-grid > .kds-leads-advanced-filters[open] { grid-column: 1 / -1; }
+.kds-leads-filter-grid > .kds-leads-advanced-trigger { grid-column: auto; }
 .kds-leads-filter-count { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); min-width: 0; color: var(--text-muted); }
 .painel-theme.kifer-ds .kds-kanban-column .kds-kanban-column-title { font: var(--type-body-sm); font-weight: var(--font-weight-semibold); }
 .kds-kanban-wip > label { padding-block: var(--space-1); }

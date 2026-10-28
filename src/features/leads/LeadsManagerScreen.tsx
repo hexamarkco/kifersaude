@@ -1,5 +1,5 @@
 import { LeadListCard } from './components/LeadListCard';
-import { ActionSurface, Avatar, DisclosureTrigger, Heading, Text, FieldLabel } from '../../design-system';
+import { ActionSurface, Avatar, Heading, Text, FieldLabel } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -86,6 +86,16 @@ import {
   Pagination,
   RecordActions,
   LinkButton,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
@@ -144,6 +154,20 @@ export default function LeadsManager({
   const [filterUltimoContatoTo, setFilterUltimoContatoTo] = useState("");
   const [filterProximoRetornoFrom, setFilterProximoRetornoFrom] = useState("");
   const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState("");
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 767,
+  );
+  const [advancedFilterDraft, setAdvancedFilterDraft] = useState({
+    tags: [] as string[],
+    channels: [] as string[],
+    createdFrom: "",
+    createdTo: "",
+    lastContactFrom: "",
+    lastContactTo: "",
+    nextFollowUpFrom: "",
+    nextFollowUpTo: "",
+  });
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [showForm, setShowForm] = useState(false);
@@ -177,6 +201,12 @@ export default function LeadsManager({
     setReminderLead(null);
     setReminderPromptMessage(undefined);
   };
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobileViewport(window.innerWidth <= 767);
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
   const [viewMode, setViewMode] = useState<LeadsViewMode>("list");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -324,6 +354,34 @@ export default function LeadsManager({
       setFilterProximoRetornoTo("");
     });
   }, [initialStatusFilter]);
+
+  const openAdvancedFilters = () => {
+    setAdvancedFilterDraft({
+      tags: [...filterTags],
+      channels: [...filterCanais],
+      createdFrom: filterCreatedFrom,
+      createdTo: filterCreatedTo,
+      lastContactFrom: filterUltimoContatoFrom,
+      lastContactTo: filterUltimoContatoTo,
+      nextFollowUpFrom: filterProximoRetornoFrom,
+      nextFollowUpTo: filterProximoRetornoTo,
+    });
+    setAdvancedFiltersOpen(true);
+  };
+
+  const applyAdvancedFilters = () => {
+    startTransition(() => {
+      setFilterTags(advancedFilterDraft.tags);
+      setFilterCanais(advancedFilterDraft.channels);
+      setFilterCreatedFrom(advancedFilterDraft.createdFrom);
+      setFilterCreatedTo(advancedFilterDraft.createdTo);
+      setFilterUltimoContatoFrom(advancedFilterDraft.lastContactFrom);
+      setFilterUltimoContatoTo(advancedFilterDraft.lastContactTo);
+      setFilterProximoRetornoFrom(advancedFilterDraft.nextFollowUpFrom);
+      setFilterProximoRetornoTo(advancedFilterDraft.nextFollowUpTo);
+    });
+    setAdvancedFiltersOpen(false);
+  };
 
   const parseSearchQuery = useCallback((value: string) => {
     const tokens: Record<string, string[]> = {};
@@ -1473,6 +1531,93 @@ export default function LeadsManager({
   };
   const sortDirectionFor = (field: SortField) => sortField === field ? sortDirection : null;
 
+  const advancedFilterFields = (
+    <div className="kds-leads-advanced-fields">
+      <FilterMultiSelect
+        icon={Tag}
+        options={tagFilterOptions}
+        placeholder="Todas as tags"
+        values={advancedFilterDraft.tags}
+        onChange={(tags) => setAdvancedFilterDraft((current) => ({ ...current, tags }))}
+      />
+      <FilterMultiSelect
+        icon={Share2}
+        options={canalFilterOptions}
+        placeholder="Todos os canais"
+        values={advancedFilterDraft.channels}
+        onChange={(channels) => setAdvancedFilterDraft((current) => ({ ...current, channels }))}
+      />
+      <DateRangeFilter
+        icon={Calendar}
+        label="Criação"
+        fromValue={advancedFilterDraft.createdFrom}
+        toValue={advancedFilterDraft.createdTo}
+        onFromChange={(createdFrom) => setAdvancedFilterDraft((current) => ({ ...current, createdFrom }))}
+        onToChange={(createdTo) => setAdvancedFilterDraft((current) => ({ ...current, createdTo }))}
+        type="date"
+      />
+      <DateRangeFilter
+        icon={MessageCircle}
+        label="Último contato"
+        fromValue={advancedFilterDraft.lastContactFrom}
+        toValue={advancedFilterDraft.lastContactTo}
+        onFromChange={(lastContactFrom) => setAdvancedFilterDraft((current) => ({ ...current, lastContactFrom }))}
+        onToChange={(lastContactTo) => setAdvancedFilterDraft((current) => ({ ...current, lastContactTo }))}
+        type="datetime-local"
+      />
+      <DateRangeFilter
+        icon={Bell}
+        label="Próximo follow-up"
+        fromValue={advancedFilterDraft.nextFollowUpFrom}
+        toValue={advancedFilterDraft.nextFollowUpTo}
+        onFromChange={(nextFollowUpFrom) => setAdvancedFilterDraft((current) => ({ ...current, nextFollowUpFrom }))}
+        onToChange={(nextFollowUpTo) => setAdvancedFilterDraft((current) => ({ ...current, nextFollowUpTo }))}
+        type="datetime-local"
+      />
+    </div>
+  );
+
+  const advancedFilterPanel = advancedFiltersOpen ? (
+    isMobileViewport ? (
+      <Drawer
+        id="leads-advanced-filters"
+        open
+        onOpenChange={setAdvancedFiltersOpen}
+        side="right"
+        size="sm"
+        className="kds-leads-filter-drawer"
+      >
+        <DrawerHeader onClose={() => setAdvancedFiltersOpen(false)}>
+          <DialogTitle>Filtros avançados</DialogTitle>
+          <DialogDescription>Refine a carteira por tags, canais e datas.</DialogDescription>
+        </DrawerHeader>
+        <DrawerBody className="kds-leads-filter-fields">{advancedFilterFields}</DrawerBody>
+        <DrawerFooter className="kds-leads-filter-footer">
+          <Button type="button" variant="secondary" className="kds-leads-filter-action" onClick={() => setAdvancedFiltersOpen(false)}>Cancelar</Button>
+          <Button type="button" variant="primary" className="kds-leads-filter-action" onClick={applyAdvancedFilters}>Aplicar filtros</Button>
+        </DrawerFooter>
+      </Drawer>
+    ) : (
+      <Dialog
+        id="leads-advanced-filters"
+        open
+        onOpenChange={setAdvancedFiltersOpen}
+        size="md"
+        className="kds-leads-filter-dialog"
+      >
+        <DialogHeader onClose={() => setAdvancedFiltersOpen(false)}>
+          <DialogTitle>Filtros avançados</DialogTitle>
+          <DialogDescription>Refine a carteira por tags, canais e datas.</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="kds-leads-filter-fields">{advancedFilterFields}</DialogBody>
+        <DialogFooter className="kds-leads-filter-footer">
+          <Button type="button" variant="secondary" className="kds-leads-filter-action" onClick={() => setAdvancedFiltersOpen(false)}>Cancelar</Button>
+          <Button type="button" variant="primary" className="kds-leads-filter-action" onClick={applyAdvancedFilters}>Aplicar filtros</Button>
+        </DialogFooter>
+      </Dialog>
+    )
+  ) : null;
+
   if (showForm) return <LeadForm presentation="page"
             lead={editingLead}
             onClose={() => {
@@ -1620,72 +1765,20 @@ export default function LeadsManager({
                 const { id, ...props } = filter;
                 return <FilterMultiSelect key={id} {...props} />;
               })}
-              <details className="kds-leads-advanced-filters group">
-                <DisclosureTrigger icon={Filter} className="kds-leads-advanced-summary">
-                      Filtros avançados
-                      {advancedFilterCount > 0 && (
-                        <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>
-                      )}
-                </DisclosureTrigger>
-                <Surface variant="muted" padding="none" className="kds-op-disclosure-content kds-leads-advanced-panel mt-3 grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
-                  {[
-                    {
-                      id: "tags",
-                      icon: Tag,
-                      options: tagFilterOptions,
-                      placeholder: "Todas as tags",
-                      values: filterTags,
-                      onChange: setFilterTags,
-                    },
-                    {
-                      id: "canais",
-                      icon: Share2,
-                      options: canalFilterOptions,
-                      placeholder: "Todos os canais",
-                      values: filterCanais,
-                      onChange: setFilterCanais,
-                    },
-                  ].map((filter) => {
-                    const { id, ...props } = filter;
-                    return <FilterMultiSelect key={id} {...props} />;
-                  })}
-                  {[
-                    {
-                      id: "criacao",
-                      icon: Calendar,
-                      label: "Criação",
-                      fromValue: filterCreatedFrom,
-                      toValue: filterCreatedTo,
-                      onFromChange: setFilterCreatedFrom,
-                      onToChange: setFilterCreatedTo,
-                      type: "date" as const,
-                    },
-                    {
-                      id: "ultimo-contato",
-                      icon: MessageCircle,
-                      label: "Último contato",
-                      fromValue: filterUltimoContatoFrom,
-                      toValue: filterUltimoContatoTo,
-                      onFromChange: setFilterUltimoContatoFrom,
-                      onToChange: setFilterUltimoContatoTo,
-                      type: "datetime-local" as const,
-                    },
-                    {
-                      id: "proximo-retorno",
-                      icon: Bell,
-                      label: "Próximo follow-up",
-                      fromValue: filterProximoRetornoFrom,
-                      toValue: filterProximoRetornoTo,
-                      onFromChange: setFilterProximoRetornoFrom,
-                      onToChange: setFilterProximoRetornoTo,
-                      type: "datetime-local" as const,
-                    },
-                  ].map((dateFilter) => {
-                    const { id, ...props } = dateFilter;
-                    return <DateRangeFilter key={id} {...props} />;
-                  })}
-                </Surface>
-              </details>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                className="kds-leads-advanced-trigger"
+                aria-haspopup="dialog"
+                aria-expanded={advancedFiltersOpen}
+                aria-controls="leads-advanced-filters"
+                onClick={openAdvancedFilters}
+              >
+                <Filter aria-hidden="true" />
+                <span>Filtros avançados</span>
+                {advancedFilterCount > 0 && <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>}
+              </Button>
             </div>
 
             <div className="kds-leads-filter-secondary">
@@ -1739,6 +1832,8 @@ export default function LeadsManager({
             </div>
           </div>
         </Surface>
+
+        {advancedFilterPanel}
 
         {viewMode === "kanban" ? (
           <div data-panel-animate>

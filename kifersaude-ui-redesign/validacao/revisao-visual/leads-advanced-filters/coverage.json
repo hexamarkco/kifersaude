@@ -1,0 +1,102 @@
+{
+  "created_at": "2026-10-28",
+  "contexts": [
+    "extra--leads-filtros-avancados",
+    "state--leads-filtros-avancados"
+  ],
+  "references": {
+    "extra--leads-filtros-avancados": [
+      "../../../references/desktop/extra--leads-filtros-avancados.png",
+      "../../../references/mobile/extra--leads-filtros-avancados.png"
+    ],
+    "state--leads-filtros-avancados": [
+      "../../../references/desktop/state--leads-filtros-avancados.png",
+      "../../../references/mobile/state--leads-filtros-avancados.png"
+    ]
+  },
+  "themes": [
+    "claro",
+    "escuro"
+  ],
+  "viewports": [
+    {
+      "height": 1080,
+      "width": 1920,
+      "name": "desktop"
+    },
+    {
+      "height": 1024,
+      "width": 768,
+      "name": "tablet"
+    },
+    {
+      "height": 844,
+      "width": 390,
+      "name": "mobile"
+    },
+    {
+      "height": 640,
+      "width": 320,
+      "name": "mobile-320"
+    }
+  ],
+  "screenshot_count": 6,
+  "screenshots": [
+    "advanced-filters-desktop-1920.png",
+    "advanced-filters-desktop-dark-1920.png",
+    "advanced-filters-tablet-768.png",
+    "advanced-filters-mobile-390.png",
+    "advanced-filters-date-popover-mobile-390.png",
+    "advanced-filters-mobile-320.png"
+  ],
+  "verification": {
+    "desktop_uses_dialog": true,
+    "mobile_uses_full_height_drawer": true,
+    "real_criteria_preserved": [
+      "tags",
+      "canais",
+      "criação",
+      "último contato",
+      "próximo follow-up"
+    ],
+    "cancel_discards_draft": true,
+    "apply_updates_active_filter_count": true,
+    "escape_restores_focus_to_trigger": true,
+    "date_range_popover_operable": true,
+    "horizontal_overflow": false,
+    "fixtures": "Contatos sintéticos de demonstração",
+    "data_changes_or_external_actions": false,
+    "responsive_measurements": [
+      {
+        "documentScrollWidth": 1910,
+        "horizontalOverflow": false,
+        "viewport": "1920x1080",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 758,
+        "horizontalOverflow": false,
+        "viewport": "768x1024",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 380,
+        "horizontalOverflow": false,
+        "viewport": "390x844",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 310,
+        "horizontalOverflow": false,
+        "viewport": "320x640",
+        "theme": "claro"
+      },
+      {
+        "documentScrollWidth": 1910,
+        "horizontalOverflow": false,
+        "viewport": "1920x1080",
+        "theme": "escuro"
+      }
+    ]
+  }
+}

@@ -4,8 +4,8 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 ## Cobertura atual
 
-- **23 de 160 contextos** revisados; 137 permanecem sem comparação concluída.
-- **422 screenshots** nesta nova rodada: Leads (incluindo edição em página), Contratos, Dashboard, Comissões e Agenda, incluindo lista, ficha completa e drawer de Lead, filtros, seleção de período, análises reais, calendário financeiro e estados de tarefas.
+- **25 de 160 contextos** revisados; 135 permanecem sem comparação concluída.
+- **428 screenshots** nesta nova rodada: Leads (incluindo edição em página), Contratos, Dashboard, Comissões e Agenda, incluindo lista, ficha completa e drawer de Lead, filtros, seleção de período, análises reais, calendário financeiro e estados de tarefas.
 - A descoberta de telas e overlays fora do manifesto continua pendente.
 - O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
 
@@ -13,6 +13,7 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 - [Leads — listagem, Kanban, criação, ficha completa e drawer revisados; outros overlays pendentes](leads/README.md)
 - [Edição de Lead em página — formulário responsivo, ações e orientações](lead-edit/README.md)
+- [Filtros avançados de Leads — diálogo desktop, drawer mobile e critérios reais](leads-advanced-filters/README.md)
 - [Detalhe de Lead — ficha, drawer, abas e responsividade](lead-detail/README.md)
 - [Contratos — listagem, drawer de detalhe e importação em lote revisados com adaptações](contracts/README.md)
 - [Dashboard — página principal, filtros, período e análises reais revisados com adaptações](dashboard/README.md)

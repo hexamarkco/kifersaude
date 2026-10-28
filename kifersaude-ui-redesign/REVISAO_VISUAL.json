@@ -800,9 +800,15 @@
         "references/desktop/extra--leads-filtros-avancados.png",
         "references/mobile/extra--leads-filtros-avancados.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-advanced-filters/README.md",
+        "validacao/revisao-visual/leads-advanced-filters/coverage.json"
+      ],
+      "notes": [
+        "Comparado com as referências desktop e mobile em 1920, 768, 390 e 320 px. O CRM não oferece uma rota separada de filtros avançados; os filtros foram organizados na listagem, com critérios avançados em diálogo no desktop e painel de tela cheia no mobile.",
+        "Status, responsável, origem, tipo e busca continuam nos controles existentes da listagem. A aplicação usa somente os critérios reais de tags, canais e datas; não foram criados operador atual nem regras novas."
+      ]
     },
     {
       "id": "extra--leads-historico",
@@ -1210,9 +1216,15 @@
         "references/desktop/state--leads-filtros-avancados.png",
         "references/mobile/state--leads-filtros-avancados.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-advanced-filters/README.md",
+        "validacao/revisao-visual/leads-advanced-filters/coverage.json"
+      ],
+      "notes": [
+        "Dialog desktop e Drawer mobile seguem o padrão das referências. Os cinco filtros reais são tags, canais, criação, último contato e próximo follow-up; as opções de status, responsável, origem e tipo já permanecem expostas na listagem.",
+        "As escolhas ficam em rascunho até Aplicar filtros; Cancelar e Escape descartam as mudanças. Popovers de datas permanecem disponíveis dentro do painel e Escape devolve o foco ao acionador."
+      ]
     },
     {
       "id": "state--leads-status-menu",
@@ -2549,8 +2561,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 23,
-    "remaining_manifest_contexts": 137,
+    "reviewed_contexts": 25,
+    "remaining_manifest_contexts": 135,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

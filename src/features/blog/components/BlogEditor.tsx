@@ -1,6 +1,6 @@
 import { FieldLabel, Image, Text, Heading } from '../../../design-system';
 import { FileInput } from '../../../design-system';
-import { Image as ImageIcon, Loader, Save, Tag, Upload, X } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon, Loader, Save, Tag, Upload } from "lucide-react";
 import { useMemo, type ChangeEvent } from "react";
 import { RichTextEditor } from '../../../design-system';
 
@@ -10,6 +10,7 @@ import {
   Field,
   Input,
   PageHeader,
+  PageActions,
   Surface,
   Textarea,
   IconButton,
@@ -63,18 +64,22 @@ export default function BlogEditor({
         title={editingPost ? "Editar post" : "Novo post"}
         description="Estruture o artigo, a capa e os metadados para publicação."
         actions={(
-          <IconButton
+          <Button
             type="button"
             onClick={onClose}
-            variant="icon"
-            aria-label="Fechar editor"
-           size="md">
-            <X className="kds-control-icon" />
-          </IconButton>
+            variant="secondary"
+            size="md">
+            <ArrowLeft className="kds-control-icon" aria-hidden="true" /> Voltar para artigos
+          </Button>
         )}
       />
 
       <Surface className="space-y-6">
+        <div>
+          <Heading level={2} size="lg">Informações do artigo</Heading>
+          <Text size="sm" tone="muted">Defina como o artigo será identificado no site.</Text>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Título *">
           <Input
             type="text"
@@ -83,8 +88,7 @@ export default function BlogEditor({
             placeholder="Digite o título do post"
           />
         </Field>
-
-        <Field label="Slug (URL) *" description={`URL: /blog/${formData.slug || "slug-do-post"}`}>
+        <Field label="Slug (URL) *" descriptionPlacement="tooltip" description={`URL: /blog/${formData.slug || "slug-do-post"}`}>
           <Input
             type="text"
             value={formData.slug}
@@ -94,6 +98,7 @@ export default function BlogEditor({
             placeholder="url-amigavel-do-post"
           />
         </Field>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Categoria *">
@@ -121,7 +126,11 @@ export default function BlogEditor({
           </Field>
         </div>
 
-        <Field label="Imagem de capa">
+        <div>
+          <Heading level={2} size="lg">Imagem de capa</Heading>
+          <Text size="sm" tone="muted">Adicione uma imagem por endereço ou arquivo.</Text>
+        </div>
+        <Field label="Endereço da imagem de capa">
           <div className="space-y-3">
             <div className="flex gap-2">
               <div className="flex-1">
@@ -152,21 +161,21 @@ export default function BlogEditor({
             </div>
 
             <div>
-              <FieldLabel className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center border-dashed px-4 py-3 transition-colors">
+              <FieldLabel className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center border-dashed px-4 py-3 transition-colors focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
                 <FileInput
 
                   accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                   onChange={onCoverImageUpload}
-                  className="hidden"
+                  className="sr-only"
                   disabled={uploadingCover}
                 />
                 {uploadingCover ? (
-                  <div className="flex items-center gap-2 text-[var(--warning-text)]">
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-[var(--warning-text)]">
                     <Loader className="h-5 w-5 animate-spin" />
                     <span className="font-semibold">Fazendo upload...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-[var(--warning-text)]">
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-[var(--warning-text)]">
                     <Upload className="h-5 w-5" />
                     <span className="font-semibold">
                       Fazer upload da imagem de capa
@@ -207,14 +216,18 @@ export default function BlogEditor({
           />
         </Field>
 
+        <div>
+          <Heading level={2} size="lg">Conteúdo</Heading>
+          <Text size="sm" tone="muted">Escreva e formate o texto que será publicado.</Text>
+        </div>
         <Field label="Conteúdo do artigo *">
           <div className="mb-3">
-            <FieldLabel className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors">
+            <FieldLabel className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
               <FileInput
 
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 onChange={onContentImageUpload}
-                className="hidden"
+                className="sr-only"
                 disabled={uploadingContent}
               />
               {uploadingContent ? (
@@ -239,7 +252,6 @@ export default function BlogEditor({
             </Text>
           </div>
 
-          <Surface variant="default" padding="none" className="overflow-hidden">
             <RichTextEditor
               theme="snow"
               value={formData.content}
@@ -249,7 +261,6 @@ export default function BlogEditor({
               placeholder="Escreva o conteúdo do artigo aqui..."
               className="kds-blog-editor"
             />
-          </Surface>
           <Text className="mt-1 text-xs text-[var(--text-muted)]">
             Use o editor para formatar o texto. Adicione títulos (H2, H3),
             listas, links e imagens.
@@ -310,25 +321,7 @@ export default function BlogEditor({
           </FieldLabel>
         </div>
 
-        <div className="flex gap-3 border-t border-[var(--border-subtle)] pt-4">
-          <Button
-            type="button"
-            onClick={onSave}
-            fullWidth
-            size="md"
-          >
-            <Save aria-hidden="true" />
-            {editingPost ? "Atualizar Post" : "Criar Post"}
-          </Button>
-          <Button
-            type="button"
-            onClick={onClose}
-            variant="secondary"
-            size="md"
-          >
-            Cancelar
-          </Button>
-        </div>
+        <PageActions placement="form" primary={{ label: editingPost ? "Atualizar post" : "Criar post", icon: Save, onClick: onSave }} secondary={[{ label: "Cancelar", onClick: onClose }]} />
       </Surface>
     </div>
   );

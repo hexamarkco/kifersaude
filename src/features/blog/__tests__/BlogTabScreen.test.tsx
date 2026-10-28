@@ -56,3 +56,21 @@ test('filters articles by publication status without changing the totals', async
     assert.equal(view.container.querySelectorAll('tbody tr').length, 0);
   } finally { view.unmount(); }
 });
+
+test('opens the article editor and returns without saving', async () => {
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    const create = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Novo post'));
+    assert.ok(create);
+    act(() => create.click());
+    assert.ok(view.container.querySelector('input[placeholder="Digite o título do post"]'));
+    assert.ok(view.container.querySelector('input[placeholder="url-amigavel-do-post"]'));
+    assert.ok(view.container.textContent?.includes('SEO (otimização para Google)'));
+    const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Cancelar');
+    assert.ok(cancel);
+    act(() => cancel.click());
+    assert.ok(view.container.textContent?.includes('Biblioteca de artigos'));
+    assert.equal(calls.save, 0);
+  } finally { view.unmount(); }
+});

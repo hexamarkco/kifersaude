@@ -9,3 +9,11 @@ O Playwright registrou largura do documento igual à viewport em todas as quatro
 Após inclusão dos indicadores e filtro, novas capturas: [1920 px](indicadores-1920.png), [768 px](indicadores-768.png), [390 px](indicadores-390.png), [320 px](indicadores-320.png) e [tema escuro](indicadores-dark.png). A largura do documento permaneceu igual à viewport; selecionar publicados retornou um artigo e os totais permaneceram 1, 1, 124 e 2 na fixture.
 
 Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais e paginação, estados de carregamento, vazio e erro em navegador, teclado e foco, criação, edição, prévia, exclusão e permissões. A listagem permanece pendente no manifesto.
+
+## Editor — revisão parcial
+
+As referências de [criação desktop](../../../references/desktop/state--blog-criar.png) e [mobile](../../../references/mobile/state--blog-criar.png) apresentam um modal simplificado. O editor real possui campos adicionais, imagens e conteúdo rico; foi mantido em página completa e organizado em seções, com ações de formulário do design system. A dica da URL fica no ícone de informação e uma altura antiga que deixava espaço vazio no editor rico foi removida.
+
+Capturas isoladas: [1920 px](editor-1920.png), [768 px](editor-768.png), [390 px](editor-390.png), [320 px](editor-320.png) e [tema escuro](editor-dark.png). O documento não apresentou overflow nessas larguras. Em prévia sem persistência, a digitação do título gerou o slug esperado, o editor rico recebeu texto e o ícone de ajuda recebeu foco visível por teclado. Os controles de seleção de arquivo agora podem receber foco; a prévia confirmou foco no primeiro controle e no respectivo rótulo. Não houve upload ou salvamento.
+
+Ainda faltam revisão integrada autenticada, preenchimento e validação completos, upload, edição de artigo existente, cancelamento e confirmação de salvamento, permissões e estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.

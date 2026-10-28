@@ -389,7 +389,6 @@
 .kds-favorite-active,
 .kds-favorite-icon { color: var(--accent-gold); }
 .kds-favorite-inactive { color: var(--text-muted); }
-.kds-blog-editor { height: 25rem; margin-bottom: 3.125rem; }
 .kds-flow-handle-yes { top: 35%; }
 .kds-flow-handle-no { top: 70%; }
 .kds-chart-empty { background: var(--bg-hover); color: var(--text-muted); }

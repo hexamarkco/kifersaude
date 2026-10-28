@@ -1,11 +1,8 @@
-import { Text } from '../../../design-system';
-import {
-  Surface,
-} from "../../../design-system";
+import { CalendarDays } from "lucide-react";
+
+import { EmptyState, Surface, Text } from "../../../design-system";
 import { cx } from "../../../lib/cx";
-import {
-  formatCommissionCurrency,
-} from "../shared/commissionCalendarUtils";
+import { formatCommissionCurrency } from "../shared/commissionCalendarUtils";
 import type { CommissionEvent } from "../shared/commissionCalendarTypes";
 
 type CommissionSelectedDatePanelProps = {
@@ -19,17 +16,23 @@ export default function CommissionSelectedDatePanel({
 }: CommissionSelectedDatePanelProps) {
   if (!selectedDate) {
     return (
-      <div className="flex h-full min-h-64 items-center justify-center rounded-2xl bg-[var(--bg-hover)] px-6 text-center text-sm text-[var(--text-muted)]">
-        Escolha um dia no calendário para visualizar os detalhes.
-      </div>
+      <EmptyState
+        icon={<CalendarDays aria-hidden="true" />}
+        title="Selecione uma data"
+        description="Escolha um dia no calendário para consultar as previsões."
+        className="min-h-48 border-0 bg-[var(--bg-hover)] px-4 py-8"
+      />
     );
   }
 
   if (selectedDateEvents.length === 0) {
     return (
-      <div className="flex h-full min-h-64 items-center justify-center rounded-2xl bg-[var(--bg-hover)] px-6 text-center text-sm text-[var(--text-muted)]">
-        Nenhum lançamento previsto para este dia.
-      </div>
+      <EmptyState
+        icon={<CalendarDays aria-hidden="true" />}
+        title="Nenhum lançamento previsto"
+        description="Não há comissão nem bonificação prevista para esta data."
+        className="min-h-48 border-0 bg-[var(--bg-hover)] px-4 py-8"
+      />
     );
   }
 
@@ -42,19 +45,21 @@ export default function CommissionSelectedDatePanel({
           <Surface key={event.id} padding="sm" className="p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <Text className={cx(
-                  "text-sm font-semibold",
-                  isCommission
-                    ? "text-[var(--accent-gold-hover)]"
-                    : "text-[var(--text-primary)]",
-                )}>
+                <Text
+                  className={cx(
+                    "text-sm font-semibold",
+                    isCommission
+                      ? "text-[var(--accent-gold-hover)]"
+                      : "text-[var(--text-primary)]",
+                  )}
+                >
                   {isCommission
                     ? "Recebimento de comissão"
                     : "Pagamento de bonificação"}
                 </Text>
                 <Text className="mt-1 text-xs text-[var(--text-secondary)]">
                   Contrato{" "}
-                  {event.contract.codigo_contrato || "Sem código"} -{" "}
+                  {event.contract.codigo_contrato || "Sem código"},{" "}
                   {event.contract.operadora || "Operadora não informada"}
                 </Text>
                 {event.installmentCount && event.installmentIndex && (
@@ -65,12 +70,14 @@ export default function CommissionSelectedDatePanel({
                 )}
               </div>
 
-              <span className={cx(
-                "shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums",
-                isCommission
-                  ? "text-[var(--accent-gold-hover)]"
-                  : "text-[var(--text-primary)]",
-              )}>
+              <span
+                className={cx(
+                  "shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums",
+                  isCommission
+                    ? "text-[var(--accent-gold-hover)]"
+                    : "text-[var(--text-primary)]",
+                )}
+              >
                 {formatCommissionCurrency(event.value)}
               </span>
             </div>

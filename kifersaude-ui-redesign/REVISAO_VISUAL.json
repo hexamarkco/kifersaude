@@ -86,9 +86,16 @@
         "references/desktop/page--comissoes.png",
         "references/mobile/page--comissoes.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/commissions/README.md",
+        "validacao/revisao-visual/commissions/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências em desktop, tablet, mobile e 320 px, nos temas claro e escuro. Playwright mediu larguras de documento 1910, 758, 380 e 310 px, sem overflow horizontal.",
+        "O CRM contém um calendário de previsões, não a série histórica, o ticket médio, os contratos pagos ou a exportação do mockup. Quatro cartões resumem somente totais e contagens derivados dos lançamentos e contratos reais; ausência de um tipo é mostrada como travessão.",
+        "Fixture sintética com quatro contratos. Navegação mensal e seleção de datas verificadas. As capturas registram também datas sem lançamentos e ambos os temas."
+      ]
     },
     {
       "id": "page--agenda",
@@ -1396,9 +1403,15 @@
         "references/desktop/state--comissoes-dia.png",
         "references/mobile/state--comissoes-dia.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/commissions/README.md",
+        "validacao/revisao-visual/commissions/coverage.json"
+      ],
+      "notes": [
+        "A referência mostra um modal de cadastro genérico sobre o Dashboard; o CRM não possui essa entidade ou fluxo. Foi revisado o estado real de seleção de uma data no calendário financeiro, sem criar CRUD ou persistência.",
+        "A captura da seleção com quatro previsões está incluída nas imagens completas da página. O estado sem lançamentos foi capturado no desktop e mobile, nos temas claro e escuro; navegação anterior/próxima verificada."
+      ]
     },
     {
       "id": "state--agenda-criar",

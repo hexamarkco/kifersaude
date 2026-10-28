@@ -320,8 +320,9 @@
       "shared_components": [
         "Alert",
         "CommissionCalendarSkeleton",
-        "Heading",
+        "EmptyState",
         "IconButton",
+        "KpiCard",
         "OperationalMetricChip",
         "PageHeader",
         "PanelAdaptiveLoadingFrame",
@@ -335,7 +336,7 @@
       ],
       "status": "validado",
       "exceptions": [
-        "Mantido o calendário financeiro real de comissões e bonificações, com cálculos e regras atuais; não foram criados gráficos ou indicadores fictícios da referência."
+        "A referência inclui gráfico histórico, contratos pagos, ticket médio e exportação que não existem nessa tela real. O calendário e os cálculos atuais foram preservados; quatro cartões usam totais e contagens derivados dos eventos previstos, sem inventar série histórica ou ação de exportação."
       ],
       "validation": [
         {
@@ -438,7 +439,9 @@
         "references/mobile/page--agenda.png"
       ],
       "status": "validado",
-      "exceptions": [],
+      "exceptions": [
+        "A referência de estado mostra um modal de cadastro genérico sobre o Dashboard, sem entidade ou fluxo equivalente no CRM. O estado real é a seleção de uma data no calendário de comissões e a consulta dos lançamentos correspondentes; não foi criado CRUD fictício."
+      ],
       "validation": [
         {
           "device": "desktop",

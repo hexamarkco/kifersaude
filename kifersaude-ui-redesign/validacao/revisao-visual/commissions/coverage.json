@@ -1,0 +1,279 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Comissões e produção",
+  "route": "/painel/comissoes",
+  "context": "page--comissoes",
+  "status": "revisado_com_adaptacoes",
+  "references": [
+    "references/desktop/page--comissoes.png",
+    "references/mobile/page--comissoes.png"
+  ],
+  "viewport_sizes": [
+    "1920x1080",
+    "768x1024",
+    "390x844",
+    "320x640"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "checks": {
+    "no_horizontal_overflow": true,
+    "themes_verified_at_all_viewports": true,
+    "previous_and_next_month": "Confirmado por Playwright; mudar de mês limpa a data selecionada.",
+    "day_selection": "Confirmado: 28/10/2026 abre quatro previsões sintéticas; 01/10/2026 mostra o estado sem lançamentos.",
+    "financial_data": "Quatro KPIs são derivados de lançamentos previstos e contratos distintos do mês atual. Total indisponível sem eventos é mostrado como travessão; não foram usados valores de demonstração da referência.",
+    "safety": "Fixture Playwright sintética; nenhuma escrita, integração externa, envio ou ação financeira executada.",
+    "browser_console": "O transporte Realtime local expirou durante a captura e uma dependência exibiu o aviso preexistente de ciclo de vida. As respostas GET sintéticas carregaram e a navegação/calendário funcionaram.",
+    "measured_document_widths": {
+      "desktop": 1910,
+      "mobile": 380,
+      "mobile-320": 310,
+      "tablet": 758
+    },
+    "mobile_navigation": "Navegação inferior fixa do shell permanece acessível; o conteúdo continua rolável sob a navegação."
+  },
+  "screenshots": [
+    {
+      "path": "validacao/revisao-visual/commissions/desktop/calendar-dark-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/desktop/calendar-dark-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/desktop/calendar-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/desktop/calendar-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile-320/calendar-dark-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1767,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile-320/calendar-dark-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile-320/calendar-full.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 1767,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile-320/calendar-viewport.png",
+      "viewport": "320x640",
+      "width": 320,
+      "height": 640,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 310
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile/calendar-dark-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1572,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile/calendar-dark-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile/calendar-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1572,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/mobile/calendar-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-dark-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "day-without-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-dark-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "dark",
+      "state": "day-without-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-dark-mobile-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1443,
+      "theme": "dark",
+      "state": "day-without-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-dark-mobile-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "state": "day-without-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-desktop-full.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "day-without-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-desktop-viewport.png",
+      "viewport": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "theme": "light",
+      "state": "day-without-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 1910
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-mobile-full.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 1443,
+      "theme": "light",
+      "state": "day-without-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/states/day-without-forecast-mobile-viewport.png",
+      "viewport": "390x844",
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "state": "day-without-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 380
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/tablet/calendar-dark-full.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1556,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 758
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/tablet/calendar-dark-viewport.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1024,
+      "theme": "dark",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 758
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/tablet/calendar-full.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1556,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "fullPage",
+      "document_scroll_width": 758
+    },
+    {
+      "path": "validacao/revisao-visual/commissions/tablet/calendar-viewport.png",
+      "viewport": "768x1024",
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "state": "day-with-forecast",
+      "capture": "viewport",
+      "document_scroll_width": 758
+    }
+  ]
+}

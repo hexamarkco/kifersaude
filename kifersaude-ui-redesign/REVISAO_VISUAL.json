@@ -1194,23 +1194,24 @@
       "id": "state--leads-excluir-confirmacao",
       "route": "/painel/leads",
       "kind": "states",
-      "components": [
-        "src/features/leads/LeadsManagerScreen.tsx"
-      ],
+    "components": [
+      "src/features/leads/LeadsManagerScreen.tsx"
+    ],
       "references": [
         "references/desktop/state--leads-excluir-confirmacao.png",
         "references/mobile/state--leads-excluir-confirmacao.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+    "status": "pendente",
+    "evidence": [],
+    "notes": []
     },
     {
       "id": "state--leads-filtros-avancados",
       "route": "/painel/leads",
       "kind": "states",
       "components": [
-        "src/features/leads/LeadsManagerScreen.tsx"
+        "src/features/leads/LeadsManagerScreen.tsx",
+        "src/design-system/components/Filters.tsx"
       ],
       "references": [
         "references/desktop/state--leads-filtros-avancados.png",
@@ -1231,60 +1232,84 @@
       "route": "/painel/leads",
       "kind": "states",
       "components": [
-        "src/features/leads/LeadsManagerScreen.tsx"
+        "src/features/leads/LeadsManagerScreen.tsx",
+        "src/design-system/components/Filters.tsx"
       ],
       "references": [
         "references/desktop/state--leads-status-menu.png",
         "references/mobile/state--leads-status-menu.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-filter-menus/README.md",
+        "validacao/revisao-visual/leads-filter-menus/coverage.json"
+      ],
+      "notes": [
+        "Filtro de status comparado com as referências em desktop, tablet, mobile e 320 px; estados claro e escuro conferidos. Seleções são aplicadas somente após confirmação e podem ser descartadas por Cancelar ou Escape."
+      ]
     },
     {
       "id": "state--leads-responsavel-menu",
       "route": "/painel/leads",
       "kind": "states",
       "components": [
-        "src/features/leads/LeadsManagerScreen.tsx"
+        "src/features/leads/LeadsManagerScreen.tsx",
+        "src/design-system/components/Filters.tsx"
       ],
       "references": [
         "references/desktop/state--leads-responsavel-menu.png",
         "references/mobile/state--leads-responsavel-menu.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-filter-menus/README.md",
+        "validacao/revisao-visual/leads-filter-menus/coverage.json"
+      ],
+      "notes": [
+        "Filtro de responsável comparado com as referências desktop e mobile. Rótulos longos quebram dentro do painel sem causar overflow; mudanças ficam pendentes até aplicar."
+      ]
     },
     {
       "id": "state--leads-origem-menu",
       "route": "/painel/leads",
       "kind": "states",
       "components": [
-        "src/features/leads/LeadsManagerScreen.tsx"
+        "src/features/leads/LeadsManagerScreen.tsx",
+        "src/design-system/components/Filters.tsx"
       ],
       "references": [
         "references/desktop/state--leads-origem-menu.png",
         "references/mobile/state--leads-origem-menu.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-filter-menus/README.md",
+        "validacao/revisao-visual/leads-filter-menus/coverage.json"
+      ],
+      "notes": [
+        "Filtro de origem comparado com as referências desktop e mobile; usa o mesmo diálogo acessível e o mesmo padrão de confirmação dos demais filtros rápidos."
+      ]
     },
     {
       "id": "state--leads-tipo-menu",
       "route": "/painel/leads",
       "kind": "states",
       "components": [
-        "src/features/leads/LeadsManagerScreen.tsx"
+        "src/features/leads/LeadsManagerScreen.tsx",
+        "src/design-system/components/Filters.tsx"
       ],
       "references": [
         "references/desktop/state--leads-tipo-menu.png",
         "references/mobile/state--leads-tipo-menu.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-filter-menus/README.md",
+        "validacao/revisao-visual/leads-filter-menus/coverage.json"
+      ],
+      "notes": [
+        "Filtro de tipo de contratação comparado com as referências desktop e mobile; quebra do título e rolagem do conteúdo preservam o acesso às ações em telas estreitas."
+      ]
     },
     {
       "id": "state--leads-ordenacao-menu",
@@ -2561,8 +2586,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 25,
-    "remaining_manifest_contexts": 135,
+    "reviewed_contexts": 29,
+    "remaining_manifest_contexts": 131,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

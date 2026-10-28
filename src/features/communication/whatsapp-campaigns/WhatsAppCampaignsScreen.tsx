@@ -991,10 +991,10 @@ export default function WhatsAppCampaignsScreen() {
           {audienceMode === 'crm' ? (
             <Surface variant="muted" padding="sm" className="grid gap-4 md:grid-cols-2">
               <Field label={<FieldLabel text="Status do lead" hint="Filtra o público pelos status atuais no CRM. Deixe vazio para incluir todos os status." />}>
-                <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
+                <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" dialogTitle="Filtrar público por status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
               </Field>
               <Field label={<FieldLabel text="Responsável" hint="Filtra o público pelo responsável atribuído ao lead no CRM." />}>
-                <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
+                <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsáveis" dialogTitle="Filtrar público por responsável" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </Field>
               <DsFieldLabel className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
                 <Checkbox checked={reactivationMode} onChange={(event) => setReactivationMode(event.target.checked)} />

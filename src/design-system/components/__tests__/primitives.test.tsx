@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { act, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { Filter, Settings } from 'lucide-react';
 import { render } from '@testing-library/react';
 import { test } from 'vitest';
 
@@ -13,6 +13,7 @@ import {
   DialogTitle,
   Drawer,
   DrawerBody,
+  FilterMultiSelect,
   Field,
   IconButton,
   Input,
@@ -115,6 +116,52 @@ test('Select and Combobox expose listbox semantics and commit selection', () => 
   const comboList = lists[lists.length - 1];
   click(Array.from(comboList.querySelectorAll('[role="option"]')).find((option) => option.textContent?.includes('Amil')) ?? null);
   assert.match(triggers[1].textContent ?? '', /Amil/);
+  unmount();
+});
+
+test('FilterMultiSelect keeps choices pending until applied and discards them on Escape', () => {
+  const applied: string[][] = [];
+  function Harness() {
+    const [values, setValues] = useState<string[]>([]);
+    return (
+      <FilterMultiSelect
+        icon={Filter}
+        options={[{ value: 'new', label: 'Novo' }, { value: 'active', label: 'Em andamento' }]}
+        placeholder="Todos os status"
+        dialogTitle="Filtrar por status"
+        values={values}
+        onChange={(nextValues) => {
+          applied.push(nextValues);
+          setValues(nextValues);
+        }}
+      />
+    );
+  }
+
+  const { container, unmount } = render(<Harness />);
+  const trigger = container.querySelector<HTMLButtonElement>('.kds-filter-trigger');
+  assert.ok(trigger);
+  act(() => trigger.focus());
+  click(trigger);
+  const dialog = document.body.querySelector('[role="dialog"]');
+  assert.ok(dialog);
+  assert.equal(dialog.querySelector('h2')?.textContent, 'Filtrar por status');
+  const pendingCheckbox = Array.from(dialog.querySelectorAll('label')).find((option) => option.textContent?.includes('Em andamento'))?.querySelector('input');
+  click(pendingCheckbox ?? null);
+  keyDown(document, 'Escape');
+  assert.deepEqual(applied, []);
+  assert.match(trigger.textContent ?? '', /Todos os status/);
+  assert.equal(document.activeElement, trigger);
+
+  act(() => trigger.focus());
+  click(trigger);
+  const reopenedDialog = document.body.querySelector('[role="dialog"]');
+  assert.ok(reopenedDialog);
+  const newCheckbox = Array.from(reopenedDialog.querySelectorAll('label')).find((option) => option.textContent?.includes('Novo'))?.querySelector('input');
+  click(newCheckbox ?? null);
+  click(Array.from(reopenedDialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Aplicar filtros')) ?? null);
+  assert.deepEqual(applied, [['new']]);
+  assert.match(trigger.textContent ?? '', /Novo/);
   unmount();
 });
 

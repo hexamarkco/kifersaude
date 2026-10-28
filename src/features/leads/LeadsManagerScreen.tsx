@@ -1537,6 +1537,7 @@ export default function LeadsManager({
         icon={Tag}
         options={tagFilterOptions}
         placeholder="Todas as tags"
+        dialogTitle="Filtrar leads por tag"
         values={advancedFilterDraft.tags}
         onChange={(tags) => setAdvancedFilterDraft((current) => ({ ...current, tags }))}
       />
@@ -1544,6 +1545,7 @@ export default function LeadsManager({
         icon={Share2}
         options={canalFilterOptions}
         placeholder="Todos os canais"
+        dialogTitle="Filtrar leads por canal"
         values={advancedFilterDraft.channels}
         onChange={(channels) => setAdvancedFilterDraft((current) => ({ ...current, channels }))}
       />
@@ -1734,6 +1736,7 @@ export default function LeadsManager({
                   icon: Filter,
                   options: statusFilterOptions,
                   placeholder: "Todos os status",
+                  dialogTitle: "Filtrar leads por status",
                   values: filterStatus,
                   onChange: setFilterStatus,
                 },
@@ -1742,6 +1745,7 @@ export default function LeadsManager({
                   icon: UserCircle,
                   options: responsavelFilterOptions,
                   placeholder: "Todos os responsáveis",
+                  dialogTitle: "Filtrar leads por responsável",
                   values: filterResponsavel,
                   onChange: setFilterResponsavel,
                 },
@@ -1750,6 +1754,7 @@ export default function LeadsManager({
                   icon: MapPin,
                   options: origemFilterOptions,
                   placeholder: "Todas as origens",
+                  dialogTitle: "Filtrar leads por origem",
                   values: filterOrigem,
                   onChange: setFilterOrigem,
                 },
@@ -1758,6 +1763,7 @@ export default function LeadsManager({
                   icon: Layers,
                   options: tipoContratacaoFilterOptions,
                   placeholder: "Todos os tipos",
+                  dialogTitle: "Filtrar leads por tipo de contratação",
                   values: filterTipoContratacao,
                   onChange: setFilterTipoContratacao,
                 },

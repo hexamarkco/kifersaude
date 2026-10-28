@@ -1117,6 +1117,23 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-dialog[data-size='lg'] { --dialog-width: var(--dialog-width-lg); }
 .kds-dialog[data-size='xl'], .kds-dialog[data-size='wide'] { --dialog-width: var(--dialog-width-xl); }
 .kds-dialog[data-size='full'], .kds-dialog.kds-dialog-workspace { --dialog-width: var(--dialog-width-full); }
+.kds-dialog-container:has(.kds-filter-multi-dialog) { align-items: flex-start; justify-content: flex-end; padding: clamp(7rem, 13vh, 9rem) clamp(2rem, 5vw, 6rem) var(--space-4); }
+.painel-theme.kifer-ds .kds-dialog.kds-filter-multi-dialog { width: min(calc(100vw - var(--space-8)), 22rem); max-width: min(calc(100vw - var(--space-8)), 22rem); max-height: calc(100dvh - 14rem); }
+.painel-theme.kifer-ds .kds-filter-multi-dialog .kds-dialog-header { align-items: center; padding: var(--space-3) var(--space-4); }
+.painel-theme.kifer-ds .kds-filter-multi-dialog .kds-dialog-title { font: var(--type-ui-heading); }
+.painel-theme.kifer-ds .kds-filter-multi-dialog .kds-dialog-close { width: var(--touch-target); height: var(--touch-target); }
+.painel-theme.kifer-ds .kds-filter-multi-dialog .kds-dialog-close:focus-visible { border-color: var(--brand-primary); outline: none; box-shadow: none; }
+.painel-theme.kifer-ds .kds-filter-multi-body { padding: 0 var(--space-3); }
+.kds-filter-multi-options { display: flex; flex-direction: column; min-width: 0; }
+.painel-theme.kifer-ds .kds-filter-multi-option { display: flex; min-height: var(--touch-target); align-items: center; gap: var(--space-3); padding: var(--space-2); border-bottom: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-control); color: var(--text-secondary); cursor: pointer; font: var(--type-body-sm); transition: background-color 140ms ease, color 140ms ease; }
+.painel-theme.kifer-ds .kds-filter-multi-option:last-child { border-bottom-color: transparent; }
+.painel-theme.kifer-ds .kds-filter-multi-option:hover { background: var(--bg-hover); color: var(--text-primary); }
+.painel-theme.kifer-ds .kds-filter-multi-option:focus-within { outline: 2px solid var(--focus-ring-strong); outline-offset: -2px; }
+.painel-theme.kifer-ds .kds-filter-multi-option > .kds-checkbox { flex: 0 0 auto; }
+.painel-theme.kifer-ds .kds-filter-multi-option > span { min-width: 0; overflow-wrap: anywhere; }
+.painel-theme.kifer-ds .kds-filter-multi-option-all { border-bottom-color: var(--border-default); color: var(--text-primary); }
+.painel-theme.kifer-ds .kds-filter-multi-footer { justify-content: flex-start; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+.painel-theme.kifer-ds .kds-filter-multi-action { min-width: 7rem; }
 .painel-theme.kifer-ds .kds-dialog-header, .painel-theme.kifer-ds .kds-dialog-footer { flex-shrink: 0; padding: var(--space-5); }
 .painel-theme.kifer-ds .kds-dialog-body { padding: var(--space-5); overflow-x: hidden; }
 .painel-theme.kifer-ds .kds-drawer { max-height: 100dvh; border-radius: 0; }
@@ -1149,6 +1166,14 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card-kpi { padding: var(--space-3); row-gap: var(--space-2); }
   .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-card-title { min-block-size: auto; }
   .painel-theme.kifer-ds .kds-dashboard-more-metrics > .kds-disclosure-trigger { width: 100%; }
+}
+@media (max-width: 640px) {
+  .painel-theme.kifer-ds .kds-dialog-container:has(.kds-dialog.kds-filter-multi-dialog) { align-items: flex-start !important; justify-content: center; padding: min(16vh, 8.75rem) var(--space-4) var(--space-4) !important; }
+  .painel-theme.kifer-ds .kds-dialog.kds-filter-multi-dialog { height: auto !important; width: min(calc(100vw - var(--space-8)), 22rem); max-width: min(calc(100vw - var(--space-8)), 22rem) !important; max-height: calc(100dvh - 10rem) !important; flex: 0 1 auto; border-radius: var(--radius-dialog) !important; }
+  .painel-theme.kifer-ds .kds-filter-multi-dialog .kds-dialog-header { padding: var(--space-2) var(--space-3); }
+  .painel-theme.kifer-ds .kds-filter-multi-body { padding: 0 var(--space-2); }
+  .painel-theme.kifer-ds .kds-filter-multi-footer { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); padding: var(--space-2) var(--space-3); }
+  .painel-theme.kifer-ds .kds-filter-multi-action { min-width: 0; padding-inline: var(--space-2); font: var(--type-body-sm); white-space: nowrap; }
 }
 @media (max-width: 1279px) { .kds-dashboard-primary-grid { grid-template-columns: minmax(0, 1fr); } }
 .kds-responsive-collection { container: collection / inline-size; min-width: 0; width: 100%; }

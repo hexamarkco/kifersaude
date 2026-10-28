@@ -1,0 +1,73 @@
+{
+  "created_at": "2026-10-28",
+  "contexts": [
+    "state--leads-status-menu",
+    "state--leads-responsavel-menu",
+    "state--leads-origem-menu",
+    "state--leads-tipo-menu"
+  ],
+  "references": {
+    "state--leads-status-menu": [
+      "../../../references/desktop/state--leads-status-menu.png",
+      "../../../references/mobile/state--leads-status-menu.png"
+    ],
+    "state--leads-responsavel-menu": [
+      "../../../references/desktop/state--leads-responsavel-menu.png",
+      "../../../references/mobile/state--leads-responsavel-menu.png"
+    ],
+    "state--leads-origem-menu": [
+      "../../../references/desktop/state--leads-origem-menu.png",
+      "../../../references/mobile/state--leads-origem-menu.png"
+    ],
+    "state--leads-tipo-menu": [
+      "../../../references/desktop/state--leads-tipo-menu.png",
+      "../../../references/mobile/state--leads-tipo-menu.png"
+    ]
+  },
+  "themes": [
+    "claro",
+    "escuro"
+  ],
+  "viewports": [
+    { "height": 1080, "width": 1920, "name": "desktop" },
+    { "height": 1024, "width": 768, "name": "tablet" },
+    { "height": 844, "width": 390, "name": "mobile" },
+    { "height": 640, "width": 320, "name": "mobile-320" }
+  ],
+  "screenshot_count": 11,
+  "screenshots": [
+    "desktop-status.png",
+    "desktop-responsavel.png",
+    "desktop-origem.png",
+    "desktop-tipo.png",
+    "desktop-dark-status.png",
+    "tablet-status.png",
+    "mobile-status.png",
+    "mobile-responsavel.png",
+    "mobile-origem.png",
+    "mobile-tipo.png",
+    "mobile-320-status.png"
+  ],
+  "verification": {
+    "sharedComponent": "src/design-system/components/Filters.tsx#FilterMultiSelect",
+    "allFourLeadQuickFiltersUseDialog": true,
+    "selectionIsPendingUntilApply": true,
+    "cancelAndEscapeDiscardDraft": true,
+    "escapeRestoresFocusToTrigger": true,
+    "applyUpdatesSelectedFilter": true,
+    "clearFiltersRestoresInitialState": true,
+    "fixture": "Contatos sintéticos de demonstração",
+    "dataChangesOrExternalActions": false,
+    "responsiveMeasurements": [
+      { "viewport": "1920x1080", "documentScrollWidth": 1910, "horizontalOverflow": false, "dialogInsideViewport": true, "theme": "claro" },
+      { "viewport": "768x1024", "documentScrollWidth": 758, "horizontalOverflow": false, "dialogInsideViewport": true, "theme": "claro" },
+      { "viewport": "390x844", "documentScrollWidth": 380, "horizontalOverflow": false, "dialogInsideViewport": true, "theme": "claro" },
+      { "viewport": "320x640", "documentScrollWidth": 310, "horizontalOverflow": false, "dialogInsideViewport": true, "theme": "claro" },
+      { "viewport": "1920x1080", "documentScrollWidth": 1910, "horizontalOverflow": false, "dialogInsideViewport": true, "theme": "escuro" }
+    ],
+    "localDevelopmentConsole": [
+      "Aviso de ciclo de vida emitido por react-side-effect.",
+      "Handshake Realtime da sessão local de demonstração expirou; a interface permaneceu operável."
+    ]
+  }
+}

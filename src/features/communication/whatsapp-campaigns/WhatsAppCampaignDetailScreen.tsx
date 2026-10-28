@@ -767,6 +767,7 @@ export default function WhatsAppCampaignDetailScreen() {
                   icon={Filter}
                   options={targetStatusFilterOptions}
                   placeholder="Todos os status"
+                  dialogTitle="Filtrar alvos por status"
                   values={targetsStatusFilter}
                   onChange={(values) => setTargetsStatusFilter(values as CommWhatsAppCampaignTargetStatus[])}
                 />

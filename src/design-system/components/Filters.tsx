@@ -1,11 +1,12 @@
 import DropdownOption from './DropdownOption';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import type { ControlSize } from '../tokens';
 import Button from './Button';
 import Checkbox from './Checkbox';
 import DateTimePicker from './DateTimePicker';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
 import Field from './Field';
 import FilterTrigger from './FilterTrigger';
 import { Popover, PopoverContent, PopoverTrigger } from './Popover';
@@ -48,31 +49,97 @@ export type FilterMultiSelectProps = {
   icon: LucideIcon;
   options: readonly SelectOption[];
   placeholder: string;
+  dialogTitle: string;
   values: string[];
   onChange: (values: string[]) => void;
   size?: ControlSize;
 };
 
-export function FilterMultiSelect({ icon, options, placeholder, values, onChange, size = 'md' }: FilterMultiSelectProps) {
+export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, values, onChange, size = 'md' }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const [draftValues, setDraftValues] = useState<string[]>(values);
+  const dialogId = useId().replace(/:/g, '');
   const selected = options.filter((option) => values.includes(option.value));
   const label = selected.length === 0 ? placeholder : selected.length <= 2 ? selected.map((option) => option.label).join(', ') : `${selected.length} selecionados`;
+
+  const openFilters = () => {
+    setDraftValues([...values]);
+    setOpen(true);
+  };
+  const closeFilters = () => {
+    setDraftValues([...values]);
+    setOpen(false);
+  };
+  const applyFilters = () => {
+    onChange([...draftValues]);
+    setOpen(false);
+  };
+  const toggleOption = (value: string, checked: boolean) => {
+    setDraftValues((current) => checked
+      ? current.includes(value) ? current : [...current, value]
+      : current.filter((item) => item !== value));
+  };
+  const filterOptions = (
+    <div className="kds-filter-multi-options" role="group" aria-label={dialogTitle}>
+      <label className="kds-filter-multi-option kds-filter-multi-option-all">
+        <Checkbox
+          checked={draftValues.length === 0}
+          onChange={() => setDraftValues([])}
+        />
+        <span>Todos</span>
+      </label>
+      {options.map((option) => (
+        <label key={option.value} className="kds-filter-multi-option">
+          <Checkbox
+            checked={draftValues.includes(option.value)}
+            disabled={option.disabled}
+            onChange={(event) => toggleOption(option.value, event.target.checked)}
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+  const filterActions = (
+    <>
+      <Button type="button" variant="secondary" className="kds-filter-multi-action" onClick={closeFilters}>
+        Cancelar
+      </Button>
+      <Button type="button" variant="primary" className="kds-filter-multi-action" onClick={applyFilters}>
+        Aplicar filtros
+      </Button>
+    </>
+  );
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="block">
-        <FilterTrigger icon={icon} value={label} active={values.length > 0} open={open} size={size} aria-haspopup="listbox" />
-      </PopoverTrigger>
-      <PopoverContent className="w-[min(18rem,calc(100vw-1rem))] p-2" role="listbox" aria-label={placeholder}>
-        <Button variant="ghost" size="sm" onClick={() => onChange([])} fullWidth>Limpar seleção</Button>
-        <div className="my-1 border-t border-[var(--border-subtle)]" />
-        <div className="max-h-60 overflow-y-auto">
-          {options.map((option) => {
-            const checked = values.includes(option.value);
-            return <label key={option.value} className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm text-[var(--text-secondary)]"><Checkbox checked={checked} onChange={() => onChange(checked ? values.filter((item) => item !== option.value) : [...values, option.value])} />{option.label}</label>;
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <>
+      <FilterTrigger
+        icon={icon}
+        value={label}
+        active={values.length > 0}
+        open={open}
+        size={size}
+        onClick={openFilters}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? dialogId : undefined}
+      />
+      {open && (
+        <Dialog
+          id={dialogId}
+          open
+          onOpenChange={(nextOpen) => !nextOpen && closeFilters()}
+          size="sm"
+          className="kds-filter-multi-dialog"
+        >
+          <DialogHeader onClose={closeFilters}>
+            <DialogTitle>{dialogTitle}</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="kds-filter-multi-body">{filterOptions}</DialogBody>
+          <DialogFooter className="kds-filter-multi-footer">{filterActions}</DialogFooter>
+        </Dialog>
+      )}
+    </>
   );
 }
 

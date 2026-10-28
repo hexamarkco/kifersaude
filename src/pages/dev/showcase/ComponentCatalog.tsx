@@ -1030,6 +1030,7 @@ function Data() {
               <FilterMultiSelect
                 icon={Users}
                 placeholder="Operadoras"
+                dialogTitle="Filtrar por operadora"
                 values={owners}
                 onChange={setOwners}
                 options={operatorOptions}
@@ -1048,7 +1049,7 @@ function Data() {
           <details>
             <DisclosureTrigger icon={Filter}>Filtros avançados</DisclosureTrigger>
             <Surface padding="sm" className="mt-3">
-              <FilterMultiSelect icon={Users} placeholder="Operadoras" values={owners} onChange={setOwners} options={operatorOptions} />
+              <FilterMultiSelect icon={Users} placeholder="Operadoras" dialogTitle="Filtrar por operadora" values={owners} onChange={setOwners} options={operatorOptions} />
             </Surface>
           </details>
           <FilterBar>

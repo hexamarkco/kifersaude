@@ -28,7 +28,7 @@ export function DashboardSummaryCards({
     : 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5';
 
   return (
-    <div data-panel-animate className={gridClassName}>
+    <div data-panel-animate className={`kds-kpi-grid ${gridClassName}`}>
       <KpiCard
         padding="sm"
         icon={<Users className="h-4 w-4" aria-hidden="true" />}

@@ -1113,16 +1113,15 @@ function Data() {
         </Specimen>
         <Specimen
           title="Indicadores e status"
-          description="Valores com rótulos e contexto; cor nunca é a única informação."
+          wide
+          description="Alinhe títulos, valores e contexto por linha de indicadores. Ícones usam o raio padrão; cor nunca é a única informação."
           source="KpiCard / Badge / OperationalMetricChip / OperationalStatusBadge / OperationalStatusDot"
         >
-          <KpiCard
-            title="Contatos em atendimento"
-            value="24"
-            subtitle="Base ilustrativa de demonstração"
-            trend="8 aguardando retorno"
-            icon={<Users />}
-          />
+          <div className="kds-kpi-grid grid-cols-1 xl:grid-cols-3">
+            <KpiCard title="Vendas" subtitle="Contratos fechados" value="24" trend="80 leads recebidos" icon={<Users />} />
+            <KpiCard title="Valor mensal vendido" subtitle="Contratos do período" value="R$ 62.947,16" trend="Mensalidade registrada" icon={<Users />} />
+            <KpiCard title="Comissão prevista" subtitle="Vendas do período" value="R$ 128.234,12" trend="Sem previsão adicional" icon={<Users />} />
+          </div>
           <div className="ds-row">
             {(
               [

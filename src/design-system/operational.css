@@ -1339,5 +1339,5 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
  .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-card-icon { display: none; }
  .painel-theme.kifer-ds .kds-dashboard-kpi-grid .kds-kpi-value { font-size: clamp(1rem,4.75vw,1.25rem); }
  .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card { padding: var(--space-3); }
- .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card > * + * { margin-top: var(--space-3); }
+ .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card { row-gap: var(--space-3); }
 }

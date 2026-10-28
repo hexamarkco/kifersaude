@@ -1310,6 +1310,32 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* Indicator rows share their height, including wrapped titles and monetary values. */
+.kds-kpi-grid {
+  display: grid;
+  grid-auto-rows: auto;
+  gap: var(--space-3);
+}
+.kds-kpi-grid > .kds-card-kpi {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-4);
+  align-content: start;
+}
+.kds-kpi-grid > .kds-card-kpi > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0;
+}
+.kds-kpi-grid .kds-card-title {
+  min-block-size: 2lh;
+}
+.kds-kpi-grid .kds-card-header {
+  align-self: start;
+}
+.kds-kpi-grid .kds-kpi-trend {
+  align-self: start;
+}
+
 .kds-kpi-value {
   color: var(--text-primary);
   font: var(--type-metric);
@@ -1317,7 +1343,7 @@
 }
 
 .kds-card-icon {
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   background: var(--brand-primary-soft);
   color: var(--brand-primary);
   box-shadow: none;

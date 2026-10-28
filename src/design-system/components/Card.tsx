@@ -85,7 +85,7 @@ export function CrmCard({
   return (
     <Card kind={kind} className={cx('space-y-5', className)} {...props}>
       {(eyebrow || title || subtitle || icon || actions) && (
-        <div className="flex items-start justify-between gap-4">
+        <div className="kds-card-header flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
             {icon && <CardIcon tone={iconTone}>{icon}</CardIcon>}
             <div className="min-w-0">
@@ -112,7 +112,7 @@ export function KpiCard({ value, trend, chart, children, ...props }: KpiCardProp
   return (
     <CrmCard kind="kpi" {...props}>
       {value && <div className="kds-kpi-value">{value}</div>}
-      {trend && <div className="text-sm text-[var(--text-secondary)]">{trend}</div>}
+      {trend && <div className="kds-kpi-trend text-sm text-[var(--text-secondary)]">{trend}</div>}
       {chart && <div className="pt-2">{chart}</div>}
       {children}
     </CrmCard>

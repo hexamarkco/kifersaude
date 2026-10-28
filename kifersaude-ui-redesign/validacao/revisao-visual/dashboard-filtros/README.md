@@ -37,4 +37,4 @@ As capturas de viewport usam as quatro larguras e alturas definidas no manifesto
 
 As telas foram exercitadas com fixture sintética no ambiente local. Nenhum registro real foi alterado e nenhuma comunicação foi enviada. O console também reporta o aviso de ciclo de vida de uma dependência e timeouts da conexão Realtime da fixture; não são erros do painel de filtros.
 
-O período personalizado e o estado de análises/modais são contextos separados e continuam pendentes. Esta revisão não encerra o redesign integral nem a descoberta de interfaces adicionais.
+O período personalizado foi comparado separadamente em [`state--dashboard-periodo`](../dashboard-periodo/README.md). Análises/modais continuam como contexto separado e pendente. Esta revisão não encerra o redesign integral nem a descoberta de interfaces adicionais.

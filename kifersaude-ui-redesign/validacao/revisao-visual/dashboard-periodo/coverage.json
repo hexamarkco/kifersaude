@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-10-28",
+  "module": "Dashboard — período",
+  "route": "/painel/dashboard",
+  "context": "state--dashboard-periodo",
+  "status": "revisado_com_adaptacoes",
+  "references": [
+    "references/desktop/state--dashboard-periodo.png",
+    "references/mobile/state--dashboard-periodo.png"
+  ],
+  "viewport_sizes": [
+    "1920x1080",
+    "768x1024",
+    "390x844",
+    "320x640"
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "checks": {
+    "no_horizontal_overflow": true,
+    "themes_verified_at_all_viewports": true,
+    "desktop_panel": "KDS Dialog ancorado no topo à direita; lista com sete opções reais, incluindo Mês anterior e Todo o período, além das cinco da referência.",
+    "mobile_panel": "KDS Drawer de altura completa, conteúdo rolável e ações fixas; calendário popup contido na largura útil em 390 e 320 px.",
+    "period_application": "Seleção fica em rascunho e só atualiza rota/dashboard ao confirmar Aplicar filtros.",
+    "custom_range": "Etapa separada com DateTimePicker real; intervalo incompleto, inválido ou invertido não pode ser aplicado.",
+    "keyboard": "Escape fecha primeiro o calendário aberto, depois o painel; fechamento do painel restaura o foco ao acionador.",
+    "fixture": "Fixture sintética local; intervalo de demonstração 01/10/2026–28/10/2026; sem escrita real ou comunicação externa.",
+    "browser_console": "A fixture reportou aviso de ciclo de vida legado da dependência e timeout de Realtime; sem erro nas interações testadas."
+  },
+  "screenshots": [
+    { "path": "desktop/period-custom-range.png", "viewport": "1920x1080", "width": 1920, "height": 1080, "theme": "light", "state": "etapa de intervalo personalizado" },
+    { "path": "desktop/period-dark-full.png", "viewport": "1920x1080", "width": 1920, "height": 1493, "theme": "dark", "state": "dashboard completo com opções do período abertas" },
+    { "path": "desktop/period-dark-viewport.png", "viewport": "1920x1080", "width": 1920, "height": 1080, "theme": "dark", "state": "viewport com opções do período abertas" },
+    { "path": "desktop/period-date-picker.png", "viewport": "1920x1080", "width": 1920, "height": 1080, "theme": "light", "state": "calendário popup da data inicial" },
+    { "path": "desktop/period-full.png", "viewport": "1920x1080", "width": 1920, "height": 1493, "theme": "light", "state": "dashboard completo com opções do período abertas" },
+    { "path": "desktop/period-viewport.png", "viewport": "1920x1080", "width": 1920, "height": 1080, "theme": "light", "state": "viewport com opções do período abertas" },
+    { "path": "tablet/period-dark-full.png", "viewport": "768x1024", "width": 768, "height": 2369, "theme": "dark", "state": "dashboard completo com opções do período abertas" },
+    { "path": "tablet/period-dark-viewport.png", "viewport": "768x1024", "width": 768, "height": 1024, "theme": "dark", "state": "viewport com opções do período abertas" },
+    { "path": "tablet/period-full.png", "viewport": "768x1024", "width": 768, "height": 2369, "theme": "light", "state": "dashboard completo com opções do período abertas" },
+    { "path": "tablet/period-viewport.png", "viewport": "768x1024", "width": 768, "height": 1024, "theme": "light", "state": "viewport com opções do período abertas" },
+    { "path": "mobile/period-custom-range.png", "viewport": "390x844", "width": 390, "height": 844, "theme": "light", "state": "Drawer com intervalo personalizado" },
+    { "path": "mobile/period-dark-full.png", "viewport": "390x844", "width": 390, "height": 3108, "theme": "dark", "state": "dashboard completo com Drawer de período aberto" },
+    { "path": "mobile/period-dark-viewport.png", "viewport": "390x844", "width": 390, "height": 844, "theme": "dark", "state": "viewport com Drawer de período aberto" },
+    { "path": "mobile/period-date-picker.png", "viewport": "390x844", "width": 390, "height": 844, "theme": "light", "state": "calendário popup no Drawer personalizado" },
+    { "path": "mobile/period-full.png", "viewport": "390x844", "width": 390, "height": 3108, "theme": "light", "state": "dashboard completo com Drawer de período aberto" },
+    { "path": "mobile/period-viewport.png", "viewport": "390x844", "width": 390, "height": 844, "theme": "light", "state": "viewport com Drawer de período aberto" },
+    { "path": "mobile-320/period-dark-full.png", "viewport": "320x640", "width": 320, "height": 3250, "theme": "dark", "state": "dashboard completo com Drawer de período aberto" },
+    { "path": "mobile-320/period-dark-viewport.png", "viewport": "320x640", "width": 320, "height": 640, "theme": "dark", "state": "viewport com Drawer de período aberto" },
+    { "path": "mobile-320/period-full.png", "viewport": "320x640", "width": 320, "height": 3250, "theme": "light", "state": "dashboard completo com Drawer de período aberto" },
+    { "path": "mobile-320/period-viewport.png", "viewport": "320x640", "width": 320, "height": 640, "theme": "light", "state": "viewport com Drawer de período aberto" }
+  ]
+}

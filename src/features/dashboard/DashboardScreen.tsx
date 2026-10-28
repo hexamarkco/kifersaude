@@ -2183,13 +2183,13 @@ export default function DashboardScreen({
     holders.length > 0 ||
     dependents.length > 0;
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDashboardDateInput(e.target.value);
+  const handleStartDateChange = (value: string) => {
+    const formatted = formatDashboardDateInput(value);
     setCustomStartDate(formatted);
   };
 
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDashboardDateInput(e.target.value);
+  const handleEndDateChange = (value: string) => {
+    const formatted = formatDashboardDateInput(value);
     setCustomEndDate(formatted);
   };
 
@@ -2203,13 +2203,6 @@ export default function DashboardScreen({
       setCustomEndDate("");
     }
   };
-
-  const isCustomStartInvalid = Boolean(
-    customStartDate && !validateDashboardDate(customStartDate),
-  );
-  const isCustomEndInvalid = Boolean(
-    customEndDate && !validateDashboardDate(customEndDate),
-  );
 
   const handleLeadStatusSegmentClick = (label: string) => {
     onNavigateToTab?.("leads", { leadsStatusFilter: [label] });
@@ -2304,8 +2297,6 @@ export default function DashboardScreen({
           onOperatorFilterChange={setDashboardOperatorFilter}
           onContractTypeFilterChange={setDashboardContractTypeFilter}
           onStatusFilterChange={setDashboardStatusFilter}
-          isCustomStartInvalid={isCustomStartInvalid}
-          isCustomEndInvalid={isCustomEndInvalid}
         />
 
         <DashboardAlerts

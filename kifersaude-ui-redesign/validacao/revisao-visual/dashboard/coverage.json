@@ -9,10 +9,10 @@
   ],
   "reviewed_contexts": [
     "page--dashboard",
-    "state--dashboard-filtros"
+    "state--dashboard-filtros",
+    "state--dashboard-periodo"
   ],
   "pending_contexts": [
-    "state--dashboard-periodo",
     "state--dashboard-analises"
   ],
   "visual_review": {

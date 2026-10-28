@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Filter, Layers3, SlidersHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
+import { CalendarDays, ChevronDown, Layers3, SlidersHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
 
 import {
   Badge,
@@ -9,16 +9,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DateTimePicker,
   Drawer,
   DrawerBody,
   DrawerFooter,
   DrawerHeader,
-  Input,
+  Field,
   PageHeader,
   FilterSelect,
+  Radio,
+  Text,
 } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
+import { parseDashboardDateString, validateDashboardDate } from '../shared/dashboardUtils';
 
 type OriginOption = {
   nome: string;
@@ -44,15 +48,25 @@ type DashboardHeaderProps = {
   contractTypeOptions: OwnerOption[];
   statusOptions: OwnerOption[];
   onPeriodFilterChange: (value: DashboardPeriodFilter) => void;
-  onStartDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onEndDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onStartDateChange: (value: string) => void;
+  onEndDateChange: (value: string) => void;
   onOriginFilterChange: (value: string) => void;
   onOwnerFilterChange: (value: string) => void;
   onOperatorFilterChange: (value: string) => void;
   onContractTypeFilterChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
-  isCustomStartInvalid: boolean;
-  isCustomEndInvalid: boolean;
+};
+
+type DashboardPeriodStep = 'options' | 'custom';
+
+const toDatePickerValue = (value: string) => {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
+};
+
+const fromDatePickerValue = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
 };
 
 export function DashboardHeader({
@@ -77,10 +91,13 @@ export function DashboardHeader({
   onOperatorFilterChange,
   onContractTypeFilterChange,
   onStatusFilterChange,
-  isCustomStartInvalid,
-  isCustomEndInvalid,
 }: DashboardHeaderProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [draftPeriod, setDraftPeriod] = useState(periodFilter);
+  const [draftStartDate, setDraftStartDate] = useState(customStartDate);
+  const [draftEndDate, setDraftEndDate] = useState(customEndDate);
+  const [periodStep, setPeriodStep] = useState<DashboardPeriodStep>('options');
   const [isMobileViewport, setIsMobileViewport] = useState(
     () => typeof window !== 'undefined' && window.innerWidth <= 767,
   );
@@ -99,6 +116,34 @@ export function DashboardHeader({
     dashboardStatusFilter,
   ].filter(Boolean).length;
 
+  const periodLabel = DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === periodFilter)?.label ?? 'Período';
+  const startIsValid = validateDashboardDate(draftStartDate);
+  const endIsValid = validateDashboardDate(draftEndDate);
+  const customRangeIsValid = startIsValid
+    && endIsValid
+    && parseDashboardDateString(draftStartDate) <= parseDashboardDateString(draftEndDate);
+  const customRangeIsInverted = startIsValid
+    && endIsValid
+    && parseDashboardDateString(draftStartDate) > parseDashboardDateString(draftEndDate);
+
+  const openPeriodPanel = () => {
+    setDraftPeriod(periodFilter);
+    setDraftStartDate(customStartDate);
+    setDraftEndDate(customEndDate);
+    setPeriodStep(periodFilter === 'personalizado' ? 'custom' : 'options');
+    setPeriodOpen(true);
+  };
+
+  const applyPeriod = () => {
+    if (draftPeriod === 'personalizado') {
+      if (!customRangeIsValid) return;
+      onStartDateChange(draftStartDate);
+      onEndDateChange(draftEndDate);
+    }
+    onPeriodFilterChange(draftPeriod);
+    setPeriodOpen(false);
+  };
+
   const filterTrigger = () => (
     <Button
       type="button"
@@ -114,6 +159,23 @@ export function DashboardHeader({
       <span className="hidden sm:inline">Filtros avançados</span>
       <span className="kds-dashboard-filter-label sm:hidden">Filtros</span>
       {activeFilterCount > 0 && <Badge tone="info" size="sm">{activeFilterCount}</Badge>}
+    </Button>
+  );
+
+  const periodTrigger = (
+    <Button
+      type="button"
+      variant="primary"
+      className="kds-dashboard-period-trigger"
+      aria-label={`Período: ${periodLabel}`}
+      aria-haspopup="dialog"
+      aria-expanded={periodOpen}
+      aria-controls="dashboard-period-filter"
+      onClick={openPeriodPanel}
+    >
+      <CalendarDays aria-hidden="true" />
+      <span className="kds-dashboard-period-trigger-label">{periodLabel}</span>
+      <ChevronDown aria-hidden="true" />
     </Button>
   );
 
@@ -187,98 +249,162 @@ export function DashboardHeader({
     </>
   );
 
-  return (
-    <PageHeader
-      eyebrow="Operação comercial"
-      title="Dashboard"
-      description="Veja o que pede atenção e escolha o próximo passo da operação."
-      data-panel-animate
-      className="border-b border-[var(--border-subtle)] pb-5"
-    >
-      <div className="kds-dashboard-filter-actions flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="w-full sm:w-52">
-            <FilterSelect
-              icon={Filter}
-              value={periodFilter}
-              onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
-              placeholder="Período"
-              includePlaceholderOption={false}
-              neutralValues={['todo-periodo']}
-              options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
-          </div>
+  const periodOptions = (
+    <fieldset className="kds-dashboard-period-options">
+      <legend className="sr-only">Escolha um período</legend>
+      {DASHBOARD_PERIOD_OPTIONS.map((option) => (
+        <Radio
+          key={option.value}
+          name="dashboard-period-filter"
+          value={option.value}
+          checked={draftPeriod === option.value}
+          onChange={() => {
+            setDraftPeriod(option.value);
+            setPeriodStep(option.value === 'personalizado' ? 'custom' : 'options');
+          }}
+          label={option.label}
+          className="kds-dashboard-period-option"
+        />
+      ))}
+    </fieldset>
+  );
 
-          {periodFilter === 'personalizado' && (
-            <div className="flex min-w-0 items-center gap-2">
-              <Input
-                type="text"
-                value={customStartDate}
-                onChange={onStartDateChange}
-                placeholder="De · DD/MM/AAAA"
-                aria-label="Data inicial do período"
-                maxLength={10}
-                className="w-36"
-                invalid={isCustomStartInvalid}
-              />
-              <span className="text-sm text-[var(--text-muted)]">até</span>
-              <Input
-                type="text"
-                value={customEndDate}
-                onChange={onEndDateChange}
-                placeholder="Até · DD/MM/AAAA"
-                aria-label="Data final do período"
-                maxLength={10}
-                className="w-36"
-                invalid={isCustomEndInvalid}
-              />
-            </div>
-          )}
-        </div>
+  const customPeriodFields = (
+    <div className="kds-dashboard-period-custom-fields">
+      <Text className="kds-dashboard-period-help">Defina as datas inicial e final para atualizar o dashboard.</Text>
+      <Field label="De" required description="Data inicial do intervalo.">
+        <DateTimePicker
+          type="date"
+          value={toDatePickerValue(draftStartDate)}
+          onChange={(event) => setDraftStartDate(fromDatePickerValue(event.target.value))}
+          placeholder="Selecionar"
+          aria-label="Data inicial do período"
+        />
+      </Field>
+      <Field
+        label="Até"
+        required
+        description="Data final do intervalo."
+        error={customRangeIsInverted ? 'A data final deve ser igual ou posterior à data inicial.' : undefined}
+      >
+        <DateTimePicker
+          type="date"
+          value={toDatePickerValue(draftEndDate)}
+          onChange={(event) => setDraftEndDate(fromDatePickerValue(event.target.value))}
+          placeholder="Selecionar"
+          aria-label="Data final do período"
+          aria-invalid={customRangeIsInverted}
+        />
+      </Field>
+    </div>
+  );
 
-        {isMobileViewport ? (
-          filterTrigger()
-        ) : (
-          <>
-            {filterTrigger()}
-            <Dialog
-              id="dashboard-advanced-filters"
-              open={filtersOpen}
-              onOpenChange={setFiltersOpen}
-              size="sm"
-              aria-label="Filtros avançados do dashboard"
-              className="kds-dashboard-filter-dialog"
-            >
-              <DialogHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
-                {filterTitleCopy}
-              </DialogHeader>
-              <DialogBody className="kds-dashboard-filter-fields">{filterFieldControls}</DialogBody>
-              <DialogFooter className="kds-dashboard-filter-footer">{filterActions}</DialogFooter>
-            </Dialog>
-          </>
-        )}
-      </div>
-
-      {isMobileViewport && (
-        <Drawer
-          id="dashboard-advanced-filters"
-          open={filtersOpen}
-          onOpenChange={setFiltersOpen}
-          side="right"
-          size="sm"
-          aria-label="Filtros avançados do dashboard"
-          className="kds-dashboard-filter-drawer"
-        >
-          <DrawerHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
-            {filterTitleCopy}
-          </DrawerHeader>
-          <DrawerBody className="kds-dashboard-filter-fields">{filterFieldControls}</DrawerBody>
-          <DrawerFooter className="kds-dashboard-filter-footer">{filterActions}</DrawerFooter>
-        </Drawer>
+  const periodTitle = <DialogTitle>{periodStep === 'custom' ? 'Período personalizado' : 'Período do dashboard'}</DialogTitle>;
+  const periodBody = (
+    periodStep === 'custom' ? customPeriodFields : periodOptions
+  );
+  const periodFooter = (
+    <div className={`kds-dashboard-period-footer${periodStep === 'custom' ? ' kds-dashboard-period-footer-custom' : ''}`}>
+      {periodStep === 'custom' ? (
+        <Button type="button" variant="secondary" onClick={() => setPeriodStep('options')}>Voltar</Button>
+      ) : null}
+      {draftPeriod === 'personalizado' && periodStep === 'options' ? (
+        <Button type="button" variant="primary" onClick={() => setPeriodStep('custom')}>Continuar</Button>
+      ) : (
+        <Button type="button" variant="primary" disabled={periodStep === 'custom' && !customRangeIsValid} onClick={applyPeriod}>
+          Aplicar filtros
+        </Button>
       )}
-    </PageHeader>
+    </div>
+  );
+
+  const advancedFiltersPanel = filtersOpen ? (
+    isMobileViewport ? (
+      <Drawer
+        id="dashboard-advanced-filters"
+        open
+        onOpenChange={setFiltersOpen}
+        side="right"
+        size="sm"
+        aria-label="Filtros avançados do dashboard"
+        className="kds-dashboard-filter-drawer"
+      >
+        <DrawerHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
+          {filterTitleCopy}
+        </DrawerHeader>
+        <DrawerBody className="kds-dashboard-filter-fields">{filterFieldControls}</DrawerBody>
+        <DrawerFooter className="kds-dashboard-filter-footer">{filterActions}</DrawerFooter>
+      </Drawer>
+    ) : (
+      <Dialog
+        id="dashboard-advanced-filters"
+        open
+        onOpenChange={setFiltersOpen}
+        size="sm"
+        aria-label="Filtros avançados do dashboard"
+        className="kds-dashboard-filter-dialog"
+      >
+        <DialogHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
+          {filterTitleCopy}
+        </DialogHeader>
+        <DialogBody className="kds-dashboard-filter-fields">{filterFieldControls}</DialogBody>
+        <DialogFooter className="kds-dashboard-filter-footer">{filterActions}</DialogFooter>
+      </Dialog>
+    )
+  ) : null;
+
+  const periodPanel = periodOpen ? (
+    isMobileViewport ? (
+      <Drawer
+        id="dashboard-period-filter"
+        open
+        onOpenChange={setPeriodOpen}
+        side="right"
+        size="sm"
+        aria-label="Período do dashboard"
+        className="kds-dashboard-period-drawer"
+      >
+        <DrawerHeader onClose={() => setPeriodOpen(false)} className="kds-dashboard-filter-header">
+          {periodTitle}
+        </DrawerHeader>
+        <DrawerBody className="kds-dashboard-period-body">{periodBody}</DrawerBody>
+        <DrawerFooter className="kds-dashboard-period-footer-wrap">{periodFooter}</DrawerFooter>
+      </Drawer>
+    ) : (
+      <Dialog
+        id="dashboard-period-filter"
+        open
+        onOpenChange={setPeriodOpen}
+        size="sm"
+        aria-label="Período do dashboard"
+        className="kds-dashboard-period-dialog"
+      >
+        <DialogHeader onClose={() => setPeriodOpen(false)} className="kds-dashboard-filter-header">
+          {periodTitle}
+        </DialogHeader>
+        <DialogBody className="kds-dashboard-period-body">{periodBody}</DialogBody>
+        <DialogFooter className="kds-dashboard-period-footer-wrap">{periodFooter}</DialogFooter>
+      </Dialog>
+    )
+  ) : null;
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Operação comercial"
+        title="Dashboard"
+        description="Veja o que pede atenção e escolha o próximo passo da operação."
+        actions={(
+          <div className="kds-dashboard-header-actions">
+            {filterTrigger()}
+            {periodTrigger}
+          </div>
+        )}
+        data-panel-animate
+        className="border-b border-[var(--border-subtle)] pb-5"
+      />
+      {advancedFiltersPanel}
+      {periodPanel}
+    </>
   );
 }

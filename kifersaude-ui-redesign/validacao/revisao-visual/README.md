@@ -4,8 +4,8 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 ## Cobertura atual
 
-- **9 de 160 contextos** revisados; 151 permanecem sem comparação concluída.
-- **249 screenshots** nesta nova rodada: Leads, Contratos e Dashboard, incluindo o estado avançado de filtros.
+- **10 de 160 contextos** revisados; 150 permanecem sem comparação concluída.
+- **269 screenshots** nesta nova rodada: Leads, Contratos e Dashboard, incluindo filtros avançados e seleção de período.
 - A descoberta de telas e overlays fora do manifesto continua pendente.
 - O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
 
@@ -13,7 +13,7 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 - [Leads — listagem, Kanban e criação revisados; detalhe e outros overlays pendentes](leads/README.md)
 - [Contratos — listagem, drawer de detalhe e importação em lote revisados com adaptações](contracts/README.md)
-- [Dashboard — página principal e filtros avançados revisados com adaptações; período e análises pendentes](dashboard/README.md)
+- [Dashboard — página principal, filtros avançados e período revisados com adaptações; análises pendentes](dashboard/README.md)
 
 ## Critério
 

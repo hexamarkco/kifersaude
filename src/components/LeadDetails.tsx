@@ -32,6 +32,12 @@ import {
   FilterSelect,
   PageHeader,
   Tabs,
+  Avatar,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
+  RecordActions,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -42,16 +48,17 @@ type LeadWithRelations = Lead & {
 
 type LeadDetailsProps = {
   lead: LeadWithRelations;
-  presentation?: 'dialog' | 'page';
+  presentation?: 'dialog' | 'drawer' | 'page';
   onScheduleReminder?: (lead: LeadWithRelations) => void;
   onConvert?: (lead: LeadWithRelations) => void;
   onClose: () => void;
   onUpdate: () => void;
   onEdit: (lead: LeadWithRelations) => void;
   onDelete?: (lead: LeadWithRelations) => void;
+  onOpenFullPage?: () => void;
 };
 
-export default function LeadDetails({ lead, presentation = 'dialog', onClose, onUpdate, onEdit, onDelete, onScheduleReminder, onConvert }: LeadDetailsProps) {
+export default function LeadDetails({ lead, presentation = 'dialog', onClose, onUpdate, onEdit, onDelete, onOpenFullPage, onScheduleReminder, onConvert }: LeadDetailsProps) {
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const canEditLead = getRoleModulePermission(role, 'leads').can_edit;
@@ -189,21 +196,28 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
   };
 
   const favorite = <LeadFavoriteToggle leadId={lead.id} favorito={favorito} onToggled={(next) => { setFavorito(next); onUpdate(); }} />;
-  const actions = <>
+  const deleteActions = canEditLead && onDelete
+    ? [{ label: 'Excluir lead', icon: Trash2, onClick: () => onDelete(lead), destructive: true }]
+    : [];
+  const drawerActions = [
+    ...(onOpenFullPage ? [{ label: 'Abrir ficha completa', icon: FileText, onClick: onOpenFullPage }] : []),
+    ...deleteActions,
+  ];
+  const actions = <div className="kds-lead-detail-actions">
     {canEditLead && <Button onClick={() => onEdit(lead)}><Pencil className="kds-control-icon" aria-hidden="true" />Editar lead</Button>}
-    {canEditLead && onDelete && <Button variant="danger" onClick={() => onDelete(lead)}><Trash2 className="kds-control-icon" aria-hidden="true" />Excluir</Button>}
-  </>;
+    {deleteActions.length > 0 && <RecordActions actions={deleteActions} visibleCount={0} label="Ações do lead" />}
+  </div>;
   const contact = <Surface className="kds-detail-contact">
     <SectionHeader as="h2" title="Dados do contato" />
     <dl className="kds-detail-data-grid kds-detail-data-grid-compact">
       {[['Nome', lead.nome_completo], ['Telefone', lead.telefone], ['E-mail', lead.email], ['Origem', lead.origem], ['Tipo', lead.tipo_contratacao], ['Responsável', lead.responsavel_label ?? lead.responsavel], ['Cidade', lead.cidade], ['Próximo retorno', lead.proximo_retorno ? formatDateTimeFullBR(lead.proximo_retorno) : null]].map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}
     </dl>
   </Surface>;
-  const timeline = (        <section className="kds-detail-timeline" aria-labelledby="lead-timeline-title">
+  const renderTimeline = (title = 'Linha do tempo') => (        <section className="kds-detail-timeline" aria-labelledby="lead-timeline-title">
           <SectionHeader
             as="h3"
             id="lead-timeline-title"
-            title="Linha do tempo"
+            title={title}
             className="mb-4"
             action={<History className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />}
           />
@@ -399,11 +413,11 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
     <section className="kds-detail-workspace">
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de leads</Button>
       <PageHeader eyebrow="Relacionamento" title={lead.nome_completo} identity={favorite} status={<Badge>{lead.status_nome ?? lead.status ?? 'Sem status'}</Badge>} description={`Responsável: ${lead.responsavel_label ?? lead.responsavel ?? 'Não atribuído'}`} actions={actions} />
-      <Tabs ariaLabel="Seções do lead" items={[{id:'overview',label:'Visão geral'},{id:'history',label:'Histórico'},{id:'followups',label:'Follow-ups'},{id:'data',label:'Dados do lead'}]} value={activeSection} onChange={setActiveSection} />
+      <Tabs ariaLabel="Seções do lead" listClassName="kds-lead-detail-tabs-list" triggerClassName="kds-lead-detail-tab" items={[{id:'overview',label:'Visão geral'},{id:'history',label:'Histórico'},{id:'followups',label:'Follow-ups'},{id:'data',label:'Dados do lead'}]} value={activeSection} onChange={setActiveSection} />
       {activeSection === 'overview' && <>
         <div className="kds-detail-overview-grid">
           {contact}
-          <Surface>{timeline}</Surface>
+          <Surface>{renderTimeline()}</Surface>
           <Surface className="kds-detail-quick-actions">
             <SectionHeader as="h2" title="Ações rápidas" />
             {canEditLead && onScheduleReminder && <Button onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Agendar follow-up</Button>}
@@ -414,7 +428,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
         </div>
         {interaction}
       </>}
-      {activeSection === 'history' && <><Surface>{timeline}</Surface>{interaction}</>}
+      {activeSection === 'history' && <><Surface>{renderTimeline()}</Surface>{interaction}</>}
       {activeSection === 'data' && <Surface><SectionHeader as="h2" title="Dados do lead" /><dl className="kds-detail-data-grid">{leadData.map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}</dl></Surface>}
       {activeSection === 'followups' && <Surface className="kds-detail-followups"><SectionHeader as="h2" title="Follow-ups" action={canEditLead && onScheduleReminder ? <Button onClick={() => onScheduleReminder(lead)}>Agendar follow-up</Button> : undefined} />
         {loading ? <LoadingState label="Carregando follow-ups" /> : timelineLoadError ? <Alert tone="danger">Não foi possível carregar os follow-ups. Consulte novamente o histórico.</Alert> : reminders.length === 0 ? <EmptyState title="Nenhum follow-up registrado" description="Agende o próximo contato para acompanhar este lead." /> : reminders.map(reminder => <Surface key={reminder.id} variant="muted"><div className="kds-detail-reminder-heading"><Text>{reminder.titulo}</Text><Badge tone={reminder.lido ? 'success' : 'warning'}>{reminder.lido ? 'Concluído' : 'Pendente'}</Badge></div><Text>{reminder.descricao}</Text><time dateTime={reminder.data_lembrete}>{formatDateTimeFullBR(reminder.data_lembrete)}</time></Surface>)}
@@ -422,8 +436,58 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
     </section>
   );
 
+  if (presentation === 'drawer') return (
+    <Drawer
+      open
+      onOpenChange={(open) => !open && onClose()}
+      side="right"
+      size="md"
+      aria-label="Detalhes do lead"
+      className="kds-lead-details-drawer"
+    >
+      <DrawerHeader onClose={onClose}>
+        <div className="min-w-0">
+          <DialogTitle>Detalhes do lead</DialogTitle>
+          <DialogDescription>Visualização e ações do registro</DialogDescription>
+        </div>
+      </DrawerHeader>
+      <DrawerBody className="kds-lead-details-drawer-body">
+        <div className="kds-lead-details-drawer-content">
+          <Surface className="kds-lead-details-drawer-summary">
+            <div className="kds-lead-details-drawer-identity">
+              <Avatar name={lead.nome_completo} size="sm" tone="brand" />
+              <div className="kds-lead-details-drawer-copy">
+                <Text className="font-semibold text-[var(--text-primary)]">{lead.nome_completo}</Text>
+                <Badge>{lead.status_nome ?? lead.status ?? 'Sem status'}</Badge>
+              </div>
+              {drawerActions.length > 0 && <RecordActions actions={drawerActions} visibleCount={0} label="Ações do lead" />}
+            </div>
+            <dl className="kds-lead-details-drawer-fields">
+              {[
+                ['Telefone', lead.telefone],
+                ['E-mail', lead.email],
+                ['Origem', lead.origem],
+                ['Responsável', lead.responsavel_label ?? lead.responsavel],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value || 'Não informado'}</dd>
+                </div>
+              ))}
+            </dl>
+          </Surface>
+          {renderTimeline('Histórico de interações')}
+        </div>
+      </DrawerBody>
+      <DrawerFooter className="kds-lead-details-drawer-footer">
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        {canEditLead && <Button onClick={() => onEdit(lead)}><Pencil className="kds-control-icon" aria-hidden="true" />Editar lead</Button>}
+      </DrawerFooter>
+    </Drawer>
+  );
+
   return <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
     <DialogHeader onClose={onClose}><div><DialogTitle className="flex items-center gap-2">{favorite}{lead.nome_completo}</DialogTitle><DialogDescription>Histórico de interações, status e lembretes.</DialogDescription></div></DialogHeader>
-    <DialogBody><div className="kds-detail-workspace"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<Surface>{timeline}</Surface>{interaction}</div></DialogBody>
+    <DialogBody><div className="kds-detail-workspace"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<Surface>{renderTimeline()}</Surface>{interaction}</div></DialogBody>
   </Dialog>;
 }

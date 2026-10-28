@@ -33,4 +33,4 @@ A suíte completa passou **1.724/1.724 testes em 327 arquivos** com `--testTimeo
 - O Kanban mantém preferências de WIP, arrastar cartões e callbacks existentes de status, detalhe e conversão.
 - O formulário conserva campos, validação, automações, data e persistência existentes. A barra sticky só se apresenta perto do final do conteúdo, evitando o recorte observado na primeira revisão mobile.
 - Dados para screenshots usam nomes e e-mails fictícios de `exemplo.invalid`.
-- **Pendente:** comparação visual do detalhe de lead, dos modais de lembrete/exclusão/conversão e dos estados dessas telas; varredura de rotas e interfaces de Leads que não constem do manifesto. Portanto, estes itens permanecem abertos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).
+- **Pendente:** comparação visual dos modais de edição, lembrete/exclusão/conversão e dos estados dessas telas; varredura de rotas e interfaces de Leads que não constem do manifesto. A ficha completa e o drawer foram comparados separadamente em [revisão visual — detalhe de Lead](../lead-detail/README.md). Os demais itens permanecem abertos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).

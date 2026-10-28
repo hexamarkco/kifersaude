@@ -26,6 +26,12 @@ export function RecordActions({ actions, visibleCount = 1, label = 'Ações do r
   const menuRef = useRef<HTMLDivElement>(null);
   const quick = actions.slice(0, visibleCount);
   const more = actions.slice(visibleCount);
+  const normalizedLabel = label.toLocaleLowerCase('pt-BR');
+  const moreActionsLabel = normalizedLabel === 'ações'
+    ? 'Mais ações'
+    : normalizedLabel.startsWith('ações ')
+      ? `Mais ${normalizedLabel}`
+      : `Mais ações do ${normalizedLabel}`;
   useEffect(() => {
     if (!open) return;
     const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus());
@@ -41,7 +47,7 @@ export function RecordActions({ actions, visibleCount = 1, label = 'Ações do r
       {more.length > 0 && (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger>
-            <IconButton ref={triggerRef} size="sm" variant="secondary" aria-label={`Mais ${label.toLocaleLowerCase('pt-BR')}`} aria-haspopup="menu" aria-expanded={open} onKeyDown={(event) => { if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); } }}>
+            <IconButton ref={triggerRef} size="sm" variant="secondary" aria-label={moreActionsLabel} aria-haspopup="menu" aria-expanded={open} onKeyDown={(event) => { if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); } }}>
               <MoreHorizontal aria-hidden="true" />
             </IconButton>
           </PopoverTrigger>

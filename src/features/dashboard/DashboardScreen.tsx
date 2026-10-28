@@ -2444,6 +2444,7 @@ export default function DashboardScreen({
 
         {selectedLeadWithRelations && (
           <LeadDetails
+            presentation="drawer"
             lead={selectedLeadWithRelations}
             onClose={() => setSelectedLead(null)}
             onUpdate={loadData}

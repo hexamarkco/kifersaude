@@ -149,11 +149,17 @@ export default function LeadsManager({
   const [showForm, setShowForm] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadDetailsPresentation, setLeadDetailsPresentation] = useState<'drawer' | 'page'>('drawer');
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [reminderLead, setReminderLead] = useState<Lead | null>(null);
   const [reminderPromptMessage, setReminderPromptMessage] = useState<
     string | undefined
   >(undefined);
+  const openLeadDetails = (lead: Lead) => {
+    setLeadDetailsPresentation('drawer');
+    setSelectedLead(lead);
+  };
+
   const openReminderScheduler = (lead: Lead, promptMessage?: string) => {
     setReminderLead(lead);
     setReminderPromptMessage(promptMessage);
@@ -1493,7 +1499,7 @@ export default function LeadsManager({
         ref={leadsRootRef}
         className="kds-leads-page panel-dashboard-immersive panel-page-shell space-y-5"
       >
-        {!selectedLead && <>
+        {(!selectedLead || leadDetailsPresentation === 'drawer') && <>
         <ObserverBanner />
         <LeadsHeader
           viewMode={viewMode}
@@ -1951,7 +1957,7 @@ export default function LeadsManager({
                               className="mt-0.5"
                               onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
                             />
-                            <ActionSurface variant="plain" padding="none" type="button" onClick={() => setSelectedLead(lead)} className="kds-lead-identity">
+                            <ActionSurface variant="plain" padding="none" type="button" onClick={() => openLeadDetails(lead)} className="kds-lead-identity">
                               <Avatar name={lead.nome_completo} tone="brand" size="sm" className="kds-lead-avatar" />
                               <span className="min-w-0"><span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
                             </ActionSurface>
@@ -1978,7 +1984,7 @@ export default function LeadsManager({
                         <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
                           <RecordActions label="Ações do lead" actions={[
-                            { label: 'Ver detalhes do lead', icon: Contact, onClick: () => setSelectedLead(lead) },
+                            { label: 'Ver detalhes do lead', icon: Contact, onClick: () => openLeadDetails(lead) },
                             ...(canEditLeads ? [
                               { label: 'Agendar lembrete', icon: Bell, onClick: () => openReminderScheduler(lead) },
                               { label: 'Converter em contrato', icon: FileText, onClick: () => handleConvertToContract(lead) },
@@ -2003,11 +2009,11 @@ export default function LeadsManager({
                   hasContract={leadContractIds.has(lead.id)}
                   whatsappHref={getWhatsappLink(lead.telefone) || undefined}
                   onSelect={() => toggleLeadSelection(lead.id)}
-                  onOpen={() => setSelectedLead(lead)}
+                  onOpen={() => openLeadDetails(lead)}
                   onFavoriteChange={(next) => setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, favorito: next } : item))}
                   status={canEditLeads ? <StatusDropdown currentStatus={lead.status ?? ''} leadId={lead.id} onStatusChange={handleStatusChange} disabled={isBulkUpdating} statusOptions={activeLeadStatuses} /> : <OperationalStatusBadge statusColor={getStatusColor(lead.status)}>{lead.status ?? 'Sem status'}</OperationalStatusBadge>}
                   actions={[
-                    { label: canEditLeads ? 'Ver e editar lead' : 'Ver detalhes do lead', icon: MessageCircle, onClick: () => setSelectedLead(lead) },
+                    { label: canEditLeads ? 'Ver e editar lead' : 'Ver detalhes do lead', icon: MessageCircle, onClick: () => openLeadDetails(lead) },
                     ...(lead.email ? [{ label: 'Enviar e-mail', icon: Mail, onClick: () => { void handleEmailContact(lead); } }] : []),
                     ...(canEditLeads ? [
                       { label: 'Agendar lembrete', icon: Bell, onClick: () => openReminderScheduler(lead) },
@@ -2045,12 +2051,13 @@ export default function LeadsManager({
         </>}
         {selectedLead && (
           <LeadDetails
-            presentation="page"
+            presentation={leadDetailsPresentation}
             onScheduleReminder={openReminderScheduler}
             onConvert={handleConvertToContract}
             lead={selectedLead}
             onClose={() => setSelectedLead(null)}
             onUpdate={loadLeads}
+            onOpenFullPage={() => setLeadDetailsPresentation('page')}
             onEdit={(lead) => {
               setSelectedLead(null);
               setEditingLead(lead);

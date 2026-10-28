@@ -17,6 +17,7 @@ test('keeps quick actions visible and supports keyboard navigation, disabled act
     const quick = view.container.querySelector<HTMLButtonElement>('[aria-label="Abrir"]');
     const trigger = view.container.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]');
     assert.ok(quick); assert.ok(trigger);
+    assert.equal(trigger.getAttribute('aria-label'), 'Mais ações do registro');
     act(() => quick.click()); assert.equal(opened, 1);
     act(() => trigger.click());
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 35)); });

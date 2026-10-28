@@ -758,9 +758,15 @@
         "references/desktop/extra--leads-detalhe-pagina.png",
         "references/mobile/extra--leads-detalhe-pagina.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/lead-detail/README.md",
+        "validacao/revisao-visual/lead-detail/coverage.json"
+      ],
+      "notes": [
+        "Comparado com as referências desktop e mobile em 1920, 768, 390 e 320 px, nos temas claro e escuro; visão geral, histórico, follow-ups e dados do lead foram registrados.",
+        "Ficha completa preserva os dados, permissões e ações reais. A captura usa contato sintético e não realiza gravações nem exclusões."
+      ]
     },
     {
       "id": "extra--leads-edicao-pagina",
@@ -1147,9 +1153,15 @@
         "references/desktop/state--leads-detalhes.png",
         "references/mobile/state--leads-detalhes.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/lead-detail/README.md",
+        "validacao/revisao-visual/lead-detail/coverage.json"
+      ],
+      "notes": [
+        "A lista mantém o contexto enquanto o detalhe abre no drawer à direita, como na referência; o menu contextual permite abrir a ficha completa.",
+        "Drawer e menu comparados em tema claro e escuro em 1920, 768, 390 e 320 px; sem overflow horizontal e sem operações destrutivas."
+      ]
     },
     {
       "id": "state--leads-agendar",
@@ -2531,8 +2543,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 20,
-    "remaining_manifest_contexts": 140,
+    "reviewed_contexts": 22,
+    "remaining_manifest_contexts": 138,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

@@ -1330,13 +1330,36 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-detail-data-grid dd { font: var(--type-body-sm); color: var(--text-primary); overflow-wrap: anywhere; }
 .kds-detail-reminder-heading, .kds-detail-dialog-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .kds-detail-interactions > .kds-section-header { margin-bottom: var(--space-4); }
+.kds-lead-detail-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; max-width: 100%; }
+.kds-lead-details-drawer { display: flex; flex-direction: column; }
+.kds-lead-details-drawer-body { padding: 0; }
+.kds-lead-details-drawer-content { display: grid; gap: var(--space-4); padding: var(--space-4); }
+.kds-lead-details-drawer-footer { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.kds-lead-details-drawer-summary { display: grid; gap: var(--space-4); }
+.kds-lead-details-drawer-identity { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.kds-lead-details-drawer-copy { display: grid; justify-items: start; gap: var(--space-1); flex: 1; min-width: 0; }
+.kds-lead-details-drawer-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); margin: 0; border-top: var(--border-width) solid var(--border-subtle); padding-top: var(--space-4); }
+.kds-lead-details-drawer-fields dt { margin-bottom: var(--space-1); color: var(--text-muted); font: var(--type-caption); }
+.kds-lead-details-drawer-fields dd { min-width: 0; margin: 0; color: var(--text-primary); font: var(--type-body-sm); font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
+.kds-lead-details-drawer-footer > .kds-button { min-width: 0; }
 @media(max-width: 1199px) { .kds-detail-overview-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .kds-detail-quick-actions { grid-column: 1 / -1; } }
-@media(max-width: 767px) { .kds-detail-overview-grid, .kds-detail-data-grid { grid-template-columns: minmax(0,1fr); } .kds-detail-workspace .kds-tabs-list { overflow-x: auto; flex-wrap: nowrap; } .kds-detail-workspace .kds-tabs-trigger { white-space: nowrap; } }
+@media(max-width: 767px) {
+  .kds-detail-overview-grid, .kds-detail-data-grid { grid-template-columns: minmax(0,1fr); }
+  .kds-lead-detail-tabs-list { max-width: 100%; gap: var(--space-3); overflow-x: auto; overscroll-behavior-x: contain; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .kds-lead-detail-tabs-list > .kds-lead-detail-tab { flex: 0 0 auto; white-space: nowrap; }
+  .kds-lead-detail-actions { width: 100%; justify-content: flex-end; }
+  .kds-page-actions > .kds-lead-detail-actions { flex: 1 1 100%; }
+  .kds-lead-detail-actions > .kds-button { flex: 1 1 auto; min-width: 0; }
+}
+@media(max-width: 359px) {
+  .kds-lead-detail-tabs-list { gap: var(--space-1-5); }
+  .kds-lead-detail-tabs-list > .kds-lead-detail-tab { padding-inline: var(--space-2); }
+}
 
 .kds-detail-data-grid-compact { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .kds-detail-timeline > .space-y-3 { border-left: var(--border-width) solid var(--brand-primary-border); padding-left: var(--space-3); }
 .kds-detail-timeline > .space-y-3 > .kds-surface { border: 0; border-radius: 0; background: transparent; padding: var(--space-2) 0; }
-@media(max-width: 479px) { .kds-detail-data-grid-compact { grid-template-columns: minmax(0,1fr); } }
+@media(max-width: 359px) { .kds-detail-data-grid-compact { grid-template-columns: minmax(0,1fr); } }
 
 /* The inbox is an operational workspace; all communication controls remain real. */
 .painel-theme.kifer-ds .whatsapp-inbox-shell { padding: 0 !important; }

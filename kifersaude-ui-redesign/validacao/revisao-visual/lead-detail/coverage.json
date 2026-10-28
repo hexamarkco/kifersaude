@@ -1,0 +1,189 @@
+{
+  "created_at": "2026-10-28",
+  "contexts": [
+    "extra--leads-detalhe-pagina",
+    "state--leads-detalhes"
+  ],
+  "references": {
+    "extra--leads-detalhe-pagina": [
+      "../../../references/desktop/extra--leads-detalhe-pagina.png",
+      "../../../references/mobile/extra--leads-detalhe-pagina.png"
+    ],
+    "state--leads-detalhes": [
+      "../../../references/desktop/state--leads-detalhes.png",
+      "../../../references/mobile/state--leads-detalhes.png"
+    ]
+  },
+  "themes": [
+    "claro",
+    "escuro"
+  ],
+  "viewports": [
+    {
+      "height": 1080,
+      "width": 1920,
+      "name": "desktop"
+    },
+    {
+      "height": 1024,
+      "width": 768,
+      "name": "tablet"
+    },
+    {
+      "height": 844,
+      "width": 390,
+      "name": "mobile"
+    },
+    {
+      "height": 640,
+      "width": 320,
+      "name": "mobile-320"
+    }
+  ],
+  "screenshot_count": 53,
+  "screenshots": [
+    "desktop/lead-detail-dark-full.png",
+    "desktop/lead-detail-dark-viewport.png",
+    "desktop/lead-detail-light-full.png",
+    "desktop/lead-detail-light-viewport.png",
+    "desktop/lead-drawer-dark-viewport.png",
+    "desktop/lead-drawer-light-viewport.png",
+    "mobile-320/lead-detail-dark-full.png",
+    "mobile-320/lead-detail-dark-viewport.png",
+    "mobile-320/lead-detail-light-full.png",
+    "mobile-320/lead-detail-light-viewport.png",
+    "mobile-320/lead-drawer-dark-viewport.png",
+    "mobile-320/lead-drawer-light-viewport.png",
+    "mobile/lead-detail-dark-full.png",
+    "mobile/lead-detail-dark-viewport.png",
+    "mobile/lead-detail-light-full.png",
+    "mobile/lead-detail-light-viewport.png",
+    "mobile/lead-drawer-dark-viewport.png",
+    "mobile/lead-drawer-light-viewport.png",
+    "states/lead-drawer-actions-dark-desktop.png",
+    "states/lead-drawer-actions-light-desktop.png",
+    "states/lead-drawer-actions-light-mobile-320.png",
+    "states/lead-drawer-dark-320-scroll-bottom.png",
+    "states/lead-drawer-light-320-scroll-bottom.png",
+    "states/page-tab-follow-ups-dark-desktop.png",
+    "states/page-tab-follow-ups-dark-mobile-320.png",
+    "states/page-tab-follow-ups-dark-mobile.png",
+    "states/page-tab-follow-ups-light-desktop.png",
+    "states/page-tab-follow-ups-light-mobile-320.png",
+    "states/page-tab-follow-ups-light-mobile.png",
+    "states/page-tab-history-dark-desktop.png",
+    "states/page-tab-history-dark-mobile-320.png",
+    "states/page-tab-history-dark-mobile.png",
+    "states/page-tab-history-light-desktop.png",
+    "states/page-tab-history-light-mobile-320.png",
+    "states/page-tab-history-light-mobile.png",
+    "states/page-tab-lead-data-dark-desktop.png",
+    "states/page-tab-lead-data-dark-mobile-320.png",
+    "states/page-tab-lead-data-dark-mobile.png",
+    "states/page-tab-lead-data-light-desktop.png",
+    "states/page-tab-lead-data-light-mobile-320.png",
+    "states/page-tab-lead-data-light-mobile.png",
+    "states/page-tab-overview-dark-desktop.png",
+    "states/page-tab-overview-dark-mobile-320.png",
+    "states/page-tab-overview-dark-mobile.png",
+    "states/page-tab-overview-light-desktop.png",
+    "states/page-tab-overview-light-mobile-320.png",
+    "states/page-tab-overview-light-mobile.png",
+    "tablet/lead-detail-dark-full.png",
+    "tablet/lead-detail-dark-viewport.png",
+    "tablet/lead-detail-light-full.png",
+    "tablet/lead-detail-light-viewport.png",
+    "tablet/lead-drawer-dark-viewport.png",
+    "tablet/lead-drawer-light-viewport.png"
+  ],
+  "verification": {
+    "full_page_and_viewport": true,
+    "detail_tabs": [
+      "Visão geral",
+      "Histórico",
+      "Follow-ups",
+      "Dados do lead"
+    ],
+    "drawer_opened_over_lead_list": true,
+    "list_visible_behind_drawer": true,
+    "open_full_page_action": true,
+    "drawer_menu_and_internal_scroll_captured": true,
+    "horizontal_overflow": false,
+    "fixture": "Contato Demonstração 01 (dados sintéticos locais)",
+    "destructive_or_external_actions": false,
+    "responsive_measurements": [
+      {
+        "bodyClientHeight": 910,
+        "layoutWidth": 1920,
+        "documentScrollWidth": 1910,
+        "drawerWidth": 544,
+        "bodyScrollHeight": 910,
+        "viewport": "1920x1080",
+        "theme": "claro"
+      },
+      {
+        "bodyClientHeight": 854,
+        "layoutWidth": 768,
+        "documentScrollWidth": 758,
+        "drawerWidth": 544,
+        "bodyScrollHeight": 854,
+        "viewport": "768x1024",
+        "theme": "claro"
+      },
+      {
+        "bodyClientHeight": 670,
+        "layoutWidth": 390,
+        "documentScrollWidth": 380,
+        "drawerWidth": 380,
+        "bodyScrollHeight": 712,
+        "viewport": "390x844",
+        "theme": "claro"
+      },
+      {
+        "bodyClientHeight": 466,
+        "layoutWidth": 320,
+        "documentScrollWidth": 310,
+        "drawerWidth": 310,
+        "bodyScrollHeight": 822,
+        "viewport": "320x640",
+        "theme": "claro"
+      },
+      {
+        "bodyClientHeight": 910,
+        "layoutWidth": 1920,
+        "documentScrollWidth": 1910,
+        "drawerWidth": 544,
+        "bodyScrollHeight": 910,
+        "viewport": "1920x1080",
+        "theme": "escuro"
+      },
+      {
+        "bodyClientHeight": 854,
+        "layoutWidth": 768,
+        "documentScrollWidth": 758,
+        "drawerWidth": 544,
+        "bodyScrollHeight": 854,
+        "viewport": "768x1024",
+        "theme": "escuro"
+      },
+      {
+        "bodyClientHeight": 670,
+        "layoutWidth": 390,
+        "documentScrollWidth": 380,
+        "drawerWidth": 380,
+        "bodyScrollHeight": 712,
+        "viewport": "390x844",
+        "theme": "escuro"
+      },
+      {
+        "bodyClientHeight": 466,
+        "layoutWidth": 320,
+        "documentScrollWidth": 310,
+        "drawerWidth": 310,
+        "bodyScrollHeight": 822,
+        "viewport": "320x640",
+        "theme": "escuro"
+      }
+    ]
+  }
+}

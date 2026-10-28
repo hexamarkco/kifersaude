@@ -145,7 +145,7 @@ export default function LeadOriginsManager() {
       <SettingsCatalogList
         title="Origens dos leads" description="Defina os canais de entrada e quais deles podem ser vistos por observadores."
         items={leadOrigins} getId={(origin) => origin.id} getSearchText={(origin) => origin.nome}
-        initialSortKey="name" gridClassName="md:grid-cols-[minmax(0,1fr)_6rem_9rem_5rem]"
+        initialSortKey="name" gridClassName="md:grid-cols-[minmax(15rem,2fr)_minmax(8rem,0.9fr)_minmax(9rem,1fr)_5rem]"
         columns={[
           { key: 'name', label: 'Origem', getValue: (origin) => origin.nome },
           { key: 'active', label: 'Disponível', getValue: (origin) => Number(origin.ativo) },
@@ -153,6 +153,7 @@ export default function LeadOriginsManager() {
           { key: 'actions', label: 'Ações' },
         ]}
         action={<Button size="sm" onClick={() => setIsCreateModalOpen(true)} disabled={saving}><Plus className="kds-control-icon" aria-hidden="true" />Adicionar origem</Button>}
+        hideSectionTitle
         emptyTitle="Nenhuma origem cadastrada" emptyDescription="Adicione uma origem para identificar de onde os leads chegam."
         renderItem={(origin) => {
           const isBusy = busyId === origin.id;

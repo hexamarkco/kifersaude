@@ -1,9 +1,9 @@
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
-import { Alert, Badge, PageHeader, Tabs, type TabItem } from "../../design-system";
+import { Alert, PageHeader, Tabs, type TabItem } from "../../design-system";
 import AiConfigScreen from "./ai/AiConfigScreen";
 import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
 import FormsScreen from "./forms/FormsScreen";
@@ -54,26 +54,43 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const section = query.get('section');
   const leadTab = query.get('leadTab');
   const contractTab = query.get('contractTab');
+  const leadManager = LEAD_CONFIG_MANAGERS.find(item => `manager:${item.category}` === leadTab);
+  const contractManager = CONTRACT_CONFIG_MANAGERS.find(item => item.category === (contractTab ?? 'contract_status'));
   const systemTitle = section === 'access' ? 'Perfis e acessos'
-    : section === 'leads' ? (leadTab === 'origins' ? 'Origens dos leads' : LEAD_CONFIG_MANAGERS.find(item => `manager:${item.category}` === leadTab)?.title ?? 'Configurações de leads')
-    : section === 'contracts' ? (CONTRACT_CONFIG_MANAGERS.find(item => item.category === contractTab)?.title ?? 'Configurações de contratos')
+    : section === 'leads' ? (leadTab === 'origins' ? 'Origens dos leads' : leadManager?.title ?? 'Etapas do funil')
+    : section === 'contracts' ? (contractManager?.title ?? 'Configurações de contratos')
     : 'Configurações gerais';
   const title = area === 'automation' ? 'Automações, integrações e IA'
     : activeAllowedTab === 'users' ? 'Usuários e permissões'
     : activeAllowedTab === 'links' ? 'Links públicos'
     : activeAllowedTab === 'forms' ? 'Formulários de captação' : systemTitle;
+  const description = area === 'automation'
+    ? activeAllowedTab === 'integrations'
+      ? 'Conecte e acompanhe os serviços usados pelo CRM.'
+      : activeAllowedTab === 'ai'
+        ? 'Configure os recursos de inteligência artificial disponíveis para a equipe.'
+        : 'Organize os atendimentos automáticos e as regras que movimentam o CRM.'
+    : activeAllowedTab === 'users'
+      ? 'Gerencie as contas que podem acessar a operação.'
+      : activeAllowedTab === 'links'
+        ? 'Organize os links públicos usados pela equipe e pelos clientes.'
+        : activeAllowedTab === 'forms'
+          ? 'Configure os formulários públicos que recebem novos contatos.'
+          : section === 'access'
+            ? 'Controle quais áreas do CRM ficam disponíveis para cada perfil.'
+            : section === 'leads'
+              ? leadTab === 'origins'
+                ? 'Defina os canais de entrada e a visibilidade das origens para observadores.'
+                : leadManager?.description ?? 'Organize as etapas e os cadastros usados no acompanhamento de leads.'
+              : section === 'contracts'
+                ? contractManager?.description ?? 'Organize as opções usadas no cadastro de contratos.'
+                : 'Defina como datas, sessões e notificações se comportam no CRM.';
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
       <PageHeader
         eyebrow="Administração"
         title={title}
-        description={area === "automation" ? "Organize os atendimentos automáticos, conecte serviços e configure a inteligência artificial." : "Ajuste o sistema, os cadastros e os acessos da equipe."}
-        actions={
-          <Badge tone="gold">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            {allowedTabs.length} áreas disponíveis
-          </Badge>
-        }
+        description={description}
       >
         <Tabs
           items={allowedTabs}

@@ -150,3 +150,14 @@ test('listas de cadastro filtram por nome sem acentos e ordenam sem gravar a ord
     assert.ok(view.container.textContent?.includes('Nenhum item encontrado'));
   } finally { view.unmount(); }
 });
+
+test('listas embutidas mantêm a ação e a superfície sem repetir o título da página', () => {
+  reset();
+  mocks.options = { contract_modalidade: [{ id: 'option', category: 'contract_modalidade', label: 'Modalidade', value: 'modalidade', ordem: 1, ativo: true, created_at: '', updated_at: '' }] };
+  const view = render(<ConfigOptionManager category="contract_modalidade" title="Modalidades" />);
+  try {
+    assert.ok(Array.from(view.container.querySelectorAll('button')).some((item) => item.textContent?.includes('Adicionar opção')));
+    assert.equal(view.container.querySelector('h3'), null);
+    assert.ok(view.container.querySelector('.kds-surface'));
+  } finally { view.unmount(); }
+});

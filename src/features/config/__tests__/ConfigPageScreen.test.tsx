@@ -66,6 +66,22 @@ test('cadastros e usuários permanecem na área de configurações', () => {
   } finally { view.unmount(); }
 });
 
+test('configuração de leads mostra o título da seção ativa sem repetir o cabeçalho interno', () => {
+  const view = renderAt('/painel/config?tab=system&section=leads', ['config-system']);
+  try {
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Etapas do funil');
+    assert.ok(view.container.textContent?.includes('Organize as etapas e os cadastros usados no acompanhamento de leads.'));
+  } finally { view.unmount(); }
+});
+
+test('configuração de origens explica o uso da lista na descrição da página', () => {
+  const view = renderAt('/painel/config?tab=system&section=leads&leadTab=origins', ['config-system']);
+  try {
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Origens dos leads');
+    assert.ok(view.container.textContent?.includes('Defina os canais de entrada e a visibilidade das origens para observadores.'));
+  } finally { view.unmount(); }
+});
+
 test('sem permissão não monta nenhuma tela de automação, integração ou IA', () => {
   const view = renderAt('/painel/automacoes?tab=ai', ['config-users']);
   try {

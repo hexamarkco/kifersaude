@@ -212,7 +212,7 @@ export default function LeadStatusManager() {
         title="Etapas do funil" description="Organize os nomes, as cores e a etapa inicial dos novos leads."
         hint="Nome e ordem são salvos ao sair do campo. A estrela indica a etapa padrão."
         items={leadStatuses} getId={(status) => status.id} getSearchText={(status) => status.nome}
-        initialSortKey="order" gridClassName="md:grid-cols-[minmax(0,1fr)_5rem_4rem_4rem_2.5rem]"
+        initialSortKey="order" gridClassName="md:grid-cols-[minmax(15rem,2fr)_minmax(4rem,0.7fr)_minmax(5rem,0.8fr)_minmax(5rem,0.8fr)_5rem]"
         columns={[
           { key: 'name', label: 'Etapa', getValue: (status) => status.nome },
           { key: 'order', label: 'Ordem', getValue: (status) => status.ordem },
@@ -221,6 +221,7 @@ export default function LeadStatusManager() {
           { key: 'actions', label: 'Ações' },
         ]}
         action={<Button size="sm" onClick={() => setIsCreateModalOpen(true)} disabled={saving}><Plus className="kds-control-icon" aria-hidden="true" />Adicionar etapa</Button>}
+        hideSectionTitle
         emptyTitle="Seu funil ainda está vazio" emptyDescription="Adicione a primeira etapa para organizar o acompanhamento dos leads."
         renderItem={(status) => {
           const isProcessing = processingId === status.id;

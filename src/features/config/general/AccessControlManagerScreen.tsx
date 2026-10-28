@@ -22,7 +22,7 @@ const moduleGroups = [
 
 const normalizeSearch = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").trim();
 
-export default function AccessControlManagerScreen() {
+export default function AccessControlManagerScreen({ hideSectionTitle = false }: { hideSectionTitle?: boolean } = {}) {
   const {
     accessProfiles, profilePermissions, refreshAccessProfiles, refreshProfilePermissions,
     loading, loadError, retryLoad,
@@ -169,11 +169,13 @@ export default function AccessControlManagerScreen() {
   const visibleAreaCount = selectedProfile ? ACCESS_MODULES.filter((module) => getPermission(selectedProfile.slug, module.id, selectedProfile.is_admin).can_view).length : 0;
   const profileOptions = profiles.map((profile) => ({ value: profile.id, label: formatProfileLabel(profile.slug, profile.name) }));
 
+  const createProfileAction = <Button onClick={startCreatingProfile} disabled={loading || loadError}><Plus className="kds-control-icon" aria-hidden="true" />Novo perfil</Button>;
+
   return (
     <div className="space-y-6">
-      <SectionHeader as="h3" title="Perfis e acessos" description="Escolha um perfil para definir o que seus usuários podem visualizar e editar."
-        action={<Button onClick={startCreatingProfile} disabled={loading || loadError}><Plus className="kds-control-icon" aria-hidden="true" />Novo perfil</Button>}
-      />
+      {hideSectionTitle
+        ? <div className="flex justify-end">{createProfileAction}</div>
+        : <SectionHeader as="h3" title="Perfis e acessos" description="Escolha um perfil para definir o que seus usuários podem visualizar e editar." action={createProfileAction} />}
 
       {loadError && <Alert tone="warning" title="Não foi possível carregar todos os acessos">
         Atualize os dados antes de alterar as permissões.

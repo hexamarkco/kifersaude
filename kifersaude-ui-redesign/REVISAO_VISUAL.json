@@ -238,15 +238,23 @@
       "route": "/painel/config?tab=system",
       "kind": "pages",
       "components": [
+        "src/features/config/ConfigPageScreen.tsx",
         "src/features/config/general/SystemSettingsScreen.tsx"
       ],
       "references": [
         "references/desktop/page--config-system.png",
         "references/mobile/page--config-system.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config/README.md",
+        "validacao/revisao-visual/config/coverage.json"
+      ],
+      "notes": [
+        "Comparada com a referência em 1920×1080, 768×1024, 390×844 e 320×640 no tema claro; tema escuro conferido em 1920×1080. Sem overflow horizontal.",
+        "Mantém os campos reais de data, fuso, sessão e notificações; o painel de estrutura encaminha para permissões e cadastros existentes. A faixa secundária fica oculta na visão inicial e reaparece nas outras áreas.",
+        "O menu fixo inferior cruza o início do cartão seguinte na posição inicial de rolagem mobile; registrado para revisão de densidade."
+      ]
     },
     {
       "id": "page--config-users",
@@ -388,15 +396,26 @@
       "route": "/painel/config?tab=system&section=leads&leadTab=origins",
       "kind": "pages",
       "components": [
-        "src/features/config/general/SystemSettingsScreen.tsx"
+        "src/features/config/ConfigPageScreen.tsx",
+        "src/features/config/general/SystemSettingsScreen.tsx",
+        "src/features/config/general/components/LeadOriginsManager.tsx",
+        "src/features/config/general/components/SettingsCatalogList.tsx"
       ],
       "references": [
         "references/desktop/page--config-leads-origins.png",
         "references/mobile/page--config-leads-origins.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config/README.md",
+        "validacao/revisao-visual/config/coverage.json"
+      ],
+      "notes": [
+        "Comparada com a referência em 1920×1080, 768×1024, 390×844 e 320×640 no tema claro; tema escuro conferido em 390×844. Sem overflow horizontal.",
+        "Busca, ordenação, disponibilidade, visibilidade para observadores e edição/exclusão são os controles reais do CRM. Exportação e filtros por responsável/período da referência não existem neste cadastro e não foram simulados.",
+        "A navegação preserva três níveis reais (área, grupo e categoria do cadastro) e continua mais densa que a referência; há uma pendência de simplificação visual registrada.",
+        "O atalho desde Preferências passou a atualizar section e leadTab em uma única alteração de URL; abertura confirmada em desktop e 320 px."
+      ]
     },
     {
       "id": "page--config-leads-manager-lead_tipo_contratacao",
@@ -1992,15 +2011,23 @@
       "route": "/painel/config?tab=system&section=leads&leadTab=origins",
       "kind": "states",
       "components": [
-        "src/features/config/general/SystemSettingsScreen.tsx"
+        "src/features/config/general/components/LeadOriginsManager.tsx",
+        "src/design-system/components/Dialog.tsx"
       ],
       "references": [
         "references/desktop/state--config-origem-criar.png",
         "references/mobile/state--config-origem-criar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config/README.md",
+        "validacao/revisao-visual/config/coverage.json"
+      ],
+      "notes": [
+        "Diálogo aberto em 1920×1080 e 390×844 e fechado por Escape sem enviar o formulário.",
+        "O modelo real pede o nome e cria a origem ativa/visível para observadores; descrição e status editável do mockup não pertencem a este fluxo.",
+        "O diálogo ocupa a altura toda no mobile apesar de haver apenas um campo; registrado para ajuste de proporção."
+      ]
     },
     {
       "id": "state--config-tipo-criar",

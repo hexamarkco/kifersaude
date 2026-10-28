@@ -1,7 +1,7 @@
 import { Text } from '../../../../design-system';
 import { useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react';
-import { ActionSurface, Button, EmptyState, IconButton, Input, SectionHeader, Select, useSortedTableRows, useTableSorting, type TableSortValue } from '../../../../design-system';
+import { ActionSurface, Button, EmptyState, IconButton, Input, SectionHeader, Select, Surface, useSortedTableRows, useTableSorting, type TableSortValue } from '../../../../design-system';
 import { normalizeConfigSearchText } from '../shared/systemSettingsConfig';
 
 type CatalogColumn<T> = {
@@ -22,11 +22,12 @@ type SettingsCatalogListProps<T> = {
   getSearchText: (item: T) => string;
   renderItem: (item: T) => ReactNode;
   action: ReactNode;
+  hideSectionTitle?: boolean;
   emptyTitle: string;
   emptyDescription: string;
 };
 
-export function SettingsCatalogList<T>({ title, description, hint, items, columns, initialSortKey, gridClassName, getId, getSearchText, renderItem, action, emptyTitle, emptyDescription }: SettingsCatalogListProps<T>) {
+export function SettingsCatalogList<T>({ title, description, hint, items, columns, initialSortKey, gridClassName, getId, getSearchText, renderItem, action, hideSectionTitle = false, emptyTitle, emptyDescription }: SettingsCatalogListProps<T>) {
   const [search, setSearch] = useState('');
   const { sorting, sortBy } = useTableSorting(initialSortKey);
   const sortedItems = useSortedTableRows(items, sorting, (item, key) => columns.find((column) => column.key === key)?.getValue?.(item));
@@ -34,8 +35,9 @@ export function SettingsCatalogList<T>({ title, description, hint, items, column
   const visibleItems = sortedItems.filter((item) => normalizeConfigSearchText(getSearchText(item)).includes(normalizedSearch));
   const sortableColumns = columns.filter((column) => column.getValue);
 
-  return <div className="min-w-0 space-y-4">
-    <SectionHeader as="h3" title={title} description={description} action={action} />
+  return <Surface padding="md" className="min-w-0">
+    <div className="min-w-0 space-y-4">
+    {hideSectionTitle ? <div className="flex justify-end">{action}</div> : <SectionHeader as="h3" title={title} description={description} action={action} />}
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="w-full sm:max-w-72"><Input size="sm" leftIcon={Search} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome" aria-label={`Buscar em ${title}`} /></div>
       <Text className="text-xs text-[var(--text-muted)]" role="status">{normalizedSearch ? `${visibleItems.length} de ${items.length}` : items.length} {items.length === 1 ? 'item' : 'itens'}</Text>
@@ -67,5 +69,6 @@ export function SettingsCatalogList<T>({ title, description, hint, items, column
         {visibleItems.map((item) => <li key={getId(item)} className={`grid grid-cols-1 items-center gap-3 px-1 py-3 ${gridClassName}`}>{renderItem(item)}</li>)}
       </ul>
     </div>}
-  </div>;
+    </div>
+  </Surface>;
 }

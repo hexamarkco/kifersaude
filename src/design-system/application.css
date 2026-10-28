@@ -2175,6 +2175,11 @@ html,
   }
 }
 
+/* Keep horizontally scrollable config tab rails free of 1px vertical scrollbars. */
+.kds-config-screen .kds-tabs-list {
+  overflow-y: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .painel-theme :is(.message-bubble, .message-bubble-action-trigger, .message-bubble-emoji-button, .message-bubble-action-menu),
   .comm-emoji-picker-tab,

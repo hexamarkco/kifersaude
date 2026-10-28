@@ -192,7 +192,7 @@ export default function ConfigOptionManager({
         title={title} description={description}
         hint="Nome e ordem são salvos automaticamente ao sair do campo."
         items={items} getId={(item) => item.id} getSearchText={(item) => item.label}
-        initialSortKey="order" gridClassName="md:grid-cols-[minmax(0,1fr)_5rem_7rem_2.5rem]"
+        initialSortKey="order" gridClassName="md:grid-cols-[minmax(15rem,2fr)_minmax(4rem,0.7fr)_minmax(7rem,1fr)_5rem]"
         columns={[
           { key: 'name', label: optionLabel, getValue: (item) => item.label },
           { key: 'order', label: 'Ordem', getValue: (item) => item.ordem },
@@ -200,6 +200,7 @@ export default function ConfigOptionManager({
           { key: 'actions', label: 'Ações' },
         ]}
         action={<Button size="sm" onClick={() => setIsCreateModalOpen(true)} disabled={saving}><Plus className="kds-control-icon" aria-hidden="true" />{addLabel}</Button>}
+        hideSectionTitle
         emptyTitle={emptyStateTitle} emptyDescription={emptyStateDescription}
         renderItem={(item) => {
           const isBusy = busyId === item.id;

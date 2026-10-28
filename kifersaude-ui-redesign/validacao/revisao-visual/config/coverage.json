@@ -1,0 +1,51 @@
+{
+  "updated_at": "2026-10-28",
+  "references_root": "../../references",
+  "capture_mode": "Playwright fullPage; reduced motion; fonts ready",
+  "data_policy": "Nenhuma preferência ou cadastro foi alterado; as ações de criação ficaram abertas e foram fechadas sem envio.",
+  "responsive_checks": [
+    { "route": "/painel/config?tab=system", "viewport": "1920x1080", "document_width": 1910, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system", "viewport": "768x1024", "document_width": 758, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system", "viewport": "390x844", "document_width": 380, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system", "viewport": "320x640", "document_width": 310, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system&section=leads&leadTab=origins", "viewport": "1920x1080", "document_width": 1910, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system&section=leads&leadTab=origins", "viewport": "768x1024", "document_width": 758, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system&section=leads&leadTab=origins", "viewport": "390x844", "document_width": 380, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system&section=leads&leadTab=origins", "viewport": "320x640", "document_width": 310, "horizontal_overflow": false, "theme": "light" },
+    { "route": "/painel/config?tab=system&section=leads&leadTab=origins", "viewport": "390x844", "document_width": 380, "horizontal_overflow": false, "theme": "dark" }
+  ],
+  "interactions": [
+    { "name": "Abrir origens dos leads pelo painel de atalhos", "viewports": ["1920x1080", "320x640"], "result": "section=leads e leadTab=origins presentes simultaneamente na URL e categoria Origens selecionada" },
+    { "name": "Criar origem", "viewports": ["1920x1080", "390x844"], "result": "diálogo aberto; nenhum envio" },
+    { "name": "Fechar diálogo com Escape", "viewports": ["390x844"], "result": "diálogo fechado e foco devolvido ao acionador" }
+  ],
+  "validation": {
+    "unit_tests": "1.741 testes em 329 arquivos passaram",
+    "typecheck": "passed",
+    "lint": "passed",
+    "architecture_check": "passed",
+    "migration_check": "passed",
+    "visual_audit": "passed",
+    "production_build": "passed; aviso conhecido de chunk vendor acima de 500 kB"
+  },
+  "screenshots": [
+    "preferencias-desktop-1920.png",
+    "preferencias-desktop-1920-dark.png",
+    "preferencias-tablet-768.png",
+    "preferencias-mobile-390.png",
+    "preferencias-mobile-320.png",
+    "origens-desktop-1920.png",
+    "origens-tablet-768.png",
+    "origens-mobile-390.png",
+    "origens-mobile-dark.png",
+    "origens-mobile-320.png",
+    "origem-criar-desktop-1920.png",
+    "origem-criar-mobile-390.png"
+  ],
+  "known_differences": [
+    "O cadastro real de origens não possui exportação, filtro de responsável/período, descrição ou status editável na criação; esses controles das referências não foram inventados.",
+    "A navegação de configurações de leads tem três níveis e permanece mais densa que a referência.",
+    "O diálogo de criação de origem ocupa a altura toda no mobile apesar do formulário de um campo.",
+    "A navegação fixa inferior cruza o início do cartão seguinte em parte do primeiro viewport mobile; o conteúdo permanece alcançável por rolagem."
+  ]
+}

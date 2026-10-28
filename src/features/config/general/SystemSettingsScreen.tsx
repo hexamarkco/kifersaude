@@ -1,10 +1,11 @@
 import { Text, Heading } from '../../../design-system';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GitBranch, Share2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   BellRing,
   Clock,
+  ArrowRight,
   Globe2,
   Info,
   Loader2,
@@ -28,17 +29,16 @@ import { Skeleton } from '../../../design-system';
 import { SystemSettingsSkeleton } from '../../../design-system';
 import {
   Alert,
+  ActionSurface,
   Badge,
   Button,
   Field,
   Input,
-  SectionHeader,
   Select,
   Surface,
   Switch,
   Tabs,
   type TabItem,
-  SegmentedControl,
 } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
@@ -81,7 +81,26 @@ export default function SystemSettingsScreen() {
     ["contract_status", "contract_modalidade", "contract_abrangencia", "contract_acomodacao", "contract_carencia"] as const,
     "contract_status",
   );
-  const { loading: configLoading, getRoleModulePermission, options } = useConfig();
+  const [, setSearchParams] = useSearchParams();
+  const navigateToConfigSection = (
+    section: SectionId,
+    detail?: { key: "leadTab" | "contractTab"; value: string; defaultValue: string },
+  ) => {
+    setSearchTerm("");
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set("section", section);
+      if (detail) {
+        if (detail.value === detail.defaultValue) {
+          next.delete(detail.key);
+        } else {
+          next.set(detail.key, detail.value);
+        }
+      }
+      return next;
+    }, { replace: true });
+  };
+  const { loading: configLoading, getRoleModulePermission, options, leadStatuses, leadOrigins } = useConfig();
   const loadingUi = useAdaptiveLoading(loading);
   const timezoneOptions = useMemo(
     () => [
@@ -259,6 +278,10 @@ export default function SystemSettingsScreen() {
     () => !areSystemPreferencesEqual(settings, savedSettings),
     [savedSettings, settings],
   );
+  const contractOptionCount = useMemo(
+    () => CONTRACT_CONFIG_MANAGERS.reduce((count, manager) => count + (options[manager.category]?.length ?? 0), 0),
+    [options],
+  );
 
   const shouldExpandSection = (sectionId: SectionId) =>
     activeVisibleSection === sectionId;
@@ -267,12 +290,11 @@ export default function SystemSettingsScreen() {
     | "origins"
     | `manager:${LeadConfigCategory}`;
   const leadConfigurationTabs: TabItem<LeadConfigurationTabId>[] = [
-    ...(showLeadStatusManager ? [{ id: "status" as const, label: "Funil", icon: GitBranch }] : []),
-    ...(showLeadOriginsManager ? [{ id: "origins" as const, label: "Origens", icon: Share2 }] : []),
+    ...(showLeadStatusManager ? [{ id: "status" as const, label: "Funil" }] : []),
+    ...(showLeadOriginsManager ? [{ id: "origins" as const, label: "Origens" }] : []),
     ...visibleLeadManagers.map((manager) => ({
       id: `manager:${manager.category}` as const,
       label: manager.title,
-      icon: manager.tabIcon,
     })),
   ];
   const activeLeadConfigurationId = leadConfigurationTabs.some(
@@ -283,7 +305,6 @@ export default function SystemSettingsScreen() {
   const contractConfigurationTabs: TabItem<ContractConfigCategory>[] = visibleContractManagers.map((manager) => ({
     id: manager.category,
     label: manager.tabLabel ?? manager.title,
-    icon: manager.tabIcon,
     badge: options[manager.category]?.length ?? 0,
   }));
   const activeContractConfigurationId = contractConfigurationTabs.some(
@@ -334,38 +355,33 @@ export default function SystemSettingsScreen() {
       overlayLabel="Atualizando configurações do sistema..."
       stageClassName="min-h-[440px]"
     >
-      <div className="panel-page-shell space-y-6">
-        <Surface padding="md">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <SectionHeader
-              eyebrow="Configuração geral"
-              title="Regras, catálogo e cadastros"
-              description="Encontre e ajuste uma área por vez, sem perder espaço útil para o conteúdo."
-            />
-            <div className="w-full xl:max-w-md">
+      <div className="panel-page-shell space-y-5">
+        {(activeVisibleSection !== "general" || searchTerm.length > 0) && (
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            {hasVisibleSections && activeVisibleSection !== "general" && (
+              <Tabs
+                items={visibleSections.map(({ id, title }) => ({ id, label: title }))}
+                value={activeVisibleSection ?? "general"}
+                onChange={setActiveSection}
+                variant="underline"
+                className="w-full min-w-0 lg:flex-1"
+                listClassName="flex-nowrap overflow-x-auto"
+                triggerClassName="shrink-0 whitespace-nowrap"
+                ariaLabel="Seções das configurações gerais"
+              />
+            )}
+            <div className="w-full lg:max-w-md">
               <Input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por permissões, leads ou contratos"
+                placeholder="Buscar em configurações, leads ou contratos"
                 leftIcon={Search}
+                aria-label="Buscar nas configurações gerais"
               />
             </div>
           </div>
-          {hasVisibleSections && (
-            <SegmentedControl
-              items={visibleSections.map(({ id, title, icon }) => ({
-                id,
-                label: title,
-                icon,
-              }))}
-              value={activeVisibleSection ?? "general"}
-              onChange={setActiveSection}
-              className="mt-5"
-              listClassName="flex-nowrap overflow-x-auto"
-            />
-          )}
-        </Surface>
+        )}
 
         {!hasVisibleSections && (
           <Surface variant="muted" padding="md" className="border-dashed text-center">
@@ -377,27 +393,20 @@ export default function SystemSettingsScreen() {
 
         {showGeneralSection && shouldExpandSection("general") && (
           <section id="settings-section-general" className="space-y-5">
-            <SectionHeader
-              eyebrow="Configuração do sistema"
-              title="Preferências do sistema"
-              description="Defina como datas, sessões e notificações se comportam no CRM."
-              className="items-center"
-              action={(
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                  <Button
-                    onClick={handleRestoreGeneralDefaults}
-                    variant="secondary"
-                    size="md"
-                  >
-                    <RotateCcw className="kds-control-icon" />
-                    Restaurar padrões
-                  </Button>
-                </div>
-              )}
-            />
+            <div className="flex justify-end">
+              <Button
+                onClick={handleRestoreGeneralDefaults}
+                variant="secondary"
+                size="md"
+              >
+                <RotateCcw className="kds-control-icon" />
+                Restaurar padrões
+              </Button>
+            </div>
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-              <Surface padding="md" className="xl:col-span-7">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+              <div className="space-y-5 xl:col-span-8">
+              <Surface padding="md">
                 <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
                     <Globe2 className="h-5 w-5" aria-hidden="true" />
@@ -440,7 +449,7 @@ export default function SystemSettingsScreen() {
                 </div>
               </Surface>
 
-              <Surface padding="md" className="xl:col-span-5">
+              <Surface padding="md">
                 <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-muted)] text-[var(--text-secondary)]">
                     <ShieldCheck className="h-5 w-5" aria-hidden="true" />
@@ -473,7 +482,7 @@ export default function SystemSettingsScreen() {
                 </Field>
               </Surface>
 
-              <Surface padding="md" className="xl:col-span-12">
+              <Surface padding="md">
                 <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-gold-border)] bg-[var(--accent-gold-soft)] text-[var(--accent-gold-hover)]">
                     <BellRing className="h-5 w-5" aria-hidden="true" />
@@ -572,6 +581,93 @@ export default function SystemSettingsScreen() {
                   </Field>
                 </div>
               </Surface>
+              </div>
+
+              <Surface padding="md" className="xl:col-span-4">
+                <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">Estrutura e parametrização</Heading>
+                <Text className="mt-1 text-sm text-[var(--text-secondary)]">Acesse os cadastros que alimentam os formulários e a operação do CRM.</Text>
+                <div className="mt-4 divide-y divide-[var(--border-subtle)]">
+                  {canViewAccessSettings && (
+                    <ActionSurface
+                      variant="plain"
+                      padding="none"
+                      className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                      aria-label="Abrir perfis e acessos"
+                      onClick={() => navigateToConfigSection("access")}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-[var(--text-primary)]">Perfis e acessos</span>
+                        <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Permissões por área do CRM</span>
+                      </span>
+                      <ArrowRight className="kds-control-icon shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+                    </ActionSurface>
+                  )}
+                  <ActionSurface
+                    variant="plain"
+                    padding="none"
+                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    aria-label="Abrir etapas do funil"
+                    onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "status", defaultValue: "status" })}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Etapas do funil</span>
+                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Nome, cor e etapa inicial dos leads</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge tone="neutral">{leadStatuses.length}</Badge>
+                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
+                    </span>
+                  </ActionSurface>
+                  <ActionSurface
+                    variant="plain"
+                    padding="none"
+                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    aria-label="Abrir origens dos leads"
+                    onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "origins", defaultValue: "status" })}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Origens dos leads</span>
+                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Canais de entrada e visibilidade</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge tone="neutral">{leadOrigins.length}</Badge>
+                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
+                    </span>
+                  </ActionSurface>
+                  <ActionSurface
+                    variant="plain"
+                    padding="none"
+                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    aria-label="Abrir responsáveis pelos leads"
+                    onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "manager:lead_responsavel", defaultValue: "status" })}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Responsáveis pelos leads</span>
+                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Equipe disponível para atribuição</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge tone="neutral">{options.lead_responsavel?.length ?? 0}</Badge>
+                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
+                    </span>
+                  </ActionSurface>
+                  <ActionSurface
+                    variant="plain"
+                    padding="none"
+                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    aria-label="Abrir configurações de contratos"
+                    onClick={() => navigateToConfigSection("contracts", { key: "contractTab", value: "contract_status", defaultValue: "contract_status" })}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Regras de contratos</span>
+                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Status, modalidade e condições</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge tone="neutral">{contractOptionCount}</Badge>
+                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
+                    </span>
+                  </ActionSurface>
+                </div>
+              </Surface>
             </div>
 
             <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -605,11 +701,6 @@ export default function SystemSettingsScreen() {
 
         {showAccessSection && shouldExpandSection("access") && (
           <section id="settings-section-access" className="space-y-4">
-            <SectionHeader
-              title="Perfis e acessos"
-              description="Controle de acesso aos módulos para cada tipo de usuário."
-            />
-
             {shouldExpandSection("access") && (
               <div className="space-y-4">
                 {configLoading ? (
@@ -622,7 +713,7 @@ export default function SystemSettingsScreen() {
                     </div>
                   </Surface>
                 ) : (
-                  <AccessControlManagerScreen />
+                  <AccessControlManagerScreen hideSectionTitle />
                 )}
               </div>
             )}
@@ -631,11 +722,6 @@ export default function SystemSettingsScreen() {
 
         {showLeadsSection && shouldExpandSection("leads") && (
           <section id="settings-section-leads" className="space-y-4">
-            <SectionHeader
-              title="Configurações de leads"
-              description="Etapas do funil, origens e cadastros auxiliares."
-            />
-
             {shouldExpandSection("leads") && (
               <div className="space-y-6">
                 {configLoading ? (
@@ -655,7 +741,7 @@ export default function SystemSettingsScreen() {
                           items={leadConfigurationTabs}
                           value={activeLeadConfigurationId}
                           onChange={setActiveLeadConfiguration}
-                          variant="pill"
+                          variant="underline"
                           size="md"
                           ariaLabel="Categorias das configurações de leads"
                           listClassName="flex-nowrap overflow-x-auto"
@@ -691,11 +777,6 @@ export default function SystemSettingsScreen() {
 
         {showContractsSection && shouldExpandSection("contracts") && (
           <section id="settings-section-contracts" className="space-y-4">
-            <SectionHeader
-              title="Configurações de contratos"
-              description="Organize status, modalidade e condições disponíveis no cadastro de contratos."
-            />
-
             {shouldExpandSection("contracts") && (
               <div className="space-y-6">
                 {configLoading ? (
@@ -720,7 +801,7 @@ export default function SystemSettingsScreen() {
                         items={contractConfigurationTabs}
                         value={activeContractConfigurationId}
                         onChange={setActiveContractConfiguration}
-                        variant="pill"
+                        variant="underline"
                         size="md"
                         ariaLabel="Categorias das configurações de contratos"
                         listClassName="flex-nowrap overflow-x-auto"

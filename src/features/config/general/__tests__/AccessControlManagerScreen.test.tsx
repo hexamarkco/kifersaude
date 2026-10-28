@@ -166,6 +166,15 @@ test('falha de carregamento bloqueia alterações e não apresenta ausência de 
   } finally { view.unmount(); }
 });
 
+test('acessos podem reutilizar o título da página sem duplicar o cabeçalho da seção', () => {
+  reset([profile(1)]);
+  const view = render(<AccessControlManagerScreen hideSectionTitle />);
+  try {
+    assert.equal(Array.from(view.container.querySelectorAll('h3')).some((heading) => heading.textContent === 'Perfis e acessos'), false);
+    assert.ok(Array.from(view.container.querySelectorAll('button')).some((button) => button.textContent?.includes('Novo perfil')));
+  } finally { view.unmount(); }
+});
+
 test('cria perfil pelo diálogo e abre suas permissões; uma falha permite tentar novamente', async () => {
   reset([profile(1)]);
   mocks.failProfile = true;

@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import {
   ActionSurface,
   DropdownOption,
-  FieldLabel,
+  Field,
   getPanelToneStyle,
   OperationalStatusBadge,
   OperationalStatusDot,
@@ -56,11 +56,11 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
           {!saving && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
         </ActionSurface>
       </PopoverTrigger>
-      <PopoverContent className="w-52 p-1" aria-label={`Status do contrato ${code}`}>
+      <PopoverContent className="w-[min(16rem,calc(100vw-1rem))] p-1" aria-label={`Status do contrato ${code}`}>
         {operatorError && <Text role="alert" className="p-2 text-xs">{operatorError}</Text>}
-        {operators.length > 0 && <FieldLabel className="block p-2 text-xs">Responsável pela venda
-          <Select value={saleOperator} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolha no fechamento' }, ...operators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
-        </FieldLabel>}
+        {operators.length > 0 && <Field label="Responsável pela venda" className="p-2">
+          <Select value={saleOperator} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolher responsável' }, ...operators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
+        </Field>}
         {options.map((option) => (
           <DropdownOption
             key={option.value}

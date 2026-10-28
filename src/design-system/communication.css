@@ -48,6 +48,11 @@
   background: var(--bg-hover);
 }
 
+.whatsapp-inbox-chat-card .whatsapp-inbox-chat-menu-trigger,
+.whatsapp-inbox-chat-card .whatsapp-inbox-chat-menu-trigger:hover:not(:disabled) {
+  border-color: transparent;
+}
+
 .comm-terracotta .whatsapp-inbox-chat-card.is-active {
   border-color: var(--brand-primary-border);
   background: var(--brand-primary-muted);

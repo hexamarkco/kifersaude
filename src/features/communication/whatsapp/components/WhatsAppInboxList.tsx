@@ -381,7 +381,7 @@ export function InboxChatListItem({
 
   return (
     <div
-      className={`group/chat relative whatsapp-inbox-chat-card border-b transition ${selected ? 'is-active' : ''}`}
+      className={`group/chat relative whatsapp-inbox-chat-card border-b transition-colors duration-200 ease-out ${selected ? 'is-active' : ''}`}
       onContextMenu={(event) => {
         event.preventDefault();
         onOpenContextMenu(chat.id, { x: event.clientX, y: event.clientY });
@@ -408,7 +408,7 @@ export function InboxChatListItem({
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
               </div>
             </div>
-            <div className="flex shrink-0 items-start pr-12 sm:pr-8">
+            <div className="flex shrink-0 items-start">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
             </div>
           </div>
@@ -450,9 +450,8 @@ export function InboxChatListItem({
           onToggleMenu(chat.id);
         }}
         className={cx(
-          "absolute right-3 top-2.5 z-[2] inline-flex w-6 items-center justify-center transition",
-          menuOpen ? "opacity-100" : "opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100",
-          selected ? "opacity-100" : "",
+          "whatsapp-inbox-chat-menu-trigger absolute right-3 top-2.5 z-[2] inline-flex items-center justify-center transition-opacity duration-150",
+          menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0 group-hover/chat:pointer-events-auto group-hover/chat:opacity-100 group-focus-within/chat:pointer-events-auto group-focus-within/chat:opacity-100",
         )}
         aria-label="Abrir menu da conversa"
         aria-expanded={menuOpen}

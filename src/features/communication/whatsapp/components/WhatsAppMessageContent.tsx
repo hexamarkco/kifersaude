@@ -975,7 +975,7 @@ export function WhatsAppMessageBody({
     <div className="space-y-3">
       {quotePreviewNode}
       {linkPreviewNode}
-      {visibleTextContent ? <LinkifiedText className="whitespace-pre-wrap break-words text-justify text-sm leading-6 [text-align-last:left]" text={visibleTextContent} /> : null}
+      {visibleTextContent ? <LinkifiedText className="whitespace-pre-wrap break-words text-left text-sm leading-6" text={visibleTextContent} /> : null}
       {editInfoNode}
     </div>
   );

@@ -21,6 +21,13 @@ const renderMessage = (messageType: string, interactive: Record<string, unknown>
   />);
 };
 
+test('alinha o texto das mensagens à esquerda sem esticar os espaços', () => {
+  const markup = renderMessage('text', {}, 'outbound', {});
+
+  assert.ok(markup.includes('text-left'));
+  assert.ok(!markup.includes('text-justify'));
+});
+
 for (const type of ['list', 'interactive']) {
 test(`renders ${type} with section titles, option names and descriptions`, () => {
   const markup = renderMessage(type, {

@@ -558,7 +558,7 @@ export function WhatsAppComposer({
                       </div>
                     </div>
                   ) : null}
-                  <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                  <div className={`whatsapp-inbox-composer-row flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                     <ButtonGroup
                       className={cx('whatsapp-inbox-composer-button-group relative shrink-0', isComposerExpanded ? 'self-end' : 'self-center')}
                       role="group"
@@ -769,7 +769,7 @@ export function WhatsAppComposer({
                       </Popover>
                     </ButtonGroup>
 
-                    <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
+                    <div className={`whatsapp-inbox-composer-input-wrap relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       {quickReplyMenuOpen && (
                         <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xl">
                           <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
@@ -867,7 +867,7 @@ export function WhatsAppComposer({
                       />
                     </div>
 
-                    <div className={`flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
+                    <div className={`whatsapp-inbox-composer-send flex shrink-0 items-center gap-1 ${isComposerExpanded ? 'items-end pb-0.5' : ''}`}>
                       <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={handleComposerSubmit}

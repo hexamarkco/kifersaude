@@ -1,0 +1,61 @@
+{
+  "route": "/painel/inbox",
+  "reviewed_at": "2026-10-28",
+  "fixture": "Local Playwright audit fixture with synthetic conversations and records",
+  "comparison": [
+    "references/desktop/page--inbox.png",
+    "references/mobile/page--inbox.png"
+  ],
+  "layout_checks": [
+    {
+      "viewport": "1920x1080",
+      "document_scroll_width": 1920,
+      "body_scroll_width": 1920,
+      "themes": ["light", "dark"]
+    },
+    {
+      "viewport": "768x1024",
+      "document_scroll_width": 768,
+      "body_scroll_width": 768,
+      "themes": ["light", "dark"]
+    },
+    {
+      "viewport": "390x844",
+      "document_scroll_width": 390,
+      "body_scroll_width": 390,
+      "themes": ["light", "dark"]
+    },
+    {
+      "viewport": "320x640",
+      "document_scroll_width": 320,
+      "body_scroll_width": 320,
+      "themes": ["light", "dark"]
+    }
+  ],
+  "composer_measurements": [
+    { "viewport": "390x844", "input_width": 340.8 },
+    { "viewport": "320x640", "input_width": 270.4 }
+  ],
+  "screenshots": [
+    { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "desktop/selected-dark-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
+    { "file": "tablet/selected-light-full.png", "state": "selected conversation", "viewport": "768x1024", "theme": "light", "capture": "fullPage" },
+    { "file": "tablet/selected-dark-full.png", "state": "selected conversation", "viewport": "768x1024", "theme": "dark", "capture": "fullPage" },
+    { "file": "mobile/selected-light-full.png", "state": "selected conversation and compact composer", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "mobile/selected-dark-full.png", "state": "selected conversation and compact composer", "viewport": "390x844", "theme": "dark", "capture": "fullPage" },
+    { "file": "mobile/list-light-full.png", "state": "conversation list and page action", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "mobile-320/selected-light-full.png", "state": "selected conversation and compact composer", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
+    { "file": "mobile-320/selected-dark-full.png", "state": "selected conversation and compact composer", "viewport": "320x640", "theme": "dark", "capture": "fullPage" },
+    { "file": "states/lead-context-drawer-light.png", "state": "lead information drawer at top", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/lead-context-drawer-light-lower.png", "state": "lead information drawer after internal scroll", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "states/lead-context-drawer-mobile-light.png", "state": "lead information drawer at top", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "states/lead-context-drawer-mobile-light-lower.png", "state": "lead information drawer after internal scroll", "viewport": "390x844", "theme": "light", "capture": "viewport" },
+    { "file": "states/new-conversation-dialog-mobile.png", "state": "new conversation, saved contacts tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-crm-mobile.png", "state": "new conversation, CRM tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-number-mobile.png", "state": "new conversation, manual number tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" }
+  ],
+  "limitations": [
+    "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",
+    "Inbox subcontexts for filters, agenda, scheduled messages, WhatsApp dashboard, message search, attachments, media, formatting, quick replies and other message actions are still pending separate visual review."
+  ]
+}

@@ -122,15 +122,26 @@
       "route": "/painel/inbox",
       "kind": "pages",
       "components": [
-        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppInboxLeadContextPanel.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppComposer.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppInboxSidebar.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppMessageContent.tsx",
+        "src/design-system/operational.css"
       ],
       "references": [
         "references/desktop/page--inbox.png",
         "references/mobile/page--inbox.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/inbox/README.md",
+        "validacao/revisao-visual/inbox/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências em desktop, tablet, mobile e 320 px nos temas claro e escuro; sem overflow horizontal. PageHeader e painel contextual reaproveitam componentes, dados e ações existentes.",
+        "Em até 430 px, o campo de mensagem ocupa sua própria linha e as ações ficam abaixo. Drawer do lead e abas do diálogo Novo chat foram capturados sem gravar dados ou enviar mensagens. Os demais estados da Inbox continuam pendentes como contextos separados."
+      ]
     },
     {
       "id": "page--campanhas",
@@ -2594,8 +2605,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 30,
-    "remaining_manifest_contexts": 130,
+    "reviewed_contexts": 31,
+    "remaining_manifest_contexts": 129,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

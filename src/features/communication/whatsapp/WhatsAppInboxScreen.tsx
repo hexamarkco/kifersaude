@@ -1,11 +1,12 @@
-import { Heading, Text } from '../../../design-system';
+import { Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2, MessageCircle, Pin, Plus, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
   Alert,
   Button,
+  PageHeader,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { PositionedPopover as PanelPopoverShell } from '../../../design-system';
@@ -29,6 +30,7 @@ import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
 import { WhatsAppThreadActionsMenu } from './components/WhatsAppThreadActionsMenu';
 import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
 import { WhatsAppInboxConversationPane, type WhatsAppInboxConversationView } from './components/WhatsAppInboxConversationPane';
+import { WhatsAppInboxLeadContextPanel } from './components/WhatsAppInboxLeadContextPanel';
 import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
 import { WhatsAppInboxLazyLoadingFallback } from './components/WhatsAppInboxLazyLoadingFallback';
@@ -1523,6 +1525,25 @@ export default function WhatsAppInboxScreen() {
     resizeComposerTextarea();
   }, [messageDraft, pendingAttachments.length, resizeComposerTextarea, selectedChatId, voiceAttachment?.id]);
 
+  useLayoutEffect(() => {
+    const textarea = composerTextareaRef.current;
+    if (!textarea || typeof ResizeObserver === 'undefined') return;
+
+    let previousWidth = textarea.getBoundingClientRect().width;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+
+      const nextWidth = entry.contentRect.width;
+      if (Math.abs(nextWidth - previousWidth) < 1) return;
+
+      previousWidth = nextWidth;
+      resizeComposerTextarea(textarea);
+    });
+
+    observer.observe(textarea);
+    return () => observer.disconnect();
+  }, [resizeComposerTextarea, selectedChatId]);
+
   const {
     sendTextSegments,
     handleSendMessage,
@@ -2009,18 +2030,28 @@ export default function WhatsAppInboxScreen() {
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
     <div className={`comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0 ${selectedChat ? 'is-conversation-open' : ''}`}>
       <div className="flex h-full min-h-0 flex-col gap-0">
-        <Heading level={1} className="sr-only">WhatsApp Inbox</Heading>
+        <PageHeader
+          className={`whatsapp-inbox-page-header shrink-0 ${selectedChat ? 'hidden md:block' : ''}`}
+          title="WhatsApp Inbox"
+          description="Atenda seus leads e acompanhe cada conversa em um único lugar."
+          actions={(
+            <Button variant="primary" size="md" onClick={() => setStartChatModalOpen(true)}>
+              <Plus className="kds-control-icon" aria-hidden="true" />
+              Nova conversa
+            </Button>
+          )}
+        />
         {operationalBanner && (
-          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3.5`}>
-            <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
-            <div className="min-w-0 space-y-1">
+          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-3 mb-0 flex items-start gap-2.5 rounded-[var(--kds-radius-md)] border px-3 py-2.5 sm:mx-4`}>
+            <operationalBanner.icon className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="whatsapp-inbox-status-banner-copy min-w-0 sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-2">
               <Text className="whatsapp-inbox-heading text-sm font-semibold">{operationalBanner.title}</Text>
-              <Text className="text-sm leading-6 opacity-90">{operationalBanner.description}</Text>
+              <Text className="whatsapp-inbox-status-banner-description text-sm leading-5 opacity-90">{operationalBanner.description}</Text>
             </div>
           </section>
         )}
 
-        <section className="kds-inbox-workspace-grid grid min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="kds-inbox-workspace-grid grid min-h-0 flex-1 gap-0">
         <WhatsAppInboxSidebar
           leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}
@@ -2033,7 +2064,6 @@ export default function WhatsAppInboxScreen() {
           onOpenAgenda={() => setWhatsAppAgendaOpen(true)}
           onOpenScheduledMessages={() => setAllScheduledMessagesPanelOpen(true)}
           onOpenDashboard={() => setWhatsAppDashboardOpen(true)}
-          onStartChat={() => setStartChatModalOpen(true)}
           canViewAgenda={canViewAgenda}
           allScheduledMessagesPanelOpen={allScheduledMessagesPanelOpen}
           searchDraft={searchDraft}
@@ -2080,6 +2110,16 @@ export default function WhatsAppInboxScreen() {
           onDragOver={handleThreadDragOver}
           onDragLeave={handleThreadDragLeave}
           onDrop={handleThreadDrop}
+        />
+        <WhatsAppInboxLeadContextPanel
+          selectedChat={selectedChat}
+          selectedChatDisplayName={selectedChat ? selectedChatDisplayName : null}
+          leadPanel={leadPanel}
+          leadPanelLoading={leadPanelLoading}
+          leadPanelError={leadPanelError}
+          pendingReminderCount={chatAgendaSummary.pendingCount}
+          onOpenLeadDrawer={handleOpenLeadDrawer}
+          onOpenLeadInCrm={selectedChat?.lead_id ? handleViewLeadInCrm : undefined}
         />
         </section>
 

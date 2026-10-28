@@ -36,7 +36,7 @@ type WhatsAppInboxSidebarProps = {
   onOpenAgenda: () => void;
   onOpenScheduledMessages: () => void;
   onOpenDashboard: () => void;
-  onStartChat: () => void;
+  onStartChat?: () => void;
   canViewAgenda: boolean;
   allScheduledMessagesPanelOpen: boolean;
   searchDraft: string;
@@ -200,16 +200,18 @@ export function WhatsAppInboxSidebar({
               >
                 <Cog className="kds-control-icon" />
               </IconButton>
-              <IconButton
-                variant="ghost"
-                className="shrink-0"
-                size="md"
-                onClick={onStartChat}
-                aria-label="Novo chat"
-                title="Novo chat"
-              >
-                <Plus className="kds-control-icon" />
-              </IconButton>
+              {onStartChat ? (
+                <IconButton
+                  variant="ghost"
+                  className="shrink-0"
+                  size="md"
+                  onClick={onStartChat}
+                  aria-label="Novo chat"
+                  title="Novo chat"
+                >
+                  <Plus className="kds-control-icon" />
+                </IconButton>
+              ) : null}
             </ButtonGroup>
           </div>
 

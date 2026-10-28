@@ -1445,10 +1445,37 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .whatsapp-inbox-chat-card.is-active { box-shadow: none; background: var(--brand-primary-soft); }
 .painel-theme.kifer-ds .whatsapp-inbox-chat-select { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: var(--space-3); }
 .kds-inbox-chat-copy { min-width: 0; }
+.whatsapp-inbox-page-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-canvas);
+}
+.painel-theme.kifer-ds .whatsapp-inbox-page-header .kds-page-title { margin-top: 0; font: var(--type-ui-title); }
+.whatsapp-inbox-page-header .kds-page-description { margin-top: var(--space-1); font: var(--type-caption); }
+.whatsapp-inbox-page-header .kds-page-actions { display: flex; align-items: center; }
+.kds-inbox-workspace-grid { grid-template-columns: minmax(0,1fr); }
+.kds-inbox-lead-context-panel { display: none; }
 @media(min-width: 1024px) { .kds-inbox-workspace-grid { grid-template-columns: 20rem minmax(0,1fr); } }
+@media(min-width: 1600px) {
+  .kds-inbox-workspace-grid { grid-template-columns: 20rem minmax(0,1fr) 18rem; }
+  .kds-inbox-lead-context-panel { display: flex; }
+}
 @media(max-width: 767px) {
   .painel-theme.kifer-ds .whatsapp-inbox-chat-select { gap: var(--space-2); }
   .painel-theme.kifer-ds .whatsapp-inbox-sidebar-header { padding: var(--space-3); }
+  .whatsapp-inbox-page-header { padding: var(--space-3); }
+}
+@media(max-width: 430px) {
+  .painel-theme.kifer-ds .whatsapp-inbox-composer-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "input input" "actions send";
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .whatsapp-inbox-composer-button-group { grid-area: actions; }
+  .whatsapp-inbox-composer-input-wrap { grid-area: input; width: 100%; padding-block: 0 !important; }
+  .whatsapp-inbox-composer-send { grid-area: send; }
 }
 
 /* Record pages share list and form density across operational modules. */

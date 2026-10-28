@@ -33,6 +33,7 @@ import { useContractStatus } from "./hooks/useContractStatus";
 import { useProductionOperators } from "../production";
 import {
   Badge,
+  Avatar,
   Button,
   Alert,
   EmptyState,
@@ -909,6 +910,7 @@ export default function ContractsManager({
                 )}
                 {paginatedContracts.map((contract) => {
                   const bonusValue = getBonusValue(contract);
+                  const displayName = getContractDisplayName(contract);
 
                   return (
                     <TableRow key={contract.id} className="align-middle">
@@ -916,11 +918,11 @@ export default function ContractsManager({
                       <ActionSurface variant="plain" padding="none"
                         type="button"
                         onClick={() => setSelectedContract(contract)}
-                        className="block w-full min-w-0 overflow-hidden text-left transition-colors hover:text-[var(--brand-primary)]"
-                        title={getContractDisplayName(contract)}
+                        className="kds-lead-identity"
+                        title={`${displayName} · ${contract.codigo_contrato}`}
                       >
-                        <span className="block max-w-full truncate font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
-                        <span className="mt-1 block max-w-full truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
+                        <Avatar name={displayName === 'Sem titular' ? undefined : displayName} fallback={displayName === 'Sem titular' ? <FileText className="h-4 w-4" aria-hidden="true" /> : undefined} tone="brand" size="sm" className="kds-lead-avatar" />
+                        <span className="min-w-0"><span className="block truncate font-semibold text-[var(--text-primary)]">{displayName}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
                       </ActionSurface>
                     </TableCell>
                     <TableCell>
@@ -970,9 +972,9 @@ export default function ContractsManager({
                     <div className="min-w-0">
                       <ActionSurface variant="plain" padding="none" onClick={() => setSelectedContract(contract)} className="block max-w-full text-left">
                         <Heading level={3} className="truncate text-base font-semibold text-[var(--text-primary)]">
-                          {contract.codigo_contrato}
+                          {getContractDisplayName(contract)}
                         </Heading>
-                        <Text className="mt-1 truncate text-sm text-[var(--text-secondary)]">{getContractDisplayName(contract)}</Text>
+                        <Text className="mt-1 truncate text-sm text-[var(--text-secondary)]">{contract.codigo_contrato}</Text>
                       </ActionSurface>
                     </div>
                     <ContractStatusDropdown

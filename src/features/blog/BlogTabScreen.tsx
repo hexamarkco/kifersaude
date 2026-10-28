@@ -194,6 +194,7 @@ export default function BlogTabScreen() {
   const handleCoverImageUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
+      event.currentTarget.value = "";
 
       if (!file) {
         return;
@@ -225,6 +226,7 @@ export default function BlogTabScreen() {
   const handleContentImageUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
+      event.currentTarget.value = "";
 
       if (!file) {
         return;

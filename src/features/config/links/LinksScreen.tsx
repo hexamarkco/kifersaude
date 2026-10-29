@@ -1,4 +1,4 @@
-import { ButtonGroup, Heading, Text, Image, FieldLabel } from '../../../design-system';
+import { ButtonGroup, Heading, InfoTooltip, Text, Image, FieldLabel } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
@@ -401,8 +401,10 @@ export default function LinksScreen() {
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Heading level={3} className="kds-card-title">Perfil da página</Heading>
-            <Text className="kds-card-subtitle">Título, biografia e foto exibidos no topo de {PUBLIC_LINKS_PATH}.</Text>
+            <div className="kds-card-title-row">
+              <Heading level={3} className="kds-card-title">Perfil da página</Heading>
+              <InfoTooltip content={`Título, biografia e foto exibidos no topo de ${PUBLIC_LINKS_PATH}.`} label="Informações sobre o perfil da página" />
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyPublicUrl()}>
@@ -513,10 +515,10 @@ export default function LinksScreen() {
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Heading level={3} className="kds-card-title">Links</Heading>
-            <Text className="kds-card-subtitle">
-              Adicione WhatsApp, redes sociais ou qualquer outra URL. Use as setas para reordenar.
-            </Text>
+            <div className="kds-card-title-row">
+              <Heading level={3} className="kds-card-title">Links</Heading>
+              <InfoTooltip content="Adicione WhatsApp, redes sociais ou qualquer outra URL. Use as setas para reordenar." label="Informações sobre a lista de links" />
+            </div>
           </div>
           <Button
             onClick={() => {

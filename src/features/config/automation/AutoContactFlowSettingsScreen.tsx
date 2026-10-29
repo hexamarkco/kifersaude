@@ -1,4 +1,4 @@
-import { ButtonGroup, Text, Heading, FieldLabel } from '../../../design-system';
+import { ButtonGroup, Text, Heading, FieldLabel, InfoTooltip } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -1737,7 +1737,7 @@ export default function AutoContactFlowSettingsScreen() {
                     <div className="min-w-0">
                       <Text className="kds-card-subtitle uppercase tracking-[0.12em]">Resumo operacional</Text>
                       <Heading level={3} id="automation-operation-heading" className="kds-card-title mt-1">Visão geral da operação</Heading>
-                      <Text className="kds-card-subtitle mt-1">Volume dos fluxos e atividade recente das automações.</Text>
+                      <div className="mt-1"><InfoTooltip content="Volume dos fluxos e atividade recente das automações." label="Informações sobre o resumo operacional" /></div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -1772,8 +1772,10 @@ export default function AutoContactFlowSettingsScreen() {
               <section className="space-y-4" aria-labelledby="automation-global-settings-heading">
                 <div>
                   <Text className="kds-op-section-label">Preferências da operação</Text>
-                  <Heading level={3} id="automation-global-settings-heading" className="kds-section-title kds-section-title-h3 mt-1">Configurações globais</Heading>
-                  <Text className="kds-section-description mt-1">Ajuste o envio automático, a agenda e a observabilidade sem alterar as regras individuais dos fluxos.</Text>
+                  <div className="kds-section-title-row mt-1">
+                    <Heading level={3} id="automation-global-settings-heading" className="kds-section-title kds-section-title-h3">Configurações globais</Heading>
+                    <InfoTooltip content="Ajuste o envio automático, a agenda e a observabilidade sem alterar as regras individuais dos fluxos." label="Informações sobre as configurações globais" />
+                  </div>
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-2">
@@ -1784,7 +1786,7 @@ export default function AutoContactFlowSettingsScreen() {
                       </CardIcon>
                       <div>
                         <Heading level={4} className="kds-card-title">Envio automático</Heading>
-                        <Text className="kds-card-subtitle mt-1">Pausa ou libera o processamento dos fluxos ativos.</Text>
+                        <div className="mt-1"><InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" /></div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
@@ -1807,7 +1809,7 @@ export default function AutoContactFlowSettingsScreen() {
                       </CardIcon>
                       <div>
                         <Heading level={4} className="kds-card-title">Agendamento avançado</Heading>
-                        <Text className="kds-card-subtitle mt-1">Fuso horário e regras globais para dias não úteis.</Text>
+                        <div className="mt-1"><InfoTooltip content="Fuso horário e regras globais para dias não úteis." label="Informações sobre o calendário operacional" /></div>
                       </div>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -1847,7 +1849,7 @@ export default function AutoContactFlowSettingsScreen() {
                   </CardIcon>
                   <div>
                     <Heading level={4} className="kds-card-title">Observabilidade e auditoria</Heading>
-                    <Text className="kds-card-subtitle mt-1">Defina a frequência do monitoramento e a retenção dos registros.</Text>
+                    <div className="mt-1"><InfoTooltip content="Defina a frequência do monitoramento e a retenção dos registros." label="Informações sobre observabilidade e auditoria" /></div>
                   </div>
                 </div>
 
@@ -1855,8 +1857,7 @@ export default function AutoContactFlowSettingsScreen() {
                   <section className="space-y-4 xl:border-r xl:border-[var(--border-subtle)] xl:pr-6" aria-labelledby="automation-monitoring-heading">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <Heading level={5} id="automation-monitoring-heading" className="text-sm font-semibold text-[var(--text-primary)]">Monitoramento em tempo real</Heading>
-                        <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Atualiza o painel com o status das execuções.</Text>
+                         <div className="kds-card-title-row"><Heading level={5} id="automation-monitoring-heading" className="text-sm font-semibold text-[var(--text-primary)]">Monitoramento em tempo real</Heading><InfoTooltip content="Atualiza o painel com o status das execuções." label="Informações sobre o monitoramento em tempo real" /></div>
                       </div>
                       <Switch
                         checked={monitoringDraft.realtimeEnabled}
@@ -1888,8 +1889,7 @@ export default function AutoContactFlowSettingsScreen() {
                   <section className="space-y-4" aria-labelledby="automation-logging-heading">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <Heading level={5} id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Histórico de atividades</Heading>
-                        <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Guarde as ações realizadas para consultar o que aconteceu.</Text>
+                         <div className="kds-card-title-row"><Heading level={5} id="automation-logging-heading" className="text-sm font-semibold text-[var(--text-primary)]">Histórico de atividades</Heading><InfoTooltip content="Guarde as ações realizadas para consultar o que aconteceu." label="Informações sobre o histórico de atividades" /></div>
                       </div>
                       <Switch
                         checked={loggingDraft.enabled}
@@ -2183,9 +2183,12 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
                         </div>
                         <div>
-                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                            Limite diário deste fluxo
-                          </FieldLabel>
+                          <div className="mb-1 flex items-center gap-1.5">
+                            <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)]">
+                              Limite diário deste fluxo
+                            </FieldLabel>
+                            <InfoTooltip content="Conta apenas os envios automáticos deste fluxo por dia." label="Informações sobre o limite diário" />
+                          </div>
                           <Input
                             type="number"
                             min={1}
@@ -2201,10 +2204,6 @@ export default function AutoContactFlowSettingsScreen() {
                             }}
                             placeholder="Sem limite"
                           />
-                          <Text className="text-[11px] text-[var(--text-subtle)] mt-1">
-                            Conta apenas os envios automáticos deste fluxo por
-                            dia.
-                          </Text>
                         </div>
                       </div>
                     </div>
@@ -2214,8 +2213,7 @@ export default function AutoContactFlowSettingsScreen() {
                     {flowDetailTab === "journey" && <>
                     <div className="flex flex-wrap items-end justify-between gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
                       <div>
-                        <Heading level={5} className="text-sm font-semibold text-[var(--text-primary)]">Jornada do lead</Heading>
-                        <Text className="mt-1 text-xs text-[var(--text-muted)]">Clique em um bloco para editar o gatilho, condições e ações. O canvas ocupa a área principal para facilitar a leitura da sequência.</Text>
+                         <div className="kds-card-title-row"><Heading level={5} className="text-sm font-semibold text-[var(--text-primary)]">Jornada do lead</Heading><InfoTooltip content="Clique em um bloco para editar o gatilho, condições e ações. O canvas ocupa a área principal para facilitar a leitura da sequência." label="Informações sobre a jornada do lead" /></div>
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                         <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-1">{activeFlow.steps.length} etapas</span>

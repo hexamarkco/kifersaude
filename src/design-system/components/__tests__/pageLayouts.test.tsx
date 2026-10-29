@@ -11,6 +11,7 @@ import {
   DialogBody,
   DialogFooter,
   DialogTitle,
+  CrmCard,
   Field,
   FormActions,
   FormPage,
@@ -19,10 +20,12 @@ import {
   ListPage,
   MultiSelect,
   PageActions,
+  PageHeader,
   Popover,
   PopoverContent,
   PopoverTrigger,
   Select,
+  SectionHeader,
   Switch,
   Tooltip,
 } from '../../index';
@@ -43,6 +46,21 @@ test('page actions isolate destruction and preserve secondary/primary order whil
   );
   assert.ok(buttons.every((button) => button.disabled));
   assert.equal(buttons[2].getAttribute('aria-busy'), 'true');
+  view.unmount();
+});
+
+test('page, section and card helper descriptions use the shared info control', () => {
+  const view = render(
+    <>
+      <PageHeader title="Leads" description="Acompanhe os contatos em andamento." />
+      <SectionHeader title="Atividade" description="Confira as ações recentes." />
+      <CrmCard title="Resumo" subtitle="Dados atualizados hoje." />
+      <CrmCard subtitle="Ajuda sem título." />
+    </>,
+  );
+  assert.equal(view.container.querySelectorAll('.kds-info-trigger').length, 4);
+  assert.equal(view.container.querySelectorAll('.kds-page-description, .kds-section-description').length, 0);
+  assert.equal(view.container.querySelectorAll('.kds-card-subtitle').length, 0);
   view.unmount();
 });
 

@@ -2297,7 +2297,7 @@ export default function ContractForm({
                 : "Novo Contrato"}
           </DialogTitle>
           {leadToConvert && (
-            <DialogDescription className="flex items-center gap-1.5">
+            <DialogDescription placement="visible" className="flex items-center gap-1.5">
               <LeadFavoriteBadge favorito={leadToConvert.favorito} />
               {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
             </DialogDescription>

@@ -1,5 +1,6 @@
 import type { FormHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import { cx } from '../../lib/cx';
+import InfoTooltip from './InfoTooltip';
 import {
   PageContainer,
   Toolbar,
@@ -121,6 +122,7 @@ export function FormSection({
   title,
   step,
   description,
+  descriptionPlacement = 'tooltip',
   children,
   className,
   ...props
@@ -128,11 +130,16 @@ export function FormSection({
   title: string;
   step?: string;
   description?: string;
+  descriptionPlacement?: 'tooltip' | 'visible';
 }) {
   return (
     <fieldset className={cx('kds-form-section', className)} {...props}>
-      <legend>{step && <span className="kds-form-section-step" aria-hidden="true">{step}</span>}<span>{title}</span></legend>
-      {description && (
+      <legend>
+        {step && <span className="kds-form-section-step" aria-hidden="true">{step}</span>}
+        <span>{title}</span>
+        {description && descriptionPlacement === 'tooltip' && <InfoTooltip content={description} label={`Informações: ${title}`} />}
+      </legend>
+      {description && descriptionPlacement === 'visible' && (
         <p className="kds-form-section-description">{description}</p>
       )}
       <div className="kds-form-fields">{children}</div>

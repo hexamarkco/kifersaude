@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
 import { useDesignSystemAppearance } from '../appearanceContext';
+import InfoTooltip from './InfoTooltip';
 
 export type DialogSize = 'sm' | 'md' | 'form' | 'lg' | 'xl' | 'wide' | 'full';
 export type DialogPresentation = 'standard' | 'workspace';
@@ -207,9 +208,20 @@ export function DialogTitle({ className, children, ...props }: DialogTitleProps)
   );
 }
 
-export type DialogDescriptionProps = HTMLAttributes<HTMLParagraphElement>;
+export type DialogDescriptionPlacement = 'tooltip' | 'visible';
+export type DialogDescriptionProps = HTMLAttributes<HTMLParagraphElement> & {
+  placement?: DialogDescriptionPlacement;
+};
 
-export function DialogDescription({ className, children, ...props }: DialogDescriptionProps) {
+export function DialogDescription({ className, children, placement = 'tooltip', ...props }: DialogDescriptionProps) {
+  if (placement === 'tooltip') {
+    return (
+      <p className={cx('kds-dialog-description kds-dialog-description-tooltip', className)} {...props}>
+        <InfoTooltip content={children} label="Informações sobre esta janela" />
+      </p>
+    );
+  }
+
   return (
     <p className={cx('kds-dialog-description', className)} {...props}>
       {children}
@@ -251,6 +263,7 @@ export type DialogShellProps = {
   onClose: () => void;
   title?: string;
   description?: string;
+  descriptionPlacement?: DialogDescriptionPlacement;
   children: ReactNode;
   footer?: ReactNode;
   size?: DialogSize;
@@ -270,6 +283,7 @@ export function DialogShell({
   onClose,
   title,
   description,
+  descriptionPlacement = 'tooltip',
   children,
   footer,
   size = 'md',
@@ -295,7 +309,7 @@ export function DialogShell({
       {(title || description || showCloseButton) && (
         <DialogHeader onClose={onClose} showCloseButton={showCloseButton}>
           {title && <DialogTitle>{title}</DialogTitle>}
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description && <DialogDescription placement={descriptionPlacement}>{description}</DialogDescription>}
         </DialogHeader>
       )}
       <DialogBody scrollable={bodyScrollable} className={bodyClassName}>{children}</DialogBody>

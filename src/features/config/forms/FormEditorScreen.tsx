@@ -1,4 +1,4 @@
-import { ButtonGroup, Heading, Text, TextLink } from '../../../design-system';
+import { ButtonGroup, Heading, InfoTooltip, Text, TextLink } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -360,7 +360,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div><Heading level={3} className="kds-card-title">Dados e publicação</Heading><Text className="kds-card-subtitle">Configure o endereço, a mensagem de confirmação e o acesso público.</Text></div>
+          <div className="kds-card-title-row"><Heading level={3} className="kds-card-title">Dados e publicação</Heading><InfoTooltip content="Configure o endereço, a mensagem de confirmação e o acesso público." label="Informações sobre os dados e publicação" /></div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void handleCopyLink()}>
               <Copy className="kds-control-icon" />
@@ -439,8 +439,10 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Heading level={3} className="kds-card-title">Perguntas</Heading>
-            <Text className="kds-card-subtitle">Uma pergunta por tela. A última etapa (contato) é sempre fixa.</Text>
+            <div className="kds-card-title-row">
+              <Heading level={3} className="kds-card-title">Perguntas</Heading>
+              <InfoTooltip content="Uma pergunta por tela. A última etapa (contato) é sempre fixa." label="Informações sobre as etapas do formulário" />
+            </div>
           </div>
           <Button onClick={() => setStepDialog({ step: null })} disabled={stepMutationInFlight}>
             <Plus className="kds-control-icon" />
@@ -518,9 +520,10 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
 
       <Card>
         <div className="mb-4 flex items-center justify-between">
-          <div>
+          <div className="kds-card-title-row">
             <Heading level={3} className="kds-card-title">Respostas recentes</Heading>
-            <Text className="kds-card-subtitle">{form.submission_count} envio{form.submission_count === 1 ? "" : "s"} no total. Cada envio já criou um lead.</Text>
+            <Badge>{form.submission_count} envio{form.submission_count === 1 ? "" : "s"}</Badge>
+            <InfoTooltip content="Cada envio já criou um lead." label="Informações sobre as respostas recentes" />
           </div>
           <Users className="h-5 w-5 text-[var(--text-muted)]" />
         </div>

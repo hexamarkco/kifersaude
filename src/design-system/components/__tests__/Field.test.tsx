@@ -6,7 +6,7 @@ import Field from '../Field';
 import Input from '../Input';
 
 test('contextual help stays accessible without adding a visible row, and validation stays visible', async () => {
-  const view = render(<Field label="Cidade" description="Escolha primeiro o estado." descriptionPlacement="tooltip" error="Informe uma cidade."><Input /></Field>);
+  const view = render(<Field label="Cidade" description="Escolha primeiro o estado." error="Informe uma cidade."><Input /></Field>);
   try {
     const input = view.container.querySelector('input');
     const help = view.container.querySelector<HTMLButtonElement>('button');

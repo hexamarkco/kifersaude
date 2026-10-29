@@ -1002,6 +1002,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-form-page { isolation: isolate; }
 .kds-form-section { min-width: 0; margin: 0; padding: var(--space-5); border: 1px solid var(--border-default); border-radius: var(--radius-panel); background: var(--bg-surface); }
 .kds-form-section legend { padding-inline: var(--space-2); font: var(--type-ui-heading); color: var(--text-primary); }
+.kds-form-section legend .kds-info-trigger { margin-inline-start: var(--space-1); vertical-align: middle; }
 .kds-form-section-description { color: var(--text-secondary); font: var(--type-body-sm); margin-bottom: var(--space-4); }
 .kds-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--section-gap); }
 .kds-detail-layout-aside { display: grid; grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr); gap: var(--layout-gap); }

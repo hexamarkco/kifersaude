@@ -95,7 +95,7 @@ export function ContractJsonImportDialog({
     >
       <DialogHeader onClose={loading ? undefined : onClose}>
         <DialogTitle>Importar contrato de arquivo</DialogTitle>
-        <DialogDescription>
+        <DialogDescription placement="visible">
           Selecione um arquivo .json preenchido conforme o modelo abaixo. Revise os dados no formulário antes de salvar o contrato.
         </DialogDescription>
       </DialogHeader>

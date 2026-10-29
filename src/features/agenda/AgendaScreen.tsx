@@ -1777,7 +1777,7 @@ export default function AgendaScreen() {
           >
             <DialogHeader onClose={isDeletingReminder ? undefined : () => setReminderPendingDeletion(null)}>
               <DialogTitle>Remover item</DialogTitle>
-              <DialogDescription>Esta ação não pode ser desfeita.</DialogDescription>
+              <DialogDescription placement="visible">Esta ação não pode ser desfeita.</DialogDescription>
             </DialogHeader>
             <DialogBody>
               <Alert tone="danger" title={`Remover "${reminderPendingDeletion.titulo}"?`}>
@@ -1807,7 +1807,7 @@ export default function AgendaScreen() {
             <form onSubmit={(event) => void handleAddTask(event)} className="flex min-h-0 flex-1 flex-col">
               <DialogHeader onClose={savingTask ? undefined : closeAddTaskModal}>
                 <DialogTitle>Nova tarefa</DialogTitle>
-                <DialogDescription>{selectedDateLabel}</DialogDescription>
+                <DialogDescription placement="visible">{selectedDateLabel}</DialogDescription>
               </DialogHeader>
               <DialogBody className="space-y-4">
                 <Field label="Tarefa" htmlFor="agenda-task-title">
@@ -1882,7 +1882,7 @@ export default function AgendaScreen() {
           >
             <DialogHeader showCloseButton={false}>
               <DialogTitle>Carregando lead</DialogTitle>
-              <DialogDescription>Aguarde enquanto buscamos os dados mais recentes.</DialogDescription>
+              <DialogDescription placement="visible">Aguarde enquanto buscamos os dados mais recentes.</DialogDescription>
             </DialogHeader>
             <DialogBody className="flex min-h-44 items-center justify-center">
               <Surface variant="strong" padding="sm" className="flex items-center gap-2 px-4 py-3" role="status">

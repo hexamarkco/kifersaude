@@ -45,6 +45,7 @@ type WhatsAppThreadHeaderProps = {
   followUpGenerationDisabledReason: string | null;
   generatingFollowUp: boolean;
   threadActionsMenuOpen: boolean;
+  contactContextPanelOpen: boolean;
   threadActionsMenuTriggerRef: RefObject<HTMLButtonElement>;
   chatAgendaSummary: ChatAgendaSummary;
   nextChatReminderSummary: string | null;
@@ -59,7 +60,7 @@ type WhatsAppThreadHeaderProps = {
   onCopyTranscript: () => void;
   onRecoverHistory: () => void;
   onOpenFollowUp: () => void;
-  onOpenLeadDrawer: () => void;
+  onToggleContactContextPanel: () => void;
   onToggleThreadActionsMenu: () => void;
 };
 
@@ -83,6 +84,7 @@ export function WhatsAppThreadHeader({
   followUpGenerationDisabledReason,
   generatingFollowUp,
   threadActionsMenuOpen,
+  contactContextPanelOpen,
   threadActionsMenuTriggerRef,
   chatAgendaSummary,
   nextChatReminderSummary,
@@ -97,7 +99,7 @@ export function WhatsAppThreadHeader({
   onCopyTranscript,
   onRecoverHistory,
   onOpenFollowUp,
-  onOpenLeadDrawer,
+  onToggleContactContextPanel,
   onToggleThreadActionsMenu,
 }: WhatsAppThreadHeaderProps) {
   const phoneRegion = selectedChat.is_group ? null : getCommWhatsAppPhoneRegion(selectedChat.phone_number);
@@ -177,7 +179,22 @@ export function WhatsAppThreadHeader({
             <IconButton type="button" onClick={onCopyTranscript} variant="ghost" aria-label="Copiar conversa formatada" title="Copiar conversa formatada" disabled={copyingTranscript} size="md">{copyingTranscript ? <Loader2 className="animate-spin" /> : <Copy aria-hidden="true" />}</IconButton>
             <IconButton type="button" onClick={onRecoverHistory} variant="ghost" aria-label="Recuperar mensagens antigas do chat" title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'} disabled={Boolean(historyRecoveryDisabledReason) || syncingHistory} size="md">{syncingHistory ? <Loader2 className="animate-spin" /> : <Download aria-hidden="true" />}</IconButton>
             {!selectedChat.is_group ? <IconButton type="button" onClick={onOpenFollowUp} variant="ghost" aria-label="Gerar follow-up com IA" title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'} disabled={Boolean(followUpGenerationDisabledReason)} size="md">{generatingFollowUp ? <Loader2 className="animate-spin" /> : <Sparkles className="kds-control-icon" />}</IconButton> : null}
-            {!selectedChat.is_group ? <IconButton type="button" onClick={onOpenLeadDrawer} variant="ghost" aria-label="Abrir informações do lead" title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'} size="md"><span className="relative inline-flex"><Info className="kds-control-icon" />{chatAgendaSummary.pendingCount > 0 ? <span className="kds-sidebar-badge whatsapp-inbox-count-badge" aria-label={`${chatAgendaSummary.pendingCount} lembretes pendentes`}>{chatAgendaSummary.pendingCount > 9 ? '9+' : chatAgendaSummary.pendingCount}</span> : null}</span></IconButton> : null}
+            {!selectedChat.is_group ? (
+              <IconButton
+                type="button"
+                onClick={onToggleContactContextPanel}
+                variant={contactContextPanelOpen ? 'secondary' : 'ghost'}
+                aria-label={contactContextPanelOpen ? 'Fechar informações do contato' : 'Abrir informações do contato'}
+                aria-pressed={contactContextPanelOpen}
+                title={contactContextPanelOpen ? 'Fechar informações do contato' : 'Informações do contato'}
+                size="md"
+              >
+                <span className="relative inline-flex">
+                  <Info className="kds-control-icon" />
+                  {chatAgendaSummary.pendingCount > 0 ? <span className="kds-sidebar-badge whatsapp-inbox-count-badge" aria-label={`${chatAgendaSummary.pendingCount} lembretes pendentes`}>{chatAgendaSummary.pendingCount > 9 ? '9+' : chatAgendaSummary.pendingCount}</span> : null}
+                </span>
+              </IconButton>
+            ) : null}
           </ButtonGroup>
         </div>
       </div>

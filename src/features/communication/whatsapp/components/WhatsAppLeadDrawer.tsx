@@ -22,6 +22,7 @@ import {
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
+import { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
 import {
   listRemindersForLeadContext,
   subscribeToReminderChanges,
@@ -49,9 +50,11 @@ const LEAD_DRAWER_TABS: TabItem<LeadDrawerTab>[] = [
 
 type WhatsAppLeadDrawerProps = {
   isOpen: boolean;
+  presentation?: 'drawer' | 'sidebar';
   onClose: () => void;
   chatId: string | null;
   chatDisplayName: string;
+  chatPhoneNumber: string | null;
   linkedLead: CommWhatsAppLeadPanel | null;
   leadPanelError: string | null;
   autoLinked: boolean;
@@ -110,9 +113,11 @@ function LeadAvatar({ label }: { label: string }) {
 
 export default function WhatsAppLeadDrawer({
   isOpen,
+  presentation = 'drawer',
   onClose,
   chatId,
   chatDisplayName,
+  chatPhoneNumber,
   linkedLead,
   leadPanelError,
   autoLinked,
@@ -454,21 +459,20 @@ export default function WhatsAppLeadDrawer({
     return null;
   }
 
-  return (
+  const drawerContent = (
     <>
-      <Drawer
-        open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
-        side="right"
-        size="md"
-        className="comm-whatsapp-lead-drawer"
-      >
         <DrawerHeader onClose={onClose} className="comm-whatsapp-lead-drawer-header">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">Info do chat</Text>
-          <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
-          <Text className="mt-1 text-sm text-[var(--text-muted)]">Lead, contratos e próximos acompanhamentos</Text>
+          <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">{presentation === 'sidebar' ? 'Informações do contato' : 'Info do chat'}</Text>
+          {presentation === 'sidebar' ? (
+            <Heading level={2} className="mt-1 text-base font-semibold text-[var(--text-primary)]">{chatDisplayName}</Heading>
+          ) : (
+            <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
+          )}
+          <Text className="mt-1 text-sm text-[var(--text-muted)]">
+            {presentation === 'sidebar' ? `Contato do WhatsApp · ${formatCommWhatsAppPhoneLabel(chatPhoneNumber)}` : 'Lead, contratos e próximos acompanhamentos'}
+          </Text>
         </DrawerHeader>
-        <DrawerBody className="overflow-y-auto">
+        <DrawerBody className={presentation === 'sidebar' ? 'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto' : 'overflow-y-auto'}>
           <Tabs
             items={LEAD_DRAWER_TABS}
             value={activeTab}
@@ -765,7 +769,27 @@ export default function WhatsAppLeadDrawer({
             </div>
           )}
         </DrawerBody>
-      </Drawer>
+    </>
+  );
+
+  return (
+    <>
+      {presentation === 'sidebar' ? (
+        <aside className="kds-inbox-lead-context-panel is-open flex min-h-0 flex-col border-l border-[var(--border-subtle)] bg-[var(--bg-surface)]" aria-label="Informações do contato">
+          {drawerContent}
+        </aside>
+      ) : (
+        <Drawer
+          open={isOpen}
+          onOpenChange={(open) => !open && onClose()}
+          side="right"
+          size="md"
+          className="comm-whatsapp-lead-drawer"
+        >
+          {drawerContent}
+        </Drawer>
+      )}
+
 
       {schedulerOpen && agendaLead ? (
         <ReminderSchedulerModal

@@ -4,6 +4,7 @@ import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2,
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
+  ActionSurface,
   Alert,
   Button,
   PageHeader,
@@ -30,7 +31,6 @@ import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
 import { WhatsAppThreadActionsMenu } from './components/WhatsAppThreadActionsMenu';
 import { WhatsAppInboxSidebar } from './components/WhatsAppInboxSidebar';
 import { WhatsAppInboxConversationPane, type WhatsAppInboxConversationView } from './components/WhatsAppInboxConversationPane';
-import { WhatsAppInboxLeadContextPanel } from './components/WhatsAppInboxLeadContextPanel';
 import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
 import { WhatsAppInboxLazyLoadingFallback } from './components/WhatsAppInboxLazyLoadingFallback';
@@ -214,7 +214,7 @@ export default function WhatsAppInboxScreen() {
   const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
   const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null);
   const [chatFilesOpen, setChatFilesOpen] = useState(false);
-  const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
+  const [contactContextPanelOpen, setContactContextPanelOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
   const [leadPanelLoading, setLeadPanelLoading] = useState(false);
   const [leadPanelError, setLeadPanelError] = useState<string | null>(null);
@@ -494,7 +494,7 @@ export default function WhatsAppInboxScreen() {
     loading: leadSearchLoading,
     error: leadSearchError,
     refreshDrawerSearch,
-  } = useInboxLeadSearch({ isOpen: leadDrawerOpen, query: leadSearchQuery, selectedChat });
+  } = useInboxLeadSearch({ isOpen: contactContextPanelOpen, query: leadSearchQuery, selectedChat });
   const sending = selectedChatId ? Boolean(sendingByChatId[selectedChatId]) : false;
   const sendingDrawerMedia = selectedChatId ? Boolean(sendingDrawerMediaByChatId[selectedChatId]) : false;
 
@@ -713,12 +713,12 @@ export default function WhatsAppInboxScreen() {
   });
 
   const suggestedLead = useMemo(() => {
-    if (!leadDrawerOpen || selectedChat?.lead_id || leadSearchQuery.trim() !== '') {
+    if (!contactContextPanelOpen || selectedChat?.lead_id || leadSearchQuery.trim() !== '') {
       return null;
     }
 
     return leadSearchResults.length === 1 ? leadSearchResults[0] : null;
-  }, [leadDrawerOpen, leadSearchQuery, leadSearchResults, selectedChat?.lead_id]);
+  }, [contactContextPanelOpen, leadSearchQuery, leadSearchResults, selectedChat?.lead_id]);
   const selectedChatWasAutoLinked = selectedChat?.lead_link_source === 'auto_phone';
   const selectedChatLeadMutationLoading = leadMutationLoadingChatId === selectedChat?.id;
   const selectedChatDisplayName = useMemo(
@@ -1037,7 +1037,7 @@ export default function WhatsAppInboxScreen() {
 
   useInboxSelectedChatLifecycle({
     selectedChatId,
-    leadDrawerOpen,
+    leadDrawerOpen: contactContextPanelOpen,
     refs: {
       selectedChatIdRef,
       suppressAutoChatSelectionRef,
@@ -1658,16 +1658,15 @@ export default function WhatsAppInboxScreen() {
     void loadLeadContracts(leadPanel?.id ?? null);
   }, [leadPanel?.id, loadLeadContracts]);
 
-  const handleOpenLeadDrawer = () => {
-    if (selectedChat?.is_group) {
-      return;
-    }
-    setLeadDrawerOpen(true);
+  const handleToggleContactContextPanel = () => {
+    setContactContextPanelOpen((current) => !current);
   };
 
-  const handleCloseLeadDrawer = () => {
-    setLeadDrawerOpen(false);
-  };
+  useEffect(() => {
+    if (!selectedChat || selectedChat.is_group) {
+      setContactContextPanelOpen(false);
+    }
+  }, [selectedChat]);
 
   const handleOpenCreateLeadFromChat = useCallback(() => {
     if (!selectedChat || selectedChat.is_group) {
@@ -1870,11 +1869,15 @@ export default function WhatsAppInboxScreen() {
       followUpGenerationDisabledReason,
       generatingFollowUp,
       threadActionsMenuOpen,
+      contactContextPanelOpen,
       threadActionsMenuTriggerRef,
       chatAgendaSummary,
       nextChatReminderSummary,
       chatAgendaSummaryError,
-      onBack: handleBackToChatList,
+      onBack: () => {
+        setContactContextPanelOpen(false);
+        handleBackToChatList();
+      },
       onLeadStatusChange: handleLeadStatusChange,
       onSaveContact: (name) => {
         setSaveContactName(name);
@@ -1896,7 +1899,7 @@ export default function WhatsAppInboxScreen() {
       onCopyTranscript: () => void handleCopyChatTranscript(),
       onRecoverHistory: () => void handleRecoverChatHistory(),
       onOpenFollowUp: handleOpenFollowUpModal,
-      onOpenLeadDrawer: handleOpenLeadDrawer,
+      onToggleContactContextPanel: handleToggleContactContextPanel,
       onToggleThreadActionsMenu: () => setThreadActionsMenuOpen((current) => !current),
     },
     messageSearch: chatMessageSearchOpen ? {
@@ -2051,7 +2054,7 @@ export default function WhatsAppInboxScreen() {
           </section>
         )}
 
-        <section className="kds-inbox-workspace-grid grid min-h-0 flex-1 gap-0">
+        <section className={`kds-inbox-workspace-grid grid min-h-0 flex-1 gap-0 ${contactContextPanelOpen && selectedChat && !selectedChat.is_group ? 'is-contact-panel-open' : ''}`}>
         <WhatsAppInboxSidebar
           leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}
@@ -2111,16 +2114,56 @@ export default function WhatsAppInboxScreen() {
           onDragLeave={handleThreadDragLeave}
           onDrop={handleThreadDrop}
         />
-        <WhatsAppInboxLeadContextPanel
-          selectedChat={selectedChat}
-          selectedChatDisplayName={selectedChat ? selectedChatDisplayName : null}
-          leadPanel={leadPanel}
-          leadPanelLoading={leadPanelLoading}
-          leadPanelError={leadPanelError}
-          pendingReminderCount={chatAgendaSummary.pendingCount}
-          onOpenLeadDrawer={handleOpenLeadDrawer}
-          onOpenLeadInCrm={selectedChat?.lead_id ? handleViewLeadInCrm : undefined}
-        />
+        {contactContextPanelOpen && selectedChat && !selectedChat.is_group ? (
+          <ActionSurface
+            type="button"
+            variant="plain"
+            padding="none"
+            className="kds-inbox-context-backdrop"
+            onClick={() => setContactContextPanelOpen(false)}
+            aria-label="Fechar informações do contato"
+          />
+        ) : null}
+        {contactContextPanelOpen && selectedChat && !selectedChat.is_group ? (
+          <Suspense fallback={<WhatsAppInboxLazyLoadingFallback />}>
+            <WhatsAppLeadDrawer
+              presentation="sidebar"
+              isOpen
+              onClose={() => setContactContextPanelOpen(false)}
+              chatId={selectedChat.id}
+              chatDisplayName={selectedChatDisplayName}
+              chatPhoneNumber={selectedChat.phone_number}
+              linkedLead={leadPanel}
+              leadPanelError={leadPanelError}
+              autoLinked={selectedChatWasAutoLinked}
+              loading={leadPanelLoading}
+              contracts={leadContracts}
+              contractsLoading={leadContractsLoading}
+              contractsError={leadContractsError}
+              statusOptions={leadStatuses}
+              responsavelOptions={responsavelOptions}
+              leadMutationLoading={selectedChatLeadMutationLoading}
+              onStatusChange={handleLeadStatusChange}
+              onResponsavelChange={handleLeadResponsavelChange}
+              onRefreshContracts={handleRefreshLeadContracts}
+              onViewLead={leadPanel ? handleViewLeadInCrm : undefined}
+              onUnlinkLead={selectedChat.lead_id ? handleUnlinkLead : undefined}
+              searchQuery={leadSearchQuery}
+              onSearchQueryChange={setLeadSearchQuery}
+              searchResults={leadSearchResults}
+              searchError={leadSearchError}
+              suggestedLead={suggestedLead}
+              searchLoading={leadSearchLoading}
+              onRetryLeadPanel={() => void loadLeadPanel(selectedChat)}
+              onRetrySearch={() => void refreshDrawerSearch(leadSearchQuery, selectedChat.phone_number)}
+              onCreateLead={!selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
+              onLinkLead={(leadId) => void handleLinkLead(leadId)}
+              linkLoadingLeadId={linkLoadingLeadId}
+              canViewAgenda={canViewAgenda}
+              canEditAgenda={canEditAgenda}
+            />
+          </Suspense>
+        ) : null}
         </section>
 
         {lightboxMessageId && mediaViewerMessages.length > 0 ? (
@@ -2311,43 +2354,6 @@ export default function WhatsAppInboxScreen() {
           />
         ) : null}
 
-        {leadDrawerOpen && !selectedChat?.is_group ? (
-          <WhatsAppLeadDrawer
-            isOpen
-            onClose={handleCloseLeadDrawer}
-            chatId={selectedChat?.id ?? null}
-            chatDisplayName={selectedChatDisplayName}
-            linkedLead={leadPanel}
-            leadPanelError={leadPanelError}
-            autoLinked={selectedChatWasAutoLinked}
-            loading={leadPanelLoading}
-            contracts={leadContracts}
-            contractsLoading={leadContractsLoading}
-            contractsError={leadContractsError}
-            statusOptions={leadStatuses}
-            responsavelOptions={responsavelOptions}
-            leadMutationLoading={selectedChatLeadMutationLoading}
-            onStatusChange={handleLeadStatusChange}
-            onResponsavelChange={handleLeadResponsavelChange}
-            onRefreshContracts={handleRefreshLeadContracts}
-            onViewLead={leadPanel ? handleViewLeadInCrm : undefined}
-            onUnlinkLead={selectedChat?.lead_id ? handleUnlinkLead : undefined}
-            searchQuery={leadSearchQuery}
-            onSearchQueryChange={setLeadSearchQuery}
-            searchResults={leadSearchResults}
-            searchError={leadSearchError}
-            suggestedLead={suggestedLead}
-            searchLoading={leadSearchLoading}
-            onRetryLeadPanel={() => void loadLeadPanel(selectedChat)}
-            onRetrySearch={() => void refreshDrawerSearch(leadSearchQuery, selectedChat?.phone_number)}
-            onCreateLead={selectedChat && !selectedChat.is_group && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
-            onLinkLead={(leadId) => void handleLinkLead(leadId)}
-            linkLoadingLeadId={linkLoadingLeadId}
-            canViewAgenda={canViewAgenda}
-            canEditAgenda={canEditAgenda}
-          />
-        ) : null}
-
         {createLeadDraft ? (
           <LeadForm
             lead={null}
@@ -2534,6 +2540,7 @@ export default function WhatsAppInboxScreen() {
         <WhatsAppThreadActionsMenu
           menuRef={threadActionsMenuRef}
           isOpen={Boolean(selectedChat && threadActionsMenuOpen && threadActionsMenuPosition)}
+          contactContextPanelOpen={contactContextPanelOpen}
           position={threadActionsMenuPosition}
           selectedChat={selectedChat}
           setOpen={setThreadActionsMenuOpen}
@@ -2557,7 +2564,7 @@ export default function WhatsAppInboxScreen() {
           onCopyTranscript={() => void handleCopyChatTranscript()}
           onRecoverHistory={() => void handleRecoverChatHistory()}
           onOpenFollowUp={handleOpenFollowUpModal}
-          onOpenLeadDrawer={handleOpenLeadDrawer}
+          onToggleContactContextPanel={handleToggleContactContextPanel}
         />
 
         <PanelPopoverShell

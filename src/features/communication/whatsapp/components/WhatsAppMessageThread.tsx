@@ -182,7 +182,7 @@ export function WhatsAppMessageThread({
                         groupMediaSendingMessage && mediaUploadProgress?.attachmentId === groupMediaSendingMessage.id,
                       );
                       const mediaGroupMeta = (
-                        <div className={`whatsapp-inbox-message-meta mt-1 flex flex-wrap items-center gap-2 px-1 text-[11px] font-medium ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`whatsapp-inbox-message-meta mt-1 flex flex-wrap items-center gap-2 text-[11px] font-medium ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                           <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
                             <span>{formatMessageTime(lastMessage.message_at)}</span>
                             {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
@@ -241,7 +241,7 @@ export function WhatsAppMessageThread({
                       ? 'whatsapp-inbox-media-message'
                       : isBubblelessMediaMessage(message)
                         ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
-                        : `rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
+                        : `rounded-[var(--kds-radius-lg)] py-3 pl-3 pr-2 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
                     const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
                     const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
                     const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';
@@ -249,8 +249,8 @@ export function WhatsAppMessageThread({
                       <div className={cx(
                         'whatsapp-inbox-message-meta flex w-full flex-wrap items-center gap-1.5 text-[11px] font-medium',
                         reactions.length > 0
-                          ? `mt-0 px-1 ${messageMetaJustify}`
-                          : `mt-1 px-1 ${messageMetaJustify}`,
+                          ? `mt-0 ${messageMetaJustify}`
+                          : `mt-1 ${messageMetaJustify}`,
                       )}>
                         <span className={`${messageMetaTimeOrder} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`}>
                           <span>{formatMessageTime(message.message_at)}</span>

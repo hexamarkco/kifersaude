@@ -66,11 +66,12 @@ const createProps = (selectedChat: CommWhatsAppChat) => {
     onCopyTranscript: createSpy(),
     onRecoverHistory: createSpy(),
     onOpenFollowUp: createSpy(),
-    onOpenLeadDrawer: createSpy(),
+    onToggleContactContextPanel: createSpy(),
   };
   const props: ComponentProps<typeof WhatsAppThreadActionsMenu> = {
     menuRef: createRef<HTMLDivElement>(),
     isOpen: true,
+    contactContextPanelOpen: false,
     position: { top: 0, left: 0, width: 288, maxHeight: 400 },
     selectedChat,
     setOpen: spies.setOpen,
@@ -88,7 +89,7 @@ const createProps = (selectedChat: CommWhatsAppChat) => {
     onCopyTranscript: spies.onCopyTranscript,
     onRecoverHistory: spies.onRecoverHistory,
     onOpenFollowUp: spies.onOpenFollowUp,
-    onOpenLeadDrawer: spies.onOpenLeadDrawer,
+    onToggleContactContextPanel: spies.onToggleContactContextPanel,
   };
   return { props, spies };
 };
@@ -113,26 +114,29 @@ test('disponibiliza ações de CRM em chats individuais e fecha o menu antes de 
     const menu = getMenu();
     const followUpItem = getMenuItem(menu, 'Gerar follow-up com IA');
     const attendanceItem = getMenuItem(menu, 'Desativar IA neste chat');
+    const contextPanelItem = getMenuItem(menu, 'Informações do contato');
 
     act(() => followUpItem.click());
     act(() => attendanceItem.click());
+    act(() => contextPanelItem.click());
 
     assert.equal(spies.onOpenFollowUp.mock.calls.length, 1);
     assert.deepEqual(spies.onToggleAutonomousAttendance.mock.calls, [[props.selectedChat]]);
-    assert.deepEqual(spies.setOpen.mock.calls, [[false], [false]]);
+    assert.equal(spies.onToggleContactContextPanel.mock.calls.length, 1);
+    assert.deepEqual(spies.setOpen.mock.calls, [[false], [false], [false]]);
   } finally {
     view.unmount();
   }
 });
 
-test('oculta ações de lead e IA para conversas em grupo', () => {
+test('oculta ações de contato e IA para conversas em grupo', () => {
   const { props } = createProps(createChat({ is_group: true, lead_id: null }));
   const view = render(<WhatsAppThreadActionsMenu {...props} />);
 
   try {
     const menu = getMenu();
     assert.equal(menu.textContent?.includes('Gerar follow-up com IA'), false);
-    assert.equal(menu.textContent?.includes('Vincular lead do CRM'), false);
+    assert.equal(menu.textContent?.includes('Informações do contato'), false);
     assert.equal(menu.textContent?.includes('Ativar IA neste chat'), false);
     assert.ok(getMenuItem(menu, 'Arquivos da conversa'));
   } finally {

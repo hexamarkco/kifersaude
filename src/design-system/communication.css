@@ -562,6 +562,12 @@
   padding-bottom: 1.5rem;
 }
 
+.kds-inbox-lead-context-panel .comm-whatsapp-lead-drawer-header,
+.kds-inbox-lead-context-panel .comm-whatsapp-lead-drawer-body {
+  padding: var(--space-4);
+  background: var(--bg-surface);
+}
+
 .comm-whatsapp-lead-drawer .kds-dialog-title {
   font-size: 1.5rem;
 }

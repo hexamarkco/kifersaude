@@ -9,6 +9,7 @@ import type { InboxOverlayPosition } from '../hooks/useInboxOverlayPositions';
 type WhatsAppThreadActionsMenuProps = {
   menuRef: Ref<HTMLDivElement>;
   isOpen: boolean;
+  contactContextPanelOpen: boolean;
   position: InboxOverlayPosition | null;
   selectedChat: CommWhatsAppChat | null;
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -26,12 +27,13 @@ type WhatsAppThreadActionsMenuProps = {
   onCopyTranscript: () => void;
   onRecoverHistory: () => void;
   onOpenFollowUp: () => void;
-  onOpenLeadDrawer: () => void;
+  onToggleContactContextPanel: () => void;
 };
 
 export const WhatsAppThreadActionsMenu = ({
   menuRef,
   isOpen,
+  contactContextPanelOpen,
   position,
   selectedChat,
   setOpen,
@@ -49,7 +51,7 @@ export const WhatsAppThreadActionsMenu = ({
   onCopyTranscript,
   onRecoverHistory,
   onOpenFollowUp,
-  onOpenLeadDrawer,
+  onToggleContactContextPanel,
 }: WhatsAppThreadActionsMenuProps) => (
   <PanelPopoverShell
     ref={menuRef}
@@ -168,12 +170,12 @@ export const WhatsAppThreadActionsMenu = ({
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              onOpenLeadDrawer();
+              onToggleContactContextPanel();
             }}
             className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
           >
             <Info className="h-4 w-4 shrink-0" />
-            <span>{selectedChat.lead_id ? 'Informações do lead' : 'Vincular lead do CRM'}</span>
+            <span>{contactContextPanelOpen ? 'Fechar informações do contato' : 'Informações do contato'}</span>
           </DropdownOption>
         ) : null}
       </div>

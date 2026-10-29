@@ -919,6 +919,15 @@ export default function ContractsManager({
                 {paginatedContracts.map((contract) => {
                   const bonusValue = getBonusValue(contract);
                   const displayName = getContractDisplayName(contract);
+                  const operatorLabel = normalizeOperadoraLabel(contract.operadora) || "Sem operadora";
+                  const planLabel = [
+                    formatContractPlanLabel(contract.produto_plano),
+                    contract.modalidade ? formatContractModalityLabel(contract.modalidade) ?? contract.modalidade : null,
+                  ].filter(Boolean).join(" · ") || "Sem plano";
+                  const financialDetail = contract.comissao_prevista != null
+                    ? `Comissão: R$ ${contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}${bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}`
+                    : null;
+                  const ownerLabel = formatContractEntityName(contract.responsavel) || "Não atribuído";
 
                   return (
                     <TableRow key={contract.id} className="align-middle">
@@ -948,17 +957,19 @@ export default function ContractsManager({
                       />
                     </TableCell>
                     <TableCell>
-                      <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
-                      <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatContractPlanLabel(contract.produto_plano) || "Sem plano"}{contract.modalidade ? ` · ${formatContractModalityLabel(contract.modalidade) ?? contract.modalidade}` : ""}</span>
+                      <span className="kds-contracts-cell-secondary font-medium text-[var(--text-secondary)]" title={operatorLabel} aria-label={operatorLabel}>{operatorLabel}</span>
+                      <span className="kds-contracts-cell-secondary mt-1 text-xs text-[var(--text-muted)]" title={planLabel} aria-label={planLabel}>{planLabel}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
-                      {contract.comissao_prevista != null && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
+                      <span className="kds-contracts-cell-secondary font-medium text-[var(--text-primary)]" title={contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}>
+                        {contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}
+                      </span>
+                      {financialDetail && <span className="kds-contracts-cell-secondary mt-1 text-xs text-[var(--text-muted)]" title={financialDetail} aria-label={financialDetail}>{financialDetail}</span>}
                     </TableCell>
                     <TableCell>
                       {renderDateBadges(contract, true) ?? <span className="text-[var(--text-muted)]">Sem destaque</span>}
                     </TableCell>
-                    <TableCell>{formatContractEntityName(contract.responsavel) || "Não atribuído"}</TableCell>
+                    <TableCell><span className="kds-contracts-cell-secondary" title={ownerLabel} aria-label={ownerLabel}>{ownerLabel}</span></TableCell>
                       <TableCell align="right">
                         <RecordActions actions={getContractActions(contract)} visibleCount={1} label={`Ações do contrato ${contract.codigo_contrato}`} />
                       </TableCell>

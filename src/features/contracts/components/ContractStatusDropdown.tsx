@@ -45,7 +45,7 @@ export default function ContractStatusDropdown({ status, code, tone, canEdit, sa
           padding="none"
           type="button"
           style={{ '--op-status-color': statusColor } as CSSProperties}
-          className={`kds-op-status-badge kds-op-status-trigger w-fit max-w-full ${saving || options.length === 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+          className={`kds-op-status-badge kds-op-status-trigger ${saving || options.length === 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           aria-haspopup="dialog"
           disabled={saving || options.length === 0}
           aria-label={`Alterar status do contrato ${code}: ${label}`}

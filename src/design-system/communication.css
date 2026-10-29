@@ -523,6 +523,14 @@
   color: var(--brand-primary);
 }
 
+.whatsapp-start-chat-source-tabs-list {
+  flex-wrap: nowrap;
+}
+
+.whatsapp-start-chat-source-tabs-list > .kds-tab {
+  flex: 1 1 0;
+}
+
 .comm-whatsapp-overlay :is(.rounded-3xl, .rounded-2xl),
 .comm-whatsapp-lead-drawer :is(.rounded-3xl, .rounded-2xl) {
   border-radius: var(--kds-radius-md);

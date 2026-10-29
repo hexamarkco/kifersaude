@@ -12,6 +12,7 @@ export type DialogProps = HTMLAttributes<HTMLDivElement> & {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   size?: DialogSize;
+  initialFocus?: 'first' | 'first-content';
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;
   presentation?: DialogPresentation;
@@ -43,6 +44,7 @@ export function Dialog({
   open,
   onOpenChange,
   size = 'md',
+  initialFocus = 'first',
   closeOnOverlay = true,
   closeOnEscape = true,
   presentation = 'standard',
@@ -65,7 +67,12 @@ export function Dialog({
       const dialog = dialogRef.current;
       if (!dialog) return;
 
-      dialog.querySelector<HTMLElement>(focusableSelector)?.focus();
+      const content = initialFocus === 'first-content'
+        ? dialog.querySelector<HTMLElement>('.kds-dialog-body')
+        : null;
+      const focusTarget = content?.querySelector<HTMLElement>(focusableSelector)
+        ?? dialog.querySelector<HTMLElement>(focusableSelector);
+      focusTarget?.focus();
       if (document.activeElement === document.body) dialog.focus();
     });
 
@@ -75,7 +82,7 @@ export function Dialog({
         previouslyFocusedElementRef.current.focus();
       }
     };
-  }, [open]);
+  }, [initialFocus, open]);
 
   useEffect(() => {
     if (!open || !closeOnEscape) return;
@@ -254,6 +261,7 @@ export type DialogShellProps = {
   children: ReactNode;
   footer?: ReactNode;
   size?: DialogSize;
+  initialFocus?: 'first' | 'first-content';
   presentation?: DialogPresentation;
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;
@@ -273,6 +281,7 @@ export function DialogShell({
   children,
   footer,
   size = 'md',
+  initialFocus = 'first',
   presentation = 'standard',
   closeOnOverlay = true,
   closeOnEscape = true,
@@ -287,6 +296,7 @@ export function DialogShell({
       open={isOpen}
       onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
       size={size}
+      initialFocus={initialFocus}
       presentation={presentation}
       closeOnOverlay={closeOnOverlay}
       closeOnEscape={closeOnEscape}

@@ -4,12 +4,15 @@ import { AlertTriangle, Loader2, MessageSquarePlus, Phone, RefreshCw, Search, Us
 
 import {
   ActionSurface,
+  Avatar,
   Badge,
   Button,
+  EmptyState,
   Input,
+  LoadingState,
   Surface,
   type TabItem,
-  WorkspaceDialog,
+  DialogShell,
   SegmentedControl,
 } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
@@ -21,7 +24,7 @@ import type { CommWhatsAppPhoneContact } from '../domain/types';
 type StartChatSource = 'saved' | 'crm' | 'manual';
 
 const SOURCE_TABS: TabItem<StartChatSource>[] = [
-  { id: 'saved', label: 'Contatos salvos' },
+  { id: 'saved', label: 'Contatos' },
   { id: 'crm', label: 'CRM' },
   { id: 'manual', label: 'Número' },
 ];
@@ -49,20 +52,6 @@ type WhatsAppStartChatModalProps = {
   onStartFromManual: () => void;
   startingKey: string | null;
 };
-
-const getInitial = (value: string) => value.trim().charAt(0).toUpperCase() || '#';
-
-function ContactAvatar({ label, tone = 'brand' }: { label: string; tone?: 'brand' | 'gold' }) {
-  return (
-    <div
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-        tone === 'gold' ? 'bg-[var(--accent-gold-soft)] text-[var(--accent-gold-hover)]' : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
-      }`}
-    >
-      {getInitial(label)}
-    </div>
-  );
-}
 
 export default function WhatsAppStartChatModal({
   isOpen,
@@ -105,24 +94,33 @@ export default function WhatsAppStartChatModal({
         return 'Contatos salvos';
     }
   }, [source]);
+  const sourceHasResults = source === 'saved' ? contacts.length > 0 : crmLeads.length > 0;
 
   return (
-    <WorkspaceDialog
+    <DialogShell
       isOpen={isOpen}
       onClose={onClose}
       title="Novo chat"
       description="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente."
-      size="lg"
+      size="form"
+      initialFocus="first-content"
       bodyScrollable={false}
       bodyClassName="flex min-h-0 flex-col"
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-5">
-        <SegmentedControl items={SOURCE_TABS} value={source} onChange={setSource} />
+      <div className="flex min-w-0 flex-col gap-5">
+        <SegmentedControl
+          items={SOURCE_TABS}
+          value={source}
+          onChange={setSource}
+          ariaLabel="Origem do novo chat"
+          className="whatsapp-start-chat-source-tabs"
+          listClassName="whatsapp-start-chat-source-tabs-list"
+        />
 
         {source === 'manual' ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <Surface variant="muted" padding="lg" className="min-h-0 flex-1 overflow-y-auto">
-              <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
+          <div className="flex min-w-0 flex-col gap-4">
+            <Surface variant="muted" padding="lg" className="overflow-y-auto">
+              <div className="flex min-h-[12rem] flex-col items-center justify-center text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
                   <Phone className="h-6 w-6" />
                 </div>
@@ -141,7 +139,7 @@ export default function WhatsAppStartChatModal({
             </Surface>
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />
             {source === 'saved' && (
               <div className="flex items-center justify-between px-1">
@@ -149,7 +147,11 @@ export default function WhatsAppStartChatModal({
                 <Badge tone="neutral" size="sm">{contactsTotal}</Badge>
               </div>
             )}
-            <Surface variant="muted" padding="sm" className="min-h-[320px] flex-1 overflow-y-auto">
+            <Surface
+              variant="default"
+              padding="sm"
+              className={`max-h-[20rem] overflow-y-auto ${sourceHasResults ? 'min-h-0' : 'min-h-[12rem]'}`}
+            >
               {loadError ? (
                 <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
                   <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
@@ -163,15 +165,28 @@ export default function WhatsAppStartChatModal({
                   </div>
                 </Surface>
               ) : (source === 'saved' ? contactsLoading : crmLoading) ? (
-                <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Carregando {source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...
-                </div>
+                <LoadingState
+                  compact
+                  className="min-h-[12rem] justify-center"
+                  label={`Carregando ${source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...`}
+                />
               ) : source === 'saved' ? (
                 contacts.length === 0 ? (
-                  <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
-                    Nenhum contato salvo encontrado.
-                  </div>
+                  <EmptyState
+                    className="h-full min-h-0 border-0 bg-transparent px-3 py-8"
+                    title={<span className="font-sans text-sm font-semibold text-[var(--text-primary)]">{query.trim() ? 'Nenhum contato combina com a busca' : 'Nenhum contato salvo'}</span>}
+                    description={query.trim() ? 'Confira o nome ou número digitado, ou tente outra forma de iniciar a conversa.' : 'Você também pode buscar um lead do CRM ou iniciar pelo número.'}
+                    action={(
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => setSource('crm')}>
+                          Buscar no CRM
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => setSource('manual')}>
+                          Usar número
+                        </Button>
+                      </div>
+                    )}
+                  />
                 ) : (
                   <div className="space-y-2">
                     {contacts.map((contact) => (
@@ -182,7 +197,11 @@ export default function WhatsAppStartChatModal({
                         disabled={starting}
                         variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
                       >
-                        <ContactAvatar label={contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'} />
+                        <Avatar
+                          size="md"
+                          tone="brand"
+                          name={contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}
+                        />
                         <div className="min-w-0 flex-1">
                           <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</Text>
                           <Text className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</Text>
@@ -201,9 +220,16 @@ export default function WhatsAppStartChatModal({
                   </div>
                 )
               ) : crmLeads.length === 0 ? (
-                <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
-                  Nenhum lead encontrado.
-                </div>
+                <EmptyState
+                  className="h-full min-h-0 border-0 bg-transparent px-3 py-8"
+                  title={<span className="font-sans text-sm font-semibold text-[var(--text-primary)]">{query.trim() ? 'Nenhum lead combina com a busca' : 'Nenhum lead encontrado'}</span>}
+                  description={query.trim() ? 'Confira o nome ou número digitado, ou inicie a conversa por um número.' : 'Você pode procurar contatos salvos ou digitar um número.'}
+                  action={(
+                    <Button variant="secondary" size="sm" onClick={() => setSource('manual')}>
+                      Usar número
+                    </Button>
+                  )}
+                />
               ) : (
                 <div className="space-y-2">
                   {crmLeads.map((lead) => (
@@ -214,7 +240,7 @@ export default function WhatsAppStartChatModal({
                       disabled={starting}
                       variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
                     >
-                      <ContactAvatar label={lead.nome_completo || lead.telefone || '?'} tone="gold" />
+                      <Avatar size="md" name={lead.nome_completo || lead.telefone || '?'} />
                       <div className="min-w-0 flex-1">
                         <Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                           <LeadFavoriteBadge favorito={lead.favorito} />
@@ -241,6 +267,6 @@ export default function WhatsAppStartChatModal({
           </div>
         )}
       </div>
-    </WorkspaceDialog>
+    </DialogShell>
   );
 }

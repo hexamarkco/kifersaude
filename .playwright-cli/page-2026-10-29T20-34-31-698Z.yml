@@ -1,0 +1,23 @@
+- dialog [ref=f7e7]:
+  - generic [ref=f7e8]:
+    - generic [ref=f7e9]:
+      - heading "Novo chat" [level=2] [ref=f7e10]
+      - paragraph [ref=f7e11]:
+        - button "Informações sobre esta janela" [ref=f7e13]
+    - button "Fechar" [ref=f7e16] [cursor=pointer]
+  - generic [ref=f7e21]:
+    - tablist [ref=f7e23]:
+      - tab "Contatos salvos" [active] [selected] [ref=f7e24] [cursor=pointer]
+      - tab "CRM" [ref=f7e26] [cursor=pointer]
+      - tab "Número" [ref=f7e28] [cursor=pointer]
+    - generic [ref=f7e30]:
+      - textbox "Buscar em contatos salvos" [ref=f7e32]
+      - generic [ref=f7e33]:
+        - generic [ref=f7e34]: Contatos salvos
+        - generic [ref=f7e35]: "0"
+      - generic [ref=f7e37]:
+        - paragraph [ref=f7e38]: Nenhum contato salvo
+        - paragraph [ref=f7e39]: Você também pode buscar um lead do CRM ou iniciar pelo número.
+        - generic [ref=f7e41]:
+          - button "Buscar no CRM" [ref=f7e42] [cursor=pointer]
+          - button "Usar número" [ref=f7e43] [cursor=pointer]

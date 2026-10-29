@@ -53,7 +53,7 @@ export function SectionHeader({
   );
 }
 
-export type EmptyStateProps = HTMLAttributes<HTMLDivElement> & {
+export type EmptyStateProps = Omit<HTMLAttributes<HTMLDivElement>, 'title'> & {
   icon?: ReactNode;
   title?: ReactNode;
   description?: ReactNode;

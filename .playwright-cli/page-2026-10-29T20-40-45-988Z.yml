@@ -1,0 +1,22 @@
+- dialog [ref=f1e7]:
+  - generic [ref=f1e8]:
+    - generic [ref=f1e9]:
+      - heading "Novo chat" [level=2] [ref=f1e10]
+      - paragraph [ref=f1e11]:
+        - button "Informações sobre esta janela" [ref=f1e13]
+    - button "Fechar" [ref=f1e16] [cursor=pointer]
+  - generic [ref=f1e21]:
+    - tablist "Origem do novo chat" [ref=f1e23]:
+      - tab "Contatos" [active] [selected] [ref=f1e24] [cursor=pointer]
+      - tab "CRM" [ref=f1e26] [cursor=pointer]
+      - tab "Número" [ref=f1e28] [cursor=pointer]
+    - generic [ref=f1e30]:
+      - textbox "Buscar em contatos salvos" [ref=f1e32]
+      - generic [ref=f1e33]:
+        - generic [ref=f1e34]: Contatos salvos
+        - generic [ref=f1e35]: "1"
+      - button "CD Camila Demonstração +55 (21) 99999-1234" [ref=f1e38] [cursor=pointer]:
+        - generic [ref=f1e39]: CD
+        - generic [ref=f1e41]:
+          - paragraph [ref=f1e42]: Camila Demonstração
+          - paragraph [ref=f1e43]: +55 (21) 99999-1234

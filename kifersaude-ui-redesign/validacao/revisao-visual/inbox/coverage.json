@@ -1,6 +1,6 @@
 {
   "route": "/painel/inbox",
-  "reviewed_at": "2026-10-28",
+  "reviewed_at": "2026-10-29",
   "fixture": "Local Playwright audit fixture with synthetic conversations and records",
   "comparison": [
     "references/desktop/page--inbox.png",
@@ -36,6 +36,12 @@
     { "viewport": "390x844", "input_width": 340.8 },
     { "viewport": "320x640", "input_width": 270.4 }
   ],
+  "new_chat_measurements": [
+    { "viewport": "1920x1080", "dialog_width": 592, "empty_dialog_height": 502.2, "contact_list_height": 391, "document_scroll_width": 1920 },
+    { "viewport": "768x1024", "dialog_width": 592, "empty_dialog_height": 502.2, "document_scroll_width": 768 },
+    { "viewport": "390x844", "dialog_width": 390, "dialog_height": 844, "document_scroll_width": 390 },
+    { "viewport": "320x640", "dialog_width": 320, "dialog_height": 640, "document_scroll_width": 320, "tabs_share_one_row": true }
+  ],
   "screenshots": [
     { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "desktop/selected-dark-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
@@ -52,7 +58,20 @@
     { "file": "states/lead-context-drawer-mobile-light-lower.png", "state": "lead information drawer after internal scroll", "viewport": "390x844", "theme": "light", "capture": "viewport" },
     { "file": "states/new-conversation-dialog-mobile.png", "state": "new conversation, saved contacts tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
     { "file": "states/new-conversation-crm-mobile.png", "state": "new conversation, CRM tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
-    { "file": "states/new-conversation-number-mobile.png", "state": "new conversation, manual number tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" }
+    { "file": "states/new-conversation-number-mobile.png", "state": "new conversation, manual number tab", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-contacts-desktop.png", "state": "new conversation, synthetic saved contact result", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-crm-desktop.png", "state": "new conversation, synthetic CRM lead result", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-dialog-dark-desktop.png", "state": "new conversation, empty saved contacts", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
+    { "file": "states/new-conversation-dialog-desktop.png", "state": "new conversation, empty saved contacts", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-dialog-tablet.png", "state": "new conversation, empty saved contacts", "viewport": "768x1024", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-dialog-320.png", "state": "new conversation, empty saved contacts with compact source tabs", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-error-desktop.png", "state": "new conversation, loading contacts failed with retry action", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-info-tooltip-desktop.png", "state": "new chat guidance tooltip on hover", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-info-tooltip-focus-desktop.png", "state": "new chat guidance tooltip on keyboard focus", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-loading-desktop.png", "state": "new conversation, loading saved contacts", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-number-desktop.png", "state": "new conversation, manual number tab", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-number-filled-desktop.png", "state": "new conversation, synthetic manual number entered", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/new-conversation-number-320.png", "state": "new conversation, manual number tab", "viewport": "320x640", "theme": "light", "capture": "fullPage" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",

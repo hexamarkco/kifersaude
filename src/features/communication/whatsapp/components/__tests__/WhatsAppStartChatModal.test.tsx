@@ -85,6 +85,7 @@ test('empty contact state offers the real CRM and manual-number paths', () => {
   try {
     assert.equal(document.querySelector('[role="tablist"]')?.getAttribute('aria-label'), 'Origem do novo chat');
     assert.ok(buttonWithText('Contatos'));
+    assert.ok(document.querySelector('button[aria-label="Informações sobre o novo chat"]'));
     assert.ok(document.querySelector('[role="dialog"]')?.textContent?.includes('Nenhum contato salvo'));
     click(buttonWithText('Buscar no CRM'));
     assert.ok(document.querySelector('input[placeholder="Buscar em leads do crm"]'));

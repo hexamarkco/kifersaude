@@ -268,7 +268,7 @@ export function DialogFooter({ className, children, ...props }: DialogFooterProp
 export type DialogShellProps = {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  title?: ReactNode;
   description?: string;
   descriptionPlacement?: DialogDescriptionPlacement;
   children: ReactNode;

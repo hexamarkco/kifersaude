@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-28",
+  "updated_at": "2026-10-29",
   "scope": "Todas as interfaces reais, inclusive as que ainda forem encontradas fora do manifesto. A revisão permanece em andamento.",
   "historical_mapping": "MAPEAMENTO.json",
   "additional_interfaces_discovery": "pendente",
@@ -1671,9 +1671,16 @@
         "references/desktop/state--inbox-nova-conversa.png",
         "references/mobile/state--inbox-nova-conversa.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/inbox/README.md",
+        "validacao/revisao-visual/inbox/coverage.json"
+      ],
+      "notes": [
+        "DialogShell no tamanho form e orientação secundária no InfoTooltip reutilizável ao lado do título; o foco inicial permanece no conteúdo.",
+        "As opções reais Contatos, CRM e Número usam SegmentedControl com nome acessível e continuam alinhadas em uma linha a 320 px.",
+        "Contatos, leads e número manual preservam os callbacks existentes. Canal, mensagem inicial e salvamento não são campos disponíveis neste fluxo real."
+      ]
     },
     {
       "id": "state--inbox-filtros",
@@ -2664,8 +2671,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 39,
-    "remaining_manifest_contexts": 121,
+    "reviewed_contexts": 40,
+    "remaining_manifest_contexts": 120,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

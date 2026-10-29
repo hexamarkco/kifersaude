@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  InfoTooltip,
   Input,
   LoadingState,
   Surface,
@@ -100,8 +101,12 @@ export default function WhatsAppStartChatModal({
     <DialogShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Novo chat"
-      description="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente."
+      title={(
+        <span className="inline-flex items-center gap-1">
+          <span>Novo chat</span>
+          <InfoTooltip content="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente." side="bottom" label="Informações sobre o novo chat" />
+        </span>
+      )}
       size="form"
       initialFocus="first-content"
       bodyScrollable={false}

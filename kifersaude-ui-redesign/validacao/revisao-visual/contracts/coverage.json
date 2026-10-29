@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-28",
+  "generated_at": "2026-10-29",
   "module": "Contratos",
   "route": "/painel/contratos",
   "status": "partial",
@@ -11,16 +11,18 @@
     "references/desktop/state--contratos-importacao.png",
     "references/mobile/state--contratos-importacao.png",
     "references/desktop/state--contratos-criar.png",
-    "references/mobile/state--contratos-criar.png"
+    "references/mobile/state--contratos-criar.png",
+    "references/desktop/state--contratos-editar.png",
+    "references/mobile/state--contratos-editar.png"
   ],
   "reviewed_contexts": [
     "state--contratos-detalhes",
     "state--contratos-importacao",
     "page--contratos-listagem",
-    "state--contratos-criar"
+    "state--contratos-criar",
+    "state--contratos-editar"
   ],
   "pending_contexts": [
-    "state--contratos-editar",
     "state--contratos-excluir-confirmacao",
     "state--contratos-importacao-individual",
     "menus e estados adicionais encontrados na aplicação"
@@ -361,6 +363,36 @@
         "path": "screenshots/tablet/listagem.png",
         "width": 768,
         "height": 2462
+      },
+      {
+        "path": "screenshots/desktop/editar-contrato-pagina.png",
+        "width": 1920,
+        "height": 2348
+      },
+      {
+        "path": "screenshots/desktop/editar-contrato-pagina-viewport.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/desktop/editar-contrato-pagina-dark.png",
+        "width": 1920,
+        "height": 2348
+      },
+      {
+        "path": "screenshots/tablet/editar-contrato-pagina.png",
+        "width": 758,
+        "height": 2509
+      },
+      {
+        "path": "screenshots/mobile/editar-contrato-pagina.png",
+        "width": 380,
+        "height": 3433
+      },
+      {
+        "path": "screenshots/mobile-320/editar-contrato-pagina.png",
+        "width": 310,
+        "height": 3538
       }
     ],
     "drawer_internal_scroll_verified_at_320px": true,
@@ -371,7 +403,24 @@
     "mobile_menu_escape_restores_focus_to_trigger": true,
     "create_form_sections": 5,
     "create_form_business_fields_preserved": true,
-    "create_form_contextual_consumer_fields_match": true
+    "create_form_contextual_consumer_fields_match": true,
+    "contract_edit": {
+      "presentation": "full-page form launched from the contract details drawer",
+      "synthetic_fixture_data": true,
+      "cancel_returns_to_contract_list_without_saving": true,
+      "horizontal_overflow": false,
+      "widths_tested": [
+        "1920x1080",
+        "768x1024",
+        "390x844",
+        "320x640"
+      ],
+      "themes_tested": [
+        "light at all widths",
+        "dark at 1920x1080"
+      ],
+      "contextual_contract_details_consumers": "pending separate review"
+    }
   },
   "interaction_safety": {
     "synthetic_fixture_data": true,
@@ -379,7 +428,9 @@
     "invalid_json_state_opened": true,
     "import_action_submitted": false,
     "contract_created_updated_or_deleted": false,
-    "external_integrations_called": false
+    "external_integrations_called": false,
+    "contract_edit_opened": true,
+    "contract_edit_cancelled_without_saving": true
   },
   "screenshots": [
     {
@@ -651,6 +702,36 @@
       "path": "screenshots/tablet/listagem.png",
       "width": 768,
       "height": 2462
+    },
+    {
+      "path": "screenshots/desktop/editar-contrato-pagina.png",
+      "width": 1920,
+      "height": 2348
+    },
+    {
+      "path": "screenshots/desktop/editar-contrato-pagina-viewport.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/editar-contrato-pagina-dark.png",
+      "width": 1920,
+      "height": 2348
+    },
+    {
+      "path": "screenshots/tablet/editar-contrato-pagina.png",
+      "width": 758,
+      "height": 2509
+    },
+    {
+      "path": "screenshots/mobile/editar-contrato-pagina.png",
+      "width": 380,
+      "height": 3433
+    },
+    {
+      "path": "screenshots/mobile-320/editar-contrato-pagina.png",
+      "width": 310,
+      "height": 3538
     }
   ]
 }

@@ -108,6 +108,7 @@ type ContractDetailsProps = {
   onClose: () => void;
   onUpdate: () => void;
   onDelete?: (contract: Contract) => void;
+  onEdit?: (contract: Contract) => void;
   holderSectionAction?: ReactNode;
 };
 
@@ -117,6 +118,7 @@ export default function ContractDetails({
   onClose,
   onUpdate,
   onDelete,
+  onEdit,
   holderSectionAction,
 }: ContractDetailsProps) {
   const { role } = useAuth();
@@ -158,6 +160,15 @@ export default function ContractDetails({
   const [editingInteraction, setEditingInteraction] =
     useState<Interaction | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+
+  const handleEditContract = () => {
+    if (onEdit) {
+      onEdit(contract);
+      return;
+    }
+
+    setShowEditForm(true);
+  };
 
   const commissionInstallments = Array.isArray(contract.comissao_parcelas)
     ? contract.comissao_parcelas
@@ -879,7 +890,7 @@ export default function ContractDetails({
       {presentation !== 'drawer' && <div className="mb-4 flex items-center justify-end gap-2">
         {canEditContracts && (
           <Button
-            onClick={() => setShowEditForm(true)}
+            onClick={handleEditContract}
             variant="secondary"
             size="sm"
           >
@@ -2046,7 +2057,7 @@ export default function ContractDetails({
         <DrawerFooter className="flex items-center justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
           {canEditContracts && (
-            <Button type="button" onClick={() => setShowEditForm(true)}>
+            <Button type="button" onClick={handleEditContract}>
               Editar contrato
             </Button>
           )}

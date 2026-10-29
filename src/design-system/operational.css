@@ -1250,7 +1250,46 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   color: var(--text-primary);
   cursor: pointer;
 }
-.painel-theme.kifer-ds .kds-slider { width: 100%; accent-color: var(--brand-primary); cursor: pointer; min-height: var(--touch-target); }
+.painel-theme.kifer-ds .kds-slider {
+  width: 100%;
+  min-height: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
+}
+.painel-theme.kifer-ds .kds-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+.painel-theme.kifer-ds .kds-slider::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  appearance: none;
+  border: 2px solid var(--bg-surface);
+  border-radius: 999px;
+  background: var(--brand-primary);
+}
+.painel-theme.kifer-ds .kds-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+.painel-theme.kifer-ds .kds-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--bg-surface);
+  border-radius: 999px;
+  background: var(--brand-primary);
+}
+.painel-theme.kifer-ds .kds-slider:focus-visible {
+  outline: 2px solid var(--focus-ring-strong);
+  outline-offset: 2px;
+}
 .painel-theme.kifer-ds .kds-slider:disabled { cursor: not-allowed; opacity: 0.6; }
 .kds-skeleton-block { border-radius: var(--radius-panel); }
 .kds-image-contain { object-fit: contain; }

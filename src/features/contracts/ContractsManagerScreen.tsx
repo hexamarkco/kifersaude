@@ -379,6 +379,12 @@ export default function ContractsManager({
   const getContractDisplayName = (contract: Contract) =>
     resolveContractDisplayName(contract, holders);
 
+  const handleEditContract = (contract: Contract) => {
+    setSelectedContract(null);
+    setEditingContract(contract);
+    setShowForm(true);
+  };
+
   const handleDeleteContract = async (contract: Contract) => {
     if (deletingContractIdsRef.current.has(contract.id)) return;
 
@@ -1093,6 +1099,7 @@ export default function ContractsManager({
             contract={selectedContract}
             onClose={() => setSelectedContract(null)}
             onUpdate={handleContractsUpdated}
+            onEdit={handleEditContract}
             onDelete={handleDeleteContract}
             holderSectionAction={role === "admin" ? <HolderImportPreparation contract={selectedContract} /> : null}
           />

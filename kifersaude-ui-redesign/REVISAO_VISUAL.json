@@ -1830,15 +1830,23 @@
       "route": "/painel/contratos",
       "kind": "states",
       "components": [
+        "src/features/contracts/ContractsManagerScreen.tsx",
+        "src/components/ContractDetails.tsx",
         "src/components/ContractForm.tsx"
       ],
       "references": [
         "references/desktop/state--contratos-editar.png",
         "references/mobile/state--contratos-editar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
+      "notes": [
+        "A edição iniciada no drawer da Gestão de contratos fecha os detalhes e usa o formulário em página completa, reutilizando ContractForm e os mesmos dados, validações e salvamento; cancelar retorna à listagem.",
+        "Playwright com dados sintéticos verificou o fluxo de edição/cancelamento e o layout em 1920, 768, 390 e 320 px no tema claro e em 1920 px no tema escuro, sem overflow horizontal. Outros consumidores contextuais de ContractDetails seguem pendentes."
+      ]
     },
     {
       "id": "state--contratos-titular",
@@ -2656,8 +2664,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 38,
-    "remaining_manifest_contexts": 122,
+    "reviewed_contexts": 39,
+    "remaining_manifest_contexts": 121,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

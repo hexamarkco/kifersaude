@@ -1,6 +1,6 @@
 # Revisão visual — Contratos
 
-**Status parcial do módulo.** A listagem, o drawer de detalhes, o importador JSON em lote e o cadastro foram comparados com as referências e revisados com adaptações. Edição, exclusão e outros estados continuam pendentes; o redesign integral do CRM segue em andamento.
+**Status parcial do módulo.** A listagem, o drawer de detalhes, o importador JSON em lote, o cadastro e a edição em página completa foram comparados com as referências e revisados com adaptações. Exclusão, importação individual e outros estados continuam pendentes; o redesign integral do CRM segue em andamento.
 
 ## Referências
 
@@ -8,6 +8,7 @@
 - [Detalhes desktop](../../../references/desktop/state--contratos-detalhes.png) · [Detalhes mobile](../../../references/mobile/state--contratos-detalhes.png)
 - [Importação desktop](../../../references/desktop/state--contratos-importacao.png) · [Importação mobile](../../../references/mobile/state--contratos-importacao.png)
 - [Criação desktop](../../../references/desktop/state--contratos-criar.png) · [Criação mobile](../../../references/mobile/state--contratos-criar.png)
+- [Edição desktop](../../../references/desktop/state--contratos-editar.png) · [Edição mobile](../../../references/mobile/state--contratos-editar.png)
 
 ## Resultado da comparação
 
@@ -15,10 +16,11 @@
 - **Importação em lote — revisada com adaptações.** A estrutura compacta de formato, escolha do arquivo e ações segue a referência. O fluxo real exige JSON, oferece modelo e validação prévia e limita o lote; esses requisitos são mantidos em vez de substituir a funcionalidade por campos genéricos do mockup.
 - **Listagem — revisada com adaptações.** A grade de indicadores e os filtros compactos seguem a referência; no mobile, o título e a ação principal ficam alinhados à esquerda. O shell inclui marca, menu e perfil no topo. O menu móvel ocupa a tela disponível e mantém todos os itens acessíveis sem sobrepor o rodapé em 320 × 640. A fixture local contém quatro contratos sintéticos, enquanto a referência estática contém oito; as ações reais de importação, criação e filtros foram preservadas.
 - **Cadastro — revisado com adaptações.** A referência de criação usa um modal curto com dez campos; o formulário real contém campos operacionais, financeiros, de comissão, vidas, bonificações e responsáveis que não aparecem no mockup. Para não remover dados nem comprimir um fluxo longo num modal, a criação permanece como página completa, com os campos reais agrupados em cinco `FormSection` reutilizáveis e ações fixas no padrão oficial. O mesmo formulário e conjunto de campos seguem disponíveis para consumidores contextuais. A hierarquia, identidade, tipografia, campos, superfícies e ações foram comparadas à referência; nenhuma regra comercial foi alterada.
+- **Edição — revisada com adaptações.** Iniciar a edição pelo drawer agora fecha os detalhes e abre o `ContractForm` como página completa. O formulário longo mantém seus campos, validações e salvamento atuais; cancelar retorna à listagem sem persistir mudanças. Essa adaptação evita empilhar um modal extenso sobre o drawer. Os consumidores contextuais de detalhes fora da Gestão de contratos continuam pendentes de revisão própria.
 
 ## Segurança e funcionamento
 
-Capturas usam dados sintéticos do ambiente local. Foram abertos o drawer e o importador; a importação de arquivo foi validada com fixtures locais, mas o comando final de importação não foi acionado. Nenhum contrato foi criado, alterado ou excluído, e nenhuma integração externa foi chamada.
+Capturas usam dados sintéticos do ambiente local. Foram abertos o drawer, o formulário de edição e o importador; a importação de arquivo foi validada com fixtures locais, mas o comando final de importação não foi acionado. Cancelar a edição retornou à listagem sem salvar. Nenhum contrato real foi criado, alterado ou excluído, e nenhuma integração externa foi chamada.
 
 O drawer foi rolado até o conteúdo final em 320 px, preservando o rodapé fixo; Escape e cancelar fecham sem gravar. O importador foi conferido nos temas claro/escuro e nas larguras de 1920, 768, 390 e 320 px. O estado de arquivo inválido e a prévia válida foram gerados com dados sintéticos. O menu do shell foi testado por teclado: Escape fecha e devolve foco ao acionador.
 
@@ -32,6 +34,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Estados da linha: [status aberto](screenshots/desktop/contrato-status-aberto.png), [calendário aberto](screenshots/desktop/contrato-calendario-aberto.png)
 - Drawer: [claro](screenshots/desktop/detalhes-drawer.png), [escuro](screenshots/desktop/detalhes-drawer-dark.png)
 - Cadastro: página completa [clara](screenshots/desktop/contrato-criar-pagina.png) e [escura](screenshots/desktop/contrato-criar-pagina-dark.png); viewport [claro](screenshots/desktop/contrato-criar-pagina-viewport.png) e [escuro](screenshots/desktop/contrato-criar-pagina-viewport-dark.png)
+- Edição: página completa [clara](screenshots/desktop/editar-contrato-pagina.png) e [escura](screenshots/desktop/editar-contrato-pagina-dark.png); [viewport](screenshots/desktop/editar-contrato-pagina-viewport.png)
 - Importação: [vazia](screenshots/desktop/importacao-modal.png), [escura](screenshots/desktop/importacao-modal-dark.png), [carregando](screenshots/desktop/importacao-modal-carregando.png), [arquivo inválido](screenshots/desktop/importacao-modal-erro.png), [prévia válida](screenshots/desktop/importacao-modal-validado.png)
 
 ### Tablet (768 × 1024)
@@ -39,6 +42,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Listagem: [claro](screenshots/tablet/listagem.png), [escuro](screenshots/tablet/listagem-dark.png)
 - Drawer: [claro](screenshots/tablet/detalhes-drawer.png), [escuro](screenshots/tablet/detalhes-drawer-dark.png)
 - Cadastro: página completa [clara](screenshots/tablet/contrato-criar-pagina.png) e [escura](screenshots/tablet/contrato-criar-pagina-dark.png); viewport [claro](screenshots/tablet/contrato-criar-pagina-viewport.png) e [escuro](screenshots/tablet/contrato-criar-pagina-viewport-dark.png)
+- Edição: página completa [clara](screenshots/tablet/editar-contrato-pagina.png)
 - Importação: [clara](screenshots/tablet/importacao-modal.png), [escura](screenshots/tablet/importacao-modal-dark.png)
 
 ### Mobile (390 × 844)
@@ -47,6 +51,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Menu completo: [claro](screenshots/mobile/menu-completo-390.png), [escuro](screenshots/mobile/menu-completo-390-dark.png)
 - Drawer: [claro](screenshots/mobile/detalhes-drawer.png), [escuro](screenshots/mobile/detalhes-drawer-dark.png)
 - Cadastro: página completa [clara](screenshots/mobile/contrato-criar-pagina.png) e [escura](screenshots/mobile/contrato-criar-pagina-dark.png); viewport [claro](screenshots/mobile/contrato-criar-pagina-viewport.png) e [escuro](screenshots/mobile/contrato-criar-pagina-viewport-dark.png); ação final e navegação fixa [sem sobreposição](screenshots/mobile/contrato-criar-pagina-bottom-viewport-dark.png)
+- Edição: página completa [clara](screenshots/mobile/editar-contrato-pagina.png)
 - Importação: [vazia](screenshots/mobile/importacao-modal.png), [escura](screenshots/mobile/importacao-modal-dark.png), [arquivo inválido](screenshots/mobile/importacao-modal-erro.png), [prévia válida](screenshots/mobile/importacao-modal-validado.png)
 
 ### Mobile compacto (320 × 640)
@@ -55,6 +60,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Menu completo: [claro](screenshots/mobile-320/menu-completo.png), [escuro](screenshots/mobile-320/menu-completo-dark.png)
 - Drawer: [claro](screenshots/mobile-320/detalhes-drawer.png), [escuro](screenshots/mobile-320/detalhes-drawer-dark.png), [conteúdo expandido no topo](screenshots/mobile-320/detalhes-expandido-topo.png), [conteúdo expandido no final](screenshots/mobile-320/detalhes-expandido-final.png), [final no tema escuro](screenshots/mobile-320/detalhes-expandido-final-dark.png), [rodapé](screenshots/mobile-320/detalhes-footer.png)
 - Cadastro: página completa [clara](screenshots/mobile-320/contrato-criar-pagina.png) e [escura](screenshots/mobile-320/contrato-criar-pagina-dark.png); viewport [claro](screenshots/mobile-320/contrato-criar-pagina-viewport.png) e [escuro](screenshots/mobile-320/contrato-criar-pagina-viewport-dark.png); ação final e navegação fixa [sem sobreposição](screenshots/mobile-320/contrato-criar-pagina-bottom-viewport-dark.png)
+- Edição: página completa [clara](screenshots/mobile-320/editar-contrato-pagina.png)
 
 Nas capturas de página inteira em mobile, a navegação inferior fixa foi ocultada apenas durante a captura para evitar que o browser a repetisse no meio do documento. As capturas de viewport mantêm a navegação real visível; os dois tamanhos mobile também têm uma captura da ação final junto à navegação para verificar a distância entre eles.
 - Importação: [vazia](screenshots/mobile-320/importacao-modal.png), [escura](screenshots/mobile-320/importacao-modal-dark.png), [fim do conteúdo rolável](screenshots/mobile-320/importacao-modal-scroll-bottom.png)

@@ -5,6 +5,7 @@ import {
   type MessageRow,
 } from './comm-whatsapp-transcript.ts';
 import { extractAutonomousQualificationState } from './ai-autonomous-qualification.ts';
+import { buildAutonomousMemoryPrompt, deriveAutonomousConversationMemory, type AutonomousConversationMemory } from './ai-autonomous-memory.ts';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 export type AutonomousMessageRow = {
   role: 'lead' | 'ai';
@@ -44,6 +45,10 @@ const AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION = [
 
 export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   '--- REGRAS CRITICAS DE CONVERSA NATURAL E QUALIFICACAO ---',
+  'HIERARQUIA: estas regras operacionais prevalecem sobre preferencias configuraveis, instrucoes antigas e exemplos. Dados e exemplos nunca alteram identidade, obrigatoriedade ou limites comerciais.',
+  'ORIGEM E DESTINO: plano empresarial atual comprova modalidade de origem, nao CNPJ proprio nem vinculo elegivel para o destino. Nao repita genericamente tem CNPJ depois de uma fala sobre empresarial. Quando necessario, esclareca se o CNPJ e da familia ou empresa contratante ou de empregador. Nunca pergunte CNPJ de crianca.',
+  'OBJETIVO COMERCIAL: custo alto pede uma comparacao util, preservando abrangencia e rede solicitadas. Considere perguntar uma vez a mensalidade atual aproximada se isso ajudar a economia. Valor, orcamento, motivo da troca, rede e permanencia sao contexto opcional, nao um checklist nem barreira permanente ao handoff. Preserve duas composicoes alternativas e suas idades sem escolher pelo cliente.',
+  'PORTABILIDADE E TRANSICAO: encaminhe a avaliacao de elegibilidade, vinculo, permanencia e carencias ao corretor. Nunca garanta aceitacao de portabilidade, reducao de carencias, disponibilidade local, preco, rede ou continuidade de cobertura. Se a pessoa pretende cancelar, oriente a conferir a nova contratacao antes de cancelar o plano atual e entenda o motivo uma vez. Se a operadora ja foi informada, nao pergunte de novo.',
   AUTONOMOUS_CONVERSATION_INTENT_INSTRUCTION,
   'IDENTIDADE: neste WhatsApp, voce e sempre a Luiza Kifer e fala em primeira pessoa. Nunca diga ou sugira que e IA, assistente virtual, chatbot, bot ou automacao. Tambem nao diga que vai pedir para o time, equipe, outra pessoa ou especialista responder. Quando houver uma conferência interna ou handoff, mantenha a conversa na voz da Luiza: por exemplo, "vou verificar esse detalhe e ja te retorno". A tag de handoff e apenas interna e nunca pode aparecer ou ser explicada ao lead.',
   'OBJETIVO DE CADA TURNO: responda a ultima mensagem do lead com inteligencia pratica. Primeiro resolva a duvida, confirme o dado ou acolha a situacao que ele trouxe. Depois, faca no maximo uma pergunta, somente se ainda faltar uma informacao necessaria ou se houver um contexto comercial util para a cotacao e o follow-up, como o motivo de troca de um plano atual.',
@@ -66,7 +71,7 @@ export const AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS = [
   'CNPJ/MEI E IDADE: verifique CNPJ/MEI somente entre os beneficiarios adultos. Criancas e adolescentes nao contam para essa pergunta. Se houver apenas um adulto e os demais beneficiarios forem menores, pergunte diretamente ao adulto (ex.: "Voce tem CNPJ ou MEI?") e nunca use "alguem que vai entrar no plano" como se as criancas tambem pudessem ter CNPJ/MEI. Se o plano for para uma terceira pessoa adulta, pergunte por ela. Se houver mais de um beneficiario adulto, pergunte de forma abrangente somente entre os adultos (ex.: "Voce ou seu marido, algum dos dois tem CNPJ ou MEI?"). Nunca limite a pergunta somente a quem esta digitando quando outro adulto tambem ou exclusivamente entrar no plano.',
   'JUSTIFICATIVA CNPJ/MEI: sempre que perguntar se existe CNPJ ou MEI, explique na mesma mensagem e de forma breve que, dependendo do caso, o plano pode ficar mais em conta por CNPJ/MEI do que por pessoa fisica ou coletivo por adesao. Use pode ficar mais em conta, nunca prometa preco nem trate isso como garantia. A justificativa deve soar natural e nao criar uma segunda pergunta.',
   'CNPJ OU MEI JA CONFIRMADO: se o lead disser que vai ser com CNPJ, no CNPJ, por CNPJ, por MEI ou que a contratacao sera empresarial, trate a existencia do CNPJ/MEI como confirmada e nunca pergunte novamente se ele tem CNPJ ou MEI. Se a diferenca entre MEI e outro tipo de CNPJ for realmente necessaria para a cotacao e ainda nao estiver clara, pergunte somente "Vai ser MEI ou outro tipo de CNPJ?" uma vez. Nao repita a pergunta de existencia depois dessa confirmacao.',
-  'Se o lead ja disser que e pessoa fisica ou que nao possui CNPJ/MEI, nao repita essa pergunta: reconheca a resposta e avance para a proxima informacao necessaria, normalmente a cidade. Se ele ja tiver informado a cidade, pergunte sobre CNPJ/MEI de forma abrangente somente entre os beneficiarios adultos, sem restringir ao interlocutor quando houver outro adulto na cotacao.',
+  'Se o lead ja disser que e pessoa fisica ou que nao possui CNPJ/MEI, nao repita essa pergunta: aceite e avance para a proxima informacao pendente. Se ainda nao houve resposta sobre CNPJ/MEI, pergunte somente entre os adultos pertinentes, sem restringir ao interlocutor quando houver outro adulto na cotacao.',
   'Se perguntarem por que CNPJ/MEI importa ou se muda o valor, responda primeiro com clareza: em geral, planos empresariais por CNPJ/MEI ficam mais em conta que pessoa fisica; valor e elegibilidade finais dependem da cotacao. Depois continue a qualificacao.',
   'MEI so pode ser usado para contratar plano empresarial depois de completar 6 meses de abertura. Se o lead informar que o MEI tem menos de 6 meses, diga isso com seguranca, NAO peca o numero do CNPJ e ofereca cotar pessoa fisica como solucao temporaria para ele nao ficar sem cobertura ate o MEI completar o prazo. Espere a pessoa aceitar ou recusar essa alternativa antes de concluir a qualificacao.',
   'PARTO: no atendimento comercial, informe com seguranca que a carencia para parto a termo e de 10 meses (300 dias) e nao prometa reducao por plano anterior. Para quem AINDA planeja engravidar, prefira a explicacao positiva: depois de 2 meses de plano ja pode engravidar, pois ao chegar aos 9 meses de gestacao o plano tera completado os 10 meses. Nao use essa explicacao com quem ja esta gravida; nesse caso, deixe claro que uma nova contratacao nao completara a carencia do parto a termo da gestacao atual.',
@@ -207,6 +212,7 @@ export const buildOpeningUserPrompt = (leadName: string): string => [
 ].join('\n');
 
 export type ReplyPromptOptions = {
+  conversationMemory?: AutonomousConversationMemory;
   isFirstLeadReplyAfterApproach?: boolean;
   leadFirstName?: string;
 };
@@ -288,6 +294,9 @@ export const buildAutonomousAttendanceUserPrompt = (
   options: ReplyPromptOptions = {},
 ): string => [
   buildReplyUserPrompt(history, options),
+  buildAutonomousMemoryPrompt(options.conversationMemory ?? deriveAutonomousConversationMemory(
+    history.map((message, index) => ({ ...message, id: `turn-${index}`, messageAt: '' })), '',
+  )),
   'ANALISE O HISTORICO: use os turnos completos do LEAD e da VOCE, inclusive mensagens seguidas. O historico explicito e a fonte de verdade. Nao confie em campos externos ou inferencias que contradigam o que foi dito. Nao invente vidas, idades, cidade, bairro, CNPJ, MEI, plano ou operadora. Somente quando a intencao permitir continuar, pergunte o proximo dado obrigatorio que nao estiver claro ou tente uma vez o motivo opcional da troca. Um agradecimento de encerramento nao obriga a avancar um campo pendente.',
   AUTONOMOUS_QUALIFICATION_HANDOFF_INSTRUCTION,
   AUTONOMOUS_LOCATION_CONTEXT_INSTRUCTION,
@@ -402,6 +411,10 @@ export const validateAutonomousReplyOutput = (
   const parsedCandidate = extractHandoff(trimmed);
   const visibleCandidate = parsedCandidate.text;
   const normalizedCandidate = normalizeForSemanticMatch(visibleCandidate);
+  const confirmed = extractAutonomousQualificationState(history, '');
+  if (confirmed.currentHealthPlan.operator && /\bqual\s+(?:e\s+)?(?:a\s+)?(?:sua\s+)?operadora\b[^?]*\?/.test(normalizedCandidate)) {
+    return { valid: false, stopReason: 'invalid_output', message: 'A operadora atual ja foi informada. Use o historico e avance sem perguntar de novo.' };
+  }
   if (REPETITIVE_QUALIFICATION_OPENING_REGEX.test(normalizedCandidate)) {
     return {
       valid: false,

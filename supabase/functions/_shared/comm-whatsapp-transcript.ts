@@ -71,6 +71,7 @@ export const getMessageContent = (message: MessageRow) => {
   const caption = normalizeTranscriptText(toTrimmedString(message.media_caption));
   const transcription = normalizeTranscriptText(toTrimmedString(message.transcription_text));
   const kind = message.message_type.trim().toLowerCase();
+  if (['receipt', 'ack', 'status', 'notification', 'reaction', 'protocol'].includes(kind)) return '';
   // Eventos auxiliares da Whapi podem ter direction=inbound. O rotulo
   // de auditoria nao e uma fala do cliente, mesmo num job de catch-up.
   if (kind === 'unknown' && text.toLowerCase() === '[mensagem]' && !caption && !transcription) return '';
@@ -82,7 +83,7 @@ export const getMessageContent = (message: MessageRow) => {
   if (caption) return caption;
   if (text) return text;
   if (transcription) return transcription;
-  return `[${kind || 'mensagem sem texto'}]`;
+  return kind === 'unknown' ? '' : `[${kind || 'mensagem sem texto'}]`;
 };
 
 export const buildTranscriptLine = (message: MessageRow, contactLabel: string, timeZone: string) => {

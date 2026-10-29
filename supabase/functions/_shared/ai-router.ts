@@ -1,3 +1,4 @@
+import { AiGenerationError, AiProviderHttpError, prepareAiJsonRequest, readAiProviderHttpError } from './ai-provider-http.ts';
 import {
   AI_REASONING_EFFORTS,
   resolveOpenAiRequestProfile,
@@ -51,6 +52,7 @@ type ProviderCallParams = {
   reasoningEffort?: AiReasoningEffort | null;
   signal?: AbortSignal;
   maxHttpAttempts?: number;
+  correlationId?: string;
   onReasoningEffortApplied?: (effort: AiReasoningEffort | null) => void;
   documents?: AiDocumentInput[];
   responseFormat?: AiJsonSchemaFormat;
@@ -516,13 +518,15 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
 
   for (let attempt = 0; attempt < maxHttpAttempts; attempt += 1) {
     params.onReasoningEffortApplied?.(reasoningEffort ?? null);
+    const request = await prepareAiJsonRequest(buildOpenAiChatRequestBody(params, messages, tokenParameter, includeTemperature, reasoningEffort), 'chat/completions', params.correlationId);
+    const requestStartedAt = Date.now();
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${settings.apiKey}`,
       },
-      body: JSON.stringify(buildOpenAiChatRequestBody(params, messages, tokenParameter, includeTemperature, reasoningEffort)),
+      body: request.serialized,
       signal: params.signal,
     });
 
@@ -551,7 +555,7 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
 
     const errorText = await response.text();
 
-    if (response.status === 400) {
+    if (response.status === 400 && attempt + 1 < maxHttpAttempts) {
       if (isUnsupportedOpenAiParameterError(errorText, tokenParameter)) {
         tokenParameter = getAlternateOpenAiTokenParameter(tokenParameter);
         continue;
@@ -568,7 +572,9 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
       }
     }
 
-    throw new Error(`OpenAI retornou erro HTTP ${response.status}: ${errorText}`);
+    const failure = readAiProviderHttpError(response, errorText);
+    console.warn('[ai-provider-http] request_failed', { ...request.trace, status: response.status, code: failure.code, durationMs: Date.now() - requestStartedAt });
+    throw failure;
   }
 
   const fallbackTokenParameter = tokenParameter;
@@ -635,7 +641,7 @@ const callOpenAiTranscription = async (
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`OpenAI retornou erro HTTP ${response.status}: ${errorText}`);
+    throw readAiProviderHttpError(response, errorText);
   }
 
   const contentType = response.headers.get('content-type') || '';
@@ -914,13 +920,15 @@ const callOpenAiResponses = async (
     if (includeTemperature) body.temperature = params.temperature;
     if (reasoningEffort) body.reasoning = { effort: reasoningEffort };
 
+    const request = await prepareAiJsonRequest(body, 'responses', params.correlationId);
+    const requestStartedAt = Date.now();
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${settings.apiKey}`,
       },
-      body: JSON.stringify(body),
+      body: request.serialized,
       signal: params.signal,
     });
 
@@ -947,7 +955,7 @@ const callOpenAiResponses = async (
     }
 
     const errorText = await response.text();
-    if (response.status === 400) {
+    if (response.status === 400 && attempt + 1 < maxHttpAttempts) {
       if (includeTemperature && isUnsupportedOpenAiParameterError(errorText, 'temperature')) {
         includeTemperature = false;
         continue;
@@ -958,7 +966,9 @@ const callOpenAiResponses = async (
       }
     }
 
-    throw new Error(`OpenAI retornou erro HTTP ${response.status}: ${errorText}`);
+    const failure = readAiProviderHttpError(response, errorText);
+    console.warn('[ai-provider-http] request_failed', { ...request.trace, status: response.status, code: failure.code, durationMs: Date.now() - requestStartedAt });
+    throw failure;
   }
 
   throw new Error('OpenAI não aceitou a combinação de parâmetros para leitura de documentos.');
@@ -1375,6 +1385,7 @@ export const generateTextForFeature = async (
   let attemptsTried = 0;
   let lastStopReason: Exclude<AiCallStopReason, 'completed' | 'completed_after_retry'> = 'provider_error';
   let validationRetryInstruction = '';
+  let lastProviderError: AiProviderHttpError | null = null;
 
   for (let index = 0; index < boundedAttempts.length; index += 1) {
     const attempt = boundedAttempts[index];
@@ -1422,6 +1433,7 @@ export const generateTextForFeature = async (
         reasoningEffort: resolved.reasoningEffort,
         signal: timeoutController?.signal,
         maxHttpAttempts: options.maxProviderRequestsPerAttempt,
+        correlationId: callLogId ? `${callLogId}:${index + 1}` : undefined,
         onReasoningEffortApplied: (effort) => {
           appliedReasoningEffort = effort;
         },
@@ -1511,6 +1523,7 @@ export const generateTextForFeature = async (
       };
     } catch (error) {
       const attemptDuration = Date.now() - attemptStart;
+      lastProviderError = error instanceof AiProviderHttpError ? error : null;
       const timedOut = Boolean(timeoutController?.signal.aborted);
       lastStopReason = timedOut
         ? 'timeout'
@@ -1531,8 +1544,14 @@ export const generateTextForFeature = async (
           providerResult?.usage ?? { inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null, totalTokens: null },
           attemptDuration, false, attemptCost,
           resolved.reasoningEffort, appliedReasoningEffort,
-          { code: lastStopReason, message },
+          { code: lastProviderError?.code ?? lastStopReason, message },
         );
+      }
+      // A 400 with an unchanged request cannot be repaired by another routed
+      // attempt. Long Retry-After waits belong to the durable job queue.
+      if (lastProviderError && (!lastProviderError.retryable || (lastProviderError.retryAfterMs ?? 0) > 2_000)) break;
+      if (lastProviderError && index + 1 < boundedAttempts.length) {
+        await new Promise((resolve) => setTimeout(resolve, Math.max(lastProviderError!.retryAfterMs ?? 0, 500 * (index + 1))));
       }
     } finally {
       if (timeoutHandle !== null) clearTimeout(timeoutHandle);
@@ -1549,8 +1568,8 @@ export const generateTextForFeature = async (
     messageId: options.messageId,
   }, {
     success: false,
-    finalProvider: boundedAttempts[boundedAttempts.length - 1]?.provider,
-    finalModel: boundedAttempts[boundedAttempts.length - 1]?.model,
+    finalProvider: boundedAttempts[Math.max(0, attemptsTried - 1)]?.provider,
+    finalModel: boundedAttempts[Math.max(0, attemptsTried - 1)]?.model,
     fallbackUsed: boundedAttempts.some((attempt) => (
       attempt.provider !== resolved.provider || attempt.model !== resolved.model
     )),
@@ -1566,7 +1585,7 @@ export const generateTextForFeature = async (
     totalCostUsd: totalCostUsd > 0 ? totalCostUsd : null,
   }, callLogId);
 
-  throw new Error(`Nao foi possivel gerar resposta por IA. Tentativas: ${failures.join(' | ')}`);
+  throw new AiGenerationError(`Nao foi possivel gerar resposta por IA. Tentativas: ${failures.join(' | ')}`, lastProviderError);
 };
 
 export const aiProviderSlugByProvider: Record<AiProvider, string> = {

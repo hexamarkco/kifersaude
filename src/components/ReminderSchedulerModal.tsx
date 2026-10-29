@@ -190,7 +190,7 @@ export default function ReminderSchedulerModal({
       <DialogHeader onClose={saving ? undefined : onClose}>
         <div>
           <DialogTitle>Agendar novo lembrete</DialogTitle>
-          <DialogDescription className="flex items-center gap-1.5">
+          <DialogDescription placement="visible" className="flex items-center gap-1.5">
             <LeadFavoriteBadge favorito={lead.favorito} />
             {formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}
           </DialogDescription>

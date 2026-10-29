@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import InfoTooltip from './InfoTooltip';
 import {
   panelCardBaseClass,
   panelCardPaddingClasses,
@@ -65,6 +66,7 @@ export type CrmCardProps = Omit<CardProps, 'title'> & {
   eyebrow?: ReactNode;
   title?: ReactNode;
   subtitle?: ReactNode;
+  subtitlePlacement?: 'tooltip' | 'visible';
   icon?: ReactNode;
   iconTone?: 'terracotta' | 'gold';
   actions?: ReactNode;
@@ -74,6 +76,7 @@ export function CrmCard({
   eyebrow,
   title,
   subtitle,
+  subtitlePlacement = 'tooltip',
   icon,
   iconTone = 'terracotta',
   actions,
@@ -90,8 +93,20 @@ export function CrmCard({
             {icon && <CardIcon tone={iconTone}>{icon}</CardIcon>}
             <div className="min-w-0">
               {eyebrow && <p className="kds-card-subtitle uppercase tracking-[0.14em]">{eyebrow}</p>}
-              {title && <h3 className="kds-card-title mt-1">{title}</h3>}
-              {subtitle && <p className="kds-card-subtitle mt-1">{subtitle}</p>}
+              {title && (
+                <div className="kds-card-title-row mt-1">
+                  <h3 className="kds-card-title">{title}</h3>
+                  {subtitle && subtitlePlacement === 'tooltip' && (
+                    <InfoTooltip content={subtitle} label="Informações sobre este cartão" />
+                  )}
+                </div>
+              )}
+              {!title && subtitle && subtitlePlacement === 'tooltip' && (
+                <div className="mt-1">
+                  <InfoTooltip content={subtitle} label="Informações sobre este cartão" />
+                </div>
+              )}
+              {subtitle && subtitlePlacement === 'visible' && <p className="kds-card-subtitle mt-1">{subtitle}</p>}
             </div>
           </div>
           {actions && <div className="kds-card-actions">{actions}</div>}

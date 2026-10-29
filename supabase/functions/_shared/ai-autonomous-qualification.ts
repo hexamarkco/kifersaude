@@ -148,10 +148,12 @@ const KNOWN_OPERATOR_ALIASES: Record<string, string> = {
   bradesco: 'Bradesco',
   unimed: 'Unimed',
   'sul america': 'Sul América',
+  sulamerica: 'Sul América',
   hapvida: 'Hapvida',
   notredame: 'NotreDame',
   intermedica: 'NotreDame Intermédica',
   medsenior: 'MedSênior',
+  'med senior': 'MedSênior',
   'golden cross': 'Golden Cross',
   'prevent senior': 'Prevent Senior',
   memorial: 'Memorial',
@@ -254,8 +256,12 @@ const extractNeighborhood = (text: string): string | null => {
 
 const extractBusinessAnswer = (text: string): { value: QualificationYesNo; type: 'cnpj' | 'mei' | 'both' | null; number: string | null } | null => {
   const normalized = normalize(text);
-  const no = /\b(?:nao|não)\s+(?:tenho|possuo|temos|possui)|\bsem\s+(?:cnpj|mei)|\bpessoa\s+fisica\b/.test(normalized);
+  const no = /\b(?:nao\s+(?:tenho|possuo|temos|possui)|sem)\s+(?:um\s+)?(?:cnpj|mei)\b|\bnenhum[^.!?]{0,30}\b(?:cnpj|mei)\b|\bpessoa\s+fisica\b/.test(normalized);
   if (no) return { value: 'no', type: null, number: null };
+
+  // A corporate origin contract says nothing about an eligible destination CNPJ.
+  if (/\b(?:plano|contrato)\b.*\b(?:empresarial|cnpj)\b/.test(normalized)
+    && !/\b(?:meu|nosso|proprio|propria)\s+(?:cnpj|mei|empresa)\b|\b(?:cnpj|mei)\s+(?:proprio|da minha empresa)\b/.test(normalized)) return null;
 
   const yes = /\b(?:tenho|possuo|temos|possui|sou|somos|com)\b[^.!?]{0,40}\b(?:cnpj|mei)\b|\b(?:cnpj|mei)\b[^.!?]{0,20}\b(?:sim|tenho|possuo)\b/.test(normalized);
   if (!yes) return null;
@@ -267,11 +273,11 @@ const extractBusinessAnswer = (text: string): { value: QualificationYesNo; type:
 
 const extractPlanAnswer = (text: string): { value: QualificationYesNo; operator: string | null; plan: string | null } | null => {
   const normalized = normalize(text);
-  if (/\b(?:nao|não)\s+(?:tenho|possuo|temos|possui)|\bsem\s+plano|\bnunca\s+tive/.test(normalized)) {
+  if (/\b(?:nao\s+(?:tenho|possuo|temos|possui)|sem)\s+(?:um\s+)?plano\b|\bnunca\s+tive\s+plano/.test(normalized)) {
     return { value: 'no', operator: null, plan: null };
   }
 
-  const operatorMatch = text.match(/\b(amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|interm[eé]dica|medsenior|golden\s+cross|prevent\s+senior|memorial|klini|klin|leve\s*saude|care\s+plus)\b/i);
+  const operatorMatch = normalized.match(/\b(amil|assim|bradesco|unimed|sul\s*america|hapvida|notredame|intermedica|med\s*senior|golden\s+cross|prevent\s+senior|memorial|klini|klin|leve\s*saude|care\s+plus)\b/i);
   const operator = operatorMatch?.[1] ? normalizeKnownOperator(operatorMatch[1]) : null;
   const yes = /\b(?:tenho|possuo|temos|possui|j[aá]\s+tenho|j[aá]\s+temos)\b[^.!?]{0,50}\bplano\b|\b(?:tenho|possuo|temos|possui)\b[^.!?]{0,50}(?:amil|unimed|bradesco|hapvida|assim|notredame|klini|klin)/i.test(normalized);
   if (!yes && !operator) return null;
@@ -455,9 +461,11 @@ const calculateState = (
   };
 
   let previousAi = '';
+  let cityQuestionAnswered = false;
   for (const message of messages) {
     if (message.role === 'ai') {
       previousAi = message.content;
+      cityQuestionAnswered = false;
       continue;
     }
     const normalizedPreviousAi = normalize(previousAi);
@@ -466,10 +474,11 @@ const calculateState = (
       && /\bestado\b|\buf\b/.test(normalizedPreviousAi)
       && (!/\bcidade\b/.test(normalizedPreviousAi) || location.city !== null);
     const city = stateOnlyAnswer ? null : extractCity(cityText)
-      ?? (/cidade|onde\s+(?:mora|moram|usar|utilizar)/.test(normalizedPreviousAi)
+      ?? (!cityQuestionAnswered && /cidade|onde\s+(?:mora|moram|usar|utilizar)/.test(normalizedPreviousAi)
         ? extractCity(`cidade de ${cityText}`)
         : null);
     if (city) {
+      cityQuestionAnswered = true;
       location = {
         ...location,
         city: city.city,
@@ -485,9 +494,9 @@ const calculateState = (
     if (neighborhood) location = { ...location, neighborhood, neighborhoodStatus: 'known' };
 
     let business = extractBusinessAnswer(message.content);
-    if (!business && /cnpj|mei/.test(normalizedPreviousAi)) {
+    if (!business && /cnpj|mei/.test(normalizedPreviousAi) && !/\b(?:plano|contrato)\b.*\b(?:empresarial|cnpj)\b/.test(normalize(message.content))) {
       const normalizedLeadAnswer = normalize(message.content).replace(/[.!?,;]+$/, '').trim();
-      if (/^(?:sim|tenho|possuo|temos|tem\s+sim)\b/.test(normalizedLeadAnswer)) {
+      if (/^(?:sim|tenho|possuo|temos|tem\s+sim)$/.test(normalizedLeadAnswer)) {
         business = { value: 'yes', type: null, number: null };
       } else if (/^(?:mei|cnpj|mei\s+e\s+cnpj|cnpj\s+e\s+mei)$/.test(normalizedLeadAnswer)) {
         business = {
@@ -512,7 +521,7 @@ const calculateState = (
       };
     }
     let plan = extractPlanAnswer(message.content);
-    if (!plan && /plano|operadora/.test(normalizedPreviousAi)) {
+    if (!plan && /plano|operadora/.test(normalizedPreviousAi) && !/cnpj|mei/.test(normalizedPreviousAi)) {
       const normalizedLeadAnswer = normalize(message.content);
       if (/^(?:sim|tenho|possuo|temos|tem\s+sim)\b/.test(normalizedLeadAnswer)) {
         plan = { value: 'yes', operator: null, plan: null };
@@ -525,8 +534,8 @@ const calculateState = (
         ...currentHealthPlan,
         hasPlan: plan.value,
         answerStatus: 'known',
-        operator: plan.operator ?? currentHealthPlan.operator,
-        plan: plan.plan ?? currentHealthPlan.plan,
+        operator: plan.value === 'no' ? null : plan.operator ?? currentHealthPlan.operator,
+        plan: plan.value === 'no' ? null : plan.plan ?? currentHealthPlan.plan,
         detailsStatus: plan.operator || plan.plan ? 'known' : 'unknown',
       };
     }
@@ -538,7 +547,9 @@ const calculateState = (
   if (location.cityStatus !== 'known') missingRequiredFields.push('city');
   if (!location.state) missingRequiredFields.push('state');
   if (location.neighborhoodRequired && location.neighborhoodStatus !== 'known') missingRequiredFields.push('neighborhood');
-  if (company.answerStatus !== 'known') missingRequiredFields.push('has_cnpj_or_mei');
+  const onlyConfirmedMinors = lives.count !== null && lives.items.length === lives.count
+    && lives.items.length > 0 && lives.items.every((life) => life.age !== null && life.age < 18);
+  if (!onlyConfirmedMinors && company.answerStatus !== 'known') missingRequiredFields.push('has_cnpj_or_mei');
   if (currentHealthPlan.answerStatus !== 'known') missingRequiredFields.push('has_current_health_plan');
 
   const hasAdult = lives.items.some((life) => life.role === 'adult' || (life.age !== null && life.age >= 18));

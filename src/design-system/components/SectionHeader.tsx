@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import InfoTooltip from './InfoTooltip';
 
 export type SectionHeaderProps = HTMLAttributes<HTMLDivElement> & {
   eyebrow?: ReactNode;
@@ -8,6 +9,7 @@ export type SectionHeaderProps = HTMLAttributes<HTMLDivElement> & {
   description?: ReactNode;
   action?: ReactNode;
   as?: 'h2' | 'h3';
+  descriptionPlacement?: 'tooltip' | 'visible';
 };
 
 export function SectionHeader({
@@ -16,6 +18,7 @@ export function SectionHeader({
   description,
   action,
   as: HeadingTag = 'h2',
+  descriptionPlacement = 'tooltip',
   className,
   ...props
 }: SectionHeaderProps) {
@@ -33,16 +36,20 @@ export function SectionHeader({
             {eyebrow}
           </p>
         )}
-        <HeadingTag
-          className={cx(
-            'kds-section-title',
-            eyebrow ? 'mt-1.5' : '',
-            HeadingTag === 'h2' ? 'kds-section-title-h2' : 'kds-section-title-h3',
+        <div className={cx('kds-section-title-row', Boolean(eyebrow) && 'mt-1.5')}>
+          <HeadingTag
+            className={cx(
+              'kds-section-title',
+              HeadingTag === 'h2' ? 'kds-section-title-h2' : 'kds-section-title-h3',
+            )}
+          >
+            {title}
+          </HeadingTag>
+          {description && descriptionPlacement === 'tooltip' && (
+            <InfoTooltip content={description} label="Informações sobre esta seção" />
           )}
-        >
-          {title}
-        </HeadingTag>
-        {description && (
+        </div>
+        {description && descriptionPlacement === 'visible' && (
           <p className="kds-section-description mt-1">
             {description}
           </p>

@@ -67,7 +67,7 @@ export function ConfirmDialog({
     >
       <DialogHeader onClose={busy ? undefined : () => onOpenChange(false)}>
         <DialogTitle>{title}</DialogTitle>
-        {description && <DialogDescription>{description}</DialogDescription>}
+        {description && <DialogDescription placement="visible">{description}</DialogDescription>}
       </DialogHeader>
       {children && <DialogBody>{children}</DialogBody>}
       <DialogFooter>

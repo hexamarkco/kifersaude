@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../../design-system';
+import { Heading, InfoTooltip, Text } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, Edit2, ExternalLink, FileText, Filter, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
@@ -283,8 +283,10 @@ export default function FormsScreen() {
       </Card>
       <Card className="space-y-4">
         <div>
-          <Heading level={3} className="kds-card-title">Seus formulários</Heading>
-          <Text className="kds-card-subtitle">Cada formulário publicado cria um lead automaticamente ao ser enviado.</Text>
+          <div className="kds-card-title-row">
+            <Heading level={3} className="kds-card-title">Seus formulários</Heading>
+            <InfoTooltip content="Cada formulário publicado cria um lead automaticamente ao ser enviado." label="Como os formulários publicados funcionam" />
+          </div>
         </div>
         {visibleForms.length === 0 ? (
           <EmptyState icon={<FileText aria-hidden="true" />} title={hasFilters ? "Nenhum formulário encontrado" : "Nenhum formulário cadastrado"}

@@ -3508,7 +3508,6 @@ export async function updateWhapiPresenceSubscription(
     .insert({
       channel_id: params.channelId,
       external_entry_id: entryId,
-      chat_id: chatId,
       status: 'unknown',
       raw_payload: {},
       ...updatePayload,

@@ -175,6 +175,9 @@
 }
 
 .comm-terracotta .whatsapp-inbox-audio-transcribe-button {
+  flex: none;
+  width: auto;
+  max-width: 100%;
   height: 1.75rem;
   min-height: 1.75rem;
   gap: 0.25rem;

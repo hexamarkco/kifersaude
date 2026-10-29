@@ -70,6 +70,7 @@ import {
   RecordActions,
   Heading,
   IconButton,
+  InfoTooltip,
   Inline,
   Input,
   InputAddon,
@@ -1745,9 +1746,15 @@ function Overlays() {
         </Specimen>
         <Specimen
           title="Tooltips"
-          description="Ajuda curta para mouse e teclado. Nunca esconda instruções essenciais somente no hover."
-          source="Tooltip side=top | right | bottom | left"
+          description="Ajuda contextual acessível pelo ícone de informação, com suporte a mouse, teclado e toque."
+          source="InfoTooltip / Tooltip side=top | right | bottom | left"
         >
+          <div className="ds-row">
+            <InfoTooltip
+              content="Use a informação contextual para explicar a finalidade de um controle sem aumentar a altura da tela."
+              label="Informações sobre o exemplo"
+            />
+          </div>
           <div className="ds-row">
             {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
               <Tooltip

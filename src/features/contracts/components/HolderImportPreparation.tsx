@@ -237,7 +237,7 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
       >
         <DialogHeader>
           <DialogTitle>Preparar titular para importação</DialogTitle>
-          <DialogDescription>
+          <DialogDescription placement="visible">
             Contrato {contract.codigo_contrato}. Os dados ficam protegidos por até 24 horas e podem ser usados uma única vez pelo assistente conectado.
           </DialogDescription>
         </DialogHeader>

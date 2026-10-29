@@ -33,7 +33,7 @@ export default function Tooltip({
   className,
 }: TooltipProps) {
   const [visible, setVisible] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hovered = useRef(false);
@@ -85,7 +85,7 @@ export default function Tooltip({
     appearance?.theme ??
     (host?.classList.contains('theme-dark') ? 'dark' : 'light');
   return (
-    <div
+    <span
       ref={triggerRef}
       className={cx('kds-tooltip-anchor', className)}
       onMouseEnter={() => {
@@ -131,6 +131,6 @@ export default function Tooltip({
           </div>,
           document.body,
         )}
-    </div>
+    </span>
   );
 }

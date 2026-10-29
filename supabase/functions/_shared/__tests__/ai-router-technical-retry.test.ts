@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateTextForFeature } from '../ai-router.ts';
 import type { AiReasoningEffort } from '../ai-provider-request-profile.ts';
+import { getAiProviderFailure, parseRetryAfterMs } from '../ai-provider-http.ts';
+import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../ai-autonomous-reply-failure.ts';
 import { validateFollowUpTechnicalOutput } from '../comm-whatsapp-follow-up-output.ts';
 
 type QueryResult = { data: unknown; error: null };
@@ -118,6 +120,77 @@ describe('AI router technical retry budget', () => {
   beforeEach(() => {
     vi.stubGlobal('Deno', { env: { get: () => 'test-key' } });
     vi.restoreAllMocks();
+  });
+
+  it('T08/T14 stops invalid_json after one HTTP request and never logs upstream echoed content', async () => {
+    const secret = 'synthetic-key telephone-5511999999999 PersonExample private-prompt';
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const inserts: Array<Record<string, unknown>> = [];
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({
+      error: { code: 'invalid_json', type: 'invalid_request_error', message: secret },
+    }), { status: 400 }));
+    vi.stubGlobal('fetch', fetchMock);
+    let failure: unknown;
+    try { await runFollowUp(5_000, {}, inserts); } catch (error) { failure = error; }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getAiProviderFailure(failure)).toMatchObject({ status: 400, code: 'invalid_json', retryable: false });
+    expect(getAutonomousFailureAction({ message: String(failure), error: failure, attemptNumber: 1, deliveryAttemptStarted: false })).toBe('handoff');
+    expect(getAutonomousFailureAction({ message: String(failure), error: failure, attemptNumber: 1, deliveryAttemptStarted: true })).toBe('failed');
+    expect(JSON.stringify([warnings.mock.calls, inserts, String(failure)])).not.toContain(secret);
+    expect(inserts[0]).toMatchObject({ error_code: 'invalid_json' });
+    expect(warnings.mock.calls[0]?.[1]).toMatchObject({ payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/), payloadBytes: expect.any(Number) });
+  });
+
+  it.each(['"aspas"\nlinha nova\t<tag>ação 😀 \u2028\u2029', '', 'exemplo '.repeat(5000)])('T13 preserves Unicode and empty content in the actual Responses HTTP body', async (content) => {
+    const fetchMock = vi.fn().mockImplementation(async (_url: string, request: RequestInit) => {
+      const wire = await new Request('https://provider.test/v1/responses', request).text();
+      expect(JSON.parse(wire).input[0].content[0].text).toBe(content);
+      expect(new Headers(request.headers).get('content-type')).toBe('application/json');
+      return responsesProviderResponse('Mensagem válida.');
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await generateTextForFeature({ supabaseAdmin: createSupabaseStub(), featureKey: 'autonomous.reply', task: 'autonomous_attendance',
+      systemPrompt: content, userPrompt: content, documents: [{ fileName: 'synthetic.pdf', fileData: 'JVBERi0xLjQK' }],
+      responseFormat: { name: 'example', schema: { type: 'object' } },
+      maxAttempts: 2, maxProviderRequestsPerAttempt: 1, retrySameResolvedModel: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T09 defers a long Retry-After to the durable queue and preserves the delay', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{"error":{"code":"rate_limit_exceeded"}}', { status: 429, headers: { 'retry-after': '120' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    let failure: unknown;
+    try { await runFollowUp(); } catch (error) { failure = error; }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getAiProviderFailure(failure)?.retryable).toBe(true);
+    expect(getAutonomousRetryDelayMs(1, failure)).toBe(120_000);
+    expect(parseRetryAfterMs('Thu, 29 Oct 2026 12:01:00 GMT', Date.parse('2026-10-29T12:00:00Z'))).toBe(60_000);
+    expect(parseRetryAfterMs('invalid')).toBeNull();
+  });
+
+  it('T08 rejects invalid_json on Responses after a single valid serialized HTTP request', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (_url: string, request: RequestInit) => {
+      expect(JSON.parse(await new Request('https://provider.test/v1/responses', request).text()).instructions).toBe('estilo com ação 😀 e "aspas"');
+      return new Response('{"error":{"code":"invalid_json"}}', { status: 400 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(generateTextForFeature({ supabaseAdmin: createSupabaseStub(), featureKey: 'autonomous.reply', task: 'autonomous_attendance',
+      systemPrompt: 'estilo com ação 😀 e "aspas"', userPrompt: 'mensagem\nnova', documents: [{ fileName: 'synthetic.pdf', fileData: 'JVBERi0xLjQK' }],
+      maxAttempts: 2, maxProviderRequestsPerAttempt: 1, retrySameResolvedModel: true })).rejects.toThrow('HTTP 400 (invalid_json)');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T09 waits before a short Retry-After retry and succeeds within the attempt budget', async () => {
+    const times: number[] = [];
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      times.push(Date.now());
+      return times.length === 1 ? new Response('{"error":{"code":"rate_limit_exceeded"}}', { status: 429, headers: { 'retry-after': '1' } })
+        : providerResponse('Mensagem válida.');
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await runFollowUp();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(times[1] - times[0]).toBeGreaterThanOrEqual(990);
   });
 
   it('uses exactly one provider request for a valid follow-up', async () => {

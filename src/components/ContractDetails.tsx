@@ -808,7 +808,7 @@ export default function ContractDetails({
     <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
       <DrawerHeader onClose={onClose}>
         <DialogTitle>Detalhes do contrato</DialogTitle>
-        <DialogDescription>
+        <DialogDescription placement="visible">
           {loading ? 'Buscando as informações mais recentes.' : `Contrato ${contract.codigo_contrato}`}
         </DialogDescription>
       </DrawerHeader>
@@ -844,7 +844,7 @@ export default function ContractDetails({
       <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
         <DialogHeader showCloseButton={false}>
           <DialogTitle>Carregando contrato</DialogTitle>
-          <DialogDescription>Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
+          <DialogDescription placement="visible">Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
         </DialogHeader>
         <DialogBody className="flex min-h-[260px] items-center justify-center">
           <LoadingState label="Carregando dados do contrato" />
@@ -858,7 +858,7 @@ export default function ContractDetails({
       <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
         <DialogHeader onClose={onClose}>
           <DialogTitle>{contract.codigo_contrato}</DialogTitle>
-          <DialogDescription>Não foi possível carregar os dados atualizados do contrato.</DialogDescription>
+          <DialogDescription placement="visible">Não foi possível carregar os dados atualizados do contrato.</DialogDescription>
         </DialogHeader>
         <DialogBody className="flex min-h-[260px] items-center justify-center">
           <Alert tone="danger" role="alert" className="w-full max-w-xl items-start">
@@ -2074,7 +2074,7 @@ export default function ContractDetails({
   return (<Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{contract.codigo_contrato}</DialogTitle>
-        <DialogDescription>{`${normalizeOperadoraLabel(contract.operadora)} - ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}</DialogDescription>
+        <DialogDescription placement="visible">{`${normalizeOperadoraLabel(contract.operadora)} - ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}</DialogDescription>
       </DialogHeader>
 <DialogBody>{detailContent}</DialogBody></Dialog>);
 }

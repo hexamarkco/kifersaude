@@ -1,3 +1,5 @@
+import { getAiProviderFailure } from './ai-provider-http.ts';
+
 const MAX_JOB_ATTEMPTS = 4;
 const RETRY_DELAYS_MS = [15_000, 60_000, 180_000] as const;
 
@@ -6,16 +8,19 @@ const isTerminalError = (message: string): boolean => {
   return /whapi_token nao configurado|identidade do whatsapp|permissao de contato|atendimento autonomo foi desativado|chat sem lead vinculado|status atendimento nao encontrado/.test(normalized);
 };
 
-export const getAutonomousRetryDelayMs = (attemptNumber: number): number => (
-  RETRY_DELAYS_MS[Math.min(Math.max(attemptNumber - 1, 0), RETRY_DELAYS_MS.length - 1)]
+export const getAutonomousRetryDelayMs = (attemptNumber: number, error?: unknown): number => (
+  Math.max(RETRY_DELAYS_MS[Math.min(Math.max(attemptNumber - 1, 0), RETRY_DELAYS_MS.length - 1)],
+    getAiProviderFailure(error)?.retryAfterMs ?? 0)
 );
 
 export const getAutonomousFailureAction = (params: {
   message: string;
   attemptNumber: number;
   deliveryAttemptStarted: boolean;
+  error?: unknown;
 }): 'retry' | 'handoff' | 'failed' => {
   if (params.deliveryAttemptStarted || isTerminalError(params.message)) return 'failed';
+  if (getAiProviderFailure(params.error)?.retryable === false) return 'handoff';
   if (params.attemptNumber < MAX_JOB_ATTEMPTS) return 'retry';
   // Only exhausted generation failures stop automation for human review.
   // Delivery ambiguity and terminal permission errors retain their contracts.

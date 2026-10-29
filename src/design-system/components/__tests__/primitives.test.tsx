@@ -9,6 +9,7 @@ import {
   Combobox,
   Dialog,
   DialogBody,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   Drawer,
@@ -208,6 +209,20 @@ test('Dialog and Drawer trap presentation in modal semantics and close with Esca
   assert.ok(drawer);
   assert.match(drawer.className, /kds-drawer-right/);
   drawerRender.unmount();
+});
+
+test('dialog helper text is available from the info icon while essential copy can stay visible', () => {
+  const view = render(
+    <>
+      <DialogDescription>Orientação rápida do formulário.</DialogDescription>
+      <DialogDescription placement="visible">Esta ação não pode ser desfeita.</DialogDescription>
+    </>,
+  );
+  const help = view.container.querySelector<HTMLButtonElement>('.kds-info-trigger');
+  assert.ok(help);
+  assert.equal(help.getAttribute('aria-label'), 'Informações sobre esta janela');
+  assert.equal(view.container.textContent, 'Esta ação não pode ser desfeita.');
+  view.unmount();
 });
 
 test('Pagination renders summary, page size, ellipsis and disabled boundaries', () => {

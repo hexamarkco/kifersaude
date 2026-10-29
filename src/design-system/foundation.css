@@ -1309,6 +1309,7 @@
 .kds-field-required { color: var(--danger-text); }
 .kds-field-disabled { opacity: 0.72; }
 
+.kds-info-trigger,
 .kds-field-description-trigger {
   display: inline-flex;
   flex: none;
@@ -1325,20 +1326,25 @@
   position: relative;
 }
 
+.kds-info-trigger::after,
 .kds-field-description-trigger::after {
   content: '';
   position: absolute;
   inset: -0.25rem;
 }
 
+.kds-info-trigger:hover,
 .kds-field-description-trigger:hover {
   color: var(--brand-primary-active);
 }
 
+.kds-info-trigger:focus-visible,
 .kds-field-description-trigger:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
+
+.kds-info-trigger > svg { width: 0.875rem; height: 0.875rem; }
 
 .kds-field-description,
 .kds-field-error,

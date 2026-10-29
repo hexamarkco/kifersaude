@@ -194,6 +194,20 @@
   overflow-wrap: anywhere;
 }
 
+.kds-dialog-description-tooltip {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0;
+  vertical-align: middle;
+}
+
+.kds-dialog-title:has(+ .kds-dialog-description-tooltip) {
+  display: inline-flex;
+  max-width: 100%;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+}
+
 .kds-dialog-close {
   display: flex;
   align-items: center;
@@ -1316,6 +1330,19 @@
   color: var(--text-primary);
   font-family: var(--font-display);
   font-weight: var(--font-weight-medium);
+}
+
+.kds-card-title-row,
+.kds-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.kds-card-title-row > .kds-card-title,
+.kds-section-title-row > .kds-section-title {
+  min-width: 0;
 }
 
 /* Indicator rows share their height, including wrapped titles and monetary values. */

@@ -1583,7 +1583,7 @@ export default function WhatsAppCampaignsScreen() {
             <DialogHeader onClose={closeActivationPreview}>
               <div>
                 <DialogTitle>Revisar antes de ativar</DialogTitle>
-                <DialogDescription>Confirme público, ritmo, janela e mensagens antes de colocar o disparo na fila.</DialogDescription>
+                <DialogDescription placement="visible">Confirme público, ritmo, janela e mensagens antes de colocar o disparo na fila.</DialogDescription>
               </div>
             </DialogHeader>
 

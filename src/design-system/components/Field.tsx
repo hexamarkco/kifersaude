@@ -1,8 +1,7 @@
 import { cloneElement, isValidElement, useId, type HTMLAttributes, type ReactElement, type ReactNode } from 'react';
 
-import { Info } from 'lucide-react';
 import { cx } from '../../lib/cx';
-import Tooltip from './Tooltip';
+import InfoTooltip from './InfoTooltip';
 
 export type FieldProps = HTMLAttributes<HTMLDivElement> & {
   label?: ReactNode;
@@ -25,7 +24,7 @@ type FieldControlProps = {
   'aria-invalid'?: boolean;
 };
 
-export default function Field({ label, htmlFor, description, descriptionPlacement = 'below', hint, error, success, required = false, disabled = false, children, className, ...props }: FieldProps) {
+export default function Field({ label, htmlFor, description, descriptionPlacement = 'tooltip', hint, error, success, required = false, disabled = false, children, className, ...props }: FieldProps) {
   const generatedId = useId();
   const child = isValidElement<FieldControlProps>(children) ? children as ReactElement<FieldControlProps> : null;
   const controlId = htmlFor ?? child?.props.id ?? `field-${generatedId.replace(/:/g, '')}`;
@@ -47,15 +46,11 @@ export default function Field({ label, htmlFor, description, descriptionPlacemen
           <div className="kds-field-label-row">
             {label && <label className="kds-field-label" htmlFor={controlId}>{label}{required && <span className="kds-field-required" aria-hidden="true"> *</span>}</label>}
             {description && descriptionPlacement === 'tooltip' && (
-              <Tooltip content={description} side="top" delayMs={0}>
-                <button
-                  type="button"
-                  className="kds-field-description-trigger"
-                  aria-label={`Ajuda: ${typeof label === 'string' ? label : 'campo'}`}
-                >
-                  <Info aria-hidden="true" />
-                </button>
-              </Tooltip>
+              <InfoTooltip
+                content={description}
+                label={`Ajuda: ${typeof label === 'string' ? label : 'campo'}`}
+                className="kds-field-description-trigger"
+              />
             )}
           </div>
         </div>

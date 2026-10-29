@@ -105,7 +105,7 @@ export function ContractBulkJsonImportDialog({
     >
       <DialogHeader onClose={loading || importing ? undefined : onClose}>
         <DialogTitle>Importar contratos em massa</DialogTitle>
-        <DialogDescription>
+        <DialogDescription placement="visible">
           Valide o arquivo e revise a lista antes de importar. O lote não associa leads nem importa titulares, dependentes, parcelas de comissão ou faixas de bônus; esses dados podem ser completados depois.
         </DialogDescription>
       </DialogHeader>

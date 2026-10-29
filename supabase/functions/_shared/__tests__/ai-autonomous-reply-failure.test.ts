@@ -25,9 +25,9 @@ describe('autonomous failure recovery', () => {
   test('worker uses the existing human handoff without sending a fallback message', () => {
     const worker = readFileSync(resolve(process.cwd(), 'supabase/functions/ai-autonomous-reply-worker/index.ts'), 'utf8');
     const failureBranch = worker.slice(worker.indexOf("if (failureAction === 'handoff'"));
-    expect(worker).toContain('getAutonomousFailureAction({ message, attemptNumber, deliveryAttemptStarted })');
+    expect(worker).toContain('getAutonomousFailureAction({ message, attemptNumber, deliveryAttemptStarted, error })');
     expect(failureBranch).toContain("handoffCode: 'PRECISA_HUMANO'");
-    expect(failureBranch).toContain("reason: 'generation_attempts_exhausted'");
+    expect(failureBranch).toContain("'generation_attempts_exhausted'");
     expect(failureBranch).not.toContain('sendAutonomousWhatsAppText');
     expect(failureBranch).not.toContain("handoffCode: 'QUALIFICACAO_COMPLETA'");
   });

@@ -72,7 +72,7 @@ export {
   DialogTitle,
   WorkspaceDialog,
 } from './components/Dialog';
-export type { DialogProps, DialogPresentation, DialogSize, DialogBodyProps, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogShellProps, DialogTitleProps, WorkspaceDialogProps } from './components/Dialog';
+export type { DialogProps, DialogPresentation, DialogSize, DialogBodyProps, DialogDescriptionPlacement, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogShellProps, DialogTitleProps, WorkspaceDialogProps } from './components/Dialog';
 export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { default as FilterTrigger } from './components/FilterTrigger';
@@ -149,6 +149,8 @@ export { useTableSorting, useSortedTableRows, sortTableRows } from './hooks/useT
 export type { TableSortDirection, TableSortValue, TableSortingState } from './hooks/useTableSorting';
 export { default as Tooltip } from './components/Tooltip';
 export type { TooltipProps, TooltipSide, TooltipSize } from './components/Tooltip';
+export { default as InfoTooltip } from './components/InfoTooltip';
+export type { InfoTooltipProps } from './components/InfoTooltip';
 export { Toast, ToastProvider } from './components/Toast';
 export { useToast } from './components/toastContext';
 export type { ToastAction, ToastInput, ToastProps, ToastProviderProps, ToastVariant, ToastPosition } from './components/Toast';

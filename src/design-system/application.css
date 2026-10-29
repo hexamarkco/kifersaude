@@ -840,7 +840,9 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-audio-speed-trigger {
+  display: inline-flex;
   flex: none;
+  width: auto;
   white-space: nowrap;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);

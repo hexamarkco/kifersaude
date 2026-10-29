@@ -9,7 +9,7 @@
 - A partir de 1600 px, as três áreas ficam abertas lado a lado. Entre 1024 e 1599 px, a lista e a conversa ficam lado a lado, e o contexto continua acessível pelo drawer atual. Em telas menores, a Inbox mostra a lista ou a conversa, conforme a navegação existente.
 - Até 430 px, o campo de mensagem usa uma linha própria e as ações de composição ficam abaixo. Assim o placeholder e o texto digitado não são comprimidos pelos botões, inclusive em 320 px.
 - O texto das mensagens fica alinhado à esquerda; o justificado anterior abria espaços irregulares entre palavras em telas estreitas.
-- Ajuste de 29/10 após correção de interpretação: o histórico conserva 20 px de margem externa à esquerda e à direita (`px-5`); o padding interno de mensagens textuais e da prévia do follow-up foi reduzido para 8 px (`p-2`).
+- Ajuste de 29/10 após correção de interpretação: o histórico conserva 20 px de margem externa à esquerda e à direita (`px-5`); o padding interno de mensagens textuais e da prévia do follow-up foi zerado (`p-0`).
 - A indisponibilidade da integração aparece como aviso persistente. A fixture local não conecta ao WhatsApp; o aviso foi mantido para não esconder uma condição operacional relevante.
 
 ## Diálogo “Novo chat”
@@ -25,7 +25,7 @@
 - Capturas Playwright em 1920 × 1080, 768 × 1024, 390 × 844 e 320 × 640; tema escuro registrado para o diálogo e para a conversa selecionada.
 - As fontes foram aguardadas antes das capturas e animações/transições foram desativadas no preview sintético.
 - `document.documentElement.scrollWidth` e `document.body.scrollWidth` ficaram iguais à viewport: 1920, 768, 390 e 320 px. No diálogo de 320 px, as três abas mantêm a mesma posição vertical e a primeira opção não é truncada.
-- Depois do ajuste das bubbles, Playwright conferiu o CSS compilado com uma fixture DOM: 20 px entre a área da conversa e cada borda externa, e 8 px entre a borda da bubble e seu conteúdo. A rota autenticada redirecionou para o login, então a métrica não substitui uma nova captura da Inbox integrada.
+- Depois do ajuste das bubbles, Playwright conferiu o CSS compilado com uma fixture DOM: 20 px entre a área da conversa e cada borda externa, e 0 px de padding na bubble. A rota autenticada redirecionou para o login, então a métrica não substitui uma nova captura da Inbox integrada.
 - A lista sem conversa selecionada foi capturada em 390 × 844. O drawer de informações do lead foi capturado no início e após rolagem interna em desktop e mobile.
 - As 29 imagens desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
 

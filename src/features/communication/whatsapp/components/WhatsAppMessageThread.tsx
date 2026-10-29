@@ -110,7 +110,7 @@ export function WhatsAppMessageThread({
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
+                className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto py-5 pl-5 pr-0"
               >
                 {messageLoadErrorNotice}
                 {(hasOlderMessages || loadingOlderMessages) && (

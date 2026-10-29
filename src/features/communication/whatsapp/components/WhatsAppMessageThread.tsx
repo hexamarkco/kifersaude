@@ -110,7 +110,7 @@ export function WhatsAppMessageThread({
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto py-5 pl-5 pr-0"
+                className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
               >
                 {messageLoadErrorNotice}
                 {(hasOlderMessages || loadingOlderMessages) && (
@@ -241,7 +241,7 @@ export function WhatsAppMessageThread({
                       ? 'whatsapp-inbox-media-message'
                       : isBubblelessMediaMessage(message)
                         ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
-                        : `rounded-[var(--kds-radius-lg)] py-3 pl-3 pr-2 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
+                        : `rounded-[var(--kds-radius-lg)] p-2 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
                     const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
                     const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
                     const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';

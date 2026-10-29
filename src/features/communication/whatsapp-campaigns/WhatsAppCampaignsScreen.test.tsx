@@ -138,6 +138,9 @@ test('apresenta as campanhas em tabela paginada e navega pelo menu compartilhado
   const view = renderCampaigns();
   await settleCampaignLoading();
 
+  assert.ok(view.container.querySelector('button[aria-label="Informações sobre envios automáticos"]'));
+  assert.ok(view.container.querySelector('button[aria-label="Informações sobre esta seção"]'));
+
   const rows = () => Array.from(view.container.querySelectorAll<HTMLTableRowElement>('tbody tr'));
   assert.equal(rows().length, 10);
   assert.match(rows()[0].textContent ?? '', /Campanha 1/);

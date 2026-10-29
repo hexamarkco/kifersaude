@@ -154,9 +154,15 @@
         "references/desktop/page--campanhas.png",
         "references/mobile/page--campanhas.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/campanhas/README.md",
+        "validacao/revisao-visual/campanhas/coverage.json"
+      ],
+      "notes": [
+        "A listagem foi comparada com as referências no navegador autenticado e em prévia local com os componentes reais do design system. O screenshot publicado usa dados sintéticos; a captura completa da sessão real não foi armazenada porque inclui nomes e conteúdo de campanhas.",
+        "Os quatro indicadores continuam representando os dados realmente fornecidos pelo serviço; o painel de saúde dos envios permanece visível com o estado e as métricas de falha. As explicações secundárias foram movidas para ícones de informação, sem esconder o status operacional nem alterar ações de campanha."
+      ]
     },
     {
       "id": "page--campanha-detalhes",
@@ -2671,8 +2677,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 40,
-    "remaining_manifest_contexts": 120,
+    "reviewed_contexts": 41,
+    "remaining_manifest_contexts": 119,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

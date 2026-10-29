@@ -35,6 +35,7 @@ import {
   LoadingState,
   Pagination,
   RecordActions,
+  SectionHeader,
   Table,
   TableBody,
   TableCell,
@@ -1691,10 +1692,10 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       <Card className="space-y-4">
-        <div>
-          <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</Heading>
-          <Text className="text-sm text-[color:var(--panel-text-soft)]">Acompanhe o público, os envios e o status de cada disparo.</Text>
-        </div>
+        <SectionHeader
+          title="Campanhas recentes"
+          description="Acompanhe o público, os envios e o status de cada disparo."
+        />
 
         {loadError && campaigns.length > 0 ? (
           <Alert

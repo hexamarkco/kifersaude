@@ -1,0 +1,32 @@
+{
+  "route": "/painel/disparos",
+  "reviewed_at": "2026-10-29",
+  "references": [
+    "references/desktop/page--campanhas.png",
+    "references/mobile/page--campanhas.png"
+  ],
+  "screenshots": [
+    {
+      "file": "estados/campanhas-listagem-componentes-demo-desktop.png",
+      "state": "Prévia da listagem com dados sintéticos e componentes reais do design system",
+      "viewport": "1920x1080",
+      "theme": "light",
+      "capture": "fullPage"
+    }
+  ],
+  "live_review": {
+    "authenticated_route_inspected": true,
+    "sensitive_page_capture_saved": false,
+    "reason": "A listagem contém nomes e textos de campanhas da sessão real.",
+    "horizontal_overflow_observed": false,
+    "states_reviewed": [
+      "desktop dark theme",
+      "tablet dark theme",
+      "mobile dark theme"
+    ]
+  },
+  "limitations": [
+    "O screenshot documentado é uma prévia isolada e não uma captura integral da rota autenticada.",
+    "As métricas demonstrativas de mensagens entregues e taxa de resposta das referências não são fornecidas como totais pela projeção de campanhas atual."
+  ]
+}

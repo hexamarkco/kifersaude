@@ -1,7 +1,6 @@
-import { Heading, Text } from '../../../../design-system';
 import { useEffect, useState } from 'react';
 import { Activity, AlertCircle, Send } from 'lucide-react';
-import { Badge, Card, OperationalMetricChip, Surface } from '../../../../design-system';
+import { Badge, Card, Heading, InfoTooltip, OperationalMetricChip, Surface, Text } from '../../../../design-system';
 import type { CommWhatsAppCampaignWorkerHealth, CommWhatsAppCampaignWorkerRun } from '../commWhatsAppCampaignService';
 
 type Props = {
@@ -55,15 +54,15 @@ export function CampaignDeliveryStatusCard(props: Props) {
   }, []);
   const status = getStatus(props, now);
   return (
-    <Card className="comm-campaign-toolbar space-y-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 space-y-2">
+    <Card className="comm-campaign-toolbar space-y-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <Activity className="h-5 w-5 text-[color:var(--panel-accent-strong)]" aria-hidden="true" />
             <Heading level={2} className="text-lg font-semibold text-[color:var(--panel-text)]">Envios automáticos</Heading>
+            <InfoTooltip content={status.description} label="Informações sobre envios automáticos" side="top" />
             <Badge tone={status.tone}>{status.label}</Badge>
           </div>
-          <Text className="max-w-2xl text-sm text-[color:var(--panel-text-soft)]">{status.description}</Text>
           {health.latestRun && available && (
             <Text className="text-xs text-[color:var(--panel-text-muted)]">Última verificação: {formatCheckTime(health.latestRun.finished_at || health.latestRun.started_at, now)}.</Text>
           )}

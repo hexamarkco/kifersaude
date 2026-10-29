@@ -2,7 +2,7 @@ import { ButtonGroup, Heading, Text, FieldLabel as DsFieldLabel } from '../../..
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
   ActionSurface,
@@ -274,7 +274,11 @@ const getVariableAutocompleteState = (value: string, cursorPosition: number, sta
 };
 
 export default function WhatsAppCampaignsScreen() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const routeEditCampaign = location.state && typeof location.state === 'object'
+    ? (location.state as { campaignToEdit?: CommWhatsAppCampaign }).campaignToEdit ?? null
+    : null;
   const { leadStatuses, options } = useConfig();
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
   const [currentCampaignPage, setCurrentCampaignPage] = useState(1);
@@ -335,6 +339,7 @@ export default function WhatsAppCampaignsScreen() {
   const activationPreviewRequestIdRef = useRef(0);
   const campaignMutationLockRef = useRef(false);
   const testMessageLockRef = useRef(false);
+  const routeEditCampaignIdRef = useRef<string | null>(null);
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -520,7 +525,7 @@ export default function WhatsAppCampaignsScreen() {
     goToWizardStep(wizardStep + 1);
   };
 
-  const openEditCampaignModal = async (campaign: CommWhatsAppCampaign) => {
+  const openEditCampaignModal = useCallback(async (campaign: CommWhatsAppCampaign) => {
     const requestId = ++campaignEditRequestIdRef.current;
     setLoadingCampaignEdit(true);
     try {
@@ -621,7 +626,20 @@ export default function WhatsAppCampaignsScreen() {
         setCampaignActionId(null);
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!routeEditCampaign?.id) {
+      routeEditCampaignIdRef.current = null;
+      return;
+    }
+    if (routeEditCampaignIdRef.current === routeEditCampaign.id) return;
+
+    routeEditCampaignIdRef.current = routeEditCampaign.id;
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    setCampaignActionId(routeEditCampaign.id);
+    void openEditCampaignModal(routeEditCampaign);
+  }, [location.pathname, location.search, navigate, openEditCampaignModal, routeEditCampaign]);
 
   const handleCreateDraft = async () => {
     if (saving || campaignMutationLockRef.current) return;

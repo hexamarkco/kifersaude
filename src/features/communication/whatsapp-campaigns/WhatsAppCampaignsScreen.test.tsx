@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     listPendingAiSuggestions: vi.fn(),
     getWorkerHealth: vi.fn(),
     listTemplates: vi.fn(),
+    listCampaignSteps: vi.fn(),
     normalizePhoneDigits: vi.fn((value: unknown) => typeof value === 'string' ? value.replace(/\D/g, '') : ''),
   },
   subscribeToCampaignListChanges: vi.fn(),
@@ -49,6 +50,7 @@ const serviceMocks = mocks.service as unknown as {
   listPendingAiSuggestions: MockFunction<[], Promise<unknown[]>>;
   getWorkerHealth: MockFunction<[], Promise<unknown>>;
   listTemplates: MockFunction<[], Promise<unknown[]>>;
+  listCampaignSteps: MockFunction<[string], Promise<unknown[]>>;
   normalizePhoneDigits: MockFunction<[string], string>;
 };
 const subscribeToCampaignListChangesMock = mocks.subscribeToCampaignListChanges as unknown as MockFunction<
@@ -104,6 +106,14 @@ const renderCampaigns = () => render(
   </MemoryRouter>,
 );
 
+const renderCampaignsWithEditRequest = (campaign: CommWhatsAppCampaign) => render(
+  <MemoryRouter initialEntries={[{ pathname: '/painel/disparos', state: { campaignToEdit: campaign } }]}>
+    <Routes>
+      <Route path="/painel/disparos" element={<WhatsAppCampaignsScreen />} />
+    </Routes>
+  </MemoryRouter>,
+);
+
 const settleCampaignLoading = async () => {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -116,6 +126,7 @@ const setupMocks = () => {
   serviceMocks.listPendingAiSuggestions.mockReset();
   serviceMocks.getWorkerHealth.mockReset();
   serviceMocks.listTemplates.mockReset();
+  serviceMocks.listCampaignSteps.mockReset();
   serviceMocks.normalizePhoneDigits.mockClear();
   subscribeToCampaignListChangesMock.mockReset();
 
@@ -129,6 +140,7 @@ const setupMocks = () => {
   serviceMocks.listPendingAiSuggestions.mockResolvedValue([]);
   serviceMocks.getWorkerHealth.mockResolvedValue({ latestRun: null, latestSuccess: null, latestFailure: null, recentRuns: [] });
   serviceMocks.listTemplates.mockResolvedValue([]);
+  serviceMocks.listCampaignSteps.mockResolvedValue([]);
   subscribeToCampaignListChangesMock.mockReturnValue(() => {});
 };
 
@@ -165,4 +177,20 @@ test('apresenta as campanhas em tabela paginada e navega pelo menu compartilhado
   assert.ok(detailsAction);
   act(() => detailsAction.click());
   assert.match(document.body.textContent ?? '', /Detalhes da campanha/);
+});
+
+test('abre o editor de página completa ao receber uma solicitação vinda do detalhe', async () => {
+  setupMocks();
+  const campaign = createCampaign(7);
+  serviceMocks.listCampaigns.mockResolvedValue([campaign]);
+
+  const view = renderCampaignsWithEditRequest(campaign);
+  await settleCampaignLoading();
+
+  assert.match(view.container.textContent ?? '', /Editar disparo/);
+  const campaignNameInput = Array.from(view.container.querySelectorAll<HTMLInputElement>('input'))
+    .find((input) => input.value === campaign.name);
+  assert.ok(campaignNameInput);
+  assert.equal(serviceMocks.listCampaignSteps.mock.calls.length, 1);
+  assert.equal(serviceMocks.listCampaignSteps.mock.calls[0][0], campaign.id);
 });

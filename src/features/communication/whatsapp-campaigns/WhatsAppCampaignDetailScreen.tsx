@@ -1,7 +1,7 @@
 import { ButtonGroup } from '../../../design-system';
 import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, Filter, PauseCircle, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, Ban, Filter, PauseCircle, Pencil, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -602,24 +602,38 @@ export default function WhatsAppCampaignDetailScreen() {
   return (
     <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
       <PageHeader
+        eyebrow="Kifer Saúde / Campanhas"
         title={campaign?.name ?? 'Detalhe do disparo'}
-        description="Acompanhe contatos, status da fila, próximos envios e ações operacionais da campanha."
+        description="Resultados, público e envio de mensagens para esta campanha."
+        descriptionPlacement="visible"
         actions={(
-          <div className="flex flex-wrap items-center gap-2">
-            {campaign && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--panel-text-muted)]">
-              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-[color:var(--success)] animate-pulse' : 'bg-[color:var(--panel-text-muted)]'}`} />
-                {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
-              </span>
-            )}
-            <ButtonGroup aria-label="Ações do disparo">
-<IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
-              <ArrowLeft className="kds-control-icon" />
-            </IconButton>
-            <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
-              <RefreshCw className="kds-control-icon" />
-            </IconButton>
-</ButtonGroup>
+          <div className="comm-campaign-detail-header-actions flex flex-wrap items-center gap-2">
+            <Button
+              className="order-first whitespace-nowrap lg:order-last"
+              disabled={!campaign}
+              onClick={() => {
+                if (campaign) navigate('/painel/disparos', { state: { campaignToEdit: campaign } });
+              }}
+            >
+              <Pencil className="kds-control-icon" />
+              Editar campanha
+            </Button>
+            <div className="flex items-center gap-2">
+              {campaign && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--panel-text-muted)]">
+                  <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-[color:var(--success)] animate-pulse' : 'bg-[color:var(--panel-text-muted)]'}`} />
+                  {isLive ? 'Atualizando automaticamente' : 'Atualizando a cada 20s'}
+                </span>
+              )}
+              <ButtonGroup aria-label="Ações do disparo">
+                <IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
+                  <ArrowLeft className="kds-control-icon" />
+                </IconButton>
+                <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
+                  <RefreshCw className="kds-control-icon" />
+                </IconButton>
+              </ButtonGroup>
+            </div>
           </div>
         )}
       />
@@ -668,16 +682,15 @@ export default function WhatsAppCampaignDetailScreen() {
         <Card className="h-48 animate-pulse" />
       ) : campaign ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <KpiCard padding="sm" title="Destinatários" value={campaign.total_targets || targetsTotal} />
             <KpiCard padding="sm" title="Pendentes" value={targetCounts.pending + targetCounts.scheduled + targetCounts.sending} />
             <KpiCard padding="sm" title="Enviadas" value={targetCounts.sent} />
             <KpiCard padding="sm" title="Responderam" value={respondedCount} />
           </div>
 
-          <Card className="comm-campaign-toolbar">
-            <div className="grid gap-6 xl:grid-cols-2">
-              <section className="min-w-0 space-y-3">
+          <div className="grid gap-3 xl:grid-cols-5">
+            <Card className="comm-campaign-toolbar space-y-3 xl:col-span-3">
                 <SectionHeader
                   title="Status do disparo"
                   description="Etapa atual e andamento das mensagens."
@@ -704,9 +717,9 @@ export default function WhatsAppCampaignDetailScreen() {
                     busy={Boolean(actionLoading)}
                   />
                 )}
-              </section>
+            </Card>
 
-              <section className="min-w-0 space-y-3">
+            <Card className="comm-campaign-toolbar space-y-3 xl:col-span-2">
                 <SectionHeader
                   title="Público selecionado"
                   description="Origem e condições de envio desta campanha."
@@ -720,9 +733,8 @@ export default function WhatsAppCampaignDetailScreen() {
                     value={formatContactInterval(computeContactIntervalMinutes(campaign.contact_interval_minutes, campaign.daily_send_limit, campaign.send_window_start, campaign.send_window_end, campaign.total_targets))}
                   />
                 </dl>
-              </section>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
           {pendingWhatsAppValidation > 0 && (
             <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">

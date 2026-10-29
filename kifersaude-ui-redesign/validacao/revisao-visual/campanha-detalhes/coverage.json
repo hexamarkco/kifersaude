@@ -1,0 +1,43 @@
+{
+  "route": "/painel/disparos/00000000-0000-4000-8000-000000000700",
+  "component": "src/features/communication/whatsapp-campaigns/WhatsAppCampaignDetailScreen.tsx",
+  "preview": "Componente real montado isoladamente com dados sintéticos somente de leitura; shell autenticado não disponível nesta sessão.",
+  "references": [
+    "references/desktop/page--campanha-detalhes.png",
+    "references/mobile/page--campanha-detalhes.png"
+  ],
+  "capture": {
+    "tool": "Playwright",
+    "fontsReady": true,
+    "reducedMotion": true,
+    "animationsDisabled": true,
+    "fullPage": true,
+    "horizontalOverflow": false
+  },
+  "captures": [
+    { "file": "screenshots/desktop-light-viewport.png", "theme": "light", "kind": "viewport", "width": 1920, "height": 1080 },
+    { "file": "screenshots/desktop-light-full.png", "theme": "light", "kind": "fullPage", "width": 1920, "height": 1891 },
+    { "file": "screenshots/desktop-dark-viewport.png", "theme": "dark", "kind": "viewport", "width": 1920, "height": 1080 },
+    { "file": "screenshots/desktop-dark-full.png", "theme": "dark", "kind": "fullPage", "width": 1920, "height": 1891 },
+    { "file": "screenshots/tablet-light-viewport.png", "theme": "light", "kind": "viewport", "width": 768, "height": 1024 },
+    { "file": "screenshots/tablet-light-full.png", "theme": "light", "kind": "fullPage", "width": 768, "height": 3606 },
+    { "file": "screenshots/tablet-dark-viewport.png", "theme": "dark", "kind": "viewport", "width": 768, "height": 1024 },
+    { "file": "screenshots/tablet-dark-full.png", "theme": "dark", "kind": "fullPage", "width": 768, "height": 3606 },
+    { "file": "screenshots/mobile-light-viewport.png", "theme": "light", "kind": "viewport", "width": 390, "height": 844 },
+    { "file": "screenshots/mobile-light-full.png", "theme": "light", "kind": "fullPage", "width": 390, "height": 4847 },
+    { "file": "screenshots/mobile-dark-viewport.png", "theme": "dark", "kind": "viewport", "width": 390, "height": 844 },
+    { "file": "screenshots/mobile-dark-full.png", "theme": "dark", "kind": "fullPage", "width": 390, "height": 4847 },
+    { "file": "screenshots/mobile-320-light-viewport.png", "theme": "light", "kind": "viewport", "width": 320, "height": 640 },
+    { "file": "screenshots/mobile-320-light-full.png", "theme": "light", "kind": "fullPage", "width": 320, "height": 5233 },
+    { "file": "screenshots/mobile-320-dark-viewport.png", "theme": "dark", "kind": "viewport", "width": 320, "height": 640 },
+    { "file": "screenshots/mobile-320-dark-full.png", "theme": "dark", "kind": "fullPage", "width": 320, "height": 5233 }
+  ],
+  "interactions": [
+    "Editar campanha encaminha para /painel/disparos com a campanha atual e abre o editor de página completa existente.",
+    "A função atual listCampaignSteps carrega as etapas antes de abrir o editor."
+  ],
+  "notCaptured": [
+    "Shell integrado autenticado: sessão de desenvolvimento indisponível; a rota protegida redireciona para o login.",
+    "Ações de pausa, cancelamento e processamento: não foram acionadas por alterarem o estado operacional do disparo."
+  ]
+}

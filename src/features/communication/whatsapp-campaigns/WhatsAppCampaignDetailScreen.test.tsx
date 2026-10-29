@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { act } from 'react';
 import { render } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { test, vi } from 'vitest';
 
 import type { CommWhatsAppCampaign } from './commWhatsAppCampaignService';
@@ -127,6 +127,14 @@ const flushLiveRequests = (resolvers: Array<() => void>) => {
   resolvers.splice(0).forEach((resolve) => resolve());
 };
 
+const CampaignEditRequestProbe = () => {
+  const location = useLocation();
+  const requestedCampaign = location.state && typeof location.state === 'object'
+    ? (location.state as { campaignToEdit?: CommWhatsAppCampaign }).campaignToEdit
+    : null;
+  return <p>Editor solicitado: {requestedCampaign?.name ?? 'sem campanha'}</p>;
+};
+
 test('enfileira uma única atualização quando o realtime chega durante a atualização anterior', async () => {
   serviceMocks.getCampaign.mockResolvedValue(campaign);
   serviceMocks.listCampaignTargets.mockResolvedValue({ targets: [], total: 0 });
@@ -142,6 +150,7 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
     <MemoryRouter initialEntries={['/disparos/campanhas/campaign-1']}>
       <Routes>
         <Route path="/disparos/campanhas/:campaignId" element={<WhatsAppCampaignDetailScreen />} />
+        <Route path="/painel/disparos" element={<CampaignEditRequestProbe />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -150,6 +159,7 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
   assert.ok(document.body.textContent?.includes('Público selecionado'));
   assert.ok(document.body.textContent?.includes('Destinatários'));
   assert.ok(Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).some((button) => button.textContent?.includes('Processar lote')));
+  assert.ok(Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).some((button) => button.textContent?.includes('Editar campanha')));
 
   serviceMocks.listCampaignTargets.mockClear();
   serviceMocks.getCampaignTargetStatusCounts.mockClear();
@@ -191,5 +201,12 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
   assert.equal(serviceMocks.getCampaignTargetStatusCounts.mock.calls.length, 2);
 
   flushLiveRequests(liveResolvers);
+  const editCampaignButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => button.textContent?.includes('Editar campanha'));
+  assert.ok(editCampaignButton);
+  await act(async () => {
+    editCampaignButton.click();
+  });
+  assert.match(document.body.textContent ?? '', /Editor solicitado: Campanha de teste/);
   view.unmount();
 });

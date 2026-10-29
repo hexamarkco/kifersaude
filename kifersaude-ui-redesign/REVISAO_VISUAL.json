@@ -175,9 +175,15 @@
         "references/desktop/page--campanha-detalhes.png",
         "references/mobile/page--campanha-detalhes.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/campanha-detalhes/README.md",
+        "validacao/revisao-visual/campanha-detalhes/coverage.json"
+      ],
+      "notes": [
+        "A hierarquia da página foi comparada com as referências; indicadores empilham em duas colunas no mobile, andamento e público ficam em painéis separados e o botão de edição reutiliza o editor de página completa existente.",
+        "Relatório, contatos e contagens operacionais foram preservados; a prévia usa dados sintéticos somente de leitura. Capturas Playwright cobrem 1920, 768, 390 e 320 px nos temas claro e escuro, sem overflow horizontal. A rota integrada não foi validada porque o ambiente sem sessão redireciona para o login."
+      ]
     },
     {
       "id": "page--blog",

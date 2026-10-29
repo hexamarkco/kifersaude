@@ -502,6 +502,10 @@
   background: var(--bg-surface);
 }
 
+.comm-terracotta-campaigns .comm-campaign-detail-header-actions {
+  justify-content: flex-start;
+}
+
 .comm-whatsapp-overlay {
   border-color: var(--border-default);
   border-radius: var(--kds-radius-lg);

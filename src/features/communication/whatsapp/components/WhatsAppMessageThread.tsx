@@ -324,7 +324,7 @@ export function WhatsAppMessageThread({
                               delete messageBubbleRefs.current[message.id];
                             }
                           }}
-                          className="relative max-w-[80%]"
+                          className="relative whatsapp-inbox-message-bubble-wrap"
                         >
                           <div className="relative">
                             {message.direction !== 'system' && message.external_message_id ? (

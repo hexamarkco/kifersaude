@@ -146,6 +146,10 @@
   margin-inline: auto;
 }
 
+.comm-terracotta .whatsapp-inbox-thread .whatsapp-inbox-message-bubble-wrap {
+  max-width: 68%;
+}
+
 .comm-terracotta .whatsapp-inbox-audio-native-card {
   border-color: var(--border-subtle);
   background: var(--bg-elevated);

@@ -1,4 +1,6 @@
 import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_shared/ai-autonomous-reply-failure.ts';
+import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
+import { deriveAutonomousConversationMemory } from '../_shared/ai-autonomous-memory.ts';
 import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
@@ -16,7 +18,6 @@ import {
   formatPhoneLabel,
   getNowIso,
   getWhapiToken,
-  parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
   resolveCommWhatsAppCanonicalChatRouteByUuid,
@@ -34,6 +35,7 @@ import {
   splitGeneratedReply,
   validateAutonomousReplyOutput,
   type HandoffCode,
+  type AutonomousMessageRow,
 } from '../_shared/ai-autonomous-helpers.ts';
 
 declare const Deno: {
@@ -74,7 +76,7 @@ async function hasNewInboundMessageSincePrompt(params: {
   const { supabaseAdmin, chatId, promptInboundMessageId } = params;
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_messages')
-    .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text')
+    .select('id, direction, message_type, delivery_status, text_content, message_at, created_at, media_caption, transcription_text')
     .eq('chat_id', chatId)
     .eq('direction', 'inbound')
     .order('created_at', { ascending: false })
@@ -101,6 +103,11 @@ async function cancelStaleAutonomousReplyJob(params: {
     .eq('status', 'processing');
 
   if (error) throw new Error(`Erro ao descartar resposta autonoma obsoleta: ${error.message}`);
+
+  // Reconcile explicitly. A webhook may have persisted inbound but not yet
+  // scheduled its job, or a competing worker may have claimed that job.
+  const scheduled = await supabaseAdmin.rpc('schedule_ai_autonomous_reply_job', { p_chat_id: chatId, p_delay_seconds: 2 });
+  if (scheduled.error) throw new Error('Erro ao reagendar turno atualizado.');
 
   console.log('[ai-autonomous-reply-worker] resposta obsoleta descartada', {
     jobId,
@@ -295,7 +302,7 @@ async function ensureAudioTranscriptionForAutonomousReply(params: {
       provider: transcription.provider,
       model: transcription.model,
       fallbackUsed: transcription.fallbackUsed,
-      transcriptionPreview: transcription.text.slice(0, 120),
+      transcriptionCharacters: transcription.text.length,
     });
 
     return {
@@ -335,6 +342,7 @@ async function sendAutonomousWhatsAppText(params: {
   channelPhone: string | null;
   channelName: string | null;
   idempotencyKey: string;
+  beforeSend: () => Promise<boolean>;
 }): Promise<string> {
   const { supabaseAdmin, chatRoute, text, channelId, channelPhone, channelName } = params;
 
@@ -344,6 +352,7 @@ async function sendAutonomousWhatsAppText(params: {
   const chatId = chatRoute.externalChatId;
   const phoneDigits = chatRoute.phoneNumber || extractPhoneFromChatId(chatId);
   await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'service_reply');
+  if (!await params.beforeSend()) return '';
   const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
     method: 'POST',
     headers: {
@@ -352,11 +361,11 @@ async function sendAutonomousWhatsAppText(params: {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ to: chatId, body: text }),
-  });
+  }, AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS);
 
   const payload = await readResponsePayload(response);
   if (!response.ok) {
-    throw new Error(parseWhapiError(payload) || `Whapi retornou erro HTTP ${response.status}.`);
+    throw new Error(`Whapi retornou erro HTTP ${response.status}. Conferir entrega antes de tentar novamente.`);
   }
 
   const externalMessageId = extractWhapiMessageId(payload);
@@ -399,7 +408,7 @@ async function sendAutonomousWhatsAppText(params: {
       contact_permission_scope: 'service_reply',
       idempotency_key: params.idempotencyKey,
     },
-  }, AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS);
+  });
 
   return externalMessageId;
 }
@@ -454,12 +463,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Self-healing: jobs travados em 'processing' (funcao caiu no meio) voltam a pending.
-    await supabaseAdmin
-      .from('ai_autonomous_reply_jobs')
-      .update({ status: 'pending', last_error: 'Job reiniciado (processamento interrompido)' })
-      .eq('status', 'processing')
-      .lt('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+    const recovery = await callAutonomousRpc(supabaseAdmin, 'recover_stalled_ai_autonomous_jobs', {});
+    if (recovery.error) throw new Error('Erro ao recuperar fila interrompida.');
 
     let jobsQuery = supabaseAdmin
       .from('ai_autonomous_reply_jobs')
@@ -519,17 +524,18 @@ Deno.serve(async (req: Request) => {
       });
 
       let conversationLockAcquired = false;
+      const jobStartedAt = Date.now();
       let deliveryAttemptStarted = false;
       let failureLeadId: string | null = job.lead_id;
       try {
         const { data: chat, error: chatError } = await supabaseAdmin
           .from('comm_whatsapp_chats')
-          .select('id, autonomous_attendance_status, lead_id')
+          .select('id, autonomous_attendance_status, lead_id, deleted_at')
           .eq('id', job.chat_id)
           .maybeSingle();
         if (chatError) throw new Error(`Erro ao carregar chat: ${chatError.message}`);
 
-        if (!chat || chat.autonomous_attendance_status !== 'active') {
+        if (!chat || chat.deleted_at || chat.autonomous_attendance_status !== 'active') {
           console.warn('[ai-autonomous-reply-worker] job cancelado: atendimento autonomo inativo', {
             jobId: job.id,
             chatId: job.chat_id,
@@ -601,7 +607,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const recentHistoryRows = [...fetchedHistoryRows].reverse();
-        const history: SandboxMessageRow[] = recentHistoryRows
+        const history: AutonomousMessageRow[] = recentHistoryRows
           .map((row) => ({
             role: row.direction === 'inbound' ? ('lead' as const) : ('ai' as const),
             content: getMessageContent(row),
@@ -620,7 +626,6 @@ Deno.serve(async (req: Request) => {
             latestFetchedAt: latestFetched?.message_at ?? null,
             latestFetchedType: latestFetched?.message_type ?? null,
             latestFetchedTranscriptionStatus: latestFetched?.transcription_status ?? null,
-            latestFetchedPreview: latestFetched ? getMessageContent(latestFetched).slice(0, 80) : null,
             latestUsableRole: history.at(-1)?.role ?? null,
           });
           // Nada novo do lead pra responder (ex: a ultima mensagem ja e nossa) — nada a fazer.
@@ -662,7 +667,6 @@ Deno.serve(async (req: Request) => {
 
         const correlationId = `${job.id}:${promptInboundMessageId}`;
         const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
-        const lastLeadMessage = [...history].reverse().find((row) => row.role === 'lead')?.content ?? '';
         console.log('[ai-autonomous-reply-worker] contexto pronto para gerar resposta', {
           jobId: job.id,
           chatId: chat.id,
@@ -670,7 +674,6 @@ Deno.serve(async (req: Request) => {
           historyRows: history.length,
           styleRows: styleMessages.length,
           quickReplies: quickReplies.length,
-          lastLeadMessagePreview: lastLeadMessage.slice(0, 120),
         });
         const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
         const { systemPrompt, trace } = await composeAutonomousPrompt({
@@ -683,7 +686,23 @@ Deno.serve(async (req: Request) => {
           metadata: trace,
         }).catch((error) => console.warn('[autonomous-prompt] trace persistence failed', String(error)));
         const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
+        const previousMemory = await supabaseAdmin.from('ai_autonomous_qualification_states')
+          .select('state').eq('chat_id', chat.id).eq('lead_id', leadId).maybeSingle();
+        if (previousMemory.error) throw new Error('Erro ao ler memoria do atendimento.');
+        const conversationMemory = deriveAutonomousConversationMemory(recentHistoryRows.map((row) => ({
+          id: row.id, messageAt: row.message_at, role: row.direction === 'inbound' ? 'lead' : 'ai', content: getMessageContent(row),
+        })), getNowIso(), promptInboundMessageId, previousMemory.data?.state);
+        const savedMemory = await callAutonomousRpc(supabaseAdmin, 'save_ai_autonomous_turn_memory', {
+          p_chat_id: chat.id, p_lead_id: leadId, p_job_id: job.id,
+          p_source_message_id: promptInboundMessageId, p_state: conversationMemory,
+        });
+        if (savedMemory.error) throw new Error('Erro ao registrar memoria do atendimento.');
+        if (savedMemory.data !== true) {
+          await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+          continue;
+        }
         const userPrompt = buildAutonomousAttendanceUserPrompt(history, {
+          conversationMemory,
           isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
           leadFirstName: leadFirstName ?? undefined,
         });
@@ -703,6 +722,7 @@ Deno.serve(async (req: Request) => {
           maxAttempts: 2,
           maxProviderRequestsPerAttempt: 1,
           retrySameResolvedModel: true,
+          attemptTimeoutMs: 30_000,
           validateOutput: (text) => validateAutonomousReplyOutput(text, history),
           buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
         });
@@ -727,6 +747,7 @@ Deno.serve(async (req: Request) => {
             'NÃO envie apenas a tag. Escreva a mensagem de despedida/closure e inclua a tag ao final.',
           ].join('\n');
           const retryResult = await generateTextForFeature({
+            attemptTimeoutMs: 30_000,
             supabaseAdmin,
             featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
             task: 'autonomous_attendance',
@@ -754,6 +775,14 @@ Deno.serve(async (req: Request) => {
               jobId: job.id,
               chatId: chat.id,
             });
+            const current = await callAutonomousRpc(supabaseAdmin, 'ai_autonomous_turn_is_current', {
+              p_chat_id: chat.id, p_job_id: job.id, p_source_message_id: promptInboundMessageId,
+            });
+            if (current.error) throw new Error('Erro ao validar encerramento do turno.');
+            if (current.data !== true) {
+              await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+              continue;
+            }
             // Aplicar handoff mesmo sem mensagem visível para não deixar a conversa presa
             await completeAutonomousAttendanceHandoff({
               supabaseAdmin,
@@ -790,7 +819,9 @@ Deno.serve(async (req: Request) => {
             messageCount: messages.length,
             visibleMessageLengths: messages.map((message) => message.length),
           },
-          metadata: { source: 'ai-autonomous-reply-worker' },
+          metadata: { source: 'ai-autonomous-reply-worker', generationDurationMs: result.durationMs,
+            retryCount: result.retryCount, estimatedCostUsd: result.estimatedCostUsd,
+            queueDelayMs: Math.max(0, jobStartedAt - Date.parse(job.scheduled_at)) },
         }).catch((error) => {
           console.warn('[ai-autonomous-reply-worker] falha ao registrar resposta gerada', {
             jobId: job.id,
@@ -879,12 +910,20 @@ Deno.serve(async (req: Request) => {
             throw new Error(`Erro ao reservar envio autonomo: ${deliveryClaim.error.message}`);
           }
           if (deliveryClaim.data !== true) {
+            if (await hasNewInboundMessageSincePrompt({ supabaseAdmin, chatId: chat.id, promptInboundMessageId })) {
+              await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+            } else {
+              await supabaseAdmin.from('ai_autonomous_reply_jobs')
+                .update({ status: 'cancelled', last_error: 'Reserva de entrega recusada. Conferir turno ou entrega anterior.' })
+                .eq('id', job.id).eq('status', 'processing');
+            }
             console.warn('[ai-autonomous-reply-worker] envio ignorado por idempotencia', {
               jobId: job.id,
               chatId: chat.id,
               idempotencyKey,
             });
-            continue;
+            replyWasDiscarded = true;
+            break;
           }
 
           // Depois que a chave foi reservada, uma falha de rede pode significar
@@ -900,7 +939,24 @@ Deno.serve(async (req: Request) => {
             channelPhone: channel.phone_number,
             channelName: channel.connected_user_name,
             idempotencyKey,
+            beforeSend: async () => {
+              const gate = await callAutonomousRpc(supabaseAdmin, 'can_send_ai_autonomous_reply', {
+                p_chat_id: chat.id, p_job_id: job.id, p_source_message_id: promptInboundMessageId,
+                p_idempotency_key: idempotencyKey,
+              });
+              if (gate.error) throw new Error('Erro ao confirmar permissao do turno autonomo.');
+              if (gate.data !== true) {
+                await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+                return false;
+              }
+              return true;
+            },
           });
+          if (!externalMessageId) {
+            deliveryAttemptStarted = false;
+            replyWasDiscarded = true;
+            break;
+          }
           await callAutonomousRpc(supabaseAdmin, 'mark_ai_autonomous_reply_delivery_key_sent', {
             p_idempotency_key: idempotencyKey,
             p_job_id: job.id,
@@ -913,7 +969,10 @@ Deno.serve(async (req: Request) => {
               error: error instanceof Error ? error.message : String(error),
             });
           });
-          deliveryAttemptStarted = false;
+          await recordAutonomousAttendanceEvent({
+            supabaseAdmin, chatId: chat.id, leadId, eventType: 'reply_sent', correlationId,
+            metadata: { messageIndex: i, totalDurationMs: Date.now() - jobStartedAt },
+          }).catch(() => undefined);
           if (i < messages.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, MESSAGE_SEND_DELAY_MS));
           }
@@ -921,6 +980,14 @@ Deno.serve(async (req: Request) => {
         if (replyWasDiscarded) continue;
 
         if (handoffCode) {
+          const current = await callAutonomousRpc(supabaseAdmin, 'ai_autonomous_turn_is_current', {
+            p_chat_id: chat.id, p_job_id: job.id, p_source_message_id: promptInboundMessageId,
+          });
+          if (current.error) throw new Error('Erro ao validar handoff do turno.');
+          if (current.data !== true) {
+            await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+            continue;
+          }
           await completeAutonomousAttendanceHandoff({
             supabaseAdmin,
             chatId: chat.id,
@@ -953,11 +1020,11 @@ Deno.serve(async (req: Request) => {
         const message = error instanceof Error ? error.message : String(error);
         console.error('[ai-autonomous-reply-worker] erro ao processar job', { jobId: job.id, error: message });
         const attemptNumber = (job.attempts ?? 0) + 1;
-        const failureAction = getAutonomousFailureAction({ message, attemptNumber, deliveryAttemptStarted });
+        const failureAction = getAutonomousFailureAction({ message, attemptNumber, deliveryAttemptStarted, error });
         const shouldRetry = failureAction === 'retry';
 
         if (shouldRetry) {
-          const scheduledAt = new Date(Date.now() + getAutonomousRetryDelayMs(attemptNumber)).toISOString();
+          const scheduledAt = new Date(Date.now() + getAutonomousRetryDelayMs(attemptNumber, error)).toISOString();
           const { error: retryError } = await supabaseAdmin
             .from('ai_autonomous_reply_jobs')
             .update({
@@ -988,11 +1055,12 @@ Deno.serve(async (req: Request) => {
               .eq('id', job.id);
           }
         } else {
-          await supabaseAdmin
+          const failedJob = await supabaseAdmin
             .from('ai_autonomous_reply_jobs')
             .update({ status: 'failed', last_error: message })
-            .eq('id', job.id);
-          if (failureAction === 'handoff' && failureLeadId) {
+            .eq('id', job.id).eq('status', 'processing').select('id').maybeSingle();
+          if (failedJob.error) throw new Error('Erro ao registrar falha do atendimento.');
+          if (failureAction === 'handoff' && failureLeadId && failedJob.data) {
             try {
               await completeAutonomousAttendanceHandoff({
                 supabaseAdmin, chatId: job.chat_id, leadId: failureLeadId, handoffCode: 'PRECISA_HUMANO',
@@ -1000,7 +1068,7 @@ Deno.serve(async (req: Request) => {
               await recordAutonomousAttendanceEvent({
                 supabaseAdmin, chatId: job.chat_id, leadId: failureLeadId,
                 eventType: 'handoff_completed', correlationId: job.id,
-                decision: { handoffCode: 'PRECISA_HUMANO', reason: 'generation_attempts_exhausted' },
+                decision: { handoffCode: 'PRECISA_HUMANO', reason: getAiProviderFailure(error)?.retryable === false ? 'provider_terminal_error' : 'generation_attempts_exhausted' },
                 metadata: { jobId: job.id, attempts: attemptNumber, error: message },
               });
             } catch (handoffError) {

@@ -94,7 +94,7 @@ const readApproachFromConfiguredFlow = (rawSettings: JsonRecord, leadName: strin
   const flows = Array.isArray(rawSettings.flows) ? rawSettings.flows : [];
   const normalizedFlows = flows
     .map(asRecord)
-    .filter((flow): flow is JsonRecord => Boolean(flow) && flow.ativo !== false)
+    .filter((flow): flow is JsonRecord => flow !== null && flow.ativo !== false)
     .sort((left, right) => {
       const leftPriority = asString(left.triggerType) === 'lead_created' ? 0 : 1;
       const rightPriority = asString(right.triggerType) === 'lead_created' ? 0 : 1;

@@ -1,4 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { dispatchPendingAutonomousReply } from '../_shared/ai-autonomous-dispatch.ts';
+import { getMessageContent } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_CHANNEL_SLUG,
@@ -111,6 +113,7 @@ type DuplicateMessageDiagnostic = ReturnType<typeof describeMessageIdentity> & {
 // inbound antes da IA responder num chat com atendimento autonomo ativo.
 // Nova mensagem nesse intervalo reagenda o mesmo job no banco.
 const AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS = 16;
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void } | undefined;
 
 declare const Deno: {
   env: {
@@ -466,10 +469,18 @@ async function persistMessageFromWebhook(
       // ativado (a funcao verifica isso internamente) — so agenda/reagenda
       // a resposta da IA quando esse chat especifico foi ativado por um
       // fluxo de Abordagem.
-      await supabaseAdmin.rpc('schedule_ai_autonomous_reply_job', {
+      const usefulInbound = getMessageContent({ id: '', direction: 'inbound', delivery_status: 'received',
+        message_type: toTrimmedString(message.type), text_content: summaryText, message_at: messageAt,
+        media_caption: null, transcription_text: null });
+      if (!usefulInbound) return { id: result.chatId };
+      const scheduled = await supabaseAdmin.rpc('schedule_ai_autonomous_reply_job', {
         p_chat_id: result.chatId,
         p_delay_seconds: AI_AUTONOMOUS_REPLY_DEBOUNCE_SECONDS,
       });
+      if (scheduled.error) throw new Error('Falha ao agendar resposta autonoma.');
+      if (typeof EdgeRuntime !== 'undefined') {
+        EdgeRuntime.waitUntil(dispatchPendingAutonomousReply(supabaseAdmin, result.chatId));
+      }
       console.log('[comm-whatsapp-webhook] agendamento de resposta autonoma avaliado', {
         chatId: result.chatId,
         messageAt,

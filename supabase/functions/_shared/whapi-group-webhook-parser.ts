@@ -186,7 +186,7 @@ export const extractWhapiGroupEvents = (payload: unknown): WhapiGroupEventItem[]
       after,
       changes,
       participantIds: snapshot.participants.map((participant) => participant.id),
-      performedBy: normalizeWhapiParticipantId(raw.triggered_by ?? raw.performed_by ?? raw.trigger?.from),
+      performedBy: normalizeWhapiParticipantId(raw.triggered_by ?? raw.performed_by ?? (isRecord(raw.trigger) ? raw.trigger.from : undefined)),
       receipt: isRecord(raw.trigger) ? raw.trigger : raw,
       raw,
     });

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { loadGlobalConfig, type ResolvedAIFeatureConfig } from '../ai-config-resolver.ts';
-import { buildAutonomousSystemPrompt, composeAutonomousPrompt, selectHumanStyleMessages, type AutonomousStyleMessage } from '../ai-autonomous-prompt.ts';
+import { buildAutonomousSystemPrompt, composeAutonomousPrompt, selectHumanStyleMessages, sanitizeAutonomousPreferences, type AutonomousStyleMessage } from '../ai-autonomous-prompt.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -22,6 +22,27 @@ const globals = {
 };
 
 describe('autonomous prompt assembly', () => {
+  test('T07/T13 removes known v24 contradictions and keeps runtime commercial limits before preferences', () => {
+    const legacy = 'Se a cidade for uma capital brasileira, colete também o bairro.\\nSe o plano for para um filho, pergunte pelo filho.\\nUse uma pergunta por mensagem.';
+    expect(sanitizeAutonomousPreferences(legacy)).not.toMatch(/colete tamb[eé]m o bairro|pergunte pelo filho/);
+    const prompt = buildAutonomousSystemPrompt({ config: { ...config, featurePrompt: legacy }, globals, styleMessages: [], quickReplies: [] });
+    expect(prompt).toContain('PORTABILIDADE E TRANSICAO');
+    expect(prompt).toContain('Nunca garanta aceitacao de portabilidade');
+    expect(prompt).toContain('nao invente operadoras, hospitais, precos ou cobertura local');
+    expect(prompt.indexOf('HIERARQUIA')).toBeLessThan(prompt.indexOf('PREFERENCIAS CONFIGURAVEIS'));
+  });
+  test('bounds distinct recent short human examples without copying long quotations or automation', () => {
+    const rows = Array.from({ length: 120 }, (_, index) => ({ ...human, id: String(index), text_content: `Mensagem comercial curta de exemplo ${index}`, message_at: new Date(Date.parse(human.message_at) + index * 1000).toISOString() }));
+    const selected = selectHumanStyleMessages([...rows, { ...human, text_content: 'a'.repeat(901) }, { ...human, metadata: { ai_generated: true } }]);
+    expect(selected).toHaveLength(6);
+    expect(selected[0].id).toBe('119');
+    expect(selected.reduce((sum, row) => sum + (row.text_content?.length ?? 0), 0)).toBeLessThanOrEqual(1920);
+    const version25 = buildAutonomousSystemPrompt({ config: { ...config, version: 25, featurePrompt: 'NEW' }, globals, styleMessages: [], quickReplies: [] });
+    const rolledBack = buildAutonomousSystemPrompt({ config, globals, styleMessages: [], quickReplies: [] });
+    expect(version25).toContain('NEW');
+    expect(rolledBack).toContain('FEATURE');
+    expect(rolledBack).not.toContain('NEW');
+  });
   test('human references exclude unattended, AI and automation messages', () => {
     const samples = [human, { ...human, created_by: null }, { ...human, metadata: { provider: 'ai_autonomous' } }, { ...human, metadata: { automation: 'auto_contact' } }, { ...human, direction: 'inbound' as const }, { ...human, delivery_status: 'failed' }];
     expect(selectHumanStyleMessages(samples)).toEqual([human]);

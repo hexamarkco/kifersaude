@@ -1,8 +1,10 @@
 import { getMessageContent, type MessageRow } from './comm-whatsapp-transcript.ts';
 
 // Rows must be ordered newest first, matching the worker's inbound query.
-export const getLatestAutonomousInboundMessageId = (messages: readonly MessageRow[]): string | null => (
-  messages.find((message) => message.direction === 'inbound' && Boolean(getMessageContent(message)))?.id ?? null
+export const getLatestAutonomousInboundMessageId = (messages: readonly (MessageRow & { created_at?: string })[]): string | null => (
+  [...messages].sort((a, b) => a.created_at && b.created_at
+    ? b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id) : 0)
+    .find((message) => message.direction === 'inbound' && Boolean(getMessageContent(message)))?.id ?? null
 );
 
 /**

@@ -795,6 +795,21 @@ html,
   gap: 0.75rem;
 }
 
+.painel-theme .whatsapp-inbox-audio-native-header {
+  max-width: 100%;
+}
+
+.painel-theme .whatsapp-inbox-audio-native-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.painel-theme .whatsapp-inbox-audio-native-controls {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
 .painel-theme .whatsapp-inbox-audio-native-play {
   display: inline-flex;
   flex-shrink: 0;
@@ -825,6 +840,8 @@ html,
 }
 
 .painel-theme .whatsapp-inbox-audio-speed-trigger {
+  flex: none;
+  white-space: nowrap;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
   background: var(--bg-surface);

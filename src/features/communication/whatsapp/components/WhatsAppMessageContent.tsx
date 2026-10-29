@@ -238,11 +238,11 @@ export function WhatsAppAudioPlayerCard({
           </ActionSurface>
 
           <div className="min-w-0 flex-1">
-            <div className="mb-1.5 flex items-center justify-between gap-3">
-              <Text className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+            <div className="whatsapp-inbox-audio-native-header mb-1.5 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <Text className="whatsapp-inbox-audio-native-label min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                 {kind === 'voice' ? 'Mensagem de voz' : fileName || 'Arquivo de áudio'}
               </Text>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="whatsapp-inbox-audio-native-controls flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
                 {transcriptionAction}
                 <ActionSurface variant="plain" padding="none"
                   type="button"
@@ -253,7 +253,7 @@ export function WhatsAppAudioPlayerCard({
                 >
                   {formatPlaybackRate(playbackRate)}
                 </ActionSurface>
-                <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
+                <span className="whatsapp-inbox-audio-native-duration shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
                   {formatDurationLabel(Math.round(duration))}
                 </span>
               </div>

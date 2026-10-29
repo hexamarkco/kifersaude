@@ -14,6 +14,7 @@ import {
   DrawerBody,
   DrawerHeader,
   EmptyState,
+  InfoTooltip,
   SearchInput,
   Surface,
   Tabs,
@@ -549,27 +550,26 @@ export default function WhatsAppLeadDrawer({
 
               {canViewAgenda ? (
                 <Surface variant="muted" padding="sm" className="sm:p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  <div className="comm-whatsapp-chat-agenda-header flex min-w-0 flex-col gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Heading level={3} className="min-w-0 text-base font-semibold leading-tight text-[var(--text-primary)]">
                         Agenda do chat
-                      </Text>
-                      <Heading level={3} className="mt-2 text-lg font-semibold leading-tight text-[var(--text-primary)]">
-                        Acompanhamento contextual
                       </Heading>
-                      <Text className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                        Lembretes do lead e dos contratos ligados a esta conversa, com foco no próximo passo operacional.
-                      </Text>
+                      <InfoTooltip
+                        content="Reúne lembretes do lead e dos contratos ligados a esta conversa. Agende, conclua ou reagende sem sair da Inbox."
+                        label="Sobre a agenda do chat"
+                        side="left"
+                      />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <div className={`comm-whatsapp-chat-agenda-actions grid gap-2 ${agendaLead && canEditAgenda ? 'grid-cols-2' : 'grid-cols-1'}`}>
                       {agendaLead && canEditAgenda ? (
-                        <Button variant="secondary" size="sm" className="min-w-[132px] justify-center" onClick={() => setSchedulerOpen(true)}>
+                        <Button variant="secondary" size="sm" className="w-full justify-center" onClick={() => setSchedulerOpen(true)}>
                           <CalendarPlus className="kds-control-icon" />
                           Agendar
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="sm" className="justify-center" onClick={() => void loadAgendaReminders()} disabled={agendaLoading}>
+                      <Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => void loadAgendaReminders()} disabled={agendaLoading}>
                         <RefreshCw className={`h-4 w-4 ${agendaLoading ? 'animate-spin' : ''}`} />
                         Atualizar
                       </Button>

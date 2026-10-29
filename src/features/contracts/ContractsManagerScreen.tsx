@@ -723,15 +723,16 @@ export default function ContractsManager({
 
         {contractsLoadError && (
           <Alert
+            role="alert"
             tone="danger"
-            title="Não foi possível carregar os contratos"
+            title={hasContractsSnapshot ? 'Não foi possível atualizar a carteira' : 'Não foi possível carregar os contratos'}
             action={(
               <Button type="button" variant="secondary" size="sm" onClick={() => void loadContracts()} loading={loading}>
                 Tentar novamente
               </Button>
             )}
           >
-            {hasContractsSnapshot ? 'Os dados exibidos anteriormente foram preservados. Tente novamente para atualizar a carteira.' : 'Tente novamente para acessar a carteira.'}
+            {hasContractsSnapshot ? 'Os dados exibidos anteriormente foram preservados e podem estar desatualizados. Tente novamente para atualizar a carteira.' : 'Tente novamente para acessar a carteira.'}
           </Alert>
         )}
 

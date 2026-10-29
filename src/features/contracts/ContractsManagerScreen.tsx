@@ -889,7 +889,7 @@ export default function ContractsManager({
           />
 
           <div className="hidden lg:block">
-            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="min-w-[75rem]" columnWidths={['18%', '12%', '18%', '16%', '15%', '10%', '11%']}>
+            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="min-w-[75rem]" columnWidths={['19%', '12%', '18%', '17%', '14%', '12%', '8%']}>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />

@@ -1325,9 +1325,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-lead-identity { display: inline-flex; min-width: 0; max-width: 100%; align-items: center; gap: var(--space-3); text-align: left; font: var(--type-body-sm); }
 .painel-theme.kifer-ds .kds-lead-identity, .painel-theme.kifer-ds .kds-lead-identity:hover { background: transparent; border: 0; box-shadow: none; border-radius: var(--radius-control); }
 .kds-lead-avatar { flex-shrink: 0; border-radius: var(--radius-control); }
-.kds-leads-results .kds-table-wrapper { border: 0; border-radius: var(--radius-control); }
-.kds-leads-results .kds-table-cell { padding-block: var(--space-3); }
-.kds-leads-results .kds-table-head { background: var(--bg-canvas-subtle); font-size: 0.6875rem; letter-spacing: 0.04em; }
 .kds-lead-form-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'contact qualification' 'location followup'; align-items: start; }
 .kds-lead-form-page .kds-lead-form-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'contact' 'location' 'qualification' 'followup'; }
 .kds-lead-form-page .kds-form-section { background: var(--bg-surface); }
@@ -1480,8 +1477,10 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 /* Record pages share list and form density across operational modules. */
 .painel-theme.kifer-ds .kds-record-filters .kds-toolbar { border: 0; background: transparent; padding: 0; box-shadow: none; }
 .painel-theme.kifer-ds .kds-record-filters .kds-toolbar-search { max-width: none; }
-.kds-record-results .kds-table-wrapper { border: 0; }
-.kds-record-results .kds-table-head { background: var(--bg-canvas-subtle); }
+.kds-record-results .kds-table-wrapper { border: 0; border-radius: var(--radius-control); }
+.kds-record-results .kds-table-head { background: var(--bg-canvas-subtle); font-size: 0.6875rem; letter-spacing: 0.04em; }
+.kds-record-results .kds-table-cell { padding-block: var(--space-2); }
+.kds-record-results .kds-table-sm { font: var(--type-caption); }
 .kds-contracts-results > .kds-contracts-results-header { padding: var(--space-4) var(--space-3) 0; }
 .kds-contracts-results > .kds-contracts-results-pagination { padding: var(--space-3); }
 @media (min-width: 1280px) {
@@ -1593,8 +1592,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-lead-list-card-followup { flex: 1 1 9rem; min-width: 0; }
 .kds-lead-list-card-followup > span { display: block; font: var(--type-caption); font-weight: var(--font-weight-semibold); color: var(--text-muted); }
 .kds-lead-list-card-followup > .kds-text { display: flex; align-items: center; gap: var(--space-1); color: var(--brand-primary-active); font: var(--type-caption); margin-top: var(--space-1); }
-.kds-leads-results .kds-table-cell { padding-block: var(--space-2); }
-.kds-leads-results .kds-table-sm { font: var(--type-caption); }
 .kds-leads-filters { padding: var(--space-4); }
 .kds-leads-filters > * + * { margin-top: var(--space-3); }
 .kds-leads-filter-secondary { padding-top: var(--space-3); }

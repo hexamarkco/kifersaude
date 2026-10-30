@@ -5,7 +5,6 @@ import {
   AlertCircle,
   BellRing,
   Clock,
-  ArrowRight,
   Globe2,
   Info,
   Loader2,
@@ -22,6 +21,7 @@ import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { configService, type SystemSettings } from "..";
 import { toast } from "../../../lib/toast";
 import ConfigOptionManager from "./components/ConfigOptionManager";
+import { SettingsCatalogLink } from "./components/SettingsCatalogLink";
 import LeadOriginsManager from "./components/LeadOriginsManager";
 import LeadStatusManager from "./components/LeadStatusManager";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
@@ -29,7 +29,6 @@ import { Skeleton } from '../../../design-system';
 import { SystemSettingsSkeleton } from '../../../design-system';
 import {
   Alert,
-  ActionSurface,
   Badge,
   Button,
   Field,
@@ -588,84 +587,41 @@ export default function SystemSettingsScreen() {
                 <Text className="mt-1 text-sm text-[var(--text-secondary)]">Acesse os cadastros que alimentam os formulários e a operação do CRM.</Text>
                 <div className="mt-4 divide-y divide-[var(--border-subtle)]">
                   {canViewAccessSettings && (
-                    <ActionSurface
-                      variant="plain"
-                      padding="none"
-                      className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
-                      aria-label="Abrir perfis e acessos"
+                    <SettingsCatalogLink
+                      title="Perfis e acessos"
+                      description="Permissões por área do CRM"
+                      ariaLabel="Abrir perfis e acessos"
                       onClick={() => navigateToConfigSection("access")}
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-[var(--text-primary)]">Perfis e acessos</span>
-                        <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Permissões por área do CRM</span>
-                      </span>
-                      <ArrowRight className="kds-control-icon shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-                    </ActionSurface>
+                    />
                   )}
-                  <ActionSurface
-                    variant="plain"
-                    padding="none"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
-                    aria-label="Abrir etapas do funil"
+                  <SettingsCatalogLink
+                    title="Etapas do funil"
+                    description="Nome, cor e etapa inicial dos leads"
+                    ariaLabel="Abrir etapas do funil"
+                    count={leadStatuses.length}
                     onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "status", defaultValue: "status" })}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Etapas do funil</span>
-                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Nome, cor e etapa inicial dos leads</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <Badge tone="neutral">{leadStatuses.length}</Badge>
-                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
-                    </span>
-                  </ActionSurface>
-                  <ActionSurface
-                    variant="plain"
-                    padding="none"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
-                    aria-label="Abrir origens dos leads"
+                  />
+                  <SettingsCatalogLink
+                    title="Origens dos leads"
+                    description="Canais de entrada e visibilidade"
+                    ariaLabel="Abrir origens dos leads"
+                    count={leadOrigins.length}
                     onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "origins", defaultValue: "status" })}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Origens dos leads</span>
-                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Canais de entrada e visibilidade</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <Badge tone="neutral">{leadOrigins.length}</Badge>
-                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
-                    </span>
-                  </ActionSurface>
-                  <ActionSurface
-                    variant="plain"
-                    padding="none"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
-                    aria-label="Abrir responsáveis pelos leads"
+                  />
+                  <SettingsCatalogLink
+                    title="Responsáveis pelos leads"
+                    description="Equipe disponível para atribuição"
+                    ariaLabel="Abrir responsáveis pelos leads"
+                    count={options.lead_responsavel?.length ?? 0}
                     onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "manager:lead_responsavel", defaultValue: "status" })}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Responsáveis pelos leads</span>
-                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Equipe disponível para atribuição</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <Badge tone="neutral">{options.lead_responsavel?.length ?? 0}</Badge>
-                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
-                    </span>
-                  </ActionSurface>
-                  <ActionSurface
-                    variant="plain"
-                    padding="none"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
-                    aria-label="Abrir configurações de contratos"
+                  />
+                  <SettingsCatalogLink
+                    title="Regras de contratos"
+                    description="Status, modalidade e condições"
+                    ariaLabel="Abrir configurações de contratos"
+                    count={contractOptionCount}
                     onClick={() => navigateToConfigSection("contracts", { key: "contractTab", value: "contract_status", defaultValue: "contract_status" })}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-[var(--text-primary)]">Regras de contratos</span>
-                      <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">Status, modalidade e condições</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <Badge tone="neutral">{contractOptionCount}</Badge>
-                      <ArrowRight className="kds-control-icon text-[var(--text-secondary)]" aria-hidden="true" />
-                    </span>
-                  </ActionSurface>
+                  />
                 </div>
               </Surface>
             </div>

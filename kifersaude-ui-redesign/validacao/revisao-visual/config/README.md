@@ -16,6 +16,8 @@ Referências: `references/desktop/page--config-system.png` e `references/mobile/
 
 O conteúdo preserva as preferências reais de formato de data, fuso horário, sessão e notificações. O painel “Estrutura e parametrização” leva a acessos e cadastros já existentes. A faixa secundária e a busca ficam fora da visão inicial quando a pessoa está nas preferências; os atalhos do painel mantêm acesso aos demais grupos e reduzem uma camada de navegação nessa página.
 
+Os cinco atalhos do painel compartilham o componente `SettingsCatalogLink` e o padding `sm` do design system. Os destinos, rótulos, contagens e regras de visibilidade por permissão foram preservados.
+
 ## Origens dos leads
 
 Referências: `references/desktop/page--config-leads-origins.png` e `references/mobile/page--config-leads-origins.png`.

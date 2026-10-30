@@ -14,6 +14,10 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 - Removi as setas ↕ dos cabeçalhos para reduzir ruído visual; cada título continua acionando ordenação e preserva nome acessível e `aria-sort`. Playwright conferiu a tabela sintética em desktop, confirmou zero ícones nos cabeçalhos e `aria-sort="ascending"` após clicar em **Ordenar por Contrato**. [Captura e limitação de sessão](validacao/revisao-visual/contracts/README.md).
 
+### Configurações — espaçamento dos atalhos (30/10/2026)
+
+- Os cinco atalhos de **Estrutura e parametrização** agora usam `SettingsCatalogLink`, com padding `sm` do design system (16 px) em todos os lados. Isso remove o texto encostado na borda e mantém os mesmos destinos, contagens e permissões. O teste focado cobre o padding e o clique; esta correção não gerou uma nova captura visual integrada.
+
 ### Configurações — Links públicos
 
 - A tela foi organizada com `PageHeader`, `PageActions`, disclosure do perfil, busca local, tabela responsiva/cards e `RecordActions`, preservando cadastro, edição, exclusão, ativação, ordenação, upload e serviços atuais. Os registros também mantêm a contagem de cliques. Playwright capturou 17 imagens dos estados e das larguras 1920, 768, 390 e 320 px; não houve overflow horizontal. Testes focados passaram (2/2), typecheck passou, e lint terminou sem erros com cinco avisos preexistentes em fixtures. A rota autenticada redirecionou para login, então a comparação da página dentro do shell permanece pendente. [Evidências](validacao/revisao-visual/config-links/README.md).

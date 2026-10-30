@@ -274,7 +274,8 @@
       "notes": [
         "Comparada com a referência em 1920×1080, 768×1024, 390×844 e 320×640 no tema claro; tema escuro conferido em 1920×1080. Sem overflow horizontal.",
         "Mantém os campos reais de data, fuso, sessão e notificações; o painel de estrutura encaminha para permissões e cadastros existentes. A faixa secundária fica oculta na visão inicial e reaparece nas outras áreas.",
-        "O menu fixo inferior cruza o início do cartão seguinte na posição inicial de rolagem mobile; registrado para revisão de densidade."
+        "O menu fixo inferior cruza o início do cartão seguinte na posição inicial de rolagem mobile; registrado para revisão de densidade.",
+        "Os cinco atalhos de Estrutura e parametrização usam o componente SettingsCatalogLink e padding sm do design system; destinos, contagens e permissões permanecem iguais."
       ]
     },
     {

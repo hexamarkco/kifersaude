@@ -1369,6 +1369,12 @@
   min-width: 0;
 }
 
+.kds-card-title-row {
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
+
 .kds-card-title-row > .kds-card-title,
 .kds-section-title-row > .kds-section-title {
   min-width: 0;

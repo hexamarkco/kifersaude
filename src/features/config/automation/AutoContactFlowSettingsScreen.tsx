@@ -1736,8 +1736,10 @@ export default function AutoContactFlowSettingsScreen() {
                     </CardIcon>
                     <div className="min-w-0">
                       <Text className="kds-card-subtitle uppercase tracking-[0.12em]">Resumo operacional</Text>
-                      <Heading level={3} id="automation-operation-heading" className="kds-card-title mt-1">Visão geral da operação</Heading>
-                      <div className="mt-1"><InfoTooltip content="Volume dos fluxos e atividade recente das automações." label="Informações sobre o resumo operacional" /></div>
+                      <div className="kds-card-title-row mt-1">
+                        <Heading level={3} id="automation-operation-heading" className="kds-card-title">Visão geral da operação</Heading>
+                        <InfoTooltip content="Volume dos fluxos e atividade recente das automações." label="Informações sobre o resumo operacional" />
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -1784,9 +1786,9 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div>
+                      <div className="kds-card-title-row">
                         <Heading level={4} className="kds-card-title">Envio automático</Heading>
-                        <div className="mt-1"><InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" /></div>
+                        <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
@@ -1807,9 +1809,9 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon tone="gold">
                         <AlarmClock className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div>
+                      <div className="kds-card-title-row">
                         <Heading level={4} className="kds-card-title">Agendamento avançado</Heading>
-                        <div className="mt-1"><InfoTooltip content="Fuso horário e regras globais para dias não úteis." label="Informações sobre o calendário operacional" /></div>
+                        <InfoTooltip content="Fuso horário e regras globais para dias não úteis." label="Informações sobre o calendário operacional" />
                       </div>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -1847,9 +1849,9 @@ export default function AutoContactFlowSettingsScreen() {
                   <CardIcon>
                     <ClipboardList className="h-5 w-5" aria-hidden="true" />
                   </CardIcon>
-                  <div>
+                  <div className="kds-card-title-row">
                     <Heading level={4} className="kds-card-title">Observabilidade e auditoria</Heading>
-                    <div className="mt-1"><InfoTooltip content="Defina a frequência do monitoramento e a retenção dos registros." label="Informações sobre observabilidade e auditoria" /></div>
+                    <InfoTooltip content="Defina a frequência do monitoramento e a retenção dos registros." label="Informações sobre observabilidade e auditoria" />
                   </div>
                 </div>
 

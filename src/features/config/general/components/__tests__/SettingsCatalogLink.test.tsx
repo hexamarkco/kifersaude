@@ -20,7 +20,7 @@ test('atalho de configurações preserva espaçamento por tokens, navegação e 
   const button = view.container.querySelector<HTMLButtonElement>('button[aria-label="Abrir perfis e acessos"]');
   assert.ok(button);
   assert.ok(button.classList.contains('kds-settings-catalog-link'));
-  assert.equal(button.classList.contains('kds-card-padding-sm'), false);
+  assert.ok(button.classList.contains('kds-card-padding-sm'));
   assert.equal(button.classList.contains('px-3'), false);
   assert.equal(button.classList.contains('py-3'), false);
   assert.ok(view.container.textContent?.includes('Permissões por área do CRM'));

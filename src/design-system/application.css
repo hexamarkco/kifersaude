@@ -1472,11 +1472,6 @@ html,
 .terracota-sidebar .kds-action-surface:hover { background: var(--bg-hover); box-shadow: none; }
 .terracota-sidebar .kds-sidebar-item.is-active { background: var(--brand-primary-soft); color: var(--brand-primary-active); }
 
-.kds-settings-catalog-link {
-  padding: var(--space-3) var(--space-4);
-}
-
-
 @keyframes whatsapp-recording-pulse {
   0% {
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 48%, transparent);

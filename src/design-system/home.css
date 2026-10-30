@@ -200,7 +200,7 @@
 .kifer-home .home-faq-trigger .kds-button-content > span:nth-child(2) { min-width: 0; overflow-wrap: break-word; }
 .kifer-home .home-faq-trigger .kds-control-icon { color: var(--brand-primary); justify-self: end; transition: transform 180ms; }
 .kifer-home .home-faq-item.is-open .home-faq-trigger .kds-control-icon { transform: rotate(180deg); }
-.kifer-home .home-faq-item [role='region'] > .kds-text { padding: 0 var(--space-8) var(--space-6) calc(6rem + var(--space-6)); font-size: 1rem; }
+.kifer-home .home-faq-item [role='region'] > .kds-text { padding: var(--space-4) var(--space-8) var(--space-6) calc(6rem + var(--space-6)); font-size: 1rem; }
 
 /* 08 — Editorial quote and preserved production form */
 .kifer-home .home-quote { position: relative; isolation: isolate; overflow: clip; }
@@ -548,7 +548,7 @@
   .kifer-home .home-faq-trigger.kds-button { grid-template-columns: 2.5rem minmax(0, 1fr) 1rem; gap: var(--space-3); min-height: 5.5rem; padding: var(--space-4) var(--space-3); font-size: 1.15rem; }
   .kifer-home .home-faq-trigger .home-icon { width: 2.5rem; height: 2.5rem; }
   .kifer-home .home-faq-trigger .home-icon svg { width: 1.4rem; height: 1.4rem; }
-  .kifer-home .home-faq-item [role='region'] > .kds-text { font-size: 0.875rem; padding: 0 var(--space-5) var(--space-5); }
+  .kifer-home .home-faq-item [role='region'] > .kds-text { font-size: 0.875rem; padding: var(--space-4) var(--space-5) var(--space-5); }
   .kifer-home .home-quote-copy .home-title { font-size: clamp(2.4rem, 9.8vw, 3.4rem); }
   .kifer-home .home-quote-copy .home-title br { display: none; }
   .kifer-home .home-quote-benefits { grid-template-columns: 1fr; gap: var(--space-5); }

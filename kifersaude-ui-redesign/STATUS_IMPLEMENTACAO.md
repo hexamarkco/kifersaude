@@ -2,9 +2,19 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **50 contextos foram comparados** e **110 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **51 contextos foram comparados** e **109 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
+
+### Chat e testes de IA — conversa e estados (30/10/2026)
+
+- `/chat` agora usa o shell compartilhado do CRM e identifica a página no breadcrumb como “Chat e testes de IA”. Cabeçalho, conversa, painel de contexto, composer, histórico, seletor de cenários e confirmação usam componentes reais do Design System; a coordenação e as integrações do sandbox permanecem no screen existente.
+- As capturas usam dados sintéticos locais. Playwright conferiu conversa e empty state em 1920×1080, 768×1024, 390×844 e 320×640; claro/escuro em desktop, drawers e confirmação. O envio permaneceu desabilitado, cenário não foi executado e a confirmação de exclusão foi cancelada. Não houve overflow horizontal.
+- A 320 px, o botão **Enviar** passa para uma linha abaixo do campo para preservar largura útil; a partir de 390 px, os controles ficam lado a lado. [Referências, evidências e diferenças](validacao/revisao-visual/chat-ia/README.md).
+
+### Gates desta atualização (30/10/2026)
+
+- A suíte completa passou: **1.843 testes em 350 arquivos**. Typecheck, arquitetura, migrations, `secrets:check`, auditorias visual/Design System, build e bundle do editor passaram. Lint terminou sem erros, com seis avisos Fast Refresh em prévias Playwright e um aviso de dependência de `useEffect` em `PainelWrapper`. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
 
 ### Contratos — ficha completa (30/10/2026)
 
@@ -48,7 +58,7 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Configurações — espaçamento dos atalhos (30/10/2026)
 
-- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com `ActionSurface` sem padding externo e aplicam o token `kds-card-padding-sm` ao contêiner interno do conteúdo. Assim, texto, contagem e seta ficam afastados da borda mesmo quando o botão recebe hover/foco. Destinos, contagens e permissões permanecem iguais. Playwright mediu 16 px no contêiner e 17 px de recuo visível em 1920, 768, 390 e 320 px, nos dois temas, sem overflow. A prévia isolada não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
+- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com `ActionSurface` e o token `kds-card-padding-sm` diretamente no botão clicável. O teste e a prévia Playwright confirmam 16 px entre a borda do botão e o conteúdo em claro/escuro e desktop/mobile; hover e foco mantêm o mesmo recuo. Destinos, contagens e permissões permanecem iguais. A sessão mockada não forneceu dados para renderizar a página integrada de configurações; essa comparação segue pendente. [Evidências](validacao/revisao-visual/config/README.md).
 
 ### Contratos — formulário de titular em página (30/10/2026)
 

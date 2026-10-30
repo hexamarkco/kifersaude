@@ -102,7 +102,7 @@
         "light",
         "dark"
       ],
-      "result": "Componente real em prévia isolada; padding calculado de 12 px vertical e 16 px horizontal; sem overflow; navegação e dados não alterados."
+      "result": "Componente real em prévia isolada; padding de 16 px em todos os lados no próprio botão; sem overflow; navegação e dados não alterados."
     }
   ],
   "validation": {
@@ -130,7 +130,9 @@
     "settings-catalog-links-desktop-light.png",
     "settings-catalog-links-desktop-dark.png",
     "settings-catalog-links-mobile-light.png",
-    "settings-catalog-links-mobile-dark.png"
+    "settings-catalog-links-mobile-dark.png",
+    "settings-catalog-link-hover-desktop-dark.png",
+    "settings-catalog-link-hover-mobile-light.png"
   ],
   "known_differences": [
     "O cadastro real de origens não possui exportação, filtro de responsável/período, descrição ou status editável na criação; esses controles das referências não foram inventados.",
@@ -139,13 +141,14 @@
     "A navegação fixa inferior cruza o início do cartão seguinte em parte do primeiro viewport mobile; o conteúdo permanece alcançável por rolagem."
   ],
   "latest_delivery_validation": {
-    "focused_tests": "2/2 passaram (SettingsCatalogLink e ContractDetails presentation)",
+    "focused_tests": "SettingsCatalogLink: passou; execução focada combinada: 4/4 testes",
     "typecheck": "passed",
-    "lint": "passed; 5 avisos Fast Refresh preexistentes em output/playwright",
+    "lint": "passed sem erros; 7 avisos (6 Fast Refresh em prévias Playwright e 1 dependência de useEffect em PainelWrapper)",
     "design_system_audit": "passed",
     "visual_audit": "passed",
     "architecture_check": "passed",
     "production_build": "passed; aviso conhecido de chunk vendor acima de 500 kB",
-    "full_test_suite": "1.835 passed; 4 falharam em ContractForm.presentation (1), ConfigPageScreen (2) e UsersScreen (1)."
+    "migration_check": "passed",
+    "full_test_suite": "1.843 testes em 350 arquivos passaram."
   }
 }

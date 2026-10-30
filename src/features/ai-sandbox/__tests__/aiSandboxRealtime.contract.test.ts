@@ -5,6 +5,7 @@ import { test } from 'vitest';
 
 const serviceSource = readFileSync(resolve(process.cwd(), 'src/lib/aiSandboxChatService.ts'), 'utf8');
 const screenSource = readFileSync(resolve(process.cwd(), 'src/features/ai-sandbox/AiSandboxChatScreen.tsx'), 'utf8');
+const pageSource = readFileSync(resolve(process.cwd(), 'src/features/ai-sandbox/components/AiSandboxChatPage.tsx'), 'utf8');
 const scenarioSource = readFileSync(resolve(process.cwd(), 'supabase/functions/ai-sandbox-run-scenario/index.ts'), 'utf8');
 const migrationSource = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261007007000_enable_ai_sandbox_realtime.sql'), 'utf8');
 
@@ -22,8 +23,8 @@ test('manual and automated sandbox conversations share one list with a visible a
   assert.match(serviceSource, /async listConversations\(\): Promise<AiSandboxConversation\[\]>/);
   assert.doesNotMatch(serviceSource, /\.eq\('is_automated'/);
   assert.doesNotMatch(screenSource, /showAutomated/);
-  assert.match(screenSource, /Automatizado/);
-  assert.match(screenSource, /conversation\.is_automated/);
+  assert.match(pageSource, /Automatizada/);
+  assert.match(pageSource, /conversation\.is_automated/);
 });
 
 test('scenario judge persists actionable playbook improvements for the UI', () => {
@@ -33,6 +34,6 @@ test('scenario judge persists actionable playbook improvements for the UI', () =
   assert.match(scenarioSource, /AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS/);
   assert.match(scenarioSource, /collectDeterministicViolations/);
   assert.match(scenarioSource, /deterministicViolations\.length > 0 \? false/);
-  assert.match(screenSource, /Sugestões para o playbook/);
+  assert.match(pageSource, /Sugestões para o playbook/);
   assert.match(screenSource, /createAutomatedConversation/);
 });

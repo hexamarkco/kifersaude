@@ -1686,7 +1686,72 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 @media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-primary-kpis { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 @media(max-width: 767px) {
  .kds-agenda-secondary-filters { grid-template-columns: minmax(0,1fr); }
- .kds-ai-workspace > aside { height: clamp(11rem,30dvh,20rem); }
+}
+
+.kds-ai-page { display: flex; flex-direction: column; gap: var(--space-4); }
+.kds-ai-page-alert { margin: 0; }
+.kds-ai-chat-layout { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(20rem,.85fr); align-items: start; gap: var(--space-4); min-width: 0; }
+.kds-ai-chat-card { display: flex; min-height: 32rem; flex-direction: column; }
+.kds-ai-chat-card .kds-card-header { align-items: flex-start; }
+.kds-ai-chat-card .kds-card-actions { display: flex; flex: 0 0 auto; align-items: center; gap: var(--space-2); }
+.kds-ai-chat-thread { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; gap: var(--space-3); overflow: auto; overscroll-behavior: contain; border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-panel); background: var(--bg-surface-muted); padding: var(--space-4); }
+.kds-ai-thread-empty { min-height: 100%; border: 0; padding: var(--space-5); }
+.kds-ai-empty-icon { width: var(--control-icon-lg); height: var(--control-icon-lg); }
+.kds-ai-message-row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.kds-ai-message-bubble.kds-card { width: fit-content; max-width: min(80%,42rem); box-shadow: none; overflow-wrap: anywhere; }
+.kds-ai-message-bubble.is-lead { border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary); }
+.kds-ai-message-bubble.is-assistant { border-color: var(--brand-primary-border); background: var(--brand-primary-soft); color: var(--text-primary); }
+.kds-ai-message-copy { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kds-ai-handoff-alert { width: min(80%,42rem); }
+.kds-ai-reply-countdown { display: flex; max-width: 100%; flex-wrap: wrap; align-items: center; gap: var(--space-2); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-control); background: var(--bg-surface); padding: var(--space-2) var(--space-3); }
+.kds-ai-reply-countdown > p { margin: 0; }
+.kds-ai-generating { align-self: flex-start; }
+.kds-ai-run-progress { align-self: flex-start; }
+.kds-ai-composer { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: var(--space-2); border-top: var(--border-width) solid var(--border-subtle); padding-top: var(--space-3); }
+.kds-ai-composer-input { width: 100%; min-width: 0; resize: vertical; }
+.kds-ai-handoff-notice { margin: 0; }
+.kds-ai-context-card { display: flex; min-width: 0; flex-direction: column; }
+.kds-ai-context-list { display: flex; flex-direction: column; }
+.kds-ai-context-row { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); padding-block: var(--space-3); }
+.kds-ai-context-row:first-child { padding-top: 0; }
+.kds-ai-context-row > div { min-width: 0; }
+.kds-ai-context-label { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-muted); font: var(--type-label); }
+.kds-ai-context-value { margin: var(--space-1) 0 0; color: var(--text-primary); overflow-wrap: anywhere; }
+.kds-ai-test-empty { padding: var(--space-4); }
+.kds-ai-test-empty .kds-empty-icon { margin-bottom: 0; }
+.kds-ai-evaluation { display: flex; flex-direction: column; gap: var(--space-3); border-top: var(--border-width) solid var(--border-subtle); padding-top: var(--space-3); }
+.kds-ai-evaluation-section { display: flex; flex-direction: column; gap: var(--space-2); }
+.kds-ai-evaluation-list { margin: 0; padding-inline-start: var(--space-5); color: var(--text-secondary); }
+.kds-ai-context-actions { display: flex; flex-direction: column; gap: var(--space-3); border-top: var(--border-width) solid var(--border-subtle); padding-top: var(--space-3); }
+.kds-ai-approach-form { display: flex; flex-direction: column; gap: var(--space-2); }
+.kds-ai-history-body,
+.kds-ai-scenario-body { display: flex; min-height: 0; flex-direction: column; gap: var(--space-3); overflow-y: auto; }
+.kds-ai-history-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.kds-ai-history-item { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: var(--space-2); border-bottom: var(--border-width) solid var(--border-subtle); padding-block: var(--space-2); }
+.kds-ai-history-select.kds-button { min-width: 0; justify-content: flex-start; text-align: left; }
+.kds-ai-history-title { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kds-ai-scenario-groups { display: flex; flex-direction: column; gap: var(--space-4); overflow-y: auto; }
+.kds-ai-scenario-group { display: flex; flex-direction: column; gap: var(--space-2); }
+.kds-ai-scenario-options { display: flex; flex-direction: column; gap: var(--space-1); }
+.kds-ai-scenario-option.kds-button { justify-content: flex-start; text-align: left; }
+
+@media(max-width: 1023px) {
+ .kds-ai-chat-layout { grid-template-columns: minmax(0,1fr); }
+}
+@media(max-width: 639px) {
+ .kds-ai-chat-card { min-height: 31rem; }
+ .kds-ai-chat-card .kds-card-header { flex-wrap: wrap; }
+ .kds-ai-chat-card .kds-card-actions { width: 100%; justify-content: flex-start; }
+ .kds-ai-chat-thread { padding: var(--space-3); }
+ .kds-ai-message-bubble.kds-card,
+ .kds-ai-handoff-alert { max-width: 92%; }
+ .kds-ai-context-row { align-items: flex-start; }
+ .kds-ai-context-row .kds-badge { flex: 0 0 auto; }
+ .kds-ai-composer { grid-template-columns: minmax(0,1fr) auto; }
+}
+@media(max-width: 379px) {
+ .kds-ai-composer { grid-template-columns: minmax(0,1fr); }
+ .kds-ai-composer > .kds-button { justify-self: end; }
 }
 .painel-theme.kifer-ds .kds-agenda-organize-label-compact { display: none; }
 

@@ -44,6 +44,7 @@ import {
   Checkbox,
   ClienteCard,
   Combobox,
+  CrmCard,
   ConfirmDialog,
   ConfirmationSummary,
   ControlGroup,
@@ -1124,6 +1125,17 @@ function Data() {
               </div>
             </div>
           </Card>
+          <CrmCard
+            eyebrow="CHAT E TESTES DE IA"
+            title="Simulação de atendimento"
+            subtitle="Explique o contexto e a próxima ação esperada."
+            subtitlePlacement="visible"
+          >
+            <Text size="sm">
+              Cards operacionais podem manter título, descrição e conteúdo com
+              espaçamento consistente.
+            </Text>
+          </CrmCard>
           <Field label="Superfície semântica">
             <Select
               value={surface}

@@ -240,15 +240,21 @@
       "route": "/chat",
       "kind": "pages",
       "components": [
-        "src/features/ai-sandbox/AiSandboxChatScreen.tsx"
+        "src/features/ai-sandbox/AiSandboxChatScreen.tsx",
+        "src/features/ai-sandbox/components/AiSandboxChatPage.tsx"
       ],
       "references": [
         "references/desktop/page--chat-ia.png",
         "references/mobile/page--chat-ia.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/chat-ia/README.md",
+        "validacao/revisao-visual/chat-ia/coverage.json"
+      ],
+      "notes": [
+        "Comparado com referências desktop/mobile em dados sintéticos; mensagens e cenários não foram enviados/executados e a confirmação de exclusão foi cancelada."
+      ]
     },
     {
       "id": "page--login",
@@ -2757,8 +2763,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 50,
-    "remaining_manifest_contexts": 110,
+    "reviewed_contexts": 51,
+    "remaining_manifest_contexts": 109,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

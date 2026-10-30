@@ -39,6 +39,7 @@ const ROUTE_TAB_MAP: Record<string, string> = {
   'blog': 'blog',
   'config': 'config',
   'automacoes': 'automation-hub',
+  'chat': 'automation-hub',
 };
 
 const TAB_ROUTE_MAP: Record<string, string> = {
@@ -102,7 +103,7 @@ export default function PainelWrapper() {
 
   const requestedTab = useMemo(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
-    const route = pathParts[1] || 'dashboard';
+    const route = location.pathname === '/chat' ? 'chat' : pathParts[1] || 'dashboard';
     if (route === 'config' || route === 'automacoes') {
       const area = getConfigAreaForTab(new URLSearchParams(location.search).get('tab'));
       if (area) return area === 'automation' ? 'automation-hub' : 'config';
@@ -111,8 +112,9 @@ export default function PainelWrapper() {
   }, [location.pathname, location.search]);
 
   const activeTab = useMemo(() => {
+    if (location.pathname === '/chat') return 'automation-hub';
     return validTabIds.has(requestedTab) ? requestedTab : (Array.from(validTabIds)[0] ?? 'dashboard');
-  }, [requestedTab, validTabIds]);
+  }, [location.pathname, requestedTab, validTabIds]);
 
   const restrictedOriginNamesForObservers = useMemo(
     () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
@@ -163,6 +165,7 @@ export default function PainelWrapper() {
   }, [navigate]);
 
   useEffect(() => {
+    if (location.pathname === '/chat') return;
     if (configLoading) {
       return;
     }
@@ -194,7 +197,7 @@ export default function PainelWrapper() {
     const fallbackTab = Array.from(validTabIds)[0];
     const fallbackRoute = fallbackTab ? TAB_ROUTE_MAP[fallbackTab] : 'dashboard';
     navigate(`/painel/${fallbackRoute}`, { replace: true });
-  }, [configLoading, requestedTab, navigate, validTabIds]);
+  }, [configLoading, location.pathname, requestedTab, navigate, validTabIds]);
 
   const handleCloseNotification = (reminder: NotificationReminder) => {
     setActiveNotifications((prev) => prev.filter((item) => item !== reminder));
@@ -286,6 +289,7 @@ export default function PainelWrapper() {
       </Helmet>
       <Layout
         activeTab={activeTab}
+        headerTitle={location.pathname === '/chat' ? 'Chat e testes de IA' : undefined}
         onTabChange={handleTabChange}
         unreadReminders={unreadReminders}
         unreadInboxChats={unreadInboxChats}

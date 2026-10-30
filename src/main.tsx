@@ -71,9 +71,11 @@ createRoot(document.getElementById('root')!).render(
             <Route
               path="/chat"
               element={
-                <NoIndex><ProtectedRoute><AiSandboxChatWrapper /></ProtectedRoute></NoIndex>
+                <NoIndex><ProtectedRoute><ConfigProvider><PainelWrapper /></ConfigProvider></ProtectedRoute></NoIndex>
               }
-            />
+            >
+              <Route index element={<AiSandboxChatWrapper />} />
+            </Route>
             <Route
               path="/painel"
               element={

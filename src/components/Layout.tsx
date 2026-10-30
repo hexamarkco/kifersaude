@@ -56,6 +56,7 @@ type TabConfig = {
 type LayoutProps = {
   children: ReactNode;
   activeTab: string;
+  headerTitle?: string;
   useFullBleedContent?: boolean;
   onTabChange: (tab: string, options?: TabNavigationOptions) => void;
   unreadReminders: number;
@@ -84,6 +85,7 @@ const getInitialThemeMode = (): ThemeMode => {
 export default function Layout({
   children,
   activeTab,
+  headerTitle,
   useFullBleedContent = false,
   onTabChange,
   unreadReminders,
@@ -1320,7 +1322,7 @@ export default function Layout({
         style={{ '--terracota-sidebar-width': sidebarOffset } as CSSProperties}
       >
         {!useFullBleedContent && <WorkspaceHeader
-          title={tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'CRM'}
+          title={headerTitle ?? tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'CRM'}
           username={userProfile?.username}
           theme={themeMode}
           mobileMenuOpen={isMobileMenuOpen}

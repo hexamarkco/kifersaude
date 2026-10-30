@@ -1,0 +1,106 @@
+{
+  "updated_at": "2026-10-30",
+  "route": "/chat",
+  "references": [
+    "../../../references/desktop/page--chat-ia.png",
+    "../../../references/mobile/page--chat-ia.png"
+  ],
+  "capture_mode": "Playwright viewport screenshots; fonts loaded; isolated local session with intercepted synthetic data",
+  "data_policy": "Dados sintéticos; mensagens não enviadas; cenário não executado; confirmação de exclusão cancelada; nenhum dado real lido ou alterado.",
+  "responsive_checks": [
+    {
+      "viewport": "1920x1080",
+      "document_width": 1910,
+      "horizontal_overflow": false,
+      "themes": ["light", "dark"]
+    },
+    {
+      "viewport": "768x1024",
+      "document_width": 758,
+      "horizontal_overflow": false,
+      "themes": ["light"]
+    },
+    {
+      "viewport": "390x844",
+      "document_width": 380,
+      "horizontal_overflow": false,
+      "themes": ["light"]
+    },
+    {
+      "viewport": "320x640",
+      "document_width": 310,
+      "horizontal_overflow": false,
+      "themes": ["light"]
+    }
+  ],
+  "interactions": [
+    {
+      "name": "Nova simulação",
+      "result": "Conversa local limpa e estado vazio exibido; nenhuma chamada de criação ou envio."
+    },
+    {
+      "name": "Histórico de simulações",
+      "viewports": ["1920x1080", "390x844"],
+      "result": "Drawer mostra a conversa sintética."
+    },
+    {
+      "name": "Cenários de teste",
+      "viewports": ["1920x1080", "390x844"],
+      "result": "Drawer, busca e grupos disponíveis; nenhum cenário foi selecionado."
+    },
+    {
+      "name": "Confirmação de exclusão",
+      "viewports": ["1920x1080", "390x844", "320x640"],
+      "result": "Confirmação aberta e cancelada; a conversa foi mantida."
+    },
+    {
+      "name": "Composer mobile mínimo",
+      "viewports": ["320x640"],
+      "result": "Campo e botão ficam empilhados para manter largura útil; em 390 px permanecem lado a lado."
+    }
+  ],
+  "screenshots": [
+    "route-shell-desktop-viewport.png",
+    "route-shell-desktop-dark-1920.png",
+    "route-shell-tablet-768.png",
+    "route-shell-mobile-390.png",
+    "route-shell-mobile-320.png",
+    "route-active-conversation-desktop-1920.png",
+    "route-active-conversation-desktop-dark-1920.png",
+    "route-active-conversation-tablet-768.png",
+    "route-active-conversation-mobile-390.png",
+    "route-active-conversation-mobile-390-composer.png",
+    "route-active-conversation-mobile-390-bottom.png",
+    "route-active-conversation-mobile-320.png",
+    "route-active-conversation-mobile-320-composer.png",
+    "history-drawer-desktop-1920.png",
+    "history-drawer-mobile-390.png",
+    "scenario-drawer-desktop-1920.png",
+    "scenario-drawer-mobile-390.png",
+    "confirmation-delete-desktop-1920.png",
+    "confirmation-delete-mobile-390.png",
+    "confirmation-delete-mobile-320.png"
+  ],
+  "known_differences": [
+    "A referência mostra o estado vazio; capturas adicionais mostram conversa e avaliação sintéticas para documentar os componentes reais.",
+    "A navegação e o breadcrumb usam o shell real do CRM, mais denso que o shell isolado da referência.",
+    "Capturas fullPage não são usadas como evidência porque sidebar e navegação inferior fixas aparecem em posições artificiais; conteúdo abaixo da dobra foi capturado em estados de rolagem próprios.",
+    "A sessão mockada não forneceu dados da configuração geral no caminho /painel/config?tab=system; os atalhos foram validados em prévia isolada do componente real.",
+    "O console registrou o aviso React Strict Mode sobre UNSAFE_componentWillMount em SideEffect(NullComponent2), sem impedir a renderização."
+  ],
+  "validation": {
+    "fonts": "loaded before captures",
+    "console": "1 pre-existing React Strict Mode lifecycle warning; no application errors observed in the page interaction flow",
+    "focused_tests": "4/4 passed",
+    "full_test_suite": "1,843 tests in 350 files passed",
+    "typecheck": "passed",
+    "lint": "passed with 0 errors and 7 warnings: six Fast Refresh warnings in Playwright previews and one useEffect dependency warning in PainelWrapper",
+    "architecture_check": "passed",
+    "migration_check": "passed",
+    "secrets_check": "passed",
+    "design_system_audit": "passed; 439 source files and 121 application components covered",
+    "visual_audit": "passed; 0 hardcode matches",
+    "production_build": "passed; known vendor chunk size warning above 500 kB",
+    "editor_bundle_check": "passed"
+  }
+}

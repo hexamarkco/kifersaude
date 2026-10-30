@@ -1,17 +1,7 @@
-import { Text, Heading, DesignSystemProvider } from '../../design-system';
-import { ActionSurface, Textarea } from '../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Download, FlaskConical, Lightbulb, MessageCirclePlus, Search, Send, Sparkles, Trash2, UserRoundPlus } from 'lucide-react';
-import {
-  Badge,
-  Button,
-  EmptyState,
-  Input,
-  LoadingState,
-  IconButton,
-} from '../../design-system';
 import { toast } from '../../lib/toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { AiSandboxChatPage, type AiSandboxScenario, type AiSandboxScenarioGroup } from './components/AiSandboxChatPage';
 import {
   aiSandboxChatService,
   type AiSandboxConversation,
@@ -21,8 +11,8 @@ import {
 
 const REPLY_DEBOUNCE_SECONDS = 8;
 
-type ScenarioDef = { key: string; label: string; p: string; lead?: boolean };
-type ScenarioGroup = { cat: string; scenarios: ScenarioDef[] };
+type ScenarioDef = AiSandboxScenario;
+type ScenarioGroup = AiSandboxScenarioGroup;
 
 const SCENARIO_GROUPS: ScenarioGroup[] = [
   { cat: 'Qualificação', scenarios: [
@@ -123,10 +113,8 @@ const SCENARIO_GROUPS: ScenarioGroup[] = [
   ]},
 ];
 
-const ALL_SCENARIOS = SCENARIO_GROUPS.flatMap((g) => g.scenarios);
-
 export default function AiSandboxChatScreen() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<AiSandboxConversation[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -142,6 +130,8 @@ export default function AiSandboxChatScreen() {
   const [runningScenario, setRunningScenario] = useState(false);
   const [scenarioSearch, setScenarioSearch] = useState('');
   const [showScenarioPicker, setShowScenarioPicker] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<AiSandboxConversation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversationIdRef = useRef<string | null>(null);
@@ -336,10 +326,16 @@ export default function AiSandboxChatScreen() {
     setDraft('');
     setLeadNameForApproach('');
     setError(null);
+    setHistoryOpen(false);
+    setShowScenarioPicker(false);
+    setConversationToDelete(null);
   };
 
   const handleSelectConversation = (conversationId: string) => {
-    if (conversationId === activeConversationId) return;
+    if (conversationId === activeConversationId) {
+      setHistoryOpen(false);
+      return;
+    }
     clearPendingTimer();
     sendRequestIdRef.current += 1;
     startingApproachRequestIdRef.current += 1;
@@ -350,6 +346,7 @@ export default function AiSandboxChatScreen() {
     setRunningScenario(false);
     activeConversationIdRef.current = conversationId;
     setActiveConversationId(conversationId);
+    setHistoryOpen(false);
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -357,6 +354,7 @@ export default function AiSandboxChatScreen() {
       await aiSandboxChatService.deleteConversation(conversationId);
       invalidateConversationsLoad();
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      setConversationToDelete(null);
       if (activeConversationIdRef.current === conversationId) {
         handleNewConversation();
       }
@@ -566,330 +564,60 @@ export default function AiSandboxChatScreen() {
     }
   };
 
+  const handleChooseScenario = (scenario: ScenarioDef) => {
+    setShowScenarioPicker(false);
+    setScenarioSearch('');
+    if (scenario.lead) {
+      handleNewConversation();
+      return;
+    }
+    void handleRunTestScenario(scenario.key, scenario.label, scenario.p);
+  };
+
   return (
-    <DesignSystemProvider className="kds-ai-workspace painel-theme kifer-ds flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] md:flex-row">
-      <aside className="flex h-[34dvh] w-full shrink-0 flex-col border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] md:h-auto md:w-72 md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-4">
-          <div>
-            <Heading level={1} size="md">Chat e testes de IA</Heading>
-            <Text className="text-xs text-[var(--text-secondary)]">Simulações de atendimento</Text>
-          </div>
-          <Button variant="text" size="sm" onClick={() => signOut()}>
-            Sair
-          </Button>
-        </div>
-
-        <div className="px-3 pt-3">
-          <Button variant="primary" size="sm" fullWidth onClick={handleNewConversation}>
-            <MessageCirclePlus className="mr-1.5" />
-            Nova simulação
-          </Button>
-        </div>
-
-        <div className="border-b border-[var(--border-subtle)] px-3 pt-3 pb-3">
-          <ActionSurface variant="plain" padding="none"
-            type="button"
-            className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface-muted)]"
-            onClick={() => setShowScenarioPicker(!showScenarioPicker)}
-          >
-            <FlaskConical className="h-3.5 w-3.5 shrink-0" />
-            Cenários de teste
-            <span className="ml-auto text-[10px] text-[var(--text-muted)]">{ALL_SCENARIOS.length}</span>
-          </ActionSurface>
-
-          {showScenarioPicker && (
-            <div className="mt-2">
-              <div className="relative mb-2">
-                <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--text-muted)]" />
-                <Input
-                  type="text"
-                  value={scenarioSearch}
-                  onChange={(e) => setScenarioSearch(e.target.value)}
-                  placeholder="Buscar cenário..."
-                  className="w-full border placeholder:text-[var(--text-muted)]"
-                  autoFocus
-                />
-              </div>
-              <div className="max-h-60 space-y-1 overflow-y-auto pr-1">
-                {filteredScenarioGroups.length === 0 && (
-                  <Text className="py-2 text-center text-[10px] text-[var(--text-muted)]">Nenhum cenário encontrado.</Text>
-                )}
-                {filteredScenarioGroups.map((group) => (
-                  <div key={group.cat}>
-                    <Text className="px-1 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      {group.cat}
-                    </Text>
-                    {group.scenarios.map((s) => (
-                      <ActionSurface variant="plain" padding="none"
-                        key={s.key}
-                        type="button"
-                        className="flex w-full items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)] disabled:opacity-50"
-                        disabled={runningScenario}
-                        onClick={() => {
-                          setShowScenarioPicker(false);
-                          setScenarioSearch('');
-                          if (s.lead) {
-                            handleNewConversation();
-                          } else {
-                            handleRunTestScenario(s.key, s.label, s.p);
-                          }
-                        }}
-                      >
-                        <FlaskConical className="h-2.5 w-2.5 shrink-0 text-[var(--text-muted)]" />
-                        {s.label}
-                      </ActionSurface>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2 py-3">
-          {conversationsLoading ? (
-            <LoadingState compact label="Carregando..." />
-          ) : conversations.length === 0 ? (
-            <Text className="px-2 py-6 text-center text-xs text-[var(--text-secondary)]">
-              Nenhuma simulação ainda. Comece uma conversa como se fosse um lead ou rode um cenário automatizado.
-            </Text>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {conversations.map((conversation) => (
-                <li key={conversation.id}>
-                  <div
-                    className={`group flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-2 text-sm transition-colors ${
-                      conversation.id === activeConversationId
-                        ? 'bg-[var(--app-surface-selected)] font-medium text-[var(--text-primary)]'
-                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                    }`}
-                  >
-                    <Button variant="ghost"
-                      type="button"
-                      onClick={() => handleSelectConversation(conversation.id)}
-                      className="flex min-w-0 flex-1 items-center text-left"
-                      title={conversation.title}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
-                      {conversation.is_automated && (
-                        <Badge tone="warning" size="sm" className="shrink-0">
-                          Automatizado
-                        </Badge>
-                      )}
-                    </Button>
-                    <IconButton variant="ghost" size="sm" aria-label="Apagar simulação"
-                      type="button"
-                      onClick={() => handleDeleteConversation(conversation.id)}
-                      className="shrink-0 opacity-0 transition-colors group-hover:opacity-100"
-                      title="Apagar simulação"
-                    >
-                      <Trash2 className="" />
-                    </IconButton>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </aside>
-
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {activeConversation && (
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-3 sm:px-6">
-            <Text className="truncate text-sm font-medium">{activeConversation.title}</Text>
-            {messages.length > 0 && (
-              <IconButton
-                variant="ghost"
-                size="sm"
-                onClick={handleExportChat}
-                title="Exportar conversa"
-                aria-label="Exportar conversa"
-              >
-                <Download />
-              </IconButton>
-            )}
-          </div>
-        )}
-        {!activeConversationId && messages.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-4 sm:px-6">
-            <div className="w-full max-w-sm">
-              <EmptyState
-                icon={<Sparkles className="h-6 w-6" />}
-                title="Simule um atendimento"
-                description="A abordagem inicial usa o mesmo fluxo cadastrado no atendimento. Depois, você pode responder como lead e a IA continua a conversa."
-              />
-              <div className="mt-4 flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
-                <Text className="text-xs font-medium text-[var(--text-secondary)]">IA aborda o lead primeiro</Text>
-                <Input
-                  value={leadNameForApproach}
-                  onChange={(event) => setLeadNameForApproach(event.target.value)}
-                  placeholder="Nome do lead (opcional)"
-                  size="sm"
-                  disabled={startingApproach}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={startingApproach}
-                  onClick={handleStartWithApproach}
-                >
-                  {!startingApproach && <UserRoundPlus className="mr-1.5" />}
-                  Iniciar abordagem
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6">
-            <div className="mx-auto flex max-w-2xl flex-col gap-3">
-              {messagesLoading ? (
-                <LoadingState compact label="Carregando conversa..." />
-              ) : (
-                messages.map((message) => (
-                  <div key={message.id} className="flex flex-col gap-1">
-                    <div
-                      className={`flex ${message.role === 'lead' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[92%] whitespace-pre-wrap rounded-[var(--radius-lg)] px-4 py-2.5 text-sm shadow-[var(--shadow-card)] sm:max-w-[75%] ${
-                          message.role === 'lead'
-                            ? 'bg-[var(--brand-primary)] text-[var(--text-on-brand)]'
-                            : 'border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {message.content}
-                      </div>
-                    </div>
-                    {message.handoff_code && (
-                      <div className="flex justify-start">
-                        <div className="flex max-w-[92%] items-start gap-1.5 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-1.5 text-xs text-[var(--warning-text)] sm:max-w-[75%]">
-                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                          <span>
-                            <Badge tone="warning" size="sm" className="mr-1.5 align-middle">
-                              Transferência para atendente: {message.handoff_code}
-                            </Badge>
-                            {message.handoff_reason}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-
-              {runningScenario && activeConversation?.is_automated && (
-                <div className="flex justify-start">
-                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-4 py-2.5 text-sm text-[var(--text-secondary)]">
-                    Cenário em execução — acompanhando os turnos ao vivo...
-                  </div>
-                </div>
-              )}
-
-              {activeTestRun && (
-                <section className={`rounded-[var(--radius-lg)] border p-4 ${
-                  activeTestRun.passed
-                    ? 'border-[var(--success-border)] bg-[var(--success-soft)]'
-                    : 'border-[var(--warning-border)] bg-[var(--warning-soft)]'
-                }`}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {activeTestRun.passed ? (
-                      <CheckCircle2 className="h-4 w-4 text-[var(--success-text)]" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4 text-[var(--warning-text)]" />
-                    )}
-                    <Text className="text-sm font-semibold text-[var(--text-primary)]">
-                      Avaliação do juiz: {activeTestRun.passed ? 'aprovado' : 'precisa de ajuste'}
-                    </Text>
-                    <Badge tone={activeTestRun.passed ? 'success' : 'warning'} size="sm">
-                      {activeTestRun.turns} turno{activeTestRun.turns === 1 ? '' : 's'}
-                    </Badge>
-                  </div>
-
-                  {verdict.notes && (
-                    <Text className="mt-2 text-sm text-[var(--text-secondary)]">{verdict.notes}</Text>
-                  )}
-
-                  {verdict.violations.length > 0 && (
-                    <div className="mt-3">
-                      <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Pontos reprovados</Text>
-                      <ul className="mt-1.5 space-y-1 text-sm text-[var(--text-secondary)]">
-                        {verdict.violations.map((violation) => <li key={violation}>• {violation}</li>)}
-                      </ul>
-                    </div>
-                  )}
-
-                  {verdict.playbookImprovements.length > 0 && (
-                    <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
-                      <Text className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                        <Lightbulb className="h-3.5 w-3.5" /> Sugestões para o playbook
-                      </Text>
-                      <ul className="mt-1.5 space-y-1 text-sm text-[var(--text-secondary)]">
-                        {verdict.playbookImprovements.map((improvement) => <li key={improvement}>• {improvement}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {secondsUntilReply !== null && (
-                <div className="flex flex-wrap items-center justify-start gap-2">
-                  <div className="flex min-w-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>IA responde em {secondsUntilReply}s (aguardando novas mensagens)</span>
-                  </div>
-                  <Button variant="text" size="sm" onClick={handleReplyNow}>
-                    Responder agora
-                  </Button>
-                </div>
-              )}
-
-              {generatingReply && (
-                <div className="flex justify-start">
-                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2.5 text-sm text-[var(--text-secondary)]">
-                    IA está digitando...
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mx-3 mb-2 rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)] sm:mx-6">
-            {error}
-          </div>
-        )}
-
-        {isHandedOff && (
-          <div className="mx-3 mb-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)] sm:mx-6">
-            🔒 Essa conversa já foi encaminhada — a partir daqui é atendimento humano, a IA não responde mais aqui (mesmo que o lead mande mais mensagens).
-          </div>
-        )}
-
-        <div className="border-t border-[var(--border-subtle)] px-3 py-3 sm:px-6 sm:py-4">
-          <div className="mx-auto flex max-w-2xl items-end gap-2">
-            <Textarea
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite como se fosse o lead..."
-              rows={1}
-              disabled={sendingDraft}
-              className="kds-textarea flex-1 resize-none"
-            />
-            <IconButton
-              variant="primary"
-              loading={sendingDraft}
-              onClick={handleSend}
-              disabled={!draft.trim()}
-              title="Enviar"
-              aria-label="Enviar"
-             size="md">
-              <Send className="kds-control-icon" />
-            </IconButton>
-          </div>
-        </div>
-      </main>
-    </DesignSystemProvider>
+    <AiSandboxChatPage
+      conversations={conversations}
+      conversationsLoading={conversationsLoading}
+      activeConversation={activeConversation}
+      activeConversationId={activeConversationId}
+      messages={messages}
+      messagesLoading={messagesLoading}
+      activeTestRun={activeTestRun}
+      verdict={verdict}
+      draft={draft}
+      onDraftChange={setDraft}
+      onSend={handleSend}
+      onKeyDown={handleKeyDown}
+      threadRef={scrollRef}
+      sendingDraft={sendingDraft}
+      secondsUntilReply={secondsUntilReply}
+      onReplyNow={handleReplyNow}
+      generatingReply={generatingReply}
+      runningScenario={runningScenario}
+      startingApproach={startingApproach}
+      leadNameForApproach={leadNameForApproach}
+      onLeadNameChange={setLeadNameForApproach}
+      onStartWithApproach={handleStartWithApproach}
+      isHandedOff={isHandedOff}
+      error={error}
+      onNewConversation={handleNewConversation}
+      onExportChat={handleExportChat}
+      onSelectConversation={handleSelectConversation}
+      onRequestDelete={setConversationToDelete}
+      historyOpen={historyOpen}
+      onHistoryOpenChange={setHistoryOpen}
+      showScenarioPicker={showScenarioPicker}
+      onScenarioPickerOpenChange={setShowScenarioPicker}
+      scenarioSearch={scenarioSearch}
+      onScenarioSearchChange={setScenarioSearch}
+      scenarioGroups={filteredScenarioGroups}
+      onChooseScenario={handleChooseScenario}
+      conversationToDelete={conversationToDelete}
+      onDeleteOpenChange={(open) => !open && setConversationToDelete(null)}
+      onConfirmDelete={async () => {
+        if (!conversationToDelete) return;
+        await handleDeleteConversation(conversationToDelete.id);
+      }}
+    />
   );
 }

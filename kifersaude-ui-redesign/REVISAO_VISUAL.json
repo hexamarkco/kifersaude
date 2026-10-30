@@ -655,9 +655,14 @@
         "references/desktop/page--ia-global.png",
         "references/mobile/page--ia-global.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-ai/README.md",
+        "validacao/revisao-visual/config-ai/coverage.json"
+      ],
+      "notes": [
+        "A configuração global foi comparada dentro da página real de IA, com feedback de validação e falha junto ao campo, sem toast sobre as ações. Playwright documentou viewport e página completa em desktop claro/escuro e mobile, com alterações sintéticas não persistidas."
+      ]
     },
     {
       "id": "page--public-home",
@@ -2326,9 +2331,14 @@
         "references/desktop/state--ia-feature-editar.png",
         "references/mobile/state--ia-feature-editar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-ai/README.md",
+        "validacao/revisao-visual/config-ai/coverage.json"
+      ],
+      "notes": [
+        "O drawer real de edição e seus seletores, estados de validação, carregamento, erro e confirmação foram exercitados em Playwright. Capturas cobrem desktop claro/escuro, tablet e mobile de 390 e 320 px; a fixture bloqueou gravações externas."
+      ]
     },
     {
       "id": "state--automacao-novo-fluxo",

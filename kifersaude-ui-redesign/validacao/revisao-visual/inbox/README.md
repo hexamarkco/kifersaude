@@ -43,6 +43,10 @@
 
 Anexos recebidos passam a ser arquivados no bucket privado `comm-whatsapp-media` em uma tarefa de fundo, após salvar a mensagem. Falhas transitórias de armazenamento são repetidas até três vezes, sem atrasar a resposta do webhook. O resolvedor compartilhado é usado pela conversa, pelo drawer de arquivos e pelo visualizador.
 
+Se a Whapi entregar um arquivo durante a abertura da conversa, mas a gravação temporária no Storage falhar, a função ainda devolve a mídia para a sessão atual e registra a falha do cache. O arquivamento em segundo plano mantém as tentativas. Uma mídia que a Whapi já não encontra e que não foi arquivada antes disso precisa ser reenviada pelo contato.
+
+A correção do endpoint está publicada na função `comm-whatsapp-media`, versão 177, mantendo `verify_jwt = true`. `npm run typecheck` e `npm run build` passaram; nenhuma migration foi necessária.
+
 Falhas transitórias de imagem/figurinha, vídeo, áudio/áudio de voz e documento oferecem **Tentar novamente** como ação primária compacta. Quando a Whapi identifica que o arquivo de origem expirou, a interface informa que o contato precisa reenviá-lo e não oferece uma repetição sem efeito. O botão mantém contraste próprio mesmo no placeholder de mídia.
 
 Testes focados: 25/25 aprovados; `npm run typecheck` e `npm run build` passaram. `npm run lint` terminou sem erros e com cinco avisos de Fast Refresh em previews preexistentes de `output/playwright`. Na suíte geral, 1.830 testes passaram e quatro falharam em testes de contratos/configurações/usuários fora dos arquivos desta entrega. A Edge Function `comm-whatsapp-webhook` foi publicada no Supabase após o commit `981576cd` e está ativa na versão 214, sem mudança no requisito de JWT. A validação visual integrada permanece pendente: `/painel/inbox` redirecionou ao login no Playwright local, então não foi aberta uma conversa autenticada. Os contextos de mídia continuam pendentes no manifesto; nenhuma conversa real foi lida ou alterada.

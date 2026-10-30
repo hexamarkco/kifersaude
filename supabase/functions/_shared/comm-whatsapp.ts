@@ -3811,6 +3811,11 @@ const sanitizeCommWhatsAppStorageSegment = (value: string) =>
 
 const getCommWhatsAppMediaStoragePath = (mediaId: string) => `${sanitizeCommWhatsAppStorageSegment(mediaId)}`;
 
+type CommWhatsAppMediaArchiveOptions = {
+  keepDownloadedMediaOnArchiveError?: boolean;
+  onArchiveError?: (error: unknown) => void;
+};
+
 export async function getCachedCommWhatsAppMedia(supabaseAdmin: SupabaseClient, mediaId: string): Promise<Blob | null> {
   const normalizedMediaId = toTrimmedString(mediaId);
   if (!normalizedMediaId) return null;
@@ -3852,7 +3857,7 @@ export async function archiveCommWhatsAppMediaFromWhapi(supabaseAdmin: SupabaseC
   mediaUrl?: string | null;
   fallbackFileName?: string | null;
   fallbackMimeType?: string | null;
-}): Promise<{ blob: Blob; mimeType: string; fileName: string; cached: boolean }> {
+}, options: CommWhatsAppMediaArchiveOptions = {}): Promise<{ blob: Blob; mimeType: string; fileName: string; cached: boolean }> {
   const mediaId = toTrimmedString(params.mediaId);
   if (mediaId) {
     const cachedBlob = await getCachedCommWhatsAppMedia(supabaseAdmin, mediaId);
@@ -3870,11 +3875,16 @@ export async function archiveCommWhatsAppMediaFromWhapi(supabaseAdmin: SupabaseC
 
   const result = await fetchWhapiMediaBlob(params);
   if (mediaId) {
-    await archiveCommWhatsAppMedia(supabaseAdmin, {
-      mediaId,
-      blob: result.blob,
-      mimeType: result.mimeType,
-    });
+    try {
+      await archiveCommWhatsAppMedia(supabaseAdmin, {
+        mediaId,
+        blob: result.blob,
+        mimeType: result.mimeType,
+      });
+    } catch (error) {
+      options.onArchiveError?.(error);
+      if (!options.keepDownloadedMediaOnArchiveError) throw error;
+    }
   }
 
   return { ...result, cached: false };
@@ -3886,8 +3896,8 @@ export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, para
   mediaUrl?: string | null;
   fallbackFileName?: string | null;
   fallbackMimeType?: string | null;
-}): Promise<{ blob: Blob; mimeType: string; fileName: string; cached: boolean }> {
-  return await archiveCommWhatsAppMediaFromWhapi(supabaseAdmin, params);
+}, options: CommWhatsAppMediaArchiveOptions = {}): Promise<{ blob: Blob; mimeType: string; fileName: string; cached: boolean }> {
+  return await archiveCommWhatsAppMediaFromWhapi(supabaseAdmin, params, options);
 }
 
 export async function addWhapiContact(params: {

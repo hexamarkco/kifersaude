@@ -107,6 +107,11 @@ Deno.serve(async (req: Request) => {
       mediaUrl: typeof message?.media_url === 'string' ? message.media_url : null,
       fallbackMimeType: typeof message?.media_mime_type === 'string' ? message.media_mime_type : null,
       fallbackFileName: typeof message?.media_file_name === 'string' ? message.media_file_name : null,
+    }, {
+      // The attachment was fetched successfully; a cache write timeout must not
+      // prevent it from being shown in the current conversation.
+      keepDownloadedMediaOnArchiveError: true,
+      onArchiveError: (error) => console.error('[comm-whatsapp-media] falha ao arquivar; entregando mídia desta vez', error),
     });
 
     const headers = new Headers(corsHeaders);

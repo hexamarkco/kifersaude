@@ -2732,14 +2732,19 @@
         "references/mobile/state--contratos-importacao-individual.png"
       ],
       "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "evidence": [
+        "validacao/revisao-visual/contracts/importacao-individual/README.md",
+        "validacao/revisao-visual/contracts/importacao-individual/coverage.json"
+      ],
+      "notes": [
+        "Componente real comparado em prévia isolada com dados sintéticos, erros, loading, validação, teclado, temas claro/escuro e quatro viewports. A rota autenticada não ficou acessível para revisar o diálogo dentro do shell; manter pendente até concluir essa comparação integrada."
+      ]
     }
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 42,
-    "remaining_manifest_contexts": 118,
+    "reviewed_contexts": 44,
+    "remaining_manifest_contexts": 116,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

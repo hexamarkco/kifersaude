@@ -1,6 +1,6 @@
 # Revisão visual — Contratos
 
-**Status parcial do módulo.** A listagem, o drawer de detalhes, o importador JSON em lote, o cadastro e a edição em página completa foram comparados com as referências e revisados com adaptações. Exclusão, importação individual e outros estados continuam pendentes; o redesign integral do CRM segue em andamento.
+**Status parcial do módulo.** A listagem, o drawer de detalhes, os importadores JSON em lote e individual, o cadastro e a edição em página completa foram comparados com as referências e revisados com adaptações. Exclusão, verificação integrada de alguns estados e outras interfaces continuam pendentes; o redesign integral do CRM segue em andamento.
 
 ## Referências
 
@@ -15,6 +15,7 @@
 
 - **Drawer de detalhes — revisado com adaptações.** A largura, a hierarquia de resumo, participantes, plano e ações se aproximam da referência. Informações financeiras, documentos e histórico ficam recolhidos, preservando os dados reais e reduzindo ruído. A base atual não armazena status individual para cada participante, então esses status do mockup não são inventados.
 - **Importação em lote — revisada com adaptações.** A estrutura compacta de formato, escolha do arquivo e ações segue a referência. O fluxo real exige JSON, oferece modelo e validação prévia e limita o lote; esses requisitos são mantidos em vez de substituir a funcionalidade por campos genéricos do mockup.
+- **Importação individual — revisada em prévia isolada; comparação integrada pendente.** O modal real importa um arquivo JSON preenchido, permite baixar o modelo, valida os dados e só então os aplica ao formulário ainda não salvo. A referência mostra campos genéricos para dados do contrato, titular e modalidade, além de uma ação de salvamento; isso não corresponde ao fluxo disponível e foi mantido como adaptação documentada. O diálogo foi dimensionado pelo padrão de formulário e o rodapé responsivo conserva as ações lado a lado em 320 px. Playwright verificou erro de extensão, JSON inválido, validação em andamento, resultado válido e 4 viewports nos temas claro/escuro. A montagem isolada com dados sintéticos não substitui a revisão dentro da rota autenticada; evidências e medidas estão em [Importação individual](importacao-individual/README.md).
 - **Listagem — revisada com adaptações.** A grade de indicadores e os filtros compactos seguem a referência; no mobile, o título e a ação principal ficam alinhados à esquerda. O shell inclui marca, menu e perfil no topo. O menu móvel ocupa a tela disponível e mantém todos os itens acessíveis sem sobrepor o rodapé em 320 × 640. A fixture local contém quatro contratos sintéticos, enquanto a referência estática contém oito; as ações reais de importação, criação e filtros foram preservadas.
 - **Cabeçalhos da tabela — refinados.** Os indicadores ↕ foram removidos para reduzir ruído visual; os títulos continuam sendo botões de ordenação com rótulos acessíveis e `aria-sort`. Playwright conferiu a listagem sintética em desktop e acionou **Ordenar por Contrato**; a ordenação mudou para crescente sem reexibir ícones. [Captura desktop sem setas](screenshots/desktop/contratos-cabecalho-sem-indicador-ordenacao.png). A tabela completa no shell autenticado ainda depende de sessão local.
 - A tabela de Leads adota o mesmo tratamento para os cabeçalhos: sem setas visuais em repouso, com ordenação e estado acessível mantidos. Titular e código identificam o registro sem avatar de iniciais.
@@ -87,7 +88,7 @@ Medições, verificações e lista de caminhos também estão em [`coverage.json
 
 ## Pendências deste módulo
 
-- Comparar edição, confirmação de exclusão, importação individual e os estados adicionais descritos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).
+- Conferir a integração da importação individual no formulário/shell, a confirmação de exclusão e os estados adicionais descritos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).
 - A ficha aberta pela lista agora usa a página completa com carregamento dentro da própria página e ações alinhadas ao cabeçalho. O teste do componente passou; a captura integrada desktop/mobile permanece pendente porque a rota local redirecionou para a página pública sem sessão autenticada.
 - Não marcar o módulo nem o redesign global como concluídos enquanto esses itens estiverem pendentes.
 

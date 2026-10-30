@@ -213,7 +213,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-control);
   width: var(--control-height-md);
   height: var(--control-height-md);
   padding: 0;

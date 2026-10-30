@@ -91,7 +91,8 @@ export function ContractJsonImportDialog({
       onOpenChange={(open) => !open && !loading && onClose()}
       closeOnOverlay={!loading}
       closeOnEscape={!loading}
-      size="md"
+      size="form"
+      className="kds-contract-json-import-dialog"
     >
       <DialogHeader onClose={loading ? undefined : onClose}>
         <DialogTitle>Importar contrato de arquivo</DialogTitle>
@@ -146,7 +147,7 @@ export function ContractJsonImportDialog({
         )}
         {error && <Alert tone="danger" title="Não foi possível importar o arquivo">{error}</Alert>}
       </DialogBody>
-      <DialogFooter>
+      <DialogFooter className="kds-contract-json-import-footer">
         <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>
         {payload ? (
           <Button type="button" onClick={() => { onApply(payload); onClose(); }}>

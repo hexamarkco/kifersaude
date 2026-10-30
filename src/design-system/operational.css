@@ -1219,6 +1219,19 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   .painel-theme.kifer-ds .kds-dashboard-more-metrics > .kds-disclosure-trigger { width: 100%; }
 }
 @media (max-width: 640px) {
+  .painel-theme.kifer-ds .kds-dialog.kds-contract-json-import-dialog .kds-contract-json-import-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: var(--space-2);
+  }
+  .painel-theme.kifer-ds .kds-dialog.kds-contract-json-import-dialog .kds-contract-json-import-footer > .kds-button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: var(--space-2);
+    font: var(--type-body-sm);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+  }
   .painel-theme.kifer-ds .kds-lead-reminder-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-footer > .kds-button { width: 100%; min-width: 0; white-space: nowrap; }

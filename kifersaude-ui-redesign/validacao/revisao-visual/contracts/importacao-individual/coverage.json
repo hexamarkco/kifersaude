@@ -1,0 +1,60 @@
+{
+  "context_id": "state--contratos-importacao-individual",
+  "route": "/painel/contratos",
+  "status": "pendente",
+  "status_reason": "A rota autenticada redirecionou para login; falta comparar o modal aberto a partir do ContractForm dentro do shell real.",
+  "component": "src/features/contracts/components/ContractJsonImportDialog.tsx",
+  "reference_adaptation": "A referência mostra campos genéricos para contrato, titular e modalidade e salvamento direto. O componente real importa JSON, valida os dados e só os aplica ao formulário não salvo; essa semântica foi preservada.",
+  "capture": {
+    "full_page": true,
+    "animations_disabled": true,
+    "fonts_ready": true,
+    "synthetic_data_only": true,
+    "external_calls": false,
+    "writes": false,
+    "themes": ["light", "dark"],
+    "viewports": [
+      { "width": 1920, "height": 1080, "document_width": 1920, "dialog_width": 592 },
+      { "width": 768, "height": 1024, "document_width": 768, "dialog_width": 592 },
+      { "width": 390, "height": 844, "document_width": 390, "dialog_width": 390 },
+      { "width": 320, "height": 640, "document_width": 320, "dialog_width": 320 }
+    ]
+  },
+  "states": [
+    "initial dialog",
+    "unsupported file extension",
+    "malformed JSON",
+    "validation in progress with action disabled",
+    "valid JSON preview awaiting apply"
+  ],
+  "interaction_checks": {
+    "initial_focus": "Fechar",
+    "escape_closes_when_idle": true,
+    "escape_restores_focus_to_persistent_launcher": true,
+    "escape_and_backdrop_blocked_during_loading": "verified by ContractImportDialogs component tests"
+  },
+  "mobile_320": {
+    "footer_height": 85,
+    "buttons": [
+      { "label": "Cancelar", "width": 125, "height": 44 },
+      { "label": "Validar arquivo", "width": 153, "height": 44 }
+    ],
+    "horizontal_overflow": false
+  },
+  "screenshots": [
+    "dialog-1920x1080-light.png",
+    "dialog-1920x1080-dark.png",
+    "dialog-768x1024-light.png",
+    "dialog-768x1024-dark.png",
+    "dialog-390x844-light.png",
+    "dialog-390x844-dark.png",
+    "dialog-320x640-light.png",
+    "dialog-320x640-dark.png",
+    "extension-error-390x844-light.png",
+    "json-error-390x844-light.png",
+    "json-validated-390x844-light.png",
+    "validation-loading-320x640-light.png"
+  ],
+  "test_command": "npm test -- --run src/features/contracts/components/__tests__/ContractImportDialogs.test.tsx src/features/contracts/domain/contractJsonImport.test.ts",
+  "test_result": "2 test files, 9 tests passed"
+}

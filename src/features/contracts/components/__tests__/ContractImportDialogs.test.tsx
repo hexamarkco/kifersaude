@@ -30,6 +30,9 @@ test('mantém o diálogo de importação individual aberto durante a validação
       onClose={() => { closeCalls += 1; }}
     />,
   );
+  const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+  assert.ok(dialog?.classList.contains('kds-contract-json-import-dialog'));
+  assert.ok(dialog?.querySelector('.kds-contract-json-import-footer'));
   const input = document.body.querySelector<HTMLInputElement>('input[type="file"]');
   assert.ok(input);
 

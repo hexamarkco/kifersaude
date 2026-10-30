@@ -297,19 +297,19 @@
 .kifer-home .home-footer-brand .kds-workspace-brand > span > span { font-size: 0.73em; font-weight: 400; }
 .kifer-home .home-footer-tagline { font-size: clamp(1.25rem, 1.65vw, 1.75rem); line-height: 1.45; margin-block: var(--space-8) var(--space-5); }
 .kifer-home .home-footer-brand > .kds-text:last-of-type { font-size: 1rem; max-width: 23rem; opacity: 0.9; }
-.kifer-home .home-footer h2 { font: 500 0.875rem / 1.5 var(--font-sans); letter-spacing: 0.19em; text-transform: uppercase; margin-bottom: var(--space-6); }
+.kifer-home .home-footer h2 { font: 500 0.875rem / 1.5 var(--font-sans); letter-spacing: 0.19em; text-transform: uppercase; margin-bottom: var(--space-4); }
 .kifer-home .home-footer h2::after { content: ''; display: block; margin-top: var(--space-3); width: var(--space-8); height: 2px; background: var(--accent-copper); }
-.kifer-home .home-footer nav ul { display: grid; gap: var(--space-3); }
-.kifer-home .home-footer nav a { font-size: 1rem; line-height: 1.5; min-height: 2.75rem; display: inline-flex; align-items: center; }
+.kifer-home .home-footer nav ul { display: grid; gap: var(--space-2); }
+.kifer-home .home-footer nav a { font-size: 1rem; line-height: 1.5; min-height: var(--space-8); display: inline-flex; align-items: center; }
 .kifer-home .home-footer a:hover { text-decoration: underline; text-underline-offset: var(--space-1); }
 .kifer-home .home-footer a:focus-visible { outline-color: var(--text-on-brand); }
-.kifer-home .home-footer-useful { margin-top: var(--space-10); }
+.kifer-home .home-footer-useful { margin-top: var(--space-6); }
 .kifer-home .home-footer-benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); margin-top: var(--space-10); }
 .kifer-home .home-footer-benefits li { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; font-size: 0.8125rem; line-height: 1.5; }
 .kifer-home .home-footer .home-icon { background: color-mix(in srgb, var(--brand-primary) 75%, transparent); color: var(--text-on-brand); width: 3.25rem; height: 3.25rem; }
 .kifer-home .home-footer .home-icon svg { width: 1.6rem; height: 1.6rem; }
 .kifer-home .home-footer-contact > .kds-text { font-size: 0.9375rem; }
-.kifer-home .home-footer-contact > ul { margin-top: var(--space-6); display: grid; gap: var(--space-6); }
+.kifer-home .home-footer-contact > ul { margin-top: var(--space-6); display: grid; gap: var(--space-4); }
 .kifer-home .home-footer-contact li { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
 .kifer-home .home-footer-contact li > div { min-width: 0; }
 .kifer-home .home-footer-contact li .kds-text { font-size: 0.8125rem; opacity: 0.85; }
@@ -594,7 +594,7 @@
   .kifer-home .home-footer-brand > .kds-text:last-of-type { max-width: none; font-size: 0.9375rem; }
   .kifer-home .home-footer-benefits { gap: var(--space-4); margin-top: var(--space-6); }
   .kifer-home .home-footer h2 { font-size: 0.6875rem; letter-spacing: 0.12em; margin-bottom: var(--space-4); }
-  .kifer-home .home-footer nav a { font-size: 0.8125rem; }
+  .kifer-home .home-footer nav a { font-size: 0.8125rem; min-height: 2.75rem; }
   .kifer-home .home-footer nav ul { gap: var(--space-1); }
   .kifer-home .home-footer-useful { margin-top: var(--space-8); }
   .kifer-home .home-footer-contact { display: block; }

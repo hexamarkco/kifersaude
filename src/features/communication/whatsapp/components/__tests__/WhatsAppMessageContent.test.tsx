@@ -31,6 +31,22 @@ const renderMessage = (messageType: string, interactive: Record<string, unknown>
   />);
 };
 
+const renderMediaMessage = (messageType: string) => {
+  const message: CommWhatsAppMessage = {
+    id: `${messageType}-1`, chat_id: 'chat-1', channel_id: 'channel-1', external_message_id: `${messageType}-external-1`,
+    direction: 'inbound', message_type: messageType, delivery_status: 'received', text_content: null,
+    media_id: `${messageType}-media-1`, media_file_name: `arquivo.${messageType === 'video' ? 'mp4' : messageType === 'document' ? 'docx' : 'mp3'}`,
+    media_mime_type: messageType === 'video' ? 'video/mp4' : messageType === 'document' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'audio/mpeg', metadata: {},
+    message_at: '2026-10-01T12:00:00Z', created_at: '2026-10-01T12:00:00Z',
+  };
+
+  return render(<WhatsAppMessageBody
+    message={message} onOpenImage={vi.fn()} onOpenQuotedMessage={vi.fn()} onTranscribe={vi.fn()}
+    onSelectInteractiveReply={vi.fn()} onOpenSharedContactChat={vi.fn()} onSaveSharedContact={vi.fn()}
+    sharedContactActionKey={null} transcribing={false} mediaSending={false} mediaSendingProgress={null}
+  />);
+};
+
 test('alinha o texto das mensagens à esquerda sem esticar os espaços', () => {
   const markup = renderMessage('text', {}, 'outbound', {});
 
@@ -64,6 +80,27 @@ test('permite tentar carregar novamente uma imagem indisponível', () => {
     mediaState.error = null;
   }
 });
+
+for (const messageType of ['video', 'audio', 'document']) {
+  test(`permite tentar carregar novamente um arquivo de ${messageType} indisponível`, () => {
+    mediaState.mediaUrl = null;
+    mediaState.loading = false;
+    mediaState.error = 'Arquivo indisponível no momento.';
+    mediaState.retryCalls = 0;
+    const view = renderMediaMessage(messageType);
+
+    try {
+      const retryButton = Array.from(view.container.querySelectorAll('button'))
+        .find((button) => button.textContent?.trim() === 'Tentar novamente');
+      assert.ok(retryButton);
+      act(() => retryButton.click());
+      assert.equal(mediaState.retryCalls, 1);
+    } finally {
+      view.unmount();
+      mediaState.error = null;
+    }
+  });
+}
 
 for (const type of ['list', 'interactive']) {
 test(`renders ${type} with section titles, option names and descriptions`, () => {

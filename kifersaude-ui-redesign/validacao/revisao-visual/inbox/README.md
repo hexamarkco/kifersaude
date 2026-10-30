@@ -38,3 +38,9 @@
 - Contatos, leads, conversas, mensagens, imagens, contratos e lembretes usados nas capturas são dados sintéticos. O preview usa callbacks sem efeito; nenhuma mensagem foi enviada, nenhum contato ou lembrete foi criado ou alterado e nenhuma ação comercial foi confirmada.
 - A fixture da Inbox bloqueou a tentativa de presença com HTTP 403 e não disponibilizou Realtime (handshake local expirado). O polling de leitura continuou ativo; esses avisos são do ambiente de demonstração.
 - Esta revisão encerra apenas `page--inbox` e `state--inbox-nova-conversa`. Filtros, agenda, mensagens agendadas, painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados da conversa permanecem como contextos independentes pendentes no manifesto.
+
+## Recuperação de anexos indisponíveis — 30/10/2026
+
+Os estados de falha de imagem/figurinha, vídeo, áudio/áudio de voz e documento agora oferecem a mesma ação **Tentar novamente**, ligada ao resolvedor de mídia existente. A nova tentativa limpa o cache negativo do arquivo e solicita outra resolução; nenhum envio ou alteração da mensagem ocorre. Os testes do componente validam a ação em imagem, vídeo e áudio (16/16 testes do arquivo passaram).
+
+A validação visual integrada desse estado permanece pendente: no Playwright CLI local, `/painel/inbox` exibiu a tela de login. A mudança não encerra os contextos de mídia listados no manifesto e não foi conferida em uma conversa autenticada.

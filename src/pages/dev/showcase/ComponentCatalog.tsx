@@ -45,6 +45,7 @@ import {
   ClienteCard,
   Combobox,
   ConfirmDialog,
+  ConfirmationSummary,
   ControlGroup,
   DateRangeFilter,
   DateTimePicker,
@@ -409,7 +410,7 @@ function Actions() {
         <Specimen
           title="Ações da página"
           description="Uma ordem oficial: exclusão isolada, secundárias antes da principal. A exclusão exige confirmação."
-          source="PageActions / ConfirmDialog"
+          source="PageActions / ConfirmDialog / ConfirmationSummary"
           wide
         >
           <div role="status">
@@ -435,14 +436,23 @@ function Actions() {
             open={deleteConfirm}
             onOpenChange={setDeleteConfirm}
             title="Excluir um exemplo?"
-            description="A contagem deste bloco será reduzida em um. Use Reiniciar para restaurar a demonstração."
+            description="Confira o efeito antes de continuar."
             confirmLabel="Excluir exemplo"
             destructive
             closeOnConfirm
             onConfirm={() =>
               setActionExamples((current) => Math.max(0, current - 1))
             }
-          />
+          >
+            <ConfirmationSummary
+              tone="warning"
+              warning="Esta demonstração não altera dados do CRM; apenas reduz a contagem exibida."
+              items={[
+                { label: 'Registro', value: 'Exemplo do showcase' },
+                { label: 'Consequência', value: 'Menos um exemplo na contagem' },
+              ]}
+            />
+          </ConfirmDialog>
         </Specimen>
         <Specimen
           title="Salvar e cancelar"

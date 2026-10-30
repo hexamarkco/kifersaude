@@ -75,6 +75,8 @@ export {
 export type { DialogProps, DialogPresentation, DialogSize, DialogBodyProps, DialogDescriptionPlacement, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogShellProps, DialogTitleProps, WorkspaceDialogProps } from './components/Dialog';
 export { ConfirmDialog } from './components/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/ConfirmDialog';
+export { ConfirmationSummary } from './components/ConfirmationSummary';
+export type { ConfirmationSummaryItem, ConfirmationSummaryProps } from './components/ConfirmationSummary';
 export { default as FilterTrigger } from './components/FilterTrigger';
 export { default as DisclosureTrigger } from './components/DisclosureTrigger';
 export { WorkspaceHeader } from './components/WorkspaceHeader';

@@ -1471,15 +1471,28 @@
       "route": "/painel/contratos",
       "kind": "states",
       "components": [
-        "src/features/contracts/ContractsManagerScreen.tsx"
+        "src/features/contracts/ContractsManagerScreen.tsx",
+        "src/design-system/components/ConfirmationSummary.tsx",
+        "src/hooks/useConfirmationModal.tsx"
       ],
       "references": [
         "references/desktop/state--contratos-excluir-confirmacao.png",
         "references/mobile/state--contratos-excluir-confirmacao.png"
       ],
       "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "evidence": [
+        "validacao/revisao-visual/contracts/screenshots/desktop/exclusao-confirmacao-showcase.png",
+        "validacao/revisao-visual/contracts/screenshots/desktop/exclusao-confirmacao-showcase-dark.png",
+        "validacao/revisao-visual/contracts/screenshots/tablet/exclusao-confirmacao-showcase.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile/exclusao-confirmacao-showcase.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-showcase.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-showcase-dark.png"
+      ],
+      "notes": [
+        "ConfirmationSummary foi implementado e documentado no showcase com dados sintéticos; a tela de Contratos fornece código e titular ao confirmar exclusão.",
+        "Screenshots registram apenas o componente no showcase. A rota autenticada de Contratos ainda precisa de comparação visual integrada; o estado continua pendente.",
+        "Escape e cancelamento fecham o diálogo e devolvem foco ao acionador; a ação destrutiva não foi confirmada."
+      ]
     },
     {
       "id": "state--contratos-status-menu",

@@ -26,6 +26,18 @@ function ConfirmationHarness({ onResult }: { onResult: (value: boolean) => void 
       >
         Abrir segunda
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          void requestConfirmation({
+            title: "Confirmação contextualizada",
+            description: "Confira o efeito antes de continuar.",
+            content: <p>Resumo do registro e da consequência.</p>,
+          }).then(onResult);
+        }}
+      >
+        Abrir confirmação contextualizada
+      </button>
       {ConfirmationDialog}
     </>
   );
@@ -69,5 +81,35 @@ test("cancela a confirmação anterior quando uma nova é aberta", async () => {
   });
 
   assert.deepEqual(results, [false, false]);
+  view.unmount();
+});
+
+test("permite conteúdo contextual sem mudar o fluxo de cancelamento", async () => {
+  const results: boolean[] = [];
+  const view = render(<ConfirmationHarness onResult={(value) => results.push(value)} />);
+  const openButton = Array.from(document.querySelectorAll("button")).find(
+    (button) => button.textContent === "Abrir confirmação contextualizada",
+  );
+  assert.ok(openButton);
+
+  await act(async () => {
+    openButton.click();
+    await Promise.resolve();
+  });
+
+  assert.ok(document.body.textContent?.includes("Confira o efeito antes de continuar."));
+  assert.ok(document.body.textContent?.includes("Resumo do registro e da consequência."));
+
+  const cancelButton = Array.from(document.querySelectorAll("button")).find(
+    (button) => button.textContent === "Cancelar",
+  );
+  assert.ok(cancelButton);
+
+  await act(async () => {
+    cancelButton.click();
+    await Promise.resolve();
+  });
+
+  assert.deepEqual(results, [false]);
   view.unmount();
 });

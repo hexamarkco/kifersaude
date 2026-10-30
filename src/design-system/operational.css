@@ -1220,7 +1220,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-heading-xl:not(.kds-heading-editorial) { font: var(--type-ui-section); }
 .painel-theme.kifer-ds .kds-heading-lg:not(.kds-heading-editorial),
 .painel-theme.kifer-ds .kds-heading-md:not(.kds-heading-editorial) { font: var(--type-ui-heading); }
-.painel-theme.kifer-ds :where(button, input, textarea, a, [tabindex]):focus-visible { outline: 1px solid var(--brand-primary); outline-offset: 2px; box-shadow: none; }
+.painel-theme.kifer-ds :where(button, input, textarea, a, [tabindex]):focus-visible { outline: 1px solid var(--brand-primary); outline-offset: -1px; box-shadow: none; }
 .painel-theme.kifer-ds :where(.kds-input, .kds-select, .kds-textarea)[aria-invalid='true'] { border-color: var(--danger-text); }
 .painel-theme.kifer-ds .kds-dialog-footer .kds-page-action-bar-form { padding-block: 0; border-top: 0; width: 100%; }
 .kds-surface-plain {

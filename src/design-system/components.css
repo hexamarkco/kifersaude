@@ -245,6 +245,35 @@
   background: color-mix(in srgb, var(--bg-inset) 45%, transparent);
 }
 
+.kds-confirmation-summary-content {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.kds-confirmation-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--space-4) var(--space-5);
+  margin: 0;
+}
+
+.kds-confirmation-summary-item {
+  min-width: 0;
+}
+
+.kds-confirmation-summary-item dt {
+  color: var(--text-muted);
+  font: var(--type-caption);
+}
+
+.kds-confirmation-summary-item dd {
+  margin: var(--space-1) 0 0;
+  color: var(--text-primary);
+  font: var(--type-body-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 /* ── Drawer / confirmation ─────────────────────────── */
 .kds-dialog-container:has(.kds-drawer) {
   align-items: stretch;

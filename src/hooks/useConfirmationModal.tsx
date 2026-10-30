@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
   ConfirmDialog,
@@ -10,6 +10,7 @@ type ConfirmationOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: 'danger' | 'default';
+  content?: ReactNode;
 };
 
 type ConfirmationState = ConfirmationOptions;
@@ -55,14 +56,17 @@ export function useConfirmationModal() {
         open={!!confirmationState}
         onOpenChange={(open) => { if (!open) handleCancel(); }}
         title={confirmationState?.title ?? ''}
+        description={confirmationState?.content ? confirmationState.description : undefined}
         confirmLabel={confirmationState?.confirmLabel}
         cancelLabel={confirmationState?.cancelLabel}
         destructive={confirmationState?.tone === 'danger'}
         onConfirm={handleConfirm}
       >
-        <Alert tone={confirmationState?.tone === 'danger' ? 'danger' : 'warning'}>
-          {confirmationState?.description ?? 'Essa ação pode impactar os dados atuais. Confirme para continuar.'}
-        </Alert>
+        {confirmationState?.content ?? (
+          <Alert tone={confirmationState?.tone === 'danger' ? 'danger' : 'warning'}>
+            {confirmationState?.description ?? 'Essa ação pode impactar os dados atuais. Confirme para continuar.'}
+          </Alert>
+        )}
       </ConfirmDialog>
     ),
     [confirmationState, handleCancel, handleConfirm],

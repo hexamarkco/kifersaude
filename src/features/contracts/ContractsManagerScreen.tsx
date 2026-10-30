@@ -36,6 +36,7 @@ import {
   Avatar,
   Button,
   Alert,
+  ConfirmationSummary,
   EmptyState,
   Input,
   OperationalMetricChip,
@@ -390,10 +391,19 @@ export default function ContractsManager({
 
     const confirmed = await requestConfirmation({
       title: "Excluir contrato",
-      description: `Deseja excluir o contrato ${contract.codigo_contrato}? Esta ação não pode ser desfeita.`,
+      description: "Confira o contrato selecionado e o efeito da exclusão.",
       confirmLabel: "Excluir",
       cancelLabel: "Cancelar",
       tone: "danger",
+      content: (
+        <ConfirmationSummary
+          warning="A exclusão é permanente. Este contrato será removido da carteira."
+          items={[
+            { label: "Contrato", value: contract.codigo_contrato },
+            { label: "Titular", value: getContractDisplayName(contract) },
+          ]}
+        />
+      ),
     });
 
     if (!confirmed) return;

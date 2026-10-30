@@ -24,6 +24,10 @@ Capturas usam dados sintéticos do ambiente local. Foram abertos o drawer, o for
 
 O drawer foi rolado até o conteúdo final em 320 px, preservando o rodapé fixo; Escape e cancelar fecham sem gravar. O importador foi conferido nos temas claro/escuro e nas larguras de 1920, 768, 390 e 320 px. O estado de arquivo inválido e a prévia válida foram gerados com dados sintéticos. O menu do shell foi testado por teclado: Escape fecha e devolve foco ao acionador.
 
+### Confirmação de exclusão — componente atualizado; integração pendente
+
+O `ConfirmationSummary` reutilizável exibe o aviso, o registro e a consequência antes da confirmação. A tela de Contratos fornece o código e o titular do contrato selecionado; o hook aceita esse conteúdo contextual sem alterar a API dos outros diálogos. O showcase demonstra o mesmo componente com dados sintéticos. Playwright verificou 1920 px em tema claro/escuro, 768 px, 390 px e 320 px em tema claro/escuro; em 320 px o conteúdo cabe na viewport e as ações se empilham. Escape fecha o diálogo e devolve o foco ao acionador. A ação destrutiva não foi confirmada. As capturas são do showcase isolado; a confirmação integrada na rota autenticada `/painel/contratos` segue pendente de revisão visual própria.
+
 ## Capturas
 
 Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos são relativos a esta pasta de documentação.
@@ -36,6 +40,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Cadastro: página completa [clara](screenshots/desktop/contrato-criar-pagina.png) e [escura](screenshots/desktop/contrato-criar-pagina-dark.png); viewport [claro](screenshots/desktop/contrato-criar-pagina-viewport.png) e [escuro](screenshots/desktop/contrato-criar-pagina-viewport-dark.png)
 - Edição: página completa [clara](screenshots/desktop/editar-contrato-pagina.png) e [escura](screenshots/desktop/editar-contrato-pagina-dark.png); [viewport](screenshots/desktop/editar-contrato-pagina-viewport.png)
 - Importação: [vazia](screenshots/desktop/importacao-modal.png), [escura](screenshots/desktop/importacao-modal-dark.png), [carregando](screenshots/desktop/importacao-modal-carregando.png), [arquivo inválido](screenshots/desktop/importacao-modal-erro.png), [prévia válida](screenshots/desktop/importacao-modal-validado.png)
+- Confirmação de exclusão no showcase: [claro](screenshots/desktop/exclusao-confirmacao-showcase.png), [escuro](screenshots/desktop/exclusao-confirmacao-showcase-dark.png)
 
 ### Tablet (768 × 1024)
 
@@ -44,6 +49,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Cadastro: página completa [clara](screenshots/tablet/contrato-criar-pagina.png) e [escura](screenshots/tablet/contrato-criar-pagina-dark.png); viewport [claro](screenshots/tablet/contrato-criar-pagina-viewport.png) e [escuro](screenshots/tablet/contrato-criar-pagina-viewport-dark.png)
 - Edição: página completa [clara](screenshots/tablet/editar-contrato-pagina.png)
 - Importação: [clara](screenshots/tablet/importacao-modal.png), [escura](screenshots/tablet/importacao-modal-dark.png)
+- Confirmação de exclusão no showcase: [claro](screenshots/tablet/exclusao-confirmacao-showcase.png)
 
 ### Mobile (390 × 844)
 
@@ -53,6 +59,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Cadastro: página completa [clara](screenshots/mobile/contrato-criar-pagina.png) e [escura](screenshots/mobile/contrato-criar-pagina-dark.png); viewport [claro](screenshots/mobile/contrato-criar-pagina-viewport.png) e [escuro](screenshots/mobile/contrato-criar-pagina-viewport-dark.png); ação final e navegação fixa [sem sobreposição](screenshots/mobile/contrato-criar-pagina-bottom-viewport-dark.png)
 - Edição: página completa [clara](screenshots/mobile/editar-contrato-pagina.png)
 - Importação: [vazia](screenshots/mobile/importacao-modal.png), [escura](screenshots/mobile/importacao-modal-dark.png), [arquivo inválido](screenshots/mobile/importacao-modal-erro.png), [prévia válida](screenshots/mobile/importacao-modal-validado.png)
+- Confirmação de exclusão no showcase: [claro](screenshots/mobile/exclusao-confirmacao-showcase.png)
 
 ### Mobile compacto (320 × 640)
 
@@ -61,6 +68,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Drawer: [claro](screenshots/mobile-320/detalhes-drawer.png), [escuro](screenshots/mobile-320/detalhes-drawer-dark.png), [conteúdo expandido no topo](screenshots/mobile-320/detalhes-expandido-topo.png), [conteúdo expandido no final](screenshots/mobile-320/detalhes-expandido-final.png), [final no tema escuro](screenshots/mobile-320/detalhes-expandido-final-dark.png), [rodapé](screenshots/mobile-320/detalhes-footer.png)
 - Cadastro: página completa [clara](screenshots/mobile-320/contrato-criar-pagina.png) e [escura](screenshots/mobile-320/contrato-criar-pagina-dark.png); viewport [claro](screenshots/mobile-320/contrato-criar-pagina-viewport.png) e [escuro](screenshots/mobile-320/contrato-criar-pagina-viewport-dark.png); ação final e navegação fixa [sem sobreposição](screenshots/mobile-320/contrato-criar-pagina-bottom-viewport-dark.png)
 - Edição: página completa [clara](screenshots/mobile-320/editar-contrato-pagina.png)
+- Confirmação de exclusão no showcase: [clara](screenshots/mobile-320/exclusao-confirmacao-showcase.png), [escura](screenshots/mobile-320/exclusao-confirmacao-showcase-dark.png)
 
 Nas capturas de página inteira em mobile, a navegação inferior fixa foi ocultada apenas durante a captura para evitar que o browser a repetisse no meio do documento. As capturas de viewport mantêm a navegação real visível; os dois tamanhos mobile também têm uma captura da ação final junto à navegação para verificar a distância entre eles.
 - Importação: [vazia](screenshots/mobile-320/importacao-modal.png), [escura](screenshots/mobile-320/importacao-modal-dark.png), [fim do conteúdo rolável](screenshots/mobile-320/importacao-modal-scroll-bottom.png)

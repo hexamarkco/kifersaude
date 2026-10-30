@@ -11,8 +11,9 @@
   box-sizing: border-box;
 }
 .ds-showcase :where(button, a, summary):focus-visible {
-  outline: 2px solid var(--focus-ring-strong);
-  outline-offset: 3px;
+  outline: 1px solid var(--brand-primary);
+  outline-offset: -1px;
+  box-shadow: none;
 }
 .ds-showcase :where(h1, h2, h3, p) {
   margin: 0;

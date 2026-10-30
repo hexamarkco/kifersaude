@@ -1911,9 +1911,15 @@
         "references/desktop/state--contratos-titular.png",
         "references/mobile/state--contratos-titular.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
+      "notes": [
+        "A referência apresenta um modal curto; o formulário real reúne informações pessoais, endereço e dados empresariais, então Adicionar titular usa página completa com o HolderForm e PageActions reutilizáveis. Os campos, validações e salvamento originais foram preservados.",
+        "Prévia isolada do componente real conferida em 1920, 768, 390 e 320 px, nos temas claro e escuro, sem overflow horizontal. Voltar/cancelar foi verificado sem envio. A captura autenticada dentro da rota permanece pendente."
+      ]
     },
     {
       "id": "state--contratos-dependente",
@@ -2716,8 +2722,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 41,
-    "remaining_manifest_contexts": 119,
+    "reviewed_contexts": 42,
+    "remaining_manifest_contexts": 118,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

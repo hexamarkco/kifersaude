@@ -1472,7 +1472,7 @@ html,
 .terracota-sidebar .kds-action-surface:hover { background: var(--bg-hover); box-shadow: none; }
 .terracota-sidebar .kds-sidebar-item.is-active { background: var(--brand-primary-soft); color: var(--brand-primary-active); }
 
-.painel-theme.kifer-ds .kds-settings-catalog-link {
+.kds-settings-catalog-link {
   padding: var(--space-3) var(--space-4);
 }
 

@@ -16,7 +16,16 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Configurações — espaçamento dos atalhos (30/10/2026)
 
-- Os cinco atalhos de **Estrutura e parametrização** agora usam `SettingsCatalogLink`, com padding `sm` do design system (16 px) em todos os lados. Isso remove o texto encostado na borda e mantém os mesmos destinos, contagens e permissões. O teste focado cobre o padding e o clique; esta correção não gerou uma nova captura visual integrada.
+- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com 12 px de padding vertical e 16 px horizontal por tokens do design system. A regra do componente não depende mais do escopo do tema; os destinos, contagens e permissões permanecem iguais. O teste focado cobre o clique e Playwright conferiu 12 px × 16 px em desktop/mobile nos dois temas, sem overflow. A captura isolada do componente não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
+
+### Contratos — formulário de titular em página (30/10/2026)
+
+- **Adicionar titular** reutiliza o `HolderForm` real numa página completa porque o formulário contém grupos pessoais, de endereço e empresariais que não cabem no modal curto da referência. Campos, validações e salvamento foram preservados; voltar/cancelar retorna à ficha sem gravar. Playwright conferiu a página em 1920, 768, 390 e 320 px nos temas claro/escuro, sem overflow. O rodapé não cobre o último campo no final da rolagem. A captura integrada na rota autenticada continua pendente. [Evidências](validacao/revisao-visual/contracts/README.md).
+
+### Gates desta entrega (30/10/2026)
+
+- Testes focados: **2/2**; typecheck, auditorias visual/Design System/arquitetura, lint e build passaram. O lint mantém cinco avisos Fast Refresh em prévias Playwright preexistentes. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
+- Suíte completa: **1.835 testes passaram e 4 falharam** em `ContractForm.presentation.test.tsx`, `ConfigPageScreen.test.tsx` (2) e `UsersScreen.test.tsx` (1). Os testes e componentes de produção desses arquivos não fazem parte desta alteração; os contextos afetados seguem em revisão.
 
 ### Configurações — Links públicos
 

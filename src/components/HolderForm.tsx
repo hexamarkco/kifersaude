@@ -1,6 +1,7 @@
 import { Heading, FieldLabel } from '../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   Building2,
   HeartPulse,
   Mail,
@@ -26,6 +27,7 @@ import DependentForm from './DependentForm';
 import { toast } from '../lib/toast';
 import {
   Button,
+  Card,
   Checkbox,
   DateTimePicker,
   Dialog,
@@ -39,9 +41,12 @@ import {
   Surface,
   IconButton,
   FilterSelect,
+  PageActions,
+  PageHeader,
 } from '../design-system';
 
 type HolderFormProps = {
+  presentation?: 'dialog' | 'page';
   contractId: string;
   modalidade: string;
   holder?: ContractHolder;
@@ -128,6 +133,7 @@ const withCurrentOption = (
 };
 
 export default function HolderForm({
+  presentation = 'dialog',
   contractId,
   modalidade,
   holder,
@@ -516,18 +522,9 @@ export default function HolderForm({
     }
   };
 
-  return (
-    <>
-      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl">
-        <DialogHeader onClose={saving ? undefined : onClose}>
-          <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
-          <DialogDescription>
-            Cadastre os dados pessoais, de contato e de elegibilidade do titular.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody>
+  const holderFormFields = (
         <form id="holder-form" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <Surface variant="muted" padding="sm">
               <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informações Pessoais</Heading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -833,6 +830,42 @@ export default function HolderForm({
           </div>
 
         </form>
+  );
+
+  return (
+    <>
+      {presentation === 'page' ? (
+        <section className="kds-record-detail kds-detail-workspace kds-contract-holder-form-page">
+          <Button type="button" variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}>
+            <ArrowLeft className="kds-control-icon" aria-hidden="true" />
+            Voltar à ficha do contrato
+          </Button>
+          <PageHeader
+            eyebrow="Contratos / Beneficiários"
+            title={holder ? 'Editar titular' : 'Dados do titular'}
+            description="Cadastre informações pessoais, de contato e de elegibilidade do titular."
+            descriptionPlacement="visible"
+          />
+          <Card kind="base" padding="md">
+            {holderFormFields}
+          </Card>
+          <PageActions
+            placement="form"
+            sticky
+            secondary={[{ label: 'Cancelar', onClick: onClose, disabled: saving }]}
+            primary={{ label: saving ? 'Salvando...' : 'Salvar titular', type: 'submit', form: 'holder-form', loading: saving }}
+          />
+        </section>
+      ) : (
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl">
+        <DialogHeader onClose={saving ? undefined : onClose}>
+          <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
+          <DialogDescription>
+            Cadastre os dados pessoais, de contato e de elegibilidade do titular.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {holderFormFields}
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
@@ -843,6 +876,7 @@ export default function HolderForm({
           </Button>
         </DialogFooter>
       </Dialog>
+      )}
 
       {showDependentForm && (
         <DependentForm

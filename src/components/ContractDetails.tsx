@@ -38,6 +38,7 @@ import DependentForm from "./DependentForm";
 import {
   PageHeader,
   PageActions,
+  DisclosureTrigger,
   Badge,
   Alert,
   Button,
@@ -1961,6 +1962,28 @@ export default function ContractDetails({
       )}
       {ConfirmationDialog}
 </>);
+  if (presentation === 'page' && showHolderForm) {
+    return (
+      <HolderForm
+        presentation="page"
+        key={editingHolder?.id ?? `holder-${contract.id}`}
+        contractId={contract.id}
+        modalidade={contract.modalidade}
+        holder={editingHolder || undefined}
+        bonusPorVidaDefault={contract.bonus_por_vida_aplicado ?? true}
+        onClose={() => {
+          setShowHolderForm(false);
+          setEditingHolder(null);
+        }}
+        onSave={() => {
+          setShowHolderForm(false);
+          setEditingHolder(null);
+          void loadData();
+          onUpdate();
+        }}
+      />
+    );
+  }
   if (presentation === 'drawer') {
     const participants = [
       ...holders.map((holder) => ({ id: holder.id, name: holder.nome_completo, role: 'Titular' })),
@@ -2078,16 +2101,141 @@ export default function ContractDetails({
     );
   }
 
-  if (presentation === 'page') return <section className="kds-record-detail kds-detail-workspace">
-    <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
-    <PageHeader
-      eyebrow="Contratos"
-      title={`Ficha do contrato ${contract.codigo_contrato}`}
-      description={`${normalizeOperadoraLabel(contract.operadora)} · ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}
-      actions={pageActions}
-    />
-    {detailContent}
-  </section>;
+  if (presentation === 'page') {
+    const primaryHolder = holders[0];
+    const primaryHolderName = primaryHolder
+      ? primaryHolder.nome_fantasia || primaryHolder.razao_social || primaryHolder.nome_completo
+      : contract.nome_fantasia || contract.razao_social || 'Não informado';
+    const beneficiaries = [
+      ...holders.map((holder) => ({
+        id: `holder-${holder.id}`,
+        name: holder.nome_fantasia || holder.razao_social || holder.nome_completo,
+        description: 'Dados do titular',
+      })),
+      ...dependents.map((dependent) => ({
+        id: `dependent-${dependent.id}`,
+        name: dependent.nome_completo,
+        description: dependent.relacao
+          ? `Dados do dependente · ${dependent.relacao}`
+          : 'Dados do dependente',
+      })),
+    ];
+
+    return (
+      <section className="kds-record-detail kds-detail-workspace kds-contract-detail-page">
+        <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}>
+          <ArrowLeft className="kds-control-icon" aria-hidden="true" />
+          Gestão de contratos
+        </Button>
+        <PageHeader
+          eyebrow="Kifer Saúde / Contratos"
+          title="Ficha do contrato"
+          description="Acompanhe as informações contratuais e os beneficiários vinculados."
+          descriptionPlacement="visible"
+          identity={<Badge tone="neutral" size="sm">{contract.codigo_contrato}</Badge>}
+          actions={pageActions}
+        />
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.9fr)]">
+          <Card kind="base" padding="md" aria-labelledby="contract-page-data-title">
+            <Heading id="contract-page-data-title" level={3} className={detailTitleClass}>
+              Dados do contrato
+            </Heading>
+            <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-5 text-sm sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className={detailMutedTextClass}>Titular</dt>
+                <dd className={`mt-1 break-words ${detailHeadingTextClass}`}>{primaryHolderName}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className={detailMutedTextClass}>Operadora</dt>
+                <dd className={`mt-1 break-words ${detailHeadingTextClass}`}>{normalizeOperadoraLabel(contract.operadora) || 'Não informada'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className={detailMutedTextClass}>Plano</dt>
+                <dd className={`mt-1 break-words ${detailHeadingTextClass}`}>{formatContractPlanLabel(contract.produto_plano) || 'Não informado'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className={detailMutedTextClass}>Modalidade</dt>
+                <dd className={`mt-1 break-words ${detailHeadingTextClass}`}>{formatContractModalityLabel(contract.modalidade) || 'Não informada'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className={detailMutedTextClass}>Vigência</dt>
+                <dd className={`mt-1 break-words ${detailHeadingTextClass}`}>{formatDateOnly(contract.data_inicio || contract.created_at) || 'Não informada'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className={detailMutedTextClass}>Status</dt>
+                <dd className={`mt-1 break-words ${detailHeadingTextClass}`}>{normalizeSentenceCase(contract.status) ?? contract.status}</dd>
+              </div>
+            </dl>
+          </Card>
+
+          <Card kind="base" padding="md" aria-labelledby="contract-page-beneficiaries-title">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Heading id="contract-page-beneficiaries-title" level={3} className={detailTitleClass}>
+                Beneficiários
+              </Heading>
+              {canEditContracts && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setEditingHolder(null);
+                      setShowHolderForm(true);
+                    }}
+                  >
+                    <Plus className="kds-control-icon" aria-hidden="true" />
+                    Adicionar titular
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      if (holders.length === 0) {
+                        toast.warning('Cadastre um titular antes de adicionar dependentes.');
+                        return;
+                      }
+                      setEditingDependent(null);
+                      setSelectedHolderId(holders[0]?.id || null);
+                      setShowDependentForm(true);
+                    }}
+                  >
+                    <Plus className="kds-control-icon" aria-hidden="true" />
+                    Dependente
+                  </Button>
+                </div>
+              )}
+            </div>
+            {beneficiaries.length > 0 ? (
+              <ul className="mt-4 divide-y divide-[var(--border-subtle)]">
+                {beneficiaries.map((beneficiary) => (
+                  <li key={beneficiary.id} className="flex min-w-0 items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <Text className="break-words text-sm font-semibold text-[var(--text-primary)]">{beneficiary.name}</Text>
+                      <Text className="mt-1 text-xs text-[var(--text-muted)]">{beneficiary.description}</Text>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Text className="mt-4 text-sm text-[var(--text-secondary)]">Nenhum beneficiário cadastrado.</Text>
+            )}
+          </Card>
+        </div>
+
+        <details className="kds-contract-detail-expanded">
+          <DisclosureTrigger size="md" className="w-full justify-between">
+            Ver informações financeiras, pessoas, documentos e histórico
+          </DisclosureTrigger>
+          <div className="mt-4">
+            {detailContent}
+          </div>
+        </details>
+      </section>
+    );
+  }
   return (<Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{contract.codigo_contrato}</DialogTitle>

@@ -5,7 +5,7 @@ import { test } from 'vitest';
 
 import { SettingsCatalogLink } from '../SettingsCatalogLink';
 
-test('atalho de configurações usa o padding do design system e preserva navegação e contagem', () => {
+test('atalho de configurações preserva espaçamento por tokens, navegação e contagem', () => {
   let navigated = false;
   const view = render(
     <SettingsCatalogLink
@@ -19,7 +19,8 @@ test('atalho de configurações usa o padding do design system e preserva navega
 
   const button = view.container.querySelector<HTMLButtonElement>('button[aria-label="Abrir perfis e acessos"]');
   assert.ok(button);
-  assert.ok(button.classList.contains('kds-card-padding-sm'));
+  assert.ok(button.classList.contains('kds-settings-catalog-link'));
+  assert.equal(button.classList.contains('kds-card-padding-sm'), false);
   assert.equal(button.classList.contains('px-3'), false);
   assert.equal(button.classList.contains('py-3'), false);
   assert.ok(view.container.textContent?.includes('Permissões por área do CRM'));

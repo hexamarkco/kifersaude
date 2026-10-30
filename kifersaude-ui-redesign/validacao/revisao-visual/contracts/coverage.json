@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-29",
+  "generated_at": "2026-10-30",
   "module": "Contratos",
   "route": "/painel/contratos",
   "status": "partial",
@@ -13,14 +13,17 @@
     "references/desktop/state--contratos-criar.png",
     "references/mobile/state--contratos-criar.png",
     "references/desktop/state--contratos-editar.png",
-    "references/mobile/state--contratos-editar.png"
+    "references/mobile/state--contratos-editar.png",
+    "references/desktop/state--contratos-titular.png",
+    "references/mobile/state--contratos-titular.png"
   ],
   "reviewed_contexts": [
     "state--contratos-detalhes",
     "state--contratos-importacao",
     "page--contratos-listagem",
     "state--contratos-criar",
-    "state--contratos-editar"
+    "state--contratos-editar",
+    "state--contratos-titular"
   ],
   "pending_contexts": [
     "state--contratos-excluir-confirmacao",
@@ -393,6 +396,76 @@
         "path": "screenshots/mobile-320/editar-contrato-pagina.png",
         "width": 310,
         "height": 3538
+      },
+      {
+        "path": "screenshots/titular/holder-form-desktop-light.png",
+        "width": 1920,
+        "height": 1116
+      },
+      {
+        "path": "screenshots/titular/holder-form-desktop-dark.png",
+        "width": 1920,
+        "height": 1116
+      },
+      {
+        "path": "screenshots/titular/holder-form-tablet-light.png",
+        "width": 768,
+        "height": 1427
+      },
+      {
+        "path": "screenshots/titular/holder-form-tablet-dark.png",
+        "width": 768,
+        "height": 1427
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-light.png",
+        "width": 390,
+        "height": 2469
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-dark.png",
+        "width": 390,
+        "height": 2469
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-320-light.png",
+        "width": 320,
+        "height": 2505
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-320-dark.png",
+        "width": 320,
+        "height": 2505
+      },
+      {
+        "path": "screenshots/titular/holder-form-desktop-light-viewport.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/titular/holder-form-desktop-dark-viewport.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-light-viewport.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-320-light-viewport.png",
+        "width": 320,
+        "height": 640
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-bottom-light-viewport.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "path": "screenshots/titular/holder-form-mobile-320-bottom-light-viewport.png",
+        "width": 320,
+        "height": 640
       }
     ],
     "drawer_internal_scroll_verified_at_320px": true,
@@ -420,7 +493,9 @@
         "dark at 1920x1080"
       ],
       "contextual_contract_details_consumers": "pending separate review"
-    }
+    },
+    "holder_form_presentation": "Página completa para o formulário real, mais extenso que o modal da referência.",
+    "holder_form_scroll_end_no_action_overlap_at_390px": true
   },
   "interaction_safety": {
     "synthetic_fixture_data": true,
@@ -430,7 +505,11 @@
     "contract_created_updated_or_deleted": false,
     "external_integrations_called": false,
     "contract_edit_opened": true,
-    "contract_edit_cancelled_without_saving": true
+    "contract_edit_cancelled_without_saving": true,
+    "holder_form_opened": true,
+    "holder_form_cancelled_without_saving": true,
+    "holder_form_submitted": false,
+    "holder_form_external_lookups_triggered": false
   },
   "screenshots": [
     {
@@ -732,6 +811,76 @@
       "path": "screenshots/mobile-320/editar-contrato-pagina.png",
       "width": 310,
       "height": 3538
+    },
+    {
+      "path": "screenshots/titular/holder-form-desktop-light.png",
+      "width": 1920,
+      "height": 1116
+    },
+    {
+      "path": "screenshots/titular/holder-form-desktop-dark.png",
+      "width": 1920,
+      "height": 1116
+    },
+    {
+      "path": "screenshots/titular/holder-form-tablet-light.png",
+      "width": 768,
+      "height": 1427
+    },
+    {
+      "path": "screenshots/titular/holder-form-tablet-dark.png",
+      "width": 768,
+      "height": 1427
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-light.png",
+      "width": 390,
+      "height": 2469
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-dark.png",
+      "width": 390,
+      "height": 2469
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-320-light.png",
+      "width": 320,
+      "height": 2505
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-320-dark.png",
+      "width": 320,
+      "height": 2505
+    },
+    {
+      "path": "screenshots/titular/holder-form-desktop-light-viewport.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/titular/holder-form-desktop-dark-viewport.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-light-viewport.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-320-light-viewport.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-bottom-light-viewport.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/titular/holder-form-mobile-320-bottom-light-viewport.png",
+      "width": 320,
+      "height": 640
     }
   ]
 }

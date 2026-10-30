@@ -41,3 +41,53 @@ test('contract workspace keeps the same production fields and form submission ta
     assert.equal(contextual.querySelectorAll('fieldset').length, 5);
   } finally { dialog.unmount(); }
 });
+
+test('the full-page contract form applies an individual JSON import without saving', async () => {
+  let saveCalls = 0;
+  const page = render(
+    <ContractForm
+      presentation="page"
+      contract={null}
+      onClose={() => undefined}
+      onSave={() => { saveCalls += 1; }}
+    />,
+  );
+
+  try {
+    await act(async () => { await Promise.resolve(); });
+    const importButton = Array.from(page.container.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Importar de arquivo'));
+    assert.ok(importButton);
+
+    await act(async () => { importButton.click(); });
+    assert.ok(document.body.querySelector('[role="dialog"].kds-contract-json-import-dialog'));
+
+    const input = document.body.querySelector<HTMLInputElement>('.kds-contract-json-import-dialog input[type="file"]');
+    assert.ok(input);
+    const content = JSON.stringify({ contrato: { codigo_contrato: 'C-IMPORTADO-1' } });
+    const file = new File([content], 'contrato.json', { type: 'application/json' });
+    Object.defineProperty(file, 'text', { value: async () => content });
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+    await act(async () => {
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const validateButton = Array.from(document.body.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Validar arquivo'));
+    assert.ok(validateButton);
+    await act(async () => { validateButton.click(); });
+
+    const applyButton = Array.from(document.body.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Aplicar ao formulário'));
+    assert.ok(applyButton);
+    await act(async () => { applyButton.click(); });
+
+    assert.equal(document.body.querySelector('[role="dialog"].kds-contract-json-import-dialog'), null);
+    const codeInput = page.container.querySelector<HTMLInputElement>('input[placeholder="Informe o código fornecido pela operadora"]');
+    assert.equal(codeInput?.value, 'C-IMPORTADO-1');
+    assert.equal(saveCalls, 0);
+  } finally {
+    page.unmount();
+  }
+});

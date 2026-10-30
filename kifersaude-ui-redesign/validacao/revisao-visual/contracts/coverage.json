@@ -30,7 +30,7 @@
     "state--contratos-datas-menu"
   ],
   "pending_contexts": [
-    "state--contratos-importacao-individual",
+    "comparação visual autenticada de state--contratos-importacao-individual",
     "outros menus e estados encontrados na aplicação",
     "conferência visual da abertura do drawer na rota autenticada"
   ],
@@ -45,6 +45,14 @@
     "lint": "passed with 7 warnings",
     "build": "passed",
     "full_test_suite": "1860 passed, 1 failed in HomePage.test.tsx outside this module",
+    "authenticated_playwright_visual_review": "pending"
+  },
+  "integrated_individual_import": {
+    "real_contract_form_opens_dialog": true,
+    "valid_json_applies_to_unsaved_form": true,
+    "save_callback_not_called": true,
+    "test_file": "src/components/__tests__/ContractForm.presentation.test.tsx",
+    "focused_contract_form_and_dialog_tests": "4/4 passed",
     "authenticated_playwright_visual_review": "pending"
   },
   "visual_review": {

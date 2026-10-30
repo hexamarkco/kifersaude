@@ -4,8 +4,8 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 ## Cobertura atual
 
-- **54 de 160 contextos** revisados; 106 permanecem sem comparação concluída.
-- **851 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página, importação individual e menus de filtro), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações, Usuários e permissões, Login e Chat e testes de IA.
+- **55 de 160 contextos** revisados; 105 permanecem sem comparação concluída.
+- **871 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página, importação individual e menus de filtro), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações (incluindo shell integrado para Geral e Links), Usuários e permissões, Login e Chat e testes de IA.
 - A descoberta de telas e overlays fora do manifesto continua pendente.
 - O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
 
@@ -23,10 +23,10 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 - [Agenda e tarefas — calendário, pendentes, concluídos e interações reais revisados com adaptações](agenda/README.md)
 - [WhatsApp Inbox — estrutura da conversa, painel contextual, composer responsivo e diálogo Novo chat revisados](inbox/README.md)
 - [Campanhas — listagem, indicadores reais e monitoramento de envios revisados com adaptações](campanhas/README.md)
-- [Configurações — preferências, origens dos leads e criação revisadas com adaptações](config/README.md)
+- [Configurações — preferências, atalhos, slider e origens dos leads revisados com adaptações](config/README.md)
 - [Usuários e permissões — listagem, busca, criação, edição e confirmação revisadas com adaptações](config-users/README.md)
 - [Chat e testes de IA — página, conversa, drawers, confirmação e responsividade revisados com adaptações](chat-ia/README.md)
-- [Links públicos — componente reorganizado e capturado em fixture; comparação integrada pendente por autenticação](config-links/README.md)
+- [Links públicos — listagem integrada ao cabeçalho compartilhado e revisada no shell com fixture sintética](config-links/README.md)
 - [Login — formulário pré-autenticado, teclado e responsividade revisados com adaptações](login/README.md)
 
 ## Critério

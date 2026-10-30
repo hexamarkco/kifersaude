@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-10-29",
+  "generated_at": "2026-10-30",
   "module": "Links públicos",
   "route": "/painel/config?tab=links",
-  "status": "pendente",
+  "status": "revisado_com_adaptacoes",
   "target": [
     "references/desktop/page--config-links.png",
     "references/mobile/page--config-links.png"
   ],
-  "reviewed_contexts": [],
-  "pending_contexts": [
+  "reviewed_contexts": [
     "page--config-links"
   ],
+  "pending_contexts": [],
   "visual_review": {
     "widths": [
       "1920x1080",
@@ -26,6 +26,16 @@
       "1920x1080"
     ],
     "screenshots": [
+      { "path": "shell-desktop-light-1920x1080.png", "width": 1920, "height": 1211 },
+      { "path": "shell-desktop-light-viewport-1920x1080.png", "width": 1920, "height": 1080 },
+      { "path": "shell-desktop-dark-1920x1080.png", "width": 1920, "height": 1211 },
+      { "path": "shell-tablet-light-768x1024.png", "width": 768, "height": 1924 },
+      { "path": "shell-tablet-light-viewport-768x1024.png", "width": 768, "height": 1024 },
+      { "path": "shell-mobile-light-390x844.png", "width": 390, "height": 2217 },
+      { "path": "shell-mobile-light-viewport-390x844.png", "width": 390, "height": 844 },
+      { "path": "shell-compact-light-320x640.png", "width": 320, "height": 2217 },
+      { "path": "shell-compact-light-viewport-320x640.png", "width": 320, "height": 640 },
+      { "path": "shell-desktop-create-dialog-1920x1080.png", "width": 1920, "height": 1211 },
       { "path": "desktop-light-1920x1080.png", "width": 1920, "height": 1095 },
       { "path": "desktop-light-viewport-1920x1080.png", "width": 1920, "height": 1080 },
       { "path": "desktop-dark-1920x1080.png", "width": 1920, "height": 1095 },
@@ -45,7 +55,24 @@
       { "path": "desktop-error-1920x1080.png", "width": 1920, "height": 1080 }
     ]
   },
+  "validation": {
+    "focused_tests": "13/13 testes em SettingsCatalogLink, ConfigPageScreen e LinksScreen",
+    "full_test_suite": "1.846/1.846 testes em 350 arquivos",
+    "typecheck": "passed",
+    "lint": "passed sem erros; 7 avisos existentes",
+    "design_system_audit": "passed; 121 componentes da aplicação cobertos pelo showcase",
+    "visual_audit": "passed",
+    "architecture_check": "passed",
+    "migration_check": "passed",
+    "production_build": "passed; aviso conhecido de chunk vendor acima de 500 kB"
+  },
   "checks": {
+    "header_integration": {
+      "single_page_header": true,
+      "create_dialog_controlled_by_config_page": true,
+      "dialog_closes_when_leaving_tab": true,
+      "evidence": "Testes de ConfigPageScreen/LinksScreen e capturas shell-desktop-light-1920x1080.png e shell-desktop-create-dialog-1920x1080.png; fixture sintética, sem sessão autenticada."
+    },
     "no_horizontal_overflow": {
       "320x640": true,
       "390x844": true,
@@ -53,13 +80,16 @@
       "1920x1080": true
     },
     "interactions": [
+      "Abrir diálogo existente pelo CTA Novo link do cabeçalho compartilhado",
+      "Fechar diálogo ao trocar de aba",
       "Abrir diálogo de criação sem enviar",
       "Abrir menu de ações do registro",
       "Editar item inline sem salvar",
       "Expandir formulário do perfil público",
       "Filtrar localmente até estado sem resultados"
     ],
-    "fixture": "Componente real montado com serviços mockados e registros sintéticos; não acessa o CRM.",
-    "authentication": "A rota completa redirecionou para login; validação integrada no shell permanece pendente."
+    "fixture": "Layout, ConfigPageScreen e LinksScreen reais montados com serviços mockados e registros sintéticos; gravações bloqueadas.",
+    "external_requests": "Bloqueadas no navegador durante a captura.",
+    "authentication": "Sessão autenticada não utilizada; a revisão visual foi feita no shell real com fixture sintética."
   }
 }

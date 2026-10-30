@@ -102,11 +102,33 @@
         "light",
         "dark"
       ],
-      "result": "Componente real em prévia isolada; padding de 16 px em todos os lados no próprio botão; sem overflow; navegação e dados não alterados."
+      "result": "Componente real dentro da página integrada; botão externo com 0 px e conteúdo interno com 20 px do token kds-card-padding-md, inclusive texto e seta; navegação e dados não alterados."
     }
   ],
+  "integrated_shell": {
+    "fixture": "Layout e ConfigPageScreen reais com preferências sintéticas; gravações bloqueadas e tráfego externo abortado.",
+    "screenshots": [
+      { "path": "shell-general-desktop-light-1920x1080.png", "width": 1920, "height": 1205 },
+      { "path": "shell-general-desktop-light-viewport-1920x1080.png", "width": 1920, "height": 1080 },
+      { "path": "shell-general-desktop-dark-1920x1080.png", "width": 1920, "height": 1205 },
+      { "path": "shell-general-tablet-light-768x1024.png", "width": 768, "height": 1941 },
+      { "path": "shell-general-tablet-light-viewport-768x1024.png", "width": 768, "height": 1024 },
+      { "path": "shell-general-mobile-light-390x844.png", "width": 390, "height": 2275 },
+      { "path": "shell-general-mobile-light-viewport-390x844.png", "width": 390, "height": 844 },
+      { "path": "shell-general-compact-light-320x640.png", "width": 320, "height": 2491 },
+      { "path": "shell-general-compact-light-viewport-320x640.png", "width": 320, "height": 640 },
+      { "path": "settings-catalog-link-padding-hover.png", "width": 477, "height": 81 }
+    ],
+    "settings_catalog_link_spacing": {
+      "outer_button_padding": "0px",
+      "inner_content_padding": "20px",
+      "label_inset": "20px",
+      "icon_inset": "20px"
+    },
+    "notifications_slider": "kds-slider aplicado ao controle real; trilho/indicador terracota e contorno de campo removido."
+  },
   "validation": {
-    "unit_tests": "1.741 testes em 329 arquivos passaram",
+    "unit_tests": "1.846 testes em 350 arquivos passaram na suíte completa isolada",
     "typecheck": "passed",
     "lint": "passed",
     "architecture_check": "passed",
@@ -132,7 +154,17 @@
     "settings-catalog-links-mobile-light.png",
     "settings-catalog-links-mobile-dark.png",
     "settings-catalog-link-hover-desktop-dark.png",
-    "settings-catalog-link-hover-mobile-light.png"
+    "settings-catalog-link-hover-mobile-light.png",
+    "shell-general-desktop-light-1920x1080.png",
+    "shell-general-desktop-light-viewport-1920x1080.png",
+    "shell-general-desktop-dark-1920x1080.png",
+    "shell-general-tablet-light-768x1024.png",
+    "shell-general-tablet-light-viewport-768x1024.png",
+    "shell-general-mobile-light-390x844.png",
+    "shell-general-mobile-light-viewport-390x844.png",
+    "shell-general-compact-light-320x640.png",
+    "shell-general-compact-light-viewport-320x640.png",
+    "settings-catalog-link-padding-hover.png"
   ],
   "known_differences": [
     "O cadastro real de origens não possui exportação, filtro de responsável/período, descrição ou status editável na criação; esses controles das referências não foram inventados.",
@@ -141,12 +173,15 @@
     "A navegação fixa inferior cruza o início do cartão seguinte em parte do primeiro viewport mobile; o conteúdo permanece alcançável por rolagem."
   ],
   "latest_delivery_validation": {
-    "focused_tests": "SettingsCatalogLink: passou; execução focada combinada: 4/4 testes",
+    "focused_tests": "13/13 testes em SettingsCatalogLink, ConfigPageScreen e LinksScreen",
+    "full_test_suite": "1.846/1.846 testes em 350 arquivos",
     "typecheck": "passed",
     "lint": "passed sem erros; 7 avisos (6 Fast Refresh em prévias Playwright e 1 dependência de useEffect em PainelWrapper)",
     "design_system_audit": "passed",
     "visual_audit": "passed",
     "architecture_check": "passed",
+    "migration_check": "passed",
+    "secrets_check": "passed; 2.795 arquivos verificados",
     "production_build": "passed; aviso conhecido de chunk vendor acima de 500 kB",
     "migration_check": "passed",
     "full_test_suite": "1.843 testes em 350 arquivos passaram."

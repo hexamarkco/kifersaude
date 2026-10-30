@@ -551,7 +551,7 @@ export default function SystemSettingsScreen() {
                           notification_volume: Number.parseFloat(event.target.value),
                         })
                       }
-                      className="cursor-pointer"
+                      className="kds-slider cursor-pointer"
                     />
                   </Field>
 

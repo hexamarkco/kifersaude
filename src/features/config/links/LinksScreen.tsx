@@ -70,7 +70,17 @@ const EMPTY_LINK_FORM: LinkFormState = { title: "", url: "", icon: "link" };
 
 const PUBLIC_LINKS_PATH = "/links";
 
-export default function LinksScreen() {
+type LinksScreenProps = {
+  showPageHeader?: boolean;
+  createDialogOpen?: boolean;
+  onCreateDialogOpenChange?: (open: boolean) => void;
+};
+
+export default function LinksScreen({
+  showPageHeader = true,
+  createDialogOpen,
+  onCreateDialogOpenChange,
+}: LinksScreenProps = {}) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [pageSettings, setPageSettings] = useState<PublicLinkPageSettings | null>(null);
@@ -92,7 +102,12 @@ export default function LinksScreen() {
   const [linkSearch, setLinkSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<LinkFormState>(EMPTY_LINK_FORM);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [internalCreateModalOpen, setInternalCreateModalOpen] = useState(false);
+  const isCreateModalOpen = createDialogOpen ?? internalCreateModalOpen;
+  const setIsCreateModalOpen = (open: boolean) => {
+    if (createDialogOpen === undefined) setInternalCreateModalOpen(open);
+    onCreateDialogOpenChange?.(open);
+  };
   const [createForm, setCreateForm] = useState<LinkFormState>(EMPTY_LINK_FORM);
   const [creating, setCreating] = useState(false);
   const loadRequestIdRef = useRef(0);
@@ -483,7 +498,7 @@ export default function LinksScreen() {
     return <LoadingState label="Carregando página de links..." />;
   }
 
-  const pageHeader = (
+  const pageHeader = showPageHeader ? (
     <PageHeader
       eyebrow="Configurações"
       title="Links públicos"
@@ -495,7 +510,7 @@ export default function LinksScreen() {
         />
       )}
     />
-  );
+  ) : null;
 
   if (loadError) {
     return (

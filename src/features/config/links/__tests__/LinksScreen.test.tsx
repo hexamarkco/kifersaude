@@ -88,6 +88,37 @@ test('libera o salvamento do perfil quando a chamada de rede rejeita', async () 
   view.unmount();
 });
 
+test('pode ser incorporada ao cabeçalho compartilhado com o diálogo de criação controlado', async () => {
+  const openChangeCalls: boolean[] = [];
+  const onCreateDialogOpenChange = (open: boolean) => openChangeCalls.push(open);
+  const closedView = render(
+    <LinksScreen
+      showPageHeader={false}
+      createDialogOpen={false}
+      onCreateDialogOpenChange={onCreateDialogOpenChange}
+    />,
+  );
+
+  await waitForBodyText('Links cadastrados');
+  assert.equal(closedView.container.querySelectorAll('h1').length, 0);
+  closedView.unmount();
+
+  const openView = render(
+    <LinksScreen
+      showPageHeader={false}
+      createDialogOpen
+      onCreateDialogOpenChange={onCreateDialogOpenChange}
+    />,
+  );
+  await waitForBodyText('Links cadastrados');
+  assert.ok(document.body.querySelector('[role="dialog"]'));
+
+  const cancelButton = await waitForButtonText('Cancelar');
+  await act(async () => cancelButton.click());
+  assert.equal(openChangeCalls[openChangeCalls.length - 1], false);
+  openView.unmount();
+});
+
 test('apresenta links na coleção do design system e filtra nome ou endereço localmente', async () => {
   mocks.linkItems.push(
     {

@@ -23,6 +23,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [createLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = useConfigParam("tab", ALL_TAB_IDS, area === "automation" ? "automation" : "system");
 
@@ -76,7 +77,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
     : activeAllowedTab === 'users'
       ? 'Gerencie as contas que podem acessar a operação.'
       : activeAllowedTab === 'links'
-        ? 'Organize os links públicos usados pela equipe e pelos clientes.'
+        ? 'Gerencie o perfil público e os links exibidos em /links.'
         : activeAllowedTab === 'forms'
           ? 'Configure os formulários públicos que recebem novos contatos.'
           : section === 'access'
@@ -90,9 +91,12 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
                 : 'Defina como datas, sessões e notificações se comportam no CRM.';
   const headerActions = activeAllowedTab === 'users' && getRoleModulePermission(role, 'config-users').can_edit
     ? <Button onClick={() => setCreateUserDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo usuário</Button>
+    : activeAllowedTab === 'links'
+      ? <Button onClick={() => setCreateLinkDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo link</Button>
     : undefined;
   const handleTabChange = (nextTab: ConfigTabType) => {
     if (nextTab !== 'users') setCreateUserDialogOpen(false);
+    if (nextTab !== 'links') setCreateLinkDialogOpen(false);
     setActiveTab(nextTab);
   };
   return (
@@ -121,7 +125,13 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
           {activeAllowedTab === "ai" && <AiConfigScreen />}
-          {activeAllowedTab === "links" && <LinksScreen />}
+          {activeAllowedTab === "links" && (
+            <LinksScreen
+              showPageHeader={false}
+              createDialogOpen={createLinkDialogOpen}
+              onCreateDialogOpenChange={setCreateLinkDialogOpen}
+            />
+          )}
           {activeAllowedTab === "forms" && <FormsScreen />}
       </main>
     </div>

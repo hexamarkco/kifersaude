@@ -299,7 +299,8 @@
         "Comparada com a referência em 1920×1080, 768×1024, 390×844 e 320×640 no tema claro; tema escuro conferido em 1920×1080. Sem overflow horizontal.",
         "Mantém os campos reais de data, fuso, sessão e notificações; o painel de estrutura encaminha para permissões e cadastros existentes. A faixa secundária fica oculta na visão inicial e reaparece nas outras áreas.",
         "O menu fixo inferior cruza o início do cartão seguinte na posição inicial de rolagem mobile; registrado para revisão de densidade.",
-        "Os cinco atalhos de Estrutura e parametrização usam o componente SettingsCatalogLink e padding md do design system; destinos, contagens e permissões permanecem iguais."
+        "Os cinco atalhos de Estrutura e parametrização usam o componente SettingsCatalogLink e padding md do design system; destinos, contagens e permissões permanecem iguais.",
+        "A tela geral também foi capturada dentro do Layout e ConfigPageScreen reais com fixture sintética em 1920, 768, 390 e 320 px, tema escuro no desktop. O padding fica no conteúdo interno (20 px), o botão externo fica em zero; o controle de volume usa kds-slider terracota."
       ]
     },
     {
@@ -327,20 +328,22 @@
       "route": "/painel/config?tab=links",
       "kind": "pages",
       "components": [
+        "src/features/config/ConfigPageScreen.tsx",
         "src/features/config/links/LinksScreen.tsx"
       ],
       "references": [
         "references/desktop/page--config-links.png",
         "references/mobile/page--config-links.png"
       ],
-      "status": "pendente",
+      "status": "revisado_com_adaptacoes",
       "evidence": [
         "validacao/revisao-visual/config-links/README.md",
         "validacao/revisao-visual/config-links/coverage.json"
       ],
       "notes": [
-        "A implementação do componente real foi reorganizada e conferida em fixture com dados sintéticos nas larguras 1920, 768, 390 e 320 px, tema claro/escuro em desktop, e interações de busca, criação, edição, menu e perfil.",
-        "A rota autenticada redirecionou para login nesta sessão. A comparação integrada com o shell do CRM permanece pendente, por isso o contexto continua pendente."
+        "A implementação do componente real foi comparada às referências e conferida em fixture sintética nas larguras 1920, 768, 390 e 320 px, tema claro/escuro em desktop, e interações de busca, criação, edição, menu e perfil. A captura adicional inclui Layout e ConfigPageScreen reais, sem sessão autenticada.",
+        "ConfigPageScreen é a única responsável pelo PageHeader e pela ação Novo link na aba integrada; LinksScreen preserva cabeçalho próprio no uso isolado. Testes verificam título único, abertura do diálogo pelo cabeçalho e fechamento ao trocar de aba. A composição do shell não apresenta overflow horizontal.",
+        "O shell usa dados sintéticos, com gravações bloqueadas e tráfego externo abortado. Diferenças de recursos em relação à referência permanecem registradas na evidência; não foram simuladas funcionalidades ausentes."
       ]
     },
     {
@@ -2777,8 +2780,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 51,
-    "remaining_manifest_contexts": 109,
+    "reviewed_contexts": 55,
+    "remaining_manifest_contexts": 105,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

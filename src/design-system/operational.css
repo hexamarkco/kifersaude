@@ -1287,9 +1287,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-action-surface {
   font-family: var(--font-sans);
 }
-.painel-theme.kifer-ds .kds-settings-catalog-link {
-  padding: var(--card-padding-md);
-}
 .painel-theme.kifer-ds .kds-dropdown-option {
   display: flex;
   width: 100%;
@@ -1316,6 +1313,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   min-height: var(--touch-target);
   height: var(--touch-target);
   padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   appearance: none;
   background: transparent;
   accent-color: var(--brand-primary);

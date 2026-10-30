@@ -12,7 +12,7 @@ vi.mock('../automation/AutomationSettingsScreen', () => ({ default: () => <p>Ár
 vi.mock('../integrations/IntegrationsScreen', () => ({ default: () => <p>Área de integrações</p> }));
 vi.mock('../general/SystemSettingsScreen', () => ({ default: () => <p>Área geral</p> }));
 vi.mock('../users/UsersScreen', () => ({ default: ({ createDialogOpen }: { createDialogOpen: boolean }) => <><p>Área de usuários</p>{createDialogOpen && <div role="dialog">Criar usuário</div>}</> }));
-vi.mock('../links/LinksScreen', () => ({ default: () => <p>Área de links</p> }));
+vi.mock('../links/LinksScreen', () => ({ default: ({ createDialogOpen, showPageHeader }: { createDialogOpen: boolean; showPageHeader: boolean }) => <>{showPageHeader !== false && <h1>Links públicos interno</h1>}<p>Área de links</p>{createDialogOpen && <div role="dialog">Criar link</div>}</> }));
 vi.mock('../forms/FormsScreen', () => ({ default: () => <p>Área de formulários</p> }));
 
 import ConfigPageScreen from '../ConfigPageScreen';
@@ -117,4 +117,22 @@ test('ação de criar usuário aparece somente com permissão de edição e fech
   try {
     assert.equal([...restrictedView.container.querySelectorAll('button')].some((button) => button.textContent?.includes('Novo usuário')), false);
   } finally { restrictedView.unmount(); }
+});
+
+test('Links públicos mantém um único cabeçalho e centraliza a criação na ação da página', () => {
+  const view = renderAt('/painel/config?tab=links', ['config-links', 'config-system']);
+  try {
+    assert.equal(view.container.querySelectorAll('h1').length, 1);
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Links públicos');
+
+    const createButton = [...view.container.querySelectorAll('button')].find((button) => button.textContent?.includes('Novo link'));
+    assert.ok(createButton);
+    act(() => createButton.click());
+    assert.ok(view.container.querySelector('[role="dialog"]'));
+
+    const generalTab = [...view.container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((tab) => tab.textContent?.includes('Geral'));
+    assert.ok(generalTab);
+    act(() => generalTab.click());
+    assert.equal(view.container.querySelector('[role="dialog"]'), null);
+  } finally { view.unmount(); }
 });

@@ -21,4 +21,4 @@ Há **7 screenshots** nesta pasta, com captura full-page em desktop, tablet, mob
 
 ## Verificação
 
-Os testes direcionados de `FormPage`, do showcase e da apresentação de `LeadForm` passaram (**19/19**); a suíte completa passou **1.733 testes em 328 arquivos**. Typecheck, lint, auditorias, arquitetura, migrations, build e validação Playwright passaram. Para o build, o `setup.js` gerado e não rastreado em `output/playwright/ui-audit-run/` foi movido temporariamente para fora do repositório porque contém uma configuração `access_token` sinalizada pela verificação local; foi restaurado após a compilação. Nenhum valor foi exposto nem incluído no commit.
+Os testes direcionados de `FormPage`, do showcase e da apresentação de `LeadForm` passaram (**19/19**); a suíte completa passou **1.733 testes em 328 arquivos**. Typecheck, lint, auditorias, arquitetura, migrations, build e validação Playwright passaram. A falha de build causada pelo `setup.js` gerado em `output/playwright/ui-audit-run/` foi corrigida ao removê-lo do controle de versão e adicioná-lo ao `.gitignore`; a cópia local foi preservada. `npm run build` passou após a correção.

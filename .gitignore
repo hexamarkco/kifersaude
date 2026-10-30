@@ -45,3 +45,6 @@ scripts/hospital_location_report.csv
 
 # Local visual audit archive (exceeds GitHub's file size limit).
 /kifersaude-ui-audit.zip
+
+# Generated browser audit session setup can contain local authentication state.
+/output/playwright/ui-audit-run/setup.js

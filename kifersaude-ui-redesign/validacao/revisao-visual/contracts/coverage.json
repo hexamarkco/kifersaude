@@ -24,12 +24,12 @@
     "state--contratos-criar",
     "state--contratos-editar",
     "state--contratos-titular",
+    "state--contratos-excluir-confirmacao",
     "state--contratos-status-menu",
     "state--contratos-operadoras-menu",
     "state--contratos-datas-menu"
   ],
   "pending_contexts": [
-    "state--contratos-excluir-confirmacao",
     "state--contratos-importacao-individual",
     "outros menus e estados encontrados na aplicação"
   ],
@@ -962,6 +962,41 @@
     },
     {
       "path": "screenshots/mobile-320/filtro-status-aberto.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/desktop/exclusao-confirmacao-integrada.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/exclusao-confirmacao-integrada-dark.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/tablet/exclusao-confirmacao-integrada.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/mobile/exclusao-confirmacao-integrada.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile/exclusao-confirmacao-integrada-dark.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile-320/exclusao-confirmacao-integrada.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/mobile-320/exclusao-confirmacao-integrada-dark.png",
       "width": 320,
       "height": 640
     }

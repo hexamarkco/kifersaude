@@ -1530,19 +1530,27 @@
         "references/desktop/state--contratos-excluir-confirmacao.png",
         "references/mobile/state--contratos-excluir-confirmacao.png"
       ],
-      "status": "pendente",
+      "status": "revisado_com_adaptacoes",
       "evidence": [
         "validacao/revisao-visual/contracts/screenshots/desktop/exclusao-confirmacao-showcase.png",
         "validacao/revisao-visual/contracts/screenshots/desktop/exclusao-confirmacao-showcase-dark.png",
         "validacao/revisao-visual/contracts/screenshots/tablet/exclusao-confirmacao-showcase.png",
         "validacao/revisao-visual/contracts/screenshots/mobile/exclusao-confirmacao-showcase.png",
         "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-showcase.png",
-        "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-showcase-dark.png"
+        "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-showcase-dark.png",
+        "validacao/revisao-visual/contracts/screenshots/desktop/exclusao-confirmacao-integrada.png",
+        "validacao/revisao-visual/contracts/screenshots/desktop/exclusao-confirmacao-integrada-dark.png",
+        "validacao/revisao-visual/contracts/screenshots/tablet/exclusao-confirmacao-integrada.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile/exclusao-confirmacao-integrada.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile/exclusao-confirmacao-integrada-dark.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-integrada.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile-320/exclusao-confirmacao-integrada-dark.png"
       ],
       "notes": [
         "ConfirmationSummary foi implementado e documentado no showcase com dados sintéticos; a tela de Contratos fornece código e titular ao confirmar exclusão.",
-        "Screenshots registram apenas o componente no showcase. A rota autenticada de Contratos ainda precisa de comparação visual integrada; o estado continua pendente.",
-        "Escape e cancelamento fecham o diálogo e devolvem foco ao acionador; a ação destrutiva não foi confirmada."
+        "Playwright abriu a confirmação no ContractsManagerScreen real, montado em shell local com fixture sintética (sem sessão autenticada). Desktop e tablet usam diálogo central; em 390 e 320 px ele ocupa a tela inteira com ações acessíveis no rodapé, conforme as referências. A cópia informa o efeito real e identifica o contrato e o titular.",
+        "Em 1920x1080, 768x1024, 390x844 e 320x640, document.documentElement.scrollWidth permaneceu igual à viewport; os dois botões do rodapé ficaram visíveis. Tema escuro registrado em desktop, 390 e 320 px.",
+        "Escape fecha o diálogo e devolve foco ao acionador; Cancelar fecha sem remover o registro. A ação destrutiva não foi confirmada. A confirmação na sessão autenticada continua pendente de revisão."
       ]
     },
     {
@@ -2780,8 +2788,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 55,
-    "remaining_manifest_contexts": 105,
+    "reviewed_contexts": 56,
+    "remaining_manifest_contexts": 104,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

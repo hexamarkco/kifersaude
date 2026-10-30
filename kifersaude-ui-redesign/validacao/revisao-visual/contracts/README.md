@@ -1,6 +1,6 @@
 # Revisão visual — Contratos
 
-**Status parcial do módulo.** A listagem, o drawer de detalhes, os importadores JSON em lote e individual, o cadastro e a edição em página completa foram comparados com as referências e revisados com adaptações. Exclusão, verificação integrada de alguns estados e outras interfaces continuam pendentes; o redesign integral do CRM segue em andamento.
+**Status parcial do módulo.** A listagem, o drawer de detalhes, os importadores JSON em lote e individual, o cadastro, a edição em página completa e a confirmação de exclusão foram comparados com as referências e revisados com adaptações. A confirmação foi aberta no componente real dentro de um shell local com dados sintéticos; nenhuma exclusão foi confirmada. A integração da importação individual, outros estados e interfaces adicionais continuam pendentes; o redesign integral do CRM segue em andamento.
 
 ## Referências
 
@@ -12,6 +12,8 @@
 - [Titular desktop](../../../references/desktop/state--contratos-titular.png) · [Titular mobile](../../../references/mobile/state--contratos-titular.png)
 
 ## Resultado da comparação
+
+- **Confirmação de exclusão — revisada com adaptações.** Desktop e tablet mantêm o diálogo centralizado; em 390 px e 320 px, ele ocupa a tela toda e conserva Cancelar e Excluir no rodapé, alinhado às referências mobile. O resumo informa o efeito real e identifica o contrato e o titular. Playwright verificou cancelamento sem remover o registro, fechamento por Escape com retorno de foco ao acionador e ausência de overflow nas quatro larguras.
 
 - **Drawer de detalhes — revisado com adaptações.** A largura, a hierarquia de resumo, participantes, plano e ações se aproximam da referência. Informações financeiras, documentos e histórico ficam recolhidos, preservando os dados reais e reduzindo ruído. A base atual não armazena status individual para cada participante, então esses status do mockup não são inventados.
 - **Importação em lote — revisada com adaptações.** A estrutura compacta de formato, escolha do arquivo e ações segue a referência. O fluxo real exige JSON, oferece modelo e validação prévia e limita o lote; esses requisitos são mantidos em vez de substituir a funcionalidade por campos genéricos do mockup.
@@ -32,9 +34,9 @@ O drawer foi rolado até o conteúdo final em 320 px, preservando o rodapé fixo
 
 O formulário de titular foi aberto na prévia isolada do componente real com contrato fictício, nos temas claro/escuro e nas larguras 1920, 768, 390 e 320 px. Não houve overflow horizontal; o rodapé sticky continuou acessível no mobile e não cobriu o último campo ao chegar ao fim da página. A ida e a volta para a ficha foram verificadas sem submeter o formulário nem acionar consultas externas. A captura dentro da rota autenticada continua pendente.
 
-### Confirmação de exclusão — componente atualizado; integração pendente
+### Confirmação de exclusão — revisada no componente real com dados sintéticos
 
-O `ConfirmationSummary` reutilizável exibe o aviso, o registro e a consequência antes da confirmação. A tela de Contratos fornece o código e o titular do contrato selecionado; o hook aceita esse conteúdo contextual sem alterar a API dos outros diálogos. O showcase demonstra o mesmo componente com dados sintéticos. Playwright verificou 1920 px em tema claro/escuro, 768 px, 390 px e 320 px em tema claro/escuro; em 320 px o conteúdo cabe na viewport e as ações se empilham. Escape fecha o diálogo e devolve o foco ao acionador. A ação destrutiva não foi confirmada. As capturas são do showcase isolado; a confirmação integrada na rota autenticada `/painel/contratos` segue pendente de revisão visual própria.
+O `ConfirmationSummary` reutilizável exibe o aviso, o registro e a consequência antes da confirmação. Playwright abriu a confirmação a partir das ações de um contrato fictício no `ContractsManagerScreen`, sem sessão autenticada nem operação remota. Desktop e tablet usam diálogo central; em 390 px e 320 px ele ocupa a tela inteira com ações fixas e visíveis no rodapé, conforme as referências. O conteúdo mostra o código `DEMO-001` e o titular sintético. O documento permaneceu com `scrollWidth` igual à viewport em 1920, 768, 390 e 320 px; o tema escuro foi capturado em desktop, 390 px e 320 px. Cancelar preservou o registro, Escape fechou o diálogo e devolveu foco ao acionador. Excluir nunca foi acionado. A confirmação dentro da sessão autenticada ainda precisa de revisão própria.
 
 ## Capturas
 
@@ -50,6 +52,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Titular: página completa [clara](screenshots/titular/holder-form-desktop-light.png), [escura](screenshots/titular/holder-form-desktop-dark.png) e [viewport](screenshots/titular/holder-form-desktop-light-viewport.png)
 - Importação: [vazia](screenshots/desktop/importacao-modal.png), [escura](screenshots/desktop/importacao-modal-dark.png), [carregando](screenshots/desktop/importacao-modal-carregando.png), [arquivo inválido](screenshots/desktop/importacao-modal-erro.png), [prévia válida](screenshots/desktop/importacao-modal-validado.png)
 - Confirmação de exclusão no showcase: [claro](screenshots/desktop/exclusao-confirmacao-showcase.png), [escuro](screenshots/desktop/exclusao-confirmacao-showcase-dark.png)
+- Confirmação integrada ao `ContractsManagerScreen`: [claro](screenshots/desktop/exclusao-confirmacao-integrada.png), [escuro](screenshots/desktop/exclusao-confirmacao-integrada-dark.png)
 
 ### Tablet (768 × 1024)
 
@@ -60,6 +63,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Titular: página completa [clara](screenshots/titular/holder-form-tablet-light.png) e [escura](screenshots/titular/holder-form-tablet-dark.png)
 - Importação: [clara](screenshots/tablet/importacao-modal.png), [escura](screenshots/tablet/importacao-modal-dark.png)
 - Confirmação de exclusão no showcase: [claro](screenshots/tablet/exclusao-confirmacao-showcase.png)
+- Confirmação integrada ao `ContractsManagerScreen`: [claro](screenshots/tablet/exclusao-confirmacao-integrada.png)
 
 ### Mobile (390 × 844)
 
@@ -71,6 +75,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Titular: página completa [clara](screenshots/titular/holder-form-mobile-light.png) e [escura](screenshots/titular/holder-form-mobile-dark.png); [viewport inicial](screenshots/titular/holder-form-mobile-light-viewport.png) e [ações no fim da rolagem](screenshots/titular/holder-form-mobile-bottom-light-viewport.png)
 - Importação: [vazia](screenshots/mobile/importacao-modal.png), [escura](screenshots/mobile/importacao-modal-dark.png), [arquivo inválido](screenshots/mobile/importacao-modal-erro.png), [prévia válida](screenshots/mobile/importacao-modal-validado.png)
 - Confirmação de exclusão no showcase: [claro](screenshots/mobile/exclusao-confirmacao-showcase.png)
+- Confirmação integrada ao `ContractsManagerScreen`: [claro](screenshots/mobile/exclusao-confirmacao-integrada.png), [escuro](screenshots/mobile/exclusao-confirmacao-integrada-dark.png)
 
 ### Mobile compacto (320 × 640)
 
@@ -81,6 +86,7 @@ Todos os arquivos citados estão em [`screenshots/`](screenshots/). Os caminhos 
 - Edição: página completa [clara](screenshots/mobile-320/editar-contrato-pagina.png)
 - Titular: página completa [clara](screenshots/titular/holder-form-mobile-320-light.png) e [escura](screenshots/titular/holder-form-mobile-320-dark.png); [viewport inicial](screenshots/titular/holder-form-mobile-320-light-viewport.png) e [ações no fim da rolagem](screenshots/titular/holder-form-mobile-320-bottom-light-viewport.png)
 - Confirmação de exclusão no showcase: [clara](screenshots/mobile-320/exclusao-confirmacao-showcase.png), [escura](screenshots/mobile-320/exclusao-confirmacao-showcase-dark.png)
+- Confirmação integrada ao `ContractsManagerScreen`: [clara](screenshots/mobile-320/exclusao-confirmacao-integrada.png), [escura](screenshots/mobile-320/exclusao-confirmacao-integrada-dark.png)
 
 Nas capturas de página inteira em mobile, a navegação inferior fixa foi ocultada apenas durante a captura para evitar que o browser a repetisse no meio do documento. As capturas de viewport mantêm a navegação real visível; os dois tamanhos mobile também têm uma captura da ação final junto à navegação para verificar a distância entre eles.
 - Importação: [vazia](screenshots/mobile-320/importacao-modal.png), [escura](screenshots/mobile-320/importacao-modal-dark.png), [fim do conteúdo rolável](screenshots/mobile-320/importacao-modal-scroll-bottom.png)

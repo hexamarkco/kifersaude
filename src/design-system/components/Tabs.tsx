@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import {
@@ -44,6 +44,32 @@ export default function Tabs<T extends string>({
   ariaLabel,
 }: TabsProps<T>) {
   const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const keepActiveTabVisible = () => {
+      const activeTrigger = activeTriggerRef.current;
+      if (!activeTrigger) return;
+
+      const listRect = list.getBoundingClientRect();
+      const triggerRect = activeTrigger.getBoundingClientRect();
+      if (listRect.width === 0 || triggerRect.width === 0) return;
+
+      const edgeGutter = 4;
+      const leftOverflow = Math.max(0, listRect.left + edgeGutter - triggerRect.left);
+      const rightOverflow = Math.max(0, triggerRect.right - listRect.right + edgeGutter);
+      if (leftOverflow > 0) list.scrollLeft = Math.max(0, list.scrollLeft - leftOverflow);
+      else if (rightOverflow > 0) list.scrollLeft += rightOverflow;
+    };
+
+    keepActiveTabVisible();
+    window.addEventListener('resize', keepActiveTabVisible);
+    return () => window.removeEventListener('resize', keepActiveTabVisible);
+  }, [items, value]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -64,6 +90,7 @@ export default function Tabs<T extends string>({
   return (
     <div className={className}>
       <div
+        ref={listRef}
         role="tablist"
         aria-label={ariaLabel}
         aria-orientation="horizontal"
@@ -75,7 +102,10 @@ export default function Tabs<T extends string>({
 
           return (
             <button
-              ref={(element) => { triggerRefs.current[index] = element; }}
+              ref={(element) => {
+                triggerRefs.current[index] = element;
+                if (isActive) activeTriggerRef.current = element;
+              }}
               key={item.id}
               type="button"
               role="tab"

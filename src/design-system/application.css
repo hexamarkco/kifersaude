@@ -2210,6 +2210,11 @@ html,
   overflow-y: hidden;
 }
 
+.kds-config-screen .kds-tabs-list.kds-config-tabs-scrollable::after {
+  content: "";
+  flex: 0 0 0.25rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .painel-theme :is(.message-bubble, .message-bubble-action-trigger, .message-bubble-emoji-button, .message-bubble-action-menu),
   .comm-emoji-picker-tab,

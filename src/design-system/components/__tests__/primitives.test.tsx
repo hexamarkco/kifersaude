@@ -147,6 +147,59 @@ test('Tabs and SegmentedControl support roving keyboard selection', () => {
   unmount();
 });
 
+test('Tabs keeps the selected tab visible when the selection changes', () => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'getBoundingClientRect');
+  const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+  const rect = (left: number, right: number, width: number): DOMRect => ({
+    x: left,
+    y: 0,
+    left,
+    right,
+    top: 0,
+    bottom: 40,
+    width,
+    height: 40,
+    toJSON: () => ({}),
+  });
+
+  Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value(this: HTMLElement) {
+      if (this.getAttribute('role') === 'tablist') return rect(0, 100, 100);
+      if (this.getAttribute('role') === 'tab') {
+        const list = this.parentElement as HTMLElement;
+        const index = Array.from(list.children).indexOf(this);
+        const left = index * 70 - list.scrollLeft;
+        return rect(left, left + 70, 70);
+      }
+      return originalGetBoundingClientRect.call(this);
+    },
+  });
+
+  const items = [
+    { id: 'a', label: 'Geral' },
+    { id: 'b', label: 'Usuários' },
+    { id: 'c', label: 'Formulários' },
+  ] as const;
+  function Harness() {
+    const [value, setValue] = useState<'a' | 'b' | 'c'>('c');
+    return <Tabs value={value} onChange={setValue} items={items} />;
+  }
+
+  try {
+    const view = render(<Harness />);
+    const list = view.container.querySelector<HTMLElement>('[role="tablist"]');
+    assert.ok(list);
+    assert.equal(list.scrollLeft, 114);
+
+    click(view.container.querySelectorAll('[role="tab"]')[0]);
+    assert.equal(list.scrollLeft, 0);
+    view.unmount();
+  } finally {
+    if (originalDescriptor) Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', originalDescriptor);
+  }
+});
+
 test('Select and Combobox expose listbox semantics and commit selection', () => {
   function Harness() {
     const [selectValue, setSelectValue] = useState('');

@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **57 contextos foram comparados** e **103 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **58 contextos foram comparados** e **102 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -11,6 +11,13 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 - O conteúdo de `SettingsCatalogLink` agora recebe 20 px pelo token `kds-card-padding-md`; o botão clicável não adiciona padding próprio. O slider de volume aplica `kds-slider` e mantém a paleta terracota sem contorno de campo. `ConfigPageScreen` concentra o `PageHeader` da aba Links e controla o diálogo já existente de **Novo link**, evitando duplicar título e ação.
 - Playwright registrou o shell com fixtures sintéticas em 1920, 768, 390 e 320 px, claro/escuro no desktop, hover do atalho e diálogo aberto. Foram medidos 20 px de recuo em título e seta, um único `h1` e nenhum overflow horizontal. Gravações e tráfego externo foram bloqueados; não foi usada sessão autenticada nem houve alteração de dados comerciais.
 - Testes focados: **13/13**. Suíte completa: **1.846/1.846 testes em 350 arquivos**. Typecheck, arquitetura, migrations, auditorias visual/Design System, `secrets:check` e build passaram. Lint passou sem erros, com sete avisos já existentes; o build mantém o aviso conhecido do chunk vendor acima de 500 kB. Nenhuma migration ou Edge Function foi necessária. [Configurações gerais](validacao/revisao-visual/config/README.md) · [Links públicos](validacao/revisao-visual/config-links/README.md).
+
+### Configurações — formulários e abas responsivas (30/10/2026)
+
+- A listagem de formulários foi comparada com as referências dentro de `Layout` e `ConfigPageScreen` reais, usando serviços sintéticos e sem gravações. Busca, filtro de publicação, menu de ações e confirmação de exclusão foram verificados; a exclusão foi cancelada. As capturas incluem viewport e página completa em 1920, 768, 390 e 320 px; tema escuro no desktop; não houve overflow horizontal.
+- A faixa de abas do componente reutilizável `Tabs` acompanha a seleção e mantém a aba ativa visível após carregar e redimensionar a janela. A referência inclui ordem, responsável e período, campos que a listagem real não fornece; nenhum dado foi inventado. Sessão autenticada indisponível; editor, criação, pergunta e formulário público continuam como contextos separados pendentes.
+- Teste focado: **12/12**. [Evidências e capturas](validacao/revisao-visual/config-forms/README.md) · [Cobertura](validacao/revisao-visual/config-forms/coverage.json).
+- `npm run typecheck` e `npm run build` passaram. `npm run lint` passou sem erros e com sete avisos preexistentes. A suíte completa aprovou **1.850 testes**; um timeout em `ai-router-technical-retry.test.ts` passou na execução isolada (**20/20**).
 
 ### Chat e testes de IA — conversa e estados (30/10/2026)
 

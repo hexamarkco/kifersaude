@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-10-30",
+  "module": "Configurações — formulários de captação",
+  "route": "/painel/config?tab=forms",
+  "status": "revisado_com_adaptacoes",
+  "target": [
+    "references/desktop/page--config-forms.png",
+    "references/mobile/page--config-forms.png"
+  ],
+  "reviewed_contexts": [
+    "page--config-forms"
+  ],
+  "pending_contexts": [
+    "extra--config-formularios-editor",
+    "state--formularios-criar",
+    "state--formularios-editar",
+    "state--formularios-pergunta",
+    "state--formulario-publico-contato"
+  ],
+  "visual_review": {
+    "widths": [
+      "1920x1080",
+      "768x1024",
+      "390x844",
+      "320x640"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "dark_theme_widths": [
+      "1920x1080"
+    ],
+    "screenshots": [
+      { "path": "current-shell/full-desktop-1920-light.png", "width": 1920, "height": 1164, "capture": "fullPage", "theme": "light" },
+      { "path": "current-shell/viewport-desktop-1920-light.png", "width": 1920, "height": 1080, "capture": "viewport", "theme": "light" },
+      { "path": "current-shell/full-desktop-1920-dark.png", "width": 1920, "height": 1164, "capture": "fullPage", "theme": "dark" },
+      { "path": "current-shell/viewport-desktop-1920-dark.png", "width": 1920, "height": 1080, "capture": "viewport", "theme": "dark" },
+      { "path": "current-shell/full-tablet-768-light.png", "width": 768, "height": 1804, "capture": "fullPage", "theme": "light" },
+      { "path": "current-shell/viewport-tablet-768-light.png", "width": 768, "height": 1024, "capture": "viewport", "theme": "light" },
+      { "path": "current-shell/full-mobile-390-light.png", "width": 390, "height": 1963, "capture": "fullPage", "theme": "light" },
+      { "path": "current-shell/viewport-mobile-390-light.png", "width": 390, "height": 844, "capture": "viewport", "theme": "light" },
+      { "path": "current-shell/full-mobile-320-light.png", "width": 320, "height": 2101, "capture": "fullPage", "theme": "light" },
+      { "path": "current-shell/viewport-mobile-320-light.png", "width": 320, "height": 640, "capture": "viewport", "theme": "light" },
+      { "path": "current-shell/state-search-result-desktop.png", "width": 1920, "height": 1080, "capture": "state", "theme": "light" },
+      { "path": "current-shell/state-status-dropdown-desktop.png", "width": 1920, "height": 1080, "capture": "state", "theme": "light" },
+      { "path": "current-shell/state-filtered-draft-desktop.png", "width": 1920, "height": 1080, "capture": "state", "theme": "light" },
+      { "path": "current-shell/state-row-actions-menu-desktop.png", "width": 1920, "height": 1080, "capture": "state", "theme": "light" },
+      { "path": "current-shell/state-delete-confirmation-desktop.png", "width": 1920, "height": 1080, "capture": "state", "theme": "light" }
+    ]
+  },
+  "checks": {
+    "no_horizontal_overflow": true,
+    "selected_configuration_tab_visible_after_load_and_resize": true,
+    "selected_tab_clearance": "4 px on each scroll-rail edge",
+    "font_status": "loaded",
+    "fixture": "Formulários sintéticos executados na composição real Layout + ConfigPageScreen + FormsScreen.",
+    "external_requests_and_real_writes": "bloqueados",
+    "route_authentication": "Sessão autenticada indisponível; a tela foi montada em shell local com a interface real.",
+    "interactions": [
+      "Busca e filtro de publicação exercitados.",
+      "Menu da linha e confirmação de exclusão capturados; cancelamento executado sem remover dados.",
+      "Aba selecionada verificada após carregamento, navegação e redimensionamento de 1920 para 768, 390 e 320 px."
+    ],
+    "console": "0 erros e 0 warnings da aplicação após recarregar a prévia; aviso informativo do React DevTools não é erro.",
+    "validation": {
+      "focused_tests": "src/design-system/components/__tests__/primitives.test.tsx passou com 12/12 testes.",
+      "full_test_suite": "1.850 passaram; 1 timeout em ai-router-technical-retry.test.ts (349/350 arquivos passaram). O arquivo do timeout passou isoladamente com 20/20 testes.",
+      "typecheck": "passou",
+      "lint": "passou sem erros; 7 avisos preexistentes em previews do Playwright e PainelWrapper.",
+      "build": "passou, incluindo secrets:check, auditorias do Design System/visual e verificação do bundle do editor."
+    },
+    "target_differences": "A referência solicita ordem, responsável e período; a listagem real não fornece esses campos/filtros. Sem dados ou funções inventados.",
+    "related_contexts": "Editor, criação, edição, pergunta e formulário público continuam pendentes no manifesto e não estão incluídos no status desta listagem."
+  }
+}

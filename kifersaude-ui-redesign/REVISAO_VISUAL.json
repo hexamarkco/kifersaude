@@ -357,9 +357,16 @@
         "references/desktop/page--config-forms.png",
         "references/mobile/page--config-forms.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-forms/README.md",
+        "validacao/revisao-visual/config-forms/coverage.json"
+      ],
+      "notes": [
+        "Comparada às referências com Layout, ConfigPageScreen e FormsScreen reais em fixture sintética; sessão autenticada indisponível, serviços de escrita e tráfego externo bloqueados.",
+        "Busca, filtro de publicação, menu e confirmação de exclusão foram verificados; exclusão cancelada. Página sem overflow em 1920, 768, 390 e 320 px, nos temas claro e escuro em desktop.",
+        "Tabs mantém a aba selecionada visível após carregamento e redimensionamento. A referência pede ordem, responsável e período, ausentes no modelo real; nenhuma função foi inventada. Editor, criação, pergunta e formulário público são contextos distintos ainda pendentes."
+      ]
     },
     {
       "id": "page--config-automation",

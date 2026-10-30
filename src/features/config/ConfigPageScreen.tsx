@@ -126,7 +126,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
           variant="underline"
           size={area === "automation" ? "sm" : "md"}
           ariaLabel={area === "automation" ? "Áreas de automações e IA" : "Áreas de configurações"}
-          listClassName="flex-nowrap overflow-x-auto"
+          listClassName="kds-config-tabs-scrollable flex-nowrap overflow-x-auto"
           triggerClassName="shrink-0 whitespace-nowrap"
         />
       </PageHeader>

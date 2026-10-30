@@ -1,17 +1,43 @@
-# Formulários de captação — revisão parcial
+# Configurações — formulários de captação
 
-A listagem real foi comparada à [referência desktop](../../../references/desktop/page--config-forms.png). Agora usa busca, ação principal no cabeçalho, tabela e cartões responsivos do design system. Mantém endereço, envios, publicação e ações de edição, cópia, abertura e exclusão. A referência contém ordem, responsável e filtros que não constam da listagem existente; não foram inventados dados.
+## Listagem
 
-O Playwright montou a tela real isoladamente com duas respostas fictícias para a consulta de formulários e bloqueou chamadas externas. Capturas: [1920 px](lista-1920.png), [768 px](lista-768.png), [390 px](lista-390.png), [320 px](lista-320.png), [criação em 320 px](criar-320.png) e [tema escuro em 320 px](lista-dark-320.png). O documento não apresentou overflow nessas larguras. A busca por “contato” mostrou apenas o formulário correspondente; o menu apresentou as quatro ações. A criação foi aberta e fechada por Escape; não houve escrita.
+O contexto `page--config-forms` foi comparado às referências de [desktop](../../../references/desktop/page--config-forms.png) e [mobile](../../../references/mobile/page--config-forms.png), usando a implementação real de `Layout`, `ConfigPageScreen` e `FormsScreen`. A rota protegida não disponibilizou uma sessão autenticada nesta revisão; a composição foi executada em uma prévia local com serviços sintéticos e gravações bloqueadas.
 
-Permanecem pendentes a comparação integrada na rota autenticada, outros filtros quando suportados por dados reais, estados de erro e carregamento, publicação e permissões, criação completa, editor e seus diálogos, teclado e temas nas demais combinações. O contexto permanece pendente no manifesto.
+A página mantém os dados e as ações realmente disponíveis: nome/endereço público, envios, publicação, edição, cópia de link, abertura e exclusão. A referência pede campos e filtros por ordem, responsável e período que não fazem parte do modelo desta listagem. Eles não foram simulados nem acrescentados.
 
-Em nova verificação, a listagem usa filtro de publicação e paginação local dos formulários carregados. Com 12 formulários sintéticos, Playwright confirmou mudança de página, retorno à primeira página ao buscar, combinação de busca e status e limpeza no estado vazio, sem chamadas de escrita. O documento permaneceu sem overflow em [1920 px](paginacao-1920.png), [768 px](paginacao-768.png), [390 px](paginacao-390.png) e [320 px](paginacao-320.png); há captura adicional no [tema escuro em 320 px](paginacao-dark-320.png). Essas prévias isoladas não substituem a validação autenticada.
+Playwright confirmou busca, filtro de publicação, menu de ações e diálogo de exclusão. O diálogo foi fechado por **Cancelar**; nada foi removido ou publicado. A revisão também confirmou que as abas de configuração agora acompanham a aba selecionada em uma faixa horizontal, inclusive após redimensionar a janela.
 
-O editor real foi comparado à [referência desktop](../../../references/desktop/extra--config-formularios-editor.png): ação de salvar no cabeçalho e configurações em seção identificada, preservando perguntas, contato e respostas, que não aparecem na referência simplificada. A prévia isolada registrou [1920 px](editor-1920.png), [768 px](editor-768.png), [390 px](editor-390.png), [320 px](editor-320.png), [pergunta em 320 px](editor-pergunta-320.png) e [tema escuro em 320 px](editor-dark-320.png). O diálogo abriu e fechou com Escape, sem gravações. Um overflow em 320 px de textos longos de switches foi corrigido no componente compartilhado. Ainda faltam validação autenticada e revisão dos demais estados do editor.
+## Responsividade e temas
 
-O salvamento de configurações foi exercitado com respostas interceptadas, sem gravações externas: título vazio e endereço inválido exibem erros associados e recebem foco; durante o envio os campos ficam bloqueados; uma falha preserva os dados e permite tentar novamente; endereço duplicado destaca e foca o campo; uma resposta de sucesso atualiza o cabeçalho. [Falha simulada em desktop](editor-salvar-erro.png). Os fluxos de pergunta e publicação ainda precisam de verificação equivalente.
+A listagem usa tabela no desktop e cartões em tablet/mobile. A página não apresentou rolagem horizontal no documento ou no conteúdo nas larguras 1920, 768, 390 e 320 px. A aba ativa **Formulários** permanece inteiramente visível no tablet e no mobile. O tema claro foi capturado nas quatro larguras e o tema escuro no desktop. As fontes estavam carregadas durante as capturas.
 
-O diálogo de pergunta foi comparado à [referência](../../../references/desktop/state--formularios-pergunta.png): título e tipo dividem a linha em desktop, com campos reais adicionais preservados. Playwright verificou [1920](pergunta-1920.png), [768](pergunta-768.png), [390](pergunta-390.png) e [320 px](pergunta-320.png), além de [validação e tipo de contratação em 320 px](pergunta-validacao-320.png): sem overflow do documento, com foco em título e primeira opção e Escape para fechar. As opções agora têm nomes acessíveis; erros de título, quantidade e mapeamento aparecem junto aos campos. Não houve gravação. Persistência, edição, demais temas e rota autenticada ainda requerem validação.
+O menu inferior móvel é compartilhado pelo shell do CRM e permanece sobre a área rolável durante a navegação. Ele não causa overflow horizontal; o comportamento global será acompanhado na revisão do shell.
 
-Na aba integrada, `ConfigPageScreen` fornece o cabeçalho e a ação **Novo formulário**, evitando título duplicado e mantendo o botão no alinhamento padrão das configurações. O diálogo de criação limpa o rascunho ao fechar e mostra validação inline para título e endereço público inválidos, focando o primeiro campo incorreto; o serviço não é chamado nesses casos. A captura da [validação de título em desktop](criar-validacao-desktop.png) usa fixtures locais. Testes também verificam endereço inválido e ausência de criação. A rota autenticada e o fluxo completo de gravação seguem pendentes.
+## Interações capturadas
+
+- [Busca com resultado](current-shell/state-search-result-desktop.png)
+- [Seletor de publicação aberto](current-shell/state-status-dropdown-desktop.png)
+- [Listagem filtrada por rascunho](current-shell/state-filtered-draft-desktop.png)
+- [Menu de ações da linha](current-shell/state-row-actions-menu-desktop.png)
+- [Confirmação de exclusão, sem confirmar](current-shell/state-delete-confirmation-desktop.png)
+
+## Capturas da listagem
+
+As imagens abaixo mostram o estado inicial com dados fictícios. `full-*` usa captura de página inteira; `viewport-*` registra apenas a primeira área visível. As dimensões exatas estão em [coverage.json](coverage.json).
+
+- **Desktop 1920 × 1080:** [viewport claro](current-shell/viewport-desktop-1920-light.png), [página completa clara](current-shell/full-desktop-1920-light.png), [viewport escuro](current-shell/viewport-desktop-1920-dark.png), [página completa escura](current-shell/full-desktop-1920-dark.png).
+- **Tablet 768 × 1024:** [viewport](current-shell/viewport-tablet-768-light.png), [página completa](current-shell/full-tablet-768-light.png).
+- **Mobile 390 × 844:** [viewport](current-shell/viewport-mobile-390-light.png), [página completa](current-shell/full-mobile-390-light.png).
+- **Mobile 320 × 640:** [viewport](current-shell/viewport-mobile-320-light.png), [página completa](current-shell/full-mobile-320-light.png).
+
+## Contextos relacionados que continuam separados
+
+O status acima cobre somente `page--config-forms`. Estes contextos têm evidências parciais próprias e ainda precisam de revisão individual antes de fechar o módulo:
+
+- `state--formularios-criar`: criação e seus estados de salvamento.
+- `state--formularios-editar` e `extra--config-formularios-editor`: edição integrada, perguntas, publicação, respostas e falhas.
+- `state--formularios-pergunta`: criação/edição de perguntas e validações.
+- `state--formulario-publico-contato`: formulário público em `/forms/demonstracao`.
+
+Estados de carregamento/erro e permissões da listagem também dependem de uma sessão e respostas controladas; não foram inferidos da fixture de sucesso. O detalhamento desta execução e suas limitações está em [coverage.json](coverage.json).

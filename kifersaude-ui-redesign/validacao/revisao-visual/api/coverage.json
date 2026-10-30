@@ -1,0 +1,247 @@
+{
+  "id": "page--api",
+  "route": "/painel/api",
+  "screen": "Documentação da API",
+  "category": "integrações",
+  "status": "revisado_com_adaptacoes",
+  "reviewedAt": "2026-10-30",
+  "references": [
+    "references/desktop/page--api.png",
+    "references/mobile/page--api.png"
+  ],
+  "implementation": [
+    "src/features/config/integrations/api-docs/ApiDocsScreen.tsx",
+    "src/features/config/integrations/api-docs/domain/catalog.ts",
+    "src/features/config/integrations/api-docs/domain/request.ts",
+    "src/features/config/integrations/api-docs/hooks/useApiExplorer.ts",
+    "src/features/config/integrations/api-docs/data/apiDocsService.ts",
+    "src/design-system/operational.css"
+  ],
+  "adaptations": [
+    "Mantém o explorador funcional e as 13 operações existentes; não inventa uma seção de webhooks ausente no produto.",
+    "Mostra título e descrição no cabeçalho e organiza método, nome, caminho e acesso em linhas legíveis.",
+    "Preserva a confirmação de operações com impacto e os comportamentos existentes."
+  ],
+  "playwright": {
+    "harness": "Layout, WorkspaceHeader, DesignSystemProvider e tela real; autenticação e configuração simuladas.",
+    "waits": [
+      "networkidle",
+      "document.fonts.ready",
+      "imagens carregadas",
+      "animações desativadas"
+    ],
+    "viewports": [
+      {
+        "name": "desktop",
+        "width": 1920,
+        "height": 1080,
+        "documentWidth": 1910,
+        "overflow": false
+      },
+      {
+        "name": "tablet",
+        "width": 768,
+        "height": 1024,
+        "documentWidth": 758,
+        "overflow": false
+      },
+      {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "documentWidth": 380,
+        "overflow": false
+      },
+      {
+        "name": "mobile-compacto",
+        "width": 320,
+        "height": 640,
+        "documentWidth": 310,
+        "overflow": false
+      }
+    ],
+    "themes": [
+      "claro",
+      "escuro"
+    ],
+    "interactions": [
+      "Busca por operações de lead.",
+      "Filtro GET, exibindo 2 de 13 operações.",
+      "Validação do formulário de exemplo sem executar chamada.",
+      "Confirmação de criação apresentada e cancelada em desktop, mobile e 320 px.",
+      "Detalhes de autenticação e exemplo cURL expandidos."
+    ],
+    "externalRequestsBlocked": true,
+    "endpointsExecuted": 0,
+    "writes": 0,
+    "credentialsUsed": false,
+    "horizontalOverflow": false
+  },
+  "screenshots": [
+    {
+      "file": "advanced-auth-open-desktop-light.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "autenticacao-e-curl-expandidos",
+      "fullPage": false
+    },
+    {
+      "file": "confirmation-create-compact-light.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "confirmacao-de-criacao-cancelada",
+      "fullPage": false
+    },
+    {
+      "file": "confirmation-create-desktop-light.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "confirmacao-de-criacao-cancelada",
+      "fullPage": false
+    },
+    {
+      "file": "confirmation-create-mobile-light.png",
+      "viewport": "390x844",
+      "theme": "claro",
+      "state": "confirmacao-de-criacao-cancelada",
+      "fullPage": false
+    },
+    {
+      "file": "method-get-desktop-light.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "filtro-metodo-get",
+      "fullPage": false
+    },
+    {
+      "file": "page-desktop-dark-full.png",
+      "viewport": "1920x1080",
+      "theme": "escuro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-desktop-dark-viewport.png",
+      "viewport": "1920x1080",
+      "theme": "escuro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-desktop-light-full.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-desktop-light-viewport.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-mobile-compacto-dark-full.png",
+      "viewport": "320x640",
+      "theme": "escuro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-mobile-compacto-dark-viewport.png",
+      "viewport": "320x640",
+      "theme": "escuro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-mobile-compacto-light-full.png",
+      "viewport": "320x640",
+      "theme": "claro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-mobile-compacto-light-viewport.png",
+      "viewport": "320x640",
+      "theme": "claro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-mobile-dark-full.png",
+      "viewport": "390x844",
+      "theme": "escuro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-mobile-dark-viewport.png",
+      "viewport": "390x844",
+      "theme": "escuro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-mobile-light-full.png",
+      "viewport": "390x844",
+      "theme": "claro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-mobile-light-viewport.png",
+      "viewport": "390x844",
+      "theme": "claro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-tablet-dark-full.png",
+      "viewport": "768x1024",
+      "theme": "escuro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-tablet-dark-viewport.png",
+      "viewport": "768x1024",
+      "theme": "escuro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "page-tablet-light-full.png",
+      "viewport": "768x1024",
+      "theme": "claro",
+      "state": "pagina-inteira",
+      "fullPage": true
+    },
+    {
+      "file": "page-tablet-light-viewport.png",
+      "viewport": "768x1024",
+      "theme": "claro",
+      "state": "viewport-inicial",
+      "fullPage": false
+    },
+    {
+      "file": "search-lead-desktop-light.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "busca-por-lead",
+      "fullPage": false
+    },
+    {
+      "file": "validation-placeholder-desktop-light.png",
+      "viewport": "1920x1080",
+      "theme": "claro",
+      "state": "validacao-de-campos",
+      "fullPage": false
+    }
+  ],
+  "pending": [
+    "Conferência na rota autenticada com as permissões reais da sessão.",
+    "Respostas e erros reais da API: não foi executada nenhuma operação para evitar escrita ou comunicação externa."
+  ]
+}

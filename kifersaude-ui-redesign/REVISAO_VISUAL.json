@@ -215,15 +215,25 @@
       "route": "/painel/api",
       "kind": "pages",
       "components": [
-        "src/features/config/integrations/api-docs/ApiDocsScreen.tsx"
+        "src/features/config/integrations/api-docs/ApiDocsScreen.tsx",
+        "src/features/config/integrations/api-docs/domain/catalog.ts",
+        "src/features/config/integrations/api-docs/hooks/useApiExplorer.ts",
+        "src/design-system/operational.css"
       ],
       "references": [
         "references/desktop/page--api.png",
         "references/mobile/page--api.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/api/README.md",
+        "validacao/revisao-visual/api/coverage.json"
+      ],
+      "notes": [
+        "Preserva o explorador real com 13 operações; a confirmação foi cancelada e nenhuma chamada à API foi executada.",
+        "23 capturas Playwright em quatro larguras e dois temas; harness local bloqueou requests externos e não apresentou overflow horizontal.",
+        "A verificação autenticada continua pendente; diferenças visuais e funcionais em relação à referência estão descritas na evidência."
+      ]
     },
     {
       "id": "page--chat-ia",
@@ -2747,8 +2757,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 49,
-    "remaining_manifest_contexts": 111,
+    "reviewed_contexts": 50,
+    "remaining_manifest_contexts": 110,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

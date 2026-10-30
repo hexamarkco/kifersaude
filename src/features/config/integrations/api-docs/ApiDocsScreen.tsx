@@ -33,8 +33,9 @@ export default function ApiDocsScreen() {
 
   return (
     <PageContainer size="full" className="kds-api-page">
-      <PageHeader eyebrow="Integrações · API de leads" title="Conecte seus sistemas ao CRM"
+      <PageHeader eyebrow="Kifer Saúde · Integrações" title="Documentação da API"
         description="Explore as operações, prepare uma chamada e confira a resposta sem sair do painel."
+        descriptionPlacement="visible"
         actions={<LinkButton href="/painel/leads" variant="secondary"><ArrowLeft size={16} />Voltar aos leads</LinkButton>}
       />
 
@@ -63,9 +64,9 @@ export default function ApiDocsScreen() {
                     <Button variant="ghost" key={item.id} type="button" className={`kds-api-endpoint ${item.id === endpoint.id ? "is-active" : ""}`}
                       aria-current={item.id === endpoint.id ? 'true' : undefined} disabled={running}
                       onClick={() => { explorer.selectEndpoint(item.id); setResponseTab('body'); }}>
-                      <span><Badge tone={item.method === 'GET' ? 'info' : item.method === 'PUT' ? 'warning' : 'primary'} size="sm">{item.method}</Badge>
+                      <span className="kds-api-endpoint-meta"><Badge tone={item.method === 'GET' ? 'info' : item.method === 'PUT' ? 'warning' : 'primary'} size="sm">{item.method}</Badge>
                         {item.access === 'server' && <LockKeyhole size={13} aria-label="Somente servidor" />}</span>
-                      <strong>{item.title}</strong><code>{endpointPath(item)}</code>
+                      <span className="kds-api-endpoint-main"><strong>{item.title}</strong><code>{endpointPath(item)}</code></span>
                     </Button>
                   ))}</div>
                 </div>;

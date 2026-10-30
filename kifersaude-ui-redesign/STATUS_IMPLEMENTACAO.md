@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **49 contextos foram comparados** e **111 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **50 contextos foram comparados** e **110 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -20,6 +20,13 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 - Criação e edição seguem em página completa porque o formulário real inclui capa/upload, editor rico e SEO; a referência usa modal genérico. A prévia permanece somente leitura. Busca, status e os indicadores existentes foram mantidos; os filtros e métricas ilustrativos sem suporte no módulo não foram inventados.
 - A validação no mobile revelou o toast de formulário atrás da navegação inferior. `ToastViewport` agora reserva a altura da navegação fixa; em 320×640 há 12 px entre toast e navegação. Evidências e diferenças em [Blog — revisão visual](validacao/revisao-visual/blog/README.md).
 - Gates desta entrega: 1.843/1.843 testes, typecheck, lint, arquitetura e build passaram. O lint mantém cinco avisos Fast Refresh em previews locais não versionados; o build mantém o aviso conhecido de chunk vendor acima de 500 kB.
+
+### API — documentação e explorador (30/10/2026)
+
+- O cabeçalho agora usa o título “Documentação da API” e uma descrição operacional visível, evitando o ícone de ajuda isolado em telas estreitas. Os itens do explorador alinham método, nome e caminho em linhas próprias; a cascata de estilos utilitários deixava esses dados comprimidos e desalinhados.
+- O showcase usa a tela e os componentes reais do explorador, preservando as 13 operações documentadas, busca, filtro por método, formulários, detalhes de autenticação/cURL e a confirmação antes de chamadas com impacto. A referência mais simples foi adaptada ao produto real; nenhuma operação foi executada.
+- Playwright capturou 23 estados em 1920×1080, 768×1024, 390×844 e 320×640, nos temas claro e escuro. Busca, filtro GET (2 de 13 operações), validação do exemplo e confirmação de criação cancelada foram conferidos. O harness bloqueou tráfego externo e registrou zero escritas; não houve overflow horizontal. [API — revisão visual, cobertura e limitações](validacao/revisao-visual/api/README.md).
+- Gates: 1.843/1.843 testes, typecheck, arquitetura e build passaram. O lint passou com cinco avisos Fast Refresh preexistentes nos previews locais. O build mantém o aviso de chunk vendor acima de 500 kB.
 
 ### Leads — confirmação de exclusão (30/10/2026)
 

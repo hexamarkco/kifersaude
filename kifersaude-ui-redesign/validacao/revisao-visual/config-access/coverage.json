@@ -1,0 +1,65 @@
+{
+  "route": "/painel/config?tab=system&section=access",
+  "screen": "Configurações — Perfis e acessos",
+  "component": "src/features/config/general/AccessControlManagerScreen.tsx",
+  "status": "revisado_com_adaptacoes",
+  "contexts": [
+    "page--config-access",
+    "state--perfis-criar",
+    "state--perfis-permissoes"
+  ],
+  "viewport_capture_sizes": [
+    { "width": 1920, "height": 1080, "theme": "light" },
+    { "width": 1920, "height": 1080, "theme": "dark" },
+    { "width": 1440, "height": 960, "theme": "light" },
+    { "width": 768, "height": 1024, "theme": "light" },
+    { "width": 390, "height": 844, "theme": "light" },
+    { "width": 320, "height": 640, "theme": "light" }
+  ],
+  "screenshot_count": 18,
+  "screenshots": [
+    "full-desktop-1920-light.png",
+    "viewport-desktop-1920-light.png",
+    "full-desktop-1920-dark.png",
+    "viewport-desktop-1920-dark.png",
+    "full-desktop-1440-light.png",
+    "full-tablet-768-light.png",
+    "full-mobile-390-light.png",
+    "viewport-mobile-390-light.png",
+    "full-mobile-320-light.png",
+    "viewport-mobile-320-light.png",
+    "permission-menu-desktop.png",
+    "permission-menu-mobile.png",
+    "create-dialog-desktop.png",
+    "create-dialog-mobile-390.png",
+    "create-dialog-mobile-320.png",
+    "create-validation-desktop.png",
+    "edit-dialog-desktop.png",
+    "delete-confirmation-desktop.png"
+  ],
+  "verification": {
+    "fixture": "synthetic",
+    "authentication": "not used",
+    "external_requests": "blocked",
+    "persistent_mutations": "none",
+    "focused_tests": "12 passed",
+    "focused_lint": "passed",
+    "production_build": "passed; existing vendor chunk size warning",
+    "global_typecheck": "blocked by errors in untracked src/pages/public/HomePage.test.tsx; outside this task scope",
+    "create_and_edit": "modal open, initial focus and validation exercised",
+    "permission_levels": "menu and inline error state exercised; no persisted change",
+    "delete_confirmation": "opened and canceled",
+    "mobile_create_dialog_390": {
+      "width": 358,
+      "height": 526,
+      "border_radius": 16,
+      "focus": "profile name input",
+      "horizontal_overflow": false
+    }
+  },
+  "reference_adaptations": [
+    "The page reference represents system preferences rather than the current real profile-access screen.",
+    "The permissions reference shows a separate modal and status field that do not exist in the real access model; real permissions remain inline and save per area."
+  ],
+  "evidence": "README.md"
+}

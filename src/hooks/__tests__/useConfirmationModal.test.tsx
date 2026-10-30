@@ -33,6 +33,7 @@ function ConfirmationHarness({ onResult }: { onResult: (value: boolean) => void 
             title: "Confirmação contextualizada",
             description: "Confira o efeito antes de continuar.",
             content: <p>Resumo do registro e da consequência.</p>,
+            dialogClassName: "kds-access-profile-confirmation",
           }).then(onResult);
         }}
       >
@@ -99,6 +100,7 @@ test("permite conteúdo contextual sem mudar o fluxo de cancelamento", async () 
 
   assert.ok(document.body.textContent?.includes("Confira o efeito antes de continuar."));
   assert.ok(document.body.textContent?.includes("Resumo do registro e da consequência."));
+  assert.ok(document.querySelector('[role="dialog"]')?.classList.contains("kds-access-profile-confirmation"));
 
   const cancelButton = Array.from(document.querySelectorAll("button")).find(
     (button) => button.textContent === "Cancelar",

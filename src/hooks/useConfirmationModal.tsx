@@ -11,6 +11,7 @@ type ConfirmationOptions = {
   cancelLabel?: string;
   tone?: 'danger' | 'default';
   content?: ReactNode;
+  dialogClassName?: string;
 };
 
 type ConfirmationState = ConfirmationOptions;
@@ -60,6 +61,7 @@ export function useConfirmationModal() {
         confirmLabel={confirmationState?.confirmLabel}
         cancelLabel={confirmationState?.cancelLabel}
         destructive={confirmationState?.tone === 'danger'}
+        className={confirmationState?.dialogClassName}
         onConfirm={handleConfirm}
       >
         {confirmationState?.content ?? (

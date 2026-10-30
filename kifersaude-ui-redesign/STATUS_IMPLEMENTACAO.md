@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **63 contextos foram comparados** e **97 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **66 contextos foram comparados** e **94 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -12,6 +12,13 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 - Corrigi o feedback de falha ao salvar as instruções globais: o erro fica junto ao campo e limpa quando o operador altera o texto. A validação do prompt leva o campo para a área visível e mostra o erro abaixo dele. Toasts do drawer ficam acima do rodapé fixo.
 - Playwright registrou **40 capturas** desktop-first (1920×1080), tablet (768×1024), mobile (390×844 e 320×640) e tema escuro no desktop, incluindo página completa e os overlays separados. Busca, edição, restauração local de padrões, exportação sintética e demais estados foram exercitados. O teste bloqueou gravações e tráfego externo; ativações, desativações e importação foram canceladas. Nenhum overflow horizontal foi encontrado.
 - Testes focados: **24/24** em seis arquivos. Typecheck e build passaram. ESLint passou nos arquivos TS/TSX; CSS está fora da configuração do ESLint. O build mantém o aviso conhecido do chunk vendor acima de 500 kB. Sessão autenticada e persistência de produção não foram verificadas. [Capturas, interações e limitações](validacao/revisao-visual/config-ai/README.md) · [Cobertura](validacao/revisao-visual/config-ai/coverage.json).
+
+### Configurações — Perfis e acessos (30/10/2026)
+
+- Revisei a tela completa e seus fluxos reais: busca e seleção de perfil, busca de áreas, níveis de acesso por módulo, criação, edição e confirmação de exclusão. Permissões continuam sendo salvas por área; o sistema não tem um modal separado para editar permissões.
+- Padronizei validações e falhas junto ao campo/área correspondente, foco inicial no nome ao abrir criar/editar e dimensões compactas dos diálogos no mobile. Os seletores de acesso ficam alinhados à direita em desktop amplo e abaixo da descrição em telas estreitas.
+- Playwright documentou 18 capturas no tema claro/escuro, desktop (1920 e 1440), tablet (768), mobile (390 e 320) e estados de menu, formulário, validação e confirmação. As capturas do modal medem 358 px a 390 e 288 px a 320, com raio de 16 px; sem overflow horizontal.
+- A referência de página e o modal de permissões mostram controles que não existem no modelo real. Mantive o comportamento e os campos persistidos do CRM, sem criar permissões ou estados fictícios. A fixture foi sintética; não houve sessão autenticada, gravação, exclusão ou chamada externa. Testes focados: **12/12**; lint focado e build passaram. O typecheck global acusa erros de tipos em `src/pages/public/HomePage.test.tsx`, arquivo não rastreado e fora desta tarefa; não o alterei. O build mantém o aviso conhecido do chunk vendor acima de 500 kB. [Capturas, interações e adaptações](validacao/revisao-visual/config-access/README.md) · [Cobertura](validacao/revisao-visual/config-access/coverage.json).
 
 ### Configurações — visão geral de integrações (30/10/2026)
 

@@ -4,7 +4,7 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 ## Cobertura atual
 
-- **63 de 160 contextos** revisados; 97 permanecem sem comparação concluída.
+- **66 de 160 contextos** revisados; 94 permanecem sem comparação concluída.
 - **1.023 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página, importação individual e menus de filtro), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações (incluindo shell integrado para Geral, Links, Formulários, Automações, Integrações e IA), Usuários e permissões, Login e Chat e testes de IA.
 - A descoberta de telas e overlays fora do manifesto continua pendente.
 - O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
@@ -30,6 +30,7 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 - [Automações — fluxos, busca, filtros, templates e operação com adaptações responsivas](config-automation/README.md)
 - [Integrações — visão geral e painéis de WhatsApp, Meta Ads, IA e rastreamento](config-integrations/README.md)
 - [Configurações — IA, configurações globais, editor, confirmações e importação](config-ai/README.md)
+- [Configurações — perfis, permissões por área, formulários e confirmação de exclusão](config-access/README.md)
 - [Login — formulário pré-autenticado, teclado e responsividade revisados com adaptações](login/README.md)
 
 ## Critério

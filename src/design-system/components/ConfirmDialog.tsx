@@ -14,6 +14,7 @@ export type ConfirmDialogProps = {
   destructive?: boolean;
   loading?: boolean;
   closeOnConfirm?: boolean;
+  className?: string;
   children?: ReactNode;
 };
 
@@ -29,6 +30,7 @@ export function ConfirmDialog({
   destructive = false,
   loading = false,
   closeOnConfirm = false,
+  className,
   children,
 }: ConfirmDialogProps) {
   const [confirming, setConfirming] = useState(false);
@@ -63,7 +65,7 @@ export function ConfirmDialog({
       closeOnOverlay={!busy}
       closeOnEscape={!busy}
       size="form"
-      className="kds-dialog-confirmation"
+      className={className ? `kds-dialog-confirmation ${className}` : 'kds-dialog-confirmation'}
     >
       <DialogHeader onClose={busy ? undefined : () => onOpenChange(false)}>
         <DialogTitle>{title}</DialogTitle>

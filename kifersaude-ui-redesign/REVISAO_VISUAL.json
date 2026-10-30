@@ -443,15 +443,23 @@
       "route": "/painel/config?tab=system&section=access",
       "kind": "pages",
       "components": [
-        "src/features/config/general/SystemSettingsScreen.tsx"
+        "src/features/config/general/AccessControlManagerScreen.tsx"
       ],
       "references": [
         "references/desktop/page--config-access.png",
         "references/mobile/page--config-access.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-access/README.md",
+        "validacao/revisao-visual/config-access/coverage.json"
+      ],
+      "notes": [
+        "A referência da página mostra preferências do sistema, não a tela atual de perfis e níveis de acesso; a diferença foi registrada na evidência.",
+        "A experiência real usa busca e seleção de perfil, busca de área e permissões inline salvas por módulo. Nenhum campo ou regra do mockup foi inventado.",
+        "Fixture sintética comparada em desktop, tablet, mobile 390/320 e temas claro/escuro no desktop; sem overflow horizontal.",
+        "Sem sessão autenticada, persistência, exclusão confirmada ou chamadas externas."
+      ]
     },
     {
       "id": "page--config-leads",
@@ -1895,8 +1903,13 @@
         "references/mobile/state--blog-criar.png"
       ],
       "status": "revisado_com_adaptacoes",
-      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
-      "notes": ["Criar post é página completa, e não modal, para acomodar o editor rico, capa/upload, resumo e SEO. Os quatro erros obrigatórios foram verificados sem salvar. Capturas desktop, tablet, 390 e 320 px; nenhum overflow."]
+      "evidence": [
+        "validacao/revisao-visual/blog/README.md",
+        "validacao/revisao-visual/blog/coverage.json"
+      ],
+      "notes": [
+        "Criar post é página completa, e não modal, para acomodar o editor rico, capa/upload, resumo e SEO. Os quatro erros obrigatórios foram verificados sem salvar. Capturas desktop, tablet, 390 e 320 px; nenhum overflow."
+      ]
     },
     {
       "id": "state--blog-editar",
@@ -1910,8 +1923,13 @@
         "references/mobile/state--blog-editar.png"
       ],
       "status": "revisado_com_adaptacoes",
-      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
-      "notes": ["Edição real exibe os dados do artigo em página completa por causa do editor rico e das áreas de imagem e SEO. Os campos e valores foram conferidos em desktop, tablet, 390 e 320 px; nenhuma alteração ou escrita foi enviada."]
+      "evidence": [
+        "validacao/revisao-visual/blog/README.md",
+        "validacao/revisao-visual/blog/coverage.json"
+      ],
+      "notes": [
+        "Edição real exibe os dados do artigo em página completa por causa do editor rico e das áreas de imagem e SEO. Os campos e valores foram conferidos em desktop, tablet, 390 e 320 px; nenhuma alteração ou escrita foi enviada."
+      ]
     },
     {
       "id": "state--blog-visualizar",
@@ -1925,8 +1943,13 @@
         "references/mobile/state--blog-visualizar.png"
       ],
       "status": "revisado_com_adaptacoes",
-      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
-      "notes": ["A aplicação usa o diálogo real de prévia somente leitura, preservando conteúdo, categoria e status. Escape fecha e devolve o foco ao acionador em desktop e mobile; estado conferido também a 320 px."]
+      "evidence": [
+        "validacao/revisao-visual/blog/README.md",
+        "validacao/revisao-visual/blog/coverage.json"
+      ],
+      "notes": [
+        "A aplicação usa o diálogo real de prévia somente leitura, preservando conteúdo, categoria e status. Escape fecha e devolve o foco ao acionador em desktop e mobile; estado conferido também a 320 px."
+      ]
     },
     {
       "id": "state--blog-excluir",
@@ -1940,8 +1963,13 @@
         "references/mobile/state--blog-excluir.png"
       ],
       "status": "revisado_com_adaptacoes",
-      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
-      "notes": ["A confirmação destrutiva identifica o artigo e informa que a ação não pode ser desfeita. O diálogo foi comparado em desktop, 390 e 320 px; todos os casos foram cancelados sem exclusão."]
+      "evidence": [
+        "validacao/revisao-visual/blog/README.md",
+        "validacao/revisao-visual/blog/coverage.json"
+      ],
+      "notes": [
+        "A confirmação destrutiva identifica o artigo e informa que a ação não pode ser desfeita. O diálogo foi comparado em desktop, 390 e 320 px; todos os casos foram cancelados sem exclusão."
+      ]
     },
     {
       "id": "state--leads-editar",
@@ -2152,30 +2180,44 @@
       "route": "/painel/config?tab=system&section=access",
       "kind": "states",
       "components": [
-        "src/features/config/general/SystemSettingsScreen.tsx"
+        "src/features/config/general/AccessControlManagerScreen.tsx"
       ],
       "references": [
         "references/desktop/state--perfis-criar.png",
         "references/mobile/state--perfis-criar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-access/README.md",
+        "validacao/revisao-visual/config-access/coverage.json"
+      ],
+      "notes": [
+        "Criação real coleta nome, descrição opcional e tipo administrativo; as permissões por área são configuradas após criar o perfil.",
+        "A referência inclui campos de permissões e escopo que não pertencem ao formulário real; foi mantido o modelo funcional atual.",
+        "Validação inline, foco inicial no nome, salvar e cancelar conferidos. Capturas desktop e modal mobile 390 após a última correção de dimensões e raio."
+      ]
     },
     {
       "id": "state--perfis-permissoes",
       "route": "/painel/config?tab=system&section=access",
       "kind": "states",
       "components": [
-        "src/features/config/general/SystemSettingsScreen.tsx"
+        "src/features/config/general/AccessControlManagerScreen.tsx"
       ],
       "references": [
         "references/desktop/state--perfis-permissoes.png",
         "references/mobile/state--perfis-permissoes.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-access/README.md",
+        "validacao/revisao-visual/config-access/coverage.json"
+      ],
+      "notes": [
+        "Não existe modal separado para permissões. A tela real edita o nível de acesso diretamente em cada área e salva a alteração de forma imediata.",
+        "O estado foi comparado com a referência e documentado como adaptação; não se adicionaram campo de status, modal ou confirmação inexistentes.",
+        "Menu de níveis e estado inline de falha capturados; nenhuma alteração persistente foi feita."
+      ]
     },
     {
       "id": "state--config-etapa-criar",
@@ -2833,8 +2875,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 60,
-    "remaining_manifest_contexts": 100,
+    "reviewed_contexts": 66,
+    "remaining_manifest_contexts": 94,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

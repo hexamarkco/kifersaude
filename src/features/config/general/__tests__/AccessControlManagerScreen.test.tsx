@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   deletedIds: [] as string[],
   errors: [] as string[],
   successes: [] as string[],
+  updatedProfiles: [] as unknown[][],
   userCount: 0,
   failPermission: false,
   failProfile: false,
@@ -32,6 +33,14 @@ vi.mock('../../data/configService', () => ({
       const created = { ...input, id: 'created-profile', is_system: false, created_at: '', updated_at: '' };
       mocks.profiles = [...mocks.profiles, created];
       return { data: created, error: null };
+    },
+    updateAccessProfile: async (id: string, updates: Partial<Pick<AccessProfile, 'name' | 'description' | 'is_admin'>>) => {
+      mocks.updatedProfiles.push([id, updates]);
+      const existing = mocks.profiles.find((item) => item.id === id);
+      if (!existing || mocks.failProfile) return { data: null, error: new Error('Falha simulada') };
+      const updated = { ...existing, ...updates };
+      mocks.profiles = mocks.profiles.map((item) => item.id === id ? updated : item);
+      return { data: updated, error: null };
     },
     upsertProfilePermission: async (...args: unknown[]) => {
       mocks.permissionCalls.push(args);
@@ -63,6 +72,7 @@ const reset = (profiles: AccessProfile[]) => {
   mocks.deletedIds = [];
   mocks.errors = [];
   mocks.successes = [];
+  mocks.updatedProfiles = [];
   mocks.userCount = 0;
   mocks.failPermission = false;
   mocks.failProfile = false;
@@ -73,6 +83,13 @@ const changeInput = async (input: HTMLInputElement, value: string) => {
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+};
+
+const changeTextarea = async (textarea: HTMLTextAreaElement, value: string) => {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(textarea, value);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
   });
 };
 
@@ -133,11 +150,13 @@ test('falha ao salvar libera os controles e mantém a permissão anterior', asyn
   const view = render(<AccessControlManagerScreen />);
   try {
     await changePermission(view.container, 'Leads', 'edit');
-    assert.equal(mocks.errors.length, 1);
+    assert.equal(mocks.errors.length, 0);
     assert.equal(mocks.successes.length, 0);
     assert.ok(Array.from(view.container.querySelectorAll('select')).every((select) => !select.disabled));
     const trigger = view.container.querySelector<HTMLButtonElement>('button[aria-label="Acesso a Leads"]');
     assert.ok(trigger?.textContent?.includes('Sem acesso'));
+    assert.equal(trigger?.getAttribute('aria-invalid'), 'true');
+    assert.ok(view.container.textContent?.includes('Não foi possível salvar esta permissão. Tente novamente.'));
   } finally { view.unmount(); }
 });
 
@@ -191,7 +210,8 @@ test('cria perfil pelo diálogo e abre suas permissões; uma falha permite tenta
     await changeInput(name, 'Equipe regional');
     await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     assert.equal(mocks.successes.length, 0);
-    assert.equal(mocks.errors.length, 1);
+    assert.equal(mocks.errors.length, 0);
+    assert.ok(dialog?.textContent?.includes('Não foi possível salvar o perfil.'));
     assert.ok(document.querySelector('[role="dialog"]'));
     assert.equal(form.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled, false);
     mocks.failProfile = false;
@@ -201,5 +221,52 @@ test('cria perfil pelo diálogo e abre suas permissões; uma falha permite tenta
     assert.equal(mocks.profiles[mocks.profiles.length - 1]?.slug, 'equipe-regional');
     await changePermission(view.container, 'Leads', 'view');
     assert.deepEqual(mocks.permissionCalls[0], ['equipe-regional', 'leads', { can_view: true, can_edit: false }]);
+  } finally { view.unmount(); }
+});
+
+test('valida o nome do perfil junto ao campo e limpa o erro ao editar', async () => {
+  reset([]);
+  const view = render(<AccessControlManagerScreen />);
+  try {
+    const create = Array.from(view.container.querySelectorAll('button')).find((button) => button.textContent?.includes('Criar primeiro perfil'));
+    assert.ok(create);
+    await act(async () => create.click());
+    const dialog = document.querySelector('[role="dialog"]');
+    const input = dialog?.querySelector<HTMLInputElement>('input[placeholder="Ex.: Equipe comercial"]');
+    const form = dialog?.querySelector('form');
+    assert.ok(input);
+    assert.ok(form);
+    await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    assert.equal(input.getAttribute('aria-invalid'), 'true');
+    assert.ok(dialog?.textContent?.includes('Informe um nome para o perfil.'));
+    await changeInput(input, 'Comercial');
+    assert.equal(input.getAttribute('aria-invalid'), null);
+    assert.equal(dialog?.textContent?.includes('Informe um nome para o perfil.'), false);
+    assert.equal(mocks.successes.length, 0);
+  } finally { view.unmount(); }
+});
+
+test('edita a descrição e o tipo de acesso do perfil sem alterar seu identificador', async () => {
+  reset([profile(1)]);
+  const view = render(<AccessControlManagerScreen />);
+  try {
+    const edit = Array.from(view.container.querySelectorAll('button')).find((button) => button.textContent?.includes('Editar perfil'));
+    assert.ok(edit);
+    await act(async () => edit.click());
+    const dialog = document.querySelector('[role="dialog"]');
+    const name = dialog?.querySelector<HTMLInputElement>('input[placeholder="Ex.: Equipe comercial"]');
+    const description = dialog?.querySelector<HTMLTextAreaElement>('textarea');
+    const form = dialog?.querySelector('form');
+    const admin = dialog?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    assert.ok(name);
+    assert.ok(description);
+    assert.ok(form);
+    assert.ok(admin);
+    await changeTextarea(description, 'Equipe de supervisão');
+    await act(async () => { admin.click(); });
+    await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    assert.deepEqual(mocks.updatedProfiles, [['profile-1', { name: 'Perfil 001', description: 'Equipe de supervisão', is_admin: true }]]);
+    assert.equal(document.querySelector('[role="dialog"]'), null);
+    assert.ok(view.container.textContent?.includes('Acesso total'));
   } finally { view.unmount(); }
 });

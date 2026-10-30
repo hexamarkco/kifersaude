@@ -1997,3 +1997,21 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media(max-width: 639px) {
   body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(13rem + env(safe-area-inset-bottom)) !important; }
 }
+
+@media (max-width: 640px) {
+  .painel-theme.kifer-ds .kds-dialog-container:has(.kds-access-profile-dialog, .kds-access-profile-confirmation) {
+    align-items: center;
+    padding: var(--space-4);
+  }
+
+  .painel-theme.kifer-ds .kds-dialog.kds-access-profile-dialog,
+  .painel-theme.kifer-ds .kds-dialog.kds-access-profile-confirmation {
+    align-self: center !important;
+    height: auto !important;
+    width: min(calc(100vw - var(--space-8)), var(--dialog-width, 28rem)) !important;
+    max-width: min(calc(100vw - var(--space-8)), var(--dialog-width, 28rem)) !important;
+    max-height: calc(100dvh - var(--space-8)) !important;
+    flex: 0 1 auto;
+    border-radius: var(--radius-dialog) !important;
+  }
+}

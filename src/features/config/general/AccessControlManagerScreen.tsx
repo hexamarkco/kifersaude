@@ -36,6 +36,9 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
   const [profileName, setProfileName] = useState("");
   const [profileDescription, setProfileDescription] = useState("");
   const [profileIsAdmin, setProfileIsAdmin] = useState(false);
+  const [profileNameError, setProfileNameError] = useState<string | null>(null);
+  const [profileSaveError, setProfileSaveError] = useState(false);
+  const [permissionErrors, setPermissionErrors] = useState<Record<string, string>>({});
   const [savingProfile, setSavingProfile] = useState(false);
   const [deletingProfileId, setDeletingProfileId] = useState<string | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -53,6 +56,8 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
     setProfileName("");
     setProfileDescription("");
     setProfileIsAdmin(false);
+    setProfileNameError(null);
+    setProfileSaveError(false);
   };
 
   const startCreatingProfile = () => {
@@ -72,7 +77,13 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
 
   const updatePermission = async (role: string, module: string, level: string) => {
     if (updatingKey) return;
-    setUpdatingKey(`${role}:${module}`);
+    const permissionKey = `${role}:${module}`;
+    setUpdatingKey(permissionKey);
+    setPermissionErrors((current) => {
+      const next = { ...current };
+      delete next[permissionKey];
+      return next;
+    });
     try {
       const { data, error } = await configService.upsertProfilePermission(role, module, {
         can_view: level !== "none",
@@ -83,7 +94,10 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
       await refreshProfilePermissions();
       toast.success("Permissão atualizada.");
     } catch {
-      toast.error("Não foi possível atualizar a permissão. Tente novamente.");
+      setPermissionErrors((current) => ({
+        ...current,
+        [permissionKey]: "Não foi possível salvar esta permissão. Tente novamente.",
+      }));
     } finally {
       setUpdatingKey(null);
     }
@@ -102,13 +116,14 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
     event.preventDefault();
     if (savingProfile) return;
     const name = profileName.trim();
+    setProfileSaveError(false);
     if (!name) {
-      toast.error("Informe um nome para o perfil.");
+      setProfileNameError("Informe um nome para o perfil.");
       return;
     }
     const slug = buildProfileSlug(name);
     if (!editingProfileId && !slug) {
-      toast.error("Use letras ou números no nome do perfil.");
+      setProfileNameError("Use letras ou números no nome do perfil.");
       return;
     }
     setSavingProfile(true);
@@ -125,7 +140,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
       toast.success(editingProfileId ? "Perfil atualizado." : profileIsAdmin ? "Perfil criado com acesso total." : "Perfil criado. Defina as permissões de acesso abaixo.");
       resetProfileForm();
     } catch {
-      toast.error("Não foi possível salvar o perfil. Confira o nome e tente novamente.");
+      setProfileSaveError(true);
     } finally {
       setSavingProfile(false);
     }
@@ -138,6 +153,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
       title: "Excluir perfil",
       description: `Deseja excluir o perfil "${profile.name}"? Perfis vinculados a usuários não podem ser excluídos.`,
       confirmLabel: "Excluir perfil", cancelLabel: "Cancelar", tone: "danger",
+      dialogClassName: "kds-access-profile-confirmation",
     });
     if (!confirmed) return;
     setDeletingProfileId(profile.id);
@@ -174,7 +190,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
   return (
     <div className="space-y-6">
       {hideSectionTitle
-        ? <div className="flex justify-end">{createProfileAction}</div>
+        ? <div className="flex justify-end lg:hidden">{createProfileAction}</div>
         : <SectionHeader as="h3" title="Perfis e acessos" description="Escolha um perfil para definir o que seus usuários podem visualizar e editar." action={createProfileAction} />}
 
       {loadError && <Alert tone="warning" title="Não foi possível carregar todos os acessos">
@@ -184,17 +200,20 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
 
       {loading && profiles.length === 0 ? <LoadingState label="Carregando perfis e acessos…" /> : selectedProfile ? (
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
-          <Card padding="md" className="hidden min-w-0 lg:block">
+          <Card padding="md" className="sticky top-4 hidden min-w-0 lg:block">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <Heading level={4} className="font-semibold text-[var(--text-primary)]">Perfis</Heading>
-              <Badge tone="neutral" size="sm">{profiles.length}</Badge>
+              <div className="flex min-w-0 items-center gap-2">
+                <Heading level={4} className="font-semibold text-[var(--text-primary)]">Perfis</Heading>
+                <Badge tone="neutral" size="sm">{profiles.length}</Badge>
+              </div>
+              {createProfileAction}
             </div>
             <Input leftIcon={Search} value={profileSearch} onChange={(event) => setProfileSearch(event.target.value)} placeholder="Buscar perfil" aria-label="Buscar perfil" />
             <nav aria-label="Perfis de acesso" className="mt-3 max-h-[32rem] space-y-1 overflow-y-auto pr-1">
               {visibleProfiles.map((profile) => {
                 const selected = profile.id === selectedProfile.id;
-                return <ActionSurface variant="plain" padding="none" key={profile.id} type="button" aria-pressed={selected} onClick={() => selectProfile(profile.id)}
-                  className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] ${selected ? "border-[var(--border-accent)] bg-[var(--brand-primary-soft)]" : "border-transparent hover:bg-[var(--surface-secondary)]"}`}>
+                return <ActionSurface variant="plain" padding="sm" key={profile.id} type="button" aria-pressed={selected} onClick={() => selectProfile(profile.id)}
+                  className={`flex w-full items-start gap-3 rounded-lg border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] ${selected ? "border-[var(--border-accent)] bg-[var(--brand-primary-soft)]" : "border-transparent hover:bg-[var(--surface-secondary)]"}`}>
                   <span className="min-w-0 flex-1">
                     <span className="block break-words text-sm font-semibold text-[var(--text-primary)]">{formatProfileLabel(profile.slug, profile.name)}</span>
                     <span className="mt-1 block text-xs text-[var(--text-muted)]">{profile.is_admin ? "Acesso total" : profile.is_system ? "Perfil padrão" : "Acesso personalizado"}</span>
@@ -213,14 +232,14 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
               </Field>
             </div>
 
-            <Card padding="lg" className="min-w-0 space-y-5" aria-labelledby="selected-profile-title">
+            <Card padding="md" className="min-w-0 space-y-5" aria-labelledby="selected-profile-title">
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div className="w-full min-w-0 sm:w-auto sm:flex-1">
                   <div className="mb-2 flex flex-wrap gap-2">
                     {selectedProfile.is_system && <Badge tone="neutral" size="sm">Perfil padrão</Badge>}
                     <Badge tone={selectedProfile.is_admin ? "gold" : "neutral"} size="sm">{selectedProfile.is_admin ? "Acesso total" : "Acesso personalizado"}</Badge>
                   </div>
-                  <Heading level={4} id="selected-profile-title" className="break-words font-[var(--font-display)] text-xl text-[var(--text-primary)]">{formatProfileLabel(selectedProfile.slug, selectedProfile.name)}</Heading>
+                  <Heading level={4} id="selected-profile-title" className="break-words font-[var(--font-sans)] text-lg font-semibold text-[var(--text-primary)]">{formatProfileLabel(selectedProfile.slug, selectedProfile.name)}</Heading>
                   {selectedProfile.description && <Text className="mt-2 break-words text-sm leading-6 text-[var(--text-secondary)]">{selectedProfile.description}</Text>}
                 </div>
                 {!selectedProfile.is_system && <div className="flex flex-wrap gap-2">
@@ -246,30 +265,41 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
                   {moduleGroups.map((group) => {
                     const modules = visibleModules.filter((module) => module.group === group.id);
                     if (modules.length === 0) return null;
+                    const splitIndex = Math.ceil(modules.length / 2);
+                    const columns = [modules.slice(0, splitIndex), modules.slice(splitIndex)];
                     return <section key={group.id} aria-labelledby={`access-group-${group.id}`}>
                       <Heading level={6} id={`access-group-${group.id}`} className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{group.label}</Heading>
-                      <ul className="divide-y divide-[var(--border-subtle)]">
-                        {modules.map((module) => {
-                          const permission = getPermission(selectedProfile.slug, module.id, selectedProfile.is_admin);
-                          const level = !permission.can_view ? "none" : permission.can_edit ? "edit" : "view";
-                          const isUpdating = updatingKey === `${selectedProfile.slug}:${module.id}`;
-                          return <li key={module.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" aria-busy={isUpdating}>
-                            <div className="min-w-0 flex-1">
-                              <Text className="text-sm font-medium text-[var(--text-primary)]">{module.label}</Text>
-                              <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{module.description}</Text>
-                            </div>
-                            <div className="w-full shrink-0 sm:w-52">
-                              <Select aria-label={`Acesso a ${module.label}`} value={level} disabled={selectedProfile.is_admin || Boolean(updatingKey || deletingProfileId) || loading || loadError}
-                                onChange={(event) => void updatePermission(selectedProfile.slug, module.id, event.target.value)}>
-                                <option value="none">Sem acesso</option>
-                                <option value="view">Visualizar</option>
-                                <option value="edit">Visualizar e editar</option>
-                              </Select>
-                              {isUpdating && <span role="status" className="mt-1 block text-xs text-[var(--text-muted)]">Salvando permissão…</span>}
-                            </div>
-                          </li>;
-                        })}
-                      </ul>
+                      <div className="grid gap-x-8 2xl:grid-cols-2">
+                        {columns.map((column, columnIndex) => <ul key={`${group.id}-column-${columnIndex}`} className="divide-y divide-[var(--border-subtle)]">
+                          {column.map((module) => {
+                            const permission = getPermission(selectedProfile.slug, module.id, selectedProfile.is_admin);
+                            const level = !permission.can_view ? "none" : permission.can_edit ? "edit" : "view";
+                            const permissionKey = `${selectedProfile.slug}:${module.id}`;
+                            const isUpdating = updatingKey === permissionKey;
+                            const error = permissionErrors[permissionKey];
+                            return <li key={module.id} className="flex min-w-0 flex-col gap-3 py-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4" aria-busy={isUpdating}>
+                              <div className="min-w-0 flex-1">
+                                <Text className="text-sm font-medium text-[var(--text-primary)]">{module.label}</Text>
+                                <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{module.description}</Text>
+                              </div>
+                              <div className="w-full min-w-0 shrink-0 xl:w-48">
+                                <Field
+                                  label={<span className="sr-only">Acesso a {module.label}</span>}
+                                  error={error ?? undefined}
+                                >
+                                  <Select aria-label={`Acesso a ${module.label}`} value={level} invalid={Boolean(error)} disabled={selectedProfile.is_admin || Boolean(updatingKey || deletingProfileId) || loading || loadError}
+                                    onChange={(event) => void updatePermission(selectedProfile.slug, module.id, event.target.value)}>
+                                    <option value="none">Sem acesso</option>
+                                    <option value="view">Visualizar</option>
+                                    <option value="edit">Visualizar e editar</option>
+                                  </Select>
+                                </Field>
+                                {isUpdating && <span role="status" className="mt-1 block text-xs text-[var(--text-muted)]">Salvando permissão…</span>}
+                              </div>
+                            </li>;
+                          })}
+                        </ul>)}
+                      </div>
                     </section>;
                   })}
                   {visibleModules.length === 0 && <EmptyState title="Nenhuma área encontrada" description="Tente outro nome para encontrar a área desejada." action={<Button variant="secondary" size="sm" onClick={() => setModuleSearch("")}>Limpar busca</Button>} />}
@@ -280,14 +310,15 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
         </div>
       ) : !loadError && <EmptyState icon={<ShieldCheck aria-hidden="true" />} title="Nenhum perfil cadastrado" description="Crie um perfil para definir as áreas que seus usuários poderão acessar." action={<Button onClick={startCreatingProfile}>Criar primeiro perfil</Button>} />}
 
-      <Dialog open={creatingProfile || Boolean(editingProfileId)} onOpenChange={(open) => { if (!open && !savingProfile) resetProfileForm(); }} size="sm" closeOnEscape={!savingProfile} closeOnOverlay={!savingProfile}>
+      <Dialog open={creatingProfile || Boolean(editingProfileId)} onOpenChange={(open) => { if (!open && !savingProfile) resetProfileForm(); }} size="sm" initialFocus="first-content" closeOnEscape={!savingProfile} closeOnOverlay={!savingProfile} className="kds-access-profile-dialog">
         <DialogHeader onClose={savingProfile ? undefined : resetProfileForm}>
           <DialogTitle>{editingProfileId ? "Editar perfil" : "Novo perfil"}</DialogTitle>
           <DialogDescription>{editingProfileId ? "Atualize o nome, a descrição e o tipo de acesso." : "Depois de criar, escolha as áreas que este perfil poderá acessar."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSaveProfile}>
           <DialogBody className="space-y-4">
-            <Field label="Nome do perfil"><Input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Ex.: Equipe comercial" required disabled={savingProfile} /></Field>
+            {profileSaveError && <Alert tone="danger" title="Não foi possível salvar o perfil.">Confira os dados e tente novamente.</Alert>}
+            <Field label={<>Nome do perfil<span className="kds-field-required" aria-hidden="true"> *</span></>} error={profileNameError ?? undefined}><Input aria-required="true" value={profileName} onChange={(event) => { setProfileName(event.target.value); setProfileNameError(null); }} placeholder="Ex.: Equipe comercial" disabled={savingProfile} /></Field>
             <Field label="Descrição (opcional)"><Textarea value={profileDescription} onChange={(event) => setProfileDescription(event.target.value)} placeholder="Para quem é este perfil?" rows={3} disabled={savingProfile} /></Field>
             <FieldLabel className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] p-4">
               <Checkbox checked={profileIsAdmin} onChange={(event) => setProfileIsAdmin(event.target.checked)} disabled={savingProfile} />

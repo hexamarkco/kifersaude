@@ -260,7 +260,7 @@ export default function DependentForm({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="md">
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="md" initialFocus="first-content">
       <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{dependent ? 'Editar Dependente' : 'Novo Dependente'}</DialogTitle>
         <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>

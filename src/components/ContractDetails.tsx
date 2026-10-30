@@ -1463,17 +1463,6 @@ export default function ContractDetails({
               <Text className={`${detailBodyTextClass} mb-3`}>
                 Nenhum titular cadastrado
               </Text>
-              {canEditContracts && (
-                <Button
-                  onClick={() => {
-                    setEditingHolder(null);
-                    setShowHolderForm(true);
-                  }}
-                  size="sm"
-                >
-                  Adicionar titular
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -1483,25 +1472,6 @@ export default function ContractDetails({
               <Users className={detailSectionIconClass} />
               <span>Dependentes ({dependents.length})</span>
             </Heading>
-            {canEditContracts && (
-              <Button
-                onClick={() => {
-                  if (holders.length === 0) {
-                    toast.warning(
-                      "Cadastre um titular antes de adicionar dependentes.",
-                    );
-                    return;
-                  }
-                  setEditingDependent(null);
-                  setSelectedHolderId(holders[0]?.id || null);
-                  setShowDependentForm(true);
-                }}
-                size="sm"
-              >
-                <Plus className="kds-control-icon" />
-                <span>Adicionar</span>
-              </Button>
-            )}
           </div>
 
           {holders.length > 0 ? (
@@ -2174,39 +2144,6 @@ export default function ContractDetails({
               <Heading id="contract-page-beneficiaries-title" level={3} className={detailTitleClass}>
                 Beneficiários
               </Heading>
-              {canEditContracts && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setEditingHolder(null);
-                      setShowHolderForm(true);
-                    }}
-                  >
-                    <Plus className="kds-control-icon" aria-hidden="true" />
-                    Adicionar titular
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      if (holders.length === 0) {
-                        toast.warning('Cadastre um titular antes de adicionar dependentes.');
-                        return;
-                      }
-                      setEditingDependent(null);
-                      setSelectedHolderId(holders[0]?.id || null);
-                      setShowDependentForm(true);
-                    }}
-                  >
-                    <Plus className="kds-control-icon" aria-hidden="true" />
-                    Dependente
-                  </Button>
-                </div>
-              )}
             </div>
             {beneficiaries.length > 0 ? (
               <ul className="mt-4 divide-y divide-[var(--border-subtle)]">

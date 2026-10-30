@@ -1220,6 +1220,16 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   .painel-theme.kifer-ds .kds-dashboard-more-metrics > .kds-disclosure-trigger { width: 100%; }
 }
 @media (max-width: 640px) {
+  .painel-theme.kifer-ds .kds-dialog-container:has(.kds-dialog-confirmation) {
+    align-items: center !important;
+    padding: var(--space-4) !important;
+  }
+  .painel-theme.kifer-ds .kds-dialog.kds-dialog-confirmation {
+    width: 100%;
+    max-width: min(calc(100vw - var(--space-8)), var(--dialog-width-form)) !important;
+    max-height: calc(100dvh - var(--space-8)) !important;
+    border-radius: var(--radius-dialog) !important;
+  }
   .painel-theme.kifer-ds .kds-dialog.kds-contract-json-import-dialog .kds-contract-json-import-footer {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);

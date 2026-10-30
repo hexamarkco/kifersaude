@@ -851,7 +851,6 @@ export default function HolderForm({
           </Card>
           <PageActions
             placement="form"
-            sticky
             secondary={[{ label: 'Cancelar', onClick: onClose, disabled: saving }]}
             primary={{ label: saving ? 'Salvando...' : 'Salvar titular', type: 'submit', form: 'holder-form', loading: saving }}
           />

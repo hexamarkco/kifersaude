@@ -2285,7 +2285,7 @@ export default function ContractForm({
       <PageHeader eyebrow="Contratos" title={title} description="Registre os dados comerciais, financeiros e de vigência do contrato." actions={<Button variant="secondary" onClick={() => setShowJsonImport(true)} disabled={saving}><FileUp className="kds-control-icon" aria-hidden="true" />Importar de arquivo</Button>} />
       {leadToConvert && <Alert tone="info">Conversão de {leadToConvert.nome_completo}. Os dados do lead foram preservados no formulário.</Alert>}
       {formContent}
-      <FormActions onCancel={onClose} submitLabel={contract ? 'Salvar alterações' : 'Continuar para titular'} loading={saving} form="contract-form" sticky />
+      <FormActions onCancel={onClose} submitLabel={contract ? 'Salvar alterações' : 'Continuar para titular'} loading={saving} form="contract-form" />
     </section> : <>
       <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
         <DialogHeader onClose={saving ? undefined : onClose}>

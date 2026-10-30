@@ -79,6 +79,7 @@ Medições, verificações e lista de caminhos também estão em [`coverage.json
 ## Pendências deste módulo
 
 - Comparar edição, confirmação de exclusão, importação individual e os estados adicionais descritos em [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json).
+- A ficha aberta pela lista agora usa a página completa com carregamento dentro da própria página e ações alinhadas ao cabeçalho. O teste do componente passou; a captura integrada desktop/mobile permanece pendente porque a rota local redirecionou para a página pública sem sessão autenticada.
 - Não marcar o módulo nem o redesign global como concluídos enquanto esses itens estiverem pendentes.
 
 ## Alinhamento com Leads — em andamento

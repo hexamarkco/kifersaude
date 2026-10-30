@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-29",
+  "updated_at": "2026-10-30",
   "scope": "Todas as interfaces reais, inclusive as que ainda forem encontradas fora do manifesto. A revisão permanece em andamento.",
   "historical_mapping": "MAPEAMENTO.json",
   "additional_interfaces_discovery": "pendente",
@@ -931,7 +931,8 @@
       "route": "/painel/contratos",
       "kind": "extras",
       "components": [
-        "src/features/contracts/ContractsManagerScreen.tsx"
+        "src/features/contracts/ContractsManagerScreen.tsx",
+        "src/components/ContractDetails.tsx"
       ],
       "references": [
         "references/desktop/extra--contratos-ficha.png",
@@ -939,7 +940,10 @@
       ],
       "status": "pendente",
       "evidence": [],
-      "notes": []
+      "notes": [
+        "A abertura da listagem agora usa a ficha em página completa; o carregamento permanece dentro da página e editar/excluir ficam no cabeçalho. O teste do componente confirma que esse modo não abre um diálogo.",
+        "A captura integrada segue pendente: uma sessão Playwright sem autenticação redirecionou /painel/contratos para a página pública."
+      ]
     },
     {
       "id": "extra--contratos-beneficiarios",

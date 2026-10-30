@@ -21,7 +21,7 @@ export function SettingsCatalogLink({
     <ActionSurface
       variant="plain"
       padding="sm"
-      className="flex w-full items-center justify-between gap-3 text-left"
+      className="kds-settings-catalog-link flex w-full items-center justify-between gap-3 text-left"
       aria-label={ariaLabel}
       onClick={onClick}
     >

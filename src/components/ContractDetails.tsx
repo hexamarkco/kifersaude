@@ -37,6 +37,7 @@ import ContractForm from "./ContractForm";
 import DependentForm from "./DependentForm";
 import {
   PageHeader,
+  PageActions,
   Badge,
   Alert,
   Button,
@@ -804,6 +805,17 @@ export default function ContractDetails({
     </Alert>
   ) : null;
 
+  const pageActions = canEditContracts ? (
+    <PageActions
+      primary={{ label: 'Editar contrato', icon: Edit, onClick: () => handleEditContract() }}
+      destructive={onDelete ? {
+        label: 'Excluir contrato',
+        icon: Trash2,
+        onClick: () => { void onDelete(contract); },
+      } : undefined}
+    />
+  ) : null;
+
   if (presentation === 'drawer' && (loading || loadError)) return (
     <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
       <DrawerHeader onClose={onClose}>
@@ -887,7 +899,7 @@ export default function ContractDetails({
 
   const detailContent = (<>
 
-      {presentation !== 'drawer' && <div className="mb-4 flex items-center justify-end gap-2">
+      {presentation === 'dialog' && <div className="mb-4 flex items-center justify-end gap-2">
         {canEditContracts && (
           <Button
             onClick={handleEditContract}
@@ -2068,7 +2080,12 @@ export default function ContractDetails({
 
   if (presentation === 'page') return <section className="kds-record-detail kds-detail-workspace">
     <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
-    <PageHeader eyebrow="Contratos" title={`Ficha do contrato ${contract.codigo_contrato}`} description={`${normalizeOperadoraLabel(contract.operadora)} · ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`} />
+    <PageHeader
+      eyebrow="Contratos"
+      title={`Ficha do contrato ${contract.codigo_contrato}`}
+      description={`${normalizeOperadoraLabel(contract.operadora)} · ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}
+      actions={pageActions}
+    />
     {detailContent}
   </section>;
   return (<Dialog open onOpenChange={(open) => !open && onClose()} size="xl">

@@ -1386,8 +1386,8 @@
 }
 
 .kds-checkbox:checked {
-  border-color: var(--text-primary);
-  background-color: var(--text-primary);
+  border-color: var(--brand-primary);
+  background-color: var(--brand-primary);
 }
 
 .kds-tabs-list {

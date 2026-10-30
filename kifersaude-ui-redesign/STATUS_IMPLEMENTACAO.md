@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **51 contextos foram comparados** e **109 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **54 contextos foram comparados** e **106 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -14,7 +14,7 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Gates desta atualização (30/10/2026)
 
-- A suíte completa passou: **1.843 testes em 350 arquivos**. Typecheck, arquitetura, migrations, `secrets:check`, auditorias visual/Design System, build e bundle do editor passaram. Lint terminou sem erros, com seis avisos Fast Refresh em prévias Playwright e um aviso de dependência de `useEffect` em `PainelWrapper`. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
+- A suíte completa passou: **1.844 testes em 350 arquivos**. Typecheck, arquitetura, migrations, `secrets:check`, auditorias visual/Design System, build e bundle do editor passaram. Lint terminou sem erros, com seis avisos Fast Refresh em prévias Playwright e um aviso de dependência de `useEffect` em `PainelWrapper`. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
 
 ### Contratos — ficha completa (30/10/2026)
 
@@ -23,6 +23,11 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 - O `ContractJsonImportDialog` real continua importando JSON, oferecendo o modelo, validando o conteúdo e aplicando os dados somente ao formulário ainda não salvo. A referência visual representa campos genéricos de contrato/titular e salvamento direto, portanto essa diferença funcional foi preservada e documentada. O diálogo usa largura do padrão de formulário; até 640 px, as ações ficam em duas colunas proporcionais, sem quebra do rótulo em 320 px.
 - Playwright conferiu erros de extensão e parse, loading sem permitir fechamento, prévia válida, teclado e foco, temas claro/escuro e 1920×1080, 768×1024, 390×844 e 320×640. Não houve overflow horizontal; no menor viewport, ambas as ações têm 44 px de altura. Foi usada uma prévia local com JSON sintético, sem escrita ou integração externa. A rota `/painel/contratos` redirecionou para autenticação sem sessão disponível, então a comparação do modal aberto no shell permanece pendente. [Evidências, referências e limitações](validacao/revisao-visual/contracts/importacao-individual/README.md).
+
+### Contratos — filtros e cabeçalhos de tabela (30/10/2026)
+
+- Status, operadoras e datas críticas agora compartilham `FilterMultiSelect`, com seleção em rascunho, confirmação e cancelamento. Os valores vêm da configuração e dos registros carregados; o filtro de datas mantém somente a regra existente de próximos 30 dias. Playwright verificou aplicação dos filtros, cancelamento sem aplicar alterações e estado vazio, sem overflow em 1920, 768, 390 e 320 px. O modal de status também foi conferido no tema escuro. A rota autenticada não estava disponível; as evidências vêm de prévia local do componente real com fixture sintética. [Capturas e notas](validacao/revisao-visual/contracts/README.md).
+- Cabeçalhos compartilhados de ordenação não mostram mais o ícone neutro ↕; a coluna continua clicável e a direção ativa permanece visível quando o indicador está habilitado. Uma captura do pedido apontava esse excesso no cabeçalho de tabela.
 
 ### Blog — listagem e estados (30/10/2026)
 
@@ -58,7 +63,7 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Configurações — espaçamento dos atalhos (30/10/2026)
 
-- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com `ActionSurface` e o token `kds-card-padding-sm` diretamente no botão clicável. O teste e a prévia Playwright confirmam 16 px entre a borda do botão e o conteúdo em claro/escuro e desktop/mobile; hover e foco mantêm o mesmo recuo. Destinos, contagens e permissões permanecem iguais. A sessão mockada não forneceu dados para renderizar a página integrada de configurações; essa comparação segue pendente. [Evidências](validacao/revisao-visual/config/README.md).
+- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com `ActionSurface` e o token `kds-card-padding-md` diretamente no botão clicável. O recuo de 20 px mantém título, descrição e seta afastados da borda em claro/escuro e desktop/mobile. Destinos, contagens e permissões permanecem iguais. A sessão mockada não forneceu dados para renderizar a página integrada de configurações; essa comparação segue pendente. [Evidências](validacao/revisao-visual/config/README.md).
 
 ### Contratos — formulário de titular em página (30/10/2026)
 

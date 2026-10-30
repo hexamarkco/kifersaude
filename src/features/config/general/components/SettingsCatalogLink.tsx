@@ -20,7 +20,7 @@ export function SettingsCatalogLink({
   return (
     <ActionSurface
       variant="plain"
-      padding="sm"
+      padding="md"
       className="kds-settings-catalog-link w-full text-left"
       aria-label={ariaLabel}
       onClick={onClick}

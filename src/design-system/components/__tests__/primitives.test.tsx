@@ -90,6 +90,27 @@ test('sortable table headers can keep sorting accessible without a visible arrow
   unmount();
 });
 
+test('sortable table headers hide the neutral icon and show the active direction', () => {
+  const onSort = () => undefined;
+  const idle = render(
+    <table><thead><tr><SortableTableHead label="Contrato" sortDirection={null} onSort={onSort} /></tr></thead></table>,
+  );
+  const sortButton = idle.container.querySelector<HTMLButtonElement>('button[aria-label="Ordenar por Contrato"]');
+  assert.ok(sortButton);
+  assert.equal(sortButton.querySelector('svg'), null);
+  assert.equal(sortButton.closest('th')?.getAttribute('aria-sort'), 'none');
+
+  idle.unmount();
+  const active = render(
+    <table><thead><tr><SortableTableHead label="Contrato" sortDirection="asc" onSort={onSort} /></tr></thead></table>,
+  );
+  const activeSortButton = active.container.querySelector<HTMLButtonElement>('button[aria-label="Ordenar por Contrato"]');
+  assert.ok(activeSortButton);
+  assert.ok(activeSortButton.querySelector('svg'));
+  assert.equal(activeSortButton.closest('th')?.getAttribute('aria-sort'), 'ascending');
+  active.unmount();
+});
+
 test('Field associates label, hint, required, disabled and error semantics', () => {
   const { container, unmount } = render(
     <Field label="E-mail" hint="Usado nas notificações" required disabled>

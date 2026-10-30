@@ -4,8 +4,8 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 ## Cobertura atual
 
-- **51 de 160 contextos** revisados; 109 permanecem sem comparação concluída.
-- **845 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página e importação individual), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações, Usuários e permissões, Login e Chat e testes de IA.
+- **54 de 160 contextos** revisados; 106 permanecem sem comparação concluída.
+- **851 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página, importação individual e menus de filtro), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações, Usuários e permissões, Login e Chat e testes de IA.
 - A descoberta de telas e overlays fora do manifesto continua pendente.
 - O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
 

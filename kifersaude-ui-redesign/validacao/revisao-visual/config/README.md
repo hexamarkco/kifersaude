@@ -16,7 +16,7 @@ Referências: `references/desktop/page--config-system.png` e `references/mobile/
 
 O conteúdo preserva as preferências reais de formato de data, fuso horário, sessão e notificações. O painel “Estrutura e parametrização” leva a acessos e cadastros já existentes. A faixa secundária e a busca ficam fora da visão inicial quando a pessoa está nas preferências; os atalhos do painel mantêm acesso aos demais grupos e reduzem uma camada de navegação nessa página.
 
-Os cinco atalhos do painel compartilham o componente `SettingsCatalogLink`. O padding de 16 px do token `kds-card-padding-sm` fica no próprio `ActionSurface` clicável; texto e ícone permanecem recuados dentro da borda e do hover. Texto, ícone, rótulos, contagens, destinos e regras de visibilidade por permissão foram preservados. Playwright conferiu o espaçamento na prévia isolada do componente real em 1920 × 1080 e 390 × 844, nos temas claro e escuro, sem overflow. Também conferiu que o hover não encosta o conteúdo na borda:
+Os cinco atalhos do painel compartilham o componente `SettingsCatalogLink`. O padding de 20 px do token `kds-card-padding-md` fica no próprio `ActionSurface` clicável; texto e ícone permanecem afastados da borda e do hover. Texto, ícone, rótulos, contagens, destinos e regras de visibilidade por permissão foram preservados. A evidência anterior conferiu o componente real em 1920 × 1080 e 390 × 844, nos temas claro e escuro, sem overflow. Nesta atualização o recuo foi ampliado para corrigir a captura da página integrada, que mostrava o texto encostado na borda:
 
 | Componente / viewport | Captura |
 | --- | --- |

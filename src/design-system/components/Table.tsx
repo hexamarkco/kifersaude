@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
 
@@ -96,11 +96,7 @@ export function SortableTableHead({
   align = 'left',
   className,
 }: SortableTableHeadProps) {
-  const SortIcon = sortDirection === 'asc'
-    ? ArrowUp
-    : sortDirection === 'desc'
-      ? ArrowDown
-      : ArrowUpDown;
+  const SortIcon = sortDirection === 'asc' ? ArrowUp : ArrowDown;
 
   return (
     <TableHead
@@ -120,7 +116,9 @@ export function SortableTableHead({
         title={sortDirection === 'asc' ? `Ordenado por ${label}, crescente` : sortDirection === 'desc' ? `Ordenado por ${label}, decrescente` : `Ordenar por ${label}`}
       >
         <span>{label}</span>
-        {showSortIndicator && <SortIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />}
+        {showSortIndicator && sortDirection !== null && (
+          <SortIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
+        )}
       </button>
     </TableHead>
   );

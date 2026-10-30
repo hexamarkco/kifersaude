@@ -299,7 +299,7 @@
         "Comparada com a referência em 1920×1080, 768×1024, 390×844 e 320×640 no tema claro; tema escuro conferido em 1920×1080. Sem overflow horizontal.",
         "Mantém os campos reais de data, fuso, sessão e notificações; o painel de estrutura encaminha para permissões e cadastros existentes. A faixa secundária fica oculta na visão inicial e reaparece nas outras áreas.",
         "O menu fixo inferior cruza o início do cartão seguinte na posição inicial de rolagem mobile; registrado para revisão de densidade.",
-        "Os cinco atalhos de Estrutura e parametrização usam o componente SettingsCatalogLink e padding sm do design system; destinos, contagens e permissões permanecem iguais."
+        "Os cinco atalhos de Estrutura e parametrização usam o componente SettingsCatalogLink e padding md do design system; destinos, contagens e permissões permanecem iguais."
       ]
     },
     {
@@ -1555,14 +1555,18 @@
         "references/desktop/state--contratos-status-menu.png",
         "references/mobile/state--contratos-status-menu.png"
       ],
-      "status": "pendente",
+      "status": "revisado_com_adaptacoes",
       "evidence": [
         "validacao/revisao-visual/contracts/README.md",
         "validacao/revisao-visual/contracts/status-picker/showcase-desktop-contextual-light.png",
-        "validacao/revisao-visual/contracts/status-picker/contrato-preview-mobile-320-light.png"
+        "validacao/revisao-visual/contracts/status-picker/contrato-preview-mobile-320-light.png",
+        "validacao/revisao-visual/contracts/screenshots/desktop/filtro-status-aberto.png",
+        "validacao/revisao-visual/contracts/screenshots/tablet/filtro-status-aberto.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile/filtro-status-aberto.png",
+        "validacao/revisao-visual/contracts/screenshots/mobile-320/filtro-status-aberto.png"
       ],
       "notes": [
-        "Leads e Contratos usam OperationalStatusSelect, incluindo variantes compacta e contextual com responsável pela venda. A referência nomeada como status-menu é um filtro múltiplo; o seletor da linha permanece de escolha única. Prévia isolada revisada; comparação na rota autenticada e na tabela completa continua pendente."
+        "O filtro de status da listagem usa FilterMultiSelect, com seleção em rascunho, confirmação e cancelamento. As opções vêm das configurações ativas e dos status já encontrados nos contratos; a referência usa valores demonstrativos e não substitui a configuração real. O seletor de status da linha permanece de escolha única em OperationalStatusSelect. A prévia isolada do screen real foi verificada em 1920, 768, 390 e 320 px, sem overflow horizontal. A comparação no shell autenticado continua pendente."
       ]
     },
     {
@@ -1576,9 +1580,14 @@
         "references/desktop/state--contratos-operadoras-menu.png",
         "references/mobile/state--contratos-operadoras-menu.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/screenshots/desktop/filtro-operadoras-aberto.png"
+      ],
+      "notes": [
+        "FilterMultiSelect mostra as operadoras encontradas nos contratos carregados e aplica a seleção somente após confirmação. A fixture sintética deste estado contém Amil; não foram inventadas operadoras ausentes da base. Prévia isolada do screen real verificada; integração autenticada permanece pendente."
+      ]
     },
     {
       "id": "state--contratos-datas-menu",
@@ -1591,9 +1600,14 @@
         "references/desktop/state--contratos-datas-menu.png",
         "references/mobile/state--contratos-datas-menu.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/screenshots/desktop/filtro-periodo-aberto.png"
+      ],
+      "notes": [
+        "FilterMultiSelect mantém a única regra temporal já implementada: próximos 30 dias para datas críticas. A referência sugere mais períodos, mas não foram criadas regras de negócio novas. Seleção confirmada foi verificada e retornou o estado vazio quando nenhum registro da fixture correspondia; integração autenticada permanece pendente."
+      ]
     },
     {
       "id": "state--comissoes-dia",

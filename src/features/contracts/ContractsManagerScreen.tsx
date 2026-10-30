@@ -55,6 +55,7 @@ import {
   Tooltip,
   type PanelTone,
   FilterSelect,
+  FilterMultiSelect,
   Pagination,
   KpiCard,
   RecordActions,
@@ -106,12 +107,10 @@ export default function ContractsManager({
   const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
   const [contractsLoadWarning, setContractsLoadWarning] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("todos");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterResponsavel, setFilterResponsavel] = useState("todos");
-  const [filterOperadora, setFilterOperadora] = useState("todas");
-  const [dateProximityFilter, setDateProximityFilter] = useState<
-    "todos" | "proximos-30"
-  >("todos");
+  const [filterOperadora, setFilterOperadora] = useState<string[]>([]);
+  const [dateProximityFilter, setDateProximityFilter] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
@@ -119,7 +118,21 @@ export default function ContractsManager({
     null,
   );
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
-  const statusOptions = (options.contract_status || []).filter((option) => option.ativo);
+  const statusOptions = useMemo(
+    () => (options.contract_status || []).filter((option) => option.ativo),
+    [options.contract_status],
+  );
+  const statusFilterOptions = useMemo(() => {
+    const values = new Map(
+      statusOptions.map((option) => [option.value, option.label]),
+    );
+    contracts.forEach((contract) => {
+      if (contract.status && !values.has(contract.status)) {
+        values.set(contract.status, contract.status);
+      }
+    });
+    return Array.from(values, ([value, label]) => ({ value, label }));
+  }, [contracts, statusOptions]);
   const { operators: productionOperators, error: productionOperatorsError } = useProductionOperators();
   const { changeStatus, savingIds } = useContractStatus((updated) => {
     setContracts((current) => current.map((contract) =>
@@ -227,9 +240,9 @@ export default function ContractsManager({
 
   useEffect(() => {
     if (initialOperadoraFilter) {
-      setFilterOperadora(normalizeOperadoraLabel(initialOperadoraFilter));
+      setFilterOperadora([normalizeOperadoraLabel(initialOperadoraFilter)]);
     } else if (initialOperadoraFilter === undefined) {
-      setFilterOperadora("todas");
+      setFilterOperadora([]);
     }
   }, [initialOperadoraFilter]);
 
@@ -326,9 +339,9 @@ export default function ContractsManager({
       );
     }
 
-    if (filterStatus !== "todos") {
+    if (filterStatus.length > 0) {
       filtered = filtered.filter(
-        (contract) => contract.status === filterStatus,
+        (contract) => filterStatus.includes(contract.status),
       );
     }
 
@@ -338,14 +351,14 @@ export default function ContractsManager({
       );
     }
 
-    if (filterOperadora !== "todas") {
+    if (filterOperadora.length > 0) {
       filtered = filtered.filter(
         (contract) =>
-          normalizeOperadoraLabel(contract.operadora) === filterOperadora,
+          filterOperadora.includes(normalizeOperadoraLabel(contract.operadora)),
       );
     }
 
-    if (dateProximityFilter === "proximos-30") {
+    if (dateProximityFilter.includes("proximos-30")) {
       filtered = filtered.filter((contract) =>
         hasUpcomingImportantDate(contract),
       );
@@ -370,10 +383,10 @@ export default function ContractsManager({
 
   const resetFilters = () => {
     setSearchTerm("");
-    setFilterStatus("todos");
+    setFilterStatus([]);
     setFilterResponsavel("todos");
-    setFilterOperadora("todas");
-    setDateProximityFilter("todos");
+    setFilterOperadora([]);
+    setDateProximityFilter([]);
   };
 
   const getContractDisplayName = (contract: Contract) =>
@@ -532,10 +545,10 @@ export default function ContractsManager({
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
-      filterStatus !== 'todos' ||
+      filterStatus.length > 0 ||
       filterResponsavel !== 'todos' ||
-      filterOperadora !== 'todas' ||
-      dateProximityFilter !== 'todos',
+      filterOperadora.length > 0 ||
+      dateProximityFilter.length > 0,
   );
 
   const handleExportContracts = () => {
@@ -816,32 +829,13 @@ export default function ContractsManager({
           </Toolbar>
 
           <div className="kds-contracts-filter-grid grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <FilterSelect
+            <FilterMultiSelect
               icon={Filter}
-              value={filterStatus}
-              onChange={(value) => setFilterStatus(value)}
+              values={filterStatus}
+              onChange={setFilterStatus}
               placeholder="Todos os status"
-              includePlaceholderOption={false}
-              neutralValues={["todos"]}
-              options={[
-                { value: "todos", label: "Todos os status" },
-                { value: "Rascunho", label: "Rascunho" },
-                { value: "Em análise", label: "Em análise" },
-                {
-                  value: "Documentos pendentes",
-                  label: "Documentos pendentes",
-                },
-                { value: "Proposta enviada", label: "Proposta enviada" },
-                {
-                  value: "Aguardando assinatura",
-                  label: "Aguardando assinatura",
-                },
-                { value: "Emitido", label: "Emitido" },
-                { value: "Ativo", label: "Ativo" },
-                { value: "Suspenso", label: "Suspenso" },
-                { value: "Cancelado", label: "Cancelado" },
-                { value: "Encerrado", label: "Encerrado" },
-              ]}
+              dialogTitle="Filtrar contratos por status"
+              options={statusFilterOptions}
             />
 
             <FilterSelect
@@ -860,48 +854,40 @@ export default function ContractsManager({
               ]}
             />
 
-            <FilterSelect
+            <FilterMultiSelect
               icon={Calendar}
-              value={dateProximityFilter}
-              onChange={(value) =>
-                setDateProximityFilter(value as "todos" | "proximos-30")
-              }
+              values={dateProximityFilter}
+              onChange={setDateProximityFilter}
               placeholder="Todos os períodos"
-              includePlaceholderOption={false}
-              neutralValues={["todos"]}
+              dialogTitle="Filtrar datas críticas"
               options={[
-                { value: "todos", label: "Todos os períodos" },
                 { value: "proximos-30", label: "Próximos 30 dias" },
               ]}
             />
             <Button
               type="button"
               className="kds-contracts-advanced-trigger"
-              variant={advancedFiltersOpen || filterOperadora !== 'todas' ? 'soft' : 'secondary'}
+              variant={advancedFiltersOpen || filterOperadora.length > 0 ? 'soft' : 'secondary'}
               aria-expanded={advancedFiltersOpen}
               aria-controls="contracts-advanced-filters"
               onClick={() => setAdvancedFiltersOpen((open) => !open)}
             >
               <Filter className="kds-control-icon" aria-hidden="true" />
-              Filtros avançados{filterOperadora !== 'todas' ? ' · 1' : ''}
+              Filtros avançados{filterOperadora.length > 0 ? ` · ${filterOperadora.length}` : ''}
             </Button>
           </div>
           {advancedFiltersOpen && (
             <div id="contracts-advanced-filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <FilterSelect
+              <FilterMultiSelect
                 icon={FileText}
-                value={filterOperadora}
-                onChange={(value) => setFilterOperadora(value)}
+                values={filterOperadora}
+                onChange={setFilterOperadora}
                 placeholder="Todas as operadoras"
-                includePlaceholderOption={false}
-                neutralValues={["todas"]}
-                options={[
-                  { value: "todas", label: "Todas as operadoras" },
-                  ...operadoraOptions.map((operadora) => ({
-                    value: operadora,
-                    label: operadora,
-                  })),
-                ]}
+                dialogTitle="Filtrar contratos por operadora"
+                options={operadoraOptions.map((operadora) => ({
+                  value: operadora,
+                  label: operadora,
+                }))}
               />
             </div>
           )}

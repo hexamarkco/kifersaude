@@ -23,12 +23,15 @@
     "page--contratos-listagem",
     "state--contratos-criar",
     "state--contratos-editar",
-    "state--contratos-titular"
+    "state--contratos-titular",
+    "state--contratos-status-menu",
+    "state--contratos-operadoras-menu",
+    "state--contratos-datas-menu"
   ],
   "pending_contexts": [
     "state--contratos-excluir-confirmacao",
     "state--contratos-importacao-individual",
-    "menus e estados adicionais encontrados na aplicação"
+    "outros menus e estados encontrados na aplicação"
   ],
   "visual_review": {
     "widths": [
@@ -466,8 +469,53 @@
         "path": "screenshots/titular/holder-form-mobile-320-bottom-light-viewport.png",
         "width": 320,
         "height": 640
+      },
+      {
+        "path": "screenshots/desktop/filtro-status-aberto.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/desktop/filtro-status-aberto-dark.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/desktop/filtro-operadoras-aberto.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/desktop/filtro-periodo-aberto.png",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "path": "screenshots/tablet/filtro-status-aberto.png",
+        "width": 768,
+        "height": 1024
+      },
+      {
+        "path": "screenshots/mobile/filtro-status-aberto.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "path": "screenshots/mobile-320/filtro-status-aberto.png",
+        "width": 320,
+        "height": 640
       }
     ],
+    "contract_filters": {
+      "shared_component": "FilterMultiSelect",
+      "status_selection_applies_to_table": true,
+      "cancel_discards_pending_selection": true,
+      "operator_selection_applies_to_table": true,
+      "next_30_days_with_no_matches_shows_empty_state": true,
+      "widths_tested": ["1920x1080", "768x1024", "390x844", "320x640"],
+      "dark_theme_status_dialog_checked_state": true,
+      "document_horizontal_overflow": false
+    },
     "drawer_internal_scroll_verified_at_320px": true,
     "importer_internal_scroll_verified_at_320px": true,
     "document_horizontal_overflow": false,
@@ -879,6 +927,41 @@
     },
     {
       "path": "screenshots/titular/holder-form-mobile-320-bottom-light-viewport.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/desktop/filtro-status-aberto.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/filtro-status-aberto-dark.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/filtro-operadoras-aberto.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/filtro-periodo-aberto.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/tablet/filtro-status-aberto.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/mobile/filtro-status-aberto.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile-320/filtro-status-aberto.png",
       "width": 320,
       "height": 640
     }

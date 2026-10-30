@@ -20,8 +20,6 @@ export default function HomeAudience({
   onQuote: (kind: ContractKind) => void;
 }) {
   const [selected, setSelected] = useState<ContractKind>("PF");
-  const profile =
-    homeAudiences.find(({ kind }) => kind === selected) ?? homeAudiences[0];
   return (
     <section
       id="para-quem"
@@ -55,7 +53,7 @@ export default function HomeAudience({
                 <Radio
                   key={kind}
                   value={kind}
-                  aria-controls="audience-panel"
+                  aria-controls={`audience-panel-${kind}`}
                   label={
                     <span className="home-audience-option">
                       <span className="home-icon">
@@ -73,53 +71,62 @@ export default function HomeAudience({
               ))}
             </RadioGroup>
           </fieldset>
-          <div
-            id="audience-panel"
-            role="region"
-            aria-labelledby={`audience-label-${selected}`}
-            className="home-audience-panel"
-          >
-            <div className="home-audience-copy">
-              <Text className="home-eyebrow home-eyebrow-tail">
-                {profile.label}
-              </Text>
-              <Heading
-                family="display"
-                level={3}
-                className="home-audience-title"
-              >
-                {profile.title}
-                <br /> <em>{profile.emphasis}</em>
-              </Heading>
-              <Text className="home-lead">{profile.description}</Text>
-              <ul className="home-profile-benefits">
-                {profile.benefits.map((benefit, index) => {
-                  const Icon = homeBenefitIcons[index];
-                  return (
-                    <li key={benefit}>
-                      <span className="home-icon">
-                        <Icon aria-hidden="true" />
-                      </span>
-                      {benefit}
-                    </li>
-                  );
-                })}
-              </ul>
-              <Button type="button" size="lg" onClick={() => onQuote(selected)}>
-                {profile.cta}
-                <ChevronRight className="kds-control-icon" aria-hidden="true" />
-              </Button>
-            </div>
-            <div className="home-audience-photo">
-              <Image
+          <div className="home-audience-slides">
+            {homeAudiences.map((profile) => (
+              <div
                 key={profile.kind}
-                src={profile.photo}
-                alt={profile.alt}
-                width={1122}
-                height={1402}
-                loading="lazy"
-              />
-            </div>
+                id={`audience-panel-${profile.kind}`}
+                role="region"
+                aria-labelledby={`audience-label-${profile.kind}`}
+                aria-hidden={profile.kind !== selected}
+                className="home-audience-panel"
+              >
+                <div className="home-audience-copy">
+                  <Text className="home-eyebrow home-eyebrow-tail">
+                    {profile.label}
+                  </Text>
+                  <Heading
+                    family="display"
+                    level={3}
+                    className="home-audience-title"
+                  >
+                    {profile.title}
+                    <br /> <em>{profile.emphasis}</em>
+                  </Heading>
+                  <Text className="home-lead">{profile.description}</Text>
+                  <ul className="home-profile-benefits">
+                    {profile.benefits.map((benefit, index) => {
+                      const Icon = homeBenefitIcons[index];
+                      return (
+                        <li key={benefit}>
+                          <span className="home-icon">
+                            <Icon aria-hidden="true" />
+                          </span>
+                          {benefit}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => onQuote(profile.kind)}
+                  >
+                    {profile.cta}
+                    <ChevronRight className="kds-control-icon" aria-hidden="true" />
+                  </Button>
+                </div>
+                <div className="home-audience-photo">
+                  <Image
+                    src={profile.photo}
+                    alt={profile.alt}
+                    width={1122}
+                    height={1402}
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

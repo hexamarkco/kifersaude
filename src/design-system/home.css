@@ -105,7 +105,7 @@
 /* 03 — One shared panel, three accessible profile choices */
 .kifer-home .home-audience { padding-block: clamp(2.5rem, 3vw, 3.5rem); }
 .kifer-home .home-audience .home-section-intro .home-title { font-size: clamp(2rem, 2.7vw, 3.25rem); }
-.kifer-home .home-audience-layout { display: grid; grid-template-columns: 21.5% 78.5%; }
+.kifer-home .home-audience-layout { display: grid; grid-template-columns: 21.5% minmax(0, 1fr); gap: var(--space-4); }
 .kifer-home .home-audience-selector { border: 1px solid var(--border-default); border-radius: var(--radius-xl); padding: var(--space-3); background: var(--home-paper); }
 .kifer-home .home-audience-selector .kds-radio-group { height: 100%; gap: 0; }
 .kifer-home .home-audience-selector .kds-radio { flex: 1; display: flex; align-items: center; position: relative; padding: var(--space-6); border-radius: var(--radius-lg); transition: background 180ms; }
@@ -119,16 +119,19 @@
 .kifer-home .home-audience-option .home-icon { margin-bottom: var(--space-1); }
 .kifer-home .home-audience-arrow { position: absolute; right: var(--space-4); top: 50%; width: 1.2rem; height: 1.2rem; }
 .kifer-home .kds-radio-checked .home-audience-arrow { color: var(--brand-primary); }
-.kifer-home .home-audience-panel { position: relative; display: grid; grid-template-columns: 53% 47%; align-items: center; border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--bg-surface); overflow: clip; min-height: 34rem; }
-.kifer-home .home-audience-copy { position: relative; z-index: 1; padding: clamp(1.75rem, 2.5vw, 3rem); padding-right: var(--space-4); }
+/* Inactive slides reserve their content size; shared rows keep every profile aligned. */
+.kifer-home .home-audience-slides { display: grid; grid-template-rows: repeat(5, auto); min-width: 0; }
+.kifer-home .home-audience-panel { grid-area: 1 / 1 / -1 / -1; position: relative; display: grid; grid-template-columns: minmax(0, 53fr) minmax(0, 47fr); grid-template-rows: subgrid; border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--bg-surface); overflow: clip; min-height: 34rem; }
+.kifer-home .home-audience-panel[aria-hidden="true"] { visibility: hidden; pointer-events: none; }
+.kifer-home .home-audience-copy { grid-column: 1; grid-row: 1 / span 5; display: grid; grid-template-rows: subgrid; position: relative; z-index: 1; padding: clamp(1.75rem, 2.5vw, 3rem); padding-right: var(--space-4); }
 .kifer-home .home-audience-title { font: 500 clamp(2rem, 2.85vw, 3.35rem) / 1.15 var(--font-display); letter-spacing: -0.04em; margin-block: var(--space-6) var(--space-5); }
 .kifer-home .home-audience-copy > .home-lead { font-size: clamp(0.9375rem, 1.2vw, 1.25rem); }
 .kifer-home .home-profile-benefits { display: grid; gap: var(--space-1); margin-block: var(--space-4) var(--space-5); }
 .kifer-home .home-profile-benefits li { display: flex; align-items: center; gap: var(--space-4); color: var(--text-secondary); font-size: clamp(0.8125rem, 1.1vw, 1.0625rem); }
 .kifer-home .home-profile-benefits .home-icon { width: 2.4rem; height: 2.4rem; }
 .kifer-home .home-profile-benefits svg { width: 1.3rem; height: 1.3rem; }
-.kifer-home .home-audience-copy .kds-button { white-space: normal; --control-height-lg: 3.5rem; }
-.kifer-home .home-audience-photo { height: 100%; min-width: 0; border-radius: 65% 0 46% 49%; overflow: hidden; position: relative; }
+.kifer-home .home-audience-copy .kds-button { align-self: stretch; justify-self: start; white-space: normal; --control-height-lg: 3.5rem; }
+.kifer-home .home-audience-photo { grid-column: 2; grid-row: 1 / -1; height: 100%; min-width: 0; border-radius: 65% 0 46% 49%; overflow: hidden; position: relative; }
 .kifer-home .home-audience-photo img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; object-position: center; }
 .kifer-home .home-audience-panel::after { content: ''; pointer-events: none; position: absolute; width: 70%; height: 45%; border: 1px solid var(--brand-primary-border); border-radius: 50%; bottom: -39%; right: -10%; transform: rotate(-25deg); }
 
@@ -348,7 +351,7 @@
   .kifer-home .home-audience-selector .kds-radio { padding: var(--space-4); }
   .kifer-home .home-audience-option { font-size: 0.875rem; }
   .kifer-home .home-audience-option strong { font-size: 0.8125rem; }
-  .kifer-home .home-audience-panel { min-height: 34rem; grid-template-columns: 56% 44%; }
+  .kifer-home .home-audience-panel { min-height: 34rem; grid-template-columns: minmax(0, 56fr) minmax(0, 44fr); }
   .kifer-home .home-audience-copy { padding: var(--space-6); padding-right: var(--space-4); }
   .kifer-home .home-audience-copy .kds-button { font-size: 0.8125rem; }
   .kifer-home .home-process-line ol { gap: var(--space-6); }
@@ -388,7 +391,7 @@
   .kifer-home .home-trust-list li:not(:last-child)::after { top: 3.5rem; left: 1.5rem; }
   .kifer-home .home-trust-list h3 { font-size: 1.5rem; }
   .kifer-home .home-partner-logos a { padding-inline: var(--space-5); }
-  .kifer-home .home-audience-layout { display: block; }
+  .kifer-home .home-audience-layout { grid-template-columns: minmax(0, 1fr); }
   .kifer-home .home-audience-selector { padding: var(--space-2); }
   .kifer-home .home-audience-selector .kds-radio-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
   .kifer-home .home-audience-selector .kds-radio { border: 0; padding: var(--space-4); justify-content: center; }
@@ -399,7 +402,7 @@
   .kifer-home .home-audience-option .home-icon { width: 2rem; height: 2rem; margin: 0; }
   .kifer-home .home-audience-option .home-icon svg { width: 1.3rem; height: 1.3rem; }
   .kifer-home .home-audience-option strong { font-size: 0.75rem; letter-spacing: 0.05em; }
-  .kifer-home .home-audience-panel { min-height: 32rem; grid-template-columns: 55% 45%; }
+  .kifer-home .home-audience-panel { min-height: 32rem; grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); }
   .kifer-home .home-process-line ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); }
   .kifer-home .home-process-line > svg { display: none; }
   .kifer-home .home-testimonial-layout { grid-template-columns: 1fr; }
@@ -500,14 +503,15 @@
   .kifer-home .home-audience-selector .kds-radio { padding: var(--space-3) var(--space-1); min-height: 3.5rem; }
   .kifer-home .home-audience-option { flex-direction: column; gap: var(--space-1); }
   .kifer-home .home-audience-option strong { font-size: 0.75rem; letter-spacing: 0.02em; text-align: center; }
-  .kifer-home .home-audience-panel { display: flex; flex-direction: column; min-height: 0; }
+  .kifer-home .home-audience-slides { grid-template-rows: repeat(5, auto) 20rem; }
+  .kifer-home .home-audience-panel { grid-template-columns: minmax(0, 1fr); min-height: 0; }
   .kifer-home .home-audience-copy { padding: var(--space-6) var(--space-5); width: 100%; }
   .kifer-home .home-audience-title { font-size: 2.1rem; margin-block: var(--space-4); }
   .kifer-home .home-profile-benefits { margin-block: var(--space-5); gap: var(--space-3); }
   .kifer-home .home-profile-benefits li { font-size: 0.8125rem; gap: var(--space-3); }
   .kifer-home .home-profile-benefits .home-icon { width: 2.25rem; height: 2.25rem; }
   .kifer-home .home-audience-copy .kds-button { width: 100%; --control-padding-lg: 0.75rem; font-size: 0.8125rem; }
-  .kifer-home .home-audience-photo { width: 100%; height: 20rem; border-radius: 45% 0 0 0; }
+  .kifer-home .home-audience-photo { grid-column: 1; grid-row: 6; width: 100%; height: 20rem; border-radius: 45% 0 0 0; }
   .kifer-home .home-audience-photo img { object-position: center 38%; }
   .kifer-home .home-audience-panel::after { display: none; }
   .kifer-home .home-process .home-section-intro { margin-bottom: var(--space-10); }

@@ -100,9 +100,38 @@ test('libera o botão de salvar quando a criação da configuração falha por e
     saveButton.click();
   });
 
+  const error = await waitForBodyText('Falha de rede');
+  assert.ok(error);
+  assert.ok(document.body.querySelector('[role="alert"]'));
+
   const restoredButton = await waitForBodyText('Criar versão e ativar');
   assert.ok(restoredButton instanceof HTMLButtonElement);
   assert.equal(restoredButton.disabled, false);
+  view.unmount();
+});
+
+test('associa a validação do prompt ao campo e leva o operador até ele', async () => {
+  const view = render(
+    <FeatureEditorDrawer
+      feature={feature}
+      onClose={() => undefined}
+      onSaved={() => undefined}
+    />,
+  );
+
+  const prompt = await waitForSelector<HTMLTextAreaElement>('textarea[placeholder="Descreva como a IA deve agir nesta tarefa..."]');
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(prompt, '   ');
+    prompt.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  const saveButton = await waitForBodyText('Criar versão e ativar');
+  assert.ok(saveButton instanceof HTMLButtonElement);
+  await act(async () => saveButton.click());
+
+  assert.equal(prompt.getAttribute('aria-invalid'), 'true');
+  assert.ok(document.body.textContent?.includes('Preencha as instruções da IA'));
+  assert.equal(document.activeElement, prompt);
   view.unmount();
 });
 

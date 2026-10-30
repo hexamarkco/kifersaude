@@ -1,17 +1,24 @@
-import { Heading, Text, FieldLabel } from '../../../../design-system';
-import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, RotateCcw, Save } from "lucide-react";
+import { RotateCcw, Save } from "lucide-react";
 
 import {
+  Alert,
+  Badge,
   Button,
+  Card,
   Drawer,
   DrawerBody,
   DrawerFooter,
   DrawerHeader,
   Field,
+  FieldLabel,
+  Heading,
   Input,
+  PageActions,
+  Radio,
   Select,
+  Skeleton,
+  Text,
   Textarea,
 } from "../../../../design-system";
 import { toast } from "../../../../lib/toast";
@@ -54,11 +61,11 @@ type ProviderModelOption = {
 const isProviderSlug = (value: string | undefined): value is AiProviderSlug =>
   value === "openai";
 
-const SOURCE_BADGE_CLASSES: Record<AiModelResolutionSource, string> = {
-  feature: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-active)]",
-  ai_routing: "bg-[var(--info-soft)] text-[var(--info-text)]",
-  provider_default: "bg-[var(--text-muted)]/10 text-[var(--text-muted)]",
-  fallback: "bg-[var(--warning-soft)] text-[var(--warning-text)]",
+const SOURCE_BADGE_TONES: Record<AiModelResolutionSource, "accent" | "info" | "neutral" | "warning"> = {
+  feature: "accent",
+  ai_routing: "info",
+  provider_default: "neutral",
+  fallback: "warning",
 };
 
 /**
@@ -94,6 +101,9 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
   const [reasoningEffort, setReasoningEffort] = useState<AiReasoningEffort | null>(null);
   const [effectiveModel, setEffectiveModel] = useState<EffectiveModel | null>(null);
   const [saving, setSaving] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const [history, setHistory] = useState<Array<{ version: number; is_active: boolean; created_at: string }>>([]);
 
   const [providerModels, setProviderModels] = useState<ProviderModelOption[]>([]);
@@ -248,13 +258,33 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
     }
   }, [loadedProvider, reasoningProvider, providerError, reasoningEffort, supportedReasoningEfforts]);
 
+  useEffect(() => {
+    if (!promptError) return;
+    const field = promptInputRef.current?.parentElement;
+    const scrollContainer = field?.closest<HTMLElement>(".kds-drawer-body");
+    if (!field || !scrollContainer) return;
+
+    const fieldBounds = field.getBoundingClientRect();
+    const scrollBounds = scrollContainer.getBoundingClientRect();
+    const bottomOverflow = fieldBounds.bottom - (scrollBounds.bottom - 12);
+    if (bottomOverflow > 0) scrollContainer.scrollTop += bottomOverflow;
+  }, [promptError]);
+
   const handleSave = useCallback(async () => {
-    if (!prompt.trim()) return toast.error("Preencha as instruções da IA");
+    if (!prompt.trim()) {
+      setPromptError("Preencha as instruções da IA");
+      promptInputRef.current?.focus();
+      promptInputRef.current?.parentElement?.scrollIntoView?.({ block: "end" });
+      return;
+    }
+    setPromptError(null);
+    setSaveError(null);
 
     if (modelOverrideEnabled) {
       const validation = await aiConfigService.validateModelOverride(provider, model, taskType);
       if (!validation.valid) {
-        return toast.error(validation.error ?? "Modelo inválido");
+        setSaveError(validation.error ?? "Modelo inválido");
+        return;
       }
     }
 
@@ -272,7 +302,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       });
 
       if (error) {
-        toast.error(error);
+        setSaveError(error);
         return;
       }
 
@@ -282,7 +312,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
       onSaved();
     } catch (error) {
       console.error("Erro ao salvar configuração da IA:", error);
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a configuração.");
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar a configuração.");
     } finally {
       setSaving(false);
     }
@@ -309,6 +339,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         if (!open) onClose();
       }}
       size="lg"
+      className="kds-ai-editor-drawer"
     >
       <div className="flex h-full min-h-0 flex-col">
         {/* Header */}
@@ -346,7 +377,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           )}
 
           {/* Model Configuration */}
-          <div className="rounded-lg border border-[var(--border-subtle)] p-4 space-y-3">
+          <Card padding="sm" className="space-y-3">
             <div className="flex items-center justify-between">
               <Text className="text-sm font-medium text-[var(--text-primary)]">Modelo</Text>
               <span className="text-xs text-[var(--text-muted)]">
@@ -364,7 +395,6 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                     setModelOverrideEnabled(false);
                     if (effectiveModel?.source === "feature") setReasoningEffort(null);
                   }}
-                  className="accent-[var(--brand-primary)]"
                 />
                 <span className="text-sm text-[var(--text-primary)]">Usar roteamento padrão</span>
               </FieldLabel>
@@ -374,7 +404,6 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   name={`model-mode-${feature.key}`}
                   checked={modelOverrideEnabled}
                   onChange={() => setModelOverrideEnabled(true)}
-                  className="accent-[var(--brand-primary)]"
                 />
                 <span className="text-sm text-[var(--text-primary)]">Personalizado</span>
               </FieldLabel>
@@ -383,20 +412,19 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
             {modelOverrideEnabled && (
               <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
                 <Field label="Provedor">
-                  <div className="flex h-10 items-center rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)]">
-                    OpenAI
-                  </div>
+                  <Input value="OpenAI" readOnly aria-label="Provedor de IA" />
                 </Field>
                 <Field label="Modelo">
                   {providerLoading ? (
-                    <div className="flex h-10 items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-muted)]">
-                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
-                      Carregando modelos...
-                    </div>
+                    <Skeleton variant="control" label="Carregando modelos" />
                   ) : providerError ? (
-                    <div className="rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-text)]">
+                    <Alert
+                      tone="danger"
+                      title="Não foi possível carregar os modelos"
+                      action={<Button variant="secondary" size="sm" onClick={() => loadProviderModels(provider)}>Tentar novamente</Button>}
+                    >
                       {providerError}
-                    </div>
+                    </Alert>
                   ) : (
                     <Select
                       value={model}
@@ -445,21 +473,19 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
 
             {/* Warnings for deprecated / no-pricing models */}
             {modelOverrideEnabled && isSelectedModelDeprecated && (
-              <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--warning-border)] bg-[var(--warning-soft)] p-2.5 text-xs text-[var(--warning-text)]">
-                <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
+              <Alert tone="warning" title="Modelo descontinuado">
                 <Text>Este modelo foi descontinuado pelo provedor. Considere trocar para uma versão mais recente.</Text>
-              </div>
+              </Alert>
             )}
             {modelOverrideEnabled && isSelectedModelWithoutPricing && !isSelectedModelDeprecated && (
-              <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--info-border)] bg-[var(--info-soft)] p-2.5 text-xs text-[var(--info-text)]">
-                <AlertTriangle className="mt-0.3 h-3.5 w-3.5 shrink-0" />
+              <Alert tone="info" title="Preço indisponível">
                 <Text>O uso de texto deste modelo será registrado, mas o custo estimado só ficará disponível quando o preço for cadastrado.</Text>
-              </div>
+              </Alert>
             )}
 
             {/* Effective model display */}
             {effectiveModel && (
-              <div className="space-y-1 rounded-[var(--radius-md)] bg-[var(--bg-surface-muted)] p-2.5 text-xs">
+              <Card padding="sm" variant="muted" className="space-y-1 text-xs">
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--text-muted)]">Modelo em uso</span>
                   <span className="font-medium text-[var(--text-primary)]">
@@ -468,26 +494,39 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--text-muted)]">Origem</span>
-                  <span className={`inline-block rounded px-1.5 py-0.5 font-medium ${SOURCE_BADGE_CLASSES[effectiveModel.source]}`}>
+                  <Badge tone={SOURCE_BADGE_TONES[effectiveModel.source]} size="sm">
                     {AI_MODEL_RESOLUTION_SOURCE_LABELS[effectiveModel.source]}
-                  </span>
+                  </Badge>
                 </div>
                 {effectiveModel.source === "ai_routing" && (
                   <Text className="text-[var(--text-muted)]">
                     Funcionalidade: {feature.key.replace(".", "_")}
                   </Text>
                 )}
-              </div>
+              </Card>
             )}
-          </div>
+          </Card>
+
+          {saveError && (
+            <Alert tone="danger" title="Não foi possível salvar" role="alert">
+              {saveError}
+            </Alert>
+          )}
 
           {/* Prompt */}
-          <Field label="Instruções da IA" description="Instrução principal enviada para a IA.">
+          <Field
+            label="Instruções da IA"
+            description="Instrução principal enviada para a IA."
+            error={promptError ?? undefined}
+          >
             <Textarea
+              ref={promptInputRef}
               value={prompt}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                setPrompt(e.target.value);
+                if (e.target.value.trim()) setPromptError(null);
+              }}
               rows={10}
-              className="font-mono"
               placeholder="Descreva como a IA deve agir nesta tarefa..."
             />
           </Field>
@@ -498,7 +537,6 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               value={outputInstructions}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setOutputInstructions(e.target.value)}
               rows={6}
-              className="font-mono"
               placeholder="Descreva o formato e as regras que a resposta deve seguir."
             />
           </Field>
@@ -540,15 +578,10 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               </Text>
               <div className="space-y-1">
                 {history.slice(0, 5).map((h) => (
-                  <div
-                    key={h.version}
-                    className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--text-muted)]"
-                  >
+                  <div key={h.version} className="kds-ai-version-row">
                     <span className="font-mono">v{h.version}</span>
                     {h.is_active && (
-                      <span className="rounded-full bg-[var(--success-soft)] px-1.5 py-0.5 font-medium text-[var(--success-text)]">
-                        Ativo
-                      </span>
+                      <Badge tone="success" size="sm">Ativa</Badge>
                     )}
                     <span className="ml-auto">
                       {new Date(h.created_at).toLocaleDateString("pt-BR")}
@@ -560,7 +593,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
           )}
 
           {/* Defaults reference */}
-          <div className="rounded-lg border border-[var(--border-subtle)] p-3">
+          <Card padding="sm" variant="muted" className="space-y-1">
             <Text className="text-xs font-medium text-[var(--text-secondary)] mb-1">
               Valores padrão do sistema:
             </Text>
@@ -568,24 +601,26 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
               <Text>Variação das respostas: {feature.default_temperature}</Text>
               <Text>Limite de texto (tokens): {feature.default_max_output_tokens}</Text>
             </div>
-          </div>
+          </Card>
         </DrawerBody>
 
         {/* Footer */}
-        <DrawerFooter className="flex items-center justify-between">
+        <DrawerFooter className="kds-ai-editor-footer">
           <Button variant="ghost" size="sm" onClick={handleResetToDefaults}>
             <RotateCcw className="kds-control-icon" />
             Restaurar padrão
           </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {!saving && <Save className="kds-control-icon" />}
-              {saving ? "Salvando..." : "Criar versão e ativar"}
-            </Button>
-          </div>
+          <PageActions
+            placement="form"
+            secondary={[{ label: "Cancelar", onClick: onClose }]}
+            primary={{
+              label: saving ? "Salvando..." : "Criar versão e ativar",
+              icon: Save,
+              onClick: handleSave,
+              disabled: saving,
+              loading: saving,
+            }}
+          />
         </DrawerFooter>
       </div>
     </Drawer>

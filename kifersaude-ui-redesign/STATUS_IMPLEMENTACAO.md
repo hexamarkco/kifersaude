@@ -2,9 +2,16 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **60 contextos foram comparados** e **100 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **61 contextos foram comparados** e **99 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
+
+### Configurações — IA concluída como página (30/10/2026)
+
+- Revisei a página `/painel/automacoes?tab=ai` de ponta a ponta antes de avançar para outro módulo: lista e busca, resumo, configurações globais, editor em drawer, seletores e tooltips, confirmação de ativação/desativação, importação e estados de carregamento, erro e validação. A composição usa a tela e os componentes reais dentro do shell do CRM.
+- Corrigi o feedback de falha ao salvar as instruções globais: o erro fica junto ao campo e limpa quando o operador altera o texto. A validação do prompt leva o campo para a área visível e mostra o erro abaixo dele. Toasts do drawer ficam acima do rodapé fixo.
+- Playwright registrou **40 capturas** desktop-first (1920×1080), tablet (768×1024), mobile (390×844 e 320×640) e tema escuro no desktop, incluindo página completa e os overlays separados. Busca, edição, restauração local de padrões, exportação sintética e demais estados foram exercitados. O teste bloqueou gravações e tráfego externo; ativações, desativações e importação foram canceladas. Nenhum overflow horizontal foi encontrado.
+- Testes focados: **24/24** em seis arquivos. Typecheck e build passaram. ESLint passou nos arquivos TS/TSX; CSS está fora da configuração do ESLint. O build mantém o aviso conhecido do chunk vendor acima de 500 kB. Sessão autenticada e persistência de produção não foram verificadas. [Capturas, interações e limitações](validacao/revisao-visual/config-ai/README.md) · [Cobertura](validacao/revisao-visual/config-ai/coverage.json).
 
 ### Configurações — visão geral de integrações (30/10/2026)
 

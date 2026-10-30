@@ -1,13 +1,7 @@
-import { ButtonGroup, Heading, Text } from '../../../../design-system';
+import { Badge, ButtonGroup, ConfirmDialog, Heading, IconButton, Text } from '../../../../design-system';
 import { useState } from "react";
-import { Brain, Pencil, Power, PowerOff } from "lucide-react";
+import { Pencil, Power, PowerOff } from "lucide-react";
 
-import {
-  Badge,
-  Card,
-  ConfirmDialog,
-  IconButton,
-} from "../../../../design-system";
 import type { AiFeatureWithConfig, AiFeatureCategory } from "../aiConfigTypes";
 import { AI_FEATURE_LABELS } from "../aiConfigTypes";
 import { getAiFeatureDisplayState } from "../aiFeatureState";
@@ -24,13 +18,14 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
 
   return (
     <>
-    <Card className="overflow-hidden">
-      <div className="border-b border-[var(--border-subtle)] px-4 py-2.5">
+    <section className="kds-ai-category-section" aria-label={category.label}>
+      <div className="kds-ai-category-heading">
         <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
           {category.label}
         </Heading>
+        <Badge tone="neutral" size="sm">{category.features.length}</Badge>
       </div>
-      <div className="divide-y divide-[var(--border-subtle)]">
+      <div className="kds-ai-feature-list">
         {category.features.map((feature) => {
           const state = getAiFeatureDisplayState(feature);
           const isLegacy = state === "legacy";
@@ -41,45 +36,37 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
           return (
             <div
               key={feature.id}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--bg-surface-muted)]"
+              className="kds-ai-feature-row"
             >
-              <Brain className={`h-4 w-4 shrink-0 ${isActive ? "text-[var(--brand-primary)]" : "text-[var(--text-muted)]"}`} />
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--text-primary)] truncate">
+              <div className="kds-ai-feature-copy">
+                <div className="kds-ai-feature-title-row">
+                  <span className="kds-ai-feature-title">
                     {label}
                   </span>
-                  {displayConfig ? (
-                    <Badge tone={isActive ? "success" : "neutral"} size="sm">
-                      v{displayConfig.version}
-                    </Badge>
-                  ) : (
+                  {displayConfig && (
                     <Badge tone="neutral" size="sm">
-                      Sem configuração
+                      v{displayConfig.version}
                     </Badge>
                   )}
                 </div>
                 {feature.description && (
-                  <Text className="mt-0.5 text-xs text-[var(--text-muted)] truncate">
+                  <Text className="kds-ai-feature-description">
                     {feature.description}
                   </Text>
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
-                {displayConfig && (
-                  <Badge
-                    tone={isActive ? "success" : "neutral"}
-                    size="sm"
-                  >
-                    {isLegacy ? "Desativada" : isActive ? "Ativo" : "Inativo"}
-                  </Badge>
-                )}
-                <ButtonGroup size="sm" aria-label="Ações da configuração">
+              <div className="kds-ai-feature-actions">
+                <Badge
+                  tone={isLegacy ? "neutral" : isActive ? "success" : displayConfig ? "warning" : "neutral"}
+                  size="sm"
+                >
+                  {isLegacy ? "Legada" : isActive ? "Ativa" : displayConfig ? "Inativa" : "Não configurada"}
+                </Badge>
+                <ButtonGroup size="sm" aria-label={`Ações para ${label}`}>
                 {!isLegacy && (
                   <IconButton
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={() => onEdit(feature)}
                     title="Configurar"
@@ -90,7 +77,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
                 )}
                 {!isLegacy && displayConfig && (
                   <IconButton
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={() =>
                       setConfirmTarget({
@@ -114,7 +101,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
           );
         })}
       </div>
-    </Card>
+    </section>
 
     <ConfirmDialog
       open={!!confirmTarget}

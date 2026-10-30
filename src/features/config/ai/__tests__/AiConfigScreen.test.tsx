@@ -37,19 +37,21 @@ const waitForBodyText = async (text: string) => {
   }
 };
 
-test('libera a tela e permite tentar novamente quando a carga inicial falha por exceção', async () => {
+test('mostra o estado de erro e permite tentar novamente após falha na carga inicial', async () => {
   const view = render(
     <MemoryRouter>
       <AiConfigScreen />
     </MemoryRouter>,
   );
 
-  await waitForBodyText('Nenhuma funcionalidade encontrada.');
+  await waitForBodyText('Não foi possível carregar as funcionalidades');
 
-  const refreshButton = document.body.querySelector<HTMLButtonElement>(
-    'button[aria-label="Atualizar configurações de IA"]',
-  );
-  assert.ok(refreshButton);
-  assert.equal(refreshButton.disabled, false);
+  const retryButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => button.textContent?.includes('Tentar novamente'));
+  assert.ok(retryButton);
+  assert.equal(retryButton.disabled, false);
+
+  await act(async () => retryButton.click());
+  await waitForBodyText('Não foi possível carregar as funcionalidades');
   view.unmount();
 });

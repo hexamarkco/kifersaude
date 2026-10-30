@@ -417,15 +417,26 @@
       "route": "/painel/automacoes?tab=ai",
       "kind": "pages",
       "components": [
-        "src/features/config/ai/AiConfigScreen.tsx"
+        "src/features/config/ai/AiConfigScreen.tsx",
+        "src/features/config/ai/components/FeatureListCard.tsx",
+        "src/features/config/ai/components/GlobalConfigSection.tsx",
+        "src/features/config/ai/components/FeatureEditorDrawer.tsx"
       ],
       "references": [
         "references/desktop/page--config-ai.png",
         "references/mobile/page--config-ai.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-ai/README.md",
+        "validacao/revisao-visual/config-ai/coverage.json"
+      ],
+      "notes": [
+        "Página comparada à referência desktop e documentada com 38 capturas de viewport, página completa, tema escuro, formulário global, drawer e estados interativos nas larguras 1920, 768, 390 e 320 px.",
+        "O editor de funcionalidade, seletor de modelo/raciocínio, busca, importação e confirmações usam os componentes reais. Operações de ativar, desativar e importar foram canceladas; gravações e chamadas externas foram bloqueadas na fixture.",
+        "Falhas ao salvar as configurações globais agora aparecem junto ao respectivo campo e não encobrem o botão de ação.",
+        "A rota integrada autenticada e persistência com dados reais não foram verificadas; nenhuma outra página ou regra comercial foi alterada."
+      ]
     },
     {
       "id": "page--config-access",

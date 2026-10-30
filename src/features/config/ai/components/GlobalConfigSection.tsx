@@ -1,11 +1,13 @@
-import { Heading, Text } from '../../../../design-system';
 import { useCallback, useState } from "react";
 import { Save } from "lucide-react";
 
 import {
-  Button,
+  Alert,
   Card,
-  Input,
+  Field,
+  PageActions,
+  SectionHeader,
+  Text,
   Textarea,
 } from "../../../../design-system";
 import { toast } from "../../../../lib/toast";
@@ -17,99 +19,118 @@ type Props = {
   onReload: () => void;
 };
 
-const GLOBAL_CONFIG_META: Record<string, { label: string; description: string; type: "text" | "textarea" }> = {
+const GLOBAL_CONFIG_META: Record<string, { label: string; description: string }> = {
   global_instructions: {
     label: "Instruções globais",
-    description: "Diretrizes gerais que se aplicam a todas as funcionalidades de IA.",
-    type: "textarea",
+    description: "Diretrizes gerais aplicadas a todas as funcionalidades de IA.",
   },
   global_style: {
     label: "Estilo global",
-    description: "Tom, formatação e estilo padrão para todas as respostas.",
-    type: "textarea",
+    description: "Tom e formatação padrão para as respostas geradas.",
   },
 };
 
 export default function GlobalConfigSection({ configs, onReload }: Props) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const map: Record<string, string> = {};
-    for (const c of configs) map[c.key] = c.value;
+    for (const config of configs) map[config.key] = config.value;
     return map;
   });
-  const [saving, setSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
 
   const handleSave = useCallback(async (key: string) => {
-    setSaving(true);
-    const { error } = await aiConfigService.updateGlobalConfig(key, values[key] ?? "");
-    setSaving(false);
+    setSavingKey(key);
+    setSaveErrors((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+    try {
+      const { error } = await aiConfigService.updateGlobalConfig(key, values[key] ?? "");
+      if (error) {
+        setSaveErrors((previous) => ({ ...previous, [key]: error }));
+        return;
+      }
 
-    if (error) return toast.error(error);
-    toast.success("Salvo com sucesso.");
-    onReload();
-  }, [values, onReload]);
-
-  const meta = GLOBAL_CONFIG_META;
+      toast.success("Configuração global atualizada.");
+      onReload();
+    } catch (error) {
+      setSaveErrors((previous) => ({
+        ...previous,
+        [key]: error instanceof Error ? error.message : "Não foi possível salvar a configuração global.",
+      }));
+    } finally {
+      setSavingKey(null);
+    }
+  }, [onReload, values]);
 
   return (
-    <div className="space-y-4">
-      {Object.entries(meta).map(([key, info]) => {
-        const existing = configs.find((c) => c.key === key);
-        const val = values[key] ?? existing?.value ?? "";
+    <Card padding="md" className="kds-ai-global-card">
+      <SectionHeader
+        as="h3"
+        title="Configurações globais"
+        description="Diretrizes compartilhadas por todos os recursos de inteligência artificial."
+        descriptionPlacement="visible"
+      />
 
-        return (
-          <Card key={key} className="p-5 space-y-3">
-            <div>
-              <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
-                {info.label}
-              </Heading>
-              <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {info.description}
-              </Text>
-            </div>
+      <div className="kds-ai-global-fields">
+        {Object.entries(GLOBAL_CONFIG_META).map(([key, info], index) => {
+          const existing = configs.find((config) => config.key === key);
+          const value = values[key] ?? existing?.value ?? "";
+          const savedValue = existing?.value ?? "";
+          const saving = savingKey === key;
 
-            {info.type === "textarea" ? (
-              <Textarea
-                value={val}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                rows={6}
-                className="font-mono"
-                placeholder={`Digite as ${info.label.toLowerCase()}...`}
-              />
-            ) : (
-              <Input
-                value={val}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                placeholder={`Digite...`}
-              />
-            )}
-
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                onClick={() => handleSave(key)}
-                disabled={saving}
+          return (
+            <section className="kds-ai-global-field" key={key} aria-label={info.label}>
+              <Field
+                label={info.label}
+                description={info.description}
+                descriptionPlacement="tooltip"
               >
-                {!saving && <Save className="kds-control-icon" />}
-                {saving ? "Salvando..." : "Salvar"}
-              </Button>
-            </div>
+                <Textarea
+                  value={value}
+                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {
+                    setValues((previous) => ({ ...previous, [key]: event.target.value }));
+                    setSaveErrors((previous) => {
+                      if (!(key in previous)) return previous;
+                      const next = { ...previous };
+                      delete next[key];
+                      return next;
+                    });
+                  }}
+                  rows={5}
+                  placeholder={`Digite ${info.label.toLowerCase()}...`}
+                />
+              </Field>
 
-            {existing && (
-              <Text className="text-xs text-[var(--text-muted)]">
-                Última atualização: {new Date(existing.updated_at).toLocaleString("pt-BR")}
-              </Text>
-            )}
-          </Card>
-        );
-      })}
+              {saveErrors[key] && (
+                <Alert tone="danger" title="Não foi possível salvar" role="alert" className="kds-ai-global-save-error">
+                  {saveErrors[key]}
+                </Alert>
+              )}
 
-      {Object.keys(meta).length === 0 && (
-        <Card className="p-8 text-center">
-          <Text className="text-sm text-[var(--text-secondary)]">
-            Nenhuma configuração global disponível.
-          </Text>
-        </Card>
-      )}
-    </div>
+              <div className="kds-ai-global-field-footer">
+                <Text className="kds-ai-global-updated">
+                  {existing
+                    ? `Atualizada em ${new Date(existing.updated_at).toLocaleString("pt-BR")}`
+                    : "Ainda não há uma versão personalizada."}
+                </Text>
+                <PageActions
+                  placement="header"
+                  primary={{
+                    label: index === 0 ? "Salvar instruções" : "Salvar estilo",
+                    icon: Save,
+                    onClick: () => handleSave(key),
+                    disabled: savingKey !== null || value === savedValue,
+                    loading: saving,
+                  }}
+                />
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </Card>
   );
 }

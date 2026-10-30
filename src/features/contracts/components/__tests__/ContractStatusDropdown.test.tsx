@@ -33,7 +33,7 @@ test('seletor de status usa o badge operacional e mantém a seleção interativa
   assert.equal(trigger.classList.contains('kds-button'), false);
 
   act(() => trigger.click());
-  assert.ok(document.body.querySelector('[role="dialog"][aria-label="Status do contrato CON-001"]'));
+  assert.ok(document.body.querySelector('[role="listbox"][aria-label="Status do contrato CON-001"]'));
   const cancelledOption = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="option"]')).find((option) => option.textContent?.trim() === 'Cancelado');
   assert.ok(cancelledOption);
   assert.ok(cancelledOption.querySelector('.kds-op-status-dot-only'));

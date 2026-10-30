@@ -85,6 +85,7 @@ import {
   OperationalMetricChip,
   OperationalStatusBadge,
   OperationalStatusDot,
+  OperationalStatusSelect,
   OpportunityCard,
   Pagination,
   Popover,
@@ -968,6 +969,9 @@ function Navigation() {
 
 function Data() {
   const [status, setStatus] = useState('');
+  const [compactStatus, setCompactStatus] = useState('active');
+  const [contextualStatus, setContextualStatus] = useState('review');
+  const [demoOperator, setDemoOperator] = useState('');
   const [owners, setOwners] = useState<string[]>([]);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -1145,8 +1149,8 @@ function Data() {
         <Specimen
           title="Indicadores e status"
           wide
-          description="Alinhe títulos, valores e contexto por linha de indicadores. Ícones usam o raio padrão; cor nunca é a única informação."
-          source="KpiCard / Badge / OperationalMetricChip / OperationalStatusBadge / OperationalStatusDot"
+          description="Alinhe títulos, valores e contexto por linha de indicadores. Status usam texto além da cor e um seletor único compartilhado entre Leads e Contratos."
+          source="KpiCard / Badge / OperationalMetricChip / OperationalStatusBadge / OperationalStatusDot / OperationalStatusSelect"
         >
           <div className="kds-kpi-grid grid-cols-1 xl:grid-cols-3">
             <KpiCard title="Vendas" subtitle="Contratos fechados" value="24" trend="80 leads recebidos" icon={<Users />} />
@@ -1179,6 +1183,53 @@ function Data() {
             </OperationalStatusBadge>
             <OperationalStatusDot statusColor="var(--warning-text)" />
             <Text size="sm">Aguardando retorno</Text>
+          </div>
+          <div className="ds-grid">
+            <Surface variant="muted" padding="sm" className="grid gap-3">
+              <Heading level={3}>Status simples</Heading>
+              <Text size="sm">Menu compacto para atualizar um status.</Text>
+              <OperationalStatusSelect
+                value={compactStatus}
+                options={[
+                  { value: 'active', label: 'Ativo', color: 'var(--success-text)' },
+                  { value: 'review', label: 'Em análise', color: 'var(--info-text)' },
+                  { value: 'documents', label: 'Aguardando documentos', color: 'var(--warning-text)' },
+                  { value: 'cancelled', label: 'Cancelado', color: 'var(--danger-text)' },
+                ]}
+                onValueChange={setCompactStatus}
+                triggerAriaLabel="Alterar status simples demonstrativo"
+                menuAriaLabel="Status simples demonstrativos"
+              />
+            </Surface>
+            <Surface variant="muted" padding="sm" className="grid gap-3">
+              <Heading level={3}>Status com contexto</Heading>
+              <Text size="sm">Campo auxiliar separado das opções de status.</Text>
+              <OperationalStatusSelect
+                value={contextualStatus}
+                options={[
+                  { value: 'active', label: 'Ativo', color: 'var(--success-text)' },
+                  { value: 'review', label: 'Em análise', color: 'var(--info-text)' },
+                  { value: 'documents', label: 'Aguardando documentos', color: 'var(--warning-text)' },
+                  { value: 'cancelled', label: 'Cancelado', color: 'var(--danger-text)' },
+                ]}
+                onValueChange={setContextualStatus}
+                triggerAriaLabel="Alterar status contextual demonstrativo"
+                menuAriaLabel="Status contextual demonstrativos"
+                menuSize="contextual"
+                beforeOptions={(
+                  <Field label="Responsável pela venda">
+                    <Select
+                      value={demoOperator}
+                      onChange={(event) => setDemoOperator(event.target.value)}
+                      options={[
+                        { value: '', label: 'Escolher responsável' },
+                        ...operatorOptions,
+                      ]}
+                    />
+                  </Field>
+                )}
+              />
+            </Surface>
           </div>
           <div className="ds-row">
             {(['sm', 'md', 'lg'] as const).map((size) => (

@@ -101,6 +101,8 @@ export { AppLoadingScreen, LoadingState, Skeleton } from './components/LoadingSt
 export type { AppLoadingScreenProps, LoadingStateProps, SkeletonProps } from './components/LoadingState';
 export { OperationalMetricChip, OperationalStatusBadge, OperationalStatusDot } from './components/Operational';
 export type { OperationalMetricChipProps, OperationalStatusBadgeProps, OperationalStatusDotProps, OperationalTone } from './components/Operational';
+export { OperationalStatusSelect } from './components/OperationalStatusSelect';
+export type { OperationalStatusSelectOption, OperationalStatusSelectProps } from './components/OperationalStatusSelect';
 export { default as PageHeader } from './components/PageHeader';
 export type { PageHeaderProps } from './components/PageHeader';
 export { default as Pagination, PaginationInfo } from './components/Pagination';

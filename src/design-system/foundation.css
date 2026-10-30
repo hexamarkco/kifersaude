@@ -30,6 +30,9 @@
   --dialog-width-lg: 48rem;
   --dialog-width-xl: 72rem;
   --dialog-width-full: 90rem;
+  --op-status-menu-width-compact: 13rem;
+  --op-status-menu-width-contextual: 16rem;
+  --op-status-menu-max-height: min(24rem, calc(100dvh - var(--space-4)));
   color-scheme: dark;
 
   --font-display: 'Playfair Display', serif;

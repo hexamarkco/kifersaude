@@ -1,15 +1,9 @@
-import { type CSSProperties, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import {
-  ActionSurface,
-  DropdownOption,
   Field,
   getPanelToneStyle,
   OperationalStatusBadge,
-  OperationalStatusDot,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  OperationalStatusSelect,
   Select,
   Text,
   type PanelTone,
@@ -31,52 +25,52 @@ type Props = {
 };
 
 export default function ContractStatusDropdown({ status, code, tone, canEdit, saving, options, operators = [], operatorError, getOptionTone, onChange }: Props) {
-  const [open, setOpen] = useState(false);
   const [saleOperator, setSaleOperator] = useState('');
   const label = normalizeSentenceCase(status) ?? status;
   const statusColor = getPanelToneStyle(tone).color ?? 'var(--text-muted)';
   if (!canEdit) return <OperationalStatusBadge statusColor={statusColor}>{label}</OperationalStatusBadge>;
 
+  const contextualContent = (
+    <>
+      {operatorError && <Text role="alert" className="p-2 text-xs">{operatorError}</Text>}
+      {operators.length > 0 && (
+        <Field label="Responsável pela venda" className="p-2">
+          <Select
+            value={saleOperator}
+            onChange={(event) => setSaleOperator(event.target.value)}
+            options={[
+              { value: '', label: 'Escolher responsável' },
+              ...operators.map((operator) => ({
+                value: operator.user_id,
+                label: operator.display_name,
+              })),
+            ]}
+          />
+        </Field>
+      )}
+    </>
+  );
+
   return (
-    <Popover open={open && !saving} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex">
-        <ActionSurface
-          variant="plain"
-          padding="none"
-          type="button"
-          style={{ '--op-status-color': statusColor } as CSSProperties}
-          className={`kds-op-status-badge kds-op-status-trigger ${saving || options.length === 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-          aria-haspopup="dialog"
-          disabled={saving || options.length === 0}
-          aria-label={`Alterar status do contrato ${code}: ${label}`}
-          aria-expanded={open && !saving}
-          aria-busy={saving}
-        >
-          <span>{saving ? 'Atualizando...' : label}</span>
-          {!saving && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
-        </ActionSurface>
-      </PopoverTrigger>
-      <PopoverContent className="w-[min(16rem,calc(100vw-1rem))] p-1" aria-label={`Status do contrato ${code}`}>
-        {operatorError && <Text role="alert" className="p-2 text-xs">{operatorError}</Text>}
-        {operators.length > 0 && <Field label="Responsável pela venda" className="p-2">
-          <Select value={saleOperator} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolher responsável' }, ...operators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
-        </Field>}
-        {options.map((option) => (
-          <DropdownOption
-            key={option.value}
-            type="button"
-            disabled={saving}
-            aria-pressed={option.value === status}
-            className={`kds-dropdown-option flex w-full items-center px-3 py-2 text-left text-sm ${option.value === status ? 'is-selected font-medium' : ''}`}
-            onClick={() => {
-              setOpen(false);
-              void onChange(option.value, saleOperator || undefined);
-            }}
-          >
-            <OperationalStatusDot statusColor={getPanelToneStyle(getOptionTone?.(option.value) ?? 'neutral').color ?? null} className="mr-2" />{option.label}
-          </DropdownOption>
-        ))}
-      </PopoverContent>
-    </Popover>
+    <OperationalStatusSelect
+      value={status}
+      triggerLabel={label}
+      statusColor={statusColor}
+      options={options.map((option) => ({
+        ...option,
+        color:
+          getPanelToneStyle(getOptionTone?.(option.value) ?? 'neutral').color ??
+          null,
+      }))}
+      onValueChange={(nextStatus) =>
+        void onChange(nextStatus, saleOperator || undefined)
+      }
+      triggerAriaLabel={`Alterar status do contrato ${code}: ${label}`}
+      menuAriaLabel={`Status do contrato ${code}`}
+      beforeOptions={operators.length > 0 || operatorError ? contextualContent : undefined}
+      menuSize={operators.length > 0 || operatorError ? 'contextual' : 'compact'}
+      disabled={options.length === 0}
+      loading={saving}
+    />
   );
 }

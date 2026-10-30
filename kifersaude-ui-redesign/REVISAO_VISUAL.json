@@ -51,7 +51,8 @@
       ],
       "notes": [
         "Comparação visual com previous-approved em desktop e mobile; comportamento verificado também em tablet e 320 px e nos dois temas.",
-        "Mantidos dados, configurações de status, permissões e ações reais; tamanhos de toque e campos seguem os componentes oficiais."
+        "Mantidos dados, configurações de status, permissões e ações reais; tamanhos de toque e campos seguem os componentes oficiais.",
+        "Setas visuais dos cabeçalhos removidas para seguir o padrão de Contratos; ordenação por clique e aria-sort permanecem. A rota local redirecionou para autenticação durante esta última conferência, então não foi produzida nova captura integrada."
       ]
     },
     {
@@ -1526,15 +1527,23 @@
       "route": "/painel/contratos",
       "kind": "states",
       "components": [
-        "src/features/contracts/ContractsManagerScreen.tsx"
+        "src/features/contracts/ContractsManagerScreen.tsx",
+        "src/features/contracts/components/ContractStatusDropdown.tsx",
+        "src/design-system/components/OperationalStatusSelect.tsx"
       ],
       "references": [
         "references/desktop/state--contratos-status-menu.png",
         "references/mobile/state--contratos-status-menu.png"
       ],
       "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "evidence": [
+        "validacao/revisao-visual/contracts/README.md",
+        "validacao/revisao-visual/contracts/status-picker/showcase-desktop-contextual-light.png",
+        "validacao/revisao-visual/contracts/status-picker/contrato-preview-mobile-320-light.png"
+      ],
+      "notes": [
+        "Leads e Contratos usam OperationalStatusSelect, incluindo variantes compacta e contextual com responsável pela venda. A referência nomeada como status-menu é um filtro múltiplo; o seletor da linha permanece de escolha única. Prévia isolada revisada; comparação na rota autenticada e na tabela completa continua pendente."
+      ]
     },
     {
       "id": "state--contratos-operadoras-menu",

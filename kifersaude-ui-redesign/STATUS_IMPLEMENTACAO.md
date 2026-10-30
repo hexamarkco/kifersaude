@@ -20,6 +20,16 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 - Removi as setas ↕ dos cabeçalhos para reduzir ruído visual; cada título continua acionando ordenação e preserva nome acessível e `aria-sort`. Playwright conferiu a tabela sintética em desktop, confirmou zero ícones nos cabeçalhos e `aria-sort="ascending"` após clicar em **Ordenar por Contrato**. [Captura e limitação de sessão](validacao/revisao-visual/contracts/README.md).
 
+### Leads — cabeçalhos da tabela (30/10/2026)
+
+- Os cabeçalhos de Leads seguem o mesmo padrão de Contratos: sem ícones de ordenação em repouso, mantendo o clique, `aria-sort` e os nomes acessíveis. A listagem também não renderiza avatares de iniciais; o nome e os dados de contato permanecem como identificação principal.
+
+### Leads e Contratos — seletor de status compartilhado (30/10/2026)
+
+- `OperationalStatusSelect` agora concentra o acionador e o menu de status usados por Leads e Contratos. O showcase demonstra as variantes simples e contextual; opções com status único recebem `aria-selected`, foco de teclado e espaçamento do Design System. A variante simples mede 13 rem e a contextual 16 rem; limites de viewport e altura com rolagem localizada estão centralizados nos tokens e estilos do componente.
+- Contratos preserva **Responsável pela venda** no bloco contextual e continua enviando essa seleção com a mudança de status; Leads preserva a atualização otimista e sua regra para selecionar o estado atual. O badge sem edição permanece disponível. Não houve mudança de regra de negócio.
+- Playwright verificou a interação do componente real em 1920, 768, 390 e 320 px, tema claro/escuro, seleção, `Escape` com retorno de foco e ausência de overflow. A prévia isolada de Contratos atualizou apenas estado local ao testar operador e status. Capturas e medidas em [seletor de status](validacao/revisao-visual/contracts/README.md). A rota autenticada completa permanece pendente no manifesto.
+
 ### Configurações — espaçamento dos atalhos (30/10/2026)
 
 - Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com o token `kds-card-padding-sm` no contêiner interno. O botão mantém a borda e o hover; texto, contagem e seta ficam recuados pelo token, sem depender do padding externo do botão. Destinos, contagens e permissões permanecem iguais. O teste focado passou e Playwright mediu 16 px de padding interno (17 px entre borda e conteúdo), inclusive no hover, em 390 px; as capturas foram atualizadas em desktop e mobile nos dois temas, sem overflow. A captura isolada do componente não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
@@ -30,8 +40,7 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Gates desta entrega (30/10/2026)
 
-- Teste focado desta correção: **1/1**. Typecheck, lint, arquitetura, `secrets:check`, auditorias visual/Design System, build e verificação do bundle do editor passaram. O lint mantém cinco avisos Fast Refresh em prévias Playwright preexistentes. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
-- A suíte completa foi atualizada após corrigir expectativas de testes defasadas: **1.840 testes passaram em 349 arquivos**; não há falhas pendentes nesses três arquivos de contratos/configurações/usuários.
+- Testes focados do seletor compartilhado: **5/5**. A suíte completa passou com **1.843 testes em 350 arquivos**. Typecheck, lint, arquitetura, migrations, `secrets:check`, auditorias visual/Design System, build e verificação do bundle do editor passaram. O lint mantém cinco avisos Fast Refresh em prévias Playwright preexistentes. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
 
 ### Configurações — Links públicos
 

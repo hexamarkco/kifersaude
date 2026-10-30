@@ -99,7 +99,7 @@
 .kifer-home .home-partner-logos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: var(--space-6); align-items: center; }
 .kifer-home .home-partner-logos li + li { border-left: 1px solid var(--border-strong); }
 .kifer-home .home-partner-logos a { display: flex; min-height: 4rem; justify-content: center; align-items: center; padding-inline: var(--space-8); }
-.kifer-home .home-partner-logos img { width: 100%; height: 2.6rem; object-fit: contain; filter: grayscale(1); opacity: 0.58; transition: filter 180ms, opacity 180ms; }
+.kifer-home .home-partner-logos img { width: 9.5rem; max-width: 100%; height: auto; max-height: 3.75rem; object-fit: contain; filter: grayscale(1); opacity: 0.58; transition: filter 180ms, opacity 180ms; }
 .kifer-home .home-partner-logos a:hover img { filter: none; opacity: 1; }
 
 /* 03 — One shared panel, three accessible profile choices */
@@ -493,7 +493,7 @@
   .kifer-home .home-partner-logos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5) 0; }
   .kifer-home .home-partner-logos li:nth-child(4) { border-left: 0; }
   .kifer-home .home-partner-logos a { padding-inline: var(--space-4); min-height: 3rem; }
-  .kifer-home .home-partner-logos img { height: 2.2rem; }
+  .kifer-home .home-partner-logos img { max-height: 3rem; }
   .kifer-home .home-audience .home-section-intro .home-title { font-size: 2.15rem; }
   .kifer-home .home-audience-selector { padding: var(--space-1); }
   .kifer-home .home-audience-selector .kds-radio-group { gap: var(--space-1); }

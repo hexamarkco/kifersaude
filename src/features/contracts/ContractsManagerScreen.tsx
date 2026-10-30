@@ -908,7 +908,7 @@ export default function ContractsManager({
             )}
           />
 
-          <div className="hidden lg:block">
+          <div className="kds-contracts-table-container hidden lg:block">
             <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="min-w-[75rem]" columnWidths={['19%', '12%', '18%', '17%', '14%', '12%', '8%']}>
               <TableHeader>
                 <TableRow>
@@ -992,7 +992,7 @@ export default function ContractsManager({
             </Table>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 lg:hidden">
+          <div className="kds-contracts-mobile-list grid grid-cols-1 gap-3 lg:hidden">
             {filteredContracts.length === 0 && <EmptyState icon={<FileText className="h-8 w-8" />} title="Nenhum contrato encontrado" description="Tente ajustar os filtros ou adicione um novo contrato." />}
             {paginatedContracts.map((contract) => {
               const bonusValue = getBonusValue(contract);

@@ -2230,6 +2230,11 @@ html,
   flex: 0 0 0.25rem;
 }
 
+.kds-contracts-results .kds-contracts-table-container,
+.kds-contracts-results .kds-contracts-mobile-list {
+  padding-inline: var(--space-3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .painel-theme :is(.message-bubble, .message-bubble-action-trigger, .message-bubble-emoji-button, .message-bubble-action-menu),
   .comm-emoji-picker-tab,

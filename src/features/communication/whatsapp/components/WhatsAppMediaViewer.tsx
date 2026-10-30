@@ -66,7 +66,7 @@ export function WhatsAppMediaViewer({
 }) {
   const selectedIndex = Math.max(0, messages.findIndex((message) => message.id === selectedMessageId));
   const selectedMessage = messages[selectedIndex] ?? messages[0];
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(selectedMessage);
+  const { mediaUrl, loading, error, retryable, retry } = useResolvedMediaUrl(selectedMessage);
   const isVideo = selectedMessage ? isVideoLikeMessageType(selectedMessage.message_type) : false;
   const canGoPrevious = selectedIndex > 0;
   const canGoNext = selectedIndex < messages.length - 1;
@@ -238,8 +238,9 @@ export function WhatsAppMediaViewer({
               </div>
             )
           ) : (
-            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 text-sm text-[var(--text-secondary)]">
-              {error || 'Mídia indisponível no momento.'}
+            <div className="flex max-w-md flex-col items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 text-center" role={error ? 'alert' : 'status'}>
+              <Text className="text-sm text-[var(--text-secondary)]">{error || 'Mídia indisponível no momento.'}</Text>
+              {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
             </div>
           )}
         </div>

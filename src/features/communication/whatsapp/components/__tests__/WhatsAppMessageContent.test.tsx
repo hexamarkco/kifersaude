@@ -10,6 +10,7 @@ const mediaState = vi.hoisted(() => ({
   mediaUrl: null as string | null,
   loading: false,
   error: null as string | null,
+  retryable: true,
   retryCalls: 0,
   retry: () => { mediaState.retryCalls += 1; },
 }));
@@ -58,6 +59,7 @@ test('permite tentar carregar novamente uma imagem indisponível', () => {
   mediaState.mediaUrl = null;
   mediaState.loading = false;
   mediaState.error = 'Arquivo indisponível no momento.';
+  mediaState.retryable = true;
   mediaState.retryCalls = 0;
   const imageMessage: CommWhatsAppMessage = {
     id: 'image-1', chat_id: 'chat-1', channel_id: 'channel-1', external_message_id: 'external-1',
@@ -83,11 +85,30 @@ test('permite tentar carregar novamente uma imagem indisponível', () => {
   }
 });
 
+test('orienta pedir o reenvio de uma mídia expirada sem oferecer uma tentativa inútil', () => {
+  mediaState.mediaUrl = null;
+  mediaState.loading = false;
+  mediaState.error = 'Arquivo expirado. Peça ao contato para enviá-lo novamente.';
+  mediaState.retryable = false;
+  const view = renderMediaMessage('image');
+
+  try {
+    assert.ok(view.container.textContent?.includes('Arquivo expirado. Peça ao contato para enviá-lo novamente.'));
+    assert.equal(Array.from(view.container.querySelectorAll('button'))
+      .some((button) => button.textContent?.trim() === 'Tentar novamente'), false);
+  } finally {
+    view.unmount();
+    mediaState.error = null;
+    mediaState.retryable = true;
+  }
+});
+
 for (const messageType of ['video', 'audio', 'document']) {
   test(`permite tentar carregar novamente um arquivo de ${messageType} indisponível`, () => {
     mediaState.mediaUrl = null;
     mediaState.loading = false;
     mediaState.error = 'Arquivo indisponível no momento.';
+    mediaState.retryable = true;
     mediaState.retryCalls = 0;
     const view = renderMediaMessage(messageType);
 
@@ -100,6 +121,7 @@ for (const messageType of ['video', 'audio', 'document']) {
     } finally {
       view.unmount();
       mediaState.error = null;
+      mediaState.retryable = true;
     }
   });
 }

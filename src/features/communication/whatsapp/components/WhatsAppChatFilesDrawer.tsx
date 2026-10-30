@@ -33,6 +33,7 @@ import {
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import { getMessageLinkPreview } from '../domain/messageMetadata';
 import type { CommWhatsAppMessage } from '../domain/types';
+import { useResolvedMediaUrl } from '../hooks/useResolvedMediaUrl';
 import { KeyedActionLock } from './keyedActionLock';
 
 type ChatFilesDrawerProps = {
@@ -202,80 +203,53 @@ function MediaIcon({ children }: { children: ReactNode }) {
 }
 
 function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOpen: () => void }) {
-  const [url, setUrl] = useState<string | null>(null);
+  const { mediaUrl, loading, error, retryable, retry } = useResolvedMediaUrl(message);
   const [downloading, setDownloading] = useState(false);
   const messageType = normalizeMediaType(message);
   const isVideo = messageType === 'video';
   const Icon = isVideo ? Video : Image;
-
-  useEffect(() => {
-    let active = true;
-    setUrl(null);
-    const mediaId = message.media_id?.trim() || null;
-
-    void whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
-      .then((resolved) => {
-        if (active) setUrl(resolved);
-      })
-      .catch(() => {
-        if (active) setUrl(null);
-      });
-
-    return () => {
-      active = false;
-      if (mediaId) {
-        whatsappMediaRepository.releaseObjectUrl(mediaId);
-      }
-    };
-  }, [message.media_id, message.media_url]);
-
-  const downloadMedia = async () => {
-    if (downloading) return;
+  const downloadMedia = () => {
+    if (downloading || !mediaUrl) return;
     setDownloading(true);
-    const mediaId = message.media_id?.trim() || null;
-    let retainedForDownload = false;
-
     try {
-      const resolvedUrl = url ?? await whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url });
-      if (!url && mediaId) {
-        retainedForDownload = true;
-      }
-      if (!resolvedUrl) return;
       const link = document.createElement('a');
-      link.href = resolvedUrl;
+      link.href = mediaUrl;
       link.download = getMediaTitle(message);
       document.body.appendChild(link);
       link.click();
       link.remove();
     } finally {
-      if (retainedForDownload && mediaId) {
-        whatsappMediaRepository.releaseObjectUrl(mediaId);
-      }
       setDownloading(false);
     }
   };
 
   return (
     <article className="comm-whatsapp-chat-files-visual">
-      <ActionSurface variant="plain" padding="none"
-        type="button"
-        onClick={onOpen}
-        className="comm-whatsapp-chat-files-visual-preview"
-        aria-label={`Abrir ${isVideo ? 'vídeo' : 'imagem'}: ${getMediaTitle(message)}`}
-      >
-        {url && !isVideo ? (
-          <DsImage src={url} alt={message.media_caption || getMediaTitle(message)} className="comm-whatsapp-chat-files-visual-image" loading="lazy" />
-        ) : url && isVideo ? (
-          <DsVideo src={url} className="comm-whatsapp-chat-files-visual-image" muted preload="metadata" />
-        ) : (
+      {mediaUrl ? (
+        <ActionSurface variant="plain" padding="none"
+          type="button"
+          onClick={onOpen}
+          className="comm-whatsapp-chat-files-visual-preview"
+          aria-label={`Abrir ${isVideo ? 'vídeo' : 'imagem'}: ${getMediaTitle(message)}`}
+        >
+          {!isVideo ? (
+            <DsImage src={mediaUrl} alt={message.media_caption || getMediaTitle(message)} className="comm-whatsapp-chat-files-visual-image" loading="lazy" />
+          ) : (
+            <DsVideo src={mediaUrl} className="comm-whatsapp-chat-files-visual-image" muted preload="metadata" />
+          )}
+          <span className="comm-whatsapp-chat-files-visual-type">
+            <Icon className="kds-control-icon" />
+            {isVideo ? 'Vídeo' : 'Imagem'}
+          </span>
+          {isVideo && <span className="comm-whatsapp-chat-files-play"><Play className="kds-control-icon fill-current" /></span>}
+        </ActionSurface>
+      ) : (
+        <div className="comm-whatsapp-chat-files-visual-preview is-unavailable" role={error ? 'alert' : 'status'} aria-busy={loading}>
           <span className="comm-whatsapp-chat-files-visual-placeholder"><Icon className="kds-control-icon" /></span>
-        )}
-        <span className="comm-whatsapp-chat-files-visual-type">
-          <Icon className="kds-control-icon" />
-          {isVideo ? 'Vídeo' : 'Imagem'}
-        </span>
-        {isVideo && <span className="comm-whatsapp-chat-files-play"><Play className="kds-control-icon fill-current" /></span>}
-      </ActionSurface>
+          <Text className="text-xs">{loading ? 'Carregando mídia...' : error || 'Prévia indisponível'}</Text>
+          {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
+        </div>
+      )}
       <div className="comm-whatsapp-chat-files-visual-footer">
         <span>{getMediaMeta(message)}</span>
         <IconButton
@@ -284,6 +258,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
           title={`Baixar ${isVideo ? 'vídeo' : 'imagem'}`}
           aria-label={`Baixar ${isVideo ? 'vídeo' : 'imagem'}`}
           loading={downloading}
+          disabled={!mediaUrl || downloading}
           onClick={() => void downloadMedia()}
         >
           {!downloading && <Download className="kds-control-icon" />}
@@ -297,33 +272,18 @@ const formatDuration = (seconds: number) => `${Math.floor(seconds / 60)}:${Math.
 
 function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpen: () => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
+  const { mediaUrl: url, loading, error, retryable, retry } = useResolvedMediaUrl(message);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
 
   useEffect(() => {
-    let active = true;
-    setUrl(null);
-    setPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-    const mediaId = message.media_id?.trim() || null;
-
-    void whatsappMediaRepository.resolveObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
-      .then((resolved) => { if (active) setUrl(resolved); })
-      .catch(() => { if (active) setUrl(null); });
-
     const audio = audioRef.current;
     return () => {
-      active = false;
       audio?.pause();
-      if (mediaId) {
-        whatsappMediaRepository.releaseObjectUrl(mediaId);
-      }
     };
-  }, [message.media_id, message.media_url]);
+  }, []);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -369,49 +329,55 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
           {playing ? <Pause className="kds-control-icon" /> : <Play className="kds-control-icon fill-current" />}
         </IconButton>
       </div>
-      <div className="comm-whatsapp-chat-files-audio-timeline">
-        <span>{formatDuration(currentTime)}</span>
-        <Slider
-
-          min="0"
-          max={duration || 0}
-          step="0.1"
-          value={Math.min(currentTime, duration || 0)}
-          disabled={!url || !duration}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            if (audioRef.current) audioRef.current.currentTime = next;
-            setCurrentTime(next);
-          }}
-          aria-label="Posição do áudio"
-        />
-        <span>{formatDuration(duration)}</span>
-      </div>
-      <div className="comm-whatsapp-chat-files-audio-actions">
-        <div className="comm-whatsapp-chat-files-speed" aria-label="Velocidade de reprodução">
-          {[1, 1.5, 2].map((value) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={speed === value ? 'soft' : 'ghost'}
-              onClick={() => setSpeed(value)}
-              aria-pressed={speed === value}
-            >
-              {String(value).replace('.', ',')}x
-            </Button>
-          ))}
+      {url ? (
+        <>
+          <div className="comm-whatsapp-chat-files-audio-timeline">
+            <span>{formatDuration(currentTime)}</span>
+            <Slider
+              min="0"
+              max={duration || 0}
+              step="0.1"
+              value={Math.min(currentTime, duration || 0)}
+              disabled={!duration}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                if (audioRef.current) audioRef.current.currentTime = next;
+                setCurrentTime(next);
+              }}
+              aria-label="Posição do áudio"
+            />
+            <span>{formatDuration(duration)}</span>
+          </div>
+          <div className="comm-whatsapp-chat-files-audio-actions">
+            <div className="comm-whatsapp-chat-files-speed" aria-label="Velocidade de reprodução">
+              {[1, 1.5, 2].map((value) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={speed === value ? 'soft' : 'ghost'}
+                  onClick={() => setSpeed(value)}
+                  aria-pressed={speed === value}
+                >
+                  {String(value).replace('.', ',')}x
+                </Button>
+              ))}
+            </div>
+            <div className="comm-whatsapp-chat-files-item-actions">
+              <IconButton variant="ghost" size="sm" onClick={onOpen} title="Abrir em nova guia" aria-label="Abrir áudio em nova guia">
+                <ExternalLink className="kds-control-icon" />
+              </IconButton>
+              <TextLink href={url} download={getMediaTitle(message)} className="comm-whatsapp-chat-files-download-link">
+                Baixar
+              </TextLink>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2" role={error ? 'alert' : 'status'} aria-busy={loading}>
+          <Text className="text-sm text-[var(--text-secondary)]">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
+          {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
         </div>
-        <div className="comm-whatsapp-chat-files-item-actions">
-          <IconButton variant="ghost" size="sm" onClick={onOpen} title="Abrir em nova guia" aria-label="Abrir áudio em nova guia">
-            <ExternalLink className="kds-control-icon" />
-          </IconButton>
-          {url && (
-            <TextLink href={url} download={getMediaTitle(message)} className="comm-whatsapp-chat-files-download-link">
-              Baixar
-            </TextLink>
-          )}
-        </div>
-      </div>
+      )}
     </Surface>
   );
 }
@@ -568,7 +534,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   const filterLabel = mediaTabs.find((tab) => tab.id === mediaType)?.label.toLocaleLowerCase('pt-BR') ?? 'arquivos';
 
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" size="lg" className="comm-whatsapp-chat-files-drawer">
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" size="md" className="comm-whatsapp-chat-files-drawer">
       <DrawerHeader onClose={onClose} className="comm-whatsapp-chat-files-header">
         <Text className="comm-whatsapp-chat-files-eyebrow">Arquivos da conversa</Text>
         <DialogTitle>{chatDisplayName}</DialogTitle>

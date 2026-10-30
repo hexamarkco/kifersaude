@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { whatsappMediaRepository } from '../data';
+import { describeMediaResolutionFailure } from '../domain/mediaResolution';
 import type { CommWhatsAppMessage } from '../domain/types';
 
 export function useResolvedMediaUrl(message: CommWhatsAppMessage) {
@@ -13,6 +14,7 @@ export function useResolvedMediaUrl(message: CommWhatsAppMessage) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(whatsappMediaRepository.getRememberedLocalPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryable, setRetryable] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
   const mediaRequestKey = buildMediaRequestKey(retryNonce);
   const [resolvedMediaRequestKey, setResolvedMediaRequestKey] = useState(mediaRequestKey);
@@ -26,6 +28,7 @@ export function useResolvedMediaUrl(message: CommWhatsAppMessage) {
     setMediaUrl(null);
     setLoading(false);
     setError(null);
+    setRetryable(false);
 
     const rememberedPreview = whatsappMediaRepository.retainLocalPreview(message.external_message_id);
     if (rememberedPreview) {
@@ -84,8 +87,9 @@ export function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       })
       .catch((resolveError) => {
         if (!active) return;
-        const resolvedMessage = resolveError instanceof Error ? resolveError.message : 'Não foi possível carregar a mídia.';
-        setError(resolvedMessage.includes('specified media not found') ? 'Arquivo indisponível no momento.' : resolvedMessage);
+        const failure = describeMediaResolutionFailure(resolveError);
+        setError(failure.message);
+        setRetryable(failure.retryable);
       })
       .finally(() => {
         if (!active) return;
@@ -105,6 +109,7 @@ export function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
   const retry = useCallback(() => {
     setError(null);
+    setRetryable(false);
     setRetryNonce((current) => current + 1);
   }, []);
 
@@ -114,6 +119,7 @@ export function useResolvedMediaUrl(message: CommWhatsAppMessage) {
     mediaUrl: isCurrentMediaRequest ? mediaUrl : null,
     loading: isCurrentMediaRequest ? loading : true,
     error: isCurrentMediaRequest ? error : null,
+    retryable: isCurrentMediaRequest ? retryable : false,
     retry,
   };
 }

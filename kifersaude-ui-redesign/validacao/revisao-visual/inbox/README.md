@@ -41,6 +41,8 @@
 
 ## Recuperação de anexos indisponíveis — 29/10/2026
 
-Os estados de falha de imagem/figurinha, vídeo, áudio/áudio de voz e documento agora oferecem a mesma ação **Tentar novamente**, com botão primário compacto do design system. A nova tentativa limpa o cache negativo do arquivo e solicita outra resolução; nenhum envio ou alteração da mensagem ocorre. Os 17 testes do componente passaram, incluindo acessibilidade e variante visual do botão.
+Anexos recebidos passam a ser arquivados no bucket privado `comm-whatsapp-media` em uma tarefa de fundo, após salvar a mensagem. Falhas transitórias de armazenamento são repetidas até três vezes, sem atrasar a resposta do webhook. O resolvedor compartilhado é usado pela conversa, pelo drawer de arquivos e pelo visualizador.
 
-A validação visual integrada desse estado permanece pendente: no Playwright CLI local, `/painel/inbox` exibiu a tela de login. O print enviado mostra apenas a falha de resolução, sem dados suficientes para distinguir uma falha transitória de um arquivo já indisponível na origem. A mudança não encerra os contextos de mídia listados no manifesto e não foi conferida em uma conversa autenticada.
+Falhas transitórias de imagem/figurinha, vídeo, áudio/áudio de voz e documento oferecem **Tentar novamente** como ação primária compacta. Quando a Whapi identifica que o arquivo de origem expirou, a interface informa que o contato precisa reenviá-lo e não oferece uma repetição sem efeito. O botão mantém contraste próprio mesmo no placeholder de mídia.
+
+Testes focados: 25/25 aprovados; `npm run typecheck` e `npm run build` passaram. `npm run lint` terminou sem erros e com cinco avisos de Fast Refresh em previews preexistentes de `output/playwright`. Na suíte geral, 1.830 testes passaram e quatro falharam em testes de contratos/configurações/usuários fora dos arquivos desta entrega. A validação visual integrada permanece pendente: `/painel/inbox` redirecionou ao login no Playwright local, então não foi aberta uma conversa autenticada. Os contextos de mídia continuam pendentes no manifesto; nenhuma conversa real foi lida ou alterada.

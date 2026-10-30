@@ -3,12 +3,14 @@ import { dispatchPendingAutonomousReply } from '../_shared/ai-autonomous-dispatc
 import { getMessageContent } from '../_shared/comm-whatsapp-transcript.ts';
 import {
   applyCommWhatsAppMessageMutation,
+  cacheCommWhatsAppMedia,
   COMM_WHATSAPP_CHANNEL_SLUG,
   COMM_WHATSAPP_WEBHOOK_SECRET_HEADER,
   COMM_WHATSAPP_WEBHOOK_SECRET_QUERY_PARAM,
   corsHeaders,
   extractWhapiDeletedMessageEvent,
   ensurePrimaryChannel,
+  ensureCommWhatsAppSettings,
   ensureWhapiGroupChatMetadata,
   extractWhapiContactCardMeta,
   extractWhapiLocationMeta,
@@ -49,6 +51,7 @@ import {
   unixTimestampToIso,
   updateCommWhatsAppMessageStatus,
 } from '../_shared/comm-whatsapp.ts';
+import { queueWhatsAppMediaArchive } from './mediaArchive.ts';
 import {
   buildWhapiWebhookMessageReceiptKey,
   extractWhapiWebhookMessageItems,
@@ -703,6 +706,11 @@ Deno.serve(async (req: Request) => {
     let duplicateMessages = 0;
     let skippedMessages = 0;
     const duplicateDiagnostics: DuplicateMessageDiagnostic[] = [];
+    let mediaSettingsPromise: ReturnType<typeof ensureCommWhatsAppSettings> | null = null;
+    const loadMediaSettings = () => {
+      mediaSettingsPromise ??= ensureCommWhatsAppSettings(supabaseAdmin);
+      return mediaSettingsPromise;
+    };
 
     if (messageItems.length > 0) {
       for (const rawItem of messageItems) {
@@ -751,6 +759,32 @@ Deno.serve(async (req: Request) => {
           skippedMessages += 1;
           continue;
         }
+
+        const mediaMeta = extractWhapiMediaMeta(item.message);
+        queueWhatsAppMediaArchive(item.message.from_me === true ? 'outbound' : 'inbound', mediaMeta.mediaId ? {
+          mediaId: mediaMeta.mediaId,
+          mediaUrl: mediaMeta.mediaUrl,
+          mimeType: mediaMeta.mediaMimeType,
+          fileName: mediaMeta.mediaFileName,
+        } : null, {
+          loadSettings: loadMediaSettings,
+          archive: ({ token, mediaId, mediaUrl, mimeType, fileName }) => cacheCommWhatsAppMedia(supabaseAdmin, {
+            token,
+            mediaId,
+            mediaUrl,
+            fallbackMimeType: mimeType,
+            fallbackFileName: fileName,
+          }),
+          waitUntil: (task) => {
+            if (typeof EdgeRuntime !== 'undefined') {
+              EdgeRuntime.waitUntil(task);
+              return;
+            }
+
+            void task;
+          },
+          onError: () => console.error(`[${correlationId}] falha ao arquivar anexo recebido`),
+        });
 
         await recordEventReceipt(
           supabaseAdmin,

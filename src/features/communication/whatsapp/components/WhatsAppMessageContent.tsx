@@ -96,6 +96,7 @@ export function WhatsAppAudioPlayerCard({
   loading,
   error,
   onRetryMedia,
+  retryable,
   mediaSending,
   mediaSendingProgress,
   onCancelMediaUpload,
@@ -113,6 +114,7 @@ export function WhatsAppAudioPlayerCard({
   loading: boolean;
   error: string | null;
   onRetryMedia: () => void;
+  retryable: boolean;
   mediaSending: boolean;
   mediaSendingProgress: number | null;
   onCancelMediaUpload?: () => void;
@@ -231,7 +233,7 @@ export function WhatsAppAudioPlayerCard({
         <div className="min-w-0 flex-1 space-y-1">
           {kind !== 'voice' ? <Text className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</Text> : null}
           <Text className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
-          {error ? <MediaRetryAction retry={onRetryMedia} loading={loading} /> : null}
+          {error && retryable ? <MediaRetryAction retry={onRetryMedia} loading={loading} /> : null}
         </div>
         {transcriptionAction ? <div className="shrink-0 self-center">{transcriptionAction}</div> : null}
         {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
@@ -331,7 +333,7 @@ export function WhatsAppMessageBody({
   mediaSendingProgress: number | null;
   onCancelMediaUpload?: () => void;
 }) {
-  const { mediaUrl, loading, error, retry } = useResolvedMediaUrl(message);
+  const { mediaUrl, loading, error, retryable, retry } = useResolvedMediaUrl(message);
   const [showOriginalText, setShowOriginalText] = useState(false);
   const kind = message.message_type.trim().toLowerCase();
   const locationInfo = getMessageLocationInfo(message);
@@ -686,10 +688,10 @@ export function WhatsAppMessageBody({
             ) : (
               <div className={isSticker
                 ? 'flex h-32 w-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
-                : `flex h-40 w-[13.75rem] max-w-full flex-col items-center justify-center gap-2 border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
+                : `flex h-40 w-[13.75rem] max-w-full flex-col items-center justify-center gap-2 border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
               >
-                <Text>{loading ? loadingLabel : error || unavailableLabel}</Text>
-                {error ? <MediaRetryAction retry={retry} loading={loading} /> : null}
+                <Text className="text-[var(--text-secondary)]">{loading ? loadingLabel : error || unavailableLabel}</Text>
+                {error && retryable ? <MediaRetryAction retry={retry} loading={loading} /> : null}
               </div>
             )}
             {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
@@ -725,9 +727,9 @@ export function WhatsAppMessageBody({
                 </Video>
               </ActionSurface>
             ) : (
-              <div className={`flex h-[11rem] flex-col items-center justify-center gap-2 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
-                <Text>{loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}</Text>
-                {error ? <MediaRetryAction retry={retry} loading={loading} /> : null}
+              <div className={`flex h-[11rem] flex-col items-center justify-center gap-2 bg-[var(--bg-inset)] px-3 text-center text-sm ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
+                <Text className="text-[var(--text-secondary)]">{loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}</Text>
+                {error && retryable ? <MediaRetryAction retry={retry} loading={loading} /> : null}
               </div>
             )}
             {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
@@ -797,7 +799,7 @@ export function WhatsAppMessageBody({
               ) : (
                 <>
                   <span className="text-xs text-[var(--text-muted)]">{loading ? 'Carregando arquivo...' : error || 'Arquivo indisponível'}</span>
-                  {error ? <MediaRetryAction retry={retry} loading={loading} /> : null}
+                  {error && retryable ? <MediaRetryAction retry={retry} loading={loading} /> : null}
                 </>
               )}
             </div>
@@ -850,7 +852,7 @@ export function WhatsAppMessageBody({
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
-                {error ? (
+                {error && retryable ? (
                   <MediaRetryAction retry={retry} loading={loading} />
                 ) : null}
               </div>
@@ -886,6 +888,7 @@ export function WhatsAppMessageBody({
           loading={loading}
           error={error}
           onRetryMedia={retry}
+          retryable={retryable}
           mediaSending={mediaSending}
           mediaSendingProgress={mediaSendingProgress}
           onCancelMediaUpload={onCancelMediaUpload}

@@ -1,5 +1,5 @@
 import { Text, Heading } from '../../../../design-system';
-import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2, Plus } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Bell, Bot, CalendarPlus, Check, Clock3, Loader2, MapPin, Pencil, RefreshCw, Sparkles, Unlink, Info, Link2, Plus, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
@@ -15,6 +15,7 @@ import {
   DrawerHeader,
   EmptyState,
   InfoTooltip,
+  OperationalStatusBadge,
   SearchInput,
   Surface,
   Tabs,
@@ -23,7 +24,8 @@ import {
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
-import { formatCommWhatsAppPhoneLabel } from '../domain/phonePresentation';
+import { formatCommWhatsAppPhoneLabel, getCommWhatsAppPhoneRegion } from '../domain/phonePresentation';
+import type { CommWhatsAppChat } from '../domain/types';
 import {
   listRemindersForLeadContext,
   subscribeToReminderChanges,
@@ -41,6 +43,7 @@ import type { Contract } from '../../../contracts';
 import type { LeadStatusConfig } from '../../../leads';
 import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
 import { KeyedActionLock } from './keyedActionLock';
+import WhatsAppPresenceIndicator from './WhatsAppPresenceIndicator';
 
 type LeadDrawerTab = 'info' | 'critique';
 
@@ -53,6 +56,7 @@ type WhatsAppLeadDrawerProps = {
   isOpen: boolean;
   presentation?: 'drawer' | 'sidebar';
   onClose: () => void;
+  chat: Pick<CommWhatsAppChat, 'saved_contact_name' | 'presence_status' | 'presence_last_seen_at' | 'presence_updated_at' | 'autonomous_attendance_status'>;
   chatId: string | null;
   chatDisplayName: string;
   chatPhoneNumber: string | null;
@@ -84,6 +88,7 @@ type WhatsAppLeadDrawerProps = {
   linkLoadingLeadId: string | null;
   canViewAgenda: boolean;
   canEditAgenda: boolean;
+  onSaveContact: (name: string) => void;
 };
 
 const DAY_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
@@ -116,6 +121,7 @@ export default function WhatsAppLeadDrawer({
   isOpen,
   presentation = 'drawer',
   onClose,
+  chat,
   chatId,
   chatDisplayName,
   chatPhoneNumber,
@@ -147,8 +153,10 @@ export default function WhatsAppLeadDrawer({
   linkLoadingLeadId,
   canViewAgenda,
   canEditAgenda,
+  onSaveContact,
 }: WhatsAppLeadDrawerProps) {
   const [activeTab, setActiveTab] = useState<LeadDrawerTab>('info');
+  const phoneRegion = getCommWhatsAppPhoneRegion(chatPhoneNumber);
 
   useEffect(() => {
     setActiveTab('info');
@@ -469,9 +477,34 @@ export default function WhatsAppLeadDrawer({
           ) : (
             <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
           )}
-          <Text className="mt-1 text-sm text-[var(--text-muted)]">
-            {presentation === 'sidebar' ? `Contato do WhatsApp · ${formatCommWhatsAppPhoneLabel(chatPhoneNumber)}` : 'Lead, contratos e próximos acompanhamentos'}
-          </Text>
+          {presentation === 'drawer' ? <Text className="mt-1 text-sm text-[var(--text-muted)]">Lead, contratos e próximos acompanhamentos</Text> : null}
+          <div className="mt-3 min-w-0 space-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-sm text-[var(--text-secondary)]">
+              <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</span>
+              {phoneRegion ? (
+                <Badge tone="neutral" size="sm" icon={MapPin} title={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}. Região do telefone; não indica a localização atual do contato.`} aria-label={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}`}>
+                  {phoneRegion.uf} · DDD {phoneRegion.ddd}
+                </Badge>
+              ) : null}
+              <WhatsAppPresenceIndicator chat={chat} />
+            </div>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                onClick={() => onSaveContact(chat.saved_contact_name || chatDisplayName)}
+              >
+                {chat.saved_contact_name ? <Pencil className="kds-control-icon" /> : <UserPlus className="kds-control-icon" />}
+                {chat.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}
+              </Button>
+              {chat.autonomous_attendance_status === 'active' ? (
+                <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA atendendo</OperationalStatusBadge>
+              ) : chat.autonomous_attendance_status === 'handed_off' ? (
+                <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA encerrada</OperationalStatusBadge>
+              ) : null}
+            </div>
+          </div>
         </DrawerHeader>
         <DrawerBody className={presentation === 'sidebar' ? 'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto' : 'overflow-y-auto'}>
           <Tabs

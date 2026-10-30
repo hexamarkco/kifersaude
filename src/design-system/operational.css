@@ -1564,8 +1564,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-record-results .kds-table-head { background: var(--bg-canvas-subtle); font-size: 0.6875rem; letter-spacing: 0.04em; }
 .kds-record-results .kds-table-cell { padding-block: var(--space-2); }
 .kds-record-results .kds-table-sm { font: var(--type-caption); }
-.kds-contracts-results > .kds-contracts-results-header { padding: var(--space-4) var(--space-3) 0; }
-.kds-contracts-results > .kds-contracts-results-pagination { padding: var(--space-3); }
+.kds-record-results > .kds-record-results-header { padding: var(--space-4) var(--space-3) 0; }
+.kds-record-results > .kds-record-results-pagination { padding: var(--space-3); }
+.kds-leads-results > .kds-leads-bulk-panel { margin: 0 var(--space-3) var(--space-4); }
 .kds-contracts-results .kds-contracts-cell-secondary {
   display: block;
   max-width: 100%;

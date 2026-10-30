@@ -1851,8 +1851,8 @@ export default function LeadsManager({
             />
           </div>
         ) : (
-          <Surface className="kds-record-results kds-leads-results" data-panel-animate>
-            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <Surface className="kds-record-results kds-leads-results" padding="none" data-panel-animate>
+            <div className="kds-record-results-header mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <Text className="kds-op-section-label">
                   Carteira em foco
@@ -2141,6 +2141,7 @@ export default function LeadsManager({
                 totalPages={totalPages}
                 itemsPerPage={itemsPerPage}
                 totalItems={filteredLeads.length}
+                className="kds-record-results-pagination"
                 onPageChange={handlePageChange}
                 onItemsPerPageChange={handleItemsPerPageChange}
               />

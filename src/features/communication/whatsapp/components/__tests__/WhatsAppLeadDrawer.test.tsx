@@ -20,6 +20,13 @@ const createProps = (onClose: () => void): ComponentProps<typeof WhatsAppLeadDra
   isOpen: true,
   presentation: 'sidebar',
   onClose,
+  chat: {
+    saved_contact_name: 'Contato de demonstração',
+    presence_status: null,
+    presence_last_seen_at: null,
+    presence_updated_at: null,
+    autonomous_attendance_status: 'inactive',
+  },
   chatId: 'chat-1',
   chatDisplayName: 'Contato de demonstração',
   chatPhoneNumber: '5511999999999',
@@ -51,6 +58,7 @@ const createProps = (onClose: () => void): ComponentProps<typeof WhatsAppLeadDra
   linkLoadingLeadId: null,
   canViewAgenda: false,
   canEditAgenda: false,
+  onSaveContact: vi.fn(),
 });
 
 test('renderiza informações do contato em uma lateral inline fechável, sem abrir um drawer modal', () => {
@@ -65,12 +73,46 @@ test('renderiza informações do contato em uma lateral inline fechável, sem ab
     assert.ok(panel);
     assert.match(panel.textContent ?? '', /Contato de demonstração/);
     assert.match(panel.textContent ?? '', /\+55 \(11\) 99999-9999/);
+    assert.ok(panel.querySelector('button[aria-label="Fechar"]'));
+    assert.match(panel.textContent ?? '', /Renomear contato/);
     assert.equal(document.querySelector('[role="dialog"]'), null);
 
     const closeButton = panel.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]');
     assert.ok(closeButton);
     act(() => closeButton.click());
     assert.equal(closeCalls.count, 1);
+  } finally {
+    view.unmount();
+  }
+});
+
+test('mantém telefone, presença, renomeação e estado da IA nas informações do contato', () => {
+  const props = createProps(() => undefined);
+  props.chat = {
+    saved_contact_name: 'Contato salvo',
+    presence_status: 'typing',
+    presence_last_seen_at: null,
+    presence_updated_at: new Date().toISOString(),
+    autonomous_attendance_status: 'active',
+  };
+  props.chatDisplayName = 'Nome exibido no chat';
+  const saveContactNames: string[] = [];
+  const onSaveContact = (name: string) => saveContactNames.push(name);
+  props.onSaveContact = onSaveContact;
+
+  const view = render(<WhatsAppLeadDrawer {...props} />);
+
+  try {
+    const panel = document.querySelector('aside[aria-label="Informações do contato"]');
+    assert.ok(panel);
+    assert.match(panel.textContent ?? '', /\+55 \(11\) 99999-9999/);
+    assert.match(panel.textContent ?? '', /SP · DDD 11/);
+    assert.match(panel.textContent ?? '', /digitando…/);
+    assert.match(panel.textContent ?? '', /IA atendendo/);
+    const renameButton = Array.from(panel.querySelectorAll('button')).find((button) => button.textContent?.includes('Renomear contato'));
+    assert.ok(renameButton);
+    act(() => renameButton.click());
+    assert.equal(saveContactNames[0], 'Contato salvo');
   } finally {
     view.unmount();
   }

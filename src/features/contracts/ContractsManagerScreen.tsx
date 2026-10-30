@@ -886,7 +886,7 @@ export default function ContractsManager({
             title="Contratos em acompanhamento"
             description="Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial."
             as="h3"
-            className="kds-contracts-results-header mb-4"
+            className="kds-record-results-header mb-4"
             action={(
               <div className="flex flex-wrap gap-2">
                 <OperationalMetricChip value={filteredContracts.length} label="resultados" />
@@ -1063,7 +1063,7 @@ export default function ContractsManager({
 
           {filteredContracts.length > 0 && (
             <Pagination
-              className="kds-contracts-results-pagination"
+              className="kds-record-results-pagination"
               currentPage={currentPage}
               totalPages={totalPages}
               itemsPerPage={itemsPerPage}

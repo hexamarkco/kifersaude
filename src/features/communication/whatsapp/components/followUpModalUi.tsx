@@ -91,7 +91,7 @@ export function ChatBubblePreview({
     <div className="whatsapp-inbox-thread space-y-2 rounded-xl bg-[var(--bg-inset)] p-3">
       {segments.map((segment, index) => (
         <div key={`${index}:${segment.slice(0, 32)}`} className="message-bubble-row flex w-full justify-end">
-          <div className="message-bubble message-bubble-outbound max-w-[92%] rounded-[var(--kds-radius-lg)] p-0 shadow-sm">
+          <div className="message-bubble message-bubble-outbound max-w-[92%] rounded-[var(--kds-radius-lg)] p-2 shadow-sm">
             <Text className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">{segment}</Text>
             {segments.length > 1 ? (
               <div className="mt-1.5 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">

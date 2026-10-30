@@ -1848,16 +1848,15 @@ export default function WhatsAppInboxScreen() {
     </Alert>
   ) : null;
 
+  const handleOpenSaveContactDialog = (name: string) => {
+    setSaveContactName(name);
+    setSaveContactDialogOpen(true);
+  };
+
   const conversationView: WhatsAppInboxConversationView | null = selectedChat ? {
     selectedChat,
     header: {
-      selectedChatForPresentation,
       selectedChatDisplayName,
-      leadPanel,
-      leadStatuses,
-      favoritedLeadIds,
-      selectedChatLeadMutationLoading,
-      selectedChatWasAutoLinked,
       isSelectedChatWaitingForQuote,
       assumingControl: assumingControlChatId === selectedChat.id,
       chatFilesOpen,
@@ -1877,11 +1876,6 @@ export default function WhatsAppInboxScreen() {
       onBack: () => {
         setContactContextPanelOpen(false);
         handleBackToChatList();
-      },
-      onLeadStatusChange: handleLeadStatusChange,
-      onSaveContact: (name) => {
-        setSaveContactName(name);
-        setSaveContactDialogOpen(true);
       },
       onToggleAutonomousAttendance: () => {
         if (isSelectedChatWaitingForQuote) {
@@ -2130,9 +2124,11 @@ export default function WhatsAppInboxScreen() {
               presentation="sidebar"
               isOpen
               onClose={() => setContactContextPanelOpen(false)}
+              chat={selectedChatForPresentation ?? selectedChat}
               chatId={selectedChat.id}
               chatDisplayName={selectedChatDisplayName}
               chatPhoneNumber={selectedChat.phone_number}
+              onSaveContact={handleOpenSaveContactDialog}
               linkedLead={leadPanel}
               leadPanelError={leadPanelError}
               autoLinked={selectedChatWasAutoLinked}

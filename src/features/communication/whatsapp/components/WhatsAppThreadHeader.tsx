@@ -1,22 +1,10 @@
 import { Text } from '../../../../design-system';
-import { Button } from '../../../../design-system';
-import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, Loader2, MapPin, MoreHorizontal, Pause, Pencil, Search, Sparkles, Users } from 'lucide-react';
+import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, Loader2, MoreHorizontal, Pause, Search, Sparkles, Users } from 'lucide-react';
 import type { RefObject } from 'react';
 
-import {
-  Badge,
-  ButtonGroup,
-  IconButton,
-  OperationalStatusBadge,
-} from '../../../../design-system';
-import { LeadFavoriteToggle } from '../../../../components/LeadFavoriteStar';
-import StatusDropdown from '../../../../components/StatusDropdown';
+import { Badge, ButtonGroup, IconButton } from '../../../../design-system';
 import { isOverdue } from '../../../../lib/dateUtils';
-import { formatCommWhatsAppPhoneLabel, getCommWhatsAppPhoneRegion } from '../domain/phonePresentation';
 import type { CommWhatsAppChat } from '../domain/types';
-import type { CommWhatsAppLeadPanel } from '../data';
-import type { LeadStatusConfig } from '../../../leads';
-import WhatsAppPresenceIndicator from './WhatsAppPresenceIndicator';
 
 type ChatAgendaSummary = {
   pendingCount: number;
@@ -27,13 +15,7 @@ type ChatAgendaSummary = {
 
 type WhatsAppThreadHeaderProps = {
   selectedChat: CommWhatsAppChat;
-  selectedChatForPresentation: CommWhatsAppChat | null;
   selectedChatDisplayName: string;
-  leadPanel: CommWhatsAppLeadPanel | null;
-  leadStatuses: LeadStatusConfig[];
-  favoritedLeadIds: ReadonlySet<string>;
-  selectedChatLeadMutationLoading: boolean;
-  selectedChatWasAutoLinked: boolean;
   isSelectedChatWaitingForQuote: boolean;
   assumingControl: boolean;
   chatFilesOpen: boolean;
@@ -51,8 +33,6 @@ type WhatsAppThreadHeaderProps = {
   nextChatReminderSummary: string | null;
   chatAgendaSummaryError: string | null;
   onBack: () => void;
-  onLeadStatusChange: (leadId: string, newStatus: string) => Promise<void>;
-  onSaveContact: (name: string) => void;
   onToggleAutonomousAttendance: () => void;
   onOpenChatFiles: () => void;
   onToggleChatMessageSearch: () => void;
@@ -66,13 +46,7 @@ type WhatsAppThreadHeaderProps = {
 
 export function WhatsAppThreadHeader({
   selectedChat,
-  selectedChatForPresentation,
   selectedChatDisplayName,
-  leadPanel,
-  leadStatuses,
-  favoritedLeadIds,
-  selectedChatLeadMutationLoading,
-  selectedChatWasAutoLinked,
   isSelectedChatWaitingForQuote,
   assumingControl,
   chatFilesOpen,
@@ -90,8 +64,6 @@ export function WhatsAppThreadHeader({
   nextChatReminderSummary,
   chatAgendaSummaryError,
   onBack,
-  onLeadStatusChange,
-  onSaveContact,
   onToggleAutonomousAttendance,
   onOpenChatFiles,
   onToggleChatMessageSearch,
@@ -102,7 +74,6 @@ export function WhatsAppThreadHeader({
   onToggleContactContextPanel,
   onToggleThreadActionsMenu,
 }: WhatsAppThreadHeaderProps) {
-  const phoneRegion = selectedChat.is_group ? null : getCommWhatsAppPhoneRegion(selectedChat.phone_number);
   const agendaBadge = nextChatReminderSummary ? (
     <Badge
       size="sm"
@@ -126,43 +97,14 @@ export function WhatsAppThreadHeader({
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <Text className="whatsapp-inbox-heading flex min-w-0 max-w-full items-center gap-1.5 text-base font-semibold leading-tight text-[var(--text-primary)] sm:text-lg">
                 {selectedChat.is_group ? <Users className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
-                {!selectedChat.is_group && leadPanel?.id ? <LeadFavoriteToggle leadId={leadPanel.id} favorito={favoritedLeadIds.has(leadPanel.id)} size="sm" /> : null}
                 <span className="min-w-0 truncate">{selectedChatDisplayName}</span>
               </Text>
-              {!selectedChat.is_group && selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
-                <StatusDropdown currentStatus={leadPanel.status_nome} leadId={leadPanel.id} onStatusChange={onLeadStatusChange} statusOptions={leadStatuses} disabled={selectedChatLeadMutationLoading} />
-              ) : null}
-              {!selectedChat.is_group && selectedChatWasAutoLinked ? <Badge tone="primary" size="sm" className="uppercase tracking-[0.12em]">Auto</Badge> : null}
-              {!selectedChat.is_group && selectedChat.autonomous_attendance_status === 'active' ? (
-                <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA atendendo</OperationalStatusBadge>
-              ) : !selectedChat.is_group && selectedChat.autonomous_attendance_status === 'handed_off' ? (
-                <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA encerrada</OperationalStatusBadge>
-              ) : null}
             </div>
             <IconButton ref={threadActionsMenuTriggerRef} type="button" onClick={onToggleThreadActionsMenu} variant={threadActionsMenuOpen ? 'secondary' : 'soft'} className="shrink-0 lg:hidden" aria-label="Abrir ações da conversa" aria-expanded={threadActionsMenuOpen} title="Ações da conversa" size="lg">
               <MoreHorizontal aria-hidden="true" />
             </IconButton>
           </div>
-          {!selectedChat.is_group ? (
-            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-secondary)] sm:text-sm">
-              <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
-              {phoneRegion ? (
-                <Badge tone="neutral" size="sm" icon={MapPin} className="shrink-0" title={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}. Região do telefone; não indica a localização atual do contato.`} aria-label={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}`}>
-                  {phoneRegion.uf} · DDD {phoneRegion.ddd}
-                </Badge>
-              ) : null}
-              <WhatsAppPresenceIndicator chat={selectedChat} />
-              {!selectedChatForPresentation?.saved_contact_name ? (
-                <Button variant="ghost" size="sm" type="button" onClick={() => onSaveContact(selectedChatDisplayName)} className="font-semibold hover:underline">+ Salvar contato</Button>
-              ) : (
-                <Button variant="ghost" size="sm" type="button" onClick={() => onSaveContact(selectedChatForPresentation.saved_contact_name || selectedChatDisplayName)} className="inline-flex items-center font-semibold hover:underline"><Pencil className="kds-control-icon" />Renomear contato</Button>
-              )}
-              {leadPanel?.responsavel_label ? <span className="min-w-0 truncate">Responsável: {leadPanel.responsavel_label}</span> : null}
-              {agendaBadge}
-            </div>
-          ) : agendaBadge ? (
-            <div className="mt-1 flex min-w-0">{agendaBadge}</div>
-          ) : null}
+          {agendaBadge ? <div className="mt-1 flex min-w-0">{agendaBadge}</div> : null}
         </div>
       </div>
       <div className="hidden min-w-0 shrink-0 items-start lg:flex lg:justify-end">

@@ -1022,6 +1022,12 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-page-title-row { flex: 1; }
 .kds-page-header-operational .kds-page-actions { width: auto; max-width: 100%; }
 .kds-contracts-header-actions { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.kds-contract-details-drawer .kds-contract-summary-value {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+}
+.kds-contract-details-drawer .kds-dialog-title:has(+ .kds-dialog-description-tooltip) { margin-right: 0; }
 .kds-dialog.kds-contract-bulk-import-dialog { max-width: min(37rem, calc(100vw - 2rem)) !important; }
 .kds-page-action-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); max-width: 100%; min-width: 0; }
 .kds-page-action-buttons { display: flex; gap: var(--space-2); align-items: stretch; justify-content: flex-end; flex-wrap: nowrap; margin-left: auto; min-width: 0; max-width: 100%; }

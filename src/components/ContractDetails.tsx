@@ -1979,8 +1979,10 @@ export default function ContractDetails({
         <DrawerHeader onClose={onClose}>
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
-              <DialogTitle>Detalhes do contrato</DialogTitle>
-              <DialogDescription>Visualização e ações do registro</DialogDescription>
+              <div className="flex min-w-0 items-center gap-2">
+                <DialogTitle className="min-w-0 flex-1">Detalhes do contrato</DialogTitle>
+                <DialogDescription className="shrink-0">Visualização e ações do registro</DialogDescription>
+              </div>
             </div>
             {canEditContracts && onDelete && (
               <RecordActions
@@ -1995,7 +1997,7 @@ export default function ContractDetails({
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
               <Text className="text-xs font-medium text-[var(--text-secondary)]">Mensalidade</Text>
-              <Text className="whitespace-nowrap text-sm font-semibold text-[var(--text-primary)] sm:text-base">
+              <Text className="kds-contract-summary-value text-sm font-semibold text-[var(--text-primary)] sm:text-base">
                 {contract.mensalidade_total
                   ? contract.mensalidade_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                   : 'Não informada'}
@@ -2003,15 +2005,15 @@ export default function ContractDetails({
             </Card>
             <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
               <Text className="text-xs font-medium text-[var(--text-secondary)]">Vigência</Text>
-              <Text className="break-words text-lg font-semibold text-[var(--text-primary)]">{tenureValue}</Text>
+              <Text className="kds-contract-summary-value text-lg font-semibold text-[var(--text-primary)]">{tenureValue}</Text>
             </Card>
             <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
               <Text className="text-xs font-medium text-[var(--text-secondary)]">Vidas</Text>
-              <Text className="break-words text-lg font-semibold text-[var(--text-primary)]">{lifeCount || 'Não informadas'}</Text>
+              <Text className="kds-contract-summary-value text-lg font-semibold text-[var(--text-primary)]">{lifeCount || 'Não informadas'}</Text>
             </Card>
             <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
               <Text className="text-xs font-medium text-[var(--text-secondary)]">Status</Text>
-              <Text className="break-words text-lg font-semibold text-[var(--text-primary)]">
+              <Text className="kds-contract-summary-value text-lg font-semibold text-[var(--text-primary)]">
                 {normalizeSentenceCase(contract.status) ?? contract.status}
               </Text>
             </Card>

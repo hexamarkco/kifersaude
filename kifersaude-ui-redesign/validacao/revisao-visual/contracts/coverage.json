@@ -55,6 +55,20 @@
     "focused_contract_form_and_dialog_tests": "4/4 passed",
     "authenticated_playwright_visual_review": "pending"
   },
+  "integrated_detail_drawer_summary_layout": {
+    "fixture": "ContractsManagerScreen e ContractDetails reais com repositories sintéticos na prévia local",
+    "summary_values_wrap_between_words": true,
+    "title_tooltip_stays_inline_at_320": true,
+    "horizontal_overflow": false,
+    "scroll_width_by_viewport": {
+      "1920": 1920,
+      "768": 768,
+      "390": 390,
+      "320": 320
+    },
+    "dark_theme_desktop_review": "passed",
+    "authenticated_route_visual_review": "pending"
+  },
   "visual_review": {
     "widths": [
       "1920x1080",
@@ -1019,6 +1033,31 @@
     },
     {
       "path": "screenshots/mobile-320/exclusao-confirmacao-integrada-dark.png",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "path": "screenshots/desktop/detalhes-drawer-resumo-ajustado.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/detalhes-drawer-resumo-ajustado-dark.png",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "screenshots/tablet/detalhes-drawer-resumo-ajustado.png",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "screenshots/mobile/detalhes-drawer-resumo-ajustado.png",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "screenshots/mobile-320/detalhes-drawer-resumo-ajustado.png",
       "width": 320,
       "height": 640
     }

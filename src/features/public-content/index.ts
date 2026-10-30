@@ -1,4 +1,5 @@
 export type * from './domain/types';
+export { default as HomeScreen } from './HomeScreen';
 export {
   loadPublicHomeMetrics,
   submitPublicLead,

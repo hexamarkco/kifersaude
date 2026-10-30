@@ -1,16 +1,11 @@
 import { BrandWordmark, TextLink } from '../../../design-system';
 import { useEffect, useId, useState, type MouseEvent } from 'react';
 import { Menu } from 'lucide-react';
+import { homeNavigation } from '../domain/homeContent';
 
 import { Button, DialogTitle, Drawer, DrawerBody, DrawerFooter, DrawerHeader, IconButton } from '../../../design-system';
 
-const navigationItems = [
-  { section: 'prova-social', label: 'Operadoras' },
-  { section: 'para-quem', label: 'Para quem é' },
-  { section: 'como-funciona', label: 'Como funciona' },
-  { section: 'depoimentos', label: 'Depoimentos' },
-  { section: 'faq', label: 'Dúvidas' },
-] as const;
+const navigationItems = homeNavigation;
 
 type PublicHomeHeaderProps = {
   onNavigate: (section: string) => void;
@@ -84,7 +79,7 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
         </div>
       </header>
 
-      <Drawer id={menuId} open={menuOpen} onOpenChange={setMenuOpen} side="right" size="sm">
+      <Drawer id={menuId} open={menuOpen} onOpenChange={setMenuOpen} side="right" size="sm" className="home-mobile-drawer">
         <DrawerHeader onClose={() => setMenuOpen(false)}>
           <DialogTitle>Menu</DialogTitle>
         </DrawerHeader>

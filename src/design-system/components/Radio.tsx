@@ -1,4 +1,4 @@
-import { forwardRef, createContext, useContext, useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, createContext, useContext, useState, type AriaAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 
@@ -13,7 +13,7 @@ const RadioGroupContext = createContext<RadioGroupContextValue>({
   name: '',
 });
 
-export type RadioGroupProps = {
+export type RadioGroupProps = Pick<AriaAttributes, 'aria-label' | 'aria-labelledby' | 'aria-describedby'> & {
   name: string;
   value?: string;
   onValueChange?: (value: string) => void;
@@ -31,10 +31,12 @@ export function RadioGroup({
   orientation = 'vertical',
   className,
   children,
+  ...ariaProps
 }: RadioGroupProps) {
   return (
     <RadioGroupContext.Provider value={{ name, value, onValueChange, disabled }}>
       <div
+        {...ariaProps}
         role="radiogroup"
         aria-orientation={orientation}
         className={cx(

@@ -20,12 +20,12 @@ export function SettingsCatalogLink({
   return (
     <ActionSurface
       variant="plain"
-      padding="none"
+      padding="sm"
       className="kds-settings-catalog-link w-full text-left"
       aria-label={ariaLabel}
       onClick={onClick}
     >
-      <span className="kds-card-padding-sm flex w-full items-center justify-between gap-3">
+      <span className="flex w-full items-center justify-between gap-3">
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-[var(--text-primary)]">{title}</span>
           <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">{description}</span>

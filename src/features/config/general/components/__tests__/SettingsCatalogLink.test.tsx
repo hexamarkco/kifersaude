@@ -20,8 +20,8 @@ test('atalho de configurações preserva espaçamento por tokens, navegação e 
   const button = view.container.querySelector<HTMLButtonElement>('button[aria-label="Abrir perfis e acessos"]');
   assert.ok(button);
   assert.ok(button.classList.contains('kds-settings-catalog-link'));
-  assert.equal(button.classList.contains('kds-card-padding-sm'), false);
-  const content = button.querySelector<HTMLElement>('.kds-card-padding-sm');
+  assert.ok(button.classList.contains('kds-card-padding-sm'));
+  const content = button.querySelector<HTMLElement>('.flex.w-full.items-center.justify-between');
   assert.ok(content);
   assert.ok(content.classList.contains('flex'));
   assert.equal(content.textContent?.includes('Perfis e acessos'), true);

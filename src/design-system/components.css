@@ -1370,6 +1370,8 @@
 }
 
 .kds-card-title-row {
+  display: inline-flex;
+  flex-direction: row;
   width: fit-content;
   max-width: 100%;
   flex-wrap: nowrap;
@@ -1378,6 +1380,11 @@
 .kds-card-title-row > .kds-card-title,
 .kds-section-title-row > .kds-section-title {
   min-width: 0;
+}
+
+.kds-card-title-row > .kds-tooltip-anchor {
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 /* Indicator rows share their height, including wrapped titles and monetary values. */

@@ -10,6 +10,7 @@
     "src/features/config/automation/AutoContactFlowSettingsScreen.tsx",
     "src/features/config/automation/components/AutomationFlowsWorkspace.tsx",
     "src/features/config/shared/configTabs.ts",
+    "src/design-system/components.css",
     "src/design-system/application.css"
   ],
   "fixture": "Composição real do shell e componentes com dados sintéticos locais; chamadas externas e gravações bloqueadas.",
@@ -29,7 +30,9 @@
     { "path": "current-shell/state-filtered-tag-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Lista filtrada por follow-up" },
     { "path": "current-shell/state-search-single-result-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Busca sem resposta com resultado único" },
     { "path": "current-shell/state-templates-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Templates" },
-    { "path": "current-shell/state-operation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Operação sem alterar os controles" }
+    { "path": "current-shell/state-operation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Operação sem alterar os controles" },
+    { "path": "current-shell/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático" },
+    { "path": "current-shell/state-info-title-inline-mobile-320.png", "viewport": "320x640", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático em tela compacta" }
   ],
   "checks": {
     "font_status": "document.fonts.ready",
@@ -58,7 +61,7 @@
   },
   "validation": {
     "focused_tests": "AutomationFlowsWorkspace e configTabs: 8/8; primitivas Table: 12/12.",
-    "full_test_suite": "1851 testes em 350 arquivos passaram.",
+    "full_test_suite": "1862 testes aprovados; 1 falha em src/pages/public/HomePage.test.tsx fora do CRM e do escopo desta entrega.",
     "typecheck": "passou",
     "lint": "passou sem erros; 7 avisos preexistentes em previews Playwright e PainelWrapper.",
     "architecture": "passou",

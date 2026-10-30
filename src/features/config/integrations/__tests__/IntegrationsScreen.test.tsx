@@ -52,7 +52,7 @@ const waitForButtonText = async (text: string) => {
 
 test('libera o salvamento do provedor quando a chamada de integração rejeita', async () => {
   const view = render(
-    <MemoryRouter>
+      <MemoryRouter initialEntries={['/painel/automacoes?tab=integrations&section=ai']}>
       <IntegrationsScreen />
     </MemoryRouter>,
   );

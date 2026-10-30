@@ -27,7 +27,10 @@ export type MetaSnapshot = {
   receipts: { leadgen_id: string; status: string; received_at: string; last_error_code: string | null }[];
   events: { event_id: string; kind: string; status: string; occurred_at: string; last_error_code: string | null }[];
 };
-export function metaConnectionLabel(snapshot: MetaSnapshot): string {
+export type MetaConnectionState = Pick<MetaSnapshot, 'serverConfigured' | 'failed' | 'lastImportedAt'> & {
+  settings: Pick<MetaSnapshot['settings'], 'enabled'>;
+};
+export function metaConnectionLabel(snapshot: MetaConnectionState): string {
   if (!snapshot.serverConfigured) return 'Configuração do servidor pendente';
   if (!snapshot.settings.enabled) return 'Recebimento pausado';
   if (snapshot.failed) return 'Recebimento precisa de atenção';

@@ -31,6 +31,7 @@ import MetaAdsPanel from "./components/MetaAdsPanel";
 import { useConfigParam } from "../shared/useConfigTab";
 import { normalizeModelOptions } from "./shared/integrationsSettings";
 import { loadAiProviderModels } from "./data/integrationsApi";
+import IntegrationsOverview from "./components/IntegrationsOverview";
 
 const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 const AI_ROUTING_SLUG = "ai_routing";
@@ -287,8 +288,8 @@ const normalizeRoutingSettings = (
 export default function IntegrationsScreen() {
   const [activeSection, setActiveSection] = useConfigParam(
     "section",
-    ["ai", "whatsapp", "meta", "tracking"] as const,
-    "ai",
+    ["overview", "ai", "whatsapp", "meta", "tracking"] as const,
+    "overview",
   );
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<
     Record<AiProvider, IntegrationSetting | null>
@@ -482,19 +483,27 @@ export default function IntegrationsScreen() {
   }, []);
 
   useEffect(() => {
-    void loadAiIntegrations();
-    void loadMetaPixel();
-    void loadGtm();
+    const loadingAiSection = activeSection === "ai";
+    const loadingTrackingSection = activeSection === "overview" || activeSection === "tracking";
+    if (loadingAiSection) void loadAiIntegrations();
+    if (loadingTrackingSection) {
+      void loadMetaPixel();
+      void loadGtm();
+    }
     const aiModelsRequestIds = aiModelsRequestIdRef.current;
     return () => {
-      aiSettingsLoadRequestIdRef.current += 1;
-      metaPixelLoadRequestIdRef.current += 1;
-      gtmLoadRequestIdRef.current += 1;
-      for (const provider of AI_PROVIDER_ORDER) {
-        aiModelsRequestIds[provider] += 1;
+      if (loadingAiSection) {
+        aiSettingsLoadRequestIdRef.current += 1;
+        for (const provider of AI_PROVIDER_ORDER) {
+          aiModelsRequestIds[provider] += 1;
+        }
+      }
+      if (loadingTrackingSection) {
+        metaPixelLoadRequestIdRef.current += 1;
+        gtmLoadRequestIdRef.current += 1;
       }
     };
-  }, [loadAiIntegrations, loadGtm, loadMetaPixel]);
+  }, [activeSection, loadAiIntegrations, loadGtm, loadMetaPixel]);
 
   const handleSaveProvider = async (provider: AiProvider) => {
     const currentForm = aiProviderForms[provider];
@@ -775,30 +784,43 @@ export default function IntegrationsScreen() {
 
   return (
     <PanelAdaptiveLoadingFrame
-      loading={loadingAi}
+      loading={activeSection === "ai" && loadingAi}
       phase={loadingUi.phase}
-      hasContent={hasIntegrationSnapshot}
+      hasContent={activeSection === "ai" ? hasIntegrationSnapshot : true}
       skeleton={<IntegrationsSkeleton />}
       overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >
       <div className="space-y-6">
-        <SectionHeader
-          eyebrow="Canais e inteligência"
-          title="Integrações"
-          description="Configure cada conector por finalidade, sem misturar credenciais, automações e rastreamento."
-        />
-        <SegmentedControl
-          items={[
-            { id: "ai", label: "Inteligência artificial", icon: Sparkles },
-            { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
-            { id: "meta", label: "Meta Ads", icon: Facebook },
-            { id: "tracking", label: "Rastreamento", icon: Tag },
-          ]}
-          value={activeSection}
-          onChange={setActiveSection}
-          listClassName="flex-nowrap overflow-x-auto"
-        />
+        {activeSection === "overview" ? (
+          <IntegrationsOverview
+            onOpen={setActiveSection}
+            trackingLoading={loadingMetaPixel || loadingGtm}
+            trackingError={metaPixelLoadError || gtmLoadError}
+            pixelConfigured={Boolean(metaPixelId.trim())}
+            gtmConfigured={Boolean(gtmId.trim())}
+          />
+        ) : (
+          <>
+            <SectionHeader
+              eyebrow="Canais e inteligência"
+              title={activeSection === "ai" ? "Provedor de IA" : activeSection === "whatsapp" ? "WhatsApp" : activeSection === "meta" ? "Meta Ads" : "Rastreamento"}
+              description="Configure cada conector por finalidade, sem misturar credenciais, automações e rastreamento."
+            />
+            <SegmentedControl
+              items={[
+                { id: "overview", label: "Visão geral" },
+                { id: "ai", label: "Inteligência artificial", icon: Sparkles },
+                { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+                { id: "meta", label: "Meta Ads", icon: Facebook },
+                { id: "tracking", label: "Rastreamento", icon: Tag },
+              ]}
+              value={activeSection}
+              onChange={setActiveSection}
+              listClassName="flex-nowrap overflow-x-auto"
+            />
+          </>
+        )}
 
         {activeSection === "meta" && <MetaAdsPanel />}
         {activeSection === "ai" && <section className="space-y-4">

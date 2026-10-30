@@ -401,9 +401,16 @@
         "references/desktop/page--config-integrations.png",
         "references/mobile/page--config-integrations.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-integrations/README.md",
+        "validacao/revisao-visual/config-integrations/coverage.json"
+      ],
+      "notes": [
+        "Comparada à referência desktop-first com shell e componentes reais, fixtures sintéticas, gravações bloqueadas e sem sessão autenticada.",
+        "A tela abre na visão geral prevista pela referência; estados e acessos de WhatsApp, Meta Ads e rastreamento aparecem em resumo, com credenciais e diagnóstico. Os painéis existentes de WhatsApp, Meta Ads, IA e rastreamento permanecem responsáveis pelos campos e operações.",
+        "Playwright cobriu 1920×1080, 768×1024, 390×844 e 320×640 sem overflow horizontal; temas claro e escuro no desktop e mobile 390. Foram revistos seletores, tooltips, disclosures, busca, falha e retry. A tela não possui modal ou drawer; nenhuma operação de salvamento foi executada. Evidências relacionam 43 capturas."
+      ]
     },
     {
       "id": "page--config-ai",
@@ -2805,8 +2812,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 59,
-    "remaining_manifest_contexts": 101,
+    "reviewed_contexts": 60,
+    "remaining_manifest_contexts": 100,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

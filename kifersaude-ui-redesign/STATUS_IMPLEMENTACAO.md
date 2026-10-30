@@ -2,9 +2,15 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **59 contextos foram comparados** e **101 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **60 contextos foram comparados** e **100 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
+
+### Configurações — visão geral de integrações (30/10/2026)
+
+- `IntegrationsScreen` inicia na visão geral alinhada à referência desktop: canais, estado de credenciais e diagnóstico. Linhas abrem os painéis reais. Consultas de IA e rastreamento são carregadas sob demanda; resumo Meta mantém apenas os campos necessários aos indicadores.
+- WhatsApp, Meta Ads, IA e rastreamento foram percorridos com componentes reais e fixtures locais sintéticas. Playwright cobriu 43 capturas, os temas claro/escuro e larguras 1920, 768, 390 e 320 px; sem overflow. Switch, atualização de conexão, seletores, busca sem resultado, estado de erro, tooltips e instruções de suporte foram verificados sem persistir alterações.
+- A página não possui modal nem drawer. Sessão autenticada não estava disponível; gravações e tráfego externo foram bloqueados. Testes focados: **6/6**; typecheck, lint focado e build passaram. Build mantém o aviso conhecido do chunk vendor acima de 500 kB. Nenhuma migration ou Edge Function foi necessária. [Capturas e limitações](validacao/revisao-visual/config-integrations/README.md).
 
 ### Configurações — recuo dos atalhos e integração dos Links (30/10/2026)
 

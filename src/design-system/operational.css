@@ -1691,6 +1691,15 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
  .kds-agenda-secondary-filters { grid-template-columns: minmax(0,1fr); }
 }
 
+.kds-integration-overview-action { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-3); text-align: left; }
+.kds-integration-overview-action > span:first-child { flex: 1 1 auto; min-width: 0; }
+.kds-integration-overview-action > span:last-child { flex: 0 0 auto; }
+@media(max-width: 480px) {
+ .kds-integration-overview-action { align-items: flex-start; flex-wrap: wrap; }
+ .kds-integration-overview-action > span:first-child { flex: 1 1 100%; }
+ .kds-integration-overview-action > span:last-child { margin-left: auto; }
+}
+
 .kds-ai-page { display: flex; flex-direction: column; gap: var(--space-4); }
 .kds-ai-page-alert { margin: 0; }
 .kds-ai-chat-layout { display: grid; grid-template-columns: minmax(0,1.65fr) minmax(20rem,.85fr); align-items: start; gap: var(--space-4); min-width: 0; }

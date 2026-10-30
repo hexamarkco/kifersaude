@@ -1,0 +1,101 @@
+{
+  "route": "/painel/automacoes?tab=integrations",
+  "reference": {
+    "desktop": "references/desktop/page--config-integrations.png",
+    "mobile": "references/mobile/page--config-integrations.png"
+  },
+  "status": "revisado_com_adaptacoes",
+  "capture_method": "Playwright em shell local com componentes reais e fixtures sintéticas; tráfego externo bloqueado e gravações bloqueadas.",
+  "viewport_states": [
+    { "name": "desktop-light", "viewport": "1920x1080", "full_page": true, "horizontal_overflow": false },
+    { "name": "desktop-dark", "viewport": "1920x1080", "full_page": true, "horizontal_overflow": false },
+    { "name": "tablet-light", "viewport": "768x1024", "full_page": true, "horizontal_overflow": false },
+    { "name": "mobile-light", "viewport": "390x844", "full_page": true, "horizontal_overflow": false },
+    { "name": "mobile-compact-light", "viewport": "320x640", "full_page": true, "horizontal_overflow": false },
+    { "name": "mobile-dark", "viewport": "390x844", "full_page": true, "horizontal_overflow": false }
+  ],
+  "scroll_measurements": {
+    "1920x1080": { "inner_width": 1920, "document_scroll_width": 1910 },
+    "768x1024": { "inner_width": 768, "document_scroll_width": 758 },
+    "390x844": { "inner_width": 390, "document_scroll_width": 380 },
+    "320x640": { "inner_width": 320, "document_scroll_width": 310 },
+    "interpretation": "A diferença de 10 px corresponde à calha da barra de rolagem do Chromium; nenhum elemento excedeu o viewport."
+  },
+  "sections": ["overview", "whatsapp", "meta", "ai", "tracking"],
+  "interactions": [
+    "Navegação entre as cinco seções da tela",
+    "Linhas da visão geral abrem a configuração relacionada",
+    "Disclosure de suporte e ajuda do WhatsApp",
+    "Switch do WhatsApp alternado localmente sem persistir",
+    "Atualização de conexão executada somente contra fixture local",
+    "Tooltips da página e dos painéis",
+    "Seletores de lead, oportunidade, contrato e modelo abertos",
+    "Busca sem resultados, estado de erro e ações de retry inspecionados",
+    "Formulário de avaliação preenchido localmente sem registrar"
+  ],
+  "overlays": {
+    "dialogs": 0,
+    "drawers": 0,
+    "dropdowns_or_popovers": 4,
+    "tooltips": 4,
+    "details_disclosures": 3,
+    "notes": "Não existem diálogos ou drawers nesta tela; alterações ficam nos painéis e devem ser salvas explicitamente."
+  },
+  "screenshots": [
+    "validacao/revisao-visual/config-integrations/current-shell/ai-model-dropdown-open-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/ai-model-selection-local-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/ai-provider-section-tooltip-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/ai-provider-settings-desktop-1920-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/ai-provider-settings-desktop-1920.png",
+    "validacao/revisao-visual/config-integrations/current-shell/full-desktop-1920-dark.png",
+    "validacao/revisao-visual/config-integrations/current-shell/full-desktop-1920-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/full-mobile-320-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/full-mobile-390-dark.png",
+    "validacao/revisao-visual/config-integrations/current-shell/full-mobile-390-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/full-tablet-768-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-attribution-form-desktop-1920-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-attribution-form-desktop-1920.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-contract-dropdown-open-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-evaluation-ready-desktop-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-evaluation-ready-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-lead-dropdown-open-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-opportunity-dropdown-open-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-panel-tooltip-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-retry-actions-desktop-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-retry-actions-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-search-empty-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-section-tooltip-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-settings-desktop-1920-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-settings-desktop-1920.png",
+    "validacao/revisao-visual/config-integrations/current-shell/meta-ads-support-details-open-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/overview-meta-failure-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/tracking-settings-desktop-1920-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/tracking-settings-desktop-1920.png",
+    "validacao/revisao-visual/config-integrations/current-shell/viewport-desktop-1920-dark.png",
+    "validacao/revisao-visual/config-integrations/current-shell/viewport-desktop-1920-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/viewport-mobile-320-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/viewport-mobile-390-dark.png",
+    "validacao/revisao-visual/config-integrations/current-shell/viewport-mobile-390-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/viewport-tablet-768-light.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-advanced-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-health-refresh-complete-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-settings-desktop-1920-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-settings-desktop-1920.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-settings-mobile-390-full.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-settings-mobile-390.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-setup-help-open-desktop.png",
+    "validacao/revisao-visual/config-integrations/current-shell/whatsapp-toggle-on-local-desktop.png"
+  ],
+  "validation": {
+    "focused_tests": "6/6 passed across 3 files",
+    "typecheck": "passed",
+    "lint_changed_files": "passed without findings",
+    "build": "passed; vendor chunk size warning remains",
+    "modals_or_drawers": "none found"
+  },
+  "limitations": [
+    "No authenticated production session was available; all visual data is synthetic.",
+    "Save actions, external integrations, and commercial operations were not executed.",
+    "A visible success result from authenticated persistence cannot be verified in the local fixture."
+  ]
+}

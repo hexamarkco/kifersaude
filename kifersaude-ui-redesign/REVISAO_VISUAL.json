@@ -1264,16 +1264,23 @@
       "id": "state--leads-excluir-confirmacao",
       "route": "/painel/leads",
       "kind": "states",
-    "components": [
-      "src/features/leads/LeadsManagerScreen.tsx"
-    ],
+      "components": [
+        "src/features/leads/LeadsManagerScreen.tsx",
+        "src/features/leads/components/LeadDeletionSummary.tsx",
+        "src/design-system/components/ConfirmDialog.tsx"
+      ],
       "references": [
         "references/desktop/state--leads-excluir-confirmacao.png",
         "references/mobile/state--leads-excluir-confirmacao.png"
       ],
-    "status": "pendente",
-    "evidence": [],
-    "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/leads-delete/README.md"
+      ],
+      "notes": [
+        "Dialog e resumo reais comparados por Playwright em 1920, 768, 390 e 320 px, nos temas claro e escuro; a tela de fundo da fixture é uma referência estática.",
+        "A exclusão não foi confirmada. A comparação integrada em /painel/leads permanece pendente porque a sessão local redireciona para login."
+      ]
     },
     {
       "id": "state--leads-filtros-avancados",

@@ -6,6 +6,10 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
+### Leads — confirmação de exclusão (30/10/2026)
+
+- A exclusão agora identifica o lead e explicita a consequência antes da ação destrutiva. O resumo usa `ConfirmationSummary` do design system; todos os `ConfirmDialog` seguem a largura oficial do padrão (37rem no desktop) e se adaptam a 320 px. Playwright comparou referência e componente real em desktop, tablet, mobile e 320 px, nos temas claro e escuro. `Escape` fecha o diálogo; nenhuma exclusão foi confirmada. A composição foi revisada em fixture local porque `/painel/leads` redireciona para login; a verificação integrada autenticada segue pendente. [Evidências](validacao/revisao-visual/leads-delete/README.md).
+
 ### Configurações — Links públicos
 
 - A tela foi organizada com `PageHeader`, `PageActions`, disclosure do perfil, busca local, tabela responsiva/cards e `RecordActions`, preservando cadastro, edição, exclusão, ativação, ordenação, upload e serviços atuais. Os registros também mantêm a contagem de cliques. Playwright capturou 17 imagens dos estados e das larguras 1920, 768, 390 e 320 px; não houve overflow horizontal. Testes focados passaram (2/2), typecheck passou, e lint terminou sem erros com cinco avisos preexistentes em fixtures. A rota autenticada redirecionou para login, então a comparação da página dentro do shell permanece pendente. [Evidências](validacao/revisao-visual/config-links/README.md).

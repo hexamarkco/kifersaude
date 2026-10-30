@@ -21,6 +21,7 @@ test('bloqueia o fechamento enquanto a confirmação está em andamento', () => 
   const dialog = document.body.querySelector('[role="dialog"]');
   assert.ok(dialog);
   assert.ok(dialog.classList.contains('kds-dialog-confirmation'));
+  assert.equal(dialog.getAttribute('data-size'), 'form');
   assert.equal(dialog.querySelector('[aria-label="Fechar"]'), null);
   assert.equal(Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Cancelar'))?.disabled, true);
   assert.equal(dialog.querySelector<HTMLButtonElement>('button[data-loading="true"]')?.disabled, true);

@@ -62,7 +62,7 @@ export function ConfirmDialog({
       onOpenChange={(nextOpen) => !nextOpen && !busy && onOpenChange(false)}
       closeOnOverlay={!busy}
       closeOnEscape={!busy}
-      size="sm"
+      size="form"
       className="kds-dialog-confirmation"
     >
       <DialogHeader onClose={busy ? undefined : () => onOpenChange(false)}>

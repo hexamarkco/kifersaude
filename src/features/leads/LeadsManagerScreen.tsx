@@ -1,4 +1,5 @@
 import { LeadListCard } from './components/LeadListCard';
+import { LeadDeletionSummary } from './components/LeadDeletionSummary';
 import { ActionSurface, Heading, Text, FieldLabel } from '../../design-system';
 import {
   startTransition,
@@ -1091,10 +1092,11 @@ export default function LeadsManager({
 
     const confirmed = await requestConfirmation({
       title: "Excluir lead",
-      description: `Deseja excluir o lead ${lead.nome_completo}? Esta ação não pode ser desfeita.`,
+      description: "Confira o registro e o impacto antes de excluir.",
       confirmLabel: "Excluir",
       cancelLabel: "Cancelar",
       tone: "danger",
+      content: <LeadDeletionSummary leadName={lead.nome_completo} />,
     });
 
     if (!confirmed) return;

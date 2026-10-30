@@ -666,10 +666,15 @@ export function WhatsAppMessageBody({
               </ActionSurface>
             ) : (
               <div className={isSticker
-                ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
-                : `flex h-40 w-[13.75rem] max-w-full items-center justify-center border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
+                ? 'flex h-32 w-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
+                : `flex h-40 w-[13.75rem] max-w-full flex-col items-center justify-center gap-2 border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80 ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
               >
-                {loading ? loadingLabel : error || unavailableLabel}
+                <Text>{loading ? loadingLabel : error || unavailableLabel}</Text>
+                {error ? (
+                  <Button variant="secondary" type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
+                    Tentar novamente
+                  </Button>
+                ) : null}
               </div>
             )}
             {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}

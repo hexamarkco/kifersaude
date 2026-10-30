@@ -1,11 +1,21 @@
 import assert from 'node:assert/strict';
+import { act } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { test, vi } from 'vitest';
+import { render } from '../../../../../testing-library/react';
 import type { CommWhatsAppMessage } from '../../domain/types';
 import { WhatsAppMessageBody } from '../WhatsAppMessageContent';
 
+const mediaState = vi.hoisted(() => ({
+  mediaUrl: null as string | null,
+  loading: false,
+  error: null as string | null,
+  retryCalls: 0,
+  retry: () => { mediaState.retryCalls += 1; },
+}));
+
 vi.mock('../../hooks/useResolvedMediaUrl', () => ({
-  useResolvedMediaUrl: () => ({ mediaUrl: null, loading: false, error: null, retry: vi.fn() }),
+  useResolvedMediaUrl: () => mediaState,
 }));
 
 const renderMessage = (messageType: string, interactive: Record<string, unknown>, direction: CommWhatsAppMessage['direction'] = 'inbound', metadata: Record<string, unknown> = { interactive }) => {
@@ -26,6 +36,33 @@ test('alinha o texto das mensagens à esquerda sem esticar os espaços', () => {
 
   assert.ok(markup.includes('text-left'));
   assert.ok(!markup.includes('text-justify'));
+});
+
+test('permite tentar carregar novamente uma imagem indisponível', () => {
+  mediaState.mediaUrl = null;
+  mediaState.loading = false;
+  mediaState.error = 'Arquivo indisponível no momento.';
+  mediaState.retryCalls = 0;
+  const imageMessage: CommWhatsAppMessage = {
+    id: 'image-1', chat_id: 'chat-1', channel_id: 'channel-1', external_message_id: 'external-1',
+    direction: 'inbound', message_type: 'image', delivery_status: 'received', text_content: null,
+    media_id: 'media-1', message_at: '2026-10-01T12:00:00Z', created_at: '2026-10-01T12:00:00Z', metadata: {},
+  };
+  const view = render(<WhatsAppMessageBody
+    message={imageMessage} onOpenImage={vi.fn()} onOpenQuotedMessage={vi.fn()} onTranscribe={vi.fn()}
+    onSelectInteractiveReply={vi.fn()} onOpenSharedContactChat={vi.fn()} onSaveSharedContact={vi.fn()}
+    sharedContactActionKey={null} transcribing={false} mediaSending={false} mediaSendingProgress={null}
+  />);
+
+  try {
+    const retryButton = view.container.querySelector('button');
+    assert.equal(retryButton?.textContent?.trim(), 'Tentar novamente');
+    act(() => retryButton?.click());
+    assert.equal(mediaState.retryCalls, 1);
+  } finally {
+    view.unmount();
+    mediaState.error = null;
+  }
 });
 
 for (const type of ['list', 'interactive']) {

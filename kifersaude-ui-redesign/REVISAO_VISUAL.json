@@ -947,10 +947,14 @@
         "references/mobile/extra--contratos-ficha.png"
       ],
       "status": "pendente",
-      "evidence": [],
+      "evidence": [
+        "validacao/revisao-visual/contracts/ficha/README.md",
+        "validacao/revisao-visual/contracts/ficha/coverage.json"
+      ],
       "notes": [
-        "A abertura da listagem agora usa a ficha em página completa; o carregamento permanece dentro da página e editar/excluir ficam no cabeçalho. O teste do componente confirma que esse modo não abre um diálogo.",
-        "A captura integrada segue pendente: uma sessão Playwright sem autenticação redirecionou /painel/contratos para a página pública."
+        "O título da seção recolhível foi encurtado nas apresentações page e drawer; Playwright confirmou o texto completo em 320 px e ausência de overflow em quatro larguras, nos temas claro e escuro.",
+        "Foram arquivadas 12 capturas da prévia local do componente real com dados sintéticos, incluindo seção expandida em desktop e mobile.",
+        "A comparação integrada segue pendente porque a rota /painel/contratos redirecionou para autenticação sem sessão local."
       ]
     },
     {

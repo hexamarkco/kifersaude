@@ -1,0 +1,17 @@
+{
+  "component": "src/components/ContractDetails.tsx",
+  "route": "/painel/contratos",
+  "references": [
+    "references/desktop/extra--contratos-ficha.png",
+    "references/mobile/extra--contratos-ficha.png"
+  ],
+  "preview": "isolated local fixture using synthetic contract and beneficiary data",
+  "status": "integrated shell comparison pending",
+  "states": ["default", "disclosure expanded"],
+  "viewports": ["1920x1080", "768x1024", "390x844", "320x640"],
+  "themes": ["light", "dark"],
+  "screenshots": 12,
+  "horizontalOverflow": false,
+  "mobileDisclosureLabel": "Mais informações do contrato",
+  "limitations": ["Authenticated route redirected to login; real shell could not be captured."]
+}

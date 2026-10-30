@@ -89,6 +89,7 @@ test('contract details page keeps loading in-page and exposes header actions aft
     assert.ok(view.container.textContent?.includes('Ficha do contrato'));
     assert.ok(view.container.textContent?.includes('Dados do contrato'));
     assert.ok(view.container.textContent?.includes('Beneficiários'));
+    assert.ok(view.container.textContent?.includes('Mais informações do contrato'));
     assert.ok(view.container.textContent?.includes('Contato Demonstração 01'));
     assert.ok(view.container.textContent?.includes('Dependente de demonstração'));
     assert.equal(view.container.querySelector('details')?.open, false);

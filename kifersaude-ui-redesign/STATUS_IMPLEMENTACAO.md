@@ -6,6 +6,9 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
+### Contratos — ficha completa (30/10/2026)
+
+- A seção recolhível agora usa o rótulo curto “Mais informações do contrato” tanto na ficha completa quanto no drawer. A prévia isolada do componente real foi verificada em 1920, 768, 390 e 320 px nos temas claro e escuro; não houve overflow horizontal e o rótulo coube a 320 px. A seção aberta também foi capturada em desktop e mobile com dados sintéticos. A rota autenticada redirecionou para login, então a integração com o shell segue pendente. [Evidências](validacao/revisao-visual/contracts/ficha/README.md).
 ### Contratos — importação JSON individual (30/10/2026)
 
 - O `ContractJsonImportDialog` real continua importando JSON, oferecendo o modelo, validando o conteúdo e aplicando os dados somente ao formulário ainda não salvo. A referência visual representa campos genéricos de contrato/titular e salvamento direto, portanto essa diferença funcional foi preservada e documentada. O diálogo usa largura do padrão de formulário; até 640 px, as ações ficam em duas colunas proporcionais, sem quebra do rótulo em 320 px.

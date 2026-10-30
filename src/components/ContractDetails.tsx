@@ -2084,7 +2084,7 @@ export default function ContractDetails({
 
           <details className="kds-contract-detail-expanded border-t border-[var(--border-subtle)] pt-4">
             <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">
-              Ver informações financeiras, documentos e histórico
+              Mais informações do contrato
             </summary>
             <div className="mt-4">{detailContent}</div>
           </details>
@@ -2227,7 +2227,7 @@ export default function ContractDetails({
 
         <details className="kds-contract-detail-expanded">
           <DisclosureTrigger size="md" className="w-full justify-between">
-            Ver informações financeiras, pessoas, documentos e histórico
+            Mais informações do contrato
           </DisclosureTrigger>
           <div className="mt-4">
             {detailContent}

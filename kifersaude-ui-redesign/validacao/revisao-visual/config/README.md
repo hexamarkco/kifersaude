@@ -16,7 +16,7 @@ Referências: `references/desktop/page--config-system.png` e `references/mobile/
 
 O conteúdo preserva as preferências reais de formato de data, fuso horário, sessão e notificações. O painel “Estrutura e parametrização” leva a acessos e cadastros já existentes. A faixa secundária e a busca ficam fora da visão inicial quando a pessoa está nas preferências; os atalhos do painel mantêm acesso aos demais grupos e reduzem uma camada de navegação nessa página.
 
-Os cinco atalhos do painel compartilham o componente `SettingsCatalogLink`. O texto e o ícone mantêm 12 px de respiro vertical e 16 px horizontal por tokens do design system; isso evita que rótulos encostem na borda. Os destinos, rótulos, contagens e regras de visibilidade por permissão foram preservados. Playwright conferiu o padding calculado e capturou uma prévia isolada do componente real em 1920 × 1080 e 390 × 844, nos temas claro e escuro, sem overflow. A captura integrada da página de configurações ainda depende de sessão autenticada.
+Os cinco atalhos do painel compartilham o componente `SettingsCatalogLink`. O padding de 16 px do token `kds-card-padding-sm` fica num contêiner interno, mantendo o respiro do conteúdo independente do padding externo do botão. A borda e o hover permanecem no botão externo. Texto, ícone, rótulos, contagens, destinos e regras de visibilidade por permissão foram preservados. Playwright mediu 16 px de padding interno (17 px entre a borda do botão e texto/seta) e capturou a prévia isolada do componente real em 1920 × 1080 e 390 × 844, nos temas claro e escuro, sem overflow. Também conferiu que o hover não encosta o conteúdo na borda:
 
 | Componente / viewport | Captura |
 | --- | --- |
@@ -24,6 +24,9 @@ Os cinco atalhos do painel compartilham o componente `SettingsCatalogLink`. O te
 | Atalhos, desktop 1920 × 1080, escuro | [settings-catalog-links-desktop-dark.png](settings-catalog-links-desktop-dark.png) |
 | Atalhos, mobile 390 × 844, claro | [settings-catalog-links-mobile-light.png](settings-catalog-links-mobile-light.png) |
 | Atalhos, mobile 390 × 844, escuro | [settings-catalog-links-mobile-dark.png](settings-catalog-links-mobile-dark.png) |
+| Atalho em hover, mobile 390 × 844, claro | [settings-catalog-link-hover-mobile-light.png](settings-catalog-link-hover-mobile-light.png) |
+
+A captura integrada da página de configurações ainda depende de sessão autenticada.
 
 ## Origens dos leads
 

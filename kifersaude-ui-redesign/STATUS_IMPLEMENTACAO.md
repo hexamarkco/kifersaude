@@ -22,7 +22,7 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Configurações — espaçamento dos atalhos (30/10/2026)
 
-- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com 12 px de padding vertical e 16 px horizontal por tokens do design system. A regra do componente não depende mais do escopo do tema; os destinos, contagens e permissões permanecem iguais. O teste focado cobre o clique e Playwright conferiu 12 px × 16 px em desktop/mobile nos dois temas, sem overflow. A captura isolada do componente não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
+- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com o token `kds-card-padding-sm` no contêiner interno. O botão mantém a borda e o hover; texto, contagem e seta ficam recuados pelo token, sem depender do padding externo do botão. Destinos, contagens e permissões permanecem iguais. O teste focado passou e Playwright mediu 16 px de padding interno (17 px entre borda e conteúdo), inclusive no hover, em 390 px; as capturas foram atualizadas em desktop e mobile nos dois temas, sem overflow. A captura isolada do componente não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
 
 ### Contratos — formulário de titular em página (30/10/2026)
 
@@ -30,8 +30,8 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Gates desta entrega (30/10/2026)
 
-- Testes focados: **2/2**; typecheck, auditorias visual/Design System/arquitetura, lint e build passaram. O lint mantém cinco avisos Fast Refresh em prévias Playwright preexistentes. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
-- Suíte completa: **1.835 testes passaram e 4 falharam** em `ContractForm.presentation.test.tsx`, `ConfigPageScreen.test.tsx` (2) e `UsersScreen.test.tsx` (1). Os testes e componentes de produção desses arquivos não fazem parte desta alteração; os contextos afetados seguem em revisão.
+- Teste focado desta correção: **1/1**. Typecheck, lint, arquitetura, `secrets:check`, auditorias visual/Design System, build e verificação do bundle do editor passaram. O lint mantém cinco avisos Fast Refresh em prévias Playwright preexistentes. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
+- A suíte completa foi atualizada após corrigir expectativas de testes defasadas: **1.840 testes passaram em 349 arquivos**; não há falhas pendentes nesses três arquivos de contratos/configurações/usuários.
 
 ### Configurações — Links públicos
 

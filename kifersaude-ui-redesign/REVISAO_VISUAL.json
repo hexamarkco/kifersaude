@@ -59,7 +59,8 @@
       "route": "/painel/contratos",
       "kind": "pages",
       "components": [
-        "src/features/contracts/ContractsManagerScreen.tsx"
+        "src/features/contracts/ContractsManagerScreen.tsx",
+        "src/design-system/components/Table.tsx"
       ],
       "references": [
         "references/desktop/page--contratos-listagem.png",
@@ -72,7 +73,8 @@
       ],
       "notes": [
         "Comparada às referências em desktop, tablet, mobile e mobile compacto nos temas claro e escuro. O shell mobile agora exibe marca, menu completo e perfil no cabeçalho; o menu ocupa a tela disponível e conserva navegação rolável sem sobrepor o rodapé em 320 px.",
-        "Mantidos os quatro registros sintéticos da fixture e as ações reais de importação, criação, busca e filtros; a contagem de dados difere da referência estática, que contém oito registros."
+        "Mantidos os quatro registros sintéticos da fixture e as ações reais de importação, criação, busca e filtros; a contagem de dados difere da referência estática, que contém oito registros.",
+        "Os indicadores de ordenação foram removidos dos cabeçalhos sem desativar a ordenação; a ação e aria-sort foram verificadas por Playwright na fixture sintética."
       ]
     },
     {

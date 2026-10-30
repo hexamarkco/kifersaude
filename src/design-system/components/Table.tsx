@@ -85,12 +85,14 @@ export type SortableTableHeadProps = TableHeadProps & {
   label: string;
   sortDirection: 'asc' | 'desc' | null;
   onSort: () => void;
+  showSortIndicator?: boolean;
 };
 
 export function SortableTableHead({
   label,
   sortDirection,
   onSort,
+  showSortIndicator = true,
   align = 'left',
   className,
 }: SortableTableHeadProps) {
@@ -118,7 +120,7 @@ export function SortableTableHead({
         title={sortDirection === 'asc' ? `Ordenado por ${label}, crescente` : sortDirection === 'desc' ? `Ordenado por ${label}, decrescente` : `Ordenar por ${label}`}
       >
         <span>{label}</span>
-        <SortIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
+        {showSortIndicator && <SortIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />}
       </button>
     </TableHead>
   );

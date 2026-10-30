@@ -22,6 +22,7 @@ import {
   Pagination,
   SegmentedControl,
   Select,
+  SortableTableHead,
   Tabs,
 } from '../../index';
 
@@ -72,6 +73,20 @@ test('controls share the sm/md/lg scale and loading semantics', () => {
   assert.match(buttons[2].className, /kds-control-lg/);
   assert.match(buttons[3].className, /kds-icon-button/);
   assert.equal(buttons[3].getAttribute('aria-label'), 'Configurações');
+  unmount();
+});
+
+test('sortable table headers can keep sorting accessible without a visible arrow', () => {
+  let sorted = false;
+  const { container, unmount } = render(
+    <table><thead><tr><SortableTableHead label="Contrato" sortDirection={null} onSort={() => { sorted = true; }} showSortIndicator={false} /></tr></thead></table>,
+  );
+  const sortButton = container.querySelector<HTMLButtonElement>('button[aria-label="Ordenar por Contrato"]');
+  assert.ok(sortButton);
+  assert.equal(sortButton.querySelector('svg'), null);
+  assert.equal(sortButton.closest('th')?.getAttribute('aria-sort'), 'none');
+  click(sortButton);
+  assert.equal(sorted, true);
   unmount();
 });
 

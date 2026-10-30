@@ -13,7 +13,23 @@ vi.mock('../integrations/IntegrationsScreen', () => ({ default: () => <p>Área d
 vi.mock('../general/SystemSettingsScreen', () => ({ default: () => <p>Área geral</p> }));
 vi.mock('../users/UsersScreen', () => ({ default: ({ createDialogOpen }: { createDialogOpen: boolean }) => <><p>Área de usuários</p>{createDialogOpen && <div role="dialog">Criar usuário</div>}</> }));
 vi.mock('../links/LinksScreen', () => ({ default: ({ createDialogOpen, showPageHeader }: { createDialogOpen: boolean; showPageHeader: boolean }) => <>{showPageHeader !== false && <h1>Links públicos interno</h1>}<p>Área de links</p>{createDialogOpen && <div role="dialog">Criar link</div>}</> }));
-vi.mock('../forms/FormsScreen', () => ({ default: () => <p>Área de formulários</p> }));
+vi.mock('../forms/FormsScreen', () => ({ default: ({
+  showPageHeader,
+  createDialogOpen,
+  onCreateAvailabilityChange,
+  onEditorOpenChange,
+}: {
+  showPageHeader?: boolean;
+  createDialogOpen?: boolean;
+  onCreateAvailabilityChange?: (available: boolean) => void;
+  onEditorOpenChange?: (open: boolean) => void;
+}) => <>
+  {showPageHeader !== false && <h2>Formulários de captação interno</h2>}
+  <p>Área de formulários</p>
+  <button type="button" onClick={() => onCreateAvailabilityChange?.(true)}>Lista pronta</button>
+  <button type="button" onClick={() => onEditorOpenChange?.(true)}>Abrir editor</button>
+  {createDialogOpen && <div role="dialog">Criar formulário</div>}
+</> }));
 
 import ConfigPageScreen from '../ConfigPageScreen';
 
@@ -134,5 +150,35 @@ test('Links públicos mantém um único cabeçalho e centraliza a criação na a
     assert.ok(generalTab);
     act(() => generalTab.click());
     assert.equal(view.container.querySelector('[role="dialog"]'), null);
+  } finally { view.unmount(); }
+});
+
+test('Formulários centraliza o cabeçalho e a criação, sem duplicar a ação na lista', () => {
+  const view = renderAt('/painel/config?tab=forms', ['config-forms', 'config-system']);
+  try {
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Formulários de captação');
+    assert.equal(view.container.querySelectorAll('h1').length, 1);
+    assert.equal(view.container.textContent?.includes('Formulários de captação interno'), false);
+
+    act(() => [...view.container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Lista pronta')!.click());
+    const createButton = [...view.container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Novo formulário'));
+    assert.ok(createButton);
+    act(() => createButton.click());
+    assert.equal(view.container.querySelector('[role="dialog"]')?.textContent, 'Criar formulário');
+
+    const generalTab = [...view.container.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((tab) => tab.textContent?.includes('Geral'));
+    assert.ok(generalTab);
+    act(() => generalTab.click());
+    assert.equal(view.container.querySelector('[role="dialog"]'), null);
+  } finally { view.unmount(); }
+});
+
+test('modo editor remove a ação de criação e atualiza o título da página', () => {
+  const view = renderAt('/painel/config?tab=forms', ['config-forms', 'config-system']);
+  try {
+    act(() => [...view.container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Lista pronta')!.click());
+    act(() => [...view.container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Abrir editor')!.click());
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Editor de formulários');
+    assert.equal([...view.container.querySelectorAll('button')].some((button) => button.textContent?.includes('Novo formulário')), false);
   } finally { view.unmount(); }
 });

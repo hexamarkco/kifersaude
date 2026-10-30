@@ -1,6 +1,6 @@
 import { Heading, InfoTooltip, Text } from '../../../design-system';
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, Edit2, ExternalLink, FileText, Filter, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Copy, Edit2, ExternalLink, FileText, Filter, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formsService } from "../../../lib/formsService";
@@ -20,12 +20,24 @@ import {
   Input,
   LoadingState,
   Pagination,
+  SearchInput,
   SectionHeader,
   Switch,
+  Toolbar,
+  ToolbarActions,
+  ToolbarSearch,
   RecordActions, ResponsiveCollection, Surface, EmptyState,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../../../design-system";
 import FormEditorScreen from "./FormEditorScreen";
+
+type FormsScreenProps = {
+  showPageHeader?: boolean;
+  createDialogOpen?: boolean;
+  onCreateDialogOpenChange?: (open: boolean) => void;
+  onCreateAvailabilityChange?: (available: boolean) => void;
+  onEditorOpenChange?: (open: boolean) => void;
+};
 
 const slugify = (value: string): string =>
   value
@@ -39,7 +51,13 @@ const slugify = (value: string): string =>
     .replace(/^-|-$/g, "")
     .slice(0, 80);
 
-export default function FormsScreen() {
+export default function FormsScreen({
+  showPageHeader = true,
+  createDialogOpen,
+  onCreateDialogOpenChange,
+  onCreateAvailabilityChange,
+  onEditorOpenChange,
+}: FormsScreenProps = {}) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [forms, setForms] = useState<PublicForm[]>([]);
@@ -49,16 +67,25 @@ export default function FormsScreen() {
   const [pageSize, setPageSize] = useState(10);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [internalCreateModalOpen, setInternalCreateModalOpen] = useState(false);
+  const isCreateModalOpen = createDialogOpen ?? internalCreateModalOpen;
+  const setIsCreateModalOpen = (open: boolean) => {
+    if (createDialogOpen === undefined) setInternalCreateModalOpen(open);
+    onCreateDialogOpenChange?.(open);
+  };
   const [createTitle, setCreateTitle] = useState("");
   const [createSlug, setCreateSlug] = useState("");
+  const [createErrors, setCreateErrors] = useState<{ title?: string; slug?: string }>({});
   const [slugTouched, setSlugTouched] = useState(false);
   const [creating, setCreating] = useState(false);
+  const createTitleRef = useRef<HTMLInputElement>(null);
+  const createSlugRef = useRef<HTMLInputElement>(null);
 
   const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set());
   const formsLoadRequestIdRef = useRef(0);
 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const selectedForm = forms.find((form) => form.id === selectedFormId) ?? null;
 
   const loadForms = useCallback(async () => {
     const requestId = ++formsLoadRequestIdRef.current;
@@ -86,6 +113,32 @@ export default function FormsScreen() {
     };
   }, [loadForms]);
 
+  useEffect(() => {
+    onCreateAvailabilityChange?.(!loading && !loadError);
+  }, [loading, loadError, onCreateAvailabilityChange]);
+
+  useEffect(() => {
+    onEditorOpenChange?.(Boolean(selectedForm));
+  }, [selectedForm, onEditorOpenChange]);
+
+  const resetCreateForm = () => {
+    setCreateTitle("");
+    setCreateSlug("");
+    setCreateErrors({});
+    setSlugTouched(false);
+  };
+
+  const openCreateDialog = () => {
+    resetCreateForm();
+    setIsCreateModalOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    if (creating) return;
+    resetCreateForm();
+    setIsCreateModalOpen(false);
+  };
+
   const setFormBusy = (formId: string, busy: boolean) => {
     setBusyIds((current) => {
       const next = new Set(current);
@@ -107,14 +160,17 @@ export default function FormsScreen() {
     const slug = slugify(createSlug || createTitle);
 
     if (!title) {
-      toast.error("Informe um título para o formulário.");
+      setCreateErrors({ title: "Informe um título para o formulário." });
+      createTitleRef.current?.focus();
       return;
     }
     if (slug.length < 2) {
-      toast.error("Informe um endereço (slug) válido, com pelo menos 2 caracteres.");
+      setCreateErrors({ slug: "Informe um endereço público válido com pelo menos 2 caracteres." });
+      createSlugRef.current?.focus();
       return;
     }
 
+    setCreateErrors({});
     setCreating(true);
     try {
       const { data: form, error } = await formsService.createForm({ slug, title, is_published: false });
@@ -139,9 +195,7 @@ export default function FormsScreen() {
       }
 
       setIsCreateModalOpen(false);
-      setCreateTitle("");
-      setCreateSlug("");
-      setSlugTouched(false);
+      resetCreateForm();
       await loadForms();
       setSelectedFormId(form.id);
       toast.success("Formulário criado. Agora monte as perguntas.");
@@ -219,14 +273,14 @@ export default function FormsScreen() {
     return <LoadingState label="Carregando formulários..." />;
   }
 
-  const pageHeader = (
+  const pageHeader = showPageHeader ? (
     <SectionHeader
       eyebrow="Página pública"
       title="Formulários de captação"
       description="Crie e organize formulários para captar leads no site."
-      action={!loadError ? <Button onClick={() => { setCreateTitle(""); setCreateSlug(""); setSlugTouched(false); setIsCreateModalOpen(true); }}><Plus className="kds-control-icon" aria-hidden="true" />Novo formulário</Button> : undefined}
+      action={!loadError ? <Button onClick={openCreateDialog}><Plus className="kds-control-icon" aria-hidden="true" />Novo formulário</Button> : undefined}
     />
-  );
+  ) : null;
 
   if (loadError) {
     return (
@@ -249,8 +303,6 @@ export default function FormsScreen() {
       </div>
     );
   }
-
-  const selectedForm = forms.find((form) => form.id === selectedFormId) ?? null;
 
   if (selectedForm) {
     return (
@@ -276,10 +328,25 @@ export default function FormsScreen() {
       {pageHeader}
 
       <Card>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="min-w-0 flex-1"><Input aria-label="Buscar formulários" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome ou endereço..." leftIcon={Search} /></div>
-          <FilterSelect icon={Filter} placeholder="Todos os status" value={statusFilter} onChange={value => { setStatusFilter(value); setPage(1); }} options={[{ value: "published", label: "Publicado" }, { value: "draft", label: "Rascunho" }]} />
-        </div>
+        <Toolbar>
+          <ToolbarSearch>
+            <SearchInput
+              aria-label="Buscar formulários"
+              value={search}
+              onChange={event => { setSearch(event.target.value); setPage(1); }}
+              placeholder="Buscar por nome ou endereço..."
+            />
+          </ToolbarSearch>
+          <ToolbarActions>
+            <FilterSelect
+              icon={Filter}
+              placeholder="Todos os status"
+              value={statusFilter}
+              onChange={value => { setStatusFilter(value); setPage(1); }}
+              options={[{ value: "published", label: "Publicado" }, { value: "draft", label: "Rascunho" }]}
+            />
+          </ToolbarActions>
+        </Toolbar>
       </Card>
       <Card className="space-y-4">
         <div>
@@ -320,41 +387,49 @@ export default function FormsScreen() {
         closeOnOverlay={!creating}
         closeOnEscape={!creating}
         onOpenChange={(open) => {
-          if (!open && !creating) setIsCreateModalOpen(false);
+          if (!open) closeCreateDialog();
         }}
         size="sm"
       >
-        <DialogHeader onClose={() => { if (!creating) setIsCreateModalOpen(false); }} showCloseButton={!creating}>
+        <DialogHeader onClose={closeCreateDialog} showCloseButton={!creating}>
           <DialogTitle>Novo formulário</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <form
             id="form-create-form"
             className="space-y-4"
+            noValidate
             onSubmit={(event) => {
               event.preventDefault();
               void handleCreate();
             }}
           >
-            <Field label="Título">
+            <Field label="Título" required error={createErrors.title}>
               <Input
+                ref={createTitleRef}
                 value={createTitle}
                 disabled={creating}
                 onChange={(event) => {
                   const value = event.target.value;
                   setCreateTitle(value);
-                  if (!slugTouched) setCreateSlug(slugify(value));
+                  setCreateErrors((current) => ({ ...current, title: undefined }));
+                  if (!slugTouched) {
+                    setCreateSlug(slugify(value));
+                    setCreateErrors((current) => ({ ...current, slug: undefined }));
+                  }
                 }}
                 placeholder="Ex: Cotação de plano de saúde"
               />
             </Field>
-            <Field label="Endereço público" description={`kifersaude.com.br/forms/${createSlug || "seu-formulario"}`}>
+            <Field label="Endereço público" required error={createErrors.slug} description={`kifersaude.com.br/forms/${createSlug || "seu-formulario"}`}>
               <Input
+                ref={createSlugRef}
                 value={createSlug}
                 disabled={creating}
                 onChange={(event) => {
                   setSlugTouched(true);
                   setCreateSlug(slugify(event.target.value));
+                  setCreateErrors((current) => ({ ...current, slug: undefined }));
                 }}
                 placeholder="seu-formulario"
               />
@@ -362,7 +437,7 @@ export default function FormsScreen() {
           </form>
         </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)} disabled={creating}>
+          <Button type="button" variant="secondary" onClick={closeCreateDialog} disabled={creating}>
             Cancelar
           </Button>
           <Button type="submit" form="form-create-form" disabled={creating}>

@@ -24,6 +24,9 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const { getRoleModulePermission } = useConfig();
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [createLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
+  const [createFormDialogOpen, setCreateFormDialogOpen] = useState(false);
+  const [canCreateForm, setCanCreateForm] = useState(false);
+  const [isFormEditorOpen, setIsFormEditorOpen] = useState(false);
   const location = useLocation();
   const [activeTab, setActiveTab] = useConfigParam("tab", ALL_TAB_IDS, area === "automation" ? "automation" : "system");
 
@@ -67,7 +70,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const title = area === 'automation' ? 'Automações, integrações e IA'
     : activeAllowedTab === 'users' ? 'Usuários e permissões'
     : activeAllowedTab === 'links' ? 'Links públicos'
-    : activeAllowedTab === 'forms' ? 'Formulários de captação' : systemTitle;
+    : activeAllowedTab === 'forms' ? isFormEditorOpen ? 'Editor de formulários' : 'Formulários de captação' : systemTitle;
   const description = area === 'automation'
     ? activeAllowedTab === 'integrations'
       ? 'Conecte e acompanhe os serviços usados pelo CRM.'
@@ -79,7 +82,9 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
       : activeAllowedTab === 'links'
         ? 'Gerencie o perfil público e os links exibidos em /links.'
         : activeAllowedTab === 'forms'
-          ? 'Configure os formulários públicos que recebem novos contatos.'
+          ? isFormEditorOpen
+            ? 'Edite os dados, as perguntas e as respostas do formulário.'
+            : 'Configure os formulários públicos que recebem novos contatos.'
           : section === 'access'
             ? 'Controle quais áreas do CRM ficam disponíveis para cada perfil.'
             : section === 'leads'
@@ -93,10 +98,17 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
     ? <Button onClick={() => setCreateUserDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo usuário</Button>
     : activeAllowedTab === 'links'
       ? <Button onClick={() => setCreateLinkDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo link</Button>
+      : activeAllowedTab === 'forms' && canCreateForm && !isFormEditorOpen
+        ? <Button onClick={() => setCreateFormDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo formulário</Button>
     : undefined;
   const handleTabChange = (nextTab: ConfigTabType) => {
     if (nextTab !== 'users') setCreateUserDialogOpen(false);
     if (nextTab !== 'links') setCreateLinkDialogOpen(false);
+    if (nextTab !== 'forms') {
+      setCreateFormDialogOpen(false);
+      setCanCreateForm(false);
+      setIsFormEditorOpen(false);
+    }
     setActiveTab(nextTab);
   };
   return (
@@ -132,7 +144,15 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
               onCreateDialogOpenChange={setCreateLinkDialogOpen}
             />
           )}
-          {activeAllowedTab === "forms" && <FormsScreen />}
+          {activeAllowedTab === "forms" && (
+            <FormsScreen
+              showPageHeader={false}
+              createDialogOpen={createFormDialogOpen}
+              onCreateDialogOpenChange={setCreateFormDialogOpen}
+              onCreateAvailabilityChange={setCanCreateForm}
+              onEditorOpenChange={setIsFormEditorOpen}
+            />
+          )}
       </main>
     </div>
   );

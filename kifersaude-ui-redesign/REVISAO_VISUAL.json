@@ -307,8 +307,14 @@
         "references/mobile/page--config-links.png"
       ],
       "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "evidence": [
+        "validacao/revisao-visual/config-links/README.md",
+        "validacao/revisao-visual/config-links/coverage.json"
+      ],
+      "notes": [
+        "A implementação do componente real foi reorganizada e conferida em fixture com dados sintéticos nas larguras 1920, 768, 390 e 320 px, tema claro/escuro em desktop, e interações de busca, criação, edição, menu e perfil.",
+        "A rota autenticada redirecionou para login nesta sessão. A comparação integrada com o shell do CRM permanece pendente, por isso o contexto continua pendente."
+      ]
     },
     {
       "id": "page--config-forms",

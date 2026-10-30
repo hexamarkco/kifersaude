@@ -6,6 +6,10 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
+### Configurações — Links públicos
+
+- A tela foi organizada com `PageHeader`, `PageActions`, disclosure do perfil, busca local, tabela responsiva/cards e `RecordActions`, preservando cadastro, edição, exclusão, ativação, ordenação, upload e serviços atuais. Os registros também mantêm a contagem de cliques. Playwright capturou 17 imagens dos estados e das larguras 1920, 768, 390 e 320 px; não houve overflow horizontal. Testes focados passaram (2/2), typecheck passou, e lint terminou sem erros com cinco avisos preexistentes em fixtures. A rota autenticada redirecionou para login, então a comparação da página dentro do shell permanece pendente. [Evidências](validacao/revisao-visual/config-links/README.md).
+
 ### Inbox — painel contextual responsivo (30/10/2026)
 
 - A regra de três colunas agora considera a largura disponível dentro do Inbox, usando container queries em vez da largura total da janela. Com 72rem (1152 px CSS) ou mais, lista, conversa e Informações do contato permanecem lado a lado. Abaixo disso, o painel ocupa a área de trabalho enquanto está aberto; a lista, a conversa e o backdrop deixam de ficar parcialmente cobertos. Ao fechar o painel, a conversa retorna. Playwright CLI conferiu 1920, 1272 (zoom), 1024, 768, 390 e 320 px, sem overflow horizontal. A validação usou uma fixture sintética para a regra CSS; a conferência integrada autenticada continua pendente. [Evidências e limitações](validacao/revisao-visual/inbox/README.md).

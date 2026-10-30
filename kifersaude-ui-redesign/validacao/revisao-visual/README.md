@@ -25,6 +25,7 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 - [Campanhas — listagem, indicadores reais e monitoramento de envios revisados com adaptações](campanhas/README.md)
 - [Configurações — preferências, origens dos leads e criação revisadas com adaptações](config/README.md)
 - [Usuários e permissões — listagem, busca, criação, edição e confirmação revisadas com adaptações](config-users/README.md)
+- [Links públicos — componente reorganizado e capturado em fixture; comparação integrada pendente por autenticação](config-links/README.md)
 - [Login — formulário pré-autenticado, teclado e responsividade revisados com adaptações](login/README.md)
 
 ## Critério

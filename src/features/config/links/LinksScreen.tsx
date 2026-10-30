@@ -1,5 +1,41 @@
-import { ButtonGroup, Heading, InfoTooltip, Text, Image, FieldLabel } from '../../../design-system';
-import { FileInput } from '../../../design-system';
+import {
+  ButtonGroup,
+  Card,
+  Field,
+  FieldLabel,
+  FileInput,
+  Heading,
+  IconButton,
+  Image,
+  InfoTooltip,
+  Input,
+  LoadingState,
+  PageActions,
+  PageHeader,
+  RecordActions,
+  ResponsiveCollection,
+  SearchInput,
+  Select,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Text,
+  Textarea,
+  Toolbar,
+  ToolbarSearch,
+  Alert,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DisclosureTrigger,
+} from '../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   Check,
@@ -10,6 +46,7 @@ import {
   ImageIcon,
   Loader,
   Plus,
+  Pencil,
   RefreshCw,
   Save,
   Trash2,
@@ -23,25 +60,6 @@ import { getLinkIcon, LINK_ICON_OPTIONS } from "../../../lib/linkIcons";
 import { linksService } from "../../../lib/linksService";
 import type { PublicLinkItem, PublicLinkPageSettings } from "../../public-content";
 import { toast } from "../../../lib/toast";
-import {
-  Alert,
-  Button,
-  Card,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Field,
-  Input,
-  LoadingState,
-  SectionHeader,
-  Select,
-  Switch,
-  Textarea,
-  IconButton,
-} from "../../../design-system";
-
 type LinkFormState = {
   title: string;
   url: string;
@@ -71,6 +89,7 @@ export default function LinksScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [linkSearch, setLinkSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<LinkFormState>(EMPTY_LINK_FORM);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -247,6 +266,106 @@ export default function LinksScreen() {
     setBusyId(null);
   };
 
+  const openCreateModal = () => {
+    setCreateForm(EMPTY_LINK_FORM);
+    setIsCreateModalOpen(true);
+  };
+
+  const normalizedLinkSearch = linkSearch.trim().toLocaleLowerCase('pt-BR');
+  const visibleLinks = normalizedLinkSearch
+    ? links.filter((link) => `${link.title} ${link.url}`.toLocaleLowerCase('pt-BR').includes(normalizedLinkSearch))
+    : links;
+
+  const renderLinkReordering = (link: PublicLinkItem) => {
+    const index = links.findIndex((item) => item.id === link.id);
+    const hasBusyMutation = busyId !== null;
+    return (
+      <ButtonGroup size="sm" aria-label={`Ordenar ${link.title}`}>
+        <IconButton
+          type="button"
+          size="sm"
+          variant="tertiary"
+          onClick={() => void moveLink(index, -1)}
+          disabled={index <= 0 || hasBusyMutation}
+          aria-label={`Mover ${link.title} para cima`}
+          title="Mover para cima"
+        >
+          <ChevronUp aria-hidden="true" />
+        </IconButton>
+        <IconButton
+          type="button"
+          size="sm"
+          variant="tertiary"
+          onClick={() => void moveLink(index, 1)}
+          disabled={index < 0 || index >= links.length - 1 || hasBusyMutation}
+          aria-label={`Mover ${link.title} para baixo`}
+          title="Mover para baixo"
+        >
+          <ChevronDown aria-hidden="true" />
+        </IconButton>
+      </ButtonGroup>
+    );
+  };
+
+  const renderLinkActions = (link: PublicLinkItem) => {
+    const isBusy = busyId === link.id;
+    const hasBusyMutation = busyId !== null;
+    const isEditing = editingId === link.id;
+
+    if (isEditing) {
+      return (
+        <ButtonGroup size="sm" aria-label={`Ações da edição de ${link.title}`}>
+          <IconButton
+            type="button"
+            onClick={() => void confirmEditing()}
+            variant="primary"
+            disabled={hasBusyMutation}
+            loading={isBusy}
+            size="sm"
+            aria-label={`Salvar alterações em ${link.title}`}
+            title="Salvar alterações"
+          >
+            <Check aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            type="button"
+            onClick={cancelEditing}
+            variant="secondary"
+            disabled={isBusy}
+            size="sm"
+            aria-label={`Cancelar edição de ${link.title}`}
+            title="Cancelar edição"
+          >
+            <X aria-hidden="true" />
+          </IconButton>
+        </ButtonGroup>
+      );
+    }
+
+    return (
+      <RecordActions
+        label={`Ações de ${link.title}`}
+        visibleCount={1}
+        actions={[
+          {
+            label: `Editar ${link.title}`,
+            icon: Pencil,
+            onClick: () => startEditing(link),
+            disabled: hasBusyMutation,
+          },
+          {
+            label: `Excluir ${link.title}`,
+            icon: Trash2,
+            onClick: () => void handleDelete(link),
+            destructive: true,
+            disabled: hasBusyMutation,
+            loading: isBusy,
+          },
+        ]}
+      />
+    );
+  };
+
   const confirmEditing = async () => {
     const targetId = editingId;
     if (!targetId) return;
@@ -365,10 +484,16 @@ export default function LinksScreen() {
   }
 
   const pageHeader = (
-    <SectionHeader
-      eyebrow="Página pública"
-      title="Página de Links"
-      description="Configure a página estilo linktree em /links: perfil, redes sociais, WhatsApp e qualquer outro link que quiser divulgar."
+    <PageHeader
+      eyebrow="Configurações"
+      title="Links públicos"
+      description="Gerencie o perfil público e os links exibidos em /links."
+      descriptionPlacement="visible"
+      actions={(
+        <PageActions
+          primary={{ label: 'Novo link', icon: Plus, onClick: openCreateModal }}
+        />
+      )}
     />
   );
 
@@ -398,31 +523,35 @@ export default function LinksScreen() {
     <div className="space-y-6">
       {pageHeader}
 
-      <Card>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="kds-card-title-row">
-              <Heading level={3} className="kds-card-title">Perfil da página</Heading>
-              <InfoTooltip content={`Título, biografia e foto exibidos no topo de ${PUBLIC_LINKS_PATH}.`} label="Informações sobre o perfil da página" />
+      <details className="min-w-0">
+        <DisclosureTrigger icon={ImageIcon} size="sm">
+          {profileForm.is_published ? 'Editar perfil público · Publicado' : 'Editar perfil público · Despublicado'}
+        </DisclosureTrigger>
+        <Card className="mt-3">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="kds-card-title-row">
+                <Heading level={3} className="kds-card-title">Perfil público</Heading>
+                <InfoTooltip content={`Título, biografia e foto exibidos no topo de ${PUBLIC_LINKS_PATH}.`} label="Informações sobre o perfil da página" />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => void handleCopyPublicUrl()}>
+                <Copy className="kds-control-icon" />
+                <span>{copyLabel}</span>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink className="kds-control-icon" />
+                <span>Abrir página</span>
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => void handleCopyPublicUrl()}>
-              <Copy className="kds-control-icon" />
-              <span>{copyLabel}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
-            >
-              <ExternalLink className="kds-control-icon" />
-              <span>Abrir página</span>
-            </Button>
-          </div>
-        </div>
 
-        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
           <Field label="Foto">
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20 shrink-0">
@@ -482,7 +611,7 @@ export default function LinksScreen() {
             />
           </Field>
 
-          <Field label="Biografia">
+          <Field label="Biografia" className="md:col-span-2">
             <Textarea
               rows={3}
               value={profileForm.bio}
@@ -490,10 +619,10 @@ export default function LinksScreen() {
               placeholder="Um resumo curto sobre você ou a Kifer Saúde."
             />
           </Field>
-        </div>
+          </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-4">
             <Switch
               checked={profileForm.is_published}
               onChange={(event) => setProfileForm((prev) => ({ ...prev, is_published: event.target.checked }))}
@@ -504,181 +633,251 @@ export default function LinksScreen() {
               onChange={(event) => setProfileForm((prev) => ({ ...prev, is_verified: event.target.checked }))}
               label="Selo de verificado na foto"
             />
+            </div>
+            <PageActions
+            placement="header"
+            busy={savingProfile}
+            primary={{
+              label: savingProfile ? 'Salvando perfil…' : 'Salvar perfil',
+              icon: Save,
+              loading: savingProfile,
+              onClick: () => void handleSaveProfile(),
+            }}
+            />
           </div>
-          <Button onClick={() => void handleSaveProfile()} loading={savingProfile}>
-            {!savingProfile && <Save className="kds-control-icon" />}
-            <span>{savingProfile ? "Salvando..." : "Salvar perfil"}</span>
-          </Button>
-        </div>
-      </Card>
+        </Card>
+      </details>
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="kds-card-title-row">
-              <Heading level={3} className="kds-card-title">Links</Heading>
+              <Heading level={3} className="kds-card-title">Links cadastrados</Heading>
               <InfoTooltip content="Adicione WhatsApp, redes sociais ou qualquer outra URL. Use as setas para reordenar." label="Informações sobre a lista de links" />
             </div>
+            <Text className="mt-1 text-sm text-[var(--text-secondary)]">
+              A ordem define como os links aparecem na página pública.
+            </Text>
           </div>
-          <Button
-            onClick={() => {
-              setCreateForm(EMPTY_LINK_FORM);
-              setIsCreateModalOpen(true);
-            }}
-          >
-            <Plus className="kds-control-icon" />
-            <span>Novo link</span>
-          </Button>
         </div>
 
         {links.length === 0 ? (
           <Text className="text-sm text-[var(--text-muted)]">
-            Nenhum link cadastrado ainda. Clique em "Novo link" para começar.
+            Nenhum link cadastrado ainda. Use “Novo link” para adicionar o primeiro.
           </Text>
         ) : (
-          <div className="space-y-3">
-            {links.map((link, index) => {
-              const isBusy = busyId === link.id;
-              const hasBusyMutation = busyId !== null;
-              const isEditing = editingId === link.id;
-              const Icon = getLinkIcon(link.icon);
+          <>
+            <Toolbar>
+              <ToolbarSearch>
+                <SearchInput
+                  value={linkSearch}
+                  onChange={(event) => setLinkSearch(event.target.value)}
+                  placeholder="Buscar por nome ou endereço"
+                  aria-label="Buscar links públicos por nome ou endereço"
+                />
+              </ToolbarSearch>
+            </Toolbar>
 
-              return (
-                <Card
-                  key={link.id}
-                  variant="muted"
-                  padding="sm"
-                  className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-                >
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <ButtonGroup size="sm" aria-label="Ordenar link" orientation="vertical">
-                      <IconButton
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => void moveLink(index, -1)}
-                        disabled={index === 0 || hasBusyMutation}
-                        aria-label="Mover para cima"
-                      >
-                        <ChevronUp />
-                      </IconButton>
-                      <IconButton
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => void moveLink(index, 1)}
-                        disabled={index === links.length - 1 || hasBusyMutation}
-                        aria-label="Mover para baixo"
-                      >
-                        <ChevronDown />
-                      </IconButton>
-                    </ButtonGroup>
+            {visibleLinks.length === 0 ? (
+              <Text role="status" className="py-4 text-sm text-[var(--text-muted)]">
+                Nenhum link corresponde a “{linkSearch.trim()}”. Revise a busca.
+              </Text>
+            ) : (
+              <ResponsiveCollection
+                table={(
+                  <Table aria-label="Links públicos" size="md" columnWidths={['42%', '18%', '16%', '14%', '10%']}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Ordem</TableHead>
+                        <TableHead>Atualização</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead align="right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visibleLinks.map((link) => {
+                        const index = links.findIndex((item) => item.id === link.id);
+                        const Icon = getLinkIcon(link.icon);
+                        const isEditing = editingId === link.id;
+                        const isBusy = busyId === link.id;
+                        const hasBusyMutation = busyId !== null;
 
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                      <Icon className="h-4 w-4" />
-                    </div>
+                        return isEditing ? (
+                          <TableRow key={link.id}>
+                            <TableCell colSpan={5}>
+                              <div className="grid min-w-0 gap-3 lg:grid-cols-[1fr_1fr_14rem_auto] lg:items-end">
+                                <Field label="Nome do link">
+                                  <Input
+                                    value={editingForm.title}
+                                    onChange={(event) => setEditingForm((prev) => ({ ...prev, title: event.target.value }))}
+                                    placeholder="Título"
+                                    disabled={hasBusyMutation}
+                                  />
+                                </Field>
+                                <Field label="Endereço">
+                                  <Input
+                                    value={editingForm.url}
+                                    onChange={(event) => setEditingForm((prev) => ({ ...prev, url: event.target.value }))}
+                                    placeholder="https://..."
+                                    disabled={isBusy}
+                                  />
+                                </Field>
+                                <Field label="Ícone">
+                                  <Select
+                                    value={editingForm.icon}
+                                    onChange={(event) => setEditingForm((prev) => ({ ...prev, icon: event.target.value }))}
+                                    options={LINK_ICON_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                                    disabled={isBusy}
+                                  />
+                                </Field>
+                                {renderLinkActions(link)}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          <TableRow key={link.id}>
+                            <TableCell>
+                              <div className="flex min-w-0 items-center gap-3">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+                                  <Icon className="h-4 w-4" aria-hidden="true" />
+                                </span>
+                                <span className="min-w-0">
+                                  <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{link.title}</Text>
+                                  <Text className="truncate text-xs text-[var(--text-secondary)]" title={link.url}>{link.url}</Text>
+                                  <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
+                                    {link.click_count} clique{link.click_count === 1 ? '' : 's'}
+                                  </Text>
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Text className="min-w-5 text-sm tabular-nums">{index + 1}</Text>
+                                {renderLinkReordering(link)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Text className="text-sm">{new Date(link.updated_at).toLocaleDateString('pt-BR')}</Text>
+                            </TableCell>
+                            <TableCell>
+                              <Switch
+                                checked={link.is_active}
+                                onChange={() => void handleToggleActive(link)}
+                                disabled={hasBusyMutation}
+                                label={link.is_active ? 'Ativo' : 'Inativo'}
+                              />
+                            </TableCell>
+                            <TableCell align="right">{renderLinkActions(link)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+                cards={(
+                  <div className="space-y-3">
+                    {visibleLinks.map((link) => {
+                      const index = links.findIndex((item) => item.id === link.id);
+                      const isBusy = busyId === link.id;
+                      const hasBusyMutation = busyId !== null;
+                      const isEditing = editingId === link.id;
+                      const Icon = getLinkIcon(link.icon);
 
-                    <div className="min-w-0 flex-1">
-                      {isEditing ? (
-                        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                          <Input
-                            value={editingForm.title}
-                            onChange={(event) =>
-                              setEditingForm((prev) => ({ ...prev, title: event.target.value }))
-                            }
-                            placeholder="Título"
-                            disabled={hasBusyMutation}
-                          />
-                          <Input
-                            value={editingForm.url}
-                            onChange={(event) => setEditingForm((prev) => ({ ...prev, url: event.target.value }))}
-                            placeholder="https://..."
-                            disabled={isBusy}
-                          />
-                          <Select
-                            value={editingForm.icon}
-                            onChange={(event) =>
-                              setEditingForm((prev) => ({ ...prev, icon: event.target.value }))
-                            }
-                            options={LINK_ICON_OPTIONS.map((option) => ({
-                              value: option.value,
-                              label: option.label,
-                            }))}
-                            disabled={isBusy}
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{link.title}</Text>
-                          <Text className="truncate text-xs text-[var(--text-secondary)]" title={link.url}>
-                            {link.url}
-                          </Text>
-                          <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
-                            {link.is_active ? "Ativo" : "Inativo"} · {link.click_count} clique
-                            {link.click_count === 1 ? "" : "s"}
-                          </Text>
-                        </>
-                      )}
-                    </div>
+                      return (
+                        <Card
+                          key={link.id}
+                          variant="muted"
+                          padding="sm"
+                          className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+                        >
+                          <div className="flex min-w-0 flex-1 items-start gap-3">
+                            <ButtonGroup size="sm" aria-label={`Ordenar ${link.title}`} orientation="vertical">
+                              <IconButton
+                                type="button"
+                                size="sm"
+                                variant="tertiary"
+                                onClick={() => void moveLink(index, -1)}
+                                disabled={index === 0 || hasBusyMutation}
+                                aria-label={`Mover ${link.title} para cima`}
+                              >
+                                <ChevronUp aria-hidden="true" />
+                              </IconButton>
+                              <IconButton
+                                type="button"
+                                size="sm"
+                                variant="tertiary"
+                                onClick={() => void moveLink(index, 1)}
+                                disabled={index === links.length - 1 || hasBusyMutation}
+                                aria-label={`Mover ${link.title} para baixo`}
+                              >
+                                <ChevronDown aria-hidden="true" />
+                              </IconButton>
+                            </ButtonGroup>
+
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+                              <Icon className="h-4 w-4" aria-hidden="true" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              {isEditing ? (
+                                <div className="grid gap-3">
+                                  <Field label="Nome do link">
+                                    <Input
+                                      value={editingForm.title}
+                                      onChange={(event) => setEditingForm((prev) => ({ ...prev, title: event.target.value }))}
+                                      placeholder="Título"
+                                      disabled={hasBusyMutation}
+                                    />
+                                  </Field>
+                                  <Field label="Endereço">
+                                    <Input
+                                      value={editingForm.url}
+                                      onChange={(event) => setEditingForm((prev) => ({ ...prev, url: event.target.value }))}
+                                      placeholder="https://..."
+                                      disabled={isBusy}
+                                    />
+                                  </Field>
+                                  <Field label="Ícone">
+                                    <Select
+                                      value={editingForm.icon}
+                                      onChange={(event) => setEditingForm((prev) => ({ ...prev, icon: event.target.value }))}
+                                      options={LINK_ICON_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                                      disabled={isBusy}
+                                    />
+                                  </Field>
+                                </div>
+                              ) : (
+                                <>
+                                  <Text className="truncate text-sm font-medium text-[var(--text-primary)]">{link.title}</Text>
+                                  <Text className="truncate text-xs text-[var(--text-secondary)]" title={link.url}>{link.url}</Text>
+                                  <Text className="mt-1 text-[11px] text-[var(--text-muted)]">
+                                    {link.is_active ? 'Ativo' : 'Inativo'} · {link.click_count} clique{link.click_count === 1 ? '' : 's'}
+                                  </Text>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {!isEditing && (
+                              <Switch
+                                checked={link.is_active}
+                                onChange={() => void handleToggleActive(link)}
+                                disabled={hasBusyMutation}
+                                label={link.is_active ? 'Ativo' : 'Inativo'}
+                              />
+                            )}
+                            {renderLinkActions(link)}
+                          </div>
+                        </Card>
+                      );
+                    })}
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {!isEditing && (
-                      <Switch
-                        checked={link.is_active}
-                        onChange={() => void handleToggleActive(link)}
-                        disabled={hasBusyMutation}
-                        label="Ativo"
-                      />
-                    )}
-
-                    {isEditing ? (
-                      <ButtonGroup size="sm" aria-label="Ações da edição do link">
-                        <IconButton
-                          onClick={() => void confirmEditing()}
-                          variant="success"
-                          disabled={hasBusyMutation}
-                          loading={isBusy}
-                          size="sm"
-                          aria-label={`Salvar alterações em ${link.title}`}
-                          title="Salvar alterações"
-                        >
-                          <Check aria-hidden="true" />
-                        </IconButton>
-                        <IconButton
-                          onClick={cancelEditing}
-                          variant="secondary"
-                          disabled={isBusy}
-                          size="sm"
-                          aria-label={`Cancelar edição de ${link.title}`}
-                          title="Cancelar edição"
-                        >
-                          <X />
-                        </IconButton>
-                      </ButtonGroup>
-                    ) : (
-                      <ButtonGroup size="sm" aria-label="Ações do link">
-                        <Button onClick={() => startEditing(link)} variant="secondary" size="sm" disabled={hasBusyMutation}>
-                          Editar
-                        </Button>
-                        <IconButton
-                          onClick={() => void handleDelete(link)}
-                          variant="danger"
-                          disabled={hasBusyMutation}
-                          loading={isBusy}
-                          size="sm"
-                          aria-label={`Excluir ${link.title}`}
-                          title="Excluir link"
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </IconButton>
-                      </ButtonGroup>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                )}
+              />
+            )}
+          </>
         )}
       </Card>
 

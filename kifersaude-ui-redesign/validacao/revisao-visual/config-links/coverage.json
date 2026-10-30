@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-10-29",
+  "module": "Links públicos",
+  "route": "/painel/config?tab=links",
+  "status": "pendente",
+  "target": [
+    "references/desktop/page--config-links.png",
+    "references/mobile/page--config-links.png"
+  ],
+  "reviewed_contexts": [],
+  "pending_contexts": [
+    "page--config-links"
+  ],
+  "visual_review": {
+    "widths": [
+      "1920x1080",
+      "768x1024",
+      "390x844",
+      "320x640"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "dark_theme_widths": [
+      "1920x1080"
+    ],
+    "screenshots": [
+      { "path": "desktop-light-1920x1080.png", "width": 1920, "height": 1095 },
+      { "path": "desktop-light-viewport-1920x1080.png", "width": 1920, "height": 1080 },
+      { "path": "desktop-dark-1920x1080.png", "width": 1920, "height": 1095 },
+      { "path": "tablet-light-768x1024.png", "width": 768, "height": 1809 },
+      { "path": "tablet-light-viewport-768x1024.png", "width": 768, "height": 1024 },
+      { "path": "mobile-light-390x844.png", "width": 390, "height": 2079 },
+      { "path": "mobile-light-viewport-390x844.png", "width": 390, "height": 844 },
+      { "path": "mobile-light-320x640.png", "width": 320, "height": 2079 },
+      { "path": "mobile-light-viewport-320x640.png", "width": 320, "height": 640 },
+      { "path": "desktop-create-modal-1920x1080.png", "width": 1920, "height": 1095 },
+      { "path": "desktop-record-menu-1920x1080.png", "width": 1920, "height": 1095 },
+      { "path": "desktop-inline-edit-1920x1080.png", "width": 1920, "height": 1104 },
+      { "path": "desktop-profile-expanded-1920x1080.png", "width": 1920, "height": 1599 },
+      { "path": "desktop-search-empty-1920x1080.png", "width": 1920, "height": 1080 },
+      { "path": "desktop-list-empty-1920x1080.png", "width": 1920, "height": 1080 },
+      { "path": "desktop-loading-1920x1080.png", "width": 1920, "height": 1080 },
+      { "path": "desktop-error-1920x1080.png", "width": 1920, "height": 1080 }
+    ]
+  },
+  "checks": {
+    "no_horizontal_overflow": {
+      "320x640": true,
+      "390x844": true,
+      "768x1024": true,
+      "1920x1080": true
+    },
+    "interactions": [
+      "Abrir diálogo de criação sem enviar",
+      "Abrir menu de ações do registro",
+      "Editar item inline sem salvar",
+      "Expandir formulário do perfil público",
+      "Filtrar localmente até estado sem resultados"
+    ],
+    "fixture": "Componente real montado com serviços mockados e registros sintéticos; não acessa o CRM.",
+    "authentication": "A rota completa redirecionou para login; validação integrada no shell permanece pendente."
+  }
+}

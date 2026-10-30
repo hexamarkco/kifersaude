@@ -42,6 +42,20 @@
     { "viewport": "390x844", "dialog_width": 390, "dialog_height": 844, "document_scroll_width": 390 },
     { "viewport": "320x640", "dialog_width": 320, "dialog_height": 640, "document_scroll_width": 320, "tabs_share_one_row": true }
   ],
+  "responsive_context_panel_checks": {
+    "checked_at": "2026-10-30",
+    "fixture": "Local Playwright CLI fixture with synthetic content and production design-system CSS",
+    "container_breakpoint_css_px": 1152,
+    "results": [
+      { "viewport": "1920x1080", "shell_width": 1856, "mode": "three-columns", "columns": [320, 1184, 352], "horizontal_overflow": false },
+      { "viewport": "1272x800", "shell_width": 1208, "mode": "three-columns", "columns": [320, 536, 352], "horizontal_overflow": false },
+      { "viewport": "1024x1024", "shell_width": 960, "mode": "context-only", "panel_width": 960, "horizontal_overflow": false },
+      { "viewport": "768x1024", "shell_width": 704, "mode": "context-only", "panel_width": 704, "horizontal_overflow": false },
+      { "viewport": "390x844", "shell_width": 390, "mode": "context-only", "panel_width": 390, "horizontal_overflow": false },
+      { "viewport": "320x640", "shell_width": 320, "mode": "context-only", "panel_width": 320, "horizontal_overflow": false }
+    ],
+    "limitation": "Checks the shared responsive CSS using synthetic markup; the authenticated Inbox route still needs integrated review."
+  },
   "screenshots": [
     { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "desktop/selected-dark-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },

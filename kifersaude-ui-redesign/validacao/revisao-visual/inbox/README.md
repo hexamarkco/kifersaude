@@ -6,7 +6,7 @@
 
 - O cabeçalho da página usa `PageHeader` e concentra a ação real **Nova conversa**. A listagem conserva os filtros e ações que o operador já utiliza.
 - Em telas largas, a conversa ocupa a área de trabalho entre a lista e um painel contextual com o contato, status, responsável, atividade e lembretes. O painel reutiliza os dados e os fluxos já existentes; não cria campos nem operações de negócio.
-- A partir de 1600 px, as três áreas ficam abertas lado a lado. Entre 1024 e 1599 px, a lista e a conversa ficam lado a lado, e o contexto continua acessível pelo drawer atual. Em telas menores, a Inbox mostra a lista ou a conversa, conforme a navegação existente.
+- A disposição usa a largura útil do Inbox, não a largura externa da janela. Com pelo menos 72rem (1152 px CSS), lista, conversa e painel de contato ficam lado a lado; o painel não cobre nem esmaece o histórico. Abaixo desse espaço, o painel de contato ocupa a área de trabalho enquanto está aberto, sem deixar mensagens parcialmente visíveis; ao fechá-lo, a conversa e a lista voltam. Sem seleção de conversa, permanece a navegação atual entre lista e conversa.
 - Até 430 px, o campo de mensagem usa uma linha própria e as ações de composição ficam abaixo. Assim o placeholder e o texto digitado não são comprimidos pelos botões, inclusive em 320 px.
 - O texto das mensagens fica alinhado à esquerda; o justificado anterior abria espaços irregulares entre palavras em telas estreitas.
 - Ajuste de 29/10: o histórico conserva 20 px de margem externa à esquerda e à direita (`px-5`); mensagens textuais e a prévia de follow-up mantêm 12 px nas laterais e 8 px na vertical (`px-3 py-2`) para o texto respirar sem alargar demais a bubble. O padding externo do histórico é independente e permanece nos dois lados. Legendas de mídia mantêm o espaçamento próprio do componente.
@@ -38,6 +38,12 @@
 - Contatos, leads, conversas, mensagens, imagens, contratos e lembretes usados nas capturas são dados sintéticos. O preview usa callbacks sem efeito; nenhuma mensagem foi enviada, nenhum contato ou lembrete foi criado ou alterado e nenhuma ação comercial foi confirmada.
 - A fixture da Inbox bloqueou a tentativa de presença com HTTP 403 e não disponibilizou Realtime (handshake local expirado). O polling de leitura continuou ativo; esses avisos são do ambiente de demonstração.
 - Esta revisão encerra apenas `page--inbox` e `state--inbox-nova-conversa`. Filtros, agenda, mensagens agendadas, painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados da conversa permanecem como contextos independentes pendentes no manifesto.
+
+## Transição responsiva do painel de contato — 30/10/2026
+
+O breakpoint agora mede a largura útil de `.whatsapp-inbox-shell` com container queries. A partir de 72rem, o painel integra a grade em três colunas; abaixo disso, ele substitui a conversa/lista enquanto estiver aberto. Isso evita o backdrop claro sobre as mensagens e elimina o corte causado pela sobreposição do painel.
+
+Playwright CLI verificou a grade em 1920 × 1080 (shell 1856 px), 1272 × 800 (shell 1208 px, caso de zoom), 1024 × 1024 (shell 960 px), 768 × 1024 (shell 704 px), 390 × 844 e 320 × 640. As duas larguras acima do limite mantiveram as três colunas; nas quatro menores, o painel ocupou a área de trabalho sem backdrop. Nenhuma apresentou overflow horizontal. A medição usou uma fixture local com conteúdo sintético e os estilos reais do design system; ela verifica a regra de posicionamento, mas não substitui uma captura integrada da rota autenticada, que segue pendente.
 
 ## Recuperação de anexos indisponíveis — 29/10/2026
 

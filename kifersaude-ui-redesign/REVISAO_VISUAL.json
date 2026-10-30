@@ -199,8 +199,15 @@
         "references/mobile/page--blog.png"
       ],
       "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "evidence": [
+        "validacao/revisao-visual/blog/README.md",
+        "validacao/revisao-visual/blog/coverage.json"
+      ],
+      "notes": [
+        "A listagem foi ajustada e comparada visualmente com as referências usando os componentes reais em preview isolado; busca, filtro de status, paginação e menu foram verificados com dados sintéticos, sem overflow ou escritas.",
+        "O módulo não possui filtros de responsável/período, exportação, nome do autor na leitura desta tela ou percentuais históricos; esses elementos ilustrativos não foram simulados.",
+        "A captura integrada da rota autenticada dentro do shell do CRM continua pendente. Os estados de criação, edição, visualização e exclusão permanecem pendentes como contextos separados."
+      ]
     },
     {
       "id": "page--api",

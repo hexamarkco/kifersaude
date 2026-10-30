@@ -23,7 +23,7 @@ test('contract workspace keeps the same production fields and form submission ta
     fieldCount = form.querySelectorAll('input,select,textarea').length; assert.ok(fieldCount > 10);
     assert.equal(page.container.querySelector('[role="dialog"]'), null);
     assert.ok(page.container.textContent?.includes('Informações do Contrato'));
-    assert.deepEqual([...form.querySelectorAll('fieldset > legend span:last-child')].map(legend => legend.textContent), [
+    assert.deepEqual([...form.querySelectorAll('fieldset > legend > span:not(.kds-tooltip-anchor)')].map(legend => legend.textContent), [
       'Informações do Contrato',
       'Vigência e valores',
       'Comissão e recebimento',

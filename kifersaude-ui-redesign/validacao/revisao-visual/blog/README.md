@@ -1,6 +1,24 @@
-# Blog — revisão parcial da listagem
+# Blog — revisão da listagem e estados pendentes
 
-A [referência desktop](../../../references/desktop/page--blog.png) foi comparada à listagem real renderizada isoladamente com dois artigos fictícios. A tabela mantém resumo, tempo de leitura, visualizações, data, categoria, status e as quatro ações existentes. Os quatro indicadores usam os artigos carregados e o filtro de status atua junto à busca; não são calculadas as variações percentuais fictícias da referência. Autor e filtros por responsável e período ainda precisam de análise antes de concluir a revisão.
+## Listagem — revisão visual de 30/10/2026
+
+A [referência desktop](../../../references/desktop/page--blog.png) e a [referência mobile](../../../references/mobile/page--blog.png) foram comparadas novamente com `BlogPostsList`, montado com os componentes reais do design system. O cabeçalho agora segue “Kifer Saúde / Conteúdo” e “Gestão de conteúdo”; a busca e o filtro de status usam o `FilterBar` oficial, com o campo ocupando o espaço disponível e o filtro alinhado ao lado. A tabela destaca a última atualização e preserva os dados reais de resumo, leitura, visualizações, categoria, status e ações.
+
+O módulo não oferece filtro por responsável ou período, exportação nem variação percentual histórica. O modelo guarda apenas `author_id`, sem nome do autor na leitura dessa tela. Esses controles e métricas não foram inventados para imitar dados ilustrativos da referência. A descrição da página permanece no ícone de informações, conforme o padrão atual do CRM.
+
+### Capturas Playwright
+
+O preview usou `BlogTabScreen` real e 12 registros sintéticos; a leitura foi interceptada e as outras requisições externas foram bloqueadas. Fontes carregadas, animações desativadas e nenhuma escrita detectada. A largura do documento correspondeu a 1920, 768, 390 e 320 px.
+
+- [Desktop claro, full page](listagem-2026-10-30/lista-desktop-1920-light-full.png) · [tablet claro](listagem-2026-10-30/lista-tablet-768-light-full.png) · [mobile 390 px claro](listagem-2026-10-30/lista-mobile-390-light-full.png) · [mobile 320 px claro](listagem-2026-10-30/lista-mobile-320-light-full.png)
+- [Desktop escuro](listagem-2026-10-30/lista-desktop-1920-dark-full.png) · [mobile escuro](listagem-2026-10-30/lista-mobile-390-dark-full.png)
+- [Filtro de status aberto](listagem-2026-10-30/filtro-status-desktop-aberto-full.png) · [menu de ações no mobile](listagem-2026-10-30/menu-acoes-mobile-390-full.png)
+
+Playwright confirmou busca com um resultado, filtro de rascunhos com oito resultados, duas linhas na segunda página e as ações Visualizar/Publicar/Editar/Excluir. Não houve overflow horizontal nem escrita. Métricas e dimensões ficam em [`coverage.json`](coverage.json).
+
+**A listagem continua pendente no manifesto** até capturar a rota autenticada com o shell real do CRM. As referências também exibem filtros de responsável/período e exportação; a interface atual não possui essas funções. Os contextos de criação, edição, visualização e exclusão continuam separados e pendentes de revisão visual contra suas respectivas referências.
+
+## Registros de revisões anteriores
 
 Capturas da prévia isolada: [1920 px](lista-preview-1920.png), [768 px](lista-preview-768.png), [390 px](lista-preview-390.png), [320 px](lista-preview-320.png) e [tema escuro em 1920 px](lista-preview-dark.png). Não representam o shell autenticado nem dados reais.
 
@@ -16,7 +34,7 @@ Em montagem isolada da tela real com `AuthProvider`, as chamadas externas foram 
 
 A confirmação de exclusão identifica o artigo e informa a consequência. Em montagem com leitura fictícia, foi capturada em [1920 px](excluir-1920.png), [768 px](excluir-768.png), [390 px](excluir-390.png), [320 px](excluir-320.png) e [tema escuro em 320 px](excluir-dark-320.png). Cancelar fechou o diálogo sem escrita; Escape também fechou e devolveu o foco ao menu. A edição carregou título, slug e conteúdo fictícios em [desktop](edicao-integrada-1920.png) e [320 px](edicao-integrada-320.png); cancelar retornou à listagem. O documento não apresentou overflow nas quatro larguras da confirmação. A simulação registrou uma leitura e nenhuma tentativa de escrita.
 
-Permanecem pendentes a conferência da rota autenticada, comparação integral com as referências desktop e mobile, filtros adicionais, estados de carregamento, vazio e erro em outras combinações de tamanho e tema, teclado completo, criação, edição, exclusão e permissões. A listagem e a prévia permanecem pendentes no manifesto.
+Permanecem pendentes a conferência da rota autenticada dentro do shell, os estados de carregamento/vazio/erro em outras combinações de tamanho e tema, teclado completo e permissões. A criação, edição, visualização e exclusão continuam pendentes como contextos independentes. A listagem já foi comparada visualmente em preview isolado, mas segue pendente no manifesto até a revisão integrada.
 
 ## Editor — revisão parcial
 

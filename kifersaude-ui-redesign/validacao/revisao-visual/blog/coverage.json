@@ -1,0 +1,54 @@
+{
+  "context": "page--blog",
+  "route": "/painel/blog",
+  "reviewedAt": "2026-10-30",
+  "implementation": [
+    "src/features/blog/components/BlogPostsList.tsx",
+    "src/features/blog/BlogTabScreen.tsx",
+    "src/design-system/components/Application.tsx",
+    "src/design-system/operational.css"
+  ],
+  "references": [
+    "../../../references/desktop/page--blog.png",
+    "../../../references/mobile/page--blog.png"
+  ],
+  "status": "pendente",
+  "captureEnvironment": {
+    "host": "preview local isolado da tela real",
+    "records": 12,
+    "recordsAreSynthetic": true,
+    "fontsReady": true,
+    "animationsDisabled": true,
+    "externalReads": "GET /rest/v1/blog_posts foi respondido por fixture; outras requisições externas foram bloqueadas",
+    "writes": 0,
+    "authenticatedCrmShellCaptured": false
+  },
+  "screenshots": [
+    { "file": "listagem-2026-10-30/lista-desktop-1920-light-full.png", "viewport": "1920x1080", "image": "1920x1446", "theme": "light", "fullPage": true },
+    { "file": "listagem-2026-10-30/lista-tablet-768-light-full.png", "viewport": "768x1024", "image": "768x2364", "theme": "light", "fullPage": true },
+    { "file": "listagem-2026-10-30/lista-mobile-390-light-full.png", "viewport": "390x844", "image": "390x2922", "theme": "light", "fullPage": true },
+    { "file": "listagem-2026-10-30/lista-mobile-320-light-full.png", "viewport": "320x640", "image": "320x3186", "theme": "light", "fullPage": true },
+    { "file": "listagem-2026-10-30/lista-desktop-1920-dark-full.png", "viewport": "1920x1080", "image": "1920x1446", "theme": "dark", "fullPage": true },
+    { "file": "listagem-2026-10-30/lista-mobile-390-dark-full.png", "viewport": "390x844", "image": "390x2922", "theme": "dark", "fullPage": true },
+    { "file": "listagem-2026-10-30/filtro-status-desktop-aberto-full.png", "viewport": "1920x1080", "image": "1920x1080", "theme": "light", "fullPage": true },
+    { "file": "listagem-2026-10-30/menu-acoes-mobile-390-full.png", "viewport": "390x844", "image": "390x1268", "theme": "light", "fullPage": true }
+  ],
+  "playwright": {
+    "documentWidthMatchesViewport": true,
+    "widths": [1920, 768, 390, 320],
+    "search": { "query": "demonstração 01", "matchingRows": 1 },
+    "statusFilter": { "draftOption": "Rascunho", "matchingRows": 8, "options": ["Todos os status", "Publicado", "Rascunho"] },
+    "pagination": { "secondPageRows": 2 },
+    "actionMenu": ["Visualizar", "Publicar", "Editar", "Excluir"],
+    "externalWrites": 0
+  },
+  "adaptations": [
+    "Mantidas apenas a busca, o filtro de status e os dados existentes no CRM; responsável, período, exportação, autor legível e tendências percentuais da referência não foram simulados sem suporte real no módulo.",
+    "A tabela prioriza a última atualização, visualizações, resumo, tempo de leitura, categoria, status e ações presentes no modelo atual."
+  ],
+  "pending": [
+    "Captura e revisão da rota autenticada dentro do shell do CRM.",
+    "Revisão visual final dos contextos criar, editar, visualizar e excluir contra suas referências específicas; suas verificações anteriores continuam documentadas no README.",
+    "Verificação integrada de permissões e do teclado completo."
+  ]
+}

@@ -23,6 +23,9 @@ import {
   EmptyState,
   Pagination,
   PageHeader,
+  FilterBar,
+  ToolbarActions,
+  ToolbarSearch,
   ResponsiveCollection,
   Surface,
   RecordActions,
@@ -84,9 +87,9 @@ export default function BlogPostsList({
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
-        eyebrow="Conteúdo público"
-        title="Blog"
-        description="Gerencie artigos publicados no site, rascunhos e metadados de busca."
+        eyebrow="Kifer Saúde / Conteúdo"
+        title="Gestão de conteúdo"
+        description="Publique artigos e mantenha os conteúdos da Kifer Saúde organizados."
         actions={(
           <Button type="button" onClick={onCreatePost}>
             <Plus className="kds-control-icon" />
@@ -102,9 +105,8 @@ export default function BlogPostsList({
         <KpiCard padding="sm" title={<span className="block min-h-10 text-sm">Atualizados no mês</span>} value={showSummary ? String(summary.updated) : '—'} />
       </div>
 
-      <Surface className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="min-w-0 flex-1">
+      <FilterBar className="kds-blog-filter-bar">
+        <ToolbarSearch>
           <Input
               type="text"
               aria-label="Buscar artigos"
@@ -113,11 +115,12 @@ export default function BlogPostsList({
               placeholder="Buscar por título ou categoria..."
               leftIcon={Search}
           />
-          </div>
+        </ToolbarSearch>
+        <ToolbarActions>
           <FilterSelect icon={Filter} placeholder="Todos os status" value={statusFilter} onChange={(value) => { setPage(1); onStatusFilterChange(value); }}
             options={[{ value: 'published', label: 'Publicado' }, { value: 'draft', label: 'Rascunho' }]} />
-        </div>
-      </Surface>
+        </ToolbarActions>
+      </FilterBar>
 
       <Surface className="space-y-4">
         <div>
@@ -145,11 +148,11 @@ export default function BlogPostsList({
                 : <Button type="button" onClick={onCreatePost}><Plus className="kds-control-icon" aria-hidden="true" /> Novo post</Button>} />
           ) : (
             <>
-            <ResponsiveCollection table={<Table aria-label="Biblioteca de artigos" className="min-w-[800px]" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
+            <ResponsiveCollection table={<Table aria-label="Biblioteca de artigos" className="min-w-[800px]" columnWidths={['38%', '14%', '12%', '10%', '14%', '12%']}>
               <TableHeader><TableRow>
                 <TableHead>Artigo</TableHead><TableHead>Categoria</TableHead>
                 <TableHead>Status</TableHead><TableHead>Visualizações</TableHead>
-                <TableHead>Criado em</TableHead><TableHead align="right">Ações</TableHead>
+                <TableHead>Atualizado em</TableHead><TableHead align="right">Ações</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {pagePosts.map((post) => (
@@ -167,7 +170,7 @@ export default function BlogPostsList({
                     <TableCell><Badge tone="accent" size="sm">{post.category}</Badge></TableCell>
                     <TableCell><Badge tone={post.published ? "success" : "neutral"} size="sm">{post.published ? "Publicado" : "Rascunho"}</Badge></TableCell>
                     <TableCell>{post.views_count}</TableCell>
-                    <TableCell className="whitespace-nowrap">{new Date(post.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell className="whitespace-nowrap">{new Date(post.updated_at || post.created_at).toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell align="right">
                       <RecordActions label={`Ações de ${post.title}`} actions={getActions(post)} />
                     </TableCell>
@@ -190,7 +193,7 @@ export default function BlogPostsList({
                     <Badge tone={post.published ? "success" : "neutral"} size="sm">{post.published ? "Publicado" : "Rascunho"}</Badge>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--border-subtle)] pt-3">
-                    <Text size="sm" tone="muted">Criado {new Date(post.created_at).toLocaleDateString("pt-BR")}</Text>
+                    <Text size="sm" tone="muted">Atualizado {new Date(post.updated_at || post.created_at).toLocaleDateString("pt-BR")}</Text>
                     <Text size="sm" tone="muted">{post.views_count} visualizações</Text>
                     <Text size="sm" tone="muted">{post.read_time}</Text>
                   </div>

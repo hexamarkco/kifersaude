@@ -68,19 +68,25 @@ test('cadastros e usuários permanecem na área de configurações', () => {
   } finally { view.unmount(); }
 });
 
-test('configuração de leads mostra o título da seção ativa sem repetir o cabeçalho interno', () => {
+test('configuração de leads mostra o título da seção ativa sem repetir o cabeçalho interno', async () => {
   const view = renderAt('/painel/config?tab=system&section=leads', ['config-system']);
   try {
     assert.equal(view.container.querySelector('h1')?.textContent, 'Etapas do funil');
-    assert.ok(view.container.textContent?.includes('Organize as etapas e os cadastros usados no acompanhamento de leads.'));
+    const info = view.container.querySelector<HTMLButtonElement>('button[aria-label="Informações sobre Etapas do funil"]');
+    assert.ok(info);
+    await act(async () => { info.focus(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(document.body.querySelector('[role="tooltip"]')?.textContent, 'Organize as etapas e os cadastros usados no acompanhamento de leads.');
   } finally { view.unmount(); }
 });
 
-test('configuração de origens explica o uso da lista na descrição da página', () => {
+test('configuração de origens explica o uso da lista nas informações da página', async () => {
   const view = renderAt('/painel/config?tab=system&section=leads&leadTab=origins', ['config-system']);
   try {
     assert.equal(view.container.querySelector('h1')?.textContent, 'Origens dos leads');
-    assert.ok(view.container.textContent?.includes('Defina os canais de entrada e a visibilidade das origens para observadores.'));
+    const info = view.container.querySelector<HTMLButtonElement>('button[aria-label="Informações sobre Origens dos leads"]');
+    assert.ok(info);
+    await act(async () => { info.focus(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(document.body.querySelector('[role="tooltip"]')?.textContent, 'Defina os canais de entrada e a visibilidade das origens para observadores.');
   } finally { view.unmount(); }
 });
 

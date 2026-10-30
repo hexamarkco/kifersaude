@@ -122,9 +122,12 @@ test('abrir e cancelar os formulários não cria nem altera usuários', async ()
     const createButton = [...view.container.querySelectorAll('button')].find((button) => button.textContent?.includes('Novo usuário'));
     assert.ok(createButton);
     await act(async () => createButton.click());
-    assert.match(document.body.textContent ?? '', /Crie um novo usuário e associe a um perfil dinâmico de acesso\./);
     const createDialog = document.body.querySelector('[role="dialog"]');
     assert.ok(createDialog);
+    const createInfo = createDialog.querySelector<HTMLButtonElement>('button[aria-label="Informações sobre esta janela"]');
+    assert.ok(createInfo);
+    await act(async () => { createInfo.focus(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(document.body.querySelector('[role="tooltip"]')?.textContent, 'Crie um novo usuário e associe a um perfil dinâmico de acesso.');
     const cancelCreate = [...createDialog.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Cancelar');
     assert.ok(cancelCreate);
     await act(async () => cancelCreate.click());
@@ -133,9 +136,12 @@ test('abrir e cancelar os formulários não cria nem altera usuários', async ()
     const editButton = [...view.container.querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'Editar Ana Demonstração');
     assert.ok(editButton);
     await act(async () => editButton.click());
-    assert.match(document.body.textContent ?? '', /Atualize os dados e o perfil de acesso do usuário\./);
     const editDialog = document.body.querySelector('[role="dialog"]');
     assert.ok(editDialog);
+    const editInfo = editDialog.querySelector<HTMLButtonElement>('button[aria-label="Informações sobre esta janela"]');
+    assert.ok(editInfo);
+    await act(async () => { editInfo.focus(); await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(document.body.querySelector('[role="tooltip"]')?.textContent, 'Atualize os dados e o perfil de acesso do usuário.');
     const cancelEdit = [...editDialog.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Cancelar');
     assert.ok(cancelEdit);
     await act(async () => cancelEdit.click());

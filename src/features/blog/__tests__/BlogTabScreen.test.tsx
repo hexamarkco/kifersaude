@@ -61,6 +61,17 @@ test('filters articles by publication status without changing the totals', async
   } finally { view.unmount(); }
 });
 
+test('uses the content management hierarchy and shared filter bar', async () => {
+  const view = render(<BlogTabScreen />);
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.ok(Array.from(view.container.querySelectorAll('h1')).some(heading => heading.textContent === 'Gestão de conteúdo'));
+    assert.ok(view.container.querySelector('.kds-blog-filter-bar.kds-op-toolbar'));
+    assert.ok(view.container.querySelector('.kds-toolbar-search input[aria-label="Buscar artigos"]'));
+    assert.ok(Array.from(view.container.querySelectorAll('th')).some(heading => heading.textContent === 'Atualizado em'));
+  } finally { view.unmount(); }
+});
+
 test('opens the article preview from the compact collection menu', async () => {
   const view = render(<BlogTabScreen />);
   try {

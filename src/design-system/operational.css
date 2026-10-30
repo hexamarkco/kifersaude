@@ -1204,6 +1204,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-toolbar { flex-wrap: wrap; gap: var(--space-3); }
 .painel-theme.kifer-ds .kds-toolbar-search { flex: 1 1 15rem; width: auto; min-width: 0; }
 .painel-theme.kifer-ds .kds-toolbar-actions { flex-wrap: wrap; flex-shrink: 1; }
+.painel-theme.kifer-ds .kds-blog-filter-bar .kds-op-toolbar-actions { flex: 0 0 auto; min-width: 0; }
 .painel-theme.kifer-ds .kds-heading-interface { font-family: var(--font-sans); }
 .painel-theme.kifer-ds .kds-kpi-value { font-size: 1.5rem; line-height: 1.25; overflow-wrap: anywhere; }
 .kds-checkbox-target { display: inline-flex; align-items: center; justify-content: center; min-width: var(--touch-target); min-height: var(--touch-target); cursor: pointer; flex-shrink: 0; }

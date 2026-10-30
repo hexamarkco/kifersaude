@@ -69,7 +69,14 @@ export function MediaSendingOverlay({
 
 function MediaRetryAction({ retry, loading }: { retry: () => void; loading: boolean }) {
   return (
-    <Button variant="secondary" type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
+    <Button
+      variant="primary"
+      size="sm"
+      type="button"
+      onClick={retry}
+      disabled={loading}
+      aria-label="Tentar carregar o arquivo novamente"
+    >
       Tentar novamente
     </Button>
   );

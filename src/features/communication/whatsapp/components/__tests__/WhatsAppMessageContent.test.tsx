@@ -73,6 +73,8 @@ test('permite tentar carregar novamente uma imagem indisponível', () => {
   try {
     const retryButton = view.container.querySelector('button');
     assert.equal(retryButton?.textContent?.trim(), 'Tentar novamente');
+    assert.ok(retryButton?.classList.contains('kds-button-primary'));
+    assert.equal(retryButton?.getAttribute('aria-label'), 'Tentar carregar o arquivo novamente');
     act(() => retryButton?.click());
     assert.equal(mediaState.retryCalls, 1);
   } finally {

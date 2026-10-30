@@ -6,9 +6,9 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
-### Inbox — recuperação de anexos indisponíveis (30/10/2026)
+### Inbox — recuperação de anexos indisponíveis (29/10/2026)
 
-- A ação **Tentar novamente** agora é padronizada nos estados de falha para imagem/figurinha, vídeo, áudio/áudio de voz e documentos, reaproveitando `Button` do design system e a resolução de mídia existente. O clique força nova resolução, sem modificar a mensagem ou acionar envio.
+- A ação **Tentar novamente** agora é um botão primário compacto do design system nos estados de falha para imagem/figurinha, vídeo, áudio/áudio de voz e documentos. O destaque remove a ambiguidade visual observada no print; o clique força nova resolução, sem modificar a mensagem ou acionar envio.
 - Testes focados: 17/17 aprovados; typecheck e build completo aprovados. `npm run lint` também passou com cinco avisos de Fast Refresh em prévias locais já existentes sob `output/playwright`. A auditoria automática encontrou 118 componentes de aplicação cobertos pelo showcase e nenhum primitivo visual fora do design system.
 - Tentei abrir `/painel/inbox` com Playwright CLI no servidor local; a rota redirecionou para o login. Não capturei nem revisei visualmente a nova ação dentro de uma conversa autenticada; essa etapa e o contexto de mídia permanecem pendentes no manifesto. Nenhuma conversa foi lida ou alterada.
 

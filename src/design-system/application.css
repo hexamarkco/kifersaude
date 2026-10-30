@@ -1879,6 +1879,10 @@ html,
     padding-bottom: calc(5.25rem + env(safe-area-inset-bottom)) !important;
   }
 
+  .kds-toast-viewport {
+    bottom: calc(5.25rem + env(safe-area-inset-bottom)) !important;
+  }
+
   .terracota-content-shell.is-full-bleed .terracota-panel-content {
     height: calc(100% - 4.75rem - env(safe-area-inset-bottom));
     margin-bottom: calc(4.75rem + env(safe-area-inset-bottom));

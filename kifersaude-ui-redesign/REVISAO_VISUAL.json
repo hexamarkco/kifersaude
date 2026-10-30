@@ -199,15 +199,15 @@
         "references/desktop/page--blog.png",
         "references/mobile/page--blog.png"
       ],
-      "status": "pendente",
+      "status": "revisado_com_adaptacoes",
       "evidence": [
         "validacao/revisao-visual/blog/README.md",
         "validacao/revisao-visual/blog/coverage.json"
       ],
       "notes": [
-        "A listagem foi ajustada e comparada visualmente com as referências usando os componentes reais em preview isolado; busca, filtro de status, paginação e menu foram verificados com dados sintéticos, sem overflow ou escritas.",
-        "O módulo não possui filtros de responsável/período, exportação, nome do autor na leitura desta tela ou percentuais históricos; esses elementos ilustrativos não foram simulados.",
-        "A captura integrada da rota autenticada dentro do shell do CRM continua pendente. Os estados de criação, edição, visualização e exclusão permanecem pendentes como contextos separados."
+        "Comparada contra as referências com BlogTabScreen, Layout, WorkspaceHeader e DesignSystemProvider reais; apenas dados e contextos de autenticação/configuração são sintéticos. Playwright cobriu 1920×1080, 768×1024, 390×844 e 320×640 nos temas claro/escuro, sem overflow ou escrita.",
+        "Busca, filtro de status, paginação e ações são funcionais. O recurso não oferece filtros de responsável/período, exportação, nome legível do autor ou tendências percentuais; esses elementos ilustrativos da referência não foram simulados.",
+        "Criação e edição permanecem páginas completas porque o formulário real inclui capa, upload, editor rico e SEO; visualização é uma prévia somente leitura. O contexto visual do shell foi montado sem sessão autenticada, com permissões de apresentação simuladas."
       ]
     },
     {
@@ -1818,9 +1818,9 @@
         "references/desktop/state--blog-criar.png",
         "references/mobile/state--blog-criar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
+      "notes": ["Criar post é página completa, e não modal, para acomodar o editor rico, capa/upload, resumo e SEO. Os quatro erros obrigatórios foram verificados sem salvar. Capturas desktop, tablet, 390 e 320 px; nenhum overflow."]
     },
     {
       "id": "state--blog-editar",
@@ -1833,9 +1833,9 @@
         "references/desktop/state--blog-editar.png",
         "references/mobile/state--blog-editar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
+      "notes": ["Edição real exibe os dados do artigo em página completa por causa do editor rico e das áreas de imagem e SEO. Os campos e valores foram conferidos em desktop, tablet, 390 e 320 px; nenhuma alteração ou escrita foi enviada."]
     },
     {
       "id": "state--blog-visualizar",
@@ -1848,9 +1848,9 @@
         "references/desktop/state--blog-visualizar.png",
         "references/mobile/state--blog-visualizar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
+      "notes": ["A aplicação usa o diálogo real de prévia somente leitura, preservando conteúdo, categoria e status. Escape fecha e devolve o foco ao acionador em desktop e mobile; estado conferido também a 320 px."]
     },
     {
       "id": "state--blog-excluir",
@@ -1863,9 +1863,9 @@
         "references/desktop/state--blog-excluir.png",
         "references/mobile/state--blog-excluir.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": ["validacao/revisao-visual/blog/README.md", "validacao/revisao-visual/blog/coverage.json"],
+      "notes": ["A confirmação destrutiva identifica o artigo e informa que a ação não pode ser desfeita. O diálogo foi comparado em desktop, 390 e 320 px; todos os casos foram cancelados sem exclusão."]
     },
     {
       "id": "state--leads-editar",
@@ -2747,8 +2747,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 44,
-    "remaining_manifest_contexts": 116,
+    "reviewed_contexts": 49,
+    "remaining_manifest_contexts": 111,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

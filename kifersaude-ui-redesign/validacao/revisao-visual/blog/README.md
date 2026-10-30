@@ -1,23 +1,51 @@
-# Blog — revisão da listagem e estados pendentes
+# Blog — revisão visual integrada (30/10/2026)
 
-## Listagem — revisão visual de 30/10/2026
+A referência [desktop](../../../references/desktop/page--blog.png) e a referência [mobile](../../../references/mobile/page--blog.png) foram comparadas com `BlogTabScreen` montado no `Layout` real, incluindo `WorkspaceHeader`, `DesignSystemProvider`, navegação e tema. O showcase usa os componentes compartilhados de página, filtros, campos, tabela/cartões responsivos, badges, paginação, ações, diálogos e feedback.
 
-A [referência desktop](../../../references/desktop/page--blog.png) e a [referência mobile](../../../references/mobile/page--blog.png) foram comparadas novamente com `BlogPostsList`, montado com os componentes reais do design system. O cabeçalho agora segue “Kifer Saúde / Conteúdo” e “Gestão de conteúdo”; a busca e o filtro de status usam o `FilterBar` oficial, com o campo ocupando o espaço disponível e o filtro alinhado ao lado. A tabela destaca a última atualização e preserva os dados reais de resumo, leitura, visualizações, categoria, status e ações.
+## Ambiente e segurança
 
-O módulo não oferece filtro por responsável ou período, exportação nem variação percentual histórica. O modelo guarda apenas `author_id`, sem nome do autor na leitura dessa tela. Esses controles e métricas não foram inventados para imitar dados ilustrativos da referência. A descrição da página permanece no ícone de informações, conforme o padrão atual do CRM.
+O preview local usa o shell e a página reais, com contextos de autenticação/configuração simulados e 12 artigos sintéticos. A leitura de `blog_posts` é respondida por fixture; as outras chamadas externas são bloqueadas. Fontes foram aguardadas, animações/transições desativadas e nenhuma escrita foi feita. Nenhum dado pessoal ou credencial foi incluído nas capturas.
 
-### Capturas Playwright
+A tabela abaixo mostra o que cada captura documenta. Nas capturas full page de tablet e mobile, a navegação inferior fixa fica temporariamente oculta apenas durante a imagem para não cobrir artigos; as capturas de viewport mostram a navegação real.
 
-O preview usou `BlogTabScreen` real e 12 registros sintéticos; a leitura foi interceptada e as outras requisições externas foram bloqueadas. Fontes carregadas, animações desativadas e nenhuma escrita detectada. A largura do documento correspondeu a 1920, 768, 390 e 320 px.
+## Página de listagem
 
-- [Desktop claro, full page](listagem-2026-10-30/lista-desktop-1920-light-full.png) · [tablet claro](listagem-2026-10-30/lista-tablet-768-light-full.png) · [mobile 390 px claro](listagem-2026-10-30/lista-mobile-390-light-full.png) · [mobile 320 px claro](listagem-2026-10-30/lista-mobile-320-light-full.png)
-- [Desktop escuro](listagem-2026-10-30/lista-desktop-1920-dark-full.png) · [mobile escuro](listagem-2026-10-30/lista-mobile-390-dark-full.png)
-- [Filtro de status aberto](listagem-2026-10-30/filtro-status-desktop-aberto-full.png) · [menu de ações no mobile](listagem-2026-10-30/menu-acoes-mobile-390-full.png)
+| Tela | Claro | Escuro |
+|---|---|---|
+| Desktop 1920×1080 | [Viewport](shell-desktop-claro-viewport.png) · [Full page](shell-desktop-claro-full.png) | [Viewport](shell-desktop-escuro-viewport.png) · [Full page](shell-desktop-escuro-full.png) |
+| Tablet 768×1024 | [Viewport](shell-tablet-claro-viewport.png) · [Full page](shell-tablet-claro-full.png) | [Viewport](shell-tablet-escuro-viewport.png) · [Full page](shell-tablet-escuro-full.png) |
+| Mobile 390×844 | [Viewport](shell-mobile-claro-viewport.png) · [Full page](shell-mobile-claro-full.png) | [Viewport](shell-mobile-escuro-viewport.png) · [Full page](shell-mobile-escuro-full.png) |
+| Mobile compacto 320×640 | [Viewport](shell-mobile-compacto-claro-viewport.png) · [Full page](shell-mobile-compacto-claro-full.png) | [Viewport](shell-mobile-compacto-escuro-viewport.png) · [Full page](shell-mobile-compacto-escuro-full.png) |
 
-Playwright confirmou busca com um resultado, filtro de rascunhos com oito resultados, duas linhas na segunda página e as ações Visualizar/Publicar/Editar/Excluir. Não houve overflow horizontal nem escrita. Métricas e dimensões ficam em [`coverage.json`](coverage.json).
+Busca e filtro de status foram exercitados com dados sintéticos: a busca encontrou um único artigo e “Publicado” retornou quatro linhas. O filtro aberto e aplicado, o menu de ações, a paginação e as variações claras/escuras também estão nas capturas acima ou nos estados abaixo. Não há overflow horizontal nas quatro larguras.
 
-**A listagem continua pendente no manifesto** até capturar a rota autenticada com o shell real do CRM. As referências também exibem filtros de responsável/período e exportação; a interface atual não possui essas funções. Os contextos de criação, edição, visualização e exclusão continuam separados e pendentes de revisão visual contra suas respectivas referências.
+A referência mostra filtro por responsável e período, exportação, autor e variação percentual histórica. O módulo atual não possui esses recursos/modelos, então não foram adicionados controles decorativos nem dados inventados. A busca, o filtro de status, os indicadores reais, a última atualização, o tempo de leitura e as ações existentes foram preservados.
 
+## Criação e edição
+
+O mockup de criação/edição é um modal genérico; o editor real reúne capa, upload, resumo, editor rico e SEO. Por ser um fluxo longo, permanece como página completa para evitar formulário extenso dentro de modal.
+
+- Criação: [desktop full page](create-form-desktop-light-full.png), [mobile 390 viewport](create-form-mobile-light-viewport.png), [mobile 390 full page](create-form-mobile-light-full.png), [tablet 768 viewport](create-form-tablet-light-viewport.png), [mobile compacto 320 viewport](create-form-mobile-compacto-light-viewport.png).
+- Edição com artigo existente: [desktop full page](edit-form-desktop-light-full.png), [mobile 390 viewport](edit-form-mobile-light-viewport.png), [mobile 390 full page](edit-form-mobile-light-full.png), [tablet 768 viewport](edit-form-tablet-light-viewport.png), [mobile compacto 320 viewport](edit-form-mobile-compacto-light-viewport.png).
+- Validação vazia: [desktop full page](create-validation-desktop-light-full.png) e [320 viewport com feedback](create-validation-mobile-compacto-toast.png). Os quatro erros aparecem junto aos respectivos campos; não foi acionado salvamento.
+
+## Visualização e exclusão
+
+A visualização usa o diálogo real de leitura, preserva categoria/status/tempo e conteúdo e fecha por Escape com retorno do foco ao acionador em desktop e mobile. A exclusão apresenta confirmação destrutiva com identificação do artigo; foi cancelada em todos os viewports.
+
+- [Prévia desktop](view-dialog-desktop-light.png) · [mobile 390](view-dialog-mobile-light.png) · [mobile compacto 320](view-dialog-mobile-compacto-light.png) · [desktop escuro](view-dialog-desktop-dark.png) · [mobile escuro](view-dialog-mobile-dark.png).
+- [Confirmação de exclusão desktop](delete-confirmation-desktop-light.png) · [mobile 390](delete-confirmation-mobile-light.png) · [mobile compacto 320](delete-confirmation-mobile-compacto-light.png) · [desktop escuro](delete-confirmation-desktop-dark.png) · [320 escuro](delete-confirmation-mobile-compacto-dark.png).
+- [Menu de ações aberto no desktop](actions-menu-open-desktop-light.png); [filtro de status aberto](filter-status-open-desktop-light.png) e [aplicado](filter-status-applied-desktop-light.png).
+
+A referência de visualização se parece com um formulário estático, mas a interface real é uma prévia somente leitura; a confirmação de exclusão mantém a consequência destrutiva explícita.
+
+## Resultado da validação
+
+O pacote desta revisão contém 42 screenshots: 19 da listagem e de suas interações, mais 23 dos formulários, validação, prévia e confirmação. Playwright verificou o shell e os formulários em 1920×1080, 768×1024, 390×844 e 320×640, tema claro e escuro. Tabela/cartões responderam ao tamanho disponível, sem overflow; busca e filtro funcionaram; validação exibiu quatro mensagens; Escape fechou a prévia e devolveu foco; confirmação de exclusão foi cancelada. Não houve escrita ou chamada externa liberada.
+
+A tela de validação mostrou ainda que o toast ficava abaixo da navegação fixa no mobile. O `ToastViewport` agora posiciona os avisos acima dela: em 320×640, o Playwright mediu 12 px entre o toast e a navegação, sem overflow e sem escrita. [Captura do estado corrigido](create-validation-mobile-compacto-toast.png).
+
+Os resultados medidos e as adaptações também estão em [`coverage.json`](coverage.json). A revisão visual do Blog está concluída com adaptações; a autenticação/permissões com sessão operacional e os contextos fora destes quatro estados continuam sendo acompanhados separadamente.
 ## Registros de revisões anteriores
 
 Capturas da prévia isolada: [1920 px](lista-preview-1920.png), [768 px](lista-preview-768.png), [390 px](lista-preview-390.png), [320 px](lista-preview-320.png) e [tema escuro em 1920 px](lista-preview-dark.png). Não representam o shell autenticado nem dados reais.
@@ -34,7 +62,7 @@ Em montagem isolada da tela real com `AuthProvider`, as chamadas externas foram 
 
 A confirmação de exclusão identifica o artigo e informa a consequência. Em montagem com leitura fictícia, foi capturada em [1920 px](excluir-1920.png), [768 px](excluir-768.png), [390 px](excluir-390.png), [320 px](excluir-320.png) e [tema escuro em 320 px](excluir-dark-320.png). Cancelar fechou o diálogo sem escrita; Escape também fechou e devolveu o foco ao menu. A edição carregou título, slug e conteúdo fictícios em [desktop](edicao-integrada-1920.png) e [320 px](edicao-integrada-320.png); cancelar retornou à listagem. O documento não apresentou overflow nas quatro larguras da confirmação. A simulação registrou uma leitura e nenhuma tentativa de escrita.
 
-Permanecem pendentes a conferência da rota autenticada dentro do shell, os estados de carregamento/vazio/erro em outras combinações de tamanho e tema, teclado completo e permissões. A criação, edição, visualização e exclusão continuam pendentes como contextos independentes. A listagem já foi comparada visualmente em preview isolado, mas segue pendente no manifesto até a revisão integrada.
+As capturas até aqui eram isoladas. A revisão integrada com `Layout` real e os quatro estados já está documentada na seção atual; estas capturas antigas continuam apenas como histórico. Ainda não foram conferidas com sessão operacional real as permissões do usuário, nem combinações adicionais de carregamento, vazio e erro dentro do shell.
 
 ## Editor — revisão parcial
 
@@ -48,4 +76,4 @@ Em montagem isolada da tela real, a gravação foi interceptada e simulada. Dura
 
 Durante o envio de imagem, salvar e sair ficam desabilitados com uma orientação para aguardar. O estado foi simulado no componente real em [1920 px](upload-1920.png), [768 px](upload-768.png), [390 px](upload-390.png) e [320 px](upload-320.png), sem overflow do documento ou envio de arquivo real. Na montagem da tela com armazenamento interceptado, falha e nova seleção do mesmo arquivo foram exercitadas para [capa](upload-falha-capa-320.png) e [conteúdo](upload-falha-conteudo-320.png): cada caso teve duas tentativas simuladas, a segunda retornou sucesso e os controles voltaram a ficar disponíveis. Nenhuma gravação chegou ao serviço real.
 
-Ainda faltam revisão integrada autenticada, validação completa, upload, permissões e outros estados de erro e carregamento. Os contextos de criação e edição permanecem pendentes no manifesto.
+Os fluxos de salvamento e upload foram exercitados apenas por simulação interceptada em prévia isolada; não houve upload, persistência ou serviço externo. Revisão de permissões com sessão real e outros estados de carregamento/vazio/erro ainda está pendente. A criação e a edição já foram comparadas como páginas completas na revisão integrada acima.

@@ -2,9 +2,17 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **66 contextos foram comparados** e **94 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **67 contextos foram comparados** e **93 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
+
+### Contratos — cadastro de dependentes (30/10/2026)
+
+- O formulário real foi comparado às referências desktop/mobile. Corrigi os ícones de CPF, valor, carência e elegibilidade, e normalizei a acentuação dos rótulos sem alterar os valores persistidos das opções.
+- Nome e nascimento agora exibem validação junto aos campos e o foco vai para o primeiro campo inválido. O teste comprova que o formulário não tenta salvar em estado inválido; a consulta externa de CPF continua fora da validação.
+- Playwright conferiu seletor de parentesco, calendário, validação e rolagem interna do diálogo em 1920×1080, 768×1024, 390×844 e 320×640 nos temas claro/escuro. Não houve overflow horizontal e o rodapé ficou acessível nos dois tamanhos mobile.
+- A prévia usa o componente real com dados e serviços sintéticos, sem consulta de CPF ou gravação. A verificação autenticada dentro da rota permanece pendente; os campos operacionais que não aparecem na referência foram preservados. [Capturas e adaptações](validacao/revisao-visual/contracts/dependente/README.md) · [Cobertura](validacao/revisao-visual/contracts/dependente/coverage.json).
+- Typecheck, auditorias e build passaram; lint terminou sem erros e com sete avisos já existentes. A suíte completa teve **1.862 testes aprovados e 1 falha** em `src/pages/public/HomePage.test.tsx`, fora do escopo CRM e da página institucional que não deve ser alterada.
 
 ### Configurações — IA concluída como página (30/10/2026)
 

@@ -69,6 +69,18 @@
     "dark_theme_desktop_review": "passed",
     "authenticated_route_visual_review": "pending"
   },
+  "dependent_form": {
+    "context": "state--contratos-dependente",
+    "evidence": "dependente/README.md",
+    "status": "revisado_com_adaptacoes",
+    "focused_test": "src/components/__tests__/DependentForm.validation.test.tsx",
+    "focused_test_result": "1/1 passed",
+    "playwright_viewports": ["1920x1080", "768x1024", "390x844", "320x640"],
+    "themes": ["light", "dark"],
+    "horizontal_overflow": false,
+    "authenticated_route_visual_review": "pending",
+    "no_external_lookup_or_save": true
+  },
   "visual_review": {
     "widths": [
       "1920x1080",

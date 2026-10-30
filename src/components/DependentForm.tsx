@@ -1,6 +1,6 @@
 import { FieldLabel } from '../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
+import { BadgeCheck, Clock, DollarSign, Fingerprint, Search, UserCircle, Users } from 'lucide-react';
 import {
   saveContractDependent,
   type ContractHolder,
@@ -48,6 +48,10 @@ type DependentFormState = {
   carencia_individual: string;
   bonus_por_vida_aplicado: boolean;
 };
+
+type DependentFormErrors = Partial<
+  Record<'nome_completo' | 'data_nascimento', string>
+>;
 
 const buildDependentFormState = (
   dependent: Dependent | null,
@@ -105,12 +109,15 @@ export default function DependentForm({
     [bonusPorVidaDefault, defaultHolderId, dependent],
   );
   const [formData, setFormData] = useState<DependentFormState>(initialFormData);
+  const [fieldErrors, setFieldErrors] = useState<DependentFormErrors>({});
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
   const lastFetchedCpfKeyRef = useRef('');
   const cpfRequestIdRef = useRef(0);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const birthDateInputRef = useRef<HTMLButtonElement>(null);
   const holderSelectOptions = useMemo(() => {
     const currentHolderLabel =
       holders.find((holder) => holder.id === formData.holder_id)?.nome_completo ||
@@ -122,10 +129,10 @@ export default function DependentForm({
     () =>
       withCurrentOption(
         [
-          { value: 'Conjuge', label: 'Conjuge' },
+          { value: 'Conjuge', label: 'Cônjuge' },
           { value: 'Filho(a)', label: 'Filho(a)' },
           { value: 'Enteado(a)', label: 'Enteado(a)' },
-          { value: 'Pai/Mae', label: 'Pai/Mae' },
+          { value: 'Pai/Mae', label: 'Pai/mãe' },
           { value: 'Outro', label: 'Outro' },
         ],
         formData.relacao,
@@ -137,7 +144,7 @@ export default function DependentForm({
       withCurrentOption(
         [
           { value: '', label: 'Mesma do titular' },
-          { value: 'padrao', label: 'Padrao' },
+          { value: 'padrao', label: 'Padrão' },
           { value: 'reduzida', label: 'Reduzida' },
           { value: 'portabilidade', label: 'Portabilidade' },
           { value: 'zero', label: 'Zero' },
@@ -152,8 +159,19 @@ export default function DependentForm({
     setFormData(initialFormData);
     setCpfLookupError(null);
     setCpfLoading(false);
+    setFieldErrors({});
     lastFetchedCpfKeyRef.current = '';
   }, [initialFormData]);
+
+  const updateField = <Key extends keyof DependentFormState>(
+    key: Key,
+    value: DependentFormState[Key],
+  ) => {
+    setFormData((current) => ({ ...current, [key]: value }));
+    if (key === 'nome_completo' || key === 'data_nascimento') {
+      setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    }
+  };
 
   const handleConsultarCPF = useCallback(
     async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
@@ -220,16 +238,33 @@ export default function DependentForm({
     e.preventDefault();
     if (savingRef.current) return;
 
+    const nextErrors: DependentFormErrors = {};
+
+    if (!formData.nome_completo.trim()) {
+      nextErrors.nome_completo = 'Informe o nome completo.';
+    }
+
+    if (!formData.data_nascimento.trim()) {
+      nextErrors.data_nascimento = 'Informe a data de nascimento.';
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      if (nextErrors.nome_completo) {
+        nameInputRef.current?.focus();
+      } else {
+        birthDateInputRef.current?.focus();
+      }
+      return;
+    }
+
     savingRef.current = true;
     setSaving(true);
 
     try {
       if (!formData.holder_id) {
         throw new Error('Selecione um titular para o dependente');
-      }
-
-      if (!formData.data_nascimento.trim()) {
-        throw new Error('Informe a data de nascimento do dependente');
       }
 
       const dataToSave = {
@@ -262,13 +297,13 @@ export default function DependentForm({
   return (
     <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="md" initialFocus="first-content">
       <DialogHeader onClose={saving ? undefined : onClose}>
-        <DialogTitle>{dependent ? 'Editar Dependente' : 'Novo Dependente'}</DialogTitle>
-        <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>
+        <DialogTitle>{dependent ? 'Editar dependente' : 'Novo dependente'}</DialogTitle>
+        <DialogDescription>Vincule o dependente ao titular e informe as condições individuais.</DialogDescription>
       </DialogHeader>
       <DialogBody>
-      <form id="dependent-form" onSubmit={handleSubmit}>
+      <form id="dependent-form" onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Titular *" className="md:col-span-2">
+          <Field label="Titular" required className="md:col-span-2">
             <FilterSelect
               icon={Users}
               value={formData.holder_id}
@@ -286,11 +321,10 @@ export default function DependentForm({
             <div className="relative">
             <Input
               type="text"
-              leftIcon={WalletCards}
+              leftIcon={Fingerprint}
               autoFormat="cpf"
               value={formData.cpf}
-              onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-              
+              onChange={(e) => updateField('cpf', e.target.value)}
               />
               <IconButton
                 type="button"
@@ -305,22 +339,25 @@ export default function DependentForm({
             </div>
           </Field>
 
-          <Field label="Nome Completo *">
+          <Field label="Nome completo" required error={fieldErrors.nome_completo}>
             <Input
+              ref={nameInputRef}
               type="text"
-              required
+              invalid={Boolean(fieldErrors.nome_completo)}
               leftIcon={UserCircle}
               value={formData.nome_completo}
-              onChange={(e) => setFormData({ ...formData, nome_completo: e.target.value })}
+              onChange={(e) => updateField('nome_completo', e.target.value)}
             />
           </Field>
 
-          <Field label="Data de Nascimento *">
+          <Field label="Data de nascimento" required error={fieldErrors.data_nascimento}>
             <DateTimePicker
+              ref={birthDateInputRef}
               type="date"
               value={formData.data_nascimento}
-              onChange={(event) => setFormData({ ...formData, data_nascimento: event.target.value })}
+              onChange={(event) => updateField('data_nascimento', event.target.value)}
               placeholder="Selecionar data"
+              aria-invalid={Boolean(fieldErrors.data_nascimento)}
             />
           </Field>
 
@@ -335,10 +372,10 @@ export default function DependentForm({
               />
               <span>
                 <span className="block text-sm font-medium text-[var(--text-primary)]">
-                  Aplicar bonus por vida
+                  Aplicar bônus por vida
                 </span>
                 <span className="mt-1 block text-xs text-[var(--text-muted)]">
-                  Marque se este dependente e elegivel ao bonus por vida deste contrato.
+                  Marque se este dependente é elegível ao bônus por vida deste contrato.
                 </span>
               </span>
             </FieldLabel>
@@ -348,30 +385,30 @@ export default function DependentForm({
             <FilterSelect
               icon={Users}
               value={formData.relacao}
-              onChange={(value) => setFormData({ ...formData, relacao: value })}
+              onChange={(value) => updateField('relacao', value)}
               placeholder="Relação com titular"
               includePlaceholderOption={false}
               options={relacaoOptions}
             />
           </Field>
 
-          <Field label="Valor Individual (R$)">
+          <Field label="Valor individual (R$)">
             <Input
               type="text"
-              leftIcon={HeartPulse}
+              leftIcon={DollarSign}
               autoFormat="currency"
               value={formData.valor_individual}
-              onChange={(e) => setFormData({ ...formData, valor_individual: e.target.value })}
+              onChange={(e) => updateField('valor_individual', e.target.value)}
               inputMode="numeric"
             />
           </Field>
 
-          <Field label="Carencia Individual">
+          <Field label="Carência individual">
             <FilterSelect
-              icon={Users}
+              icon={Clock}
               value={formData.carencia_individual}
-              onChange={(value) => setFormData({ ...formData, carencia_individual: value })}
-              placeholder="Carencia individual"
+              onChange={(value) => updateField('carencia_individual', value)}
+              placeholder="Carência individual"
               includePlaceholderOption={false}
               options={carenciaOptions}
             />
@@ -380,9 +417,9 @@ export default function DependentForm({
           <Field label="Elegibilidade" className="md:col-span-2">
             <Input
               type="text"
-              leftIcon={Users}
+              leftIcon={BadgeCheck}
               value={formData.elegibilidade}
-              onChange={(e) => setFormData({ ...formData, elegibilidade: e.target.value })}
+              onChange={(e) => updateField('elegibilidade', e.target.value)}
               placeholder="Ex: Filho menor de 21 anos"
             />
           </Field>
@@ -395,7 +432,7 @@ export default function DependentForm({
           Cancelar
         </Button>
         <Button type="submit" form="dependent-form" loading={saving}>
-          {saving ? 'Salvando...' : 'Salvar Dependente'}
+          {saving ? 'Salvando...' : 'Salvar dependente'}
         </Button>
       </DialogFooter>
     </Dialog>

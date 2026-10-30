@@ -1,0 +1,59 @@
+{
+  "context": "state--contratos-dependente",
+  "route": "/painel/contratos",
+  "component": "src/components/DependentForm.tsx",
+  "status": "revisado_com_adaptacoes",
+  "reference_comparison": true,
+  "preview": "componente real com dados sintéticos e dependências locais simuladas",
+  "authenticated_shell": "pending",
+  "viewports": [
+    "1920x1080",
+    "768x1024",
+    "390x844",
+    "320x640"
+  ],
+  "themes": ["light", "dark"],
+  "horizontal_overflow": false,
+  "dialog_metrics": {
+    "1920x1080": { "width": 672, "left": 624, "right": 1296, "body_height": 591, "body_scroll_height": 591 },
+    "768x1024": { "width": 672, "left": 48, "right": 720, "body_height": 591, "body_scroll_height": 591 },
+    "390x844": { "width": 390, "left": 0, "right": 390, "body_height": 654, "body_scroll_height": 798 },
+    "320x640": { "width": 320, "left": 0, "right": 320, "body_height": 450, "body_scroll_height": 814 }
+  },
+  "states": [
+    "default",
+    "relationship dropdown open",
+    "date picker open",
+    "required field validation",
+    "mobile internal scroll with fixed footer"
+  ],
+  "focused_test": {
+    "file": "src/components/__tests__/DependentForm.validation.test.tsx",
+    "result": "1/1 passed",
+    "save_calls_on_invalid_submit": 0
+  },
+  "screenshots": [
+    "dialog-desktop-1920x1080-light.png",
+    "dialog-desktop-1920x1080-dark.png",
+    "dialog-tablet-768x1024-light.png",
+    "dialog-tablet-768x1024-dark.png",
+    "dialog-mobile-390x844-light.png",
+    "dialog-mobile-390x844-light-scrolled.png",
+    "dialog-mobile-390x844-dark.png",
+    "dialog-mobile-390x844-dark-scrolled.png",
+    "dialog-mobile-320x640-light.png",
+    "dialog-mobile-320x640-light-scrolled.png",
+    "dialog-mobile-320x640-dark.png",
+    "dialog-mobile-320x640-dark-scrolled.png",
+    "relacao-aberta-desktop-1920x1080-light.png",
+    "data-aberta-desktop-1920x1080-light.png",
+    "validacao-desktop-1920x1080-light.png",
+    "validacao-mobile-390x844-light.png"
+  ],
+  "limitations": [
+    "O shell autenticado não estava disponível; a prévia não representa uma sessão real.",
+    "A consulta externa de CPF e a persistência não foram chamadas.",
+    "A referência contém menos campos que o formulário operacional real; os campos do CRM foram preservados.",
+    "O banco não registra status individuais de beneficiários; nenhum status foi criado para aproximar a referência."
+  ]
+}

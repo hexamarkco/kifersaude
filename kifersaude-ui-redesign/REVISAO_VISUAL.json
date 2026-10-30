@@ -1032,7 +1032,9 @@
       ],
       "status": "pendente",
       "evidence": [],
-      "notes": []
+      "notes": [
+        "A ficha sintética compara os dados e beneficiários com a referência, mas a revisão autenticada da rota integrada segue pendente. O CRM não persiste status individual de beneficiário, portanto os badges de status do mockup não podem ser reproduzidos sem criar dados fictícios."
+      ]
     },
     {
       "id": "extra--contratos-importar",
@@ -2056,9 +2058,16 @@
         "references/desktop/state--contratos-dependente.png",
         "references/mobile/state--contratos-dependente.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/dependente/README.md",
+        "validacao/revisao-visual/contracts/dependente/coverage.json"
+      ],
+      "notes": [
+        "Formulário real comparado com desktop e mobile nas larguras 1920, 768, 390 e 320 px, nos temas claro e escuro. Playwright abriu o seletor de parentesco e o calendário, capturou erros inline e verificou rolagem interna sem overflow horizontal.",
+        "A referência mostra menos campos. CPF, bônus por vida, valor individual, carência e elegibilidade foram mantidos para preservar o formulário e as regras reais; nenhuma consulta externa ou gravação foi acionada.",
+        "A rota integrada continua pendente porque o ambiente local redirecionou para autenticação."
+      ]
     },
     {
       "id": "state--usuarios-criar",

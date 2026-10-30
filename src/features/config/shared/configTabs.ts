@@ -73,7 +73,11 @@ export const getAllowedConfigTabs = (
       getRoleModulePermission(role, tab.moduleId).can_view ||
       (tab.id === "system" && getRoleModulePermission(role, "config-access").can_view)
     ),
-  ).map(({ id, icon, label }) => ({ id, icon, label }));
+  ).map(({ id, icon, label }) => ({
+    id,
+    label,
+    ...(area === "automation" ? {} : { icon }),
+  }));
 
 export const hasConfigAreaAccess = (
   role: string,

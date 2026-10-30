@@ -1926,6 +1926,21 @@ html,
     white-space: nowrap;
   }
 
+  .kds-config-screen .kds-page-title-row {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  .kds-config-screen .kds-page-title-row > .kds-page-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .kds-config-screen .kds-page-title-row > .kds-info-trigger {
+    flex: 0 0 auto;
+    margin-top: 0.15em;
+  }
+
   .kds-config-screen .kds-automation-workspace-tabs .kds-tabs-list {
     overflow: visible;
   }

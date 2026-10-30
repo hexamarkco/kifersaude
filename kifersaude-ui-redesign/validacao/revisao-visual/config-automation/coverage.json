@@ -1,0 +1,68 @@
+{
+  "context_id": "page--config-automation",
+  "route": "/painel/automacoes?tab=automation",
+  "status": "revisado_com_adaptacoes",
+  "references": [
+    "../../../references/desktop/page--config-automation.png",
+    "../../../references/mobile/page--config-automation.png"
+  ],
+  "implementation": [
+    "src/features/config/automation/AutoContactFlowSettingsScreen.tsx",
+    "src/features/config/automation/components/AutomationFlowsWorkspace.tsx",
+    "src/features/config/shared/configTabs.ts",
+    "src/design-system/application.css"
+  ],
+  "fixture": "Composição real do shell e componentes com dados sintéticos locais; chamadas externas e gravações bloqueadas.",
+  "screenshots": [
+    { "path": "current-shell/full-desktop-1920-light.png", "viewport": "1920x1080", "capture": "fullPage", "theme": "light" },
+    { "path": "current-shell/viewport-desktop-1920-light.png", "viewport": "1920x1080", "capture": "viewport", "theme": "light" },
+    { "path": "current-shell/full-desktop-1920-dark.png", "viewport": "1920x1080", "capture": "fullPage", "theme": "dark" },
+    { "path": "current-shell/viewport-desktop-1920-dark.png", "viewport": "1920x1080", "capture": "viewport", "theme": "dark" },
+    { "path": "current-shell/full-tablet-768-light.png", "viewport": "768x1024", "capture": "fullPage", "theme": "light" },
+    { "path": "current-shell/viewport-tablet-768-light.png", "viewport": "768x1024", "capture": "viewport", "theme": "light" },
+    { "path": "current-shell/full-mobile-390-light.png", "viewport": "390x844", "capture": "fullPage", "theme": "light" },
+    { "path": "current-shell/viewport-mobile-390-light.png", "viewport": "390x844", "capture": "viewport", "theme": "light" },
+    { "path": "current-shell/full-mobile-320-light.png", "viewport": "320x844", "capture": "fullPage", "theme": "light" },
+    { "path": "current-shell/viewport-mobile-320-light.png", "viewport": "320x844", "capture": "viewport", "theme": "light" },
+    { "path": "current-shell/state-info-tooltip-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Tooltip do ícone de informações com descrição e variáveis" },
+    { "path": "current-shell/state-tag-filter-open-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Filtro de tags aberto com follow-up selecionado" },
+    { "path": "current-shell/state-filtered-tag-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Lista filtrada por follow-up" },
+    { "path": "current-shell/state-search-single-result-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Busca sem resposta com resultado único" },
+    { "path": "current-shell/state-templates-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Templates" },
+    { "path": "current-shell/state-operation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Operação sem alterar os controles" }
+  ],
+  "checks": {
+    "font_status": "document.fonts.ready",
+    "reduced_motion": true,
+    "horizontal_overflow": {
+      "1920x1080": false,
+      "768x1024": false,
+      "390x844": false,
+      "320x844": false
+    },
+    "mobile_list_representation": "Cartões do Design System abaixo de lg; tabela no desktop.",
+    "desktop_theme": ["light", "dark"],
+    "interactions": [
+      "Filtro de tags aberto e filtro follow-up aplicado.",
+      "Busca por sem resposta com resultado único.",
+      "Tooltip de informação aberto e conteúdo conferido.",
+      "Abas Templates e Operação abertas; switches e campos de Operação permaneceram sem alteração."
+    ],
+    "destructive_or_external_actions": "Nenhuma criação, edição, remoção, publicação, envio ou gravação foi executada.",
+    "authenticated_route": "Sessão autenticada não disponível; revisão executada no shell real com fixture local sintética.",
+    "pending_contexts": [
+      "Editor e persistência de fluxo",
+      "Criação e edição de templates",
+      "Permissões e respostas da API em sessão autenticada"
+    ]
+  },
+  "validation": {
+    "focused_tests": "AutomationFlowsWorkspace e configTabs: 8/8; primitivas Table: 12/12.",
+    "full_test_suite": "1851 testes em 350 arquivos passaram.",
+    "typecheck": "passou",
+    "lint": "passou sem erros; 7 avisos preexistentes em previews Playwright e PainelWrapper.",
+    "architecture": "passou",
+    "build": "passou, incluindo secrets:check, auditorias do Design System/visual e verificação do bundle do editor; permanece o aviso conhecido de chunk vendor acima de 500 kB.",
+    "playwright_console": "0 erros e 0 warnings da aplicação; fontes carregadas."
+  }
+}

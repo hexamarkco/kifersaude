@@ -1700,25 +1700,25 @@ export default function AutoContactFlowSettingsScreen() {
     >
       <div className="space-y-6">
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <SegmentedControl
               items={[
-                { id: "flows", label: "Fluxos", icon: ClipboardList },
-                { id: "templates", label: "Templates", icon: MessageCircle },
-                { id: "operation", label: "Operação", icon: Activity },
+                { id: "flows", label: "Fluxos" },
+                { id: "templates", label: "Templates" },
+                { id: "operation", label: "Operação" },
               ]}
               value={activeWorkspace}
               onChange={setActiveWorkspace}
-              className="kds-automation-workspace-tabs"
-              listClassName="flex-nowrap overflow-x-auto"
+              className="kds-automation-workspace-tabs w-full lg:w-auto"
+              listClassName="w-full flex-nowrap overflow-x-auto lg:w-auto"
             />
-            <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
               <span role="status" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
                 {autoSaveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} aria-hidden="true" />}
                 {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
               </span>
               {activeWorkspace === "flows" && (
-                <Button onClick={handleAddFlow}>
+                <Button className="w-full sm:w-auto" onClick={handleAddFlow}>
                   <Plus className="kds-control-icon" aria-hidden="true" />
                   Novo fluxo
                 </Button>
@@ -3390,42 +3390,6 @@ Os horários já consideram a janela do fluxo,
                   </div>
                 </DialogShell>
               )}
-
-            <Alert tone="info" className="mt-8">
-              <div className="font-semibold mb-2">Variáveis disponíveis:</div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                <span>
-                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
-                    {"{{nome}}"}
-                  </code>{" "}
-                  nome completo
-                </span>
-                <span>
-                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
-                    {"{{primeiro_nome}}"}
-                  </code>{" "}
-                  primeiro nome
-                </span>
-                <span>
-                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
-                    {"{{origem}}"}
-                  </code>{" "}
-                  origem do lead
-                </span>
-                <span>
-                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
-                    {"{{cidade}}"}
-                  </code>{" "}
-                  cidade
-                </span>
-                <span>
-                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
-                    {"{{responsavel}}"}
-                  </code>{" "}
-                  responsável
-                </span>
-              </div>
-            </Alert>
 
           </>}
 

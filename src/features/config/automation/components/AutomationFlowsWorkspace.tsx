@@ -19,6 +19,7 @@ import {
   TableRow,
   Text,
 } from '../../../../design-system';
+import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 
 type AutomationFlowsWorkspaceProps = {
   flows: AutoContactFlow[];
@@ -52,7 +53,7 @@ function MetricCard({ label, value, detail, icon: Icon }: {
   icon: typeof Activity;
 }) {
   return (
-    <Card padding="md" className="flex min-h-[7.25rem] flex-col justify-between gap-4">
+    <Card padding="md" className="flex min-h-[7.25rem] min-w-0 flex-col justify-between gap-4">
       <div className="flex items-center justify-between gap-3">
         <Text className="kds-card-subtitle">{label}</Text>
         <Icon className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-hidden="true" />
@@ -102,7 +103,7 @@ export default function AutomationFlowsWorkspace({
 
   return (
     <div className="space-y-6">
-      <section aria-label="Resumo das automações" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Resumo das automações" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard label="Fluxos ativos" value={activeFlows} detail={`${totalFlows} configurados`} icon={Activity} />
         <MetricCard label="Etapas configuradas" value={totalSteps} detail="Distribuídas entre os fluxos" icon={Layers3} />
         <MetricCard label="Templates" value={totalTemplates} detail="Disponíveis para as mensagens" icon={MessageSquareText} />
@@ -113,7 +114,22 @@ export default function AutomationFlowsWorkspace({
         <SectionHeader
           eyebrow="Automação comercial"
           title="Fluxos de automação"
-          description="Organize regras, horários e mensagens usadas no acompanhamento dos leads."
+          description={(
+            <div className="space-y-3">
+              <Text>Organize regras, horários e mensagens usadas no acompanhamento dos leads.</Text>
+              <div>
+                <Text className="font-semibold">Variáveis disponíveis nas mensagens</Text>
+                <ul className="mt-2 space-y-1">
+                  {AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS.map(({ key, label }) => (
+                    <li key={key} className="flex items-baseline gap-2">
+                      <code>{`{{${key}}}`}</code>
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
           as="h2"
         />
 
@@ -165,42 +181,24 @@ export default function AutomationFlowsWorkspace({
               />
             ) : (
               <>
-                <Table
-                  size="md"
-                  aria-label="Fluxos de automação"
-                  className="min-w-[60rem]"
-                  columnWidths={['31%', '19%', '15%', '12%', '23%']}
-                >
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fluxo</TableHead>
-                      <TableHead>Gatilho</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead align="right">Etapas</TableHead>
-                      <TableHead align="right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleFlows.map((flow) => (
-                      <TableRow key={flow.id}>
-                        <TableCell>
+                <ul className="grid gap-3 lg:hidden" aria-label="Fluxos de automação em cartões">
+                  {visibleFlows.map((flow) => (
+                    <li key={flow.id}>
+                      <Card padding="md" className="space-y-3">
+                        <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <Text className="truncate font-semibold text-[var(--text-primary)]">{flow.name || 'Fluxo sem nome'}</Text>
-                            <Text className="mt-1 max-w-[36rem] truncate text-xs text-[var(--text-muted)]" title={getConditionPreview(flow)}>
-                              {getConditionPreview(flow)}
-                            </Text>
+                            <Text className="break-words font-semibold text-[var(--text-primary)]">{flow.name || 'Fluxo sem nome'}</Text>
+                            <Text className="mt-1 text-sm">{triggerLabels[flow.triggerType]}</Text>
                           </div>
-                        </TableCell>
-                        <TableCell>{triggerLabels[flow.triggerType]}</TableCell>
-                        <TableCell>
                           <Badge tone={flow.ativo === false ? 'warning' : 'success'} size="sm">
                             {flow.ativo === false ? 'Pausado' : 'Ativo'}
                           </Badge>
-                        </TableCell>
-                        <TableCell align="right" className="whitespace-nowrap tabular-nums">
-                          {flow.steps.length}
-                        </TableCell>
-                        <TableCell align="right">
+                        </div>
+                        <Text className="break-words text-xs text-[var(--text-muted)]">{getConditionPreview(flow)}</Text>
+                        <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+                          <Text className="text-sm tabular-nums text-[var(--text-secondary)]">
+                            {flow.steps.length} {flow.steps.length === 1 ? 'etapa' : 'etapas'}
+                          </Text>
                           <Button
                             variant="secondary"
                             size="sm"
@@ -210,11 +208,64 @@ export default function AutomationFlowsWorkspace({
                             <Edit3 className="kds-control-icon" aria-hidden="true" />
                             Editar
                           </Button>
-                        </TableCell>
+                        </div>
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="hidden lg:block">
+                  <Table
+                    size="md"
+                    aria-label="Fluxos de automação"
+                    className="min-w-[60rem]"
+                    columnWidths={['31%', '19%', '15%', '12%', '23%']}
+                  >
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fluxo</TableHead>
+                        <TableHead>Gatilho</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead align="right">Etapas</TableHead>
+                        <TableHead align="right">Ações</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {visibleFlows.map((flow) => (
+                        <TableRow key={flow.id}>
+                          <TableCell>
+                            <div className="min-w-0">
+                              <Text className="truncate font-semibold text-[var(--text-primary)]">{flow.name || 'Fluxo sem nome'}</Text>
+                              <Text className="mt-1 max-w-[36rem] truncate text-xs text-[var(--text-muted)]" title={getConditionPreview(flow)}>
+                                {getConditionPreview(flow)}
+                              </Text>
+                            </div>
+                          </TableCell>
+                          <TableCell>{triggerLabels[flow.triggerType]}</TableCell>
+                          <TableCell>
+                            <Badge tone={flow.ativo === false ? 'warning' : 'success'} size="sm">
+                              {flow.ativo === false ? 'Pausado' : 'Ativo'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell align="right" className="whitespace-nowrap tabular-nums">
+                            {flow.steps.length}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => onEditFlow(flow.id)}
+                              aria-label={`Editar fluxo ${flow.name || 'sem nome'}`}
+                            >
+                              <Edit3 className="kds-control-icon" aria-hidden="true" />
+                              Editar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
                 <Pagination
                   currentPage={safePage}

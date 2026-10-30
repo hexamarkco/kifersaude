@@ -38,7 +38,7 @@ const renderWorkspace = (flows: AutoContactFlow[], onEditFlow: (flowId: string) 
   />,
 );
 
-test('mostra o resumo real e o estado de cada fluxo na tabela', () => {
+test('mostra o resumo e disponibiliza os fluxos em tabela e cartões responsivos', () => {
   const activeFlow = createFlow('ativo', { name: 'Boas-vindas' });
   const pausedFlow = createFlow('pausado', { name: 'Reativação', ativo: false, triggerType: 'inactivity_duration' });
   const view = renderWorkspace([activeFlow, pausedFlow]);
@@ -48,10 +48,13 @@ test('mostra o resumo real e o estado de cada fluxo na tabela', () => {
     assert.ok(view.container.textContent?.includes('2 configurados'));
     assert.ok(view.container.textContent?.includes('Mensagens hoje'));
     assert.equal(view.container.querySelectorAll('tbody tr').length, 2);
+    assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] > li').length, 2);
     assert.ok(view.container.textContent?.includes('Novo lead'));
     assert.ok(view.container.textContent?.includes('Tempo sem contato'));
-    assert.equal(view.container.querySelectorAll('.kds-badge-success').length, 1);
-    assert.equal(view.container.querySelectorAll('.kds-badge-warning').length, 1);
+    assert.equal(view.container.querySelectorAll('table .kds-badge-success').length, 1);
+    assert.equal(view.container.querySelectorAll('table .kds-badge-warning').length, 1);
+    assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] .kds-badge-success').length, 1);
+    assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] .kds-badge-warning').length, 1);
   } finally {
     view.unmount();
   }

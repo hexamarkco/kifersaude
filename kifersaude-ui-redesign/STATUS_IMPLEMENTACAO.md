@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **58 contextos foram comparados** e **102 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **59 contextos foram comparados** e **101 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -18,6 +18,18 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 - A faixa de abas do componente reutilizável `Tabs` acompanha a seleção e mantém a aba ativa visível após carregar e redimensionar a janela. A referência inclui ordem, responsável e período, campos que a listagem real não fornece; nenhum dado foi inventado. Sessão autenticada indisponível; editor, criação, pergunta e formulário público continuam como contextos separados pendentes.
 - Teste focado: **12/12**. [Evidências e capturas](validacao/revisao-visual/config-forms/README.md) · [Cobertura](validacao/revisao-visual/config-forms/coverage.json).
 - `npm run typecheck` e `npm run build` passaram. `npm run lint` passou sem erros e com sete avisos preexistentes. A suíte completa aprovou **1.850 testes**; um timeout em `ai-router-technical-retry.test.ts` passou na execução isolada (**20/20**).
+
+### Automações — lista e abas responsivas (30/10/2026)
+
+- A lista de fluxos usa tabela do Design System no desktop e cartões reais (`Card`, `Badge`, `Button`) abaixo de `lg`. Os indicadores usam os valores já fornecidos pela tela; o grid passa de duas para quatro colunas em `xl`. A busca, o filtro por tag, a paginação e a ação existente de edição permanecem ligados ao mesmo estado.
+- A navegação das configurações omite ícones decorativos só nesta área para manter as abas legíveis em 320 px. O título e o “i” permanecem alinhados em viewport estreito. As variáveis disponíveis saíram do alerta permanente e estão no tooltip informativo da seção, usando `AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS`.
+- Playwright comparou a composição real do shell com as referências usando dados sintéticos locais. Foram capturados viewport e `fullPage` em 1920×1080, 768×1024, 390×844 e 320×844, tema claro em todas as larguras e tema escuro no desktop; a medição não encontrou overflow horizontal. Busca, filtro de tags, tooltip e abas Templates/Operação foram verificados sem ativar switches nem executar ações externas.
+- Criação, edição, remoção, persistência autenticada, permissões e respostas reais da API continuam pendentes em contextos próprios. [Evidências, capturas e limites](validacao/revisao-visual/config-automation/README.md) · [Cobertura](validacao/revisao-visual/config-automation/coverage.json).
+
+### Cabeçalhos ordenáveis — remoção dos indicadores visuais (30/10/2026)
+
+- O componente compartilhado `SortableTableHead` mantém o clique de ordenação e o atributo acessível `aria-sort`, sem exibir setas nos títulos. Leads, contratos e demais listas passam a seguir o mesmo padrão visual.
+- Teste focado de primitivas do Design System: **12/12**; `npm run typecheck` passou. A entrega foi publicada em `main` antes da rodada responsiva de Automações.
 
 ### Chat e testes de IA — conversa e estados (30/10/2026)
 

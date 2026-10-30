@@ -16,7 +16,9 @@ test("getAllowedConfigTabs returns only modules with view permission", () => {
 
 test("separates automation, integrations and AI from general settings", () => {
   const permission = () => ({ can_view: true });
-  assert.deepEqual(getAllowedConfigTabs("admin", permission, "automation").map((tab) => tab.id), ["automation", "integrations", "ai"]);
+  const automationTabs = getAllowedConfigTabs("admin", permission, "automation");
+  assert.deepEqual(automationTabs.map((tab) => tab.id), ["automation", "integrations", "ai"]);
+  assert.equal(automationTabs.some((tab) => tab.icon), false);
   assert.deepEqual(getAllowedConfigTabs("admin", permission, "settings").map((tab) => tab.id), ["system", "users", "links", "forms"]);
 });
 

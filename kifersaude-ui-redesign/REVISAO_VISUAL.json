@@ -379,10 +379,15 @@
         "references/desktop/page--config-automation.png",
         "references/mobile/page--config-automation.png"
       ],
-      "status": "pendente",
-      "evidence": [],
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/config-automation/README.md",
+        "validacao/revisao-visual/config-automation/coverage.json"
+      ],
       "notes": [
-        "A lista desktop foi atualizada com indicadores baseados nos dados existentes, filtros, tabela paginada e ação explícita para editar. O componente foi conferido em preview isolado com dados sintéticos; a rota autenticada ainda precisa de revisão visual integrada."
+        "Comparada às referências desktop e mobile com Layout, ConfigPageScreen e AutoContactFlowSettingsScreen reais em shell local e fixture sintética; sessão autenticada indisponível, tráfego externo bloqueado e nenhuma alteração comercial executada.",
+        "A lista mantém a tabela do Design System no desktop e usa cartões reais abaixo de lg; indicadores usam os valores existentes. Filtros por tag, busca, tooltip de informações, abas Templates e Operação foram verificados. Variáveis disponíveis agora ficam no ícone de informação da seção.",
+        "Playwright capturou página completa e viewport em 1920×1080, 768×1024, 390×844 e 320×844, tema claro em todas as larguras e tema escuro no desktop, sem overflow horizontal. Edição, criação, remoção, toggles operacionais, persistência autenticada e estados da API continuam pendentes em contextos próprios."
       ]
     },
     {
@@ -2800,8 +2805,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 57,
-    "remaining_manifest_contexts": 103,
+    "reviewed_contexts": 59,
+    "remaining_manifest_contexts": 101,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

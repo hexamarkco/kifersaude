@@ -4,8 +4,8 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 
 ## Cobertura atual
 
-- **55 de 160 contextos** revisados; 105 permanecem sem comparação concluída.
-- **871 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página, importação individual e menus de filtro), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações (incluindo shell integrado para Geral e Links), Usuários e permissões, Login e Chat e testes de IA.
+- **59 de 160 contextos** revisados; 101 permanecem sem comparação concluída.
+- **940 screenshots** nesta nova rodada: Leads (incluindo edição em página, lembrete e os quatro filtros rápidos), Contratos (incluindo ficha, edição em página, importação individual e menus de filtro), Dashboard, Comissões, Agenda, a página principal da Inbox e o diálogo Novo chat, Campanhas, Configurações (incluindo shell integrado para Geral, Links, Formulários e Automações), Usuários e permissões, Login e Chat e testes de IA.
 - A descoberta de telas e overlays fora do manifesto continua pendente.
 - O resumo por interface e o status de cada contexto ficam em [`REVISAO_VISUAL.json`](../../REVISAO_VISUAL.json).
 
@@ -27,6 +27,7 @@ As referências em [`../../references/`](../../references/) definem a meta visua
 - [Usuários e permissões — listagem, busca, criação, edição e confirmação revisadas com adaptações](config-users/README.md)
 - [Chat e testes de IA — página, conversa, drawers, confirmação e responsividade revisados com adaptações](chat-ia/README.md)
 - [Links públicos — listagem integrada ao cabeçalho compartilhado e revisada no shell com fixture sintética](config-links/README.md)
+- [Automações — fluxos, busca, filtros, templates e operação com adaptações responsivas](config-automation/README.md)
 - [Login — formulário pré-autenticado, teclado e responsividade revisados com adaptações](login/README.md)
 
 ## Critério

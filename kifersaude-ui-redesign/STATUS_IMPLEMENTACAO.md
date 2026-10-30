@@ -40,7 +40,7 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Configurações — espaçamento dos atalhos (30/10/2026)
 
-- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com `ActionSurface` e `padding="sm"` aplicado diretamente à superfície clicável. O espaçamento interno é compartilhado entre texto, contagem e seta; borda e hover continuam pertencendo à mesma superfície. Destinos, contagens e permissões permanecem iguais. O teste focado passou; Playwright verificou a captura em 390 px nos dois temas, sem overflow. A prévia isolada não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
+- Os cinco atalhos de **Estrutura e parametrização** usam `SettingsCatalogLink` com `ActionSurface` sem padding externo e aplicam o token `kds-card-padding-sm` ao contêiner interno do conteúdo. Assim, texto, contagem e seta ficam afastados da borda mesmo quando o botão recebe hover/foco. Destinos, contagens e permissões permanecem iguais. Playwright mediu 16 px no contêiner e 17 px de recuo visível em 1920, 768, 390 e 320 px, nos dois temas, sem overflow. A prévia isolada não substitui a revisão integrada autenticada. [Evidências](validacao/revisao-visual/config/README.md).
 
 ### Contratos — formulário de titular em página (30/10/2026)
 

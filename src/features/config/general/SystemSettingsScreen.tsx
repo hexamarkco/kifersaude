@@ -591,7 +591,7 @@ export default function SystemSettingsScreen() {
                     <ActionSurface
                       variant="plain"
                       padding="none"
-                      className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                      className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
                       aria-label="Abrir perfis e acessos"
                       onClick={() => navigateToConfigSection("access")}
                     >
@@ -605,7 +605,7 @@ export default function SystemSettingsScreen() {
                   <ActionSurface
                     variant="plain"
                     padding="none"
-                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
                     aria-label="Abrir etapas do funil"
                     onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "status", defaultValue: "status" })}
                   >
@@ -621,7 +621,7 @@ export default function SystemSettingsScreen() {
                   <ActionSurface
                     variant="plain"
                     padding="none"
-                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
                     aria-label="Abrir origens dos leads"
                     onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "origins", defaultValue: "status" })}
                   >
@@ -637,7 +637,7 @@ export default function SystemSettingsScreen() {
                   <ActionSurface
                     variant="plain"
                     padding="none"
-                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
                     aria-label="Abrir responsáveis pelos leads"
                     onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "manager:lead_responsavel", defaultValue: "status" })}
                   >
@@ -653,7 +653,7 @@ export default function SystemSettingsScreen() {
                   <ActionSurface
                     variant="plain"
                     padding="none"
-                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
                     aria-label="Abrir configurações de contratos"
                     onClick={() => navigateToConfigSection("contracts", { key: "contractTab", value: "contract_status", defaultValue: "contract_status" })}
                   >

@@ -1786,10 +1786,10 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row w-fit max-w-full flex-nowrap">
-                        <Heading level={4} className="kds-card-title">Envio automático</Heading>
+                      <Heading level={4} className="kds-card-title kds-heading-with-info">
+                        Envio automático{' '}
                         <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
-                      </div>
+                      </Heading>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
                       <div className="min-w-0">
@@ -1809,10 +1809,10 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon tone="gold">
                         <AlarmClock className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row w-fit max-w-full flex-nowrap">
-                        <Heading level={4} className="kds-card-title">Agendamento avançado</Heading>
+                      <Heading level={4} className="kds-card-title kds-heading-with-info">
+                        Agendamento avançado{' '}
                         <InfoTooltip content="Fuso horário e regras globais para dias não úteis." label="Informações sobre o calendário operacional" />
-                      </div>
+                      </Heading>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="min-w-0">

@@ -36,7 +36,7 @@ Os registros detalhados, métricas verificadas e limitações estão em [`covera
 - `state-tag-filter-open-desktop.png`, `state-filtered-tag-desktop.png`
 - `state-search-single-result-desktop.png`
 - `state-templates-desktop.png`, `state-operation-desktop.png`
-- `state-info-title-inline-desktop-1920.png`, `state-info-title-inline-mobile-320.png` — ícone de informação ao lado do título do card **Envio automático**.
+- `state-info-title-inline-desktop-1920.png`, `state-info-title-inline-mobile-320.png`, `state-info-title-inline-mobile-320-dark.png` — ícone de informação integrado ao título **Envio automático**, também conferido em viewport compacto e tema escuro.
 
 ## Adaptações e limites
 

@@ -32,7 +32,8 @@
     { "path": "current-shell/state-templates-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Templates" },
     { "path": "current-shell/state-operation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Operação sem alterar os controles" },
     { "path": "current-shell/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático" },
-    { "path": "current-shell/state-info-title-inline-mobile-320.png", "viewport": "320x640", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático em tela compacta" }
+    { "path": "current-shell/state-info-title-inline-mobile-320.png", "viewport": "320x640", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático em tela compacta" },
+    { "path": "current-shell/state-info-title-inline-mobile-320-dark.png", "viewport": "320x640", "capture": "state", "theme": "dark", "state": "Ícone de informação integrado ao título Envio automático em viewport compacto" }
   ],
   "checks": {
     "font_status": "document.fonts.ready",

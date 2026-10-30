@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **56 contextos foram comparados** e **104 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **57 contextos foram comparados** e **103 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -28,7 +28,8 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 ### Contratos — importação JSON individual (30/10/2026)
 
 - O `ContractJsonImportDialog` real continua importando JSON, oferecendo o modelo, validando o conteúdo e aplicando os dados somente ao formulário ainda não salvo. A referência visual representa campos genéricos de contrato/titular e salvamento direto, portanto essa diferença funcional foi preservada e documentada. O diálogo usa largura do padrão de formulário; até 640 px, as ações ficam em duas colunas proporcionais, sem quebra do rótulo em 320 px.
-- Playwright conferiu erros de extensão e parse, loading sem permitir fechamento, prévia válida, teclado e foco, temas claro/escuro e 1920×1080, 768×1024, 390×844 e 320×640. Não houve overflow horizontal; no menor viewport, ambas as ações têm 44 px de altura. Foi usada uma prévia local com JSON sintético, sem escrita ou integração externa. A rota `/painel/contratos` redirecionou para autenticação sem sessão disponível, então a comparação do modal aberto no shell permanece pendente. [Evidências, referências e limitações](validacao/revisao-visual/contracts/importacao-individual/README.md).
+- Playwright abriu o diálogo real pelo acionador **Importar de arquivo** no `ContractForm` real. Em 1920, 768, 390 e 320 px, o documento não ultrapassou a viewport; o diálogo ficou com 592 px em desktop/tablet e ocupou toda a largura em 390/320 px. A rolagem interna de 107 px no corpo em 320 px preserva o rodapé fixo e foi capturada também no fim das instruções.
+- Um JSON sintético validou cinco campos de contrato e um de titular; **Aplicar ao formulário** preencheu os campos sem salvar. Nenhuma integração foi chamada. A rota autenticada e a lista real de contratos não estavam disponíveis; por isso a comparação integrada usa prévia local do formulário e fica registrada como revisão com adaptação, não como sessão autenticada. [Evidências, referências e limitações](validacao/revisao-visual/contracts/importacao-individual/README.md).
 
 ### Contratos — filtros e cabeçalhos de tabela (30/10/2026)
 

@@ -2776,20 +2776,25 @@
         "references/desktop/state--contratos-importacao-individual.png",
         "references/mobile/state--contratos-importacao-individual.png"
       ],
-      "status": "pendente",
+      "status": "revisado_com_adaptacoes",
       "evidence": [
         "validacao/revisao-visual/contracts/importacao-individual/README.md",
-        "validacao/revisao-visual/contracts/importacao-individual/coverage.json"
+        "validacao/revisao-visual/contracts/importacao-individual/coverage.json",
+        "validacao/revisao-visual/contracts/importacao-individual/integrated-1920x1080-light.png",
+        "validacao/revisao-visual/contracts/importacao-individual/integrated-390x844-light.png",
+        "validacao/revisao-visual/contracts/importacao-individual/integrated-320x640-light-body-scrolled.png",
+        "validacao/revisao-visual/contracts/importacao-individual/integrated-json-validated-390x844-dark.png",
+        "validacao/revisao-visual/contracts/importacao-individual/integrated-json-applied-form-390x844-dark.png"
       ],
       "notes": [
-        "Componente real comparado em prévia isolada com dados sintéticos, erros, loading, validação, teclado, temas claro/escuro e quatro viewports. A rota autenticada não ficou acessível para revisar o diálogo dentro do shell; manter pendente até concluir essa comparação integrada."
+        "Playwright abriu o diálogo real pelo acionador real do ContractForm e aplicou um JSON sintético ao formulário sem salvar. A prévia usa configuração sintética; a rota autenticada e a lista real de contratos não ficaram disponíveis, então o contexto foi revisado com essa adaptação documentada."
       ]
     }
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 56,
-    "remaining_manifest_contexts": 104,
+    "reviewed_contexts": 57,
+    "remaining_manifest_contexts": 103,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

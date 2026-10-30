@@ -1,8 +1,8 @@
 {
   "context_id": "state--contratos-importacao-individual",
   "route": "/painel/contratos",
-  "status": "pendente",
-  "status_reason": "A rota autenticada redirecionou para login; falta comparar o modal aberto a partir do ContractForm dentro do shell real.",
+  "status": "revisado_com_adaptacoes",
+  "status_reason": "A rota autenticada não estava disponível. A integração foi revisada em prévia local com ContractForm e ContractJsonImportDialog reais, configuração sintética e gravações bloqueadas; a lista autenticada de contratos não foi capturada.",
   "component": "src/features/contracts/components/ContractJsonImportDialog.tsx",
   "reference_adaptation": "A referência mostra campos genéricos para contrato, titular e modalidade e salvamento direto. O componente real importa JSON, valida os dados e só os aplica ao formulário não salvo; essa semântica foi preservada.",
   "capture": {
@@ -18,6 +18,59 @@
       { "width": 768, "height": 1024, "document_width": 768, "dialog_width": 592 },
       { "width": 390, "height": 844, "document_width": 390, "dialog_width": 390 },
       { "width": 320, "height": 640, "document_width": 320, "dialog_width": 320 }
+    ]
+  },
+  "integrated_form_preview": {
+    "harness": "output/playwright/contracts-form-preview (local, sintético)",
+    "form_component": "src/components/ContractForm.tsx",
+    "dialog_component": "src/features/contracts/components/ContractJsonImportDialog.tsx",
+    "launcher": "Importar de arquivo",
+    "capture_mode": "viewport",
+    "animations_disabled": true,
+    "fonts_ready": true,
+    "synthetic_data_only": true,
+    "external_integrations": "não chamadas",
+    "writes": false,
+    "viewports": [
+      { "width": 1920, "height": 1080, "document_width": 1920, "dialog_width": 592, "theme": ["light", "dark"] },
+      { "width": 768, "height": 1024, "document_width": 768, "dialog_width": 592, "theme": ["light"] },
+      { "width": 390, "height": 844, "document_width": 390, "dialog_width": 390, "theme": ["light", "dark"] },
+      { "width": 320, "height": 640, "document_width": 320, "dialog_width": 320, "theme": ["light", "dark"] }
+    ],
+    "mobile_320_internal_scroll": {
+      "body_scroll_height": 495,
+      "body_client_height": 388,
+      "max_scroll": 107,
+      "footer_remains_visible": true,
+      "additional_capture": "integrated-320x640-light-body-scrolled.png"
+    },
+    "synthetic_import": {
+      "file": "contrato-demo.json",
+      "contract_fields_validated": 5,
+      "holder_fields_validated": 1,
+      "apply_to_unsaved_form": true,
+      "form_submission": false,
+      "populated_contract_code": "DS-DEMO-01"
+    },
+    "interaction_checks": {
+      "actual_launcher_opens_dialog": true,
+      "initial_focus": "Fechar",
+      "apply_closes_dialog_and_restores_focus": true,
+      "contract_form_receives_imported_values": true,
+      "form_save_clicked": false,
+      "external_write": false
+    },
+    "screenshots": [
+      "integrated-1920x1080-light.png",
+      "integrated-1920x1080-dark.png",
+      "integrated-768x1024-light.png",
+      "integrated-390x844-light.png",
+      "integrated-390x844-dark.png",
+      "integrated-320x640-light.png",
+      "integrated-320x640-dark.png",
+      "integrated-320x640-light-body-scrolled.png",
+      "integrated-json-validated-390x844-dark.png",
+      "integrated-json-applied-form-390x844-dark.png"
     ]
   },
   "states": [
@@ -53,7 +106,17 @@
     "extension-error-390x844-light.png",
     "json-error-390x844-light.png",
     "json-validated-390x844-light.png",
-    "validation-loading-320x640-light.png"
+    "validation-loading-320x640-light.png",
+    "integrated-1920x1080-light.png",
+    "integrated-1920x1080-dark.png",
+    "integrated-768x1024-light.png",
+    "integrated-390x844-light.png",
+    "integrated-390x844-dark.png",
+    "integrated-320x640-light.png",
+    "integrated-320x640-dark.png",
+    "integrated-320x640-light-body-scrolled.png",
+    "integrated-json-validated-390x844-dark.png",
+    "integrated-json-applied-form-390x844-dark.png"
   ],
   "test_command": "npm test -- --run src/features/contracts/components/__tests__/ContractImportDialogs.test.tsx src/features/contracts/domain/contractJsonImport.test.ts",
   "test_result": "2 test files, 9 tests passed"

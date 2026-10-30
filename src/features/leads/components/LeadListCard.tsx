@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Calendar, Info } from 'lucide-react';
-import { ActionSurface, Avatar, Badge, Checkbox, RecordActions, Surface, Text, TextLink, type RecordAction } from '../../../design-system';
+import { ActionSurface, Badge, Checkbox, RecordActions, Surface, Text, TextLink, type RecordAction } from '../../../design-system';
 import { LeadFavoriteToggle } from '../../../components/LeadFavoriteStar';
 import { formatDateTimeFullBR } from '../../../lib/dateUtils';
 import type { Lead } from '../domain/types';
@@ -24,7 +24,6 @@ export function LeadListCard({ lead, status, selected, canSelect, hasContract, a
     <Surface padding="sm" className="kds-lead-list-card" role="article" aria-label={lead.nome_completo}>
       <div className="kds-lead-list-card-heading">
         <ActionSurface variant="plain" padding="none" onClick={onOpen} className="kds-lead-identity" aria-label={`Abrir lead ${lead.nome_completo}`}>
-          <Avatar name={lead.nome_completo} tone="brand" size="sm" className="kds-lead-avatar" />
           <span className="min-w-0">
             <span className="kds-lead-list-card-title">{lead.nome_completo}</span>
             <span className="kds-lead-list-card-contact">{lead.email || lead.telefone || 'Sem contato cadastrado'}</span>

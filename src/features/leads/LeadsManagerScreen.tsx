@@ -1,5 +1,5 @@
 import { LeadListCard } from './components/LeadListCard';
-import { ActionSurface, Avatar, Heading, Text, FieldLabel } from '../../design-system';
+import { ActionSurface, Heading, Text, FieldLabel } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -2059,7 +2059,6 @@ export default function LeadsManager({
                               onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
                             />
                             <ActionSurface variant="plain" padding="none" type="button" onClick={() => openLeadDetails(lead)} className="kds-lead-identity">
-                              <Avatar name={lead.nome_completo} tone="brand" size="sm" className="kds-lead-avatar" />
                               <span className="min-w-0"><span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
                             </ActionSurface>
                           </div>

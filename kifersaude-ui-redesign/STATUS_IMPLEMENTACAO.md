@@ -61,9 +61,12 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 - A suíte completa passou: **1.844 testes em 350 arquivos**. Typecheck, arquitetura, migrations, `secrets:check`, auditorias visual/Design System, build e bundle do editor passaram. Lint terminou sem erros, com seis avisos Fast Refresh em prévias Playwright e um aviso de dependência de `useEffect` em `PainelWrapper`. O build mantém o aviso conhecido do chunk vendor acima de 500 kB.
 
-### Contratos — ficha completa (30/10/2026)
+### Contratos — ficha completa e abertura integrada do drawer (30/10/2026)
 
-- A seção recolhível agora usa o rótulo curto “Mais informações do contrato” tanto na ficha completa quanto no drawer. A prévia isolada do componente real foi verificada em 1920, 768, 390 e 320 px nos temas claro e escuro; não houve overflow horizontal e o rótulo coube a 320 px. A seção aberta também foi capturada em desktop e mobile com dados sintéticos. A rota autenticada redirecionou para login, então a integração com o shell segue pendente. [Evidências](validacao/revisao-visual/contracts/ficha/README.md).
+- A seção recolhível usa o rótulo curto “Mais informações do contrato” tanto na ficha completa quanto no drawer. A prévia isolada do componente real foi verificada em 1920, 768, 390 e 320 px nos temas claro e escuro; não houve overflow horizontal e o rótulo coube a 320 px. A seção aberta também foi capturada em desktop e mobile com dados sintéticos.
+- A rota de Gestão de contratos agora abre os detalhes no drawer de referência, sem substituir a lista por uma ficha em página inteira. A listagem permanece montada sob o drawer, os estados de carregamento/erro usam a mesma superfície, e editar continua abrindo o formulário longo em página completa. O teste de apresentação usa fixture sintética e confirma lista e drawer simultâneos.
+- A conferência visual autenticada do fluxo integrado continua pendente porque a rota local redirecionou para login. [Evidências](validacao/revisao-visual/contracts/ficha/README.md) · [Cobertura](validacao/revisao-visual/contracts/coverage.json).
+- Testes focados do fluxo e dos detalhes: **2/2**. Typecheck, lint e build passaram; o lint mantém sete avisos e o build mantém o aviso do chunk vendor acima de 500 kB. A suíte geral terminou com **1.860 testes aprovados e 1 falha** em `HomePage.test.tsx` (landing page fora do escopo desta entrega); nenhum arquivo do site foi incluído neste commit.
 ### Contratos — importação JSON individual (30/10/2026)
 
 - O `ContractJsonImportDialog` real continua importando JSON, oferecendo o modelo, validando o conteúdo e aplicando os dados somente ao formulário ainda não salvo. A referência visual representa campos genéricos de contrato/titular e salvamento direto, portanto essa diferença funcional foi preservada e documentada. O diálogo usa largura do padrão de formulário; até 640 px, as ações ficam em duas colunas proporcionais, sem quebra do rótulo em 320 px.

@@ -31,8 +31,22 @@
   ],
   "pending_contexts": [
     "state--contratos-importacao-individual",
-    "outros menus e estados encontrados na aplicação"
+    "outros menus e estados encontrados na aplicação",
+    "conferência visual da abertura do drawer na rota autenticada"
   ],
+  "integrated_detail_drawer": {
+    "route_selection_keeps_list_mounted": true,
+    "loading_and_error_use_drawer": true,
+    "edit_continues_to_full_page_form": true,
+    "route_integration_test": "passed",
+    "test_file": "src/features/contracts/__tests__/ContractsManagerScreen.presentation.test.tsx",
+    "focused_tests": "2/2 passed",
+    "typecheck": "passed",
+    "lint": "passed with 7 warnings",
+    "build": "passed",
+    "full_test_suite": "1860 passed, 1 failed in HomePage.test.tsx outside this module",
+    "authenticated_playwright_visual_review": "pending"
+  },
   "visual_review": {
     "widths": [
       "1920x1080",

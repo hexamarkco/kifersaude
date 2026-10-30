@@ -678,27 +678,9 @@ export default function ContractsManager({
     sectionStagger,
   ]);
 
-  if (selectedContract && !showForm) {
-    return (
-      <div className="kds-contracts-page panel-dashboard-immersive panel-page-shell space-y-5">
-        <ContractDetails
-          presentation="page"
-          key={selectedContract.id}
-          contract={selectedContract}
-          onClose={() => setSelectedContract(null)}
-          onUpdate={handleContractsUpdated}
-          onEdit={handleEditContract}
-          onDelete={handleDeleteContract}
-          holderSectionAction={role === "admin" ? <HolderImportPreparation contract={selectedContract} /> : null}
-        />
-        {ConfirmationDialog}
-      </div>
-    );
-  }
-
   return (
     <PanelAdaptiveLoadingFrame
-      loading={loading}
+      loading={loading && !selectedContract}
       phase={loadingUi.phase}
       hasContent={hasContractsSnapshot}
       skeleton={<ContractsPageSkeleton />}
@@ -1112,6 +1094,19 @@ export default function ContractsManager({
           <ContractBulkJsonImportDialog
             onImport={handleBulkJsonImport}
             onClose={() => setShowBulkImport(false)}
+          />
+        )}
+
+        {selectedContract && !showForm && (
+          <ContractDetails
+            presentation="drawer"
+            key={selectedContract.id}
+            contract={selectedContract}
+            onClose={() => setSelectedContract(null)}
+            onUpdate={handleContractsUpdated}
+            onEdit={handleEditContract}
+            onDelete={handleDeleteContract}
+            holderSectionAction={role === "admin" ? <HolderImportPreparation contract={selectedContract} /> : null}
           />
         )}
 

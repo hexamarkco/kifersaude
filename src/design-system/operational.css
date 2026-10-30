@@ -1287,6 +1287,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-action-surface {
   font-family: var(--font-sans);
 }
+.painel-theme.kifer-ds .kds-settings-catalog-link {
+  padding: var(--card-padding-md);
+}
 .painel-theme.kifer-ds .kds-dropdown-option {
   display: flex;
   width: 100%;

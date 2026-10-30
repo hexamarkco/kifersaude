@@ -11,8 +11,8 @@ export function describeMediaResolutionFailure(error: unknown): MediaResolutionF
 
   if (normalizedMessage.includes('specified media not found') || normalizedMessage.includes('media not found')) {
     return {
-      message: 'Arquivo expirado. Peça ao contato para enviá-lo novamente.',
-      retryable: false,
+      message: 'Não foi possível carregar agora.',
+      retryable: true,
     };
   }
 

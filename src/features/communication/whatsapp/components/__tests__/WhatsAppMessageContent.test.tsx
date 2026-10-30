@@ -85,17 +85,17 @@ test('permite tentar carregar novamente uma imagem indisponível', () => {
   }
 });
 
-test('orienta pedir o reenvio de uma mídia expirada sem oferecer uma tentativa inútil', () => {
+test('oferece uma nova tentativa quando a mídia ainda não foi carregada', () => {
   mediaState.mediaUrl = null;
   mediaState.loading = false;
-  mediaState.error = 'Arquivo expirado. Peça ao contato para enviá-lo novamente.';
-  mediaState.retryable = false;
+  mediaState.error = 'Não foi possível carregar agora.';
+  mediaState.retryable = true;
   const view = renderMediaMessage('image');
 
   try {
-    assert.ok(view.container.textContent?.includes('Arquivo expirado. Peça ao contato para enviá-lo novamente.'));
-    assert.equal(Array.from(view.container.querySelectorAll('button'))
-      .some((button) => button.textContent?.trim() === 'Tentar novamente'), false);
+    assert.ok(view.container.textContent?.includes('Não foi possível carregar agora.'));
+    assert.ok(Array.from(view.container.querySelectorAll('button'))
+      .some((button) => button.textContent?.trim() === 'Tentar novamente'));
   } finally {
     view.unmount();
     mediaState.error = null;

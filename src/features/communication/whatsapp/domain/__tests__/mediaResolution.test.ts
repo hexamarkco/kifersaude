@@ -3,12 +3,12 @@ import { test } from 'vitest';
 
 import { describeMediaResolutionFailure } from '../mediaResolution';
 
-test('informa quando a mídia expirou e orienta pedir novo envio', () => {
+test('permite tentar novamente quando a mídia ainda não está disponível', () => {
   assert.deepEqual(
     describeMediaResolutionFailure(new Error('Specified media not found')),
     {
-      message: 'Arquivo expirado. Peça ao contato para enviá-lo novamente.',
-      retryable: false,
+      message: 'Não foi possível carregar agora.',
+      retryable: true,
     },
   );
 });

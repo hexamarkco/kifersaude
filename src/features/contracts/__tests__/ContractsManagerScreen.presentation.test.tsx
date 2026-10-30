@@ -5,6 +5,7 @@ import { render, screen } from '../../../testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   loadContracts: vi.fn(),
+  loadContractDetails: vi.fn(),
   subscribeToContractChanges: vi.fn(() => () => undefined),
 }));
 const loadContractsMock = mocks.loadContracts as unknown as {
@@ -14,12 +15,22 @@ const loadContractsMock = mocks.loadContracts as unknown as {
 const subscribeToContractChangesMock = mocks.subscribeToContractChanges as unknown as {
   mockClear: () => void;
 };
+type ContractDetailsSnapshot = Awaited<ReturnType<typeof import('../../../features/contracts').getContractDetailsSnapshot>>;
+const loadContractDetailsMock = mocks.loadContractDetails as unknown as {
+  mockImplementation: (implementation: () => Promise<ContractDetailsSnapshot>) => void;
+  mockReset: () => void;
+};
 
-vi.mock('../data/contractsRepository', () => ({
-  deleteContract: vi.fn(),
-  listContractsSearchSnapshot: mocks.loadContracts,
-  subscribeToContractChanges: mocks.subscribeToContractChanges,
-}));
+vi.mock('../data/contractsRepository', async () => {
+  const actual = await (vi as typeof vi & { importActual: <T>(path: string) => Promise<T> })
+    .importActual<typeof import('../data/contractsRepository')>('../data/contractsRepository');
+  return {
+    ...actual,
+    deleteContract: vi.fn(),
+    listContractsSearchSnapshot: mocks.loadContracts,
+    subscribeToContractChanges: mocks.subscribeToContractChanges,
+  };
+});
 vi.mock('../data/contractJsonImportRepository', () => ({ createContractRecordsBulk: vi.fn() }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ role: 'admin' }) }));
 vi.mock('../../../contexts/ConfigContext', () => ({
@@ -32,22 +43,11 @@ vi.mock('../../../contexts/ConfigContext', () => ({
   }),
 }));
 vi.mock('../../../components/ContractForm', () => ({ default: () => null }));
-vi.mock('../../../components/ContractDetails', () => ({
-  default: ({
-    presentation,
-    contract,
-    onClose,
-  }: {
-    presentation: string;
-    contract: { codigo_contrato: string };
-    onClose: () => void;
-  }) => (
-    <div role="dialog" aria-label="Detalhes do contrato" data-contract-presentation={presentation}>
-      <span>{contract.codigo_contrato}</span>
-      <button type="button" onClick={onClose}>Fechar detalhes</button>
-    </div>
-  ),
-}));
+vi.mock('../../../features/contracts', async () => {
+  const actual = await (vi as typeof vi & { importActual: <T>(path: string) => Promise<T> })
+    .importActual<typeof import('../../../features/contracts')>('../../../features/contracts');
+  return { ...actual, getContractDetailsSnapshot: mocks.loadContractDetails };
+});
 vi.mock('../components/HolderImportPreparation', () => ({ default: () => null }));
 vi.mock('../components/ContractBulkJsonImportDialog', () => ({ ContractBulkJsonImportDialog: () => null }));
 vi.mock('../components/ContractStatusDropdown', () => ({
@@ -86,7 +86,7 @@ const contract = {
   updated_at: '2026-10-29T12:00:00.000Z',
 };
 
-test('opening a contract keeps the list behind its details drawer', async () => {
+test('opening a contract loads the real details drawer over the retained list', async () => {
   loadContractsMock.mockResolvedValue({
     contracts: [contract],
     holdersByContractId: {
@@ -99,6 +99,8 @@ test('opening a contract keeps the list behind its details drawer', async () => 
     dependentsByContractId: {},
     failedSources: [],
   });
+  let resolveDetails!: (value: ContractDetailsSnapshot) => void;
+  loadContractDetailsMock.mockImplementation(() => new Promise((resolve) => { resolveDetails = resolve; }));
 
   const view = render(<ContractsManagerScreen />);
 
@@ -115,13 +117,32 @@ test('opening a contract keeps the list behind its details drawer', async () => 
 
     await act(async () => { contractButton.click(); });
 
-    const detailsDrawer = view.container.querySelector('[data-contract-presentation="drawer"]');
+    const detailsDrawer = document.body.querySelector<HTMLElement>(
+      '[role="dialog"][aria-label="Detalhes do contrato"]',
+    );
     assert.ok(detailsDrawer);
+    assert.ok(detailsDrawer.textContent?.includes('Carregando dados do contrato'));
     assert.equal(view.container.querySelector('h1')?.textContent?.trim(), 'Gestão de contratos');
     assert.ok(view.container.textContent?.includes('Contato Demonstração'));
+
+    await act(async () => {
+      resolveDetails({
+        holders: [],
+        dependents: [],
+        interactions: [],
+        adjustments: [],
+        documents: [],
+        documentsError: null,
+      });
+      await Promise.resolve();
+    });
+
+    assert.ok(document.body.querySelector('[role="dialog"][aria-label="Detalhes do contrato"]')?.textContent?.includes('Mais informações do contrato'));
+    assert.ok(view.container.querySelector('h1')?.textContent?.trim() === 'Gestão de contratos');
   } finally {
     view.unmount();
     loadContractsMock.mockReset();
+    loadContractDetailsMock.mockReset();
     subscribeToContractChangesMock.mockClear();
   }
 });

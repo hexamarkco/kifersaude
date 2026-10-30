@@ -69,6 +69,29 @@
     "dark_theme_desktop_review": "passed",
     "authenticated_route_visual_review": "pending"
   },
+  "results_panel_spacing": {
+    "fixture": "ContractsManagerScreen real com contratos sintéticos e dependências simuladas",
+    "desktop_inset": "20px (space-5)",
+    "tablet_mobile_inset": "12px (space-3)",
+    "measurements": [
+      { "viewport": 1920, "document_width": 1920, "header_padding": "20px", "table_padding": "20px", "pagination_padding": "20px" },
+      { "viewport": 768, "document_width": 768, "header_padding": "12px", "table_padding": "12px", "pagination_padding": "12px" },
+      { "viewport": 390, "document_width": 390, "header_padding": "12px", "table_padding": "12px", "pagination_padding": "12px" },
+      { "viewport": 320, "document_width": 320, "header_padding": "12px", "table_padding": "12px", "pagination_padding": "12px" }
+    ],
+    "advanced_filter_and_operator_dialog": "opened; synthetic operator selected and applied",
+    "status_options": "opened and closed with Escape; no status changed",
+    "delete_confirmation": "opened and cancelled; no contract deleted",
+    "details_drawer": "opened over the retained list",
+    "themes": ["light", "dark"],
+    "horizontal_overflow": false,
+    "playwright_validation": "output/playwright/contracts-list-preview/check-final.js",
+    "screenshots": [
+      "screenshots/desktop/listagem-padding-canonico.png",
+      "screenshots/desktop/listagem-padding-canonico-dark.png"
+    ],
+    "authenticated_shell_visual_review": "pending"
+  },
   "dependent_form": {
     "context": "state--contratos-dependente",
     "evidence": "dependente/README.md",
@@ -1057,6 +1080,16 @@
       "path": "screenshots/desktop/detalhes-drawer-resumo-ajustado-dark.png",
       "width": 1920,
       "height": 1080
+    },
+    {
+      "path": "screenshots/desktop/listagem-padding-canonico.png",
+      "width": 1910,
+      "height": 1082
+    },
+    {
+      "path": "screenshots/desktop/listagem-padding-canonico-dark.png",
+      "width": 1910,
+      "height": 1082
     },
     {
       "path": "screenshots/tablet/detalhes-drawer-resumo-ajustado.png",

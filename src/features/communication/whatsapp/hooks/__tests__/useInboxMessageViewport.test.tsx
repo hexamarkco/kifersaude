@@ -76,3 +76,74 @@ test('marca como lida ao alcançar o fim, mantém o estado ao rolar para cima e 
     view.unmount();
   }
 });
+
+test('mantém a última mensagem visível quando o viewport redimensiona e não move quem lê o histórico', () => {
+  const previousResizeObserver = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
+  let onResize: ResizeObserverCallback | null = null;
+  class StubResizeObserver implements ResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      onResize = callback;
+    }
+
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  }
+
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    configurable: true,
+    writable: true,
+    value: StubResizeObserver,
+  });
+
+  const messagesContainer = {
+    scrollTop: 400,
+    scrollHeight: 1000,
+    clientHeight: 600,
+  } as unknown as HTMLDivElement;
+  const scrollMetrics = messagesContainer as unknown as {
+    scrollTop: number;
+    scrollHeight: number;
+    clientHeight: number;
+  };
+  const refs: ViewportOptions['refs'] = {
+    messagesContainerRef: { current: messagesContainer },
+    messageBubbleRefs: { current: {} },
+    pendingScrollModeRef: { current: null },
+    pendingScrollTopRef: { current: null },
+    pendingScrollHeightRef: { current: null },
+    isNearBottomRef: { current: true },
+  };
+  const options: ViewportOptions = {
+    refs,
+    messages: [message('message-1')],
+    localOutgoingMessages: [],
+    selectedChatId: 'chat-1',
+    highlightedMessageId: null,
+    setHighlightedMessageId: () => undefined,
+    markSelectedChatReadIfEligible: () => undefined,
+  };
+  const view = render(<Harness options={options} capture={() => undefined} />);
+
+  try {
+    assert.ok(onResize);
+    scrollMetrics.clientHeight = 500;
+    scrollMetrics.scrollHeight = 1200;
+    act(() => onResize?.([], {} as ResizeObserver));
+    assert.equal(scrollMetrics.scrollTop, 1200);
+
+    refs.isNearBottomRef.current = false;
+    scrollMetrics.scrollTop = 240;
+    scrollMetrics.scrollHeight = 1400;
+    act(() => onResize?.([], {} as ResizeObserver));
+    assert.equal(scrollMetrics.scrollTop, 240);
+  } finally {
+    view.unmount();
+    if (previousResizeObserver) {
+      Object.defineProperty(globalThis, 'ResizeObserver', previousResizeObserver);
+    } else {
+      delete (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    }
+  }
+});

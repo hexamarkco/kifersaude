@@ -56,6 +56,22 @@ export const useInboxMessageViewport = ({
     });
   }, [isNearBottomRef, localOutgoingMessages, messages, messagesContainerRef, pendingScrollHeightRef, pendingScrollModeRef, pendingScrollTopRef, selectedChatId]);
 
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      if (isNearBottomRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [isNearBottomRef, messagesContainerRef, selectedChatId]);
+
   useLayoutEffect(() => {
     if (!highlightedMessageId) {
       return;

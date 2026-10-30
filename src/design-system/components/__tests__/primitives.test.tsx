@@ -76,10 +76,10 @@ test('controls share the sm/md/lg scale and loading semantics', () => {
   unmount();
 });
 
-test('sortable table headers can keep sorting accessible without a visible arrow', () => {
+test('sortable table headers remain interactive without a visible sort arrow', () => {
   let sorted = false;
   const { container, unmount } = render(
-    <table><thead><tr><SortableTableHead label="Contrato" sortDirection={null} onSort={() => { sorted = true; }} showSortIndicator={false} /></tr></thead></table>,
+    <table><thead><tr><SortableTableHead label="Contrato" sortDirection={null} onSort={() => { sorted = true; }} /></tr></thead></table>,
   );
   const sortButton = container.querySelector<HTMLButtonElement>('button[aria-label="Ordenar por Contrato"]');
   assert.ok(sortButton);
@@ -90,7 +90,7 @@ test('sortable table headers can keep sorting accessible without a visible arrow
   unmount();
 });
 
-test('sortable table headers hide the neutral icon and show the active direction', () => {
+test('sortable table headers expose the active sort direction accessibly without an icon', () => {
   const onSort = () => undefined;
   const idle = render(
     <table><thead><tr><SortableTableHead label="Contrato" sortDirection={null} onSort={onSort} /></tr></thead></table>,
@@ -106,7 +106,7 @@ test('sortable table headers hide the neutral icon and show the active direction
   );
   const activeSortButton = active.container.querySelector<HTMLButtonElement>('button[aria-label="Ordenar por Contrato"]');
   assert.ok(activeSortButton);
-  assert.ok(activeSortButton.querySelector('svg'));
+  assert.equal(activeSortButton.querySelector('svg'), null);
   assert.equal(activeSortButton.closest('th')?.getAttribute('aria-sort'), 'ascending');
   active.unmount();
 });

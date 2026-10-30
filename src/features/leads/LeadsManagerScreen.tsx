@@ -2012,12 +2012,12 @@ export default function LeadsManager({
                 <TableHeader>
                   <TableRow>
                     {canSelectLeads && <TableHead align="center" className="w-12" aria-label="Selecionar" />}
-                    <SortableTableHead label="Lead" sortDirection={sortDirectionFor("nome")} onSort={() => toggleColumnSort("nome")} showSortIndicator={false} />
-                    <SortableTableHead label="Status" sortDirection={sortDirectionFor("status")} onSort={() => toggleColumnSort("status")} showSortIndicator={false} />
-                    <SortableTableHead label="Origem e tipo" sortDirection={sortDirectionFor("origem")} onSort={() => toggleColumnSort("origem")} showSortIndicator={false} />
-                    <SortableTableHead label="Responsável" sortDirection={sortDirectionFor("responsavel")} onSort={() => toggleColumnSort("responsavel")} showSortIndicator={false} />
-                    <SortableTableHead label="Próximo follow-up" sortDirection={sortDirectionFor("proximo_retorno")} onSort={() => toggleColumnSort("proximo_retorno")} showSortIndicator={false} />
-                    <SortableTableHead label="Criado em" sortDirection={sortDirectionFor("created_at")} onSort={() => toggleColumnSort("created_at")} showSortIndicator={false} />
+                    <SortableTableHead label="Lead" sortDirection={sortDirectionFor("nome")} onSort={() => toggleColumnSort("nome")} />
+                    <SortableTableHead label="Status" sortDirection={sortDirectionFor("status")} onSort={() => toggleColumnSort("status")} />
+                    <SortableTableHead label="Origem e tipo" sortDirection={sortDirectionFor("origem")} onSort={() => toggleColumnSort("origem")} />
+                    <SortableTableHead label="Responsável" sortDirection={sortDirectionFor("responsavel")} onSort={() => toggleColumnSort("responsavel")} />
+                    <SortableTableHead label="Próximo follow-up" sortDirection={sortDirectionFor("proximo_retorno")} onSort={() => toggleColumnSort("proximo_retorno")} />
+                    <SortableTableHead label="Criado em" sortDirection={sortDirectionFor("created_at")} onSort={() => toggleColumnSort("created_at")} />
                     <TableHead align="right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>

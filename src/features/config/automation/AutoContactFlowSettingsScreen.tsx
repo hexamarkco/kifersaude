@@ -1880,9 +1880,16 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <Heading level={4} className="kds-card-title kds-heading-with-info min-w-0 flex-1">
-                        <span className="kds-heading-with-info-title">Envio automático</span>
-                        <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
+                      <Heading
+                        level={4}
+                        className="kds-card-title kds-heading-with-info min-w-0 flex flex-1 flex-nowrap items-start gap-2"
+                      >
+                        <span className="kds-heading-with-info-title min-w-0 flex-1">Envio automático</span>
+                        <InfoTooltip
+                          content="Pausa ou libera o processamento dos fluxos ativos."
+                          label="Informações sobre o processamento dos fluxos"
+                          className="shrink-0"
+                        />
                       </Heading>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
@@ -1903,9 +1910,16 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon tone="gold">
                         <AlarmClock className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <Heading level={4} className="kds-card-title kds-heading-with-info min-w-0 flex-1">
-                        <span className="kds-heading-with-info-title">Agendamento avançado</span>
-                        <InfoTooltip content="Fuso horário e regras globais para dias não úteis." label="Informações sobre o calendário operacional" />
+                      <Heading
+                        level={4}
+                        className="kds-card-title kds-heading-with-info min-w-0 flex flex-1 flex-nowrap items-start gap-2"
+                      >
+                        <span className="kds-heading-with-info-title min-w-0 flex-1">Agendamento avançado</span>
+                        <InfoTooltip
+                          content="Fuso horário e regras globais para dias não úteis."
+                          label="Informações sobre o calendário operacional"
+                          className="shrink-0"
+                        />
                       </Heading>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">

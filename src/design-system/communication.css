@@ -124,12 +124,11 @@
   color: var(--text-muted);
 }
 
-/* Metadados de mídia podem ficar fora da bolha e precisam manter o recuo
-   mesmo quando o thread está dentro de um painel ou wrapper alternativo. */
-.whatsapp-inbox-media-meta {
+/* Metadados de mídia podem ficar fora da bolha e precisam manter o mesmo recuo
+   dos balões de texto, mesmo dentro de wrappers com utilitários de reset. */
+.whatsapp-inbox-thread .whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
   box-sizing: border-box;
-  padding-block: var(--space-1, 0.25rem);
-  padding-inline: var(--space-3, 0.75rem);
+  padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
 }
 
 .comm-terracotta .whatsapp-inbox-image-card,

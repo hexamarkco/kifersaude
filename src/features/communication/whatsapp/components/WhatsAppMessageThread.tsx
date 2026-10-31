@@ -395,6 +395,7 @@ export function WhatsAppMessageThread({
 
                           </div>
 
+                          {!hasMessageBubble ? messageMeta : null}
                           {reactions.length > 0 ? (
                             <div className="mt-1 flex flex-col gap-1">
                               <div className={cx(
@@ -414,7 +415,6 @@ export function WhatsAppMessageThread({
                               </div>
                             </div>
                           ) : null}
-                          {!hasMessageBubble ? messageMeta : null}
                         </div>
                       </div>
                     );

@@ -112,11 +112,17 @@ const assertMediaMetaHasConsistentSpacing = (markup: string) => {
   assert.ok(classes[0]?.includes('whatsapp-inbox-media-meta'));
 };
 
-test('mantém o horário de mídia individual inbound afastado da borda', () => {
-  const message = createMessage('image-1', 'image');
+test('mantém o horário de mídia inbound recuado e antes das reações', () => {
+  const message = {
+    ...createMessage('image-1', 'image'),
+    metadata: {
+      reactions: [{ emoji: '💗', actor_key: 'contact-demo', from_name: 'Contato de demonstração' }],
+    },
+  };
   const markup = renderThread([{ type: 'message', key: 'message:image-1', message }], [message]);
 
   assertMediaMetaHasConsistentSpacing(markup);
+  assert.ok(markup.indexOf('whatsapp-inbox-media-meta') < markup.indexOf('💗'));
 });
 
 test('mantém o horário do último item de grupo inbound afastado da borda', () => {

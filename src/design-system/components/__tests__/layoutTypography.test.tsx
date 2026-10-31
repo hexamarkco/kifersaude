@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { render } from '@testing-library/react';
 import { test } from 'vitest';
 
-import { ExternalLink, Heading, Inline, PublicCard, PublicShell, Stack, Text } from '../../index';
+import { ExternalLink, Heading, InfoTooltip, Inline, PublicCard, PublicShell, Stack, Text } from '../../index';
 
 test('layout primitives expose tokenized composition classes and semantic elements', () => {
   const { container, unmount } = render(
@@ -29,5 +29,21 @@ test('TextLink preserves external link security defaults and supports explicit s
   assert.equal(link.target, '_blank');
   assert.equal(link.rel, 'noopener noreferrer');
   assert.match(link.className, /kds-text-link-underlined/);
+  unmount();
+});
+
+test('InfoTooltip can stay structurally attached to a heading title', () => {
+  const { container, unmount } = render(
+    <Heading level={4} className="kds-card-title kds-heading-with-info">
+      <span className="kds-heading-with-info-title">Envio automático</span>
+      <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
+    </Heading>,
+  );
+  const heading = container.querySelector('h4.kds-heading-with-info');
+  const title = heading?.querySelector('.kds-heading-with-info-title');
+  const info = heading?.querySelector('button.kds-info-trigger');
+  assert.equal(title?.textContent, 'Envio automático');
+  assert.equal(info?.getAttribute('aria-label'), 'Informações sobre o processamento dos fluxos');
+  assert.equal(info?.closest('h4'), heading);
   unmount();
 });

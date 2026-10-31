@@ -3546,7 +3546,10 @@ Os horários já consideram a janela do fluxo,
                   ? "Novo template"
                   : "Editar template"
               }
-              size="lg"
+              description="Mudanças nos fluxos exigem salvar a automação."
+              descriptionPlacement="tooltip"
+              initialFocus="first-content"
+              size="form"
               footer={
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <Button
@@ -3584,14 +3587,10 @@ Os horários já consideram a janela do fluxo,
 
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
+                    <div className="flex min-w-0 items-center gap-2">
                       <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
                         Mensagens do template
                       </Heading>
-                      <Text className="text-xs text-[var(--text-muted)] mt-1">
-                        Combine textos, mídias, áudios e documentos em uma
-                        sequência completa.
-                      </Text>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -3656,12 +3655,12 @@ Os horários já consideram a janela do fluxo,
                           className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-3"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
                               <Icon className="w-4 h-4 text-[var(--text-subtle)]" />
                               <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
                                 Mensagem {index + 1}
                               </span>
-                              <div className="w-44">
+                              <div className="w-full sm:w-44">
                                 <FilterSelect
                                   icon={MessageCircle}
                                   size="sm"
@@ -3739,7 +3738,7 @@ Os horários já consideram a janela do fluxo,
                                     })
                                   }
                                   size="sm"
-                                  placeholder="Ex.: Guia em PDF, áudio de explicação..."
+                                  placeholder="Ex.: Guia do plano"
                                 />
                               </div>
                             </div>
@@ -3749,11 +3748,6 @@ Os horários já consideram a janela do fluxo,
                     })}
                   </div>
                 </div>
-              </div>
-              <div className="mt-6 text-xs text-[var(--text-muted)]">
-                Este botão salva o template na biblioteca e no banco de dados.
-                Para aplicar mudanças nos fluxos, finalize com "Salvar
-                automação".
               </div>
             </DialogShell>
           )}

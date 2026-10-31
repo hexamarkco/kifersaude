@@ -46,7 +46,14 @@
     { "path": "flow-detail/state-rules-agenda-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Regras e agenda do fluxo" },
     { "path": "flow-detail/state-test-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Simular e testar sem executar teste externo" },
     { "path": "flow-detail/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" },
-    { "path": "flow-detail/state-info-title-inline-mobile-390.png", "viewport": "390x844", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" }
+    { "path": "flow-detail/state-info-title-inline-mobile-390.png", "viewport": "390x844", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" },
+    { "path": "template-dialog/desktop-multimessage.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Criação de template com mensagens de texto e imagem" },
+    { "path": "template-dialog/desktop-multimessage-bottom.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Criação de template rolada até a última mensagem com rodapé visível" },
+    { "path": "template-dialog/desktop-edit-dark.png", "viewport": "1920x1080", "capture": "state", "theme": "dark", "state": "Edição de template com título e ícone alinhados; tooltip fechado ao abrir" },
+    { "path": "template-dialog/desktop-edit-info-tooltip.png", "viewport": "1920x1080", "capture": "state", "theme": "dark", "state": "Tooltip de orientação aberto pelo ícone ao lado do título" },
+    { "path": "template-dialog/tablet-768.png", "viewport": "768x1024", "capture": "state", "theme": "light", "state": "Modal de template com mensagem de imagem" },
+    { "path": "template-dialog/mobile-390.png", "viewport": "390x844", "capture": "state", "theme": "light", "state": "Modal de template responsivo com ações fixas" },
+    { "path": "template-dialog/mobile-320.png", "viewport": "320x844", "capture": "state", "theme": "light", "state": "Modal de template responsivo em largura compacta" }
   ],
   "checks": {
     "font_status": "document.fonts.ready",
@@ -63,6 +70,14 @@
       "nodes_within_canvas": { "768x1024": true, "390x844": true, "320x844": true },
       "empty_inspector_height": "140 px abaixo de lg; alinhado à altura do canvas em desktop"
     },
+    "template_dialog": {
+      "width_desktop": "592 px incluindo a borda no viewport 1920x1080",
+      "horizontal_overflow": { "1920x1080": false, "768x1024": false, "390x844": false, "320x844": false },
+      "internal_scroll_keeps_footer_visible": true,
+      "mobile_actions_full_width": true,
+      "initial_focus": "Primeiro campo; o tooltip de orientação não abre automaticamente",
+      "dark_theme": "Edição aberta e conferida sem conflito visual"
+    },
     "mobile_list_representation": "Cartões do Design System abaixo de lg; tabela no desktop.",
     "desktop_theme": ["light", "dark"],
     "interactions": [
@@ -70,20 +85,21 @@
       "Busca por sem resposta com resultado único.",
       "Tooltip de informação aberto e conteúdo conferido.",
       "Abas Templates e Operação abertas; switches e campos de Operação permaneceram sem alteração.",
-      "Editor do fluxo em rota própria; abas Regras e agenda e Simular e testar revisadas sem salvar, remover, executar teste ou enviar mensagem."
+      "Editor do fluxo em rota própria; abas Regras e agenda e Simular e testar revisadas sem salvar, remover, executar teste ou enviar mensagem.",
+      "Modais de criação e edição de templates abertos como rascunho local; texto, mídia, tooltip, foco, rolagem e rodapé revisados em desktop, tablet e mobile."
     ],
-    "destructive_or_external_actions": "Nenhuma criação, edição, remoção, publicação, envio ou gravação foi executada.",
+    "destructive_or_external_actions": "Nenhum template foi salvo ou removido, nenhuma automação foi publicada ou executada e nenhuma mensagem foi enviada.",
     "authenticated_route": "Sessão autenticada não disponível; revisão executada no shell real com fixture local sintética.",
     "pending_contexts": [
       "Persistência do editor de fluxo em sessão autenticada",
-      "Criação e edição de templates",
+      "Persistência de criação/edição de templates em sessão autenticada",
       "Permissões e respostas da API em sessão autenticada"
     ]
   },
   "validation": {
     "focused_tests": "ConfigPageScreen e designSystemContract: 13/13 nesta entrega.",
     "full_test_suite": "Execução anterior: 1.865 testes aprovados e 2 falhas; HomePage.test.tsx permanece fora do escopo institucional e o timeout de designSystemContract foi corrigido e passou isolado. A suíte completa não foi repetida após os últimos ajustes.",
-    "typecheck": "passou",
+    "typecheck": "bloqueado por erros preexistentes em src/features/public-content/hooks/__tests__/useHomeMotion.test.tsx (imports da API Vitest); arquivo fora desta alteração e não modificado.",
     "lint": "passou sem erros; 8 avisos em previews Playwright e PainelWrapper.",
     "architecture": "passou",
     "build": "passou, incluindo secrets:check, auditorias do Design System/visual e verificação do bundle do editor; permanece o aviso conhecido de chunk vendor acima de 500 kB.",

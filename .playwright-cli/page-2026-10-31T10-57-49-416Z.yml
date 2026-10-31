@@ -1,0 +1,149 @@
+- generic [ref=f8e1]:
+  - main [ref=f8e3]:
+    - button "Abrir mensagens agendadas" [ref=f8e4] [cursor=pointer]
+  - dialog [ref=f8e8]:
+    - generic [ref=f8e9]:
+      - generic [ref=f8e15]:
+        - heading "Mensagens Agendadas" [level=2] [ref=f8e16]
+        - paragraph [ref=f8e17]: 7 mensagem(ns) e 2 sequência(s)
+      - group "Ações dos agendamentos" [ref=f8e18]:
+        - button "Agendar nova" [active] [ref=f8e19] [cursor=pointer]
+        - button "Fechar" [ref=f8e22] [cursor=pointer]
+    - generic [ref=f8e27]:
+      - tablist "Filtrar mensagens agendadas por situação" [ref=f8e29]:
+        - tab "Próximas 9" [selected] [ref=f8e30] [cursor=pointer]:
+          - generic [ref=f8e31]: Próximas
+          - generic [ref=f8e32]: "9"
+        - tab "Atenção 2" [ref=f8e33] [cursor=pointer]:
+          - generic [ref=f8e34]: Atenção
+          - generic [ref=f8e35]: "2"
+        - tab "Histórico 3" [ref=f8e36] [cursor=pointer]:
+          - generic [ref=f8e37]: Histórico
+          - generic [ref=f8e38]: "3"
+        - tab "Todas 14" [ref=f8e39] [cursor=pointer]:
+          - generic [ref=f8e40]: Todas
+          - generic [ref=f8e41]: "14"
+      - generic [ref=f8e42]:
+        - generic [ref=f8e43]:
+          - text: Buscar
+          - searchbox "Buscar" [ref=f8e45]
+        - generic [ref=f8e46]:
+          - text: A partir de
+          - button "A partir de" [ref=f8e48] [cursor=pointer]:
+            - generic [ref=f8e51]: Qualquer data
+        - generic [ref=f8e52]:
+          - text: Até
+          - button "Até" [ref=f8e54] [cursor=pointer]:
+            - generic [ref=f8e57]: Qualquer data
+      - generic [ref=f8e58]: 7 mensagem(ns) e 2 sequência(s) nesta visão
+      - region "Sequências" [ref=f8e60]:
+        - button "Sequências (2)" [expanded] [ref=f8e61] [cursor=pointer]
+        - generic [ref=f8e71]:
+          - generic [ref=f8e73]:
+            - generic [ref=f8e74]:
+              - generic [ref=f8e75]:
+                - generic [ref=f8e76]: Agendada
+                - generic [ref=f8e77]: Etapa 1 de 1
+              - paragraph [ref=f8e78]: Retorno após proposta
+              - generic [ref=f8e79]:
+                - generic [ref=f8e80]: Em 2 dias, às 14:30
+                - generic [ref=f8e84]: 02/11/2026 às 14:30
+                - generic [ref=f8e85]: +55 (21) 98888-8800
+                - generic [ref=f8e86]: Beatriz Rocha
+            - group "Ações da sequência agendada" [ref=f8e87]:
+              - button "Editar sequência agendada" [ref=f8e88] [cursor=pointer]
+              - button "Cancelar sequência" [ref=f8e93] [cursor=pointer]
+          - generic [ref=f8e99]:
+            - generic [ref=f8e100]:
+              - generic [ref=f8e101]:
+                - generic [ref=f8e102]: Agendada
+                - generic [ref=f8e103]: Etapa 1 de 1
+              - paragraph [ref=f8e104]: Acompanhamento da cotação
+              - generic [ref=f8e105]:
+                - generic [ref=f8e106]: Em 4 dias, às 14:30
+                - generic [ref=f8e110]: 04/11/2026 às 14:30
+                - generic [ref=f8e111]: +55 (21) 98888-8801
+                - generic [ref=f8e112]: João Pedro
+            - group "Ações da sequência agendada" [ref=f8e113]:
+              - button "Editar sequência agendada" [ref=f8e114] [cursor=pointer]
+              - button "Cancelar sequência" [ref=f8e119] [cursor=pointer]
+          - navigation "Paginação de Sequências" [ref=f8e124]:
+            - generic [ref=f8e125]: 1–2 de 2 · Página 1 de 1
+            - generic [ref=f8e126]:
+              - button "Página anterior de Sequências" [disabled] [ref=f8e127]:
+                - generic [ref=f8e128]: Anterior
+              - button "Próxima página de Sequências" [disabled] [ref=f8e131]:
+                - generic [ref=f8e132]: Próxima
+      - region "Mensagens normais" [ref=f8e135]:
+        - button "Mensagens normais (7)" [expanded] [ref=f8e136] [cursor=pointer]
+        - generic [ref=f8e145]:
+          - generic [ref=f8e147]:
+            - generic [ref=f8e148]:
+              - generic [ref=f8e149]: Agendada
+              - paragraph [ref=f8e151]: Olá, Mariana! Passando para confirmar nosso retorno sobre as opções do plano familiar.
+              - generic [ref=f8e152]:
+                - generic [ref=f8e153]: Amanhã às 10:30
+                - generic [ref=f8e157]: 01/11/2026 às 10:30
+                - generic [ref=f8e158]: +55 (21) 99999-9900
+                - generic [ref=f8e159]: Mariana Costa
+              - paragraph [ref=f8e160]: Retorno do plano familiar
+            - group "Ações da mensagem agendada" [ref=f8e161]:
+              - button "Editar mensagem agendada" [ref=f8e162] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=f8e167] [cursor=pointer]
+          - generic [ref=f8e173]:
+            - generic [ref=f8e174]:
+              - generic [ref=f8e175]:
+                - generic [ref=f8e176]: Agendada
+                - generic [ref=f8e177]: Semanal
+              - paragraph [ref=f8e178]: Oi, Eduardo! Separei as informações que você pediu e posso ajudar com qualquer dúvida.
+              - generic [ref=f8e179]:
+                - generic [ref=f8e180]: Em 2 dias, às 11:30
+                - generic [ref=f8e184]: 02/11/2026 às 11:30
+                - generic [ref=f8e185]: +55 (21) 99999-9901
+                - generic [ref=f8e186]: Eduardo Martins
+            - group "Ações da mensagem agendada" [ref=f8e187]:
+              - button "Editar mensagem agendada" [ref=f8e188] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=f8e193] [cursor=pointer]
+          - generic [ref=f8e199]:
+            - generic [ref=f8e200]:
+              - generic [ref=f8e201]: Agendada
+              - paragraph [ref=f8e203]: Olá, Patrícia! Tudo bem? Podemos retomar nossa conversa sobre a proposta?
+              - generic [ref=f8e204]:
+                - generic [ref=f8e205]: Em 3 dias, às 12:30
+                - generic [ref=f8e209]: 03/11/2026 às 12:30
+                - generic [ref=f8e210]: +55 (21) 99999-9902
+                - generic [ref=f8e211]: Patrícia Nunes
+            - group "Ações da mensagem agendada" [ref=f8e212]:
+              - button "Editar mensagem agendada" [ref=f8e213] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=f8e218] [cursor=pointer]
+          - generic [ref=f8e224]:
+            - generic [ref=f8e225]:
+              - generic [ref=f8e226]: Agendada
+              - paragraph [ref=f8e228]: Olá, Mariana! Passando para confirmar nosso retorno sobre as opções do plano familiar.
+              - generic [ref=f8e229]:
+                - generic [ref=f8e230]: Em 4 dias, às 13:30
+                - generic [ref=f8e234]: 04/11/2026 às 13:30
+                - generic [ref=f8e235]: +55 (21) 99999-9903
+                - generic [ref=f8e236]: Ana Clara
+            - group "Ações da mensagem agendada" [ref=f8e237]:
+              - button "Editar mensagem agendada" [ref=f8e238] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=f8e243] [cursor=pointer]
+          - generic [ref=f8e249]:
+            - generic [ref=f8e250]:
+              - generic [ref=f8e251]: Agendada
+              - paragraph [ref=f8e253]: Oi, Eduardo! Separei as informações que você pediu e posso ajudar com qualquer dúvida.
+              - generic [ref=f8e254]:
+                - generic [ref=f8e255]: Em 5 dias, às 14:30
+                - generic [ref=f8e259]: 05/11/2026 às 14:30
+                - generic [ref=f8e260]: +55 (21) 99999-9904
+                - generic [ref=f8e261]: Rafael Mendes
+            - group "Ações da mensagem agendada" [ref=f8e262]:
+              - button "Editar mensagem agendada" [ref=f8e263] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=f8e268] [cursor=pointer]
+          - navigation "Paginação de Mensagens normais" [ref=f8e273]:
+            - generic [ref=f8e274]: 1–5 de 7 · Página 1 de 2
+            - generic [ref=f8e275]:
+              - button "Página anterior de Mensagens normais" [disabled] [ref=f8e276]:
+                - generic [ref=f8e277]: Anterior
+              - button "Próxima página de Mensagens normais" [ref=f8e280] [cursor=pointer]:
+                - generic [ref=f8e281]: Próxima

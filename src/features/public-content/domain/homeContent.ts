@@ -49,11 +49,13 @@ export const homeNavigation = [
 ] as const;
 
 export const homePhotos = {
-  luizaHero: "/images/home/luiza-hero.png",
-  luizaAbout: "/images/home/luiza-about.png",
-  luizaWhatsApp: "/images/home/luiza-whatsapp.png",
-  family: "/images/home/family.png",
-  work: "/images/home/work.png",
+  luizaHero: "/images/home/luiza-opening.webp",
+  luizaAbout: "/images/home/luiza-about-editorial.webp",
+  luizaWhatsApp: "/images/home/luiza-portrait.webp",
+  family: "/images/home/family-profile.webp",
+  trust: "/images/home/trust-coffee.webp",
+  work: "/images/home/mei-office.webp",
+  quote: "/images/home/family-quote.webp",
   business: "/images/home/business.png",
 } as const;
 
@@ -112,6 +114,8 @@ export const homeAudiences = [
     ],
     cta: "Quero cotar como pessoa física",
     photo: homePhotos.family,
+    photoWidth: 1448,
+    photoHeight: 1086,
     alt: "Imagem ilustrativa de uma família reunida no sofá",
     icon: UserRound,
   },
@@ -131,6 +135,8 @@ export const homeAudiences = [
     ],
     cta: "Quero cotar como MEI",
     photo: homePhotos.work,
+    photoWidth: 1448,
+    photoHeight: 1086,
     alt: "Imagem ilustrativa de uma profissional em seu escritório",
     icon: Briefcase,
   },
@@ -150,6 +156,8 @@ export const homeAudiences = [
     ],
     cta: "Quero cotar para minha empresa",
     photo: homePhotos.business,
+    photoWidth: 1122,
+    photoHeight: 1402,
     alt: "Imagem ilustrativa de uma equipe conversando no escritório",
     icon: Building2,
   },

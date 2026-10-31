@@ -1,6 +1,6 @@
 # WhatsApp Inbox — revisão visual
 
-**Estado: página principal e diálogo “Novo chat” revisados; `state--inbox-filtros` comparado com adaptação em fixture de componentes.** A comparação usa as referências [desktop](../../../references/desktop/page--inbox.png), [mobile](../../../references/mobile/page--inbox.png), [diálogo desktop](../../../references/desktop/state--inbox-nova-conversa.png), [diálogo mobile](../../../references/mobile/state--inbox-nova-conversa.png) e [filtros desktop e mobile](../../../references/desktop/state--inbox-filtros.png). A revisão integrada da rota autenticada e os demais contextos de overlays e ferramentas continuam pendentes no manifesto.
+**Estado: página principal e diálogo “Novo chat” revisados; filtros e respostas rápidas comparados com adaptações em fixtures de componentes.** A comparação usa as referências [desktop](../../../references/desktop/page--inbox.png), [mobile](../../../references/mobile/page--inbox.png), [diálogo desktop](../../../references/desktop/state--inbox-nova-conversa.png), [diálogo mobile](../../../references/mobile/state--inbox-nova-conversa.png) e [filtros desktop e mobile](../../../references/desktop/state--inbox-filtros.png). A revisão integrada da rota autenticada e os demais contextos de overlays e ferramentas continuam pendentes no manifesto.
 
 ## Adaptações ao CRM real
 
@@ -80,7 +80,15 @@ O `WhatsAppScheduledMessagesPanel` e os fluxos reais de criação e edição for
 - Playwright conferiu a prévia com os componentes reais em 1920×1080 (claro/escuro), 768×1024, 390×844 e 320×640. O seletor aceita navegação por setas/Enter, os tooltips de contexto e de campo abrem sob demanda, o estado vazio e a validação são legíveis e o rodapé continua acessível durante rolagem interna. Não houve overflow horizontal.
 - O foco inicial agora vai ao botão visível do `Select`; o `<select>` nativo oculto foi removido do conjunto de focáveis do `Dialog`, preservando a navegação por teclado e o ciclo de foco. Teste de regressão cobre essa combinação. O teste de saving confirma campos e ações bloqueados e o Escape sem fechar enquanto a gravação está em andamento.
 - O botão Salvar foi exercitado apenas na fixture sintética, onde fecha o diálogo sem escrita no CRM. As 12 capturas deste componente estão registradas no `coverage.json`, incluindo dropdown aberto, tooltips, vazio, erro, tema escuro e estados mobile de 320 px.
-- A rota autenticada, persistência real e inserção de respostas no compositor não foram certificadas nesta rodada; esses pontos permanecem pendentes e não encerram a revisão dos demais estados da Inbox.
+- O gerenciador foi aberto também pelo botão **Gerenciar** do compositor em fixture local, confirmando a integração entre os dois componentes. A rota autenticada e a persistência real continuam pendentes.
+
+## Mensagens rápidas — sugestões no compositor — 31/10/2026
+
+- Playwright renderizou `WhatsAppComposer`, `useInboxQuickReplyComposer`, `useInboxComposerSubmission` e `WhatsAppQuickRepliesModal` reais com respostas sintéticas. Digitar `/` abre sugestões; as setas mudam a opção ativa, Enter e clique inserem o texto no rascunho, e Escape fecha a lista ou o modal. A seleção não envia a mensagem. **Gerenciar** abre o modal real, sem gravar dados.
+- A lista expõe `combobox`, `listbox` e `option`, com `aria-controls`, `aria-activedescendant` e seleção anunciada. O botão **Gerenciar** permanece em uma linha em 320 px; a lista não cria rolagem horizontal.
+- Foram capturados sugestão normal, modal aberto, resposta inserida sem envio, nenhum resultado, estado vazio e erro de carregamento em desktop, tablet e mobile. A cobertura inclui desktop escuro, larguras 1920, 768, 390 e 320 px, sem overflow.
+- **Limitação da referência:** `state--inbox-mensagens-rapidas.png` repete o painel de filtros de origem de `state--inbox-filtros.png` e só muda o título; não há imagem de referência válida para as sugestões do compositor. A comparação visual específica fica registrada como adaptação, sem inventar um mockup. A revisão na rota autenticada permanece pendente.
+- Capturas e medições: [quick-replies-composer](quick-replies-composer/README.md) e [coverage.json](coverage.json).
 
 ## Recuperação de anexos indisponíveis — 29/10/2026
 

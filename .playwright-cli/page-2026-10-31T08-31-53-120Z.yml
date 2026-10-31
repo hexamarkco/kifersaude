@@ -1,0 +1,99 @@
+- generic [ref=f12e1]:
+  - main [ref=f12e3]:
+    - generic [ref=f12e4]:
+      - generic [ref=f12e5]:
+        - paragraph [ref=f12e6]: WhatsApp Inbox
+        - heading "Conversa de demonstração" [level=1] [ref=f12e7]
+      - generic [ref=f12e8]: Dados sintéticos · sem envio
+    - paragraph [ref=f12e10]: A mensagem agendada aparecerá nesta conversa.
+  - dialog [ref=f12e14]:
+    - generic [ref=f12e15]:
+      - generic [ref=f12e16]:
+        - heading "Agendar mensagem" [level=2] [ref=f12e17]
+        - paragraph [ref=f12e18]: Configure quando a mensagem deve ser enviada automaticamente.
+      - button "Fechar" [ref=f12e19] [cursor=pointer]
+    - generic [ref=f12e24]:
+      - tablist "Tipo de agendamento" [ref=f12e26]:
+        - tab "Mensagem única" [selected] [ref=f12e27] [cursor=pointer]
+        - tab "Criar sequência" [ref=f12e29] [cursor=pointer]
+      - generic [ref=f12e31]:
+        - generic [ref=f12e32]:
+          - generic [ref=f12e33]: Contato
+          - textbox "Contato" [ref=f12e35]: Contato de demonstração
+        - generic [ref=f12e36]:
+          - generic [ref=f12e37]: Data e hora do envio
+          - button "Data e hora do envio" [active] [ref=f12e41] [cursor=pointer]:
+            - generic [ref=f12e44]: 31/10/2026 06:00
+      - generic [ref=f12e45]:
+        - generic [ref=f12e46]: Mensagem
+        - textbox "Digite a mensagem..." [ref=f12e47]: Olá! Podemos conversar amanhã?
+        - button "Anexar mídia ou documento" [ref=f12e48] [cursor=pointer]
+      - group [ref=f12e53]:
+        - generic "Opções adicionais" [ref=f12e54] [cursor=pointer]
+    - generic [ref=f12e60]:
+      - button "Cancelar" [ref=f12e61] [cursor=pointer]
+      - button "Agendar mensagem" [ref=f12e62] [cursor=pointer]
+  - dialog "Selecionar data" [ref=f12e63]:
+    - generic "Etapas da seleção" [ref=f12e64]:
+      - button "Data" [ref=f12e65] [cursor=pointer]
+      - button "Hora" [ref=f12e66] [cursor=pointer]
+      - button "Minutos" [ref=f12e67] [cursor=pointer]
+    - generic [ref=f12e68]:
+      - generic [ref=f12e69]:
+        - button "Mês anterior" [ref=f12e70] [cursor=pointer]
+        - generic [ref=f12e73]: Outubro de 2026
+        - button "Próximo mês" [ref=f12e74] [cursor=pointer]
+      - generic [ref=f12e77]:
+        - generic [ref=f12e78]: D
+        - generic [ref=f12e79]: S
+        - generic [ref=f12e80]: T
+        - generic [ref=f12e81]: Q
+        - generic [ref=f12e82]: Q
+        - generic [ref=f12e83]: S
+        - generic [ref=f12e84]: S
+      - generic [ref=f12e85]:
+        - button "27" [disabled] [ref=f12e86]
+        - button "28" [disabled] [ref=f12e87]
+        - button "29" [disabled] [ref=f12e88]
+        - button "30" [disabled] [ref=f12e89]
+        - button "1" [disabled] [ref=f12e90]
+        - button "2" [disabled] [ref=f12e91]
+        - button "3" [disabled] [ref=f12e92]
+        - button "4" [disabled] [ref=f12e93]
+        - button "5" [disabled] [ref=f12e94]
+        - button "6" [disabled] [ref=f12e95]
+        - button "7" [disabled] [ref=f12e96]
+        - button "8" [disabled] [ref=f12e97]
+        - button "9" [disabled] [ref=f12e98]
+        - button "10" [disabled] [ref=f12e99]
+        - button "11" [disabled] [ref=f12e100]
+        - button "12" [disabled] [ref=f12e101]
+        - button "13" [disabled] [ref=f12e102]
+        - button "14" [disabled] [ref=f12e103]
+        - button "15" [disabled] [ref=f12e104]
+        - button "16" [disabled] [ref=f12e105]
+        - button "17" [disabled] [ref=f12e106]
+        - button "18" [disabled] [ref=f12e107]
+        - button "19" [disabled] [ref=f12e108]
+        - button "20" [disabled] [ref=f12e109]
+        - button "21" [disabled] [ref=f12e110]
+        - button "22" [disabled] [ref=f12e111]
+        - button "23" [disabled] [ref=f12e112]
+        - button "24" [disabled] [ref=f12e113]
+        - button "25" [disabled] [ref=f12e114]
+        - button "26" [disabled] [ref=f12e115]
+        - button "27" [disabled] [ref=f12e116]
+        - button "28" [disabled] [ref=f12e117]
+        - button "29" [disabled] [ref=f12e118]
+        - button "30" [disabled] [ref=f12e119]
+        - button "31" [ref=f12e120] [cursor=pointer]
+        - button "1" [ref=f12e121] [cursor=pointer]
+        - button "2" [ref=f12e122] [cursor=pointer]
+        - button "3" [ref=f12e123] [cursor=pointer]
+        - button "4" [ref=f12e124] [cursor=pointer]
+        - button "5" [ref=f12e125] [cursor=pointer]
+        - button "6" [ref=f12e126] [cursor=pointer]
+        - button "7" [ref=f12e127] [cursor=pointer]
+    - generic [ref=f12e128]:
+      - button "Limpar" [ref=f12e129] [cursor=pointer]
+      - button "Hoje" [ref=f12e130] [cursor=pointer]

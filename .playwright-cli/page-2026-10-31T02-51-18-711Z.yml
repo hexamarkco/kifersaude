@@ -1,0 +1,20 @@
+- generic [ref=e2]:
+  - complementary "Navegação CRM" [ref=e3]: K
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - strong [ref=e6]: WhatsApp Inbox
+      - button "＋ Nova conversa" [ref=e7] [cursor=pointer]
+    - complementary "Informações do contato" [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - strong [ref=e12]: INFORMAÇÕES DO CONTATO
+          - generic [ref=e13]: Contato de demonstração
+        - button "Fechar painel" [ref=e14] [cursor=pointer]: ×
+      - generic [ref=e15]:
+        - paragraph [ref=e16]: +55 (21) 90000-0000
+        - paragraph [ref=e17]:
+          - generic [ref=e18]: Convertido
+        - separator [ref=e19]
+        - paragraph [ref=e20]: ResponsávelOperador de demonstração
+        - separator [ref=e21]
+        - paragraph [ref=e22]: Próximo lembreteRetorno sobre a proposta

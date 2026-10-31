@@ -1,0 +1,48 @@
+- main [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - paragraph [ref=e7]: Kifer Saúde · Comunicação
+      - heading "WhatsApp Inbox" [level=1] [ref=e8]
+    - button "＋ Nova conversa" [ref=e9] [cursor=pointer]
+  - generic [ref=e10]:
+    - complementary [ref=e11]:
+      - generic [ref=e12]: Conversas
+      - generic [ref=e13]:
+        - strong [ref=e14]: Contato de demonstração
+        - text: Última mensagem · 10:20
+      - generic [ref=e15]: Contato de demonstração 02
+    - region "Conversa de demonstração" [ref=e16]:
+      - generic [ref=e17]:
+        - strong [ref=e18]: Contato de demonstração
+        - button "Informações do contato" [ref=e19] [cursor=pointer]: ⓘ
+      - generic [ref=e20]:
+        - generic [ref=e21]: Olá! Gostaria de conhecer as opções de planos para minha família. Esta mensagem de demonstração permite conferir se o painel lateral cobre ou corta o histórico em larguras diferentes.
+        - generic [ref=e22]: Claro, posso ajudar. Quantas pessoas terão cobertura e em qual cidade vocês moram?
+        - generic [ref=e23]: Seremos três pessoas. Quero comparar as opções com calma e ver as informações completas antes de decidir.
+        - generic [ref=e24]: Perfeito. Vou preparar uma comparação para você.
+      - textbox "Digite uma mensagem" [ref=e27]
+    - complementary "Informações do contato" [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - paragraph [ref=e31]: Informações do contato
+          - heading "Contato de demonstração" [level=2] [ref=e32]
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]: +55 (11) 99999-9999
+              - 'generic "DDD 11: São Paulo" [ref=e36]': SP · DDD 11
+            - button "Renomear contato" [ref=e41] [cursor=pointer]
+        - button "Fechar" [ref=e46] [cursor=pointer]
+      - generic [ref=e50]:
+        - tablist "Seções de informações do chat" [ref=e52]:
+          - tab "Dados do lead" [selected] [ref=e53] [cursor=pointer]
+          - tab "Análise do atendimento" [ref=e55] [cursor=pointer]
+        - generic [ref=e59]:
+          - generic [ref=e63]:
+            - paragraph [ref=e64]: Nenhum lead vinculado
+            - paragraph [ref=e65]: Procure um contato já cadastrado para vincular esta conversa e atualizar o atendimento sem sair daqui.
+          - generic [ref=e66]:
+            - button "Criar novo lead" [ref=e67] [cursor=pointer]
+            - searchbox "Buscar lead por nome ou telefone" [ref=e71]
+            - generic [ref=e72]:
+              - paragraph [ref=e73]: Nenhum lead encontrado
+              - paragraph [ref=e74]: Tente buscar por outro nome ou telefone.

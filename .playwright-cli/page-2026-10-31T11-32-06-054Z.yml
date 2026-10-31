@@ -1,0 +1,114 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Kifer Saúde · Comunicação
+        - heading "WhatsApp Inbox" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - button "Tema escuro" [ref=e296] [cursor=pointer]
+        - button "Nova conversa" [ref=e11] [cursor=pointer]
+    - main [ref=e15]:
+      - complementary [ref=e16]:
+        - generic [ref=e17]:
+          - paragraph [ref=e18]: Conversas
+          - generic [ref=e19]: 6 abertas
+        - textbox "Buscar conversas" [ref=e22]:
+          - /placeholder: Buscar por nome ou telefone
+        - generic [ref=e23]:
+          - button "Todas" [ref=e24] [cursor=pointer]
+          - button "Filtros" [expanded] [ref=e198] [cursor=pointer]
+        - button "AO Ana Oliveira 09:41 Preciso de uma cotação Atendimento" [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]: AO
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - generic [ref=e30]: Ana Oliveira
+              - generic [ref=e31]: 09:41
+            - paragraph [ref=e32]: Preciso de uma cotação
+            - generic [ref=e33]: Atendimento
+        - button "BM Bruno Martins 09:33 Pode me explicar os planos? Contato inicial" [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]: BM
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - generic [ref=e38]: Bruno Martins
+              - generic [ref=e39]: 09:33
+            - paragraph [ref=e40]: Pode me explicar os planos?
+            - generic [ref=e41]: Contato inicial
+        - button "CS Camila Santos 09:18 Obrigada pelo retorno Convertido" [ref=e42] [cursor=pointer]:
+          - generic [ref=e43]: CS
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]: Camila Santos
+              - generic [ref=e47]: 09:18
+            - paragraph [ref=e48]: Obrigada pelo retorno
+            - generic [ref=e49]: Convertido
+        - button "DR Daniela Rocha Ontem Tenho interesse para minha família Proposta enviada" [ref=e50] [cursor=pointer]:
+          - generic [ref=e51]: DR
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - generic [ref=e54]: Daniela Rocha
+              - generic [ref=e55]: Ontem
+            - paragraph [ref=e56]: Tenho interesse para minha família
+            - generic [ref=e57]: Proposta enviada
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - heading "Ana Oliveira" [level=3] [ref=e61]
+            - paragraph [ref=e62]: Em atendimento · WhatsApp
+          - button "Buscar" [ref=e63] [cursor=pointer]
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - paragraph [ref=e70]: Olá! Gostaria de conhecer as opções de planos de saúde para minha família.
+            - paragraph [ref=e71]: 09:41
+          - generic [ref=e72]:
+            - paragraph [ref=e73]: Claro! Posso ajudar. Quantas pessoas fazem parte da família?
+            - paragraph [ref=e74]:
+              - text: 09:42
+              - img "Entregue" [ref=e75]
+        - textbox "Escreva uma mensagem" [ref=e80]:
+          - /placeholder: Escreva uma mensagem...
+      - complementary [ref=e81]:
+        - paragraph [ref=e82]: Informações do contato
+        - heading "Ana Oliveira" [level=3] [ref=e83]
+        - paragraph [ref=e84]: +55 (21) 98888-0000
+        - paragraph [ref=e89]: "Responsável: Luiza"
+        - paragraph [ref=e93]: "Próximo lembrete: amanhã"
+  - dialog [ref=e300]:
+    - generic [ref=e301]:
+      - heading "Filtros do inbox" [level=2] [ref=e303]
+      - button "Fechar" [ref=e304] [cursor=pointer]
+    - generic [ref=e308]:
+      - group "Atividade" [ref=e309]:
+        - paragraph [ref=e310]: Atividade
+        - generic [ref=e311]:
+          - button "Todas" [ref=e312] [cursor=pointer]
+          - button "Não lidas" [active] [pressed] [ref=e313] [cursor=pointer]
+      - group "Status do lead" [ref=e314]:
+        - paragraph [ref=e316]: Status do lead
+        - generic [ref=e317]:
+          - generic [ref=e318] [cursor=pointer]:
+            - checkbox "Contato inicial" [ref=e319]
+            - generic [ref=e320]: Contato inicial
+          - generic [ref=e321] [cursor=pointer]:
+            - checkbox "Atendimento" [ref=e322]
+            - generic [ref=e323]: Atendimento
+          - generic [ref=e324] [cursor=pointer]:
+            - checkbox "Proposta enviada" [ref=e325]
+            - generic [ref=e326]: Proposta enviada
+          - generic [ref=e327] [cursor=pointer]:
+            - checkbox "Convertido" [ref=e328]
+            - generic [ref=e329]: Convertido
+      - group "Agente responsável" [ref=e330]:
+        - paragraph [ref=e332]: Agente responsável
+        - generic [ref=e333]:
+          - generic [ref=e334] [cursor=pointer]:
+            - checkbox "Luiza" [ref=e335]
+            - generic [ref=e336]: Luiza
+          - generic [ref=e337] [cursor=pointer]:
+            - checkbox "Nick" [ref=e338]
+            - generic [ref=e339]: Nick
+          - generic [ref=e340] [cursor=pointer]:
+            - checkbox "Claudia" [ref=e341]
+            - generic [ref=e342]: Claudia
+    - generic [ref=e343]:
+      - button "Limpar filtros" [ref=e345] [cursor=pointer]
+      - button "Aplicar filtros" [ref=e344] [cursor=pointer]

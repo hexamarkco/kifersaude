@@ -1,0 +1,93 @@
+- generic [ref=f21e3]:
+  - complementary [ref=f21e4]:
+    - generic [ref=f21e5]:
+      - img "Kifer Saúde CRM" [ref=f21e7]:
+        - generic [ref=f21e8]: kifersaúde
+        - generic [ref=f21e9]: CRM
+      - navigation [ref=f21e10]:
+        - generic [ref=f21e11]:
+          - button "Dashboard" [ref=f21e12] [cursor=pointer]
+          - generic [ref=f21e20]:
+            - button "CRM" [ref=f21e21] [cursor=pointer]
+            - generic [ref=f21e30]:
+              - button "Leads" [ref=f21e31] [cursor=pointer]
+              - button "Contratos" [ref=f21e39] [cursor=pointer]
+              - button "Agenda" [ref=f21e45] [cursor=pointer]
+          - button "Comunicação" [ref=f21e51] [cursor=pointer]
+          - button "Financeiro" [ref=f21e60] [cursor=pointer]
+          - button "Automações e IA" [ref=f21e69] [cursor=pointer]
+          - button "Configurações" [ref=f21e76] [cursor=pointer]
+      - generic [ref=f21e82]:
+        - button "Recolher" [ref=f21e83] [cursor=pointer]
+        - button "Notificações" [ref=f21e88] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f21e96] [cursor=pointer]:
+          - generic [ref=f21e99]: Escuro
+        - button "Sair" [ref=f21e100] [cursor=pointer]
+  - generic [ref=f21e105]:
+    - banner [ref=f21e106]:
+      - generic [ref=f21e107]:
+        - navigation "Breadcrumb" [ref=f21e108]:
+          - list [ref=f21e109]:
+            - listitem [ref=f21e110]:
+              - button "CRM" [ref=f21e111] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f21e112]
+            - listitem [ref=f21e115]: Contratos
+        - generic [ref=f21e116]:
+          - generic [ref=f21e117]: Operador demonstração
+          - button "Ativar tema escuro" [ref=f21e118] [cursor=pointer]
+          - generic [ref=f21e122]: OD
+    - main [ref=f21e124]:
+      - generic [ref=f21e126]:
+        - generic [ref=f21e128]:
+          - generic [ref=f21e129]:
+            - paragraph [ref=f21e130]: Kifer Saúde / Operação comercial
+            - generic [ref=f21e132]:
+              - heading "Gestão de contratos" [level=1] [ref=f21e133]
+              - button "Informações sobre Gestão de contratos" [ref=f21e135]
+          - generic [ref=f21e139]:
+            - button "Importar em massa" [ref=f21e140] [cursor=pointer]
+            - button "Novo contrato" [ref=f21e147] [cursor=pointer]
+        - generic "Resumo da carteira de contratos" [ref=f21e151]:
+          - generic [ref=f21e152]:
+            - heading "Contratos ativos" [level=3] [ref=f21e157]
+            - generic [ref=f21e158]: "4"
+            - generic [ref=f21e159]: Contratos vigentes
+          - generic [ref=f21e160]:
+            - heading "Em implantação" [level=3] [ref=f21e165]
+            - generic [ref=f21e166]: "4"
+            - generic [ref=f21e167]: Em análise ou emissão
+          - generic [ref=f21e168]:
+            - heading "Próximos vencimentos" [level=3] [ref=f21e173]
+            - generic [ref=f21e174]: "1"
+            - generic [ref=f21e175]: Nos próximos 30 dias
+          - generic [ref=f21e176]:
+            - heading "Mensalidade total" [level=3] [ref=f21e181]
+            - generic [ref=f21e182]: R$ 11.760,00
+            - generic [ref=f21e183]: Soma dos valores informados
+        - generic [ref=f21e184]:
+          - generic [ref=f21e185]:
+            - textbox "Buscar contratos" [ref=f21e188]:
+              - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+            - button "Exportar" [ref=f21e190] [cursor=pointer]
+          - generic [ref=f21e195]:
+            - button "Todos os status" [ref=f21e196] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f21e204] [cursor=pointer]
+            - button "Todos os períodos" [ref=f21e214] [cursor=pointer]
+            - button "Filtros avançados" [ref=f21e221] [cursor=pointer]
+        - generic [ref=f21e225]:
+          - generic [ref=f21e226]:
+            - generic [ref=f21e227]:
+              - paragraph [ref=f21e228]: Carteira contratual
+              - generic [ref=f21e229]:
+                - heading "Contratos em acompanhamento" [level=3] [ref=f21e230]
+                - button "Informações sobre esta seção" [ref=f21e232]
+            - generic [ref=f21e236]:
+              - generic [ref=f21e238]:
+                - generic [ref=f21e239]: "0"
+                - generic [ref=f21e240]: resultados
+              - generic [ref=f21e242]:
+                - generic [ref=f21e243]: 1/1
+                - generic [ref=f21e244]: páginas
+          - generic [ref=f21e246]:
+            - paragraph [ref=f21e251]: Nenhum contrato encontrado
+            - paragraph [ref=f21e252]: Tente ajustar os filtros ou adicione um novo contrato.

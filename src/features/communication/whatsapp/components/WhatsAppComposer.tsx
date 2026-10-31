@@ -1,5 +1,6 @@
 import { Text, Image, Video } from '../../../../design-system';
 import { FileInput, ActionSurface, Textarea } from '../../../../design-system';
+import { useId } from 'react';
 import type {
   ChangeEventHandler,
   ClipboardEventHandler,
@@ -176,6 +177,8 @@ export function WhatsAppComposer({
   quickRepliesLoadError: boolean;
   onRetryQuickRepliesLoad: () => void;
 }) {
+  const quickReplyListboxId = useId();
+
   return (
               <div className="whatsapp-inbox-composer-area relative z-10 min-h-0 overflow-visible border-t p-2.5 sm:p-3">
                 <div className={`whatsapp-inbox-composer rounded-xl border transition-shadow ${composerFocused ? 'is-focused' : ''} ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
@@ -780,6 +783,7 @@ export function WhatsAppComposer({
                               type="button"
                               variant="secondary"
                               size="sm"
+                              className="shrink-0 whitespace-nowrap"
                               onMouseDown={(event) => {
                                 event.preventDefault();
                                 handleOpenQuickReplySettings();
@@ -788,7 +792,7 @@ export function WhatsAppComposer({
                               Gerenciar
                             </Button>
                           </div>
-                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rápidas">
+                          <div id={quickReplyListboxId} className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rápidas">
                             {quickReplyMenuHasResults ? (
                               filteredQuickReplyOptions.map((option, index) => {
                                 const isActive = index === quickReplyActiveIndex;
@@ -796,7 +800,10 @@ export function WhatsAppComposer({
                                 return (
                                   <ActionSurface variant="plain" padding="none"
                                     key={option.id}
+                                    id={`${quickReplyListboxId}-option-${index}`}
                                     type="button"
+                                    role="option"
+                                    aria-selected={isActive}
                                     className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--brand-primary-soft)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
                                     onMouseDown={(event) => {
                                       event.preventDefault();
@@ -829,6 +836,7 @@ export function WhatsAppComposer({
                                       type="button"
                                       variant="secondary"
                                       size="sm"
+                                      className="shrink-0 whitespace-nowrap"
                                       onMouseDown={(event) => event.preventDefault()}
                                       onClick={onRetryQuickRepliesLoad}
                                     >
@@ -848,6 +856,14 @@ export function WhatsAppComposer({
 
                       <Textarea
                         ref={composerTextareaRef}
+                        role="combobox"
+                        aria-label="Digite uma mensagem"
+                        aria-autocomplete="list"
+                        aria-haspopup="listbox"
+                        aria-expanded={quickReplyMenuOpen}
+                        aria-controls={quickReplyMenuOpen ? quickReplyListboxId : undefined}
+                        aria-activedescendant={quickReplyMenuOpen && quickReplyMenuHasResults ? `${quickReplyListboxId}-option-${quickReplyActiveIndex}` : undefined}
+                        aria-multiline="true"
                         rows={1}
                         value={messageDraft}
                         onChange={handleComposerChange}

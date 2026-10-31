@@ -1,0 +1,87 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - paragraph [ref=e7]: Kifer Saúde · Comunicação
+          - heading "WhatsApp Inbox" [level=1] [ref=e8]
+        - button "Nova conversa" [ref=e9] [cursor=pointer]
+      - generic [ref=e10]:
+        - complementary [ref=e11]:
+          - heading "Conversas" [level=2] [ref=e12]
+          - generic [ref=e13]:
+            - strong [ref=e14]: Mariana Costa
+            - paragraph [ref=e15]: Estou analisando a proposta.
+          - generic [ref=e16]: Eduardo Martins
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - strong [ref=e19]: Mariana Costa
+            - paragraph [ref=e20]: Em atendimento · WhatsApp
+          - generic [ref=e21]:
+            - generic [ref=e22]: Olá! Quero comparar os planos para minha família.
+            - generic [ref=e23]: Claro. Quantas pessoas precisam de cobertura?
+          - generic [ref=e24]: Digite uma mensagem
+    - button "Abrir mensagens rápidas" [ref=e25] [cursor=pointer]
+  - dialog [ref=e29]:
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - heading "Mensagens rápidas" [level=2] [ref=e32]
+        - paragraph [ref=e33]:
+          - button "Informações sobre esta janela" [ref=e35]
+      - button "Fechar" [ref=e38] [cursor=pointer]
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - heading "Atalhos" [level=3] [ref=e47]
+            - paragraph [ref=e48]: 3 atalhos
+          - button "Nova" [active] [ref=e49] [cursor=pointer]
+        - generic "Mensagens rápidas cadastradas" [ref=e52]:
+          - 'button "Boas-vindas /boas-vindas Olá, {{nome}}! Como posso ajudar você hoje?" [pressed] [ref=e53] [cursor=pointer]':
+            - generic [ref=e54]:
+              - generic [ref=e55]: Boas-vindas
+              - code [ref=e56]: /boas-vindas
+            - paragraph [ref=e57]: "Olá, {{nome}}! Como posso ajudar você hoje?"
+          - 'button "Retorno comercial /retorno Oi, {{nome}}! Passando para saber se conseguiu avaliar as opções que conversamos." [ref=e58] [cursor=pointer]':
+            - generic [ref=e59]:
+              - generic [ref=e60]: Retorno comercial
+              - code [ref=e61]: /retorno
+            - paragraph [ref=e62]: "Oi, {{nome}}! Passando para saber se conseguiu avaliar as opções que conversamos."
+          - button "Documentos necessários /documentos Para continuar, envie por favor o nome completo e os documentos dos beneficiários." [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]:
+              - generic [ref=e65]: Documentos necessários
+              - code [ref=e66]: /documentos
+            - paragraph [ref=e67]: Para continuar, envie por favor o nome completo e os documentos dos beneficiários.
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - heading "Editor da mensagem rápida" [level=3] [ref=e71]
+            - paragraph [ref=e74]: O atalho e a mensagem ficam disponíveis imediatamente ao escrever uma resposta no WhatsApp.
+          - button "Remover" [ref=e75] [cursor=pointer]
+        - generic [ref=e80]:
+          - generic [ref=e81]:
+            - generic [ref=e83]:
+              - generic [ref=e84]: Atalho
+              - 'button "Ajuda: Atalho" [ref=e86]'
+            - textbox "Atalho" [ref=e90]:
+              - /placeholder: contato-inicial
+              - text: boas-vindas
+            - paragraph [ref=e91]: Opcional. Se ficar vazio, o sistema cria o atalho a partir do título.
+          - generic [ref=e92]:
+            - generic [ref=e93]: Título *
+            - textbox "Título" [ref=e97]:
+              - /placeholder: "Ex.: Contato inicial"
+              - text: Boas-vindas
+        - generic [ref=e98]:
+          - generic [ref=e99]: Mensagem *
+          - textbox "Mensagem" [ref=e103]:
+            - /placeholder: "Digite a mensagem. Para inserir variáveis, digite {{"
+            - text: "Olá, {{nome}}! Como posso ajudar você hoje?"
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - text: Use
+        - code [ref=e107]: "{{"
+        - text: para inserir dados do contato na mensagem.
+      - generic [ref=e108]:
+        - button "Cancelar" [ref=e109] [cursor=pointer]
+        - button "Salvar mensagens rápidas" [ref=e110] [cursor=pointer]

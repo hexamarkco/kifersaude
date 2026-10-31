@@ -1,0 +1,12 @@
+- main [ref=f7e3]:
+  - generic [ref=f7e5]:
+    - generic [ref=f7e6]:
+      - generic [aria-hidden] [ref=f7e8]: ✓
+      - generic [ref=f7e9]:
+        - heading "Envio automático" [level=4] [ref=f7e10]
+        - button "Informações sobre o processamento dos fluxos" [ref=f7e12]
+    - generic [ref=f7e15]:
+      - generic [ref=f7e16]:
+        - paragraph [ref=f7e17]: Ativar automação
+        - paragraph [ref=f7e18]: A alteração é salva automaticamente.
+      - switch "Ativar envio automático dos fluxos" [ref=f7e20]

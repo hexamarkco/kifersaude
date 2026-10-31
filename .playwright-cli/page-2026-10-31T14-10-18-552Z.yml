@@ -1,0 +1,47 @@
+- generic [active] [ref=f20e1]:
+  - generic [ref=f20e3]:
+    - main [ref=f20e4]:
+      - generic [ref=f20e5]:
+        - generic [ref=f20e6]:
+          - paragraph [ref=f20e7]: Kifer Saúde · Comunicação
+          - heading "WhatsApp Inbox" [level=1] [ref=f20e8]
+        - button "Nova conversa" [ref=f20e9] [cursor=pointer]
+      - generic [ref=f20e10]:
+        - complementary [ref=f20e11]:
+          - heading "Conversas" [level=2] [ref=f20e12]
+          - generic [ref=f20e13]:
+            - strong [ref=f20e14]: Mariana Costa
+            - paragraph [ref=f20e15]: Estou analisando a proposta.
+          - generic [ref=f20e16]: Eduardo Martins
+        - generic [ref=f20e17]:
+          - generic [ref=f20e18]:
+            - strong [ref=f20e19]: Mariana Costa
+            - paragraph [ref=f20e20]: Em atendimento · WhatsApp
+          - generic [ref=f20e21]:
+            - generic [ref=f20e22]: Olá! Quero comparar os planos para minha família.
+            - generic [ref=f20e23]: Claro. Quantas pessoas precisam de cobertura?
+          - generic [ref=f20e24]: Digite uma mensagem
+    - button "Abrir mensagens rápidas" [ref=f20e25] [cursor=pointer]
+  - dialog [ref=f20e29]:
+    - generic [ref=f20e30]:
+      - generic [ref=f20e31]:
+        - heading "Mensagens rápidas" [level=2] [ref=f20e32]
+        - paragraph [ref=f20e33]:
+          - button "Informações sobre esta janela" [ref=f20e35]
+      - button "Fechar" [ref=f20e38] [cursor=pointer]
+    - generic [ref=f20e43]:
+      - generic [ref=f20e44]:
+        - generic [ref=f20e45]:
+          - generic [ref=f20e46]: Resposta rápida
+          - combobox [disabled] [aria-hidden] [ref=f20e49]
+          - button "Resposta rápida para editar" [disabled] [ref=f20e51]:
+            - generic [ref=f20e52]: Selecione uma resposta rápida
+          - paragraph [ref=f20e55]: 0 atalhos cadastrados
+        - button "Nova" [ref=f20e57] [cursor=pointer]
+      - generic [ref=f20e99]:
+        - paragraph [ref=f20e100]: Nenhuma mensagem rápida cadastrada
+        - paragraph [ref=f20e101]: Crie um atalho para disponibilizar respostas frequentes no compositor do WhatsApp.
+        - button "Criar mensagem rápida" [ref=f20e103] [cursor=pointer]
+    - generic [ref=f20e96]:
+      - button "Cancelar" [ref=f20e97] [cursor=pointer]
+      - button "Salvar" [ref=f20e98] [cursor=pointer]

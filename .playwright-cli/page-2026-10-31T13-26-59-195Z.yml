@@ -1,0 +1,77 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - paragraph [ref=e7]: Kifer Saúde · Comunicação
+          - heading "WhatsApp Inbox" [level=1] [ref=e8]
+        - button "Nova conversa" [ref=e9] [cursor=pointer]
+      - generic [ref=e10]:
+        - complementary [ref=e11]:
+          - heading "Conversas" [level=2] [ref=e12]
+          - generic [ref=e13]:
+            - strong [ref=e14]: Mariana Costa
+            - paragraph [ref=e15]: Estou analisando a proposta.
+          - generic [ref=e16]: Eduardo Martins
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - strong [ref=e19]: Mariana Costa
+            - paragraph [ref=e20]: Em atendimento · WhatsApp
+          - generic [ref=e21]:
+            - generic [ref=e22]: Olá! Quero comparar os planos para minha família.
+            - generic [ref=e23]: Claro. Quantas pessoas precisam de cobertura?
+          - generic [ref=e24]: Digite uma mensagem
+    - button "Abrir mensagens rápidas" [ref=e25] [cursor=pointer]
+  - dialog [ref=e104]:
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - heading "Mensagens rápidas" [level=2] [ref=e107]
+        - paragraph [ref=e108]:
+          - button "Informações sobre esta janela" [ref=e110]
+      - button "Fechar" [ref=e113] [cursor=pointer]
+    - generic [ref=e118]:
+      - generic [ref=e119]:
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - heading "Atalhos" [level=3] [ref=e122]
+            - paragraph [ref=e123]: 1 atalho
+          - button "Nova" [ref=e124] [cursor=pointer]
+        - generic "Mensagens rápidas cadastradas" [ref=e127]:
+          - button "Contato inicial /contato-inicial Mensagem vazia" [pressed] [ref=e176] [cursor=pointer]:
+            - generic [ref=e129]:
+              - generic [ref=e130]: Contato inicial
+              - code [ref=e131]: /contato-inicial
+            - paragraph [ref=e132]: Mensagem vazia
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - heading "Editor da mensagem rápida" [level=3] [ref=e136]
+            - paragraph [ref=e139]: O atalho e a mensagem ficam disponíveis imediatamente ao escrever uma resposta no WhatsApp.
+          - button "Remover" [ref=e140] [cursor=pointer]
+        - generic [ref=e177]: Revise os campos indicados antes de salvar.
+        - generic [ref=e145]:
+          - generic [ref=e146]:
+            - generic [ref=e148]:
+              - generic [ref=e149]: Atalho
+              - 'button "Ajuda: Atalho" [ref=e151]'
+            - textbox "Atalho" [ref=e155]:
+              - /placeholder: contato-inicial
+            - paragraph [ref=e156]: Opcional. Se ficar vazio, o sistema cria o atalho a partir do título.
+          - generic [ref=e157]:
+            - generic [ref=e158]: Título *
+            - textbox "Título" [ref=e162]:
+              - /placeholder: "Ex.: Contato inicial"
+              - text: Contato inicial
+        - generic [ref=e163]:
+          - generic [ref=e164]: Mensagem *
+          - textbox "Mensagem" [invalid] [ref=e168]:
+            - /placeholder: "Digite a mensagem. Para inserir variáveis, digite {{"
+          - alert [ref=e180]: Escreva a mensagem que será inserida na conversa.
+    - generic [ref=e170]:
+      - generic [ref=e171]:
+        - text: Use
+        - code [ref=e172]: "{{"
+        - text: para inserir dados do contato na mensagem.
+      - generic [ref=e173]:
+        - button "Cancelar" [ref=e174] [cursor=pointer]
+        - button "Salvar mensagens rápidas" [active] [ref=e175] [cursor=pointer]

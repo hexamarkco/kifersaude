@@ -176,10 +176,10 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
     >
       <div className="home-quote-background" aria-hidden="true">
         <Image
-          src={homePhotos.family}
+          src={homePhotos.quote}
           alt=""
-          width={1122}
-          height={1402}
+          width={1448}
+          height={1086}
           loading="lazy"
         />
         <span />

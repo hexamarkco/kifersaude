@@ -1,0 +1,396 @@
+- generic [ref=e4]:
+  - link "Pular para o conteúdo" [ref=e5] [cursor=pointer]:
+    - /url: "#conteudo-principal"
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link "Kifer Saúde, início" [ref=e8] [cursor=pointer]:
+        - /url: "#topo"
+        - img "Kifer Saúde" [ref=e9]:
+          - generic [ref=e10]: kifersaúde
+      - button "Abrir menu" [ref=e13] [cursor=pointer]
+  - main [ref=e16]:
+    - region [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - paragraph [ref=e20]: Planos de saúde com orientação especializada
+          - heading "Seu plano de saúde, com orientação de verdade." [level=1] [ref=e21]:
+            - generic [ref=e22]: Seu plano de saúde,
+            - emphasis [ref=e23]:
+              - generic [ref=e24]: com orientação
+              - generic [ref=e25]: de verdade.
+          - paragraph [ref=e26]:
+            - text: Compare operadoras, entenda a rede credenciada e receba orientação especializada para escolher o plano ideal no
+            - strong [ref=e27]: Rio de Janeiro.
+          - generic [ref=e28]:
+            - button "Quero minha cotação gratuita" [ref=e29] [cursor=pointer]
+            - link "Falar no WhatsApp" [ref=e33] [cursor=pointer]:
+              - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20Quero%20uma%20cota%C3%A7%C3%A3o%20de%20plano%20de%20sa%C3%BAde%20com%20a%20Kifer.
+          - list [ref=e36]:
+            - listitem [ref=e37]:
+              - generic [ref=e42]: Compare operadoras
+            - listitem [ref=e43]:
+              - generic [ref=e50]: Entenda a rede credenciada
+            - listitem [ref=e51]:
+              - generic [ref=e56]: Orientação especializada no RJ
+          - link "Já sou cliente e preciso de suporte" [ref=e57] [cursor=pointer]:
+            - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20J%C3%A1%20sou%20cliente%20da%20Kifer%20Sa%C3%BAde%20e%20preciso%20de%20suporte.
+        - generic [ref=e60]:
+          - img "Luíza Kifer no escritório, com a mão apoiada no queixo" [ref=e61]
+          - strong [ref=e63]: Luíza Kifer
+    - region [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - paragraph [ref=e68]: Confiança e operadoras
+            - heading [level=2] [ref=e69]:
+              - text: Boas escolhas começam com
+              - emphasis [ref=e70]: informação clara.
+            - paragraph [ref=e71]: "A Kifer compara as principais operadoras de saúde e ajuda você a entender o que realmente importa: cobertura, rede credenciada, custo e o melhor encaixe para o seu perfil."
+            - generic [ref=e72]:
+              - img "Imagem ilustrativa de uma mulher tomando café ao lado do notebook" [ref=e74]
+              - paragraph [ref=e75]: Mais clareza para uma vida mais tranquila.
+          - list [ref=e77]:
+            - listitem [ref=e78]:
+              - generic [ref=e85]:
+                - paragraph [ref=e86]: "01"
+                - heading "Compare com clareza" [level=3] [ref=e88]
+                - paragraph [ref=e89]: Avaliamos as principais operadoras lado a lado, com informações simples e transparentes, para você enxergar as diferenças e escolher com segurança.
+            - listitem [ref=e90]:
+              - generic [ref=e95]:
+                - paragraph [ref=e96]: "02"
+                - heading "Entenda a sua rede" [level=3] [ref=e98]
+                - paragraph [ref=e99]: Veja quais hospitais, laboratórios e especialistas fazem parte da rede credenciada de cada plano e escolha o que melhor atende à sua rotina, na sua região.
+            - listitem [ref=e100]:
+              - generic [ref=e107]:
+                - paragraph [ref=e108]: "03"
+                - heading "Conte com suporte do início ao fim" [level=3] [ref=e110]
+                - paragraph [ref=e111]: Do orçamento à contratação, nossa equipe está ao seu lado para tirar dúvidas, explicar cada detalhe e acompanhar a ativação do seu plano.
+        - generic [ref=e112]:
+          - paragraph [ref=e113]: Principais operadoras
+          - paragraph [ref=e115]: Mais opções para a sua escolha.
+        - list [ref=e116]:
+          - listitem [ref=e117]:
+            - link "Conhecer planos Amil" [ref=e118] [cursor=pointer]:
+              - /url: /planos/amil
+              - img "Amil" [ref=e119]
+          - listitem [ref=e120]:
+            - link "Conhecer planos Bradesco Saúde" [ref=e121] [cursor=pointer]:
+              - /url: /planos/bradesco-saude
+              - img "Bradesco Saúde" [ref=e122]
+          - listitem [ref=e123]:
+            - link "Conhecer planos SulAmérica Saúde" [ref=e124] [cursor=pointer]:
+              - /url: /planos/sulamerica
+              - img "SulAmérica Saúde" [ref=e125]
+          - listitem [ref=e126]:
+            - link "Conhecer planos Porto Saúde" [ref=e127] [cursor=pointer]:
+              - /url: /planos/porto-saude
+              - img "Porto Saúde" [ref=e128]
+          - listitem [ref=e129]:
+            - link "Conhecer planos Assim Saúde" [ref=e130] [cursor=pointer]:
+              - /url: /planos/assim-saude
+              - img "Assim Saúde" [ref=e131]
+    - region [ref=e132]:
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - paragraph [ref=e135]: Para quem é
+          - heading "Planos de saúde para cada momento da sua vida." [level=2] [ref=e136]
+          - paragraph [ref=e137]: Cada perfil tem necessidades diferentes de cobertura, custo e carência. Escolha o seu e conte com a Kifer para entender as opções.
+        - generic [ref=e138]:
+          - group [ref=e139]:
+            - radiogroup "Escolha seu perfil" [ref=e141]:
+              - generic [ref=e142] [cursor=pointer]:
+                - radio "Pessoa física" [checked]
+                - strong [ref=e150]: Pessoa física
+              - generic [ref=e151] [cursor=pointer]:
+                - radio "MEI"
+                - strong [ref=e159]: MEI
+              - generic [ref=e160] [cursor=pointer]:
+                - radio "Empresa"
+                - strong [ref=e169]: Empresa
+          - generic [ref=e170]:
+            - region "Pessoa física" [ref=e171]:
+              - generic [ref=e172]:
+                - paragraph [ref=e173]: Pessoa física
+                - heading [level=3] [ref=e174]:
+                  - text: Plano de saúde para
+                  - emphasis [ref=e175]: você e sua família.
+                - paragraph [ref=e176]: Compare operadoras, rede credenciada, carência e coparticipação para escolher uma cobertura compatível com a sua rotina no RJ.
+                - list [ref=e177]:
+                  - listitem [ref=e178]: Opções para solteiros, casais e famílias
+                  - listitem [ref=e185]: Rede analisada para os locais que você usa
+                  - listitem [ref=e190]: Cotação gratuita e sem compromisso
+                  - listitem [ref=e195]: Suporte especializado em todas as etapas
+                - button "Quero cotar como pessoa física" [ref=e199] [cursor=pointer]
+              - img "Imagem ilustrativa de uma família reunida no sofá" [ref=e204]
+            - generic: Quero cotar como MEI
+            - generic: Quero cotar para minha empresa
+    - region [ref=e205]:
+      - generic [ref=e206]:
+        - generic [ref=e207]:
+          - paragraph [ref=e208]: Como funciona
+          - heading [level=2] [ref=e209]:
+            - text: Em poucos passos, você encontra o
+            - emphasis [ref=e210]: plano ideal.
+          - paragraph [ref=e211]: A Kifer simplifica sua escolha. Você fala o que precisa, a gente compara as melhores opções e te acompanha até o seu plano estar ativo.
+        - list [ref=e213]:
+          - listitem [ref=e214]:
+            - generic [ref=e215]: "01"
+            - heading "Você informa sua necessidade" [level=3] [ref=e221]
+            - paragraph [ref=e222]: Nos conte seu perfil, número de pessoas e o que é importante para você na cobertura.
+          - listitem [ref=e223]:
+            - generic [ref=e224]: "02"
+            - heading "A gente compara as melhores opções" [level=3] [ref=e230]
+            - paragraph [ref=e231]: Analisamos operadoras, coberturas, redes e preços, de forma independente e personalizada.
+          - listitem [ref=e232]:
+            - generic [ref=e233]: "03"
+            - heading "Você escolhe o plano ideal" [level=3] [ref=e240]
+            - paragraph [ref=e241]: Você recebe uma proposta clara, com os detalhes para decidir com segurança e sem complicação.
+          - listitem [ref=e242]:
+            - generic [ref=e243]: "04"
+            - heading "Acompanhamento até a ativação" [level=3] [ref=e250]
+            - paragraph [ref=e251]: Cuidamos da documentação e do processo com a operadora, acompanhando você até o plano estar ativo.
+    - region [ref=e252]:
+      - generic [ref=e253]:
+        - generic [ref=e254]:
+          - paragraph [ref=e255]: Depoimentos
+          - heading "Cada escolha tem uma história." [level=2] [ref=e256]
+          - paragraph [ref=e257]: Um espaço para as experiências de quem conta com a Kifer Saúde.
+        - generic [ref=e266]:
+          - heading "Sua confiança merece histórias de verdade." [level=3] [ref=e270]
+          - paragraph [ref=e271]: Ainda não há depoimentos disponíveis nesta página.
+    - region [ref=e293]:
+      - img "Luíza Kifer, corretora independente de planos de saúde" [ref=e295]
+      - generic [ref=e296]:
+        - paragraph [ref=e297]: Sobre a Luíza
+        - heading [level=2] [ref=e298]:
+          - text: Mais do que planos,
+          - emphasis [ref=e299]: pessoas em primeiro lugar.
+        - paragraph [ref=e300]: Oi, eu sou a Luíza, corretora independente de planos de saúde no Rio de Janeiro. Trabalho com diferentes operadoras e oriento cada cliente com a mesma atenção que dedicaria à minha família.
+        - paragraph [ref=e301]: Meu trabalho é te orientar na comparação de custos, rede credenciada e regras de contratação, com linguagem simples e sem pressão. Da cotação à ativação, você conta com acompanhamento para escolher com mais segurança.
+        - list [ref=e302]:
+          - listitem [ref=e303]:
+            - heading "Atendimento humanizado" [level=3] [ref=e310]
+            - paragraph [ref=e311]: Escuta para entender o que realmente importa para você e sua família.
+          - listitem [ref=e312]:
+            - heading "Orientação especializada" [level=3] [ref=e317]
+            - paragraph [ref=e318]: Comparação entre operadoras, com foco nas suas necessidades.
+          - listitem [ref=e319]:
+            - heading "Acompanhamento de ponta a ponta" [level=3] [ref=e323]
+            - paragraph [ref=e324]: Da cotação à ativação, você conta com orientação em cada etapa.
+        - generic [ref=e325]:
+          - strong [ref=e326]: Luíza Kifer
+          - paragraph [ref=e327]: Especialista em planos de saúde
+    - region [ref=e328]:
+      - generic [ref=e329]:
+        - generic [ref=e330]:
+          - paragraph [ref=e331]: Dúvidas
+          - heading [level=2] [ref=e332]:
+            - text: Perguntas
+            - emphasis [ref=e333]: frequentes.
+          - paragraph [ref=e334]: Aqui você encontra respostas para as dúvidas mais comuns sobre planos de saúde, contratação e atendimento.
+        - generic [ref=e340]:
+          - heading [level=3] [ref=e342]:
+            - button "MEI pode contratar plano empresarial?" [ref=e343] [cursor=pointer]
+          - heading [level=3] [ref=e353]:
+            - button "Qual a diferença entre plano por adesão e empresarial?" [ref=e354] [cursor=pointer]
+          - heading [level=3] [ref=e365]:
+            - button "Tem carência?" [ref=e366] [cursor=pointer]
+          - heading [level=3] [ref=e376]:
+            - button "Quais regiões do Rio de Janeiro o plano cobre?" [ref=e377] [cursor=pointer]
+          - heading [level=3] [ref=e387]:
+            - button "Como faço para contratar?" [ref=e388] [cursor=pointer]
+    - region [ref=e397]:
+      - generic [ref=e399]:
+        - generic [ref=e400]:
+          - paragraph [ref=e401]: Cotação
+          - heading [level=2] [ref=e402]:
+            - text: Encontre o
+            - emphasis [ref=e403]: plano ideal
+            - text: para você, sua família ou sua empresa.
+          - paragraph [ref=e404]: Compare operadoras, receba uma proposta personalizada e conte com o suporte da Kifer em todo o processo. É gratuito e sem compromisso.
+          - list [ref=e405]:
+            - listitem [ref=e406]:
+              - heading "Operadoras para o seu perfil" [level=3] [ref=e411]
+              - paragraph [ref=e412]: Rede e condições verificadas antes da sua escolha.
+            - listitem [ref=e413]:
+              - heading "Atendimento especializado" [level=3] [ref=e418]
+              - paragraph [ref=e419]: Orientação do início ao fim, com foco no que você precisa.
+            - listitem [ref=e420]:
+              - heading "Cotação gratuita e sem compromisso" [level=3] [ref=e425]
+              - paragraph [ref=e426]: Receba uma proposta personalizada para comparar.
+        - form "Solicite sua cotação" [ref=e427]:
+          - paragraph [ref=e428]: Solicite sua cotação
+          - heading "Vamos encontrar o plano certo para você?" [level=3] [ref=e429]
+          - paragraph [ref=e430]: Preencha os dados e receba uma proposta personalizada da nossa equipe, sem compromisso.
+          - group "Dados para a cotação" [ref=e431]:
+            - generic [ref=e433]:
+              - text: Qual é o seu perfil? *
+              - radiogroup "Qual é o seu perfil? *" [ref=e434]:
+                - generic [ref=e435] [cursor=pointer]:
+                  - radio "Pessoa física" [checked]
+                  - generic [ref=e439]:
+                    - strong [ref=e443]: Pessoa física
+                    - generic [ref=e444]: Eu ou minha família
+                - generic [ref=e445] [cursor=pointer]:
+                  - radio "MEI"
+                  - generic [ref=e449]:
+                    - strong [ref=e453]: MEI
+                    - generic [ref=e454]: Com CNPJ ativo
+                - generic [ref=e455] [cursor=pointer]:
+                  - radio "Empresa"
+                  - generic [ref=e459]:
+                    - strong [ref=e464]: Empresa
+                    - generic [ref=e465]: Para o seu time
+            - generic [ref=e466]:
+              - generic [ref=e467]: Quantas pessoas serão incluídas? *
+              - spinbutton "Quantas pessoas serão incluídas?" [ref=e471]
+            - generic [ref=e472]:
+              - generic [ref=e473]: Em qual cidade? *
+              - combobox "Em qual cidade?" [ref=e478]
+            - generic [ref=e479]:
+              - generic [ref=e480]: Seu nome completo *
+              - textbox "Seu nome completo" [ref=e484]:
+                - /placeholder: Digite seu nome
+            - generic [ref=e485]:
+              - generic [ref=e486]: Seu WhatsApp *
+              - textbox "Seu WhatsApp" [ref=e490]:
+                - /placeholder: (21) 99999-9999
+            - generic [aria-hidden] [ref=e491]:
+              - text: Website
+              - textbox [ref=e493]
+            - button "Quero receber minha cotação" [ref=e494] [cursor=pointer]
+          - paragraph [ref=e503]: Seus dados são usados para atender sua solicitação.
+          - paragraph [ref=e504]:
+            - text: Ao enviar seus dados, você declara estar ciente de nossa
+            - link "Política de Privacidade (abre em nova aba)" [ref=e505] [cursor=pointer]:
+              - /url: /politica-de-privacidade
+            - text: e solicita contato sobre sua cotação.
+    - region [ref=e506]:
+      - generic [ref=e507]:
+        - generic [ref=e508]:
+          - paragraph [ref=e509]: Atendimento via WhatsApp
+          - heading [level=2] [ref=e510]:
+            - text: Fale com a gente pelo
+            - emphasis [ref=e511]: WhatsApp.
+          - paragraph [ref=e512]: Tire suas dúvidas, compare opções e receba uma recomendação personalizada. Nosso time te atende de forma humana e sem complicação.
+          - list [ref=e513]:
+            - listitem [ref=e514]:
+              - generic [ref=e518]:
+                - heading "Conversa sem complicação" [level=3] [ref=e519]
+                - paragraph [ref=e520]: Tire suas dúvidas diretamente com a Kifer.
+            - listitem [ref=e521]:
+              - generic [ref=e526]:
+                - heading "Atendimento especializado" [level=3] [ref=e527]
+                - paragraph [ref=e528]: Fale com quem entende de planos de saúde.
+            - listitem [ref=e529]:
+              - generic [ref=e533]:
+                - heading "Orientação personalizada" [level=3] [ref=e534]
+                - paragraph [ref=e535]: Opções de acordo com seu perfil e necessidade.
+          - link "Falar no WhatsApp" [ref=e536] [cursor=pointer]:
+            - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20Quero%20uma%20cota%C3%A7%C3%A3o%20de%20plano%20de%20sa%C3%BAde%20com%20a%20Kifer.
+          - paragraph [ref=e541]: Atendimento gratuito e sem compromisso.
+        - generic [ref=e542]:
+          - generic [ref=e543]:
+            - img "Luíza Kifer com um celular nas mãos, no escritório da Kifer Saúde" [ref=e544]
+            - generic [ref=e545]:
+              - strong [ref=e546]: Luíza Kifer
+              - generic [ref=e547]: Time Kifer Saúde
+          - figure "Exemplo ilustrativo de uma conversa com a Kifer no WhatsApp" [ref=e548]:
+            - generic [ref=e549]:
+              - generic [ref=e551]: 9:41
+              - generic [ref=e564]:
+                - strong [ref=e565]: Kifer Saúde
+                - generic [ref=e566]: Conversa ilustrativa
+              - generic [ref=e569]:
+                - generic [ref=e570]: Oi! Sou a Luíza, da Kifer Saúde. Vou te ajudar a comparar as opções para o seu perfil.
+                - generic [ref=e571]: Para começar, vamos entender o que é mais importante para você na cobertura?
+                - generic [ref=e572]: Claro!
+                - generic [ref=e576]: Você procura um plano individual, familiar ou para o seu CNPJ?
+              - generic [ref=e579]: Mensagem
+  - contentinfo [ref=e584]:
+    - generic [ref=e585]:
+      - generic [ref=e586]:
+        - img "Kifer Saúde" [ref=e587]:
+          - generic [ref=e588]: kifersaúde
+        - paragraph [ref=e589]: Mais saúde, mais escolhas para você, sua família e sua empresa.
+        - paragraph [ref=e590]: A Kifer compara planos de diferentes operadoras, com atendimento consultivo e sem custo, para você escolher com segurança e tranquilidade.
+        - list [ref=e591]:
+          - listitem [ref=e592]: Atendimento especializado
+          - listitem [ref=e599]: Comparação sem custo
+          - listitem [ref=e604]: Mais saúde para o seu futuro
+      - navigation "Navegação do rodapé" [ref=e608]:
+        - heading "Navegação" [level=2] [ref=e609]
+        - list [ref=e610]:
+          - listitem [ref=e611]:
+            - link "Operadoras" [ref=e612] [cursor=pointer]:
+              - /url: "#prova-social"
+          - listitem [ref=e613]:
+            - link "Para quem é" [ref=e614] [cursor=pointer]:
+              - /url: "#para-quem"
+          - listitem [ref=e615]:
+            - link "Como funciona" [ref=e616] [cursor=pointer]:
+              - /url: "#como-funciona"
+          - listitem [ref=e617]:
+            - link "Depoimentos" [ref=e618] [cursor=pointer]:
+              - /url: "#depoimentos"
+          - listitem [ref=e619]:
+            - link "Dúvidas" [ref=e620] [cursor=pointer]:
+              - /url: "#faq"
+          - listitem [ref=e621]:
+            - link "Sobre a Luíza" [ref=e622] [cursor=pointer]:
+              - /url: "#quem-somos"
+      - generic [ref=e623]:
+        - navigation "Planos por perfil" [ref=e624]:
+          - heading "Para quem é" [level=2] [ref=e625]
+          - list [ref=e626]:
+            - listitem [ref=e627]:
+              - link "Pessoa física" [ref=e628] [cursor=pointer]:
+                - /url: "#cotacao"
+            - listitem [ref=e629]:
+              - link "MEI" [ref=e630] [cursor=pointer]:
+                - /url: "#cotacao"
+            - listitem [ref=e631]:
+              - link "Empresa" [ref=e632] [cursor=pointer]:
+                - /url: "#cotacao"
+        - navigation "Links úteis" [ref=e633]:
+          - heading "Links úteis" [level=2] [ref=e634]
+          - list [ref=e635]:
+            - listitem [ref=e636]:
+              - link "Conheça as operadoras" [ref=e637] [cursor=pointer]:
+                - /url: "#prova-social"
+            - listitem [ref=e638]:
+              - link "Tire suas dúvidas" [ref=e639] [cursor=pointer]:
+                - /url: "#faq"
+            - listitem [ref=e640]:
+              - link "Fale com um especialista" [ref=e641] [cursor=pointer]:
+                - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20Quero%20uma%20cota%C3%A7%C3%A3o%20de%20plano%20de%20sa%C3%BAde%20com%20a%20Kifer.
+      - generic [ref=e642]:
+        - heading "Fale com a Kifer" [level=2] [ref=e643]
+        - paragraph [ref=e644]: Nosso time está pronto para ajudar você a encontrar seu plano.
+        - list [ref=e645]:
+          - listitem [ref=e646]:
+            - generic [ref=e650]:
+              - paragraph [ref=e651]: Telefone
+              - link "+55 21 97930-2389" [ref=e652] [cursor=pointer]:
+                - /url: tel:+552197930-2389
+          - listitem [ref=e653]:
+            - generic [ref=e657]:
+              - paragraph [ref=e658]: WhatsApp
+              - link "+55 21 97930-2389" [ref=e659] [cursor=pointer]:
+                - /url: https://wa.me/5521979302389?text=Ol%C3%A1!%20Quero%20uma%20cota%C3%A7%C3%A3o%20de%20plano%20de%20sa%C3%BAde%20com%20a%20Kifer.
+          - listitem [ref=e660]:
+            - generic [ref=e665]:
+              - paragraph [ref=e666]: E-mail
+              - link "contato@kifersaude.com.br" [ref=e667] [cursor=pointer]:
+                - /url: mailto:contato@kifersaude.com.br
+          - listitem [ref=e668]:
+            - paragraph [ref=e672]: Rio de Janeiro, RJ
+        - generic [ref=e673]:
+          - heading "Siga a Kifer" [level=2] [ref=e674]
+          - link "@souluizakifer" [ref=e675] [cursor=pointer]:
+            - /url: https://instagram.com/souluizakifer
+    - generic [ref=e680]:
+      - paragraph [ref=e681]: © 2026 Kifer Saúde. Todos os direitos reservados. CNPJ 46.423.078/0001-10
+      - link "Política de Privacidade" [ref=e682] [cursor=pointer]:
+        - /url: /politica-de-privacidade
+      - paragraph [ref=e687]: Seus dados tratados com segurança e transparência.

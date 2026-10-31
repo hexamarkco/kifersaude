@@ -2685,15 +2685,24 @@
       "route": "/painel/inbox",
       "kind": "states",
       "components": [
-        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+        "src/features/communication/whatsapp/components/WhatsAppComposer.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx",
+        "src/features/communication/whatsapp/hooks/useInboxQuickReplyComposer.ts",
+        "src/features/communication/whatsapp/hooks/useInboxComposerSubmission.ts"
       ],
       "references": [
         "references/desktop/state--inbox-mensagens-rapidas.png",
         "references/mobile/state--inbox-mensagens-rapidas.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/inbox/quick-replies-composer/README.md",
+        "validacao/revisao-visual/inbox/quick-replies-composer/coverage.json"
+      ],
+      "notes": [
+        "Playwright verificou sugestões, busca, navegação por teclado, inserção no rascunho sem envio, modal Gerenciar e estados vazio/erro em 1920×1080, 768×1024, 390×844 e 320×640; tema claro em todos e escuro no desktop. Não houve overflow horizontal.",
+        "Os arquivos state--inbox-mensagens-rapidas.png desktop e mobile duplicam state--inbox-filtros.png e mostram filtros de origem, não sugestões rápidas. Não há referência visual válida para este estado; a comparação é registrada como adaptação. A revisão integrada autenticada permanece pendente."
+      ]
     },
     {
       "id": "state--inbox-emojis",

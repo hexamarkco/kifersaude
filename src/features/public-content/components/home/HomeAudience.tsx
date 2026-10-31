@@ -124,10 +124,14 @@ export default function HomeAudience({
                   <Image
                     src={profile.photo}
                     alt={profile.alt}
-                    width={1122}
-                    height={1402}
+                    width={profile.photoWidth}
+                    height={profile.photoHeight}
                     loading="lazy"
                   />
+                  <svg className="home-audience-curve" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 1000C310 850 680 930 1000 670V1000Z" />
+                    <path d="M0 230C280 35 560 150 1000 20M260 1000C530 1110 760 840 1000 800" />
+                  </svg>
                 </div>
               </div>
             ))}

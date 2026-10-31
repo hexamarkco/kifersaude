@@ -1,0 +1,91 @@
+- generic [ref=f14e1]:
+  - main [ref=f14e3]:
+    - generic [ref=f14e4]:
+      - generic [ref=f14e5]:
+        - paragraph [ref=f14e6]: WhatsApp Inbox
+        - heading "Conversa de demonstração" [level=1] [ref=f14e7]
+      - generic [ref=f14e8]: Dados sintéticos · sem envio
+    - paragraph [ref=f14e10]: A mensagem agendada aparecerá nesta conversa.
+  - dialog [ref=f14e14]:
+    - generic [ref=f14e15]:
+      - generic [ref=f14e16]:
+        - heading "Agendar mensagem" [level=2] [ref=f14e17]
+        - paragraph [ref=f14e18]: Configure quando a mensagem deve ser enviada automaticamente.
+      - button "Fechar" [ref=f14e19] [cursor=pointer]
+    - generic [ref=f14e24]:
+      - tablist "Tipo de agendamento" [ref=f14e26]:
+        - tab "Mensagem única" [selected] [ref=f14e27] [cursor=pointer]
+        - tab "Criar sequência" [ref=f14e29] [cursor=pointer]
+      - generic [ref=f14e31]:
+        - generic [ref=f14e32]:
+          - generic [ref=f14e33]: Contato
+          - textbox "Contato" [ref=f14e35]: Contato de demonstração
+        - generic [ref=f14e36]:
+          - generic [ref=f14e37]: Data e hora do envio
+          - button "Data e hora do envio" [ref=f14e41] [cursor=pointer]:
+            - generic [ref=f14e44]: 31/10/2026 06:00
+      - generic [ref=f14e45]:
+        - generic [ref=f14e46]: Mensagem
+        - textbox "Digite a mensagem..." [ref=f14e47]: Olá! Podemos conversar amanhã?
+        - button "Anexar mídia ou documento" [ref=f14e48] [cursor=pointer]
+      - group [ref=f14e53]:
+        - generic "Opções adicionais" [ref=f14e54] [cursor=pointer]
+        - generic [ref=f14e63]:
+          - generic [ref=f14e64] [cursor=pointer]:
+            - checkbox "Cancelar se o contato responder antes do envio" [ref=f14e65]
+            - generic [ref=f14e66]:
+              - generic [ref=f14e67]: Cancelar se o contato responder antes do envio
+              - generic [ref=f14e68]: A mensagem não será enviada caso o contato responda enquanto ela estiver aguardando.
+          - generic [ref=f14e69]:
+            - generic [ref=f14e70]: Recorrência
+            - generic [ref=f14e76]:
+              - button "Sem recorrência Enviar apenas uma vez" [ref=f14e77] [cursor=pointer]:
+                - generic [ref=f14e78]: Sem recorrência
+                - generic [ref=f14e79]: Enviar apenas uma vez
+              - button "Diário Repetir todos os dias" [ref=f14e80] [cursor=pointer]:
+                - generic [ref=f14e81]: Diário
+                - generic [ref=f14e82]: Repetir todos os dias
+              - button "Semanal Repetir toda semana" [ref=f14e83] [cursor=pointer]:
+                - generic [ref=f14e84]: Semanal
+                - generic [ref=f14e85]: Repetir toda semana
+              - button "Mensal Repetir todo mês" [ref=f14e86] [cursor=pointer]:
+                - generic [ref=f14e87]: Mensal
+                - generic [ref=f14e88]: Repetir todo mês
+          - generic [ref=f14e93]:
+            - generic [ref=f14e94]: Repetir até
+            - button "Data limite da recorrência" [ref=f14e99] [cursor=pointer]
+          - generic [ref=f14e89]:
+            - generic [ref=f14e90]: Etiqueta (opcional)
+            - 'textbox "Ex: Lembrete de aniversário" [ref=f14e92]'
+    - generic [ref=f14e60]:
+      - button "Cancelar" [ref=f14e61] [cursor=pointer]
+      - button "Agendar mensagem" [disabled] [ref=f14e62]
+  - dialog "Selecionar data" [ref=f14e103]:
+    - generic "Etapas da seleção" [ref=f14e104]:
+      - button "Data" [ref=f14e105] [cursor=pointer]
+      - button "Hora" [ref=f14e106] [cursor=pointer]
+      - button "Minutos" [active] [ref=f14e107] [cursor=pointer]
+    - generic [ref=f14e171]:
+      - paragraph [ref=f14e172]:
+        - text: Minutos para 06h
+        - generic [ref=f14e173]: 31/10/2026
+      - spinbutton "Minuto exato" [ref=f14e200]: "00"
+      - generic "Sugestões de minutos" [ref=f14e201]:
+        - button "00 minutos" [pressed] [ref=f14e202] [cursor=pointer]: "00"
+        - button "05 minutos" [ref=f14e203] [cursor=pointer]: "05"
+        - button "10 minutos" [ref=f14e204] [cursor=pointer]: "10"
+        - button "15 minutos" [ref=f14e205] [cursor=pointer]: "15"
+        - button "20 minutos" [ref=f14e206] [cursor=pointer]: "20"
+        - button "25 minutos" [ref=f14e207] [cursor=pointer]: "25"
+        - button "30 minutos" [ref=f14e208] [cursor=pointer]: "30"
+        - button "35 minutos" [ref=f14e209] [cursor=pointer]: "35"
+        - button "40 minutos" [ref=f14e210] [cursor=pointer]: "40"
+        - button "45 minutos" [ref=f14e211] [cursor=pointer]: "45"
+        - button "50 minutos" [ref=f14e212] [cursor=pointer]: "50"
+        - button "55 minutos" [ref=f14e213] [cursor=pointer]: "55"
+      - generic [ref=f14e214]:
+        - button "Voltar" [ref=f14e215] [cursor=pointer]
+        - button "Confirmar horário" [ref=f14e216] [cursor=pointer]
+    - generic [ref=f14e168]:
+      - button "Limpar" [ref=f14e169] [cursor=pointer]
+      - button "Hoje" [ref=f14e170] [cursor=pointer]

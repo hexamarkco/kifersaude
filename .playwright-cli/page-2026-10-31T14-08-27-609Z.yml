@@ -1,0 +1,66 @@
+- generic [ref=f18e1]:
+  - generic [ref=f18e3]:
+    - main [ref=f18e4]:
+      - generic [ref=f18e5]:
+        - generic [ref=f18e6]:
+          - paragraph [ref=f18e7]: Kifer Saúde · Comunicação
+          - heading "WhatsApp Inbox" [level=1] [ref=f18e8]
+        - button "Nova conversa" [ref=f18e9] [cursor=pointer]
+      - generic [ref=f18e10]:
+        - complementary [ref=f18e11]:
+          - heading "Conversas" [level=2] [ref=f18e12]
+          - generic [ref=f18e13]:
+            - strong [ref=f18e14]: Mariana Costa
+            - paragraph [ref=f18e15]: Estou analisando a proposta.
+          - generic [ref=f18e16]: Eduardo Martins
+        - generic [ref=f18e17]:
+          - generic [ref=f18e18]:
+            - strong [ref=f18e19]: Mariana Costa
+            - paragraph [ref=f18e20]: Em atendimento · WhatsApp
+          - generic [ref=f18e21]:
+            - generic [ref=f18e22]: Olá! Quero comparar os planos para minha família.
+            - generic [ref=f18e23]: Claro. Quantas pessoas precisam de cobertura?
+          - generic [ref=f18e24]: Digite uma mensagem
+    - button "Abrir mensagens rápidas" [ref=f18e25] [cursor=pointer]
+  - dialog [ref=f18e29]:
+    - generic [ref=f18e30]:
+      - generic [ref=f18e31]:
+        - heading "Mensagens rápidas" [level=2] [ref=f18e32]
+        - paragraph [ref=f18e33]:
+          - button "Informações sobre esta janela" [ref=f18e35]
+      - button "Fechar" [ref=f18e38] [cursor=pointer]
+    - generic [ref=f18e43]:
+      - generic [ref=f18e44]:
+        - generic [ref=f18e45]:
+          - generic [ref=f18e46]: Resposta rápida
+          - combobox [aria-hidden] [ref=f18e49]
+          - button "Resposta rápida para editar" [active] [ref=f18e51] [cursor=pointer]:
+            - generic [ref=f18e52]: Nova mensagem rápida · /boas-vindas
+          - paragraph [ref=f18e55]: 1 atalho cadastrado
+        - generic [ref=f18e56]:
+          - button "Nova" [ref=f18e57] [cursor=pointer]
+          - button "Remover" [ref=f18e60] [cursor=pointer]
+      - generic [ref=f18e65]:
+        - generic [ref=f18e66]:
+          - generic [ref=f18e67]:
+            - generic [ref=f18e69]:
+              - generic [ref=f18e70]: Atalho
+              - 'button "Ajuda: Atalho" [ref=f18e72]'
+            - textbox "Atalho" [ref=f18e76]:
+              - /placeholder: contato-inicial
+              - text: boas-vindas
+            - paragraph [ref=f18e77]: Opcional. Se ficar vazio, o sistema cria o atalho a partir do título.
+          - generic [ref=f18e78]:
+            - generic [ref=f18e79]: Título *
+            - textbox "Título" [ref=f18e83]:
+              - /placeholder: "Ex.: Contato inicial"
+        - generic [ref=f18e84]:
+          - generic [ref=f18e86]:
+            - generic [ref=f18e87]: Mensagem *
+            - 'button "Ajuda: Mensagem" [ref=f18e89]'
+          - textbox "Mensagem" [ref=f18e93]:
+            - /placeholder: "Digite a mensagem. Para inserir variáveis, digite {{"
+          - paragraph [ref=f18e94]: "Digite {{ para inserir informações disponíveis do contato."
+    - generic [ref=f18e96]:
+      - button "Cancelar" [ref=f18e97] [cursor=pointer]
+      - button "Salvar" [ref=f18e98] [cursor=pointer]

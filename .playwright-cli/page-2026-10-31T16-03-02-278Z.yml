@@ -1,0 +1,221 @@
+- main [ref=e2]:
+  - heading "Dez referências mobile, lado a lado com o site." [level=1] [ref=e3]
+  - paragraph [ref=e4]: Comparação das dez imagens fornecidas com capturas reais da versão publicada da Kifer Saúde. Referência à esquerda e implementação à direita, com a mesma largura de exibição e proporções preservadas. Clique em qualquer imagem para abrir o arquivo original.
+  - paragraph [ref=e5]:
+    - text: Capturas de
+    - time [ref=e6]: 31/10/2026, 12:57
+    - text: · WebKit · largura inicial de 390 px, correspondente ao perfil iPhone 12 Pro ·
+    - link "Site capturado" [ref=e7] [cursor=pointer]:
+      - /url: https://www.kifersaude.com.br/
+    - text: ·
+    - link "Comparação desktop" [ref=e8] [cursor=pointer]:
+      - /url: ../home-redesign/index.html
+  - group [ref=e9]:
+    - generic "Sobre diferenças de conteúdo" [ref=e10] [cursor=pointer]
+  - generic "Controles da comparação" [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]: Largura da captura
+      - combobox "Largura da captura" [ref=e14]:
+        - option "320 px"
+        - option "360 px"
+        - option "375 px"
+        - option "390 px" [selected]
+        - option "414 px"
+        - option "430 px"
+    - generic [ref=e15]:
+      - generic [ref=e16]: Ir para seção
+      - combobox "Ir para seção" [ref=e17]:
+        - option "Escolher seção" [selected]
+        - option "01 — Hero / abertura"
+        - option "02 — Confiança e operadoras"
+        - option "03 — Para quem é"
+        - option "04 — Como funciona"
+        - option "05 — Depoimentos"
+        - option "06 — Sobre a Luíza"
+        - option "07 — Dúvidas frequentes"
+        - option "08 — Cotação"
+        - option "09 — WhatsApp"
+        - option "10 — Rodapé"
+    - link "Página completa" [ref=e18] [cursor=pointer]:
+      - /url: 390/page.png
+    - link "Primeira tela" [ref=e19] [cursor=pointer]:
+      - /url: 390/viewport.png
+    - generic [ref=e20]: 10 referências · 10 capturas em 390 px. A abertura inclui o cabeçalho.
+  - region [ref=e21]:
+    - heading "01 — Hero / abertura" [level=2] [ref=e22]
+    - generic [ref=e23]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e24]:
+        - generic [ref=e25]:
+          - strong [ref=e26]: Referência fornecida
+          - generic [ref=e27]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Hero / abertura" [ref=e28] [cursor=pointer]:
+          - /url: references/01_HERO_ABERTURA_MOBILE.png
+          - img "Referência mobile fornecida — Hero / abertura" [ref=e29]
+      - figure "Implementação atual 390 × 983 px · WebKit" [ref=e30]:
+        - generic [ref=e31]:
+          - strong [ref=e32]: Implementação atual
+          - generic [ref=e33]: 390 × 983 px · WebKit
+        - link "Abrir captura original — Hero / abertura" [ref=e34] [cursor=pointer]:
+          - /url: 390/01-topo.png
+          - img "Captura real do site em 390 px — Hero / abertura" [ref=e35]
+  - region [ref=e36]:
+    - heading "02 — Confiança e operadoras" [level=2] [ref=e37]
+    - generic [ref=e38]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e39]:
+        - generic [ref=e40]:
+          - strong [ref=e41]: Referência fornecida
+          - generic [ref=e42]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Confiança e operadoras" [ref=e43] [cursor=pointer]:
+          - /url: references/02_CONFIANCA_OPERADORAS_MOBILE.png
+          - img "Referência mobile fornecida — Confiança e operadoras" [ref=e44]
+      - figure "Implementação atual 390 × 1444 px · WebKit" [ref=e45]:
+        - generic [ref=e46]:
+          - strong [ref=e47]: Implementação atual
+          - generic [ref=e48]: 390 × 1444 px · WebKit
+        - link "Abrir captura original — Confiança e operadoras" [ref=e49] [cursor=pointer]:
+          - /url: 390/02-prova-social.png
+          - img "Captura real do site em 390 px — Confiança e operadoras" [ref=e50]
+  - region [ref=e51]:
+    - heading "03 — Para quem é" [level=2] [ref=e52]
+    - generic [ref=e53]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e54]:
+        - generic [ref=e55]:
+          - strong [ref=e56]: Referência fornecida
+          - generic [ref=e57]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Para quem é" [ref=e58] [cursor=pointer]:
+          - /url: references/03_PARA_QUEM_E_MOBILE.png
+          - img "Referência mobile fornecida — Para quem é" [ref=e59]
+      - figure "Implementação atual 390 × 1236 px · WebKit" [ref=e60]:
+        - generic [ref=e61]:
+          - strong [ref=e62]: Implementação atual
+          - generic [ref=e63]: 390 × 1236 px · WebKit
+        - link "Abrir captura original — Para quem é" [ref=e64] [cursor=pointer]:
+          - /url: 390/03-para-quem.png
+          - img "Captura real do site em 390 px — Para quem é" [ref=e65]
+  - region [ref=e66]:
+    - heading "04 — Como funciona" [level=2] [ref=e67]
+    - generic [ref=e68]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e69]:
+        - generic [ref=e70]:
+          - strong [ref=e71]: Referência fornecida
+          - generic [ref=e72]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Como funciona" [ref=e73] [cursor=pointer]:
+          - /url: references/04_COMO_FUNCIONA_MOBILE.png
+          - img "Referência mobile fornecida — Como funciona" [ref=e74]
+      - figure "Implementação atual 390 × 990 px · WebKit" [ref=e75]:
+        - generic [ref=e76]:
+          - strong [ref=e77]: Implementação atual
+          - generic [ref=e78]: 390 × 990 px · WebKit
+        - link "Abrir captura original — Como funciona" [ref=e79] [cursor=pointer]:
+          - /url: 390/04-como-funciona.png
+          - img "Captura real do site em 390 px — Como funciona" [ref=e80]
+  - region [ref=e81]:
+    - heading "05 — Depoimentos" [level=2] [ref=e82]
+    - generic [ref=e83]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e84]:
+        - generic [ref=e85]:
+          - strong [ref=e86]: Referência fornecida
+          - generic [ref=e87]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Depoimentos" [ref=e88] [cursor=pointer]:
+          - /url: references/05_DEPOIMENTOS_MOBILE.png
+          - img "Referência mobile fornecida — Depoimentos" [ref=e89]
+      - figure "Implementação atual 390 × 1043 px · WebKit" [ref=e90]:
+        - generic [ref=e91]:
+          - strong [ref=e92]: Implementação atual
+          - generic [ref=e93]: 390 × 1043 px · WebKit
+        - link "Abrir captura original — Depoimentos" [ref=e94] [cursor=pointer]:
+          - /url: 390/05-depoimentos.png
+          - img "Captura real do site em 390 px — Depoimentos" [ref=e95]
+  - region [ref=e96]:
+    - heading "06 — Sobre a Luíza" [level=2] [ref=e97]
+    - generic [ref=e98]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e99]:
+        - generic [ref=e100]:
+          - strong [ref=e101]: Referência fornecida
+          - generic [ref=e102]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Sobre a Luíza" [ref=e103] [cursor=pointer]:
+          - /url: references/06_SOBRE_LUIZA_MOBILE.png
+          - img "Referência mobile fornecida — Sobre a Luíza" [ref=e104]
+      - figure "Implementação atual 390 × 1289 px · WebKit" [ref=e105]:
+        - generic [ref=e106]:
+          - strong [ref=e107]: Implementação atual
+          - generic [ref=e108]: 390 × 1289 px · WebKit
+        - link "Abrir captura original — Sobre a Luíza" [ref=e109] [cursor=pointer]:
+          - /url: 390/06-quem-somos.png
+          - img "Captura real do site em 390 px — Sobre a Luíza" [ref=e110]
+  - region [ref=e111]:
+    - heading "07 — Dúvidas frequentes" [level=2] [ref=e112]
+    - generic [ref=e113]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e114]:
+        - generic [ref=e115]:
+          - strong [ref=e116]: Referência fornecida
+          - generic [ref=e117]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Dúvidas frequentes" [ref=e118] [cursor=pointer]:
+          - /url: references/07_DUVIDAS_FREQUENTES_MOBILE.png
+          - img "Referência mobile fornecida — Dúvidas frequentes" [ref=e119]
+      - figure "Implementação atual 390 × 853 px · WebKit" [ref=e120]:
+        - generic [ref=e121]:
+          - strong [ref=e122]: Implementação atual
+          - generic [ref=e123]: 390 × 853 px · WebKit
+        - link "Abrir captura original — Dúvidas frequentes" [ref=e124] [cursor=pointer]:
+          - /url: 390/07-faq.png
+          - img "Captura real do site em 390 px — Dúvidas frequentes" [ref=e125]
+  - region [ref=e126]:
+    - heading "08 — Cotação" [level=2] [ref=e127]
+    - generic [ref=e128]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e129]:
+        - generic [ref=e130]:
+          - strong [ref=e131]: Referência fornecida
+          - generic [ref=e132]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Cotação" [ref=e133] [cursor=pointer]:
+          - /url: references/08_COTACAO_MOBILE.png
+          - img "Referência mobile fornecida — Cotação" [ref=e134]
+      - figure "Implementação atual 390 × 1659 px · WebKit" [ref=e135]:
+        - generic [ref=e136]:
+          - strong [ref=e137]: Implementação atual
+          - generic [ref=e138]: 390 × 1659 px · WebKit
+        - link "Abrir captura original — Cotação" [ref=e139] [cursor=pointer]:
+          - /url: 390/08-cotacao.png
+          - img "Captura real do site em 390 px — Cotação" [ref=e140]
+  - region [ref=e141]:
+    - heading "09 — WhatsApp" [level=2] [ref=e142]
+    - generic [ref=e143]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e144]:
+        - generic [ref=e145]:
+          - strong [ref=e146]: Referência fornecida
+          - generic [ref=e147]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — WhatsApp" [ref=e148] [cursor=pointer]:
+          - /url: references/09_WHATSAPP_MOBILE.png
+          - img "Referência mobile fornecida — WhatsApp" [ref=e149]
+      - figure "Implementação atual 390 × 1169 px · WebKit" [ref=e150]:
+        - generic [ref=e151]:
+          - strong [ref=e152]: Implementação atual
+          - generic [ref=e153]: 390 × 1169 px · WebKit
+        - link "Abrir captura original — WhatsApp" [ref=e154] [cursor=pointer]:
+          - /url: 390/09-fale-agora.png
+          - img "Captura real do site em 390 px — WhatsApp" [ref=e155]
+  - region [ref=e156]:
+    - heading "10 — Rodapé" [level=2] [ref=e157]
+    - generic [ref=e158]:
+      - figure "Referência fornecida 853 × 1844 px · imagem original" [ref=e159]:
+        - generic [ref=e160]:
+          - strong [ref=e161]: Referência fornecida
+          - generic [ref=e162]: 853 × 1844 px · imagem original
+        - link "Abrir referência original — Rodapé" [ref=e163] [cursor=pointer]:
+          - /url: references/10_RODAPE_MOBILE.png
+          - img "Referência mobile fornecida — Rodapé" [ref=e164]
+      - figure "Implementação atual 390 × 1881 px · WebKit" [ref=e165]:
+        - generic [ref=e166]:
+          - strong [ref=e167]: Implementação atual
+          - generic [ref=e168]: 390 × 1881 px · WebKit
+        - link "Abrir captura original — Rodapé" [ref=e169] [cursor=pointer]:
+          - /url: 390/10-rodape.png
+          - img "Captura real do site em 390 px — Rodapé" [ref=e170]
+  - generic [ref=e171]:
+    - paragraph [ref=e172]: As capturas mostram os perfis no estado inicial, o FAQ fechado e o formulário sem preenchimento. As imagens mantêm a proporção original; diferenças de altura entre referência e captura continuam visíveis.
+    - paragraph [ref=e173]:
+      - link "Relatório dos ajustes para iPhone" [ref=e174] [cursor=pointer]:
+        - /url: ../../../docs/homepage-iphone-2026-10-31.md
+      - text: ·
+      - link "Como reproduzir estas capturas" [ref=e175] [cursor=pointer]:
+        - /url: README.md

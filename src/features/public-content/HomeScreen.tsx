@@ -12,6 +12,7 @@ import {
   HomeTestimonials,
 } from "./components/home/HomeJourney";
 import HomeQuoteForm from "./components/home/HomeQuoteForm";
+import HomePhotoMasks from "./components/home/HomePhotoMasks";
 import { homeFaqs, homePhotos, type ContractKind } from "./domain/homeContent";
 import { useHomeQuote } from "./hooks/useHomeQuote";
 import { useHomeMotion } from "./hooks/useHomeMotion";
@@ -64,6 +65,7 @@ export default function HomeScreen() {
         faqItems={homeFaqs}
       />
       <PublicShell width="full" className="kifer-home">
+        <HomePhotoMasks />
         <TextLink href="#conteudo-principal" className="home-skip-link">
           Pular para o conteúdo
         </TextLink>

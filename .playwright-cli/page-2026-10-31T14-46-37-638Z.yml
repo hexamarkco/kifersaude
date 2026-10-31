@@ -1,0 +1,41 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Kifer Saúde · Comunicação
+      - heading "WhatsApp Inbox" [level=1] [ref=e7]
+    - generic [ref=e8]: Conversa de demonstração
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: Olá! Quero saber mais sobre as opções disponíveis.
+      - generic [ref=e12]: Claro. Posso ajudar com as informações do plano.
+    - generic [ref=e15]:
+      - group "Ações de composição da mensagem" [ref=e16]:
+        - button "Anexar" [ref=e18] [cursor=pointer]
+        - button "Emoji, GIF e figurinha" [disabled] [ref=e21]
+        - button "Ações com IA" [ref=e27] [cursor=pointer]
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: Mensagens rápidas por atalho
+            - button "Gerenciar" [ref=e35] [cursor=pointer]
+          - listbox "Mensagens rápidas" [ref=e36]:
+            - option "Boas-vindas /ola Olá! Como posso ajudar você hoje?" [selected] [ref=e37] [cursor=pointer]:
+              - generic [ref=e38]:
+                - generic [ref=e39]:
+                  - generic [ref=e40]: Boas-vindas
+                  - code [ref=e41]: /ola
+                - paragraph [ref=e42]: Olá! Como posso ajudar você hoje?
+            - option "Retorno comercial /retorno Oi! Passando para saber se conseguiu avaliar as opções que conversamos." [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]:
+                - generic [ref=e45]:
+                  - generic [ref=e46]: Retorno comercial
+                  - code [ref=e47]: /retorno
+                - paragraph [ref=e48]: Oi! Passando para saber se conseguiu avaliar as opções que conversamos.
+            - option "Documentos necessários /documentos Para continuar, envie por favor o nome completo dos beneficiários." [ref=e49] [cursor=pointer]:
+              - generic [ref=e50]:
+                - generic [ref=e51]:
+                  - generic [ref=e52]: Documentos necessários
+                  - code [ref=e53]: /documentos
+                - paragraph [ref=e54]: Para continuar, envie por favor o nome completo dos beneficiários.
+        - combobox "Digite uma mensagem" [expanded] [ref=e55]: / /
+      - button "Gravar áudio" [ref=e57] [cursor=pointer]

@@ -1,0 +1,119 @@
+- generic [ref=f15e3]:
+  - complementary [ref=f15e4]:
+    - generic [ref=f15e5]:
+      - img "Kifer Saúde CRM" [ref=f15e7]:
+        - generic [ref=f15e8]: kifersaúde
+        - generic [ref=f15e9]: CRM
+      - navigation [ref=f15e10]:
+        - generic [ref=f15e11]:
+          - button "Dashboard" [ref=f15e12] [cursor=pointer]
+          - generic [ref=f15e20]:
+            - button "CRM" [ref=f15e21] [cursor=pointer]
+            - generic [ref=f15e30]:
+              - button "Leads" [ref=f15e31] [cursor=pointer]
+              - button "Contratos" [ref=f15e39] [cursor=pointer]
+              - button "Agenda" [ref=f15e45] [cursor=pointer]
+          - button "Comunicação" [ref=f15e51] [cursor=pointer]
+          - button "Financeiro" [ref=f15e60] [cursor=pointer]
+          - button "Automações e IA" [ref=f15e69] [cursor=pointer]
+          - button "Configurações" [ref=f15e76] [cursor=pointer]
+      - generic [ref=f15e82]:
+        - button "Recolher" [ref=f15e83] [cursor=pointer]
+        - button "Notificações" [ref=f15e88] [cursor=pointer]
+        - button "Ativar tema claro" [ref=f15e96] [cursor=pointer]:
+          - generic [ref=f15e103]: Claro
+        - button "Sair" [ref=f15e104] [cursor=pointer]
+  - generic [ref=f15e109]:
+    - banner [ref=f15e110]:
+      - generic [ref=f15e111]:
+        - navigation "Breadcrumb" [ref=f15e112]:
+          - list [ref=f15e113]:
+            - listitem [ref=f15e114]:
+              - button "CRM" [ref=f15e115] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f15e116]
+            - listitem [ref=f15e119]: Contratos
+        - generic [ref=f15e120]:
+          - generic [ref=f15e121]: Operador demonstração
+          - button "Ativar tema claro" [ref=f15e122] [cursor=pointer]
+          - generic [ref=f15e130]: OD
+    - main [ref=f15e132]:
+      - generic [ref=f15e134]:
+        - generic [ref=f15e136]:
+          - generic [ref=f15e137]:
+            - paragraph [ref=f15e138]: Kifer Saúde / Operação comercial
+            - generic [ref=f15e140]:
+              - heading "Gestão de contratos" [level=1] [ref=f15e141]
+              - button "Informações sobre Gestão de contratos" [ref=f15e143]
+          - generic [ref=f15e147]:
+            - button "Importar em massa" [ref=f15e148] [cursor=pointer]
+            - button "Novo contrato" [ref=f15e155] [cursor=pointer]
+        - generic "Resumo da carteira de contratos" [ref=f15e159]:
+          - generic [ref=f15e160]:
+            - heading "Contratos ativos" [level=3] [ref=f15e165]
+            - generic [ref=f15e166]: "4"
+            - generic [ref=f15e167]: Contratos vigentes
+          - generic [ref=f15e168]:
+            - heading "Em implantação" [level=3] [ref=f15e173]
+            - generic [ref=f15e174]: "4"
+            - generic [ref=f15e175]: Em análise ou emissão
+          - generic [ref=f15e176]:
+            - heading "Próximos vencimentos" [level=3] [ref=f15e181]
+            - generic [ref=f15e182]: "1"
+            - generic [ref=f15e183]: Nos próximos 30 dias
+          - generic [ref=f15e184]:
+            - heading "Mensalidade total" [level=3] [ref=f15e189]
+            - generic [ref=f15e190]: R$ 11.760,00
+            - generic [ref=f15e191]: Soma dos valores informados
+        - generic [ref=f15e192]:
+          - generic [ref=f15e193]:
+            - textbox "Buscar contratos" [ref=f15e196]:
+              - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+            - button "Exportar" [ref=f15e198] [cursor=pointer]
+          - generic [ref=f15e203]:
+            - button "Todos os status" [ref=f15e204] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f15e212] [cursor=pointer]
+            - button "Todos os períodos" [ref=f15e222] [cursor=pointer]
+            - button "Filtros avançados" [ref=f15e229] [cursor=pointer]
+        - generic [ref=f15e233]:
+          - generic [ref=f15e234]:
+            - generic [ref=f15e235]:
+              - paragraph [ref=f15e236]: Carteira contratual
+              - generic [ref=f15e237]:
+                - heading "Contratos em acompanhamento" [level=3] [ref=f15e238]
+                - button "Informações sobre esta seção" [ref=f15e240]
+            - generic [ref=f15e244]:
+              - generic [ref=f15e246]:
+                - generic [ref=f15e247]: "0"
+                - generic [ref=f15e248]: resultados
+              - generic [ref=f15e250]:
+                - generic [ref=f15e251]: 1/1
+                - generic [ref=f15e252]: páginas
+          - region "Rolagem de Carteira de contratos" [ref=f15e254]:
+            - table "Carteira de contratos" [ref=f15e255]:
+              - rowgroup [ref=f15e264]:
+                - row [ref=f15e265]:
+                  - columnheader [ref=f15e266]:
+                    - button "Ordenar por Contrato" [ref=f15e267] [cursor=pointer]:
+                      - generic [ref=f15e268]: Contrato
+                  - columnheader [ref=f15e269]:
+                    - button "Ordenar por Status" [ref=f15e270] [cursor=pointer]:
+                      - generic [ref=f15e271]: Status
+                  - columnheader [ref=f15e272]:
+                    - button "Ordenar por Operadora e plano" [ref=f15e273] [cursor=pointer]:
+                      - generic [ref=f15e274]: Operadora e plano
+                  - columnheader [ref=f15e275]:
+                    - button "Ordenar por Financeiro" [ref=f15e276] [cursor=pointer]:
+                      - generic [ref=f15e277]: Financeiro
+                  - columnheader [ref=f15e278]:
+                    - button "Ordenar por Datas críticas" [ref=f15e279] [cursor=pointer]:
+                      - generic [ref=f15e280]: Datas críticas
+                  - columnheader [ref=f15e281]:
+                    - button "Ordenar por Responsável" [ref=f15e282] [cursor=pointer]:
+                      - generic [ref=f15e283]: Responsável
+                  - columnheader "Ações" [ref=f15e284]
+              - rowgroup [ref=f15e285]:
+                - row [ref=f15e286]:
+                  - cell [ref=f15e287]:
+                    - generic [ref=f15e288]:
+                      - paragraph [ref=f15e293]: Nenhum contrato encontrado
+                      - paragraph [ref=f15e294]: Tente ajustar os filtros ou adicione um novo contrato.

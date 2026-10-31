@@ -1,0 +1,102 @@
+[
+  {
+    "number": 1,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_48-1.png",
+    "width": 1448,
+    "height": 1086,
+    "sha256": "aa7e5e90030241dcd6ecb8b6b76e5bdf837844de1dee6f641dec9ed7c7960e65",
+    "original": "output/playwright/home-photography/originals/luiza-opening.png",
+    "used": true,
+    "asset": "public/images/home/luiza-opening.webp"
+  },
+  {
+    "number": 2,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_49-2.png",
+    "width": 1448,
+    "height": 1086,
+    "sha256": "d578214f8e5f75ccceacb62a04813f6cd9a1487f44a5535e86f02e3c6d78e275",
+    "original": "output/playwright/home-photography/originals/trust-coffee.png",
+    "used": true,
+    "asset": "public/images/home/trust-coffee.webp"
+  },
+  {
+    "number": 3,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_50-3.png",
+    "width": 1448,
+    "height": 1086,
+    "sha256": "298a120ad4fe358f7d8b39458ef8f3cf8195df3942cf28a0ed65089a2ded7cdc",
+    "original": "output/playwright/home-photography/originals/family-profile.png",
+    "used": true,
+    "asset": "public/images/home/family-profile.webp"
+  },
+  {
+    "number": 4,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_51-4.png",
+    "width": 1448,
+    "height": 1086,
+    "sha256": "7744e4322415e33051053ebcef74a93f589acfd27967290e5b29fa1a2e27a5b9",
+    "original": "output/playwright/home-photography/originals/mei-office.png",
+    "used": true,
+    "asset": "public/images/home/mei-office.webp"
+  },
+  {
+    "number": 5,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_52-5.png",
+    "width": 1122,
+    "height": 1402,
+    "sha256": "46766dea564f4723129d54d1740d4dfd352883200b825f6b8565a6a6751d0998",
+    "original": "output/playwright/home-photography/originals/testimonial-main-reserved.png",
+    "used": false,
+    "asset": null
+  },
+  {
+    "number": 6,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_53-6.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "5a97ec4864c369de892d519d1809a2b6472b99d7b14204e2162d8f4736656422",
+    "original": "output/playwright/home-photography/originals/testimonial-mei-reserved.png",
+    "used": false,
+    "asset": null
+  },
+  {
+    "number": 7,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_54-7.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "4f315269667b85619b209773855b7f2653965ac7e905b76a77e4295a02b4455c",
+    "original": "output/playwright/home-photography/originals/testimonial-company-reserved.png",
+    "used": false,
+    "asset": null
+  },
+  {
+    "number": 8,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_55-8.png",
+    "width": 1448,
+    "height": 1086,
+    "sha256": "79443f87a5538d6ad7e07c8b4dad8b9aa58e03acb250be5424129d1c952871f6",
+    "original": "output/playwright/home-photography/originals/luiza-about-editorial.png",
+    "used": true,
+    "asset": "public/images/home/luiza-about-editorial.webp"
+  },
+  {
+    "number": 9,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_56-9.png",
+    "width": 1448,
+    "height": 1086,
+    "sha256": "e42c33156b6600f6f7475261be7c279e6314583333503054989bafb367c5b369",
+    "original": "output/playwright/home-photography/originals/family-quote.png",
+    "used": true,
+    "asset": "public/images/home/family-quote.webp"
+  },
+  {
+    "number": 10,
+    "supplied": "Imagem do ChatGPT 31 de out. de 2026, 12_50_57-10.png",
+    "width": 1122,
+    "height": 1402,
+    "sha256": "90cf70b21b2b9e3f453ed79544132484f4bed754ca913a9fd8ea4d3add2492dc",
+    "original": "output/playwright/home-photography/originals/luiza-portrait.png",
+    "used": true,
+    "asset": "public/images/home/luiza-portrait.webp"
+  }
+]

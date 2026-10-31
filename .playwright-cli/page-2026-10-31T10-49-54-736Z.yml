@@ -1,0 +1,149 @@
+- generic [ref=e1]:
+  - main [ref=e3]:
+    - button "Abrir mensagens agendadas" [ref=e4] [cursor=pointer]
+  - dialog [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e15]:
+        - heading "Mensagens Agendadas" [level=2] [ref=e16]
+        - paragraph [ref=e17]: 7 mensagem(ns) e 2 sequência(s)
+      - group "Ações dos agendamentos" [ref=e18]:
+        - button "Agendar nova" [active] [ref=e19] [cursor=pointer]
+        - button "Fechar" [ref=e22] [cursor=pointer]
+    - generic [ref=e27]:
+      - tablist "Filtrar mensagens agendadas por situação" [ref=e29]:
+        - tab "Próximas 9" [selected] [ref=e30] [cursor=pointer]:
+          - generic [ref=e31]: Próximas
+          - generic [ref=e32]: "9"
+        - tab "Atenção 2" [ref=e33] [cursor=pointer]:
+          - generic [ref=e34]: Atenção
+          - generic [ref=e35]: "2"
+        - tab "Histórico 3" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: Histórico
+          - generic [ref=e38]: "3"
+        - tab "Todas 14" [ref=e39] [cursor=pointer]:
+          - generic [ref=e40]: Todas
+          - generic [ref=e41]: "14"
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - text: Buscar
+          - searchbox "Buscar" [ref=e45]
+        - generic [ref=e46]:
+          - text: A partir de
+          - button "A partir de" [ref=e48] [cursor=pointer]:
+            - generic [ref=e51]: Qualquer data
+        - generic [ref=e52]:
+          - text: Até
+          - button "Até" [ref=e54] [cursor=pointer]:
+            - generic [ref=e57]: Qualquer data
+      - generic [ref=e58]: 7 mensagem(ns) e 2 sequência(s) nesta visão
+      - region "Sequências" [ref=e60]:
+        - button "Sequências (2)" [expanded] [ref=e61] [cursor=pointer]
+        - generic [ref=e71]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - generic [ref=e75]:
+                - generic [ref=e76]: Agendada
+                - generic [ref=e77]: Etapa 1 de 1
+              - paragraph [ref=e78]: Retorno após proposta
+              - generic [ref=e79]:
+                - generic [ref=e80]: Em 2 dias, às 14:30
+                - generic [ref=e84]: 02/11/2026 às 14:30
+                - generic [ref=e85]: +55 (21) 98888-8800
+                - generic [ref=e86]: Beatriz Rocha
+            - group "Ações da sequência agendada" [ref=e87]:
+              - button "Editar sequência agendada" [ref=e88] [cursor=pointer]
+              - button "Cancelar sequência" [ref=e93] [cursor=pointer]
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - generic [ref=e101]:
+                - generic [ref=e102]: Agendada
+                - generic [ref=e103]: Etapa 1 de 1
+              - paragraph [ref=e104]: Acompanhamento da cotação
+              - generic [ref=e105]:
+                - generic [ref=e106]: Em 4 dias, às 14:30
+                - generic [ref=e110]: 04/11/2026 às 14:30
+                - generic [ref=e111]: +55 (21) 98888-8801
+                - generic [ref=e112]: João Pedro
+            - group "Ações da sequência agendada" [ref=e113]:
+              - button "Editar sequência agendada" [ref=e114] [cursor=pointer]
+              - button "Cancelar sequência" [ref=e119] [cursor=pointer]
+          - navigation "Paginação de Sequências" [ref=e124]:
+            - generic [ref=e125]: 1–2 de 2 · Página 1 de 1
+            - generic [ref=e126]:
+              - button "Página anterior de Sequências" [disabled] [ref=e127]:
+                - generic [ref=e128]: Anterior
+              - button "Próxima página de Sequências" [disabled] [ref=e131]:
+                - generic [ref=e132]: Próxima
+      - region "Mensagens normais" [ref=e135]:
+        - button "Mensagens normais (7)" [expanded] [ref=e136] [cursor=pointer]
+        - generic [ref=e145]:
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - generic [ref=e149]: Agendada
+              - paragraph [ref=e151]: Olá, Mariana! Passando para confirmar nosso retorno sobre as opções do plano familiar.
+              - generic [ref=e152]:
+                - generic [ref=e153]: Amanhã às 10:30
+                - generic [ref=e157]: 01/11/2026 às 10:30
+                - generic [ref=e158]: +55 (21) 99999-9900
+                - generic [ref=e159]: Mariana Costa
+              - paragraph [ref=e160]: Retorno do plano familiar
+            - group "Ações da mensagem agendada" [ref=e161]:
+              - button "Editar mensagem agendada" [ref=e162] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=e167] [cursor=pointer]
+          - generic [ref=e173]:
+            - generic [ref=e174]:
+              - generic [ref=e175]:
+                - generic [ref=e176]: Agendada
+                - generic [ref=e177]: Semanal
+              - paragraph [ref=e178]: Oi, Eduardo! Separei as informações que você pediu e posso ajudar com qualquer dúvida.
+              - generic [ref=e179]:
+                - generic [ref=e180]: Em 2 dias, às 11:30
+                - generic [ref=e184]: 02/11/2026 às 11:30
+                - generic [ref=e185]: +55 (21) 99999-9901
+                - generic [ref=e186]: Eduardo Martins
+            - group "Ações da mensagem agendada" [ref=e187]:
+              - button "Editar mensagem agendada" [ref=e188] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=e193] [cursor=pointer]
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - generic [ref=e201]: Agendada
+              - paragraph [ref=e203]: Olá, Patrícia! Tudo bem? Podemos retomar nossa conversa sobre a proposta?
+              - generic [ref=e204]:
+                - generic [ref=e205]: Em 3 dias, às 12:30
+                - generic [ref=e209]: 03/11/2026 às 12:30
+                - generic [ref=e210]: +55 (21) 99999-9902
+                - generic [ref=e211]: Patrícia Nunes
+            - group "Ações da mensagem agendada" [ref=e212]:
+              - button "Editar mensagem agendada" [ref=e213] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=e218] [cursor=pointer]
+          - generic [ref=e224]:
+            - generic [ref=e225]:
+              - generic [ref=e226]: Agendada
+              - paragraph [ref=e228]: Olá, Mariana! Passando para confirmar nosso retorno sobre as opções do plano familiar.
+              - generic [ref=e229]:
+                - generic [ref=e230]: Em 4 dias, às 13:30
+                - generic [ref=e234]: 04/11/2026 às 13:30
+                - generic [ref=e235]: +55 (21) 99999-9903
+                - generic [ref=e236]: Ana Clara
+            - group "Ações da mensagem agendada" [ref=e237]:
+              - button "Editar mensagem agendada" [ref=e238] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=e243] [cursor=pointer]
+          - generic [ref=e249]:
+            - generic [ref=e250]:
+              - generic [ref=e251]: Agendada
+              - paragraph [ref=e253]: Oi, Eduardo! Separei as informações que você pediu e posso ajudar com qualquer dúvida.
+              - generic [ref=e254]:
+                - generic [ref=e255]: Em 5 dias, às 14:30
+                - generic [ref=e259]: 05/11/2026 às 14:30
+                - generic [ref=e260]: +55 (21) 99999-9904
+                - generic [ref=e261]: Rafael Mendes
+            - group "Ações da mensagem agendada" [ref=e262]:
+              - button "Editar mensagem agendada" [ref=e263] [cursor=pointer]
+              - button "Cancelar agendamento" [ref=e268] [cursor=pointer]
+          - navigation "Paginação de Mensagens normais" [ref=e273]:
+            - generic [ref=e274]: 1–5 de 7 · Página 1 de 2
+            - generic [ref=e275]:
+              - button "Página anterior de Mensagens normais" [disabled] [ref=e276]:
+                - generic [ref=e277]: Anterior
+              - button "Próxima página de Mensagens normais" [ref=e280] [cursor=pointer]:
+                - generic [ref=e281]: Próxima

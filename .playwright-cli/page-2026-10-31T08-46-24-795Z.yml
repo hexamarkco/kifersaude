@@ -1,0 +1,8 @@
+- main [ref=f5e3]:
+  - region "Conversa de demonstração" [ref=f5e5]:
+    - paragraph [ref=f5e6]: Mensagem de mídia inbound com reação
+    - generic [ref=f5e9]:
+      - button [ref=f5e15] [cursor=pointer]:
+        - img "Imagem enviada" [ref=f5e16]
+      - generic [ref=f5e17]: 💗
+      - generic [ref=f5e21]: 30/10, 09:45

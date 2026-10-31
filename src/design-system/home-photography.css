@@ -1,0 +1,144 @@
+/* Photo composition only. Text, controls and motion live in home.css.
+   Focal points refer to the intact originals in public/images/home/ASSETS.md.
+   Each mask is defined in HomePhotoMasks; decoration is never part of the bitmap. */
+.kifer-home .home-photo-masks { position: absolute; pointer-events: none; }
+
+/* 01 — A sweeping left edge, a dominant portrait and a separate lower wave. */
+.kifer-home .home-hero-portrait {
+  --hero-focus: 69% 47%;
+  --hero-scale: 1.22;
+  --hero-origin: 100% 30%;
+  position: absolute; top: 0; bottom: 0;
+  right: calc((100% - 100vw) / 2); width: 59%;
+  isolation: isolate;
+}
+.kifer-home .home-hero-portrait::before { content: ''; position: absolute; inset: 0 0 0 -3%; background: var(--home-soft); clip-path: url(#home-photo-hero); }
+.kifer-home .home-hero-photo-mask { position: absolute; inset: 0; clip-path: url(#home-photo-hero); }
+.kifer-home .home-luiza-photo { position: absolute; width: 100%; height: 100%; inset: 0; object-fit: cover; object-position: var(--hero-focus); transform: scale(var(--hero-scale)); transform-origin: var(--hero-origin); }
+.kifer-home .home-hero-photo-wave { display: none; }
+.kifer-home .home-hero-portrait .home-portrait-label { right: 5%; bottom: 6%; padding: var(--space-3) var(--space-4); }
+.kifer-home .home-hero-art { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.kifer-home .home-hero-art span { position: absolute; top: 25%; right: 26%; width: 34vw; height: 65vw; border-radius: 50%; background: var(--home-soft); transform: rotate(35deg); }
+.kifer-home .home-hero-art span + span { top: -55%; right: -10%; background: var(--brand-primary-muted); }
+
+/* 02 — The flat baseline and unequal upper arcs belong to this photo only. */
+.kifer-home .home-trust-photo { --trust-focus: 44% 36%; position: relative; isolation: isolate; width: 74%; flex-shrink: 0; aspect-ratio: 1.85; }
+.kifer-home .home-trust-photo::before { content: ''; position: absolute; width: 44%; height: 85%; left: -7%; top: -7%; background: var(--home-soft); border-radius: 50%; z-index: -1; }
+.kifer-home .home-trust-photo::after { content: ''; position: absolute; inset: 29% -2% 0 -16%; background: var(--brand-primary-soft); clip-path: polygon(0 42%, 44% 0, 100% 100%, 0 100%); z-index: -1; }
+.kifer-home .home-trust-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--trust-focus); clip-path: url(#home-photo-trust); }
+
+/* 03 — One stable panel; each original has its own focal point. */
+.kifer-home #audience-panel-PF { --audience-focus: 67% 43%; }
+.kifer-home #audience-panel-MEI { --audience-focus: 53% 38%; }
+.kifer-home #audience-panel-CNPJ { --audience-focus: 49% 28%; }
+.kifer-home .home-audience-photo { position: relative; grid-column: 2; grid-row: 1 / -1; height: 100%; min-width: 0; isolation: isolate; }
+.kifer-home .home-audience-photo::before { content: ''; position: absolute; inset: 0; background: var(--home-soft); clip-path: url(#home-photo-audience); transform: translateY(5%); }
+.kifer-home .home-audience-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--audience-focus); clip-path: url(#home-photo-audience); }
+.kifer-home .home-audience-curve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.kifer-home .home-audience-curve path:first-child { fill: var(--home-soft); }
+.kifer-home .home-audience-curve path:last-child { fill: none; stroke: var(--accent-copper); stroke-width: 1; vector-effect: non-scaling-stroke; }
+
+/* 06 — Leave the desk/cup in the frame; the arc is above the photograph. */
+.kifer-home .home-about-photo { --about-focus: 35% 50%; position: relative; isolation: isolate; width: 116%; }
+.kifer-home .home-about-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--about-focus); clip-path: url(#home-photo-about); }
+.kifer-home .home-about-photo > span { position: absolute; inset: 72% 0 0 0; background: var(--home-soft); clip-path: polygon(0 0, 65% 0, 100% 100%, 0 100%); z-index: -1; }
+.kifer-home .home-about-curve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; fill: none; stroke: var(--accent-copper); stroke-width: 1.25; pointer-events: none; }
+.kifer-home .home-about-curve path { vector-effect: non-scaling-stroke; }
+.kifer-home .home-about-copy { position: relative; z-index: 1; }
+
+/* 08 — The family sits behind the form, independently of the colored loop. */
+.kifer-home .home-quote-layout { padding-right: 6vw; }
+.kifer-home .home-quote-background { --quote-focus: 35% 34%; position: absolute; top: 0; bottom: 0; right: 0; width: 34%; z-index: -1; }
+.kifer-home .home-quote-background::before { content: ''; position: absolute; inset: 0 0 26% -8%; background: var(--home-soft); clip-path: url(#home-photo-quote); }
+.kifer-home .home-quote-background::after { content: ''; position: absolute; top: -4%; left: 18%; width: 72%; height: 35%; border-top: 2px solid var(--brand-primary); border-left: 2px solid var(--brand-primary); border-radius: 100% 0 0 0; pointer-events: none; }
+.kifer-home .home-quote-background img { position: absolute; top: 0; right: 0; width: 100%; height: 65%; object-fit: cover; object-position: var(--quote-focus); clip-path: url(#home-photo-quote); }
+.kifer-home .home-quote-background > span { position: absolute; right: -29%; bottom: -25%; width: 110%; height: 76%; border: clamp(4rem, 7vw, 8rem) solid var(--brand-primary-active); border-radius: 50%; }
+
+/* 09 — The portrait and phone overlap in one scene. The phone's internal
+   dimensions (including the 2.1 ratio on touch screens) stay in home.css. */
+.kifer-home .home-whatsapp-visual { align-self: stretch; display: flex; align-items: center; position: relative; min-height: 38rem; isolation: isolate; }
+.kifer-home .home-whatsapp-visual::before { content: ''; position: absolute; inset: 6% -20% 0 28%; background: var(--brand-primary-active); border-radius: 48% 35% 0 0; z-index: -1; }
+.kifer-home .home-whatsapp-photo { --whatsapp-focus: 61% 29%; position: absolute; top: 0; bottom: 0; left: 29%; right: calc((min(100vw - 10.4vw, 84rem) - 100vw) / 2); }
+.kifer-home .home-whatsapp-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--whatsapp-focus); clip-path: url(#home-photo-whatsapp); }
+.kifer-home .home-whatsapp-photo .home-portrait-label { right: 7%; bottom: 8%; padding: var(--space-3) var(--space-4); }
+.kifer-home .home-whatsapp-photo .home-portrait-label::before { content: ''; position: absolute; width: var(--space-5); height: 2px; background: var(--brand-primary); top: 50%; right: calc(100% - var(--space-2)); }
+
+@media (min-width: 1920px) {
+  .kifer-home .home-hero-portrait { width: calc(59% + (100vw - var(--home-width)) / 2 - 5.2vw); }
+}
+@media (min-width: 640px) and (max-width: 1199.98px) {
+  .kifer-home .home-hero-portrait { --hero-focus: 66% 42%; width: 53%; }
+  .kifer-home .home-hero-portrait .home-portrait-label { right: 5%; max-width: 11rem; font-size: 0.75rem; }
+  .kifer-home .home-hero-portrait .home-portrait-label span { display: none; }
+}
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .kifer-home .home-trust-photo { width: 100%; aspect-ratio: 1.5; --trust-focus: 43% 30%; }
+  .kifer-home .home-hero-portrait { width: 48%; --hero-focus: 52% 50%; --hero-scale: 1; }
+  .kifer-home .home-about { grid-template-columns: 1fr; }
+  .kifer-home .home-about-photo { width: 100%; aspect-ratio: 1.65; --about-focus: 36% 34%; }
+  .kifer-home .home-about-photo img { clip-path: url(#home-photo-about-mobile); }
+  .kifer-home .home-about-copy { padding-top: var(--space-6); }
+  .kifer-home .home-quote { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--space-5) var(--space-5); padding-inline: var(--home-gutter); }
+  .kifer-home .home-quote-copy, .kifer-home .home-quote-layout { display: contents; }
+  .kifer-home .home-quote-copy > .home-eyebrow { grid-column: 1; grid-row: 1; }
+  .kifer-home .home-quote-copy > .home-title { grid-column: 1; grid-row: 2; margin: 0; }
+  .kifer-home .home-quote-copy > .home-lead { grid-column: 1; grid-row: 3; }
+  .kifer-home .home-quote-background { position: relative; inset: auto; grid-column: 2; grid-row: 1 / 4; width: calc(100% + var(--home-gutter)); height: auto; --quote-focus: 65% 30%; }
+  .kifer-home .home-quote-background img { height: 100%; }
+  .kifer-home .home-quote-background > span { display: none; }
+  .kifer-home .home-quote-benefits { width: 100%; grid-column: 1 / -1; grid-row: 4; margin-block: var(--space-5); }
+  .kifer-home .home-quote-form { grid-column: 1 / -1; grid-row: 5; }
+  .kifer-home .home-whatsapp-layout { grid-template-columns: 1fr; }
+  .kifer-home .home-whatsapp-copy { max-width: 38rem; }
+  .kifer-home .home-whatsapp-visual { width: 100%; min-height: 37rem; }
+  .kifer-home .home-phone { margin-left: 6%; }
+  .kifer-home .home-whatsapp-photo { left: 35%; right: -5.8%; }
+}
+@media (max-width: 639.98px) {
+  /* The mobile layouts have different silhouettes, subject positions and layers. */
+  .kifer-home .home-hero-portrait { --hero-focus: 65% 45%; --hero-scale: 1.32; --hero-origin: 70% 8%; position: relative; order: 4; width: calc(100% + var(--home-gutter) * 2); right: auto; top: auto; bottom: auto; margin: var(--space-5) calc(-1 * var(--home-gutter)) 0; aspect-ratio: 1.25; }
+  .kifer-home .home-hero-portrait::before { inset: 0; clip-path: none; background: var(--home-soft); border-radius: 80% 0 0 0; }
+  .kifer-home .home-hero-photo-mask { clip-path: url(#home-photo-hero-mobile); }
+  .kifer-home .home-hero-portrait .home-portrait-label { display: none; }
+  .kifer-home .home-hero-art { display: none; }
+  .kifer-home .home-hero-photo-wave { position: absolute; bottom: -1px; left: 0; width: 100%; height: 17%; display: block; pointer-events: none; }
+  .kifer-home .home-hero-photo-wave path:first-child { fill: var(--home-paper); }
+  .kifer-home .home-hero-photo-wave path:last-child { fill: none; stroke: var(--home-soft); stroke-width: 12; }
+  .kifer-home .home-hero-benefits { margin-top: var(--space-2); position: relative; }
+  .kifer-home .home-trust-photo { --trust-focus: 42% 30%; width: 72%; aspect-ratio: 1.7; }
+  .kifer-home .home-trust-photo-row { margin-inline: calc(-0.25 * var(--home-gutter)); }
+  .kifer-home #audience-panel-PF { --audience-focus: 54% 30%; }
+  .kifer-home #audience-panel-MEI { --audience-focus: 53% 32%; }
+  .kifer-home #audience-panel-CNPJ { --audience-focus: 49% 26%; }
+  .kifer-home .home-audience-photo { grid-column: 1; grid-row: 2; height: 100%; width: calc(100% + var(--home-gutter) * 2); margin-inline: calc(-1 * var(--home-gutter)); }
+  .kifer-home .home-audience-photo img, .kifer-home .home-audience-photo::before { clip-path: url(#home-photo-audience-mobile); }
+  .kifer-home .home-audience-photo::before { inset: 6% 0 0; transform: rotate(-7deg); }
+  .kifer-home .home-audience-curve { height: 104%; }
+  .kifer-home .home-audience-curve path:first-child { fill: none; }
+  .kifer-home .home-about-photo { --about-focus: 5% 43%; width: 100%; aspect-ratio: 1.13; }
+  .kifer-home .home-about-photo img { clip-path: url(#home-photo-about-mobile); }
+  .kifer-home .home-about-photo > span { display: none; }
+  .kifer-home .home-about-curve { stroke: var(--brand-primary-border); }
+  .kifer-home .home-about-copy { padding-top: var(--space-4); }
+  .kifer-home .home-quote { column-gap: var(--space-2); }
+  .kifer-home .home-quote-background { --quote-focus: 67% 32%; position: relative; inset: auto; grid-column: 2; grid-row: 1 / 4; width: calc(100% + var(--home-gutter)); opacity: 1; }
+  .kifer-home .home-quote-background img { height: 100%; }
+  .kifer-home .home-quote-background > span { display: block; bottom: -15%; right: -20%; width: 90%; height: 55%; border-width: 2rem; z-index: -1; }
+  .kifer-home .home-quote-background::after { top: -9%; height: 40%; }
+  .kifer-home .home-quote-copy > .home-title { font-size: clamp(1.5rem, 6.7vw, 2rem); }
+  .kifer-home .home-quote-copy > .home-lead { grid-column: 1; font-size: 0.8125rem; line-height: 1.55; }
+  .kifer-home .home-quote-form { margin-top: calc(-1 * var(--space-3)); }
+  .kifer-home .home-whatsapp-visual { width: calc(100% + var(--home-gutter) * 2); margin-inline: calc(-1 * var(--home-gutter)); min-height: 0; display: grid; grid-template-columns: 1fr; padding: 0 0 var(--space-5); gap: 0; }
+  .kifer-home .home-whatsapp-visual::before { inset: 0 -10% 0 0; border-radius: 80% 60% 0 0; }
+  .kifer-home .home-phone { margin-left: 5.8%; }
+  .kifer-home .home-whatsapp-photo { --whatsapp-focus: 67% 35%; position: absolute; inset: 0 0 0 30%; width: auto; height: auto; }
+  .kifer-home .home-whatsapp-photo .home-portrait-label { max-width: 58%; padding: var(--space-2); bottom: 8%; right: 5%; }
+  .kifer-home .home-whatsapp-photo .home-portrait-label strong { font-size: 0.6875rem; }
+  .kifer-home .home-whatsapp-photo .home-portrait-label span { font-size: 0.5625rem; }
+}
+@supports not (aspect-ratio: 1) {
+  @media (max-width: 639.98px) {
+    .kifer-home .home-hero-portrait { height: calc(100vw / 1.25); }
+    .kifer-home .home-about-photo { height: calc(100vw / 1.13); }
+  }
+}

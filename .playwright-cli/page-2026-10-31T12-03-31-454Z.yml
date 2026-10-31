@@ -1,0 +1,14 @@
+- main [ref=e3]:
+  - heading "WhatsApp Inbox" [level=1] [ref=e5]
+  - generic [ref=e6]:
+    - complementary [ref=e7]:
+      - generic [ref=e8]: Conversas
+      - paragraph [ref=e9]: Contato de demonstração
+    - generic [ref=e10]:
+      - generic [ref=e11]: Contato de demonstração
+      - generic [ref=e12]: Mensagem fictícia para validar o espaço da conversa ao lado do painel.
+    - complementary [ref=e14]:
+      - generic [ref=e15]: Informações do contato
+      - generic [ref=e16]:
+        - strong [ref=e17]: Contato de demonstração
+        - paragraph [ref=e18]: Telefone e informações do lead permanecem dentro do painel.

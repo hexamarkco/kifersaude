@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inbox · validação responsiva</title>
+  <link rel="stylesheet" href="/dist/assets/index-tgwf6zNw.css">
+  <style>
+    html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    .qa-shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; }
+    .qa-workspace { display: grid; flex: 1 1 auto; min-height: 0; }
+    .qa-sidebar { min-width: 0; overflow: hidden; }
+    .qa-thread { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .qa-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: auto; border-left: 1px solid var(--border-subtle); background: var(--bg-surface); }
+  </style>
+</head>
+<body>
+  <div id="root" class="painel-theme kifer-ds comm-terracotta theme-dark">
+    <main class="whatsapp-inbox-shell qa-shell">
+      <header class="whatsapp-inbox-page-header"><h1 class="kds-page-title">WhatsApp Inbox</h1></header>
+      <section class="kds-inbox-workspace-grid is-contact-panel-open qa-workspace">
+        <aside class="whatsapp-inbox-sidebar qa-sidebar"><div class="whatsapp-inbox-sidebar-header">Conversas</div><p>Contato de demonstração</p></aside>
+        <section class="whatsapp-inbox-thread qa-thread"><header class="whatsapp-inbox-thread-header">Contato de demonstração</header><div class="whatsapp-inbox-messages" style="flex:1;overflow:auto;padding:var(--space-4)"><div class="message-bubble message-bubble-inbound">Mensagem fictícia para validar o espaço da conversa ao lado do painel.</div></div></section>
+        <aside class="kds-inbox-lead-context-panel is-open qa-panel"><header class="whatsapp-inbox-sidebar-header">Informações do contato</header><div style="padding:var(--space-4)"><strong>Contato de demonstração</strong><p>Telefone e informações do lead permanecem dentro do painel.</p></div></aside>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

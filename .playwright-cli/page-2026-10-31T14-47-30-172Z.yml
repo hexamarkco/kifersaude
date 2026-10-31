@@ -1,0 +1,15 @@
+- main [ref=e3]:
+  - generic [ref=e5]:
+    - paragraph [ref=e6]: Kifer Saúde · Comunicação
+    - heading "WhatsApp Inbox" [level=1] [ref=e7]
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: Olá! Quero saber mais sobre as opções disponíveis.
+      - generic [ref=e12]: Claro. Posso ajudar com as informações do plano.
+    - generic [ref=e15]:
+      - group "Ações de composição da mensagem" [ref=e16]:
+        - button "Anexar" [ref=e18] [cursor=pointer]
+        - button "Emoji, GIF e figurinha" [disabled] [ref=e21]
+        - button "Ações com IA" [ref=e27] [cursor=pointer]
+      - combobox "Digite uma mensagem" [ref=e55]: Oi! Passando para saber se conseguiu avaliar as opções que conversamos. Oi! Passando para saber se conseguiu avaliar as opções que conversamos.
+      - button "Gravar áudio" [ref=e57] [cursor=pointer]

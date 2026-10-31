@@ -1,0 +1,71 @@
+- generic [ref=f14e3]:
+  - navigation "Navegação principal" [ref=f14e4]:
+    - button "Início" [ref=f14e5] [cursor=pointer]
+    - button "Leads" [ref=f14e12] [cursor=pointer]
+    - button "WhatsApp" [ref=f14e19] [cursor=pointer]
+    - button "Contratos" [ref=f14e23] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f14e28] [cursor=pointer]:
+      - generic [ref=f14e30]: Mais
+  - generic [ref=f14e31]:
+    - banner [ref=f14e32]:
+      - generic [ref=f14e33]:
+        - img "Kifer Saúde" [ref=f14e34]:
+          - generic [ref=f14e35]: kifersaúde
+        - generic [ref=f14e36]:
+          - button "Abrir menu" [ref=f14e37] [cursor=pointer]
+          - generic [ref=f14e40]: OD
+    - main [ref=f14e42]:
+      - generic [ref=f14e44]:
+        - generic [ref=f14e46]:
+          - generic [ref=f14e47]:
+            - paragraph [ref=f14e48]: Kifer Saúde / Operação comercial
+            - generic [ref=f14e50]:
+              - heading "Gestão de contratos" [level=1] [ref=f14e51]
+              - button "Informações sobre Gestão de contratos" [ref=f14e53]
+          - generic [ref=f14e57]:
+            - button "Importar em massa" [ref=f14e58] [cursor=pointer]
+            - button "Novo contrato" [ref=f14e65] [cursor=pointer]
+        - generic "Resumo da carteira de contratos" [ref=f14e69]:
+          - generic [ref=f14e70]:
+            - heading "Contratos ativos" [level=3] [ref=f14e75]
+            - generic [ref=f14e76]: "4"
+            - generic [ref=f14e77]: Contratos vigentes
+          - generic [ref=f14e78]:
+            - heading "Em implantação" [level=3] [ref=f14e83]
+            - generic [ref=f14e84]: "4"
+            - generic [ref=f14e85]: Em análise ou emissão
+          - generic [ref=f14e86]:
+            - heading "Próximos vencimentos" [level=3] [ref=f14e91]
+            - generic [ref=f14e92]: "1"
+            - generic [ref=f14e93]: Nos próximos 30 dias
+          - generic [ref=f14e94]:
+            - heading "Mensalidade total" [level=3] [ref=f14e99]
+            - generic [ref=f14e100]: R$ 11.760,00
+            - generic [ref=f14e101]: Soma dos valores informados
+        - generic [ref=f14e102]:
+          - generic [ref=f14e103]:
+            - textbox "Buscar contratos" [ref=f14e106]:
+              - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+            - button "Exportar" [ref=f14e108] [cursor=pointer]
+          - generic [ref=f14e113]:
+            - button "Todos os status" [ref=f14e114] [cursor=pointer]
+            - button "Todos os responsáveis" [ref=f14e122] [cursor=pointer]
+            - button "Todos os períodos" [ref=f14e132] [cursor=pointer]
+            - button "Filtros avançados" [ref=f14e139] [cursor=pointer]
+        - generic [ref=f14e143]:
+          - generic [ref=f14e144]:
+            - generic [ref=f14e145]:
+              - paragraph [ref=f14e146]: Carteira contratual
+              - generic [ref=f14e147]:
+                - heading "Contratos em acompanhamento" [level=3] [ref=f14e148]
+                - button "Informações sobre esta seção" [ref=f14e150]
+            - generic [ref=f14e154]:
+              - generic [ref=f14e156]:
+                - generic [ref=f14e157]: "0"
+                - generic [ref=f14e158]: resultados
+              - generic [ref=f14e160]:
+                - generic [ref=f14e161]: 1/1
+                - generic [ref=f14e162]: páginas
+          - generic [ref=f14e164]:
+            - paragraph [ref=f14e169]: Nenhum contrato encontrado
+            - paragraph [ref=f14e170]: Tente ajustar os filtros ou adicione um novo contrato.

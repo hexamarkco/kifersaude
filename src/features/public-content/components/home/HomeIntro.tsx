@@ -118,14 +118,20 @@ export function HomeHero({ onQuote }: Props) {
           </TextLink>
         </div>
         <div className="home-hero-portrait">
+          <div className="home-hero-photo-mask">
           <Image
             src={homePhotos.luizaHero}
             alt="Luíza Kifer no escritório, com a mão apoiada no queixo"
-            width={1672}
-            height={941}
+            width={1448}
+            height={1086}
             loading="eager"
             className="home-luiza-photo"
           />
+          </div>
+          <svg className="home-hero-photo-wave" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 65C140 30 225 170 420 125S690 50 840 112S970 150 1000 150V160H0Z" />
+            <path d="M0 60C140 20 235 155 420 115S690 35 840 100S970 145 1000 140" />
+          </svg>
           <div className="home-portrait-label">
             <strong>Luíza Kifer</strong>
             <span>Orientação de verdade, de perto.</span>
@@ -177,10 +183,10 @@ export function HomeTrust() {
             <div className="home-trust-photo-row">
               <div className="home-trust-photo">
                 <Image
-                  src={homePhotos.work}
+                  src={homePhotos.trust}
                   alt="Imagem ilustrativa de uma mulher tomando café ao lado do notebook"
-                  width={1536}
-                  height={1024}
+                  width={1448}
+                  height={1086}
                   loading="lazy"
                 />
               </div>

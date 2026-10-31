@@ -1,0 +1,27 @@
+- generic [ref=f11e1]:
+  - main [ref=f11e3]:
+    - button "Abrir mensagens agendadas" [ref=f11e4] [cursor=pointer]
+  - dialog [ref=f11e8]:
+    - generic [ref=f11e9]:
+      - generic [ref=f11e15]:
+        - heading "Mensagens Agendadas" [level=2] [ref=f11e16]
+        - paragraph [ref=f11e17]: 0 mensagem(ns) e 0 sequência(s)
+      - group "Ações dos agendamentos" [ref=f11e18]:
+        - button "Agendar nova" [active] [ref=f11e19] [cursor=pointer]
+        - button "Fechar" [ref=f11e22] [cursor=pointer]
+    - generic [ref=f11e27]:
+      - tablist "Filtrar mensagens agendadas por situação" [ref=f11e29]:
+        - tab "Próximas" [selected] [ref=f11e30] [cursor=pointer]
+        - tab "Atenção 2" [ref=f11e32] [cursor=pointer]:
+          - generic [ref=f11e33]: Atenção
+          - generic [ref=f11e34]: "2"
+        - tab "Histórico 3" [ref=f11e35] [cursor=pointer]:
+          - generic [ref=f11e36]: Histórico
+          - generic [ref=f11e37]: "3"
+        - tab "Todas 5" [ref=f11e38] [cursor=pointer]:
+          - generic [ref=f11e39]: Todas
+          - generic [ref=f11e40]: "5"
+      - generic [ref=f11e41]:
+        - paragraph [ref=f11e47]: Nenhum agendamento nesta aba
+        - paragraph [ref=f11e48]: Consulte outra aba para ver agendamentos em outras situações, incluindo o histórico.
+        - button "Agendar nova mensagem" [ref=f11e50] [cursor=pointer]

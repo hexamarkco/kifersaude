@@ -170,7 +170,51 @@
     "design_system_regression_test_file": "src/design-system/components/__tests__/primitives.test.tsx",
     "screenshots": ["states/quick-replies-desktop-1920-light.png", "states/quick-replies-desktop-1920-dark.png", "states/quick-replies-desktop-selector-open.png", "states/quick-replies-desktop-info-tooltip.png", "states/quick-replies-desktop-field-tooltip.png", "states/quick-replies-desktop-empty.png", "states/quick-replies-desktop-validation-error.png", "states/quick-replies-tablet-768-light.png", "states/quick-replies-mobile-390-light-top.png", "states/quick-replies-mobile-390-light-editor.png", "states/quick-replies-mobile-320-light.png", "states/quick-replies-mobile-320-light-bottom.png"],
     "reference_adaptation": "DialogShell de formulário compacto; a categoria da referência não existe no modelo WhatsAppQuickReply e não foi inventada.",
-    "limitation": "The authenticated Inbox route and insertion of saved replies into its composer remain pending. The fixture uses local callbacks and did not persist or send communications."
+    "limitation": "The authenticated Inbox route and persistence of saved replies remain pending. The composer integration was reviewed separately in a synthetic fixture without sending communications or saving CRM settings."
+  },
+  "quick_reply_composer_review": {
+    "checked_at": "2026-10-31",
+    "components": [
+      "src/features/communication/whatsapp/components/WhatsAppComposer.tsx",
+      "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx",
+      "src/features/communication/whatsapp/hooks/useInboxQuickReplyComposer.ts",
+      "src/features/communication/whatsapp/hooks/useInboxComposerSubmission.ts"
+    ],
+    "fixture": "Playwright Vite preview using the production composer, quick-reply hooks, manager modal and design-system CSS with synthetic replies and local-only callbacks.",
+    "viewports": ["1920x1080", "768x1024", "390x844", "320x640"],
+    "themes": ["light at all widths", "dark at 1920x1080"],
+    "states": ["all suggestions", "filtered suggestions", "no matches", "no saved replies", "load error and retry", "manager modal opened from composer", "inserted draft, not sent"],
+    "measurements": [
+      { "viewport": "1920x1080", "document_width": 1920, "listbox_width": 745 },
+      { "viewport": "768x1024", "document_width": 768, "listbox_width": 489 },
+      { "viewport": "390x844", "document_width": 390, "listbox_width": 314 },
+      { "viewport": "320x640", "document_width": 320, "listbox_width": 244 }
+    ],
+    "interactions": ["type slash and search", "ArrowDown selects the next option", "Enter inserts the active reply into the draft without sending", "click inserts a reply without sending", "Gerenciar opens the actual manager modal", "Escape closes the modal"],
+    "checks": {
+      "document_horizontal_overflow": false,
+      "keyboard_selection_updates_active_option": true,
+      "reply_insertion_does_not_send": true,
+      "manager_modal_opens_from_composer": true,
+      "manager_save_is_local_only": true,
+      "accessible_combobox_listbox_relationship": true,
+      "retry_and_empty_states_render": true
+    },
+    "screenshots": [
+      "quick-replies-composer/desktop-dark-1920.png",
+      "quick-replies-composer/desktop-light-1920.png",
+      "quick-replies-composer/tablet-light-768.png",
+      "quick-replies-composer/mobile-light-390.png",
+      "quick-replies-composer/mobile-light-320.png",
+      "quick-replies-composer/desktop-light-sem-resultado.png",
+      "quick-replies-composer/desktop-light-vazio.png",
+      "quick-replies-composer/desktop-light-erro-carregamento.png",
+      "quick-replies-composer/desktop-light-resposta-inserida-nao-enviada.png",
+      "quick-replies-composer/desktop-light-gerenciar-modal.png",
+      "quick-replies-composer/mobile-light-gerenciar-modal.png"
+    ],
+    "reference_adaptation": "The assigned desktop and mobile state--inbox-mensagens-rapidas images duplicate state--inbox-filtros and show source filters instead of composer suggestions. No valid visual reference exists for this state.",
+    "limitation": "The authenticated Inbox route and persisted quick-reply settings still need integrated review; all fixture callbacks remain local and no real message was sent."
   },
   "screenshots": [
     { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
@@ -261,11 +305,22 @@
     { "file": "states/quick-replies-desktop-empty.png", "state": "empty quick replies after removing the local draft", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "states/quick-replies-desktop-info-tooltip.png", "state": "dialog information tooltip open", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "states/quick-replies-desktop-field-tooltip.png", "state": "shortcut field help tooltip open", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
-    { "file": "states/quick-replies-mobile-320-light-bottom.png", "state": "quick reply modal after internal scroll with sticky footer at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" }
+    { "file": "states/quick-replies-mobile-320-light-bottom.png", "state": "quick reply modal after internal scroll with sticky footer at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-dark-1920.png", "state": "quick reply composer suggestions", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-light-1920.png", "state": "quick reply composer suggestions", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/tablet-light-768.png", "state": "quick reply composer suggestions", "viewport": "768x1024", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/mobile-light-390.png", "state": "quick reply composer suggestions", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/mobile-light-320.png", "state": "quick reply composer suggestions at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-light-sem-resultado.png", "state": "quick reply search without matches", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-light-vazio.png", "state": "no saved quick replies", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-light-erro-carregamento.png", "state": "quick reply load error and retry", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-light-resposta-inserida-nao-enviada.png", "state": "quick reply inserted into draft without sending", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/desktop-light-gerenciar-modal.png", "state": "quick replies manager opened from the composer", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "quick-replies-composer/mobile-light-gerenciar-modal.png", "state": "quick replies manager opened from the composer", "viewport": "390x844", "theme": "light", "capture": "fullPage" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",
-    "The integrated schedule form is reviewed, while the full scheduled-message list and its tabs remain pending; WhatsApp dashboard, message search, attachments, media, formatting, integration of quick replies with the composer and other message actions also remain pending separate review. The quick replies component itself has been reviewed in a local fixture.",
+    "The integrated schedule form is reviewed, while the full scheduled-message list and its tabs remain pending; WhatsApp dashboard, message search, attachments, media, formatting, and other message actions also remain pending separate review. The quick-replies composer and manager were reviewed in a local fixture, but the authenticated Inbox route remains to be checked.",
     "The advanced-filter and contact-drawer reviews still use component fixtures. The Inbox route was used with synthetic session data for the schedule form and message spacing; the full page shell was not reviewed in that pass."
   ]
 }

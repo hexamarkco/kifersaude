@@ -114,7 +114,7 @@ export function createHomeMotionController(scope: HTMLElement) {
       group(".home-hero-line", [{ transform: "translateY(10px)" }, { transform: "translateY(0)" }], 0, 35);
       play(find(".home-hero-description"), [{ transform: "translateY(6px)" }, { transform: "translateY(0)" }], { delay: 60 });
       group(".home-hero-actions > *", [{ transform: "translateY(4px)" }, { transform: "translateY(0)" }], 90, 35);
-      play(find(".home-luiza-photo"), [{ transform: "translateX(6px) scale(1.03)" }, { transform: "translateX(0) scale(1)" }], { duration: tokens.entry + 100 });
+      play(find(".home-hero-photo-mask"), [{ transform: "translateX(6px) scale(1.03)" }, { transform: "translateX(0) scale(1)" }], { duration: tokens.entry + 100 });
       group(".home-hero-benefits li", [{ opacity: 0.6, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], 90, 35);
       play(find(".home-hero-wave"), [{ opacity: 0.7, transform: "translateY(5px)" }, { opacity: 1, transform: "translateY(0)" }]);
     } else if (section.classList.contains("home-trust")) {

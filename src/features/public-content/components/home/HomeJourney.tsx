@@ -62,7 +62,7 @@ export function HomeProcess() {
 }
 
 export function HomeTestimonials() {
-  // No release/authorization or client portraits are recorded in the repository.
+  // Supplied reference portraits are reserved until real testimonials are approved.
   // Keep the reference's main + secondary composition without attributing invented stories.
   return (
     <section
@@ -134,10 +134,13 @@ export function HomeAbout() {
         <Image
           src={homePhotos.luizaAbout}
           alt="Luíza Kifer, corretora independente de planos de saúde"
-          width={1672}
-          height={941}
+          width={1448}
+          height={1086}
           loading="lazy"
         />
+        <svg className="home-about-curve" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 620C170 610 170 910 390 950S780 960 1000 1000M730 0C780 110 880 130 940 105" />
+        </svg>
       </div>
       <div className="home-about-copy">
         <Text className="home-eyebrow home-eyebrow-tail">Sobre a Luíza</Text>

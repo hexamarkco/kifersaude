@@ -1,0 +1,31 @@
+- main [ref=f7e4]:
+  - complementary "Informações do contato" [ref=f7e6]:
+    - generic [ref=f7e7]:
+      - generic [ref=f7e8]:
+        - heading "Informações do contato" [level=2] [ref=f7e9]
+        - paragraph [ref=f7e10]: Dados do contato, lead e próximos acompanhamentos
+        - generic [ref=f7e11]:
+          - generic [ref=f7e13]: CD
+          - generic [ref=f7e15]:
+            - generic [ref=f7e16]: Contato de demonstração
+            - generic [ref=f7e17]: Contato do WhatsApp
+        - generic [ref=f7e18]:
+          - generic [ref=f7e19]:
+            - generic [ref=f7e20]: +55 (11) 99999-9999
+            - 'generic "DDD 11: São Paulo" [ref=f7e21]': SP · DDD 11
+          - button "Renomear contato" [ref=f7e26] [cursor=pointer]
+      - button "Fechar" [ref=f7e31] [cursor=pointer]
+    - generic [ref=f7e35]:
+      - tablist "Seções de informações do chat" [ref=f7e37]:
+        - tab "Dados do lead" [selected] [ref=f7e38] [cursor=pointer]
+        - tab "Análise do atendimento" [ref=f7e40] [cursor=pointer]
+      - generic [ref=f7e44]:
+        - generic [ref=f7e48]:
+          - paragraph [ref=f7e49]: Nenhum lead vinculado
+          - paragraph [ref=f7e50]: Procure um contato já cadastrado para vincular esta conversa e atualizar o atendimento sem sair daqui.
+        - generic [ref=f7e51]:
+          - button "Criar novo lead" [ref=f7e52] [cursor=pointer]
+          - searchbox "Buscar lead por nome ou telefone" [ref=f7e56]
+          - generic [ref=f7e57]:
+            - paragraph [ref=f7e58]: Nenhum lead encontrado
+            - paragraph [ref=f7e59]: Tente buscar por outro nome ou telefone.

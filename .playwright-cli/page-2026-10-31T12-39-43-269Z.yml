@@ -1,0 +1,8 @@
+- main [ref=f2e3]:
+  - generic [ref=f2e4]:
+    - generic [ref=f2e5]: Conversa de demonstração
+    - generic [ref=f2e8]:
+      - button [ref=f2e14] [cursor=pointer]:
+        - img "Imagem enviada" [ref=f2e15]
+      - generic [ref=f2e16]: 30/10, 09:00
+      - generic [ref=f2e19]: 💗

@@ -1,0 +1,53 @@
+- main [ref=f10e4]:
+  - generic [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - paragraph [ref=f10e7]: Kifer Saúde · Comunicação
+      - heading "WhatsApp Inbox" [level=1] [ref=f10e8]
+    - button "＋ Nova conversa" [ref=f10e9] [cursor=pointer]
+  - generic [ref=f10e10]:
+    - complementary [ref=f10e11]:
+      - generic [ref=f10e12]: Conversas
+      - generic [ref=f10e13]:
+        - strong [ref=f10e14]: Contato de demonstração
+        - text: Última mensagem · 10:20
+      - generic [ref=f10e15]: Contato de demonstração 02
+    - region "Conversa de demonstração" [ref=f10e16]:
+      - generic [ref=f10e17]:
+        - strong [ref=f10e18]: Contato de demonstração
+        - button "Informações do contato" [ref=f10e19] [cursor=pointer]: ⓘ
+      - generic [ref=f10e20]:
+        - generic [ref=f10e21]: Olá! Gostaria de conhecer as opções de planos para minha família. Esta mensagem de demonstração permite conferir se o painel lateral cobre ou corta o histórico em larguras diferentes.
+        - generic [ref=f10e22]: Claro, posso ajudar. Quantas pessoas terão cobertura e em qual cidade vocês moram?
+        - generic [ref=f10e23]: Seremos três pessoas. Quero comparar as opções com calma e ver as informações completas antes de decidir.
+        - generic [ref=f10e24]: Perfeito. Vou preparar uma comparação para você.
+      - textbox "Digite uma mensagem" [ref=f10e27]
+    - complementary "Informações do contato" [ref=f10e28]:
+      - generic [ref=f10e29]:
+        - generic [ref=f10e30]:
+          - heading "Informações do contato" [level=2] [ref=f10e31]
+          - paragraph [ref=f10e32]: Dados do contato, lead e próximos acompanhamentos
+          - generic [ref=f10e33]:
+            - generic [ref=f10e35]: CD
+            - generic [ref=f10e37]:
+              - generic [ref=f10e38]: Contato de demonstração
+              - generic [ref=f10e39]: Contato do WhatsApp
+          - generic [ref=f10e40]:
+            - generic [ref=f10e41]:
+              - generic [ref=f10e42]: +55 (11) 99999-9999
+              - 'generic "DDD 11: São Paulo" [ref=f10e43]': SP · DDD 11
+            - button "Renomear contato" [ref=f10e48] [cursor=pointer]
+        - button "Fechar" [ref=f10e53] [cursor=pointer]
+      - generic [ref=f10e57]:
+        - tablist "Seções de informações do chat" [ref=f10e59]:
+          - tab "Dados do lead" [selected] [ref=f10e60] [cursor=pointer]
+          - tab "Análise do atendimento" [ref=f10e62] [cursor=pointer]
+        - generic [ref=f10e66]:
+          - generic [ref=f10e70]:
+            - paragraph [ref=f10e71]: Nenhum lead vinculado
+            - paragraph [ref=f10e72]: Procure um contato já cadastrado para vincular esta conversa e atualizar o atendimento sem sair daqui.
+          - generic [ref=f10e73]:
+            - button "Criar novo lead" [ref=f10e74] [cursor=pointer]
+            - searchbox "Buscar lead por nome ou telefone" [ref=f10e78]
+            - generic [ref=f10e79]:
+              - paragraph [ref=f10e80]: Nenhum lead encontrado
+              - paragraph [ref=f10e81]: Tente buscar por outro nome ou telefone.

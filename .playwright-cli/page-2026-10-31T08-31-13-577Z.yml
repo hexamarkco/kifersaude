@@ -1,0 +1,35 @@
+- generic [ref=f12e1]:
+  - main [ref=f12e3]:
+    - generic [ref=f12e4]:
+      - generic [ref=f12e5]:
+        - paragraph [ref=f12e6]: WhatsApp Inbox
+        - heading "Conversa de demonstração" [level=1] [ref=f12e7]
+      - generic [ref=f12e8]: Dados sintéticos · sem envio
+    - paragraph [ref=f12e10]: A mensagem agendada aparecerá nesta conversa.
+  - dialog [ref=f12e14]:
+    - generic [ref=f12e15]:
+      - generic [ref=f12e16]:
+        - heading "Agendar mensagem" [level=2] [ref=f12e17]
+        - paragraph [ref=f12e18]: Configure quando a mensagem deve ser enviada automaticamente.
+      - button "Fechar" [active] [ref=f12e19] [cursor=pointer]
+    - generic [ref=f12e24]:
+      - tablist "Tipo de agendamento" [ref=f12e26]:
+        - tab "Mensagem única" [selected] [ref=f12e27] [cursor=pointer]
+        - tab "Criar sequência" [ref=f12e29] [cursor=pointer]
+      - generic [ref=f12e31]:
+        - generic [ref=f12e32]:
+          - generic [ref=f12e33]: Contato
+          - textbox "Contato" [ref=f12e35]: Contato de demonstração
+        - generic [ref=f12e36]:
+          - generic [ref=f12e37]: Data e hora do envio
+          - button "Data e hora do envio" [ref=f12e41] [cursor=pointer]:
+            - generic [ref=f12e44]: 31/10/2026 06:00
+      - generic [ref=f12e45]:
+        - generic [ref=f12e46]: Mensagem
+        - textbox "Digite a mensagem..." [ref=f12e47]: Olá! Podemos conversar amanhã?
+        - button "Anexar mídia ou documento" [ref=f12e48] [cursor=pointer]
+      - group [ref=f12e53]:
+        - generic "Opções adicionais" [ref=f12e54] [cursor=pointer]
+    - generic [ref=f12e60]:
+      - button "Cancelar" [ref=f12e61] [cursor=pointer]
+      - button "Agendar mensagem" [ref=f12e62] [cursor=pointer]

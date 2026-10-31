@@ -1,0 +1,23 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - paragraph [ref=e7]: Kifer Saúde · Comunicação
+        - heading "WhatsApp Inbox" [level=1] [ref=e8]
+      - button "Nova conversa" [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - complementary [ref=e11]:
+        - heading "Conversas" [level=2] [ref=e12]
+        - generic [ref=e13]:
+          - strong [ref=e14]: Mariana Costa
+          - paragraph [ref=e15]: Estou analisando a proposta.
+        - generic [ref=e16]: Eduardo Martins
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - strong [ref=e19]: Mariana Costa
+          - paragraph [ref=e20]: Em atendimento · WhatsApp
+        - generic [ref=e21]:
+          - generic [ref=e22]: Olá! Quero comparar os planos para minha família.
+          - generic [ref=e23]: Claro. Quantas pessoas precisam de cobertura?
+        - generic [ref=e24]: Digite uma mensagem
+  - button "Abrir mensagens rápidas" [ref=e25] [cursor=pointer]

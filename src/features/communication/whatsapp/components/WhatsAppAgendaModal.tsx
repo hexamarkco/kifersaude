@@ -1576,6 +1576,7 @@ export default function WhatsAppAgendaModal({
         title="Agenda do WhatsApp"
         description="Consulte e organize seus lembretes sem sair da conversa. As alterações também aparecem na Agenda do sistema."
         size="xl"
+        initialFocus="first-content"
         bodyClassName="whatsapp-agenda-dialog-body"
         footer={
           <div className="flex items-center justify-end gap-3">

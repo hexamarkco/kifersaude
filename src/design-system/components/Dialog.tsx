@@ -72,9 +72,10 @@ export function Dialog({
         ? dialog.querySelector<HTMLElement>('.kds-dialog-body')
         : null;
       const focusTarget = content?.querySelector<HTMLElement>(focusableSelector)
-        ?? dialog.querySelector<HTMLElement>(focusableSelector);
-      focusTarget?.focus();
-      if (document.activeElement === document.body) dialog.focus();
+        ?? (initialFocus === 'first-content'
+          ? null
+          : dialog.querySelector<HTMLElement>(focusableSelector));
+      (focusTarget ?? dialog).focus();
     });
 
     return () => {

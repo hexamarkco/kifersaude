@@ -300,6 +300,46 @@ test('Dialog and Drawer trap presentation in modal semantics and close with Esca
   drawerRender.unmount();
 });
 
+test('first-content dialog focus stays on the dialog while its body is loading', async () => {
+  const view = render(
+    <Dialog open onOpenChange={() => undefined} initialFocus="first-content">
+      <DialogHeader>
+        <DialogTitle>Agenda do WhatsApp</DialogTitle>
+        <DialogDescription>Consulte os lembretes da conversa.</DialogDescription>
+      </DialogHeader>
+      <DialogBody>Carregando agenda...</DialogBody>
+    </Dialog>,
+  );
+  const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+  assert.ok(dialog);
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 30));
+  });
+
+  assert.equal(document.activeElement, dialog);
+  assert.equal(document.body.querySelector('[role="tooltip"]'), null);
+  view.unmount();
+});
+
+test('first-content dialog focus selects its first available control', async () => {
+  const view = render(
+    <Dialog open onOpenChange={() => undefined} initialFocus="first-content">
+      <DialogHeader><DialogTitle>Agenda do WhatsApp</DialogTitle></DialogHeader>
+      <DialogBody><Button>Dia anterior</Button></DialogBody>
+    </Dialog>,
+  );
+  const firstContentButton = document.body.querySelector<HTMLButtonElement>('.kds-dialog-body button');
+  assert.ok(firstContentButton);
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 30));
+  });
+
+  assert.equal(document.activeElement, firstContentButton);
+  view.unmount();
+});
+
 test('dialog helper text is available from the info icon while essential copy can stay visible', () => {
   const view = render(
     <>

@@ -1882,13 +1882,12 @@ export default function AutoContactFlowSettingsScreen() {
                       </CardIcon>
                       <Heading
                         level={4}
-                        className="kds-card-title kds-heading-with-info min-w-0 flex flex-1 flex-nowrap items-start gap-2"
+                        className="kds-card-title kds-heading-with-info min-w-0 flex-1"
                       >
-                        <span className="kds-heading-with-info-title min-w-0 flex-1">Envio automático</span>
+                        <span className="kds-heading-with-info-title min-w-0">Envio automático</span>
                         <InfoTooltip
                           content="Pausa ou libera o processamento dos fluxos ativos."
                           label="Informações sobre o processamento dos fluxos"
-                          className="shrink-0"
                         />
                       </Heading>
                     </div>
@@ -1912,13 +1911,12 @@ export default function AutoContactFlowSettingsScreen() {
                       </CardIcon>
                       <Heading
                         level={4}
-                        className="kds-card-title kds-heading-with-info min-w-0 flex flex-1 flex-nowrap items-start gap-2"
+                        className="kds-card-title kds-heading-with-info min-w-0 flex-1"
                       >
-                        <span className="kds-heading-with-info-title min-w-0 flex-1">Agendamento avançado</span>
+                        <span className="kds-heading-with-info-title min-w-0">Agendamento avançado</span>
                         <InfoTooltip
                           content="Fuso horário e regras globais para dias não úteis."
                           label="Informações sobre o calendário operacional"
-                          className="shrink-0"
                         />
                       </Heading>
                     </div>

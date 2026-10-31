@@ -832,6 +832,7 @@ export default function WhatsAppScheduledMessagesPanel({
           channelId={editingMessage.channel_id}
           chatId={editingMessage.chat_id}
           phoneDigits={editingMessage.phone_digits}
+          contactDisplayName={currentContactName}
           leadId={editingMessage.lead_id}
           contractId={editingMessage.contract_id}
           scheduledMessage={editingMessage}
@@ -850,6 +851,7 @@ export default function WhatsAppScheduledMessagesPanel({
           channelId={editingSequence.channel_id}
           chatId={editingSequence.chat_id}
           phoneDigits={editingSequence.phone_digits}
+          contactDisplayName={currentContactName}
           leadId={editingSequence.lead_id}
           contractId={editingSequence.contract_id}
           scheduledSequence={editingSequence}

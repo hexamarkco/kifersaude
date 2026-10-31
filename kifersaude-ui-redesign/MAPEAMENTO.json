@@ -8748,33 +8748,30 @@
       "kind": "states",
       "route": "/painel/inbox",
       "current_components": [
-        "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx"
+        "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx"
       ],
       "shared_components": [
-        "Badge",
         "Button",
-        "ButtonGroup",
-        "ControlGroup",
+        "Checkbox",
         "DateTimePicker",
-        "EmptyState",
+        "DialogShell",
+        "DisclosureTrigger",
         "FieldLabel",
-        "FilterSelect",
-        "Heading",
-        "IconButton",
+        "FileInput",
         "Input",
-        "PositionedPopover",
-        "Radio",
-        "Surface",
-        "Text",
-        "Textarea",
-        "WorkspaceDialog"
+        "SegmentedControl",
+        "Select",
+        "Textarea"
       ],
       "references": [
         "references/desktop/state--inbox-agenda.png",
         "references/mobile/state--inbox-agenda.png"
       ],
-      "status": "validado",
-      "exceptions": [],
+      "status": "parcial",
+      "exceptions": [
+        "Validação visual feita com a modal real e dados sintéticos. A composição integrada na rota autenticada permanece pendente; as capturas antigas da consolidação não mostravam este estado."
+      ],
       "validation": [
         {
           "device": "desktop",
@@ -8783,9 +8780,15 @@
             "height": 1080
           },
           "state": "inbox-agenda",
-          "status": "validado",
+          "status": "parcial",
           "screenshots": [
-            "validacao/consolidacao/desktop/inbox-agenda.png"
+            "validacao/revisao-visual/inbox/schedule-message/desktop-light-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/desktop-dark-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/desktop-date-picker-open.png",
+            "validacao/revisao-visual/inbox/schedule-message/desktop-date-picker-hour.png",
+            "validacao/revisao-visual/inbox/schedule-message/desktop-date-picker-minute-step.png",
+            "validacao/revisao-visual/inbox/schedule-message/desktop-options-weekly-validation.png",
+            "validacao/revisao-visual/inbox/schedule-message/desktop-sequence-mode.png"
           ],
           "document_scroll_width": 1920
         },
@@ -8796,9 +8799,10 @@
             "height": 1024
           },
           "state": "inbox-agenda",
-          "status": "validado",
+          "status": "parcial",
           "screenshots": [
-            "validacao/consolidacao/tablet/inbox-agenda.png"
+            "validacao/revisao-visual/inbox/schedule-message/tablet-light-768.png",
+            "validacao/revisao-visual/inbox/schedule-message/tablet-date-picker-open.png"
           ],
           "document_scroll_width": 768
         },
@@ -8809,9 +8813,10 @@
             "height": 844
           },
           "state": "inbox-agenda",
-          "status": "validado",
+          "status": "parcial",
           "screenshots": [
-            "validacao/consolidacao/mobile/inbox-agenda.png"
+            "validacao/revisao-visual/inbox/schedule-message/mobile-light-390.png",
+            "validacao/revisao-visual/inbox/schedule-message/mobile-date-picker-open-390.png"
           ],
           "document_scroll_width": 390
         },
@@ -8822,9 +8827,10 @@
             "height": 640
           },
           "state": "inbox-agenda",
-          "status": "validado",
+          "status": "parcial",
           "screenshots": [
-            "validacao/consolidacao/mobile-320/inbox-agenda.png"
+            "validacao/revisao-visual/inbox/schedule-message/mobile-320-light.png",
+            "validacao/revisao-visual/inbox/schedule-message/mobile-date-picker-open-320.png"
           ],
           "document_scroll_width": 320
         }

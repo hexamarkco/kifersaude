@@ -1,24 +1,25 @@
 import { FieldLabel, Text } from '../../../../design-system';
 import { FileInput, ActionSurface } from '../../../../design-system';
 import { useState, useMemo, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
-import { Calendar, Clock, MessageSquare, Plus, Repeat, Trash2, Upload, X } from 'lucide-react';
+import { Calendar, Clock, MessageSquare, Plus, Repeat, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
 
 import {
   Button,
   Checkbox,
   DateTimePicker,
+  DisclosureTrigger,
   IconButton,
   Input,
   SegmentedControl,
   Select,
   Textarea,
-  WorkspaceDialog,
+  DialogShell,
 } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { useConfig } from '../../../../contexts/ConfigContext';
 import { listPendingRemindersForLead, type ReminderPendingItem } from '../../../reminders';
-import { commWhatsAppService } from '../data';
+import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
 import type {
   CommWhatsAppScheduledMessage,
   CommWhatsAppScheduledMessageRecurrence,
@@ -34,6 +35,7 @@ type WhatsAppScheduleMessageModalProps = {
   channelId: string;
   chatId?: string | null;
   phoneDigits: string;
+  contactDisplayName?: string | null;
   leadId?: string | null;
   contractId?: string | null;
   initialText?: string;
@@ -178,6 +180,7 @@ export default function WhatsAppScheduleMessageModal({
   channelId,
   chatId,
   phoneDigits,
+  contactDisplayName,
   leadId,
   contractId,
   initialText,
@@ -222,6 +225,14 @@ export default function WhatsAppScheduleMessageModal({
   const [cancelOnInboundMessage, setCancelOnInboundMessage] = useState(
     scheduledMessage?.cancel_on_inbound_message ?? scheduledSequence?.cancel_on_inbound_message ?? false,
   );
+  const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(() => Boolean(
+    scheduledMessage && (
+      scheduledMessage.recurrence !== 'none'
+      || scheduledMessage.recurrence_ends_at
+      || scheduledMessage.label?.trim()
+      || scheduledMessage.cancel_on_inbound_message
+    ),
+  ));
   const [pendingReminders, setPendingReminders] = useState<ReminderPendingItem[]>([]);
   const [sequenceSteps, setSequenceSteps] = useState<SequenceStepDraft[]>(() => scheduledSequence?.steps?.length
     ? scheduledSequence.steps.map(createSequenceStepDraft)
@@ -242,6 +253,7 @@ export default function WhatsAppScheduleMessageModal({
   const uploadSessionRef = useRef(0);
   const hasUploadingSequenceAttachment = Object.values(uploadingSequenceStepIds).some(Boolean);
   const hasUploadingAttachment = uploadingAttachment || hasUploadingSequenceAttachment;
+  const recipientLabel = contactDisplayName?.trim() || formatCommWhatsAppPhoneLabel(phoneDigits);
 
   useEffect(() => {
     if (!leadId || mode !== 'sequence') {
@@ -543,7 +555,7 @@ export default function WhatsAppScheduleMessageModal({
   }, [submitting, updateSequenceStep, uploadingSequenceStepIds]);
 
   return (
-    <WorkspaceDialog
+    <DialogShell
       isOpen={isOpen}
       onClose={handleClose}
       title={scheduledSequence ? 'Editar sequência agendada' : scheduledMessage ? 'Editar mensagem agendada' : 'Agendar mensagem'}
@@ -552,7 +564,29 @@ export default function WhatsAppScheduleMessageModal({
         : scheduledMessage
           ? 'Atualize o conteúdo ou a programação do envio automático.'
           : 'Configure quando a mensagem deve ser enviada automaticamente.'}
-      size="md"
+      descriptionPlacement="visible"
+      size="form"
+      footer={(
+        <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="secondary"
+            onClick={handleClose}
+            disabled={submitting || hasUploadingAttachment}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSchedule}
+            disabled={!isValid || submitting || hasUploadingAttachment}
+            loading={submitting}
+          >
+            {submitting
+              ? (scheduledMessage || scheduledSequence ? 'Salvando...' : 'Agendando...')
+              : (scheduledMessage || scheduledSequence ? 'Salvar alterações' : 'Agendar mensagem')}
+          </Button>
+        </div>
+      )}
     >
       <div className="space-y-4">
         <FileInput
@@ -586,6 +620,29 @@ export default function WhatsAppScheduleMessageModal({
             ariaLabel="Tipo de agendamento"
           />
         )}
+
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+          <div className="min-w-0">
+            <FieldLabel htmlFor="whatsapp-schedule-contact" className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+              Contato
+            </FieldLabel>
+            <Input id="whatsapp-schedule-contact" value={recipientLabel} readOnly aria-readonly="true" />
+          </div>
+          <div className="min-w-0">
+            <FieldLabel htmlFor="whatsapp-schedule-at" className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+              <Calendar className="mr-1 inline-block h-4 w-4" />
+              Data e hora do envio
+            </FieldLabel>
+            <DateTimePicker
+              id="whatsapp-schedule-at"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(event) => setScheduledAt(event.target.value)}
+              min={formatDateTimeLocal(new Date())}
+              className="w-full"
+            />
+          </div>
+        </div>
 
         {mode === 'single' ? <div>
           <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
@@ -803,109 +860,122 @@ export default function WhatsAppScheduleMessageModal({
           </div>
         )}
 
-        <div>
-          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-            <Calendar className="inline-block w-4 h-4 mr-1" />
-            Data e hora do envio
-          </FieldLabel>
-          <DateTimePicker
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            min={formatDateTimeLocal(new Date())}
-            className="w-full"
-          />
-        </div>
+        {mode === 'single' ? (
+          <details
+            className="min-w-0"
+            open={advancedOptionsOpen}
+            onToggle={(event) => setAdvancedOptionsOpen(event.currentTarget.open)}
+          >
+            <DisclosureTrigger icon={SlidersHorizontal} size="sm" className="w-full justify-start">
+              Opções adicionais
+            </DisclosureTrigger>
+            <div className="mt-3 space-y-4">
+              <FieldLabel className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                <Checkbox
+                  checked={cancelOnInboundMessage}
+                  onChange={(event) => setCancelOnInboundMessage(event.target.checked)}
+                  className="mt-0.5"
+                  aria-label="Cancelar se o contato responder antes do envio"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-[var(--text-primary)]">
+                    Cancelar se o contato responder antes do envio
+                  </span>
+                  <span className="mt-0.5 block text-xs leading-5 text-[var(--text-muted)]">
+                    A mensagem não será enviada caso o contato responda enquanto ela estiver aguardando.
+                  </span>
+                </span>
+              </FieldLabel>
 
-        <FieldLabel className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
-          <Checkbox
-            checked={cancelOnInboundMessage}
-            onChange={(event) => setCancelOnInboundMessage(event.target.checked)}
-            className="mt-0.5"
-            aria-label="Cancelar se o contato responder antes do envio"
-          />
-          <span>
-            <span className="block text-sm font-medium text-[var(--text-primary)]">
-              Cancelar se o contato responder antes do envio
-            </span>
-            <span className="mt-0.5 block text-xs leading-5 text-[var(--text-muted)]">
-              A mensagem não será enviada caso o contato responda enquanto ela estiver aguardando.
-            </span>
-          </span>
-        </FieldLabel>
+              <div>
+                <FieldLabel className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
+                  <Repeat className="mr-1 inline-block h-4 w-4" />
+                  Recorrência
+                </FieldLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  {RECURRENCE_OPTIONS.map((option) => (
+                    <ActionSurface variant="plain" padding="none"
+                      key={option.value}
+                      type="button"
+                      onClick={() => setRecurrence(option.value)}
+                      className={`rounded-lg border p-3 text-left transition-colors ${
+                        recurrence === option.value
+                          ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
+                          : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-default)]'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{option.label}</div>
+                      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{option.description}</div>
+                    </ActionSurface>
+                  ))}
+                </div>
+              </div>
 
-        {mode === 'single' && <div>
-          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-            <Repeat className="inline-block w-4 h-4 mr-1" />
-            Recorrência
-          </FieldLabel>
-          <div className="grid grid-cols-2 gap-2">
-            {RECURRENCE_OPTIONS.map((option) => (
-              <ActionSurface variant="plain" padding="none"
-                key={option.value}
-                type="button"
-                onClick={() => setRecurrence(option.value)}
-                className={`p-3 rounded-lg border text-left transition-colors ${
-                  recurrence === option.value
-                    ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
-                    : 'border-[var(--border-subtle)] hover:border-[var(--border-default)] text-[var(--text-secondary)]'
-                }`}
-              >
-                <div className="text-sm font-medium">{option.label}</div>
-                <div className="text-xs text-[var(--text-muted)] mt-0.5">{option.description}</div>
-              </ActionSurface>
-            ))}
-          </div>
-        </div>}
+              {recurrence !== 'none' && (
+                <div>
+                  <FieldLabel className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+                    <Clock className="mr-1 inline-block h-4 w-4" />
+                    Repetir até
+                  </FieldLabel>
+                  <DateTimePicker
+                    type="datetime-local"
+                    value={recurrenceEndsAt}
+                    onChange={(event) => setRecurrenceEndsAt(event.target.value)}
+                    min={scheduledAt}
+                    className="w-full"
+                    placeholder="Data limite da recorrência"
+                  />
+                </div>
+              )}
 
-        {recurrence !== 'none' && mode === 'single' && (
-          <div>
-            <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              <Clock className="inline-block w-4 h-4 mr-1" />
-              Repetir até
+              <div>
+                <FieldLabel className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+                  Etiqueta (opcional)
+                </FieldLabel>
+                <Input
+                  type="text"
+                  value={label}
+                  onChange={(event) => setLabel(event.target.value)}
+                  placeholder="Ex: Lembrete de aniversário"
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </details>
+        ) : (
+          <>
+            <FieldLabel className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+              <Checkbox
+                checked={cancelOnInboundMessage}
+                onChange={(event) => setCancelOnInboundMessage(event.target.checked)}
+                className="mt-0.5"
+                aria-label="Cancelar se o contato responder antes do envio"
+              />
+              <span>
+                <span className="block text-sm font-medium text-[var(--text-primary)]">
+                  Cancelar se o contato responder antes do envio
+                </span>
+                <span className="mt-0.5 block text-xs leading-5 text-[var(--text-muted)]">
+                  A mensagem não será enviada caso o contato responda enquanto ela estiver aguardando.
+                </span>
+              </span>
             </FieldLabel>
-            <DateTimePicker
-              type="datetime-local"
-              value={recurrenceEndsAt}
-              onChange={(e) => setRecurrenceEndsAt(e.target.value)}
-              min={scheduledAt}
-              className="w-full"
-              placeholder="Data limite da recorrência"
-            />
-          </div>
+            <div>
+              <FieldLabel className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+                Etiqueta (opcional)
+              </FieldLabel>
+              <Input
+                type="text"
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+                placeholder="Ex: Lembrete de aniversário"
+                className="w-full"
+              />
+            </div>
+          </>
         )}
 
-        <div>
-          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-            Etiqueta (opcional)
-          </FieldLabel>
-          <Input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Ex: Lembrete de aniversário"
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-subtle)]">
-          <Button
-            variant="ghost"
-            onClick={handleClose}
-            disabled={submitting || hasUploadingAttachment}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSchedule}
-            disabled={!isValid || submitting || hasUploadingAttachment}
-          >
-            {submitting
-              ? (scheduledMessage || scheduledSequence ? 'Salvando...' : 'Agendando...')
-              : (scheduledMessage || scheduledSequence ? 'Salvar alterações' : 'Agendar mensagem')}
-          </Button>
-        </div>
       </div>
-    </WorkspaceDialog>
+    </DialogShell>
   );
 }

@@ -129,6 +129,9 @@
 .whatsapp-inbox-media-meta {
   box-sizing: border-box;
   padding-block: var(--space-1, 0.25rem);
+}
+
+.whatsapp-inbox-media-meta-time {
   padding-inline: var(--space-3, 0.75rem);
 }
 

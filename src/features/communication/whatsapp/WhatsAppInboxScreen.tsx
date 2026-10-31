@@ -2383,6 +2383,7 @@ export default function WhatsAppInboxScreen() {
             channelId={selectedChat.channel_id}
             chatId={selectedChat.id}
             phoneDigits={selectedChat.phone_digits}
+            contactDisplayName={selectedChatDisplayName}
             leadId={selectedChat.lead_id}
             initialText={messageDraft}
             onScheduled={() => {

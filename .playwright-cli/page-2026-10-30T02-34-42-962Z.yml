@@ -1,0 +1,19 @@
+- dialog [ref=e8]:
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - heading "Excluir lead" [level=2] [ref=e11]
+      - paragraph [ref=e12]: Confira o registro e o impacto antes de excluir.
+    - button "Fechar" [active] [ref=e13] [cursor=pointer]
+  - generic [ref=e18]:
+    - note [ref=e19]:
+      - generic [ref=e20]: A exclusão é permanente e não pode ser desfeita.
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - term [ref=e24]: Registro
+        - definition [ref=e25]: Contato de demonstração
+      - generic [ref=e26]:
+        - term [ref=e27]: Consequência
+        - definition [ref=e28]: Exclusão permanente
+  - generic [ref=e29]:
+    - button "Cancelar" [ref=e30] [cursor=pointer]
+    - button "Excluir" [ref=e31] [cursor=pointer]

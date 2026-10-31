@@ -1,0 +1,281 @@
+- generic [ref=f6e1]:
+  - generic [ref=f6e3]:
+    - complementary [ref=f6e4]:
+      - generic [ref=f6e5]:
+        - img "Kifer Saúde CRM" [ref=f6e7]:
+          - generic [ref=f6e8]: kifersaúde
+          - generic [ref=f6e9]: CRM
+        - navigation [ref=f6e10]:
+          - generic [ref=f6e11]:
+            - button "Dashboard" [ref=f6e12] [cursor=pointer]
+            - button "CRM" [ref=f6e21] [cursor=pointer]
+            - button "Comunicação" [ref=f6e31] [cursor=pointer]
+            - button "Financeiro" [ref=f6e40] [cursor=pointer]
+            - button "Automações e IA" [ref=f6e49] [cursor=pointer]
+            - button "Configurações" [ref=f6e56] [cursor=pointer]
+        - generic [ref=f6e62]:
+          - button "Recolher" [ref=f6e63] [cursor=pointer]
+          - button "Notificações" [ref=f6e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=f6e76] [cursor=pointer]:
+            - generic [ref=f6e79]: Escuro
+          - button "Sair" [ref=f6e80] [cursor=pointer]
+    - generic [ref=f6e85]:
+      - banner [ref=f6e86]:
+        - generic [ref=f6e87]:
+          - navigation "Breadcrumb" [ref=f6e88]:
+            - list [ref=f6e89]:
+              - listitem [ref=f6e90]:
+                - button "CRM" [ref=f6e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f6e92]
+              - listitem [ref=f6e95]: Automações e IA
+          - generic [ref=f6e96]:
+            - generic [ref=f6e97]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=f6e98] [cursor=pointer]
+            - generic [ref=f6e102]: OD
+      - main [ref=f6e104]:
+        - generic [ref=f6e106]:
+          - generic [ref=f6e107]:
+            - generic [ref=f6e109]:
+              - paragraph [ref=f6e110]: Administração
+              - generic [ref=f6e112]:
+                - heading "Automações, integrações e IA" [level=1] [ref=f6e113]
+                - button "Informações sobre Automações, integrações e IA" [ref=f6e115]
+            - tablist "Áreas de automações e IA" [ref=f6e120]:
+              - tab "Automações" [ref=f6e121] [cursor=pointer]
+              - tab "Integrações" [ref=f6e123] [cursor=pointer]
+              - tab "IA" [selected] [ref=f6e125] [cursor=pointer]
+          - main [ref=f6e127]:
+            - generic [ref=f6e128]:
+              - generic [ref=f6e129]:
+                - generic [ref=f6e130]:
+                  - generic [ref=f6e131]:
+                    - heading "Inteligência artificial" [level=2] [ref=f6e133]
+                    - paragraph [ref=f6e134]: Controle central de recursos e políticas.
+                  - group "Ações da página" [ref=f6e137]:
+                    - button "Exportar" [ref=f6e138] [cursor=pointer]
+                    - button "Importar" [ref=f6e143] [cursor=pointer]
+                    - button "Atualizar" [ref=f6e148] [cursor=pointer]
+                - generic [ref=f6e155]: Recursos de IA devem ter permissões e limites operacionais claros.
+                - list "Resumo das configurações de IA" [ref=f6e158]:
+                  - listitem [ref=f6e159]:
+                    - generic [ref=f6e160]:
+                      - paragraph [ref=f6e161]: Assistência em mensagens
+                      - paragraph [ref=f6e162]: Sugestões e reescrita de atendimento.
+                    - generic [ref=f6e163]: Ativa
+                  - listitem [ref=f6e164]:
+                    - generic [ref=f6e165]:
+                      - paragraph [ref=f6e166]: Qualificação de leads
+                      - paragraph [ref=f6e167]: Contexto para acompanhamento comercial.
+                    - generic [ref=f6e168]: Parcial
+                  - listitem [ref=f6e169]:
+                    - generic [ref=f6e170]:
+                      - paragraph [ref=f6e171]: Modelos de execução
+                      - paragraph [ref=f6e172]: Configuração de modelo por funcionalidade.
+                    - generic [ref=f6e173]: 5 personalizados
+              - tablist "Áreas das configurações de IA" [ref=f6e175]:
+                - tab "Funcionalidades" [selected] [ref=f6e176] [cursor=pointer]
+                - tab "Configurações globais" [ref=f6e178] [cursor=pointer]
+              - generic [ref=f6e539]:
+                - generic [ref=f6e541]:
+                  - generic [ref=f6e542]:
+                    - heading "Opções de IA" [level=3] [ref=f6e544]
+                    - paragraph [ref=f6e545]: Ative recursos e mantenha os prompts organizados por área.
+                  - searchbox "Buscar funcionalidade de IA" [ref=f6e548]
+                - generic [ref=f6e549]:
+                  - region "Mensagens" [ref=f6e550]:
+                    - generic [ref=f6e551]:
+                      - heading "Mensagens" [level=3] [ref=f6e552]
+                      - generic [ref=f6e553]: "2"
+                    - generic [ref=f6e554]:
+                      - generic [ref=f6e555]:
+                        - generic [ref=f6e556]:
+                          - generic [ref=f6e557]:
+                            - generic [ref=f6e558]: Reescrita de Mensagem
+                            - generic [ref=f6e559]: v2
+                          - paragraph [ref=f6e560]: Sugere versões mais claras antes do envio.
+                        - generic [ref=f6e561]:
+                          - generic [ref=f6e562]: Ativa
+                          - group "Ações para Reescrita de Mensagem" [ref=f6e563]:
+                            - button "Configurar Reescrita de Mensagem" [ref=f6e564] [cursor=pointer]
+                            - button "Desativar Reescrita de Mensagem" [ref=f6e569] [cursor=pointer]
+                      - generic [ref=f6e575]:
+                        - generic [ref=f6e576]:
+                          - generic [ref=f6e577]:
+                            - generic [ref=f6e578]: Sugestão de Resposta
+                            - generic [ref=f6e579]: v2
+                          - paragraph [ref=f6e580]: Sugere respostas a partir do contexto da conversa.
+                        - generic [ref=f6e581]:
+                          - generic [ref=f6e582]: Ativa
+                          - group "Ações para Sugestão de Resposta" [ref=f6e583]:
+                            - button "Configurar Sugestão de Resposta" [ref=f6e584] [cursor=pointer]
+                            - button "Desativar Sugestão de Resposta" [ref=f6e589] [cursor=pointer]
+                  - region "Transcrição" [ref=f6e595]:
+                    - generic [ref=f6e596]:
+                      - heading "Transcrição" [level=3] [ref=f6e597]
+                      - generic [ref=f6e598]: "1"
+                    - generic [ref=f6e600]:
+                      - generic [ref=f6e601]:
+                        - generic [ref=f6e602]:
+                          - generic [ref=f6e603]: Transcrição de Áudio
+                          - generic [ref=f6e604]: v2
+                        - paragraph [ref=f6e605]: Converte áudios recebidos em texto.
+                      - generic [ref=f6e606]:
+                        - generic [ref=f6e607]: Ativa
+                        - group "Ações para Transcrição de Áudio" [ref=f6e608]:
+                          - button "Configurar Transcrição de Áudio" [ref=f6e609] [cursor=pointer]
+                          - button "Desativar Transcrição de Áudio" [ref=f6e614] [cursor=pointer]
+                  - region "Campanha" [ref=f6e620]:
+                    - generic [ref=f6e621]:
+                      - heading "Campanha" [level=3] [ref=f6e622]
+                      - generic [ref=f6e623]: "1"
+                    - generic [ref=f6e625]:
+                      - generic [ref=f6e626]:
+                        - generic [ref=f6e627]:
+                          - generic [ref=f6e628]: Classificação de Intenção
+                          - generic [ref=f6e629]: v2
+                        - paragraph [ref=f6e630]: Identifica o interesse demonstrado na conversa.
+                      - generic [ref=f6e631]:
+                        - generic [ref=f6e632]: Ativa
+                        - group "Ações para Classificação de Intenção" [ref=f6e633]:
+                          - button "Configurar Classificação de Intenção" [ref=f6e634] [cursor=pointer]
+                          - button "Desativar Classificação de Intenção" [ref=f6e639] [cursor=pointer]
+                  - region "Follow-up" [ref=f6e645]:
+                    - generic [ref=f6e646]:
+                      - heading "Follow-up" [level=3] [ref=f6e647]
+                      - generic [ref=f6e648]: "1"
+                    - generic [ref=f6e650]:
+                      - generic [ref=f6e651]:
+                        - generic [ref=f6e652]:
+                          - generic [ref=f6e653]: Gerar Follow-up
+                          - generic [ref=f6e654]: v1
+                        - paragraph [ref=f6e655]: Prepara uma sugestão de acompanhamento comercial.
+                      - generic [ref=f6e656]:
+                        - generic [ref=f6e657]: Inativa
+                        - group "Ações para Gerar Follow-up" [ref=f6e658]:
+                          - button "Configurar Gerar Follow-up" [ref=f6e659] [cursor=pointer]
+                          - button "Ativar Gerar Follow-up" [ref=f6e664] [cursor=pointer]
+                  - region "Atendimento Autônomo" [ref=f6e668]:
+                    - generic [ref=f6e669]:
+                      - heading "Atendimento Autônomo" [level=3] [ref=f6e670]
+                      - generic [ref=f6e671]: "1"
+                    - generic [ref=f6e673]:
+                      - generic [ref=f6e674]:
+                        - generic [ref=f6e675]:
+                          - generic [ref=f6e676]: Resposta Autônoma
+                          - generic [ref=f6e677]: v2
+                        - paragraph [ref=f6e678]: Responde somente quando a automação autorizada estiver ativa.
+                      - generic [ref=f6e679]:
+                        - generic [ref=f6e680]: Ativa
+                        - group "Ações para Resposta Autônoma" [ref=f6e681]:
+                          - button "Configurar Resposta Autônoma" [ref=f6e682] [cursor=pointer]
+                          - button "Desativar Resposta Autônoma" [ref=f6e687] [cursor=pointer]
+                  - region "Legadas" [ref=f6e693]:
+                    - generic [ref=f6e694]:
+                      - heading "Legadas" [level=3] [ref=f6e695]
+                      - generic [ref=f6e696]: "1"
+                    - generic [ref=f6e698]:
+                      - generic [ref=f6e699]:
+                        - generic [ref=f6e700]:
+                          - generic [ref=f6e701]: Leitura de Documentos de Contrato
+                          - generic [ref=f6e702]: v2
+                        - paragraph [ref=f6e703]: Extrai dados de documentos enviados à operação.
+                      - generic [ref=f6e704]: Legada
+  - dialog [ref=f6e912]:
+    - generic [ref=f6e913]:
+      - generic [ref=f6e914]:
+        - generic [ref=f6e916]:
+          - heading "Reescrita de Mensagem" [level=2] [ref=f6e917]
+          - paragraph [ref=f6e918]: message.rewrite · v2
+        - button "Fechar" [ref=f6e919] [cursor=pointer]
+      - generic [ref=f6e923]:
+        - generic [ref=f6e924]:
+          - paragraph [ref=f6e925]: "Variáveis disponíveis:"
+          - code [ref=f6e927]: "{{mensagem}}"
+        - generic [ref=f6e928]:
+          - generic [ref=f6e929]:
+            - paragraph [ref=f6e930]: Modelo
+            - generic [ref=f6e931]: "Tipo: text"
+          - generic [ref=f6e932]:
+            - generic [ref=f6e933] [cursor=pointer]:
+              - generic [ref=f6e934]:
+                - radio "Usar roteamento padrão"
+              - generic [ref=f6e936]: Usar roteamento padrão
+            - generic [ref=f6e937] [cursor=pointer]:
+              - generic [ref=f6e938]:
+                - radio "Personalizado" [checked]
+              - generic [ref=f6e940]: Personalizado
+          - generic [ref=f6e941]:
+            - generic [ref=f6e942]:
+              - generic [ref=f6e943]: Provedor
+              - textbox "Provedor de IA" [ref=f6e947]: OpenAI
+            - generic [ref=f6e948]:
+              - generic [ref=f6e949]: Modelo
+              - combobox [aria-hidden] [ref=f6e952]
+              - button "Modelo" [ref=f6e954] [cursor=pointer]:
+                - generic [ref=f6e955]: GPT-4o mini
+          - generic [ref=f6e958]:
+            - generic [ref=f6e960]:
+              - generic [ref=f6e961]: Esforço de raciocínio
+              - 'button "Ajuda: Esforço de raciocínio" [ref=f6e963]'
+            - combobox [aria-hidden] [ref=f6e966]
+            - button "Esforço de raciocínio" [active] [ref=f6e968] [cursor=pointer]:
+              - generic [ref=f6e969]: Baixo
+            - paragraph [ref=f6e972]: Automático usa o nível seguro definido para o modelo e a tarefa.
+          - generic [ref=f6e973]:
+            - generic [ref=f6e974]:
+              - generic [ref=f6e975]: Modelo em uso
+              - generic [ref=f6e976]: gpt-4o-mini
+            - generic [ref=f6e977]:
+              - generic [ref=f6e978]: Origem
+              - generic [ref=f6e979]: Modelo escolhido para a tarefa
+            - paragraph [ref=f6e980]: "Funcionalidade: message_rewrite"
+        - generic [ref=f6e981]:
+          - generic [ref=f6e983]:
+            - generic [ref=f6e984]: Instruções da IA
+            - 'button "Ajuda: Instruções da IA" [ref=f6e986]'
+          - textbox "Instruções da IA" [ref=f6e989]:
+            - /placeholder: Descreva como a IA deve agir nesta tarefa...
+            - text: Use o contexto da conversa para produzir uma resposta clara e acolhedora.
+          - paragraph [ref=f6e990]: Instrução principal enviada para a IA.
+        - generic [ref=f6e991]:
+          - generic [ref=f6e993]:
+            - generic [ref=f6e994]: Instruções de saída
+            - 'button "Ajuda: Instruções de saída" [ref=f6e996]'
+          - textbox "Instruções de saída" [ref=f6e999]:
+            - /placeholder: Descreva o formato e as regras que a resposta deve seguir.
+            - text: Responda em português brasileiro, com objetividade e cordialidade.
+          - paragraph [ref=f6e1000]: Formato e regras de resposta.
+        - generic [ref=f6e1001]:
+          - generic [ref=f6e1002]:
+            - generic [ref=f6e1004]:
+              - generic [ref=f6e1005]: Variação das respostas
+              - 'button "Ajuda: Variação das respostas" [ref=f6e1007]'
+            - spinbutton "Variação das respostas" [ref=f6e1011]: "0.4"
+            - paragraph [ref=f6e1012]: Ignorada por este modelo enquanto o raciocínio estiver ativo.
+          - generic [ref=f6e1013]:
+            - generic [ref=f6e1015]:
+              - generic [ref=f6e1016]: Limite de texto (tokens)
+              - 'button "Ajuda: Limite de texto (tokens)" [ref=f6e1018]'
+            - spinbutton "Limite de texto (tokens)" [ref=f6e1022]: "700"
+            - paragraph [ref=f6e1023]: "Tokens são unidades de texto usadas pela IA. Padrão: 700."
+        - generic [ref=f6e1024]:
+          - paragraph [ref=f6e1025]: Versões anteriores
+          - generic [ref=f6e1026]:
+            - generic [ref=f6e1027]:
+              - generic [ref=f6e1028]: v2
+              - generic [ref=f6e1029]: Ativa
+              - generic [ref=f6e1030]: 30/10/2026
+            - generic [ref=f6e1031]:
+              - generic [ref=f6e1032]: v1
+              - generic [ref=f6e1033]: 30/10/2026
+        - generic [ref=f6e1034]:
+          - paragraph [ref=f6e1035]: "Valores padrão do sistema:"
+          - generic [ref=f6e1036]:
+            - paragraph [ref=f6e1037]: "Variação das respostas: 0.4"
+            - paragraph [ref=f6e1038]: "Limite de texto (tokens): 700"
+      - generic [ref=f6e1039]:
+        - button "Restaurar padrão" [ref=f6e1040] [cursor=pointer]
+        - group "Ações do formulário" [ref=f6e1046]:
+          - button "Cancelar" [ref=f6e1047] [cursor=pointer]
+          - button "Criar versão e ativar" [ref=f6e1048] [cursor=pointer]
+  - tooltip "Instrução principal enviada para a IA."

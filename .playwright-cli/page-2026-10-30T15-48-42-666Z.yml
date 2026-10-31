@@ -1,0 +1,128 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "Kifer Saúde CRM" [ref=e7]:
+        - generic [ref=e8]: kifersaúde
+        - generic [ref=e9]: CRM
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "CRM" [ref=e21] [cursor=pointer]
+          - button "Comunicação" [ref=e31] [cursor=pointer]
+          - button "Financeiro" [ref=e40] [cursor=pointer]
+          - button "Automações e IA" [ref=e49] [cursor=pointer]
+          - button "Configurações" [ref=e56] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Recolher" [ref=e63] [cursor=pointer]
+        - button "Notificações" [ref=e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=e76] [cursor=pointer]:
+          - generic [ref=e79]: Escuro
+        - button "Sair" [ref=e80] [cursor=pointer]
+  - generic [ref=e85]:
+    - banner [ref=e86]:
+      - generic [ref=e87]:
+        - navigation "Breadcrumb" [ref=e88]:
+          - list [ref=e89]:
+            - listitem [ref=e90]:
+              - button "CRM" [ref=e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=e92]
+            - listitem [ref=e95]: Automações e IA
+        - generic [ref=e96]:
+          - generic [ref=e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=e98] [cursor=pointer]
+          - generic [ref=e102]: OD
+    - main [ref=e104]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Administração
+            - generic [ref=e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=e115]
+          - tablist "Áreas de automações e IA" [ref=e120]:
+            - tab "Automações" [ref=e121] [cursor=pointer]
+            - tab "Integrações" [selected] [ref=e123] [cursor=pointer]
+            - tab "IA" [ref=e125] [cursor=pointer]
+        - main [ref=e127]:
+          - generic [ref=e401]:
+            - generic [ref=e403]:
+              - paragraph [ref=e404]: Canais e inteligência
+              - generic [ref=e405]:
+                - heading "Provedor de IA" [level=2] [ref=e406]
+                - button "Informações sobre esta seção" [ref=e408]
+            - tablist [ref=e412]:
+              - tab "Visão geral" [ref=e413] [cursor=pointer]
+              - tab "Inteligência artificial" [selected] [ref=e415] [cursor=pointer]
+              - tab "WhatsApp" [ref=e419] [cursor=pointer]
+              - tab "Meta Ads" [ref=e423] [cursor=pointer]
+              - tab "Rastreamento" [ref=e427] [cursor=pointer]
+            - generic [ref=e432]:
+              - generic [ref=e435]:
+                - heading "Integração de IA" [level=2] [ref=e436]
+                - button "Informações sobre esta seção" [ref=e438]
+              - generic [ref=e442]:
+                - generic [ref=e443]:
+                  - generic [ref=e444]:
+                    - heading "OpenAI" [level=3] [ref=e445]
+                    - paragraph [ref=e446]: Use modelos GPT para reescrita, follow-up e futuras tarefas de IA.
+                  - generic [ref=e447]:
+                    - switch "Ativo" [ref=e449]
+                    - generic [ref=e452] [cursor=pointer]: Ativo
+                - generic [ref=e453]:
+                  - paragraph [ref=e454]: Credencial protegida por Edge Secret
+                  - paragraph [ref=e455]: Ative o provedor para validar o Edge Secret e carregar modelos.
+                - button "Salvar OpenAI" [ref=e457] [cursor=pointer]
+              - generic [ref=e465]:
+                - generic [ref=e466]:
+                  - heading "Roteamento por funcionalidade" [level=3] [ref=e467]
+                  - paragraph [ref=e468]: Escolha qual modelo OpenAI cada funcionalidade de IA deve usar. Em caso de incompatibilidade, o backend pode usar o modelo OpenAI padrão.
+                - generic [ref=e469]:
+                  - generic [ref=e470]:
+                    - generic [ref=e471]:
+                      - paragraph [ref=e472]: Reescrita de mensagem
+                      - paragraph [ref=e473]: Usado no WhatsApp para reescrever mensagens antes de enviar.
+                    - generic [ref=e475]:
+                      - generic [ref=e476]: Modelo
+                      - button "Ative o provedor" [disabled] [ref=e478]
+                      - paragraph [ref=e486]: Ative a OpenAI e confirme o Edge Secret para carregar os modelos.
+                  - generic [ref=e487]:
+                    - generic [ref=e488]:
+                      - paragraph [ref=e489]: Geração de follow-up
+                      - paragraph [ref=e490]: Usado em lembretes para sugerir mensagens de follow-up.
+                    - generic [ref=e492]:
+                      - generic [ref=e493]: Modelo
+                      - button "Ative o provedor" [disabled] [ref=e495]
+                      - paragraph [ref=e503]: Ative a OpenAI e confirme o Edge Secret para carregar os modelos.
+                  - generic [ref=e504]:
+                    - generic [ref=e505]:
+                      - paragraph [ref=e506]: Organização da agenda de follow-ups
+                      - paragraph [ref=e507]: Usado para priorizar e reagendar a fila diária de follow-ups.
+                    - generic [ref=e509]:
+                      - generic [ref=e510]: Modelo
+                      - button "Ative o provedor" [disabled] [ref=e512]
+                      - paragraph [ref=e520]: Ative a OpenAI e confirme o Edge Secret para carregar os modelos.
+                  - generic [ref=e521]:
+                    - generic [ref=e522]:
+                      - paragraph [ref=e523]: Transcrição de áudio do WhatsApp
+                      - paragraph [ref=e524]: Transcreve notas de voz e áudios das conversas quando você solicitar.
+                    - generic [ref=e526]:
+                      - generic [ref=e527]: Modelo
+                      - button "whisper-1" [ref=e585] [cursor=pointer]
+                      - paragraph [ref=e537]: Ative a OpenAI e confirme o Edge Secret para carregar os modelos.
+                  - generic [ref=e538]:
+                    - generic [ref=e539]:
+                      - paragraph [ref=e540]: Crítica de atendimento (IA)
+                      - paragraph [ref=e541]: Analisa a qualidade de um atendimento quando você solicitar.
+                    - generic [ref=e543]:
+                      - generic [ref=e544]: Modelo
+                      - button "Ative o provedor" [disabled] [ref=e546]
+                      - paragraph [ref=e554]: Ative a OpenAI e confirme o Edge Secret para carregar os modelos.
+                  - generic [ref=e555]:
+                    - generic [ref=e556]:
+                      - paragraph [ref=e557]: Atendimento autônomo
+                      - paragraph [ref=e558]: Simula o atendimento da IA na área de testes antes de ativar as respostas nas conversas reais.
+                    - generic [ref=e560]:
+                      - generic [ref=e561]: Modelo
+                      - button "Ative o provedor" [disabled] [ref=e563]
+                      - paragraph [ref=e571]: Ative a OpenAI e confirme o Edge Secret para carregar os modelos.
+                - button "Salvar modelos por tarefa" [ref=e573] [cursor=pointer]

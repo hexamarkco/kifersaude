@@ -40,11 +40,10 @@ export function HomeHero({ onQuote }: Props) {
             family="display"
             className="home-hero-title"
           >
-            Seu plano de saúde,
-            <br />{" "}
+            <span className="home-hero-line">Seu plano de saúde,{" "}</span>
             <em>
-              com orientação
-              <br /> de verdade.
+              <span className="home-hero-line">com orientação{" "}</span>
+              <span className="home-hero-line">de verdade.</span>
             </em>
           </Heading>
           <Text className="home-lead home-hero-description">

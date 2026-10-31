@@ -1,0 +1,18 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - 'button "Alterar status do contrato DEMO: Em análise" [expanded] [ref=e5] [cursor=pointer]':
+      - generic [ref=e6]: Em análise
+    - paragraph
+  - dialog "Status do contrato DEMO" [ref=e9]:
+    - generic [ref=e11]:
+      - generic [ref=e12]: Responsável pela venda
+      - combobox [aria-hidden] [ref=e15]
+      - button "Responsável pela venda" [expanded] [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: Escolher responsável
+    - listbox "Status disponíveis" [ref=e21]:
+      - option "Em análise" [selected] [ref=e22] [cursor=pointer]
+      - option "Ativo" [ref=e25] [cursor=pointer]
+      - option "Documentos pendentes" [ref=e28] [cursor=pointer]
+  - listbox "Selecionar opção" [ref=e31]:
+    - option "Escolher responsável" [active] [selected] [ref=e32] [cursor=pointer]
+    - option "Operadora demonstração" [ref=e36] [cursor=pointer]

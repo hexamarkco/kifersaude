@@ -1,0 +1,48 @@
+- generic [ref=f4e4]:
+  - button "Gestão de contratos" [ref=f4e5] [cursor=pointer]
+  - generic [ref=f4e10]:
+    - generic [ref=f4e11]:
+      - paragraph [ref=f4e12]: Kifer Saúde / Contratos
+      - generic [ref=f4e13]:
+        - generic [ref=f4e14]: "413780"
+        - heading "Ficha do contrato" [level=1] [ref=f4e16]
+      - paragraph [ref=f4e17]: Acompanhe as informações contratuais e os beneficiários vinculados.
+    - generic [ref=f4e19]:
+      - button "Excluir contrato" [ref=f4e21] [cursor=pointer]
+      - group "Ações da página" [ref=f4e26]:
+        - button "Editar contrato" [ref=f4e27] [cursor=pointer]
+  - generic [ref=f4e32]:
+    - generic [ref=f4e33]:
+      - heading "Dados do contrato" [level=3] [ref=f4e34]
+      - generic [ref=f4e35]:
+        - generic [ref=f4e36]:
+          - term [ref=f4e37]: Titular
+          - definition [ref=f4e38]: Titular de demonstração
+        - generic [ref=f4e39]:
+          - term [ref=f4e40]: Operadora
+          - definition [ref=f4e41]: Assim Saúde
+        - generic [ref=f4e42]:
+          - term [ref=f4e43]: Plano
+          - definition [ref=f4e44]: Clássico
+        - generic [ref=f4e45]:
+          - term [ref=f4e46]: Modalidade
+          - definition [ref=f4e47]: PME
+        - generic [ref=f4e48]:
+          - term [ref=f4e49]: Vigência
+          - definition [ref=f4e50]: 01/10/2026
+        - generic [ref=f4e51]:
+          - term [ref=f4e52]: Status
+          - definition [ref=f4e53]: Ativo
+    - generic [ref=f4e54]:
+      - heading "Beneficiários" [level=3] [ref=f4e56]
+      - list [ref=f4e57]:
+        - listitem [ref=f4e58]:
+          - generic [ref=f4e59]:
+            - paragraph [ref=f4e60]: Titular de demonstração
+            - paragraph [ref=f4e61]: Dados do titular
+        - listitem [ref=f4e62]:
+          - generic [ref=f4e63]:
+            - paragraph [ref=f4e64]: Dependente de demonstração
+            - paragraph [ref=f4e65]: Dados do dependente · Filho(a)
+  - group [ref=f4e66]:
+    - generic "Mais informações do contrato" [ref=f4e67] [cursor=pointer]

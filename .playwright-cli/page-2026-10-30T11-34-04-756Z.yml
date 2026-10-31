@@ -1,0 +1,133 @@
+- generic [ref=f7e3]:
+  - complementary [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - img "Kifer Saúde CRM" [ref=f7e7]:
+        - generic [ref=f7e8]: kifersaúde
+        - generic [ref=f7e9]: CRM
+      - navigation [ref=f7e10]:
+        - generic [ref=f7e11]:
+          - button "Dashboard" [ref=f7e12] [cursor=pointer]
+          - button "CRM" [ref=f7e21] [cursor=pointer]
+          - button "Comunicação" [ref=f7e31] [cursor=pointer]
+          - button "Financeiro" [ref=f7e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f7e49] [cursor=pointer]
+          - button "Configurações" [ref=f7e56] [cursor=pointer]
+      - generic [ref=f7e62]:
+        - button "Recolher" [ref=f7e63] [cursor=pointer]
+        - button "Notificações" [ref=f7e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f7e76] [cursor=pointer]:
+          - generic [ref=f7e79]: Escuro
+        - button "Sair" [ref=f7e80] [cursor=pointer]
+  - generic [ref=f7e85]:
+    - banner [ref=f7e86]:
+      - generic [ref=f7e87]:
+        - navigation "Breadcrumb" [ref=f7e88]:
+          - list [ref=f7e89]:
+            - listitem [ref=f7e90]:
+              - button "CRM" [ref=f7e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f7e92]
+            - listitem [ref=f7e95]: Configurações
+        - generic [ref=f7e96]:
+          - generic [ref=f7e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f7e98] [cursor=pointer]
+          - generic [ref=f7e102]: OD
+    - main [ref=f7e104]:
+      - generic [ref=f7e106]:
+        - generic [ref=f7e107]:
+          - generic [ref=f7e109]:
+            - paragraph [ref=f7e110]: Administração
+            - generic [ref=f7e112]:
+              - heading "Configurações gerais" [level=1] [ref=f7e557]
+              - button "Informações sobre Configurações gerais" [ref=f7e558]
+          - tablist "Áreas de configurações" [ref=f7e124]:
+            - tab "Geral" [active] [selected] [ref=f7e125] [cursor=pointer]
+            - tab "Usuários" [ref=f7e130] [cursor=pointer]
+            - tab "Links" [ref=f7e137] [cursor=pointer]
+            - tab "Formulários" [ref=f7e142] [cursor=pointer]
+        - main [ref=f7e147]:
+          - generic [ref=f7e560]:
+            - button "Restaurar padrões" [ref=f7e562] [cursor=pointer]
+            - generic [ref=f7e567]:
+              - generic [ref=f7e568]:
+                - generic [ref=f7e569]:
+                  - generic [ref=f7e577]:
+                    - heading "Localização e formato" [level=3] [ref=f7e578]
+                    - paragraph [ref=f7e579]: Escolha a forma de exibir datas e o horário de referência do sistema.
+                  - generic [ref=f7e580]:
+                    - generic [ref=f7e581]:
+                      - generic [ref=f7e582]: Formato de data
+                      - combobox [aria-hidden] [ref=f7e585]
+                      - button "Formato de data" [ref=f7e587] [cursor=pointer]:
+                        - generic [ref=f7e588]: DD/MM/YYYY
+                      - paragraph [ref=f7e591]: Usado nas datas exibidas no CRM.
+                    - generic [ref=f7e592]:
+                      - generic [ref=f7e593]: Fuso horário do sistema
+                      - combobox [aria-hidden] [ref=f7e596]
+                      - button "Fuso horário do sistema" [ref=f7e598] [cursor=pointer]:
+                        - generic [ref=f7e599]: São Paulo (UTC-3)
+                      - paragraph [ref=f7e602]: Referência para follow-ups com IA e outras rotinas locais.
+                - generic [ref=f7e603]:
+                  - generic [ref=f7e609]:
+                    - heading "Sessão e acesso" [level=3] [ref=f7e610]
+                    - paragraph [ref=f7e611]: Ajuste o período de sessão para este ambiente.
+                  - generic [ref=f7e612]:
+                    - generic [ref=f7e613]: Tempo de sessão (minutos)
+                    - spinbutton "Tempo de sessão (minutos)" [ref=f7e617]: "480"
+                    - paragraph [ref=f7e618]: "Padrão recomendado: 480 minutos (8 horas). Limite de 30 a 1.440 minutos."
+                - generic [ref=f7e619]:
+                  - generic [ref=f7e627]:
+                    - heading "Notificações" [level=3] [ref=f7e628]
+                    - paragraph [ref=f7e629]: Controle o som e a frequência de verificação.
+                  - generic [ref=f7e630]:
+                    - generic [ref=f7e637]:
+                      - paragraph [ref=f7e638]: Sons de notificação
+                      - paragraph [ref=f7e639]: Reproduzir um alerta sonoro quando houver notificações.
+                    - switch "Sons de notificação" [checked] [ref=f7e641]
+                  - generic [ref=f7e644]:
+                    - generic [ref=f7e645]:
+                      - generic [ref=f7e649]:
+                        - generic [ref=f7e650]: Volume das notificações
+                        - generic [ref=f7e651]: 70%
+                      - slider "Volume das notificações 70%" [ref=f7e653] [cursor=pointer]: "0.7"
+                      - paragraph [ref=f7e654]: Ajuste o volume do alerta sonoro; 0% é silencioso e 100% é o máximo.
+                    - generic [ref=f7e655]:
+                      - generic [ref=f7e656]: Intervalo de verificação (segundos)
+                      - spinbutton "Intervalo de verificação (segundos)" [ref=f7e664]: "30"
+                      - paragraph [ref=f7e665]: "Padrão recomendado: 30 segundos."
+              - generic [ref=f7e666]:
+                - heading "Estrutura e parametrização" [level=3] [ref=f7e667]
+                - paragraph [ref=f7e668]: Acesse os cadastros que alimentam os formulários e a operação do CRM.
+                - generic [ref=f7e669]:
+                  - button "Abrir perfis e acessos" [ref=f7e670] [cursor=pointer]:
+                    - generic [ref=f7e672]:
+                      - generic [ref=f7e673]: Perfis e acessos
+                      - generic [ref=f7e674]: Permissões por área do CRM
+                  - button "Abrir etapas do funil" [ref=f7e678] [cursor=pointer]:
+                    - generic [ref=f7e679]:
+                      - generic [ref=f7e680]:
+                        - generic [ref=f7e681]: Etapas do funil
+                        - generic [ref=f7e682]: Nome, cor e etapa inicial dos leads
+                      - generic [ref=f7e683]: "0"
+                  - button "Abrir origens dos leads" [ref=f7e687] [cursor=pointer]:
+                    - generic [ref=f7e688]:
+                      - generic [ref=f7e689]:
+                        - generic [ref=f7e690]: Origens dos leads
+                        - generic [ref=f7e691]: Canais de entrada e visibilidade
+                      - generic [ref=f7e692]: "0"
+                  - button "Abrir responsáveis pelos leads" [ref=f7e696] [cursor=pointer]:
+                    - generic [ref=f7e697]:
+                      - generic [ref=f7e698]:
+                        - generic [ref=f7e699]: Responsáveis pelos leads
+                        - generic [ref=f7e700]: Equipe disponível para atribuição
+                      - generic [ref=f7e701]: "0"
+                  - button "Abrir configurações de contratos" [ref=f7e705] [cursor=pointer]:
+                    - generic [ref=f7e706]:
+                      - generic [ref=f7e707]:
+                        - generic [ref=f7e708]: Regras de contratos
+                        - generic [ref=f7e709]: Status, modalidade e condições
+                      - generic [ref=f7e710]: "0"
+            - generic [ref=f7e714]:
+              - generic [ref=f7e715]:
+                - generic [ref=f7e716]: Salvo
+                - paragraph [ref=f7e717]: Suas preferências estão atualizadas.
+              - button "Salvar preferências" [disabled] [ref=f7e718]

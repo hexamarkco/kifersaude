@@ -1,0 +1,175 @@
+- generic [ref=f7e3]:
+  - complementary [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - img "Kifer Saúde CRM" [ref=f7e7]:
+        - generic [ref=f7e8]: kifersaúde
+        - generic [ref=f7e9]: CRM
+      - navigation [ref=f7e10]:
+        - generic [ref=f7e11]:
+          - button "Dashboard" [ref=f7e12] [cursor=pointer]
+          - button "CRM" [ref=f7e21] [cursor=pointer]
+          - button "Comunicação" [ref=f7e31] [cursor=pointer]
+          - button "Financeiro" [ref=f7e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f7e49] [cursor=pointer]
+          - button "Configurações" [ref=f7e56] [cursor=pointer]
+  - generic [ref=f7e64]:
+    - banner [ref=f7e65]:
+      - generic [ref=f7e66]:
+        - navigation "Breadcrumb" [ref=f7e67]:
+          - list [ref=f7e68]:
+            - listitem [ref=f7e69]:
+              - button "CRM" [ref=f7e70] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f7e71]
+            - listitem [ref=f7e74]: Automações e IA
+        - generic [ref=f7e75]:
+          - generic [ref=f7e76]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f7e77] [cursor=pointer]
+          - generic [ref=f7e81]: OD
+    - main [ref=f7e83]:
+      - generic [ref=f7e85]:
+        - generic [ref=f7e86]:
+          - generic [ref=f7e88]:
+            - paragraph [ref=f7e89]: Administração
+            - generic [ref=f7e91]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f7e92]
+              - button "Informações sobre Automações, integrações e IA" [ref=f7e94]
+          - tablist "Áreas de automações e IA" [ref=f7e99]:
+            - tab "Automações" [ref=f7e100] [cursor=pointer]
+            - tab "Integrações" [ref=f7e102] [cursor=pointer]
+            - tab "IA" [selected] [ref=f7e104] [cursor=pointer]
+        - main [ref=f7e106]:
+          - generic [ref=f7e107]:
+            - generic [ref=f7e108]:
+              - generic [ref=f7e109]:
+                - generic [ref=f7e110]:
+                  - heading "Inteligência artificial" [level=2] [ref=f7e112]
+                  - paragraph [ref=f7e113]: Controle central de recursos e políticas.
+                - group "Ações da página" [ref=f7e116]:
+                  - button "Exportar" [ref=f7e117] [cursor=pointer]
+                  - button "Importar" [ref=f7e122] [cursor=pointer]
+                  - button "Atualizar" [ref=f7e127] [cursor=pointer]
+              - generic [ref=f7e134]: Recursos de IA devem ter permissões e limites operacionais claros.
+              - list "Resumo das configurações de IA" [ref=f7e137]:
+                - listitem [ref=f7e138]:
+                  - generic [ref=f7e139]:
+                    - paragraph [ref=f7e140]: Assistência em mensagens
+                    - paragraph [ref=f7e141]: Sugestões e reescrita de atendimento.
+                  - generic [ref=f7e142]: Ativa
+                - listitem [ref=f7e143]:
+                  - generic [ref=f7e144]:
+                    - paragraph [ref=f7e145]: Qualificação de leads
+                    - paragraph [ref=f7e146]: Contexto para acompanhamento comercial.
+                  - generic [ref=f7e147]: Parcial
+                - listitem [ref=f7e148]:
+                  - generic [ref=f7e149]:
+                    - paragraph [ref=f7e150]: Modelos de execução
+                    - paragraph [ref=f7e151]: Configuração de modelo por funcionalidade.
+                  - generic [ref=f7e152]: 5 personalizados
+            - tablist "Áreas das configurações de IA" [ref=f7e154]:
+              - tab "Funcionalidades" [selected] [ref=f7e155] [cursor=pointer]
+              - tab "Configurações globais" [ref=f7e157] [cursor=pointer]
+            - generic [ref=f7e159]:
+              - generic [ref=f7e161]:
+                - generic [ref=f7e162]:
+                  - heading "Opções de IA" [level=3] [ref=f7e164]
+                  - paragraph [ref=f7e165]: Ative recursos e mantenha os prompts organizados por área.
+                - searchbox "Buscar funcionalidade de IA" [ref=f7e168]
+              - generic [ref=f7e169]:
+                - region "Mensagens" [ref=f7e170]:
+                  - generic [ref=f7e171]:
+                    - heading "Mensagens" [level=3] [ref=f7e172]
+                    - generic [ref=f7e173]: "2"
+                  - generic [ref=f7e174]:
+                    - generic [ref=f7e175]:
+                      - generic [ref=f7e176]:
+                        - generic [ref=f7e177]:
+                          - generic [ref=f7e178]: Reescrita de Mensagem
+                          - generic [ref=f7e179]: v2
+                        - paragraph [ref=f7e180]: Sugere versões mais claras antes do envio.
+                      - generic [ref=f7e181]:
+                        - generic [ref=f7e182]: Ativa
+                        - group "Ações para Reescrita de Mensagem" [ref=f7e183]:
+                          - button "Configurar Reescrita de Mensagem" [ref=f7e184] [cursor=pointer]
+                          - button "Desativar Reescrita de Mensagem" [ref=f7e189] [cursor=pointer]
+                    - generic [ref=f7e195]:
+                      - generic [ref=f7e196]:
+                        - generic [ref=f7e197]:
+                          - generic [ref=f7e198]: Sugestão de Resposta
+                          - generic [ref=f7e199]: v2
+                        - paragraph [ref=f7e200]: Sugere respostas a partir do contexto da conversa.
+                      - generic [ref=f7e201]:
+                        - generic [ref=f7e202]: Ativa
+                        - group "Ações para Sugestão de Resposta" [ref=f7e203]:
+                          - button "Configurar Sugestão de Resposta" [ref=f7e204] [cursor=pointer]
+                          - button "Desativar Sugestão de Resposta" [ref=f7e209] [cursor=pointer]
+                - region "Transcrição" [ref=f7e215]:
+                  - generic [ref=f7e216]:
+                    - heading "Transcrição" [level=3] [ref=f7e217]
+                    - generic [ref=f7e218]: "1"
+                  - generic [ref=f7e220]:
+                    - generic [ref=f7e221]:
+                      - generic [ref=f7e222]:
+                        - generic [ref=f7e223]: Transcrição de Áudio
+                        - generic [ref=f7e224]: v2
+                      - paragraph [ref=f7e225]: Converte áudios recebidos em texto.
+                    - generic [ref=f7e226]:
+                      - generic [ref=f7e227]: Ativa
+                      - group "Ações para Transcrição de Áudio" [ref=f7e228]:
+                        - button "Configurar Transcrição de Áudio" [ref=f7e229] [cursor=pointer]
+                        - button "Desativar Transcrição de Áudio" [ref=f7e234] [cursor=pointer]
+                - region "Campanha" [ref=f7e240]:
+                  - generic [ref=f7e241]:
+                    - heading "Campanha" [level=3] [ref=f7e242]
+                    - generic [ref=f7e243]: "1"
+                  - generic [ref=f7e245]:
+                    - generic [ref=f7e246]:
+                      - generic [ref=f7e247]:
+                        - generic [ref=f7e248]: Classificação de Intenção
+                        - generic [ref=f7e249]: v2
+                      - paragraph [ref=f7e250]: Identifica o interesse demonstrado na conversa.
+                    - generic [ref=f7e251]:
+                      - generic [ref=f7e252]: Ativa
+                      - group "Ações para Classificação de Intenção" [ref=f7e253]:
+                        - button "Configurar Classificação de Intenção" [ref=f7e254] [cursor=pointer]
+                        - button "Desativar Classificação de Intenção" [ref=f7e259] [cursor=pointer]
+                - region "Follow-up" [ref=f7e265]:
+                  - generic [ref=f7e266]:
+                    - heading "Follow-up" [level=3] [ref=f7e267]
+                    - generic [ref=f7e268]: "1"
+                  - generic [ref=f7e270]:
+                    - generic [ref=f7e271]:
+                      - generic [ref=f7e272]:
+                        - generic [ref=f7e273]: Gerar Follow-up
+                        - generic [ref=f7e274]: v1
+                      - paragraph [ref=f7e275]: Prepara uma sugestão de acompanhamento comercial.
+                    - generic [ref=f7e276]:
+                      - generic [ref=f7e277]: Inativa
+                      - group "Ações para Gerar Follow-up" [ref=f7e278]:
+                        - button "Configurar Gerar Follow-up" [ref=f7e279] [cursor=pointer]
+                        - button "Ativar Gerar Follow-up" [ref=f7e284] [cursor=pointer]
+                - region "Atendimento Autônomo" [ref=f7e288]:
+                  - generic [ref=f7e289]:
+                    - heading "Atendimento Autônomo" [level=3] [ref=f7e290]
+                    - generic [ref=f7e291]: "1"
+                  - generic [ref=f7e293]:
+                    - generic [ref=f7e294]:
+                      - generic [ref=f7e295]:
+                        - generic [ref=f7e296]: Resposta Autônoma
+                        - generic [ref=f7e297]: v2
+                      - paragraph [ref=f7e298]: Responde somente quando a automação autorizada estiver ativa.
+                    - generic [ref=f7e299]:
+                      - generic [ref=f7e300]: Ativa
+                      - group "Ações para Resposta Autônoma" [ref=f7e301]:
+                        - button "Configurar Resposta Autônoma" [ref=f7e302] [cursor=pointer]
+                        - button "Desativar Resposta Autônoma" [ref=f7e307] [cursor=pointer]
+                - region "Legadas" [ref=f7e313]:
+                  - generic [ref=f7e314]:
+                    - heading "Legadas" [level=3] [ref=f7e315]
+                    - generic [ref=f7e316]: "1"
+                  - generic [ref=f7e318]:
+                    - generic [ref=f7e319]:
+                      - generic [ref=f7e320]:
+                        - generic [ref=f7e321]: Leitura de Documentos de Contrato
+                        - generic [ref=f7e322]: v2
+                      - paragraph [ref=f7e323]: Extrai dados de documentos enviados à operação.
+                    - generic [ref=f7e324]: Legada

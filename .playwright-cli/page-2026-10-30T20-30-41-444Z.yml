@@ -1,0 +1,143 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "Kifer Saúde CRM" [ref=e7]:
+        - generic [ref=e8]: kifersaúde
+        - generic [ref=e9]: CRM
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "CRM" [ref=e21] [cursor=pointer]
+          - button "Comunicação" [ref=e31] [cursor=pointer]
+          - button "Financeiro" [ref=e40] [cursor=pointer]
+          - button "Automações e IA" [ref=e49] [cursor=pointer]
+          - button "Configurações" [ref=e56] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Recolher" [ref=e63] [cursor=pointer]
+        - button "Notificações" [ref=e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=e76] [cursor=pointer]:
+          - generic [ref=e79]: Escuro
+        - button "Sair" [ref=e80] [cursor=pointer]
+  - generic [ref=e85]:
+    - banner [ref=e86]:
+      - generic [ref=e87]:
+        - navigation "Breadcrumb" [ref=e88]:
+          - list [ref=e89]:
+            - listitem [ref=e90]:
+              - button "CRM" [ref=e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=e92]
+            - listitem [ref=e95]: Automações e IA
+        - generic [ref=e96]:
+          - generic [ref=e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=e98] [cursor=pointer]
+          - generic [ref=e102]: OD
+    - main [ref=e104]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Administração
+            - generic [ref=e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=e115]
+          - tablist "Áreas de automações e IA" [ref=e120]:
+            - tab "Automações" [selected] [ref=e121] [cursor=pointer]
+            - tab "Integrações" [ref=e123] [cursor=pointer]
+            - tab "IA" [ref=e125] [cursor=pointer]
+        - main [ref=e127]:
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - tablist [ref=e132]:
+                - tab "Fluxos" [ref=e133] [cursor=pointer]
+                - tab "Templates" [ref=e135] [cursor=pointer]
+                - tab "Operação" [active] [selected] [ref=e137] [cursor=pointer]
+              - status [ref=e140]: Autosave ativo
+            - region [ref=e354]:
+              - generic [ref=e355]:
+                - generic [ref=e356]:
+                  - generic [ref=e361]:
+                    - paragraph [ref=e362]: Resumo operacional
+                    - generic [ref=e363]:
+                      - heading "Visão geral da operação" [level=3] [ref=e364]
+                      - button "Informações sobre o resumo operacional" [ref=e366]
+                  - generic [ref=e369]:
+                    - generic [ref=e370]: Envios automáticos ativos
+                    - generic [ref=e374]: Autosave ativo
+                - generic [ref=e379]:
+                  - generic [ref=e384]:
+                    - generic [ref=e385]: "8"
+                    - generic [ref=e386]: fluxos
+                  - generic [ref=e392]:
+                    - generic [ref=e393]: "24"
+                    - generic [ref=e394]: etapas
+                  - generic [ref=e400]:
+                    - generic [ref=e401]: "8"
+                    - generic [ref=e402]: com tags
+                  - generic [ref=e407]:
+                    - generic [ref=e408]: 17:30
+                    - generic [ref=e409]: última atualização
+                  - generic [ref=e419]:
+                    - generic [ref=e420]: "46"
+                    - generic [ref=e421]: envios hoje
+              - region [ref=e422]:
+                - generic [ref=e423]:
+                  - paragraph [ref=e424]: Preferências da operação
+                  - generic [ref=e425]:
+                    - heading "Configurações globais" [level=3] [ref=e426]
+                    - button "Informações sobre as configurações globais" [ref=e428]
+                - generic [ref=e431]:
+                  - generic [ref=e432]:
+                    - generic [ref=e438]:
+                      - heading "Envio automático" [level=4] [ref=e439]
+                      - button "Informações sobre o processamento dos fluxos" [ref=e441]
+                    - generic [ref=e444]:
+                      - generic [ref=e445]:
+                        - paragraph [ref=e446]: Ativar automação
+                        - paragraph [ref=e447]: A alteração é salva automaticamente.
+                      - switch "Ativar envio automático dos fluxos" [checked] [ref=e449]
+                  - generic [ref=e452]:
+                    - generic [ref=e462]:
+                      - heading "Agendamento avançado" [level=4] [ref=e463]
+                      - button "Informações sobre o calendário operacional" [ref=e465]
+                    - generic [ref=e468]:
+                      - generic [ref=e469]:
+                        - generic [ref=e470]: Fuso horário
+                        - button "São Paulo (UTC-3)" [ref=e472] [cursor=pointer]
+                      - generic [ref=e482]:
+                        - generic [ref=e483]:
+                          - paragraph [ref=e484]: Pausar em feriados
+                          - paragraph [ref=e485]: Feriados oficiais e datas extras.
+                        - switch "Pausar envios em feriados nacionais e estaduais" [checked] [ref=e487]
+                    - paragraph [ref=e490]: A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.
+              - generic [ref=e491]:
+                - generic [ref=e497]:
+                  - heading "Observabilidade e auditoria" [level=4] [ref=e498]
+                  - button "Informações sobre observabilidade e auditoria" [ref=e500]
+                - generic [ref=e503]:
+                  - region [ref=e504]:
+                    - generic [ref=e505]:
+                      - generic [ref=e507]:
+                        - heading "Monitoramento em tempo real" [level=5] [ref=e508]
+                        - button "Informações sobre o monitoramento em tempo real" [ref=e510]
+                      - switch "Ativar monitoramento em tempo real" [checked] [ref=e514]
+                    - generic [ref=e517]:
+                      - generic [ref=e518]:
+                        - generic [ref=e519]: Atualização (segundos)
+                        - spinbutton "Intervalo de atualização em segundos" [ref=e521]: "30"
+                      - generic [ref=e522]:
+                        - generic [ref=e523]: Última atualização
+                        - status [ref=e524]: 17:30
+                  - region [ref=e525]:
+                    - generic [ref=e526]:
+                      - generic [ref=e528]:
+                        - heading "Histórico de atividades" [level=5] [ref=e529]
+                        - button "Informações sobre o histórico de atividades" [ref=e531]
+                      - switch "Ativar histórico de atividades" [checked] [ref=e535]
+                    - generic [ref=e538]:
+                      - generic [ref=e539]:
+                        - generic [ref=e540]: Retenção (dias)
+                        - spinbutton "Dias para guardar o histórico" [ref=e542]: "30"
+                      - generic [ref=e544]:
+                        - generic [ref=e545]:
+                          - switch "Salvar conteúdo completo no histórico" [ref=e547]
+                          - generic [ref=e550] [cursor=pointer]: Salvar conteúdo completo
+                        - paragraph [ref=e551]: Inclui o conteúdo integral dos eventos.

@@ -1,0 +1,5 @@
+- generic [ref=f7e4]:
+  - heading "Gestão de contratos" [level=1] [ref=f7e5]
+  - paragraph [ref=f7e6]: Base sintética para revisar o diálogo de importação sem dados do CRM.
+  - status [ref=f7e76]: JSON aplicado ao formulário local de prévia.
+  - button "Abrir importação de arquivo" [ref=f7e77] [cursor=pointer]

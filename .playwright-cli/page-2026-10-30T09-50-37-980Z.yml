@@ -1,0 +1,194 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - navigation "Navegação principal" [ref=f3e214]:
+      - button "Início" [ref=f3e215] [cursor=pointer]
+      - button "Leads" [ref=f3e222] [cursor=pointer]
+      - button "WhatsApp" [ref=f3e229] [cursor=pointer]
+      - button "Contratos" [ref=f3e233] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f3e238] [cursor=pointer]:
+        - generic [ref=f3e240]: Mais
+    - generic [ref=f3e85]:
+      - banner [ref=f3e86]:
+        - generic [ref=f3e241]:
+          - img "Kifer Saúde" [ref=f3e242]:
+            - generic [ref=f3e243]: kifersaúde
+          - generic [ref=f3e244]:
+            - button "Abrir menu" [ref=f3e245] [cursor=pointer]
+            - generic [ref=f3e248]: O
+      - main [ref=f3e104]:
+        - generic [ref=f3e106]:
+          - generic [ref=f3e108]:
+            - generic [ref=f3e109]:
+              - paragraph [ref=f3e110]: Kifer Saúde · Inteligência artificial
+              - heading "Chat e testes de IA" [level=1] [ref=f3e113]
+              - paragraph [ref=f3e114]: Valide o atendimento automatizado em uma simulação controlada. As mensagens desta tela não são enviadas a clientes.
+            - button "Nova simulação" [ref=f3e116] [cursor=pointer]
+          - generic [ref=f3e120]:
+            - generic [ref=f3e121]:
+              - generic [ref=f3e122]:
+                - generic [ref=f3e124]:
+                  - heading "Simulação de atendimento" [level=3] [ref=f3e126]
+                  - paragraph [ref=f3e127]: Converse como lead para testar o fluxo configurado.
+                - button "Histórico" [ref=f3e129] [cursor=pointer]
+              - log "Mensagens da simulação" [ref=f3e134]:
+                - generic [ref=f3e135]:
+                  - paragraph [ref=f3e139]: Comece uma simulação
+                  - paragraph [ref=f3e140]: Envie uma mensagem como se fosse o lead ou peça para a IA iniciar a conversa.
+              - generic [ref=f3e141]:
+                - generic [ref=f3e142]: Mensagem de teste
+                - textbox "Mensagem de teste" [ref=f3e143]:
+                  - /placeholder: Digite como se fosse o lead...
+                - button "Enviar" [disabled] [ref=f3e144]
+            - generic [ref=f3e149]:
+              - generic [ref=f3e150]:
+                - generic [ref=f3e152]:
+                  - heading "Cenário de teste" [level=3] [ref=f3e154]
+                  - paragraph [ref=f3e155]: Acompanhe o contexto e o resultado desta simulação.
+                - generic [ref=f3e156]: Ambiente isolado
+              - generic [ref=f3e158]:
+                - generic [ref=f3e159]:
+                  - generic [ref=f3e160]:
+                    - paragraph [ref=f3e161]: Conversa atual
+                    - paragraph [ref=f3e162]: Nenhuma selecionada
+                  - generic [ref=f3e163]: Aguardando
+                - generic [ref=f3e164]:
+                  - generic [ref=f3e165]:
+                    - paragraph [ref=f3e166]: Avaliação mais recente
+                    - paragraph [ref=f3e167]: Nenhum teste nesta conversa
+                  - generic [ref=f3e168]: Ainda não executado
+                - generic [ref=f3e169]:
+                  - generic [ref=f3e170]:
+                    - paragraph [ref=f3e171]: Uso
+                    - paragraph [ref=f3e172]: Mensagens não são enviadas a clientes.
+                  - generic [ref=f3e173]: Simulação
+              - generic [ref=f3e174]:
+                - paragraph [ref=f3e178]: Nenhum cenário executado
+                - paragraph [ref=f3e179]: Escolha um cenário para avaliar as respostas e receber sugestões de melhoria.
+              - generic [ref=f3e180]:
+                - button "Escolher cenário" [ref=f3e181] [cursor=pointer]
+                - generic [ref=f3e185]:
+                  - paragraph [ref=f3e186]: Ou deixe a IA iniciar a conversa
+                  - textbox "Nome do lead para iniciar a abordagem" [ref=f3e188]:
+                    - /placeholder: Nome do lead (opcional)
+                  - button "Iniciar abordagem" [ref=f3e189] [cursor=pointer]
+  - dialog "Cenários de teste" [ref=f3e253]:
+    - generic [ref=f3e254]:
+      - generic [ref=f3e256]:
+        - heading "Cenários de teste" [level=2] [ref=f3e257]
+        - paragraph [ref=f3e258]: Use uma conversa simulada para validar o atendimento sem contatar clientes.
+      - button "Fechar" [active] [ref=f3e259] [cursor=pointer]
+    - generic [ref=f3e263]:
+      - textbox "Buscar cenários de teste" [ref=f3e265]:
+        - /placeholder: Buscar cenário...
+      - generic [ref=f3e266]:
+        - region "Qualificação" [ref=f3e267]:
+          - paragraph [ref=f3e268]: Qualificação
+          - generic [ref=f3e269]:
+            - button "Dados todos de uma vez" [ref=f3e270] [cursor=pointer]
+            - button "CNPJ com número" [ref=f3e275] [cursor=pointer]
+            - button "Sem plano atual" [ref=f3e280] [cursor=pointer]
+            - button "Plano não identificado" [ref=f3e285] [cursor=pointer]
+            - button "Plano + CNPJ incompleto" [ref=f3e290] [cursor=pointer]
+        - region "Beneficiários" [ref=f3e295]:
+          - paragraph [ref=f3e296]: Beneficiários
+          - generic [ref=f3e297]:
+            - button "Casal" [ref=f3e298] [cursor=pointer]
+            - button "Família 3 pessoas" [ref=f3e303] [cursor=pointer]
+            - button "Só criança <12" [ref=f3e308] [cursor=pointer]
+            - button "Criança + adulto" [ref=f3e313] [cursor=pointer]
+            - button "Idosos 70+" [ref=f3e318] [cursor=pointer]
+            - button "6 beneficiários" [ref=f3e323] [cursor=pointer]
+            - button "Mãe + 2 filhos" [ref=f3e328] [cursor=pointer]
+        - region "CNPJ / MEI" [ref=f3e333]:
+          - paragraph [ref=f3e334]: CNPJ / MEI
+          - generic [ref=f3e335]:
+            - button "MEI <6 meses" [ref=f3e336] [cursor=pointer]
+            - button "MEI >6 meses" [ref=f3e341] [cursor=pointer]
+            - button "CNPJ não-MEI" [ref=f3e346] [cursor=pointer]
+            - button "Sem CNPJ" [ref=f3e351] [cursor=pointer]
+            - button "Recusa número CNPJ" [ref=f3e356] [cursor=pointer]
+            - button "Não sabe se é MEI" [ref=f3e361] [cursor=pointer]
+        - region "Plano atual" [ref=f3e366]:
+          - paragraph [ref=f3e367]: Plano atual
+          - generic [ref=f3e368]:
+            - button "Já tem plano" [ref=f3e369] [cursor=pointer]
+            - button "Não sabe qual plano" [ref=f3e374] [cursor=pointer]
+            - button "Já informou espontaneamente" [ref=f3e379] [cursor=pointer]
+            - button "Plano cancelado" [ref=f3e384] [cursor=pointer]
+        - region "Bairro / Cidade" [ref=f3e389]:
+          - paragraph [ref=f3e390]: Bairro / Cidade
+          - generic [ref=f3e391]:
+            - button "Rio capital (bairro ok)" [ref=f3e392] [cursor=pointer]
+            - button "Niteroi (sem bairro)" [ref=f3e397] [cursor=pointer]
+            - button "Rio das Ostras" [ref=f3e402] [cursor=pointer]
+            - button "Itaguai" [ref=f3e407] [cursor=pointer]
+            - button "Volta Redonda" [ref=f3e412] [cursor=pointer]
+        - region "Valores / Desconto" [ref=f3e417]:
+          - paragraph [ref=f3e418]: Valores / Desconto
+          - generic [ref=f3e419]:
+            - button "Pergunta valor cedo" [ref=f3e420] [cursor=pointer]
+            - button "Pede desconto" [ref=f3e425] [cursor=pointer]
+            - button "Valor com dados incompletos" [ref=f3e430] [cursor=pointer]
+            - button "Comparar com concorrência" [ref=f3e435] [cursor=pointer]
+        - region "Objeções / Reclamações" [ref=f3e440]:
+          - paragraph [ref=f3e441]: Objeções / Reclamações
+          - generic [ref=f3e442]:
+            - button "Quer cancelar" [ref=f3e443] [cursor=pointer]
+            - button "Reclama do plano" [ref=f3e448] [cursor=pointer]
+            - button "Lead não responde" [ref=f3e453] [cursor=pointer]
+            - button "Cobertura insuficiente" [ref=f3e458] [cursor=pointer]
+        - region "Fora de escopo" [ref=f3e463]:
+          - paragraph [ref=f3e464]: Fora de escopo
+          - generic [ref=f3e465]:
+            - button "Seguro de vida" [ref=f3e466] [cursor=pointer]
+            - button "Seguro auto" [ref=f3e471] [cursor=pointer]
+            - button "Consórcio" [ref=f3e476] [cursor=pointer]
+            - button "Contabilidade" [ref=f3e481] [cursor=pointer]
+            - button "Plano pet" [ref=f3e486] [cursor=pointer]
+        - region "Transferência para atendente" [ref=f3e491]:
+          - paragraph [ref=f3e492]: Transferência para atendente
+          - generic [ref=f3e493]:
+            - button "Situação complexa" [ref=f3e494] [cursor=pointer]
+            - button "Recusa cotação + cancelamento" [ref=f3e499] [cursor=pointer]
+            - button "CNPJ tipo indefinido" [ref=f3e504] [cursor=pointer]
+        - region "Manipulação" [ref=f3e509]:
+          - paragraph [ref=f3e510]: Manipulação
+          - generic [ref=f3e511]:
+            - button "Ignore instruções" [ref=f3e512] [cursor=pointer]
+            - button "Pedido para revelar instruções internas" [ref=f3e517] [cursor=pointer]
+            - button "Finge ser admin" [ref=f3e522] [cursor=pointer]
+            - button "Muda de persona" [ref=f3e527] [cursor=pointer]
+            - button "Tentativa de alterar instruções por código" [ref=f3e532] [cursor=pointer]
+        - region "Estilo / Tom" [ref=f3e537]:
+          - paragraph [ref=f3e538]: Estilo / Tom
+          - generic [ref=f3e539]:
+            - button "Resposta longa" [ref=f3e540] [cursor=pointer]
+            - button "Resposta curta" [ref=f3e545] [cursor=pointer]
+            - button "Linguagem informal" [ref=f3e550] [cursor=pointer]
+            - button "Emoji excessivo" [ref=f3e555] [cursor=pointer]
+        - region "Crianças <12" [ref=f3e560]:
+          - paragraph [ref=f3e561]: Crianças <12
+          - generic [ref=f3e562]:
+            - button "Só criança" [ref=f3e563] [cursor=pointer]
+            - button "Criança + mãe" [ref=f3e568] [cursor=pointer]
+            - button "2 crianças" [ref=f3e573] [cursor=pointer]
+            - button "Criança = 12 anos" [ref=f3e578] [cursor=pointer]
+            - button "Sem adulto disponível" [ref=f3e583] [cursor=pointer]
+        - region "Carencia / ANS" [ref=f3e588]:
+          - paragraph [ref=f3e589]: Carencia / ANS
+          - generic [ref=f3e590]:
+            - button "Carencia parto" [ref=f3e591] [cursor=pointer]
+            - button "Doença preexistente" [ref=f3e596] [cursor=pointer]
+            - button "Parto + plano anterior" [ref=f3e601] [cursor=pointer]
+        - region "Operadora atual" [ref=f3e606]:
+          - paragraph [ref=f3e607]: Operadora atual
+          - generic [ref=f3e608]:
+            - button "Amil" [ref=f3e609] [cursor=pointer]
+            - button "Unimed" [ref=f3e614] [cursor=pointer]
+            - button "Bradesco" [ref=f3e619] [cursor=pointer]
+            - button "SulAmerica" [ref=f3e624] [cursor=pointer]
+        - region "Abordagem (AI inicia)" [ref=f3e629]:
+          - paragraph [ref=f3e630]: Abordagem (AI inicia)
+          - generic [ref=f3e631]:
+            - button "Lead com nome" [ref=f3e632] [cursor=pointer]
+            - button "Lead sem nome" [ref=f3e637] [cursor=pointer]

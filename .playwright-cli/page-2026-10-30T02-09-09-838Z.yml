@@ -1,0 +1,148 @@
+- generic [ref=f16e5]:
+  - banner [ref=f16e6]:
+    - generic [ref=f16e7]:
+      - generic [ref=f16e8]:
+        - paragraph [ref=f16e9]: Configurações
+        - heading "Links públicos" [level=1] [ref=f16e12]
+        - paragraph [ref=f16e13]: Gerencie o perfil público e os links exibidos em /links.
+      - group "Ações da página" [ref=f16e16]:
+        - button "Novo link" [ref=f16e17] [cursor=pointer]
+  - group [ref=f16e20]:
+    - generic "Editar perfil público · Publicado" [ref=f16e21] [cursor=pointer]
+    - generic [ref=f16e29] [cursor=pointer]: Salvar perfil
+  - generic [ref=f16e30]:
+    - generic [ref=f16e32]:
+      - generic [ref=f16e33]:
+        - heading "Links cadastrados" [level=3] [ref=f16e34]
+        - button "Informações sobre a lista de links" [ref=f16e36]
+      - paragraph [ref=f16e39]: A ordem define como os links aparecem na página pública.
+    - searchbox "Buscar links públicos por nome ou endereço" [ref=f16e43]
+    - generic [ref=f16e46]:
+      - generic [ref=f16e47]:
+        - generic [ref=f16e48]:
+          - group "Ordenar Formulário de cotação" [ref=f16e49]:
+            - button "Mover Formulário de cotação para cima" [disabled] [ref=f16e50]
+            - button "Mover Formulário de cotação para baixo" [ref=f16e54] [cursor=pointer]
+          - generic [ref=f16e62]:
+            - paragraph [ref=f16e63]: Formulário de cotação
+            - paragraph [ref=f16e64]: https://kifersaude.com.br/forms/demonstracao
+            - paragraph [ref=f16e65]: Ativo · 8 cliques
+        - generic [ref=f16e66]:
+          - generic [ref=f16e67]:
+            - switch "Ativo" [checked] [ref=f16e69]
+            - generic [ref=f16e72] [cursor=pointer]: Ativo
+          - group "Ações de Formulário de cotação" [ref=f16e73]:
+            - button "Editar Formulário de cotação" [ref=f16e74] [cursor=pointer]
+            - button "Mais ações de formulário de cotação" [ref=f16e80] [cursor=pointer]
+      - generic [ref=f16e86]:
+        - generic [ref=f16e87]:
+          - group "Ordenar Canal WhatsApp" [ref=f16e88]:
+            - button "Mover Canal WhatsApp para cima" [ref=f16e89] [cursor=pointer]
+            - button "Mover Canal WhatsApp para baixo" [ref=f16e93] [cursor=pointer]
+          - generic [ref=f16e101]:
+            - paragraph [ref=f16e102]: Canal WhatsApp
+            - paragraph [ref=f16e103]: https://wa.me/5521999999999
+            - paragraph [ref=f16e104]: Ativo · 42 cliques
+        - generic [ref=f16e105]:
+          - generic [ref=f16e106]:
+            - switch "Ativo" [checked] [ref=f16e108]
+            - generic [ref=f16e111] [cursor=pointer]: Ativo
+          - group "Ações de Canal WhatsApp" [ref=f16e112]:
+            - button "Editar Canal WhatsApp" [ref=f16e113] [cursor=pointer]
+            - button "Mais ações de canal whatsapp" [ref=f16e119] [cursor=pointer]
+      - generic [ref=f16e125]:
+        - generic [ref=f16e126]:
+          - group "Ordenar Página de atendimento" [ref=f16e127]:
+            - button "Mover Página de atendimento para cima" [ref=f16e128] [cursor=pointer]
+            - button "Mover Página de atendimento para baixo" [ref=f16e132] [cursor=pointer]
+          - generic [ref=f16e140]:
+            - paragraph [ref=f16e141]: Página de atendimento
+            - paragraph [ref=f16e142]: https://kifersaude.com.br/links/atendimento
+            - paragraph [ref=f16e143]: Ativo · 21 cliques
+        - generic [ref=f16e144]:
+          - generic [ref=f16e145]:
+            - switch "Ativo" [checked] [ref=f16e147]
+            - generic [ref=f16e150] [cursor=pointer]: Ativo
+          - group "Ações de Página de atendimento" [ref=f16e151]:
+            - button "Editar Página de atendimento" [ref=f16e152] [cursor=pointer]
+            - button "Mais ações de página de atendimento" [ref=f16e158] [cursor=pointer]
+      - generic [ref=f16e164]:
+        - generic [ref=f16e165]:
+          - group "Ordenar Site Kifer Saúde" [ref=f16e166]:
+            - button "Mover Site Kifer Saúde para cima" [ref=f16e167] [cursor=pointer]
+            - button "Mover Site Kifer Saúde para baixo" [ref=f16e171] [cursor=pointer]
+          - generic [ref=f16e179]:
+            - paragraph [ref=f16e180]: Site Kifer Saúde
+            - paragraph [ref=f16e181]: https://kifersaude.com.br
+            - paragraph [ref=f16e182]: Inativo · 13 cliques
+        - generic [ref=f16e183]:
+          - generic [ref=f16e184]:
+            - switch "Inativo" [ref=f16e186]
+            - generic [ref=f16e189] [cursor=pointer]: Inativo
+          - group "Ações de Site Kifer Saúde" [ref=f16e190]:
+            - button "Editar Site Kifer Saúde" [ref=f16e191] [cursor=pointer]
+            - button "Mais ações de site kifer saúde" [ref=f16e197] [cursor=pointer]
+      - generic [ref=f16e203]:
+        - generic [ref=f16e204]:
+          - group "Ordenar Instagram" [ref=f16e205]:
+            - button "Mover Instagram para cima" [ref=f16e206] [cursor=pointer]
+            - button "Mover Instagram para baixo" [ref=f16e210] [cursor=pointer]
+          - generic [ref=f16e218]:
+            - paragraph [ref=f16e219]: Instagram
+            - paragraph [ref=f16e220]: https://instagram.com/kifersaude
+            - paragraph [ref=f16e221]: Ativo · 18 cliques
+        - generic [ref=f16e222]:
+          - generic [ref=f16e223]:
+            - switch "Ativo" [checked] [ref=f16e225]
+            - generic [ref=f16e228] [cursor=pointer]: Ativo
+          - group "Ações de Instagram" [ref=f16e229]:
+            - button "Editar Instagram" [ref=f16e230] [cursor=pointer]
+            - button "Mais ações de instagram" [ref=f16e236] [cursor=pointer]
+      - generic [ref=f16e242]:
+        - generic [ref=f16e243]:
+          - group "Ordenar Facebook" [ref=f16e244]:
+            - button "Mover Facebook para cima" [ref=f16e245] [cursor=pointer]
+            - button "Mover Facebook para baixo" [ref=f16e249] [cursor=pointer]
+          - generic [ref=f16e256]:
+            - paragraph [ref=f16e257]: Facebook
+            - paragraph [ref=f16e258]: https://facebook.com/kifersaude
+            - paragraph [ref=f16e259]: Ativo · 6 cliques
+        - generic [ref=f16e260]:
+          - generic [ref=f16e261]:
+            - switch "Ativo" [checked] [ref=f16e263]
+            - generic [ref=f16e266] [cursor=pointer]: Ativo
+          - group "Ações de Facebook" [ref=f16e267]:
+            - button "Editar Facebook" [ref=f16e268] [cursor=pointer]
+            - button "Mais ações de facebook" [ref=f16e274] [cursor=pointer]
+      - generic [ref=f16e280]:
+        - generic [ref=f16e281]:
+          - group "Ordenar YouTube" [ref=f16e282]:
+            - button "Mover YouTube para cima" [ref=f16e283] [cursor=pointer]
+            - button "Mover YouTube para baixo" [ref=f16e287] [cursor=pointer]
+          - generic [ref=f16e295]:
+            - paragraph [ref=f16e296]: YouTube
+            - paragraph [ref=f16e297]: https://youtube.com/@kifersaude
+            - paragraph [ref=f16e298]: Ativo · 5 cliques
+        - generic [ref=f16e299]:
+          - generic [ref=f16e300]:
+            - switch "Ativo" [checked] [ref=f16e302]
+            - generic [ref=f16e305] [cursor=pointer]: Ativo
+          - group "Ações de YouTube" [ref=f16e306]:
+            - button "Editar YouTube" [ref=f16e307] [cursor=pointer]
+            - button "Mais ações de youtube" [ref=f16e313] [cursor=pointer]
+      - generic [ref=f16e319]:
+        - generic [ref=f16e320]:
+          - group "Ordenar Conteúdos de saúde" [ref=f16e321]:
+            - button "Mover Conteúdos de saúde para cima" [ref=f16e322] [cursor=pointer]
+            - button "Mover Conteúdos de saúde para baixo" [disabled] [ref=f16e326]
+          - generic [ref=f16e334]:
+            - paragraph [ref=f16e335]: Conteúdos de saúde
+            - paragraph [ref=f16e336]: https://kifersaude.com.br/blog
+            - paragraph [ref=f16e337]: Ativo · 9 cliques
+        - generic [ref=f16e338]:
+          - generic [ref=f16e339]:
+            - switch "Ativo" [checked] [ref=f16e341]
+            - generic [ref=f16e344] [cursor=pointer]: Ativo
+          - group "Ações de Conteúdos de saúde" [ref=f16e345]:
+            - button "Editar Conteúdos de saúde" [ref=f16e346] [cursor=pointer]
+            - button "Mais ações de conteúdos de saúde" [ref=f16e352] [cursor=pointer]

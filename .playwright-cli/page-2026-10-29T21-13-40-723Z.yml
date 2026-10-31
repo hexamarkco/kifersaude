@@ -1,0 +1,14 @@
+- main [ref=f2e3]:
+  - heading "Prévia do player em espaço compacto" [level=1] [ref=f2e4]
+  - generic [ref=f2e8]:
+    - button "Reproduzir áudio" [ref=f2e9] [cursor=pointer]
+    - generic [ref=f2e12]:
+      - generic [ref=f2e13]:
+        - paragraph [ref=f2e14]: Mensagem de voz
+        - generic [ref=f2e15]:
+          - button "Retranscrever áudio" [ref=f2e16] [cursor=pointer]:
+            - generic [ref=f2e20]: Retranscrever
+          - 'button "Velocidade de reprodução: 1×. Clique para mudar" [ref=f2e21] [cursor=pointer]': 1×
+          - generic [ref=f2e22]: 00:23
+      - 'button "Reproduzir áudio a partir de uma posição. Posição atual: 00:00 de 00:23" [ref=f2e23] [cursor=pointer]'
+      - paragraph [ref=f2e44]: 00:00 reproduzidos

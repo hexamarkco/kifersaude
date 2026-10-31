@@ -1,0 +1,140 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - img "Kifer Saúde CRM" [ref=f1e7]:
+        - generic [ref=f1e8]: kifersaúde
+        - generic [ref=f1e9]: CRM
+      - navigation [ref=f1e10]:
+        - generic [ref=f1e11]:
+          - button "Dashboard" [ref=f1e12] [cursor=pointer]
+          - button "CRM" [ref=f1e21] [cursor=pointer]
+          - button "Comunicação" [ref=f1e31] [cursor=pointer]
+          - button "Financeiro" [ref=f1e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f1e49] [cursor=pointer]
+          - button "Configurações" [ref=f1e56] [cursor=pointer]
+      - generic [ref=f1e62]:
+        - button "Recolher" [ref=f1e63] [cursor=pointer]
+        - button "Notificações" [ref=f1e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f1e76] [cursor=pointer]:
+          - generic [ref=f1e79]: Escuro
+        - button "Sair" [ref=f1e80] [cursor=pointer]
+  - generic [ref=f1e85]:
+    - banner [ref=f1e86]:
+      - generic [ref=f1e87]:
+        - navigation "Breadcrumb" [ref=f1e88]:
+          - list [ref=f1e89]:
+            - listitem [ref=f1e90]:
+              - button "CRM" [ref=f1e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f1e92]
+            - listitem [ref=f1e95]: Automações e IA
+        - generic [ref=f1e96]:
+          - generic [ref=f1e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f1e98] [cursor=pointer]
+          - generic [ref=f1e102]: OD
+    - main [ref=f1e104]:
+      - main [ref=f1e107]:
+        - region "Editor do fluxo automático" [ref=f1e110]:
+          - generic [ref=f1e111]:
+            - button "Voltar aos fluxos" [ref=f1e113] [cursor=pointer]
+            - generic [ref=f1e117]:
+              - generic [ref=f1e118]:
+                - paragraph [ref=f1e119]: Fluxo 1
+                - heading "Abordagem inicial" [level=1] [ref=f1e122]
+                - paragraph [ref=f1e123]: Organize a jornada, as regras operacionais e os testes em um só lugar.
+              - generic [ref=f1e124]:
+                - button "Remover fluxo" [ref=f1e125] [cursor=pointer]
+                - button "Testar fluxo" [ref=f1e130] [cursor=pointer]
+                - button "Salvar fluxo" [ref=f1e135] [cursor=pointer]
+            - tablist [ref=f1e143]:
+              - tab "Jornada" [ref=f1e144] [cursor=pointer]
+              - tab "Regras e agenda" [ref=f1e148] [cursor=pointer]
+              - tab "Simular e testar" [active] [selected] [ref=f1e153] [cursor=pointer]
+          - generic [ref=f1e366]:
+            - generic [ref=f1e367]:
+              - generic [ref=f1e368]:
+                - generic [ref=f1e369]: Simulação operacional
+                - paragraph [ref=f1e373]: Dry run do fluxo. Nenhuma mensagem é enviada; mostramos somente a previsão de execução.
+              - generic [ref=f1e374]: Lead de exemplo + agenda do fluxo
+            - generic [ref=f1e375]:
+              - generic [ref=f1e377]:
+                - generic [ref=f1e378]:
+                  - generic [ref=f1e379]: Início da simulação
+                  - button "30/10/2026 22:33" [ref=f1e381] [cursor=pointer]
+                - generic [ref=f1e385]:
+                  - generic [ref=f1e386]: "Janela: 08:00 até 19:00"
+                  - generic [ref=f1e387]: "Fuso: America/Sao_Paulo"
+                  - generic [ref=f1e388]: "Dias: Seg, Ter, Qua, Qui, Sex"
+              - generic [ref=f1e389]:
+                - generic [ref=f1e390]:
+                  - generic [ref=f1e391]: Etapas
+                  - generic [ref=f1e395]: "3"
+                  - generic [ref=f1e396]: Ações previstas no fluxo atual.
+                - generic [ref=f1e397]:
+                  - generic [ref=f1e398]: Ajustes
+                  - generic [ref=f1e406]: "1"
+                  - generic [ref=f1e407]: Etapas movidas por regras de agenda.
+                - generic [ref=f1e408]:
+                  - generic [ref=f1e409]: Janela estimada
+                  - generic [ref=f1e412]:
+                    - generic [ref=f1e413]: "Primeiro disparo: 03/11/2026, 08:00"
+                    - generic [ref=f1e414]: "Última execução: 06/11/2026, 08:00"
+            - generic [ref=f1e415]:
+              - generic [ref=f1e416]:
+                - generic [ref=f1e417]:
+                  - generic [ref=f1e418]: Envio de teste
+                  - paragraph [ref=f1e421]: Envia somente as mensagens da etapa escolhida para o seu número. Não agenda novas ações nem altera os dados ou o status do contato.
+                - generic [ref=f1e422]: Envio real pelo WhatsApp
+              - generic [ref=f1e423]:
+                - generic [ref=f1e424]:
+                  - text: Nome de teste
+                  - textbox "Nome de teste" [ref=f1e426]: Contato de teste
+                - generic [ref=f1e427]:
+                  - text: WhatsApp de teste
+                  - textbox "WhatsApp de teste" [ref=f1e429]:
+                    - /placeholder: "11999999999"
+                - 'button "Etapa 1: Template: Contato inicial" [ref=f1e431] [cursor=pointer]'
+              - generic [ref=f1e438]:
+                - paragraph [ref=f1e439]: Salve o fluxo antes do teste para garantir que a etapa selecionada seja a versão publicada.
+                - button "Enviar teste" [disabled] [ref=f1e440]
+            - generic [ref=f1e444]: 3x Enviar mensagem (canal)
+            - generic [ref=f1e446]:
+              - generic [ref=f1e447]:
+                - generic [ref=f1e448]: Linha do tempo prevista
+                - generic [ref=f1e452]:
+                  - generic [ref=f1e453]:
+                    - generic [ref=f1e454]:
+                      - generic [ref=f1e455]:
+                        - generic [ref=f1e456]: Etapa 1
+                        - generic [ref=f1e457]: "Template: Contato inicial"
+                        - generic [ref=f1e458]: 2 horas após o marco anterior
+                      - generic [ref=f1e459]: 03/11/2026, 08:00
+                    - generic [ref=f1e460]:
+                      - generic [ref=f1e461]: Ajustado por fim de semana
+                      - generic [ref=f1e462]: Ajustado por feriado
+                  - generic [ref=f1e464]:
+                    - generic [ref=f1e465]:
+                      - generic [ref=f1e466]: Etapa 2
+                      - generic [ref=f1e467]: "Template: Convite para conversar"
+                      - generic [ref=f1e468]: 24 horas após o marco anterior
+                    - generic [ref=f1e469]: 04/11/2026, 08:00
+                  - generic [ref=f1e471]:
+                    - generic [ref=f1e472]:
+                      - generic [ref=f1e473]: Etapa 3
+                      - generic [ref=f1e474]: "Template: Lembrete cordial"
+                      - generic [ref=f1e475]: 48 horas após o marco anterior
+                    - generic [ref=f1e476]: 06/11/2026, 08:00
+              - generic [ref=f1e477]:
+                - generic [ref=f1e478]: Contexto da simulação
+                - generic [ref=f1e481]:
+                  - generic [ref=f1e482]: Lead de exemplo
+                  - generic [ref=f1e483]:
+                    - generic [ref=f1e484]: "Nome: Lead Exemplo"
+                    - generic [ref=f1e485]: "Status inicial: Contato Inicial"
+                    - generic [ref=f1e486]: "Origem: Manual"
+                    - generic [ref=f1e487]: "Cidade: São Paulo"
+                - generic [ref=f1e488]:
+                  - generic [ref=f1e489]: Como ler
+                  - generic [ref=f1e490]:
+                    - paragraph [ref=f1e491]: Os horários já consideram a janela do fluxo, os dias permitidos e pulos automáticos da agenda.
+                    - paragraph [ref=f1e492]: Quando uma etapa não pode rodar no horário original, ela aparece com o motivo do ajuste.
+                    - paragraph [ref=f1e493]: Se houver pendências de configuração, a simulação mostra os alertas antes da timeline.

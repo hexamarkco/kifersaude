@@ -1,0 +1,171 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - img "Kifer Saúde CRM" [ref=e7]:
+          - generic [ref=e8]: kifersaúde
+          - generic [ref=e9]: CRM
+        - navigation [ref=e10]:
+          - generic [ref=e11]:
+            - button "Dashboard" [ref=e12] [cursor=pointer]
+            - button "CRM" [ref=e21] [cursor=pointer]
+            - button "Comunicação" [ref=e31] [cursor=pointer]
+            - button "Financeiro" [ref=e40] [cursor=pointer]
+            - button "Automações e IA" [ref=e49] [cursor=pointer]
+            - button "Configurações" [ref=e56] [cursor=pointer]
+        - generic [ref=e62]:
+          - button "Recolher" [ref=e63] [cursor=pointer]
+          - button "Notificações" [ref=e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=e76] [cursor=pointer]:
+            - generic [ref=e79]: Escuro
+          - button "Sair" [ref=e80] [cursor=pointer]
+    - generic [ref=e85]:
+      - banner [ref=e86]:
+        - generic [ref=e87]:
+          - navigation "Breadcrumb" [ref=e88]:
+            - list [ref=e89]:
+              - listitem [ref=e90]:
+                - button "CRM" [ref=e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=e92]
+              - listitem [ref=e95]: Automações e IA
+          - generic [ref=e96]:
+            - generic [ref=e97]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=e98] [cursor=pointer]
+            - generic [ref=e102]: OD
+      - main [ref=e104]:
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e109]:
+              - paragraph [ref=e110]: Administração
+              - generic [ref=e112]:
+                - heading "Automações, integrações e IA" [level=1] [ref=e113]
+                - button "Informações sobre Automações, integrações e IA" [ref=e115]
+            - tablist "Áreas de automações e IA" [ref=e120]:
+              - tab "Automações" [ref=e121] [cursor=pointer]
+              - tab "Integrações" [selected] [ref=e123] [cursor=pointer]
+              - tab "IA" [ref=e125] [cursor=pointer]
+          - main [ref=e127]:
+            - generic [ref=e128]:
+              - generic [ref=e221]:
+                - paragraph [ref=e222]: Canais e inteligência
+                - generic [ref=e223]:
+                  - heading "Meta Ads" [level=2] [ref=e224]
+                  - button "Informações sobre esta seção" [ref=e226]
+              - tablist [ref=e230]:
+                - tab "Visão geral" [ref=e231] [cursor=pointer]
+                - tab "Inteligência artificial" [ref=e233] [cursor=pointer]
+                - tab "WhatsApp" [ref=e237] [cursor=pointer]
+                - tab "Meta Ads" [selected] [ref=e241] [cursor=pointer]
+                - tab "Rastreamento" [ref=e245] [cursor=pointer]
+              - generic [ref=e250]:
+                - generic [ref=e253]:
+                  - heading "Meta Ads" [level=2] [ref=e254]
+                  - button "Informações sobre esta seção" [ref=e256]
+                - button "Atualizar recebimentos" [ref=e259] [cursor=pointer]
+                - generic [ref=e260]:
+                  - heading "Leads recebidos pelo CRM" [level=3] [ref=e261]
+                  - paragraph [ref=e262]: "Formulário configurado: form-demo"
+                  - paragraph [ref=e263]: A configuração do formulário não comprova a assinatura da página. O primeiro recebimento confirma o caminho até o CRM.
+                  - generic [ref=e264]:
+                    - paragraph [ref=e265]:
+                      - text: "Recebimentos:"
+                      - strong [ref=e266]: "9"
+                    - paragraph [ref=e267]:
+                      - text: "Importados:"
+                      - strong [ref=e268]: "8"
+                    - paragraph [ref=e269]:
+                      - text: "Aguardando processamento:"
+                      - strong [ref=e270]: "0"
+                    - paragraph [ref=e271]:
+                      - text: "Falhas de recebimento:"
+                      - strong [ref=e272]: "0"
+                    - paragraph [ref=e273]:
+                      - text: "Sinais aguardando liberação:"
+                      - strong [ref=e274]: "0"
+                    - paragraph [ref=e275]:
+                      - text: "Sinais na fila de envio:"
+                      - strong [ref=e276]: "0"
+                    - paragraph [ref=e277]:
+                      - text: "Falhas nos sinais:"
+                      - strong [ref=e278]: "0"
+                  - paragraph [ref=e279]: "Último recebimento: 30/10/2026, 11:01:00"
+                  - paragraph [ref=e280]: "Última importação concluída: 30/10/2026, 11:02:00"
+                - generic [ref=e282]:
+                  - paragraph [ref=e283]: Envio à Meta desabilitado
+                  - generic [ref=e284]: As avaliações ficam registradas no CRM. O envio exige revisão das restrições de dados de saúde, aprovação da configuração e autorização explícita.
+                - generic [ref=e285]:
+                  - heading "Origem e progresso comercial" [level=3] [ref=e286]
+                  - generic [ref=e287]:
+                    - generic [ref=e288]:
+                      - generic [ref=e289]: Buscar lead por nome ou identificação da Meta
+                      - textbox "Buscar lead por nome ou identificação da Meta" [ref=e293]
+                    - button "Buscar" [ref=e294] [cursor=pointer]
+                  - generic [ref=e295]:
+                    - generic [ref=e296]: Lead recebido pela Meta
+                    - combobox [aria-hidden] [ref=e299]
+                    - button "Lead recebido pela Meta" [ref=e301] [cursor=pointer]:
+                      - generic [ref=e302]: Contato de demonstração · 30/10/2026, 11:01:00
+                  - generic [ref=e319]:
+                    - generic [ref=e320]:
+                      - generic [ref=e321]:
+                        - term [ref=e322]: Campanha
+                        - definition [ref=e323]: Campanha de demonstração
+                      - generic [ref=e324]:
+                        - term [ref=e325]: Conjunto
+                        - definition [ref=e326]: Público de demonstração
+                      - generic [ref=e327]:
+                        - term [ref=e328]: Anúncio
+                        - definition [ref=e329]: Anúncio demonstrativo
+                      - generic [ref=e330]:
+                        - term [ref=e331]: Preenchimento na Meta
+                        - definition [ref=e332]: 30/10/2026, 11:00:00
+                      - generic [ref=e333]:
+                        - term [ref=e334]: Resposta comercial do formulário
+                        - definition [ref=e335]: Tenho interesse em um plano empresarial.
+                      - generic [ref=e336]:
+                        - term [ref=e337]: Cadastro no CRM
+                        - definition [ref=e338]: Novo contato
+                      - generic [ref=e339]:
+                        - term [ref=e340]: Origem do formulário
+                        - definition [ref=e341]: Anúncio identificado
+                    - generic [ref=e342]:
+                      - heading "Avaliação comercial" [level=3] [ref=e343]
+                      - paragraph [ref=e344]: Confirme cada critério com o cliente. Atendimento e proposta enviada não comprovam qualificação. Esta avaliação registra o administrador, a data e os critérios utilizados.
+                      - generic [ref=e345]:
+                        - checkbox "Empresário ou MEI com elegibilidade confirmada" [ref=e346] [cursor=pointer]
+                        - text: Empresário ou MEI com elegibilidade confirmada
+                      - generic [ref=e347]:
+                        - generic [ref=e348]: Quantidade de vidas confirmada
+                        - spinbutton "Quantidade de vidas confirmada" [ref=e352]
+                      - generic [ref=e353]:
+                        - checkbox "Região atendida confirmada" [ref=e354] [cursor=pointer]
+                        - text: Região atendida confirmada
+                      - generic [ref=e355]:
+                        - checkbox "Interesse em contratar confirmado com o cliente" [ref=e356] [cursor=pointer]
+                        - text: Interesse em contratar confirmado com o cliente
+                      - paragraph [ref=e357]: Qualificação ainda não confirmada
+                      - generic [ref=e358]:
+                        - generic [ref=e359]: Oportunidade ou proposta vinculada
+                        - combobox [aria-hidden] [ref=e362]
+                        - button "Oportunidade ou proposta vinculada" [expanded] [ref=e364] [cursor=pointer]:
+                          - generic [ref=e365]: Sem vínculo selecionado
+                      - generic [ref=e368]:
+                        - generic [ref=e369]: Contrato do cliente
+                        - combobox [aria-hidden] [ref=e372]
+                        - button "Contrato do cliente" [ref=e374] [cursor=pointer]:
+                          - generic [ref=e375]: Sem contrato selecionado
+                      - generic [ref=e378]:
+                        - checkbox "Conferi o contrato selecionado e confirmo que a contratação foi efetivamente concluída." [disabled] [ref=e379]
+                        - text: Conferi o contrato selecionado e confirmo que a contratação foi efetivamente concluída.
+                      - paragraph [ref=e380]: Selecione somente o contrato relacionado a esta entrada da Meta. O cadastro do contrato ou a mudança de status do lead, isoladamente, não confirma uma venda.
+                      - button "Registrar avaliação" [disabled] [ref=e381]
+                  - paragraph [ref=e305]: Exibindo até 50 entradas recentes. O histórico completo permanece armazenado.
+                - generic [ref=e306]:
+                  - heading "Histórico da integração" [level=3] [ref=e307]
+                  - list [ref=e308]:
+                    - listitem [ref=e309]: 30/10/2026, 11:02:00 · Recebimento · Concluído
+                  - group [ref=e310]:
+                    - generic "Informações para suporte" [ref=e311]
+  - listbox "Selecionar opção" [ref=e382]:
+    - option "Sem vínculo selecionado" [active] [selected] [ref=e383] [cursor=pointer]
+    - option "Oportunidade de demonstração" [ref=e387] [cursor=pointer]

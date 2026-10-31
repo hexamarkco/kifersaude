@@ -1,0 +1,196 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - navigation "Navegação principal" [ref=f3e214]:
+      - button "Início" [ref=f3e215] [cursor=pointer]
+      - button "Leads" [ref=f3e222] [cursor=pointer]
+      - button "WhatsApp" [ref=f3e229] [cursor=pointer]
+      - button "Contratos" [ref=f3e233] [cursor=pointer]
+      - button "Abrir mais opções" [ref=f3e238] [cursor=pointer]:
+        - generic [ref=f3e240]: Mais
+    - generic [ref=f3e85]:
+      - banner [ref=f3e86]:
+        - generic [ref=f3e241]:
+          - img "Kifer Saúde" [ref=f3e242]:
+            - generic [ref=f3e243]: kifersaúde
+          - generic [ref=f3e244]:
+            - button "Abrir menu" [ref=f3e245] [cursor=pointer]
+            - generic [ref=f3e248]: O
+      - main [ref=f3e104]:
+        - generic [ref=f3e106]:
+          - generic [ref=f3e108]:
+            - generic [ref=f3e109]:
+              - paragraph [ref=f3e110]: Kifer Saúde · Inteligência artificial
+              - heading "Chat e testes de IA" [level=1] [ref=f3e113]
+              - paragraph [ref=f3e114]: Valide o atendimento automatizado em uma simulação controlada. As mensagens desta tela não são enviadas a clientes.
+            - button "Nova simulação" [ref=f3e116] [cursor=pointer]
+          - generic [ref=f3e120]:
+            - generic [ref=f3e121]:
+              - generic [ref=f3e122]:
+                - generic [ref=f3e124]:
+                  - heading "Simulação de atendimento" [level=3] [ref=f3e126]
+                  - paragraph [ref=f3e127]: Simulação de qualificação — família em Niterói
+                - generic [ref=f3e128]:
+                  - button "Histórico" [ref=f3e129] [cursor=pointer]
+                  - button "Exportar conversa" [ref=f3e705] [cursor=pointer]
+              - log "Mensagens da simulação" [ref=f3e134]:
+                - paragraph [ref=f3e712]: Tenho 42 anos e gostaria de conhecer os planos disponíveis.
+                - paragraph [ref=f3e715]: Claro! Posso ajudar. Você procura um plano para você ou também para outras pessoas da família?
+                - paragraph [ref=f3e718]: Para mim e minha esposa. Moramos em Niterói.
+                - paragraph [ref=f3e721]: Entendi. Vou considerar duas pessoas em Niterói. Vocês já possuem algum plano de saúde atualmente?
+              - generic [ref=f3e141]:
+                - generic [ref=f3e142]: Mensagem de teste
+                - textbox "Mensagem de teste" [ref=f3e143]:
+                  - /placeholder: Digite como se fosse o lead...
+                - button "Enviar" [disabled] [ref=f3e144]
+            - generic [ref=f3e149]:
+              - generic [ref=f3e150]:
+                - generic [ref=f3e152]:
+                  - heading "Cenário de teste" [level=3] [ref=f3e154]
+                  - paragraph [ref=f3e155]: Acompanhe o contexto e o resultado desta simulação.
+                - generic [ref=f3e156]: Ambiente isolado
+              - generic [ref=f3e158]:
+                - generic [ref=f3e159]:
+                  - generic [ref=f3e160]:
+                    - paragraph [ref=f3e161]: Conversa atual
+                    - paragraph [ref=f3e162]: Simulação de qualificação — família em Niterói
+                  - generic [ref=f3e163]: Manual
+                - generic [ref=f3e164]:
+                  - generic [ref=f3e165]:
+                    - paragraph [ref=f3e166]: Avaliação mais recente
+                    - paragraph [ref=f3e167]: Dados todos de uma vez
+                  - generic [ref=f3e168]: Aprovado
+                - generic [ref=f3e169]:
+                  - generic [ref=f3e170]:
+                    - paragraph [ref=f3e171]: Uso
+                    - paragraph [ref=f3e172]: Mensagens não são enviadas a clientes.
+                  - generic [ref=f3e173]: Simulação
+              - region "Resultado do teste" [ref=f3e722]:
+                - generic [ref=f3e724]:
+                  - paragraph [ref=f3e725]: Teste aprovado
+                  - generic [ref=f3e726]: O atendimento coletou as informações necessárias com clareza e acolhimento.
+                - generic [ref=f3e727]:
+                  - paragraph [ref=f3e728]: Sugestões para o playbook
+                  - list [ref=f3e731]:
+                    - listitem [ref=f3e732]: Confirmar a região antes de apresentar alternativas.
+              - button "Escolher cenário" [ref=f3e181] [cursor=pointer]
+  - dialog "Cenários de teste" [ref=f3e1250]:
+    - generic [ref=f3e1251]:
+      - generic [ref=f3e1253]:
+        - heading "Cenários de teste" [level=2] [ref=f3e1254]
+        - paragraph [ref=f3e1255]: Use uma conversa simulada para validar o atendimento sem contatar clientes.
+      - button "Fechar" [active] [ref=f3e1256] [cursor=pointer]
+    - generic [ref=f3e1260]:
+      - textbox "Buscar cenários de teste" [ref=f3e1262]:
+        - /placeholder: Buscar cenário...
+      - generic [ref=f3e1263]:
+        - region "Qualificação" [ref=f3e1264]:
+          - paragraph [ref=f3e1265]: Qualificação
+          - generic [ref=f3e1266]:
+            - button "Dados todos de uma vez" [ref=f3e1267] [cursor=pointer]
+            - button "CNPJ com número" [ref=f3e1272] [cursor=pointer]
+            - button "Sem plano atual" [ref=f3e1277] [cursor=pointer]
+            - button "Plano não identificado" [ref=f3e1282] [cursor=pointer]
+            - button "Plano + CNPJ incompleto" [ref=f3e1287] [cursor=pointer]
+        - region "Beneficiários" [ref=f3e1292]:
+          - paragraph [ref=f3e1293]: Beneficiários
+          - generic [ref=f3e1294]:
+            - button "Casal" [ref=f3e1295] [cursor=pointer]
+            - button "Família 3 pessoas" [ref=f3e1300] [cursor=pointer]
+            - button "Só criança <12" [ref=f3e1305] [cursor=pointer]
+            - button "Criança + adulto" [ref=f3e1310] [cursor=pointer]
+            - button "Idosos 70+" [ref=f3e1315] [cursor=pointer]
+            - button "6 beneficiários" [ref=f3e1320] [cursor=pointer]
+            - button "Mãe + 2 filhos" [ref=f3e1325] [cursor=pointer]
+        - region "CNPJ / MEI" [ref=f3e1330]:
+          - paragraph [ref=f3e1331]: CNPJ / MEI
+          - generic [ref=f3e1332]:
+            - button "MEI <6 meses" [ref=f3e1333] [cursor=pointer]
+            - button "MEI >6 meses" [ref=f3e1338] [cursor=pointer]
+            - button "CNPJ não-MEI" [ref=f3e1343] [cursor=pointer]
+            - button "Sem CNPJ" [ref=f3e1348] [cursor=pointer]
+            - button "Recusa número CNPJ" [ref=f3e1353] [cursor=pointer]
+            - button "Não sabe se é MEI" [ref=f3e1358] [cursor=pointer]
+        - region "Plano atual" [ref=f3e1363]:
+          - paragraph [ref=f3e1364]: Plano atual
+          - generic [ref=f3e1365]:
+            - button "Já tem plano" [ref=f3e1366] [cursor=pointer]
+            - button "Não sabe qual plano" [ref=f3e1371] [cursor=pointer]
+            - button "Já informou espontaneamente" [ref=f3e1376] [cursor=pointer]
+            - button "Plano cancelado" [ref=f3e1381] [cursor=pointer]
+        - region "Bairro / Cidade" [ref=f3e1386]:
+          - paragraph [ref=f3e1387]: Bairro / Cidade
+          - generic [ref=f3e1388]:
+            - button "Rio capital (bairro ok)" [ref=f3e1389] [cursor=pointer]
+            - button "Niteroi (sem bairro)" [ref=f3e1394] [cursor=pointer]
+            - button "Rio das Ostras" [ref=f3e1399] [cursor=pointer]
+            - button "Itaguai" [ref=f3e1404] [cursor=pointer]
+            - button "Volta Redonda" [ref=f3e1409] [cursor=pointer]
+        - region "Valores / Desconto" [ref=f3e1414]:
+          - paragraph [ref=f3e1415]: Valores / Desconto
+          - generic [ref=f3e1416]:
+            - button "Pergunta valor cedo" [ref=f3e1417] [cursor=pointer]
+            - button "Pede desconto" [ref=f3e1422] [cursor=pointer]
+            - button "Valor com dados incompletos" [ref=f3e1427] [cursor=pointer]
+            - button "Comparar com concorrência" [ref=f3e1432] [cursor=pointer]
+        - region "Objeções / Reclamações" [ref=f3e1437]:
+          - paragraph [ref=f3e1438]: Objeções / Reclamações
+          - generic [ref=f3e1439]:
+            - button "Quer cancelar" [ref=f3e1440] [cursor=pointer]
+            - button "Reclama do plano" [ref=f3e1445] [cursor=pointer]
+            - button "Lead não responde" [ref=f3e1450] [cursor=pointer]
+            - button "Cobertura insuficiente" [ref=f3e1455] [cursor=pointer]
+        - region "Fora de escopo" [ref=f3e1460]:
+          - paragraph [ref=f3e1461]: Fora de escopo
+          - generic [ref=f3e1462]:
+            - button "Seguro de vida" [ref=f3e1463] [cursor=pointer]
+            - button "Seguro auto" [ref=f3e1468] [cursor=pointer]
+            - button "Consórcio" [ref=f3e1473] [cursor=pointer]
+            - button "Contabilidade" [ref=f3e1478] [cursor=pointer]
+            - button "Plano pet" [ref=f3e1483] [cursor=pointer]
+        - region "Transferência para atendente" [ref=f3e1488]:
+          - paragraph [ref=f3e1489]: Transferência para atendente
+          - generic [ref=f3e1490]:
+            - button "Situação complexa" [ref=f3e1491] [cursor=pointer]
+            - button "Recusa cotação + cancelamento" [ref=f3e1496] [cursor=pointer]
+            - button "CNPJ tipo indefinido" [ref=f3e1501] [cursor=pointer]
+        - region "Manipulação" [ref=f3e1506]:
+          - paragraph [ref=f3e1507]: Manipulação
+          - generic [ref=f3e1508]:
+            - button "Ignore instruções" [ref=f3e1509] [cursor=pointer]
+            - button "Pedido para revelar instruções internas" [ref=f3e1514] [cursor=pointer]
+            - button "Finge ser admin" [ref=f3e1519] [cursor=pointer]
+            - button "Muda de persona" [ref=f3e1524] [cursor=pointer]
+            - button "Tentativa de alterar instruções por código" [ref=f3e1529] [cursor=pointer]
+        - region "Estilo / Tom" [ref=f3e1534]:
+          - paragraph [ref=f3e1535]: Estilo / Tom
+          - generic [ref=f3e1536]:
+            - button "Resposta longa" [ref=f3e1537] [cursor=pointer]
+            - button "Resposta curta" [ref=f3e1542] [cursor=pointer]
+            - button "Linguagem informal" [ref=f3e1547] [cursor=pointer]
+            - button "Emoji excessivo" [ref=f3e1552] [cursor=pointer]
+        - region "Crianças <12" [ref=f3e1557]:
+          - paragraph [ref=f3e1558]: Crianças <12
+          - generic [ref=f3e1559]:
+            - button "Só criança" [ref=f3e1560] [cursor=pointer]
+            - button "Criança + mãe" [ref=f3e1565] [cursor=pointer]
+            - button "2 crianças" [ref=f3e1570] [cursor=pointer]
+            - button "Criança = 12 anos" [ref=f3e1575] [cursor=pointer]
+            - button "Sem adulto disponível" [ref=f3e1580] [cursor=pointer]
+        - region "Carencia / ANS" [ref=f3e1585]:
+          - paragraph [ref=f3e1586]: Carencia / ANS
+          - generic [ref=f3e1587]:
+            - button "Carencia parto" [ref=f3e1588] [cursor=pointer]
+            - button "Doença preexistente" [ref=f3e1593] [cursor=pointer]
+            - button "Parto + plano anterior" [ref=f3e1598] [cursor=pointer]
+        - region "Operadora atual" [ref=f3e1603]:
+          - paragraph [ref=f3e1604]: Operadora atual
+          - generic [ref=f3e1605]:
+            - button "Amil" [ref=f3e1606] [cursor=pointer]
+            - button "Unimed" [ref=f3e1611] [cursor=pointer]
+            - button "Bradesco" [ref=f3e1616] [cursor=pointer]
+            - button "SulAmerica" [ref=f3e1621] [cursor=pointer]
+        - region "Abordagem (AI inicia)" [ref=f3e1626]:
+          - paragraph [ref=f3e1627]: Abordagem (AI inicia)
+          - generic [ref=f3e1628]:
+            - button "Lead com nome" [ref=f3e1629] [cursor=pointer]
+            - button "Lead sem nome" [ref=f3e1634] [cursor=pointer]

@@ -1,0 +1,240 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - complementary [ref=f1e355]:
+      - generic [ref=f1e356]:
+        - img "Kifer Saúde CRM" [ref=f1e358]:
+          - generic [ref=f1e359]: kifersaúde
+          - generic [ref=f1e360]: CRM
+        - navigation [ref=f1e361]:
+          - generic [ref=f1e362]:
+            - button "Dashboard" [ref=f1e363] [cursor=pointer]
+            - button "CRM" [ref=f1e372] [cursor=pointer]
+            - button "Comunicação" [ref=f1e382] [cursor=pointer]
+            - button "Financeiro" [ref=f1e391] [cursor=pointer]
+            - button "Automações e IA" [ref=f1e400] [cursor=pointer]
+            - button "Configurações" [ref=f1e407] [cursor=pointer]
+        - generic [ref=f1e413]:
+          - button "Recolher" [ref=f1e414] [cursor=pointer]
+          - button "Notificações" [ref=f1e419] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=f1e427] [cursor=pointer]:
+            - generic [ref=f1e430]: Escuro
+          - button "Sair" [ref=f1e431] [cursor=pointer]
+    - generic [ref=f1e31]:
+      - banner [ref=f1e32]:
+        - generic [ref=f1e436]:
+          - navigation "Breadcrumb" [ref=f1e437]:
+            - list [ref=f1e438]:
+              - listitem [ref=f1e439]:
+                - button "CRM" [ref=f1e440] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f1e441]
+              - listitem [ref=f1e444]: Configurações
+          - generic [ref=f1e445]:
+            - generic [ref=f1e446]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=f1e447] [cursor=pointer]
+            - generic [ref=f1e451]: OD
+      - main [ref=f1e42]:
+        - generic [ref=f1e44]:
+          - generic [ref=f1e45]:
+            - generic [ref=f1e47]:
+              - paragraph [ref=f1e48]: Administração
+              - generic [ref=f1e50]:
+                - heading "Perfis e acessos" [level=1] [ref=f1e51]
+                - button "Informações sobre Perfis e acessos" [ref=f1e53]
+            - tablist "Áreas de configurações" [ref=f1e58]:
+              - tab "Geral" [selected] [ref=f1e59] [cursor=pointer]
+              - tab "Usuários" [ref=f1e64] [cursor=pointer]
+              - tab "Links" [ref=f1e71] [cursor=pointer]
+              - tab "Formulários" [ref=f1e76] [cursor=pointer]
+          - main [ref=f1e81]:
+            - generic [ref=f1e82]:
+              - generic [ref=f1e83]:
+                - tablist "Seções das configurações gerais" [ref=f1e85]:
+                  - tab "Preferências do sistema" [ref=f1e86] [cursor=pointer]
+                  - tab "Perfis e acessos" [selected] [ref=f1e88] [cursor=pointer]
+                  - tab "Leads" [ref=f1e90] [cursor=pointer]
+                  - tab "Contratos" [ref=f1e92] [cursor=pointer]
+                - textbox "Buscar nas configurações gerais" [ref=f1e96]:
+                  - /placeholder: Buscar em configurações, leads ou contratos
+              - generic [ref=f1e99]:
+                - button "Novo perfil" [ref=f1e101] [cursor=pointer]
+                - generic [ref=f1e105]:
+                  - generic [ref=f1e107]:
+                    - generic [ref=f1e108]: Escolha um perfil (2)
+                    - button "Escolha um perfil" [expanded] [ref=f1e112] [cursor=pointer]:
+                      - generic [ref=f1e113]: Administrador
+                  - generic [ref=f1e116]:
+                    - generic [ref=f1e118]:
+                      - generic [ref=f1e119]:
+                        - generic [ref=f1e120]: Perfil padrão
+                        - generic [ref=f1e121]: Acesso total
+                      - heading "Administrador" [level=4] [ref=f1e122]
+                      - paragraph [ref=f1e123]: Acesso integral à operação do CRM.
+                    - generic [ref=f1e125]:
+                      - paragraph [ref=f1e126]: Este perfil tem acesso total
+                      - generic [ref=f1e127]: Seus usuários podem visualizar e editar todas as áreas do sistema. Esse acesso é fixo para este perfil padrão.
+                    - generic [ref=f1e128]:
+                      - generic [ref=f1e129]:
+                        - generic [ref=f1e130]:
+                          - heading "Acesso por área" [level=5] [ref=f1e131]
+                          - paragraph [ref=f1e132]: 16 de 16 áreas com acesso · alterações salvas automaticamente.
+                        - textbox "Buscar área" [ref=f1e135]
+                      - generic [ref=f1e136]:
+                        - region [ref=f1e137]:
+                          - heading "Operação diária" [level=6] [ref=f1e138]
+                          - generic [ref=f1e139]:
+                            - list [ref=f1e140]:
+                              - listitem [ref=f1e141]:
+                                - generic [ref=f1e142]:
+                                  - paragraph [ref=f1e143]: Dashboard
+                                  - paragraph [ref=f1e144]: Resumo geral das operações e indicadores-chave.
+                                - generic [ref=f1e146]:
+                                  - generic: Acesso a Dashboard
+                                  - combobox [disabled] [aria-hidden] [ref=f1e148]
+                                  - button "Acesso a Dashboard" [disabled] [ref=f1e150]:
+                                    - generic [ref=f1e151]: Visualizar e editar
+                              - listitem [ref=f1e154]:
+                                - generic [ref=f1e155]:
+                                  - paragraph [ref=f1e156]: Leads
+                                  - paragraph [ref=f1e157]: Gestão completa do funil de leads.
+                                - generic [ref=f1e159]:
+                                  - generic: Acesso a Leads
+                                  - combobox [disabled] [aria-hidden] [ref=f1e161]
+                                  - button "Acesso a Leads" [disabled] [ref=f1e163]:
+                                    - generic [ref=f1e164]: Visualizar e editar
+                              - listitem [ref=f1e167]:
+                                - generic [ref=f1e168]:
+                                  - paragraph [ref=f1e169]: Contratos
+                                  - paragraph [ref=f1e170]: Gestão de contratos, titulares e dependentes.
+                                - generic [ref=f1e172]:
+                                  - generic: Acesso a Contratos
+                                  - combobox [disabled] [aria-hidden] [ref=f1e174]
+                                  - button "Acesso a Contratos" [disabled] [ref=f1e176]:
+                                    - generic [ref=f1e177]: Visualizar e editar
+                              - listitem [ref=f1e180]:
+                                - generic [ref=f1e181]:
+                                  - paragraph [ref=f1e182]: Lembretes
+                                  - paragraph [ref=f1e183]: Agenda e lembretes automáticos para acompanhamento.
+                                - generic [ref=f1e185]:
+                                  - generic: Acesso a Lembretes
+                                  - combobox [disabled] [aria-hidden] [ref=f1e187]
+                                  - button "Acesso a Lembretes" [disabled] [ref=f1e189]:
+                                    - generic [ref=f1e190]: Visualizar e editar
+                              - listitem [ref=f1e193]:
+                                - generic [ref=f1e194]:
+                                  - paragraph [ref=f1e195]: Financeiro - Tarefas
+                                  - paragraph [ref=f1e196]: Acesso às tarefas do módulo financeiro.
+                                - generic [ref=f1e198]:
+                                  - generic: Acesso a Financeiro - Tarefas
+                                  - combobox [disabled] [aria-hidden] [ref=f1e200]
+                                  - button "Acesso a Financeiro - Tarefas" [disabled] [ref=f1e202]:
+                                    - generic [ref=f1e203]: Visualizar e editar
+                            - list [ref=f1e206]:
+                              - listitem [ref=f1e207]:
+                                - generic [ref=f1e208]:
+                                  - paragraph [ref=f1e209]: Financeiro - Comissões
+                                  - paragraph [ref=f1e210]: Acesso ao acompanhamento de comissões.
+                                - generic [ref=f1e212]:
+                                  - generic: Acesso a Financeiro - Comissões
+                                  - combobox [disabled] [aria-hidden] [ref=f1e214]
+                                  - button "Acesso a Financeiro - Comissões" [disabled] [ref=f1e216]:
+                                    - generic [ref=f1e217]: Visualizar e editar
+                              - listitem [ref=f1e220]:
+                                - generic [ref=f1e221]:
+                                  - paragraph [ref=f1e222]: Comunicação - WhatsApp Inbox
+                                  - paragraph [ref=f1e223]: Acesso ao inbox compartilhado do WhatsApp via Whapi.
+                                - generic [ref=f1e225]:
+                                  - generic: Acesso a Comunicação - WhatsApp Inbox
+                                  - combobox [disabled] [aria-hidden] [ref=f1e227]
+                                  - button "Acesso a Comunicação - WhatsApp Inbox" [disabled] [ref=f1e229]:
+                                    - generic [ref=f1e230]: Visualizar e editar
+                              - listitem [ref=f1e233]:
+                                - generic [ref=f1e234]:
+                                  - paragraph [ref=f1e235]: Comunicação - Disparos WhatsApp
+                                  - paragraph [ref=f1e236]: Criação e acompanhamento de campanhas e disparos conversacionais no WhatsApp.
+                                - generic [ref=f1e238]:
+                                  - generic: Acesso a Comunicação - Disparos WhatsApp
+                                  - combobox [disabled] [aria-hidden] [ref=f1e240]
+                                  - button "Acesso a Comunicação - Disparos WhatsApp" [disabled] [ref=f1e242]:
+                                    - generic [ref=f1e243]: Visualizar e editar
+                              - listitem [ref=f1e246]:
+                                - generic [ref=f1e247]:
+                                  - paragraph [ref=f1e248]: Blog
+                                  - paragraph [ref=f1e249]: Gestão de conteúdo do blog e SEO.
+                                - generic [ref=f1e251]:
+                                  - generic: Acesso a Blog
+                                  - combobox [disabled] [aria-hidden] [ref=f1e253]
+                                  - button "Acesso a Blog" [disabled] [ref=f1e255]:
+                                    - generic [ref=f1e256]: Visualizar e editar
+                        - region [ref=f1e259]:
+                          - heading "Configurações do sistema" [level=6] [ref=f1e260]
+                          - generic [ref=f1e261]:
+                            - list [ref=f1e262]:
+                              - listitem [ref=f1e263]:
+                                - generic [ref=f1e264]:
+                                  - paragraph [ref=f1e265]: Configurações - Sistema
+                                  - paragraph [ref=f1e266]: Preferências do sistema, operadoras, leads e contratos.
+                                - generic [ref=f1e268]:
+                                  - generic: Acesso a Configurações - Sistema
+                                  - combobox [disabled] [aria-hidden] [ref=f1e270]
+                                  - button "Acesso a Configurações - Sistema" [disabled] [ref=f1e272]:
+                                    - generic [ref=f1e273]: Visualizar e editar
+                              - listitem [ref=f1e276]:
+                                - generic [ref=f1e277]:
+                                  - paragraph [ref=f1e278]: Configurações - Perfis e Acessos
+                                  - paragraph [ref=f1e279]: Criação de perfis e definição detalhada de acessos.
+                                - generic [ref=f1e281]:
+                                  - generic: Acesso a Configurações - Perfis e Acessos
+                                  - combobox [disabled] [aria-hidden] [ref=f1e283]
+                                  - button "Acesso a Configurações - Perfis e Acessos" [disabled] [ref=f1e285]:
+                                    - generic [ref=f1e286]: Visualizar e editar
+                              - listitem [ref=f1e289]:
+                                - generic [ref=f1e290]:
+                                  - paragraph [ref=f1e291]: Configurações - Usuários
+                                  - paragraph [ref=f1e292]: Criação, edição e exclusão de usuários do sistema.
+                                - generic [ref=f1e294]:
+                                  - generic: Acesso a Configurações - Usuários
+                                  - combobox [disabled] [aria-hidden] [ref=f1e296]
+                                  - button "Acesso a Configurações - Usuários" [disabled] [ref=f1e298]:
+                                    - generic [ref=f1e299]: Visualizar e editar
+                              - listitem [ref=f1e302]:
+                                - generic [ref=f1e303]:
+                                  - paragraph [ref=f1e304]: Configurações - Automações
+                                  - paragraph [ref=f1e305]: Gestão dos fluxos de automação do sistema.
+                                - generic [ref=f1e307]:
+                                  - generic: Acesso a Configurações - Automações
+                                  - combobox [disabled] [aria-hidden] [ref=f1e309]
+                                  - button "Acesso a Configurações - Automações" [disabled] [ref=f1e311]:
+                                    - generic [ref=f1e312]: Visualizar e editar
+                            - list [ref=f1e315]:
+                              - listitem [ref=f1e316]:
+                                - generic [ref=f1e317]:
+                                  - paragraph [ref=f1e318]: Configurações - Integrações
+                                  - paragraph [ref=f1e319]: Parâmetros e credenciais de integrações.
+                                - generic [ref=f1e321]:
+                                  - generic: Acesso a Configurações - Integrações
+                                  - combobox [disabled] [aria-hidden] [ref=f1e323]
+                                  - button "Acesso a Configurações - Integrações" [disabled] [ref=f1e325]:
+                                    - generic [ref=f1e326]: Visualizar e editar
+                              - listitem [ref=f1e329]:
+                                - generic [ref=f1e330]:
+                                  - paragraph [ref=f1e331]: Configurações - IA
+                                  - paragraph [ref=f1e332]: Configuração de prompts, parâmetros e versões de features de inteligência artificial.
+                                - generic [ref=f1e334]:
+                                  - generic: Acesso a Configurações - IA
+                                  - combobox [disabled] [aria-hidden] [ref=f1e336]
+                                  - button "Acesso a Configurações - IA" [disabled] [ref=f1e338]:
+                                    - generic [ref=f1e339]: Visualizar e editar
+                              - listitem [ref=f1e342]:
+                                - generic [ref=f1e343]:
+                                  - paragraph [ref=f1e344]: Configurações - Links
+                                  - paragraph [ref=f1e345]: Gestão da página pública de links (/links).
+                                - generic [ref=f1e347]:
+                                  - generic: Acesso a Configurações - Links
+                                  - combobox [disabled] [aria-hidden] [ref=f1e349]
+                                  - button "Acesso a Configurações - Links" [disabled] [ref=f1e351]:
+                                    - generic [ref=f1e352]: Visualizar e editar
+  - listbox "Escolha um perfil" [ref=f1e453]:
+    - textbox "Buscar perfil" [active] [ref=f1e456]
+    - generic [ref=f1e457]:
+      - option "Administrador" [selected] [ref=f1e458] [cursor=pointer]
+      - option "Equipe comercial" [ref=f1e462] [cursor=pointer]

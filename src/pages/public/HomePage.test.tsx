@@ -128,8 +128,9 @@ test("troca o painel de perfil, leva a seleção ao formulário e expande o FAQ 
       'input[name="audience-profile"][value="MEI"]',
     )!;
     act(() => mei.click());
-    const panel = view.container.querySelector("#audience-panel")!;
+    const panel = view.container.querySelector(`#${mei.getAttribute("aria-controls")}`)!;
     assert.ok(panel.textContent?.includes("Seu trabalho cresce."));
+    assert.equal(panel.getAttribute("aria-hidden"), "false");
     assert.equal(panel.getAttribute("aria-labelledby"), "audience-label-MEI");
     act(() => panel.querySelector<HTMLButtonElement>("button")!.click());
     assert.equal(
@@ -145,11 +146,15 @@ test("troca o painel de perfil, leva a seleção ao formulário e expande o FAQ 
     assert.equal(
       view.container.querySelector<HTMLElement>(
         `#${faq.getAttribute("aria-controls")}`,
-      )?.hidden,
-      false,
+      )?.getAttribute("aria-hidden"),
+      "false",
     );
     act(() => faq.click());
     assert.equal(faq.getAttribute("aria-expanded"), "false");
+    assert.equal(
+      view.container.querySelector(`#${faq.getAttribute("aria-controls")}`)?.getAttribute("aria-hidden"),
+      "true",
+    );
   } finally {
     view.unmount();
   }

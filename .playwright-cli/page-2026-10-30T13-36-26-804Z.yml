@@ -1,0 +1,182 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "Kifer Saúde CRM" [ref=e7]:
+        - generic [ref=e8]: kifersaúde
+        - generic [ref=e9]: CRM
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "CRM" [ref=e21] [cursor=pointer]
+          - button "Comunicação" [ref=e31] [cursor=pointer]
+          - button "Financeiro" [ref=e40] [cursor=pointer]
+          - button "Automações e IA" [ref=e49] [cursor=pointer]
+          - button "Configurações" [ref=e56] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Recolher" [ref=e63] [cursor=pointer]
+        - button "Notificações" [ref=e68] [cursor=pointer]
+        - button "Ativar tema claro" [ref=e407] [cursor=pointer]:
+          - generic [ref=e79]: Claro
+        - button "Sair" [ref=e80] [cursor=pointer]
+  - generic [ref=e85]:
+    - banner [ref=e86]:
+      - generic [ref=e87]:
+        - navigation "Breadcrumb" [ref=e88]:
+          - list [ref=e89]:
+            - listitem [ref=e90]:
+              - button "CRM" [ref=e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=e92]
+            - listitem [ref=e95]: Configurações
+        - generic [ref=e96]:
+          - generic [ref=e97]: Operador Demonstração
+          - button "Ativar tema claro" [active] [ref=e414] [cursor=pointer]
+          - generic [ref=e102]: OD
+    - main [ref=e104]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - generic [ref=e109]:
+              - paragraph [ref=e110]: Administração
+              - generic [ref=e112]:
+                - heading "Formulários de captação" [level=1] [ref=e113]
+                - button "Informações sobre Formulários de captação" [ref=e115]
+            - button "Novo formulário" [ref=e404] [cursor=pointer]
+          - tablist "Áreas de configurações" [ref=e120]:
+            - tab "Geral" [ref=e121] [cursor=pointer]
+            - tab "Usuários" [ref=e126] [cursor=pointer]
+            - tab "Links" [ref=e133] [cursor=pointer]
+            - tab "Formulários" [selected] [ref=e138] [cursor=pointer]
+        - main [ref=e143]:
+          - generic [ref=e144]:
+            - generic [ref=e146]:
+              - searchbox "Buscar formulários" [ref=e149]
+              - button "Todos os status" [ref=e152] [cursor=pointer]
+            - generic [ref=e159]:
+              - generic [ref=e161]:
+                - heading "Seus formulários" [level=3] [ref=e162]
+                - button "Como os formulários publicados funcionam" [ref=e164]
+              - region "Rolagem de Formulários de captação" [ref=e169]:
+                - table "Formulários de captação" [ref=e170]:
+                  - rowgroup [ref=e176]:
+                    - row [ref=e177]:
+                      - columnheader "Formulário" [ref=e178]
+                      - columnheader "Envios" [ref=e179]
+                      - columnheader "Publicação" [ref=e180]
+                      - columnheader "Ações" [ref=e181]
+                  - rowgroup [ref=e182]:
+                    - row [ref=e183]:
+                      - cell [ref=e184]:
+                        - paragraph [ref=e185]: Cotação familiar
+                        - paragraph [ref=e186]: /forms/cotacao-familiar
+                      - cell "24" [ref=e187]
+                      - cell "Publicado Publicado" [ref=e188]:
+                        - generic [ref=e189]:
+                          - switch "Publicado" [checked] [ref=e191]
+                          - generic [ref=e194] [cursor=pointer]: Publicado
+                      - cell [ref=e195]:
+                        - group "Ações de Cotação familiar" [ref=e196]:
+                          - button "Editar" [ref=e197] [cursor=pointer]
+                          - button "Mais ações de cotação familiar" [ref=e202] [cursor=pointer]
+                    - row [ref=e208]:
+                      - cell [ref=e209]:
+                        - paragraph [ref=e210]: Solicitação de contato
+                        - paragraph [ref=e211]: /forms/formulario-2
+                      - cell "18" [ref=e212]
+                      - cell "Publicado Publicado" [ref=e213]:
+                        - generic [ref=e214]:
+                          - switch "Publicado" [checked] [ref=e216]
+                          - generic [ref=e219] [cursor=pointer]: Publicado
+                      - cell [ref=e220]:
+                        - group "Ações de Solicitação de contato" [ref=e221]:
+                          - button "Editar" [ref=e222] [cursor=pointer]
+                          - button "Mais ações de solicitação de contato" [ref=e227] [cursor=pointer]
+                    - row [ref=e233]:
+                      - cell [ref=e234]:
+                        - paragraph [ref=e235]: Pesquisa pós-atendimento
+                        - paragraph [ref=e236]: /forms/formulario-3
+                      - cell "12" [ref=e237]
+                      - cell "Publicado Publicado" [ref=e238]:
+                        - generic [ref=e239]:
+                          - switch "Publicado" [checked] [ref=e241]
+                          - generic [ref=e244] [cursor=pointer]: Publicado
+                      - cell [ref=e245]:
+                        - group "Ações de Pesquisa pós-atendimento" [ref=e246]:
+                          - button "Editar" [ref=e247] [cursor=pointer]
+                          - button "Mais ações de pesquisa pós-atendimento" [ref=e252] [cursor=pointer]
+                    - row [ref=e258]:
+                      - cell [ref=e259]:
+                        - paragraph [ref=e260]: Simulação empresarial
+                        - paragraph [ref=e261]: /forms/formulario-4
+                      - cell "7" [ref=e262]
+                      - cell "Publicado Publicado" [ref=e263]:
+                        - generic [ref=e264]:
+                          - switch "Publicado" [checked] [ref=e266]
+                          - generic [ref=e269] [cursor=pointer]: Publicado
+                      - cell [ref=e270]:
+                        - group "Ações de Simulação empresarial" [ref=e271]:
+                          - button "Editar" [ref=e272] [cursor=pointer]
+                          - button "Mais ações de simulação empresarial" [ref=e277] [cursor=pointer]
+                    - row [ref=e283]:
+                      - cell [ref=e284]:
+                        - paragraph [ref=e285]: Contato pelo site
+                        - paragraph [ref=e286]: /forms/formulario-5
+                      - cell "5" [ref=e287]
+                      - cell "Publicado Publicado" [ref=e288]:
+                        - generic [ref=e289]:
+                          - switch "Publicado" [checked] [ref=e291]
+                          - generic [ref=e294] [cursor=pointer]: Publicado
+                      - cell [ref=e295]:
+                        - group "Ações de Contato pelo site" [ref=e296]:
+                          - button "Editar" [ref=e297] [cursor=pointer]
+                          - button "Mais ações de contato pelo site" [ref=e302] [cursor=pointer]
+                    - row [ref=e308]:
+                      - cell [ref=e309]:
+                        - paragraph [ref=e310]: Retorno de proposta
+                        - paragraph [ref=e311]: /forms/formulario-6
+                      - cell "2" [ref=e312]
+                      - cell "Rascunho Rascunho" [ref=e313]:
+                        - generic [ref=e314]:
+                          - switch "Rascunho" [ref=e316]
+                          - generic [ref=e319] [cursor=pointer]: Rascunho
+                      - cell [ref=e320]:
+                        - group "Ações de Retorno de proposta" [ref=e321]:
+                          - button "Editar" [ref=e322] [cursor=pointer]
+                          - button "Mais ações de retorno de proposta" [ref=e327] [cursor=pointer]
+                    - row [ref=e333]:
+                      - cell [ref=e334]:
+                        - paragraph [ref=e335]: Campanha regional
+                        - paragraph [ref=e336]: /forms/formulario-7
+                      - cell "1" [ref=e337]
+                      - cell "Publicado Publicado" [ref=e338]:
+                        - generic [ref=e339]:
+                          - switch "Publicado" [checked] [ref=e341]
+                          - generic [ref=e344] [cursor=pointer]: Publicado
+                      - cell [ref=e345]:
+                        - group "Ações de Campanha regional" [ref=e346]:
+                          - button "Editar" [ref=e347] [cursor=pointer]
+                          - button "Mais ações de campanha regional" [ref=e352] [cursor=pointer]
+                    - row [ref=e358]:
+                      - cell [ref=e359]:
+                        - paragraph [ref=e360]: Atualização cadastral
+                        - paragraph [ref=e361]: /forms/formulario-8
+                      - cell "0" [ref=e362]
+                      - cell "Publicado Publicado" [ref=e363]:
+                        - generic [ref=e364]:
+                          - switch "Publicado" [checked] [ref=e366]
+                          - generic [ref=e369] [cursor=pointer]: Publicado
+                      - cell [ref=e370]:
+                        - group "Ações de Atualização cadastral" [ref=e371]:
+                          - button "Editar" [ref=e372] [cursor=pointer]
+                          - button "Mais ações de atualização cadastral" [ref=e377] [cursor=pointer]
+              - navigation "Paginação" [ref=e383]:
+                - generic [ref=e384]:
+                  - generic [ref=e385]:
+                    - generic [ref=e386]: Itens por página
+                    - combobox [aria-hidden] [ref=e387]
+                    - button "Itens por página" [ref=e389] [cursor=pointer]:
+                      - generic [ref=e390]: "10"
+                  - generic [ref=e393]: 1–8 de 8
+                - generic [ref=e394]:
+                  - button "Pagina anterior" [disabled] [ref=e395]
+                  - button "1" [ref=e399] [cursor=pointer]
+                  - button "Próxima página" [disabled] [ref=e400]

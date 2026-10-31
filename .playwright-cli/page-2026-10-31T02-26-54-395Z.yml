@@ -1,0 +1,197 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - img "Kifer Saúde CRM" [ref=f3e7]:
+        - generic [ref=f3e8]: kifersaúde
+        - generic [ref=f3e9]: CRM
+      - navigation [ref=f3e10]:
+        - generic [ref=f3e11]:
+          - button "Dashboard" [ref=f3e12] [cursor=pointer]
+          - button "CRM" [ref=f3e21] [cursor=pointer]
+          - button "Comunicação" [ref=f3e31] [cursor=pointer]
+          - button "Financeiro" [ref=f3e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f3e49] [cursor=pointer]
+          - button "Configurações" [ref=f3e56] [cursor=pointer]
+      - generic [ref=f3e62]:
+        - button "Recolher" [ref=f3e63] [cursor=pointer]
+        - button "Notificações" [ref=f3e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f3e76] [cursor=pointer]:
+          - generic [ref=f3e79]: Escuro
+        - button "Sair" [ref=f3e80] [cursor=pointer]
+  - generic [ref=f3e85]:
+    - banner [ref=f3e86]:
+      - generic [ref=f3e87]:
+        - navigation "Breadcrumb" [ref=f3e88]:
+          - list [ref=f3e89]:
+            - listitem [ref=f3e90]:
+              - button "CRM" [ref=f3e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f3e92]
+            - listitem [ref=f3e95]: Automações e IA
+        - generic [ref=f3e96]:
+          - generic [ref=f3e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f3e98] [cursor=pointer]
+          - generic [ref=f3e102]: OD
+    - main [ref=f3e104]:
+      - generic [ref=f3e106]:
+        - generic [ref=f3e279]:
+          - generic [ref=f3e281]:
+            - paragraph [ref=f3e282]: Administração
+            - generic [ref=f3e284]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f3e285]
+              - button "Informações sobre Automações, integrações e IA" [ref=f3e287]
+          - tablist "Áreas de automações e IA" [ref=f3e292]:
+            - tab "Automações" [selected] [ref=f3e293] [cursor=pointer]
+            - tab "Integrações" [ref=f3e295] [cursor=pointer]
+            - tab "IA" [ref=f3e297] [cursor=pointer]
+        - main [ref=f3e107]:
+          - generic [ref=f3e109]:
+            - generic [ref=f3e299]:
+              - tablist [ref=f3e301]:
+                - tab "Fluxos" [selected] [ref=f3e302] [cursor=pointer]
+                - tab "Templates" [ref=f3e304] [cursor=pointer]
+                - tab "Operação" [ref=f3e306] [cursor=pointer]
+              - generic [ref=f3e308]:
+                - status [ref=f3e309]: Autosave ativo
+                - button "Novo fluxo" [ref=f3e311] [cursor=pointer]
+            - generic [ref=f3e314]:
+              - region "Resumo das automações" [ref=f3e315]:
+                - generic [ref=f3e316]:
+                  - paragraph [ref=f3e318]: Fluxos ativos
+                  - generic [ref=f3e321]:
+                    - paragraph [ref=f3e322]: "6"
+                    - paragraph [ref=f3e323]: 8 configurados
+                - generic [ref=f3e324]:
+                  - paragraph [ref=f3e326]: Etapas configuradas
+                  - generic [ref=f3e331]:
+                    - paragraph [ref=f3e332]: "24"
+                    - paragraph [ref=f3e333]: Distribuídas entre os fluxos
+                - generic [ref=f3e334]:
+                  - paragraph [ref=f3e336]: Templates
+                  - generic [ref=f3e339]:
+                    - paragraph [ref=f3e340]: "3"
+                    - paragraph [ref=f3e341]: Disponíveis para as mensagens
+                - generic [ref=f3e342]:
+                  - paragraph [ref=f3e344]: Mensagens hoje
+                  - generic [ref=f3e348]:
+                    - paragraph [ref=f3e349]: "46"
+                    - paragraph [ref=f3e350]: Mensagens automáticas registradas hoje
+              - generic [ref=f3e351]:
+                - generic [ref=f3e353]:
+                  - paragraph [ref=f3e354]: Automação comercial
+                  - generic [ref=f3e355]:
+                    - heading "Fluxos de automação" [level=2] [ref=f3e356]
+                    - button "Informações sobre esta seção" [ref=f3e358]
+                - generic [ref=f3e361]:
+                  - searchbox "Buscar fluxo por nome, condição ou tag" [ref=f3e363]
+                  - button "Todas as tags" [ref=f3e365] [cursor=pointer]
+                  - paragraph [ref=f3e373]: 8 fluxos encontrados
+                - region "Rolagem de Fluxos de automação" [ref=f3e375]:
+                  - table "Fluxos de automação" [ref=f3e376]:
+                    - rowgroup [ref=f3e383]:
+                      - row [ref=f3e384]:
+                        - columnheader "Fluxo" [ref=f3e385]
+                        - columnheader "Gatilho" [ref=f3e386]
+                        - columnheader "Status" [ref=f3e387]
+                        - columnheader "Etapas" [ref=f3e388]
+                        - columnheader "Ações" [ref=f3e389]
+                    - rowgroup [ref=f3e390]:
+                      - row [ref=f3e391]:
+                        - cell [ref=f3e392]:
+                          - generic [ref=f3e393]:
+                            - paragraph [ref=f3e394]: Abordagem inicial
+                            - paragraph [ref=f3e395]: "Status: Contato Inicial"
+                        - cell "Novo lead" [ref=f3e396]
+                        - cell "Ativo" [ref=f3e397]
+                        - cell "3" [ref=f3e399]
+                        - cell [ref=f3e400]:
+                          - button "Editar fluxo Abordagem inicial" [ref=f3e401] [cursor=pointer]:
+                            - generic [ref=f3e402]: Editar
+                      - row [ref=f3e405]:
+                        - cell [ref=f3e406]:
+                          - generic [ref=f3e407]:
+                            - paragraph [ref=f3e408]: Proposta sem retorno
+                            - paragraph [ref=f3e409]: "Status: Proposta enviada"
+                        - cell "Mudança de status" [ref=f3e410]
+                        - cell "Ativo" [ref=f3e411]
+                        - cell "3" [ref=f3e413]
+                        - cell [ref=f3e414]:
+                          - button "Editar fluxo Proposta sem retorno" [ref=f3e415] [cursor=pointer]:
+                            - generic [ref=f3e416]: Editar
+                      - row [ref=f3e419]:
+                        - cell [ref=f3e420]:
+                          - generic [ref=f3e421]:
+                            - paragraph [ref=f3e422]: Reativação de contatos
+                            - paragraph [ref=f3e423]: "Status: Decisão"
+                        - cell "Tempo no status" [ref=f3e424]
+                        - cell "Pausado" [ref=f3e425]
+                        - cell "3" [ref=f3e427]
+                        - cell [ref=f3e428]:
+                          - button "Editar fluxo Reativação de contatos" [ref=f3e429] [cursor=pointer]:
+                            - generic [ref=f3e430]: Editar
+                      - row [ref=f3e433]:
+                        - cell [ref=f3e434]:
+                          - generic [ref=f3e435]:
+                            - paragraph [ref=f3e436]: Pós-venda e acompanhamento
+                            - paragraph [ref=f3e437]: "Status: Atendimento"
+                        - cell "Tempo sem contato" [ref=f3e438]
+                        - cell "Ativo" [ref=f3e439]
+                        - cell "3" [ref=f3e441]
+                        - cell [ref=f3e442]:
+                          - button "Editar fluxo Pós-venda e acompanhamento" [ref=f3e443] [cursor=pointer]:
+                            - generic [ref=f3e444]: Editar
+                      - row [ref=f3e447]:
+                        - cell [ref=f3e448]:
+                          - generic [ref=f3e449]:
+                            - paragraph [ref=f3e450]: Lead aguardando cotação
+                            - paragraph [ref=f3e451]: "Status: Contato Inicial"
+                        - cell "Mudança de status" [ref=f3e452]
+                        - cell "Ativo" [ref=f3e453]
+                        - cell "3" [ref=f3e455]
+                        - cell [ref=f3e456]:
+                          - button "Editar fluxo Lead aguardando cotação" [ref=f3e457] [cursor=pointer]:
+                            - generic [ref=f3e458]: Editar
+                      - row [ref=f3e461]:
+                        - cell [ref=f3e462]:
+                          - generic [ref=f3e463]:
+                            - paragraph [ref=f3e464]: Retorno após simulação
+                            - paragraph [ref=f3e465]: "Status: Proposta enviada"
+                        - cell "Novo lead" [ref=f3e466]
+                        - cell "Pausado" [ref=f3e467]
+                        - cell "3" [ref=f3e469]
+                        - cell [ref=f3e470]:
+                          - button "Editar fluxo Retorno após simulação" [ref=f3e471] [cursor=pointer]:
+                            - generic [ref=f3e472]: Editar
+                      - row [ref=f3e475]:
+                        - cell [ref=f3e476]:
+                          - generic [ref=f3e477]:
+                            - paragraph [ref=f3e478]: Contato sem resposta
+                            - paragraph [ref=f3e479]: "Status: Decisão"
+                        - cell "Tempo sem contato" [ref=f3e480]
+                        - cell "Ativo" [ref=f3e481]
+                        - cell "3" [ref=f3e483]
+                        - cell [ref=f3e484]:
+                          - button "Editar fluxo Contato sem resposta" [ref=f3e485] [cursor=pointer]:
+                            - generic [ref=f3e486]: Editar
+                      - row [ref=f3e489]:
+                        - cell [ref=f3e490]:
+                          - generic [ref=f3e491]:
+                            - paragraph [ref=f3e492]: Nova oportunidade
+                            - paragraph [ref=f3e493]: "Status: Atendimento"
+                        - cell "Tempo no status" [ref=f3e494]
+                        - cell "Ativo" [ref=f3e495]
+                        - cell "3" [ref=f3e497]
+                        - cell [ref=f3e498]:
+                          - button "Editar fluxo Nova oportunidade" [ref=f3e499] [cursor=pointer]:
+                            - generic [ref=f3e500]: Editar
+                - navigation "Paginação" [ref=f3e503]:
+                  - generic [ref=f3e504]:
+                    - generic [ref=f3e505]:
+                      - generic [ref=f3e506]: Itens por página
+                      - combobox [aria-hidden] [ref=f3e507]
+                      - button "Itens por página" [ref=f3e509] [cursor=pointer]:
+                        - generic [ref=f3e510]: "10"
+                    - generic [ref=f3e513]: 1–8 de 8
+                  - generic [ref=f3e514]:
+                    - button "Pagina anterior" [disabled] [ref=f3e515]
+                    - button "1" [ref=f3e519] [cursor=pointer]
+                    - button "Próxima página" [disabled] [ref=f3e520]

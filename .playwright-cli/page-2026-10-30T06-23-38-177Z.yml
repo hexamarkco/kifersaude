@@ -1,0 +1,32 @@
+- generic [ref=f2e4]:
+  - banner [ref=f2e5]:
+    - generic [ref=f2e6]:
+      - generic [ref=f2e7]:
+        - paragraph [ref=f2e8]: Conteúdo público
+        - generic [ref=f2e10]:
+          - heading "Blog" [level=1] [ref=f2e11]
+          - button "Informações sobre Blog" [ref=f2e13]
+      - button "Novo post" [ref=f2e17] [cursor=pointer]
+  - generic [ref=f2e20]:
+    - generic [ref=f2e21]:
+      - heading "Artigos publicados" [level=3] [ref=f2e26]
+      - generic [ref=f2e28]: —
+    - generic [ref=f2e29]:
+      - heading "Rascunhos" [level=3] [ref=f2e34]
+      - generic [ref=f2e36]: —
+    - generic [ref=f2e37]:
+      - heading "Visualizações" [level=3] [ref=f2e42]
+      - generic [ref=f2e44]: —
+    - generic [ref=f2e45]:
+      - heading "Atualizados no mês" [level=3] [ref=f2e50]
+      - generic [ref=f2e52]: —
+  - generic [ref=f2e54]:
+    - textbox "Buscar artigos" [ref=f2e57]:
+      - /placeholder: Buscar por título ou categoria...
+    - button "Todos os status" [ref=f2e59] [cursor=pointer]
+  - generic [ref=f2e66]:
+    - generic [ref=f2e67]:
+      - heading "Biblioteca de artigos" [level=2] [ref=f2e68]
+      - paragraph [ref=f2e69]: Consulte e gerencie as publicações do site.
+    - status [ref=f2e70]:
+      - paragraph [ref=f2e74]: Carregando

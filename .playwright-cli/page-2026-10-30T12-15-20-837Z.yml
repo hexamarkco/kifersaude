@@ -1,0 +1,192 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - complementary [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - img "Kifer Saúde CRM" [ref=f3e7]:
+          - generic [ref=f3e8]: kifersaúde
+          - generic [ref=f3e9]: CRM
+        - navigation [ref=f3e10]:
+          - generic [ref=f3e11]:
+            - button "Dashboard" [ref=f3e12] [cursor=pointer]
+            - button "CRM" [ref=f3e21] [cursor=pointer]
+            - button "Comunicação" [ref=f3e31] [cursor=pointer]
+            - button "Financeiro" [ref=f3e40] [cursor=pointer]
+            - button "Automações e IA" [ref=f3e49] [cursor=pointer]
+            - button "Configurações" [ref=f3e56] [cursor=pointer]
+        - generic [ref=f3e62]:
+          - button "Recolher" [ref=f3e63] [cursor=pointer]
+          - button "Notificações" [ref=f3e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=f3e76] [cursor=pointer]:
+            - generic [ref=f3e79]: Escuro
+          - button "Sair" [ref=f3e80] [cursor=pointer]
+    - generic [ref=f3e85]:
+      - banner [ref=f3e86]:
+        - generic [ref=f3e87]:
+          - navigation "Breadcrumb" [ref=f3e88]:
+            - list [ref=f3e89]:
+              - listitem [ref=f3e90]:
+                - button "CRM" [ref=f3e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f3e92]
+              - listitem [ref=f3e95]: Configurações
+          - generic [ref=f3e96]:
+            - generic [ref=f3e97]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=f3e98] [cursor=pointer]
+            - generic [ref=f3e102]: OD
+      - main [ref=f3e104]:
+        - generic [ref=f3e106]:
+          - generic [ref=f3e107]:
+            - generic [ref=f3e109]:
+              - paragraph [ref=f3e110]: Administração
+              - generic [ref=f3e112]:
+                - heading "Editor de formulários" [level=1] [ref=f3e407]
+                - button "Informações sobre Editor de formulários" [ref=f3e408]
+            - tablist "Áreas de configurações" [ref=f3e124]:
+              - tab "Geral" [ref=f3e125] [cursor=pointer]
+              - tab "Usuários" [ref=f3e130] [cursor=pointer]
+              - tab "Links" [ref=f3e137] [cursor=pointer]
+              - tab "Formulários" [selected] [ref=f3e142] [cursor=pointer]
+          - main [ref=f3e147]:
+            - generic [ref=f3e409]:
+              - generic [ref=f3e410]:
+                - button "Voltar para formulários" [ref=f3e411] [cursor=pointer]
+                - generic [ref=f3e415]:
+                  - generic [ref=f3e416]:
+                    - paragraph [ref=f3e417]: Editor de formulário
+                    - generic [ref=f3e418]:
+                      - heading "Cotação familiar" [level=2] [ref=f3e419]
+                      - button "Informações sobre esta seção" [ref=f3e421]
+                  - group "Ações da página" [ref=f3e426]:
+                    - button "Salvar configurações" [ref=f3e427] [cursor=pointer]
+              - generic [ref=f3e433]:
+                - generic [ref=f3e434]:
+                  - generic [ref=f3e435]:
+                    - heading "Dados e publicação" [level=3] [ref=f3e436]
+                    - button "Informações sobre os dados e publicação" [ref=f3e438]
+                  - generic [ref=f3e441]:
+                    - button "Copiar link" [ref=f3e442] [cursor=pointer]
+                    - button "Abrir" [ref=f3e448] [cursor=pointer]
+                - generic [ref=f3e455]:
+                  - generic [ref=f3e456]:
+                    - generic [ref=f3e457]:
+                      - generic [ref=f3e458]: Título *
+                      - textbox "Título" [ref=f3e462]: Cotação familiar
+                    - generic [ref=f3e463]:
+                      - generic [ref=f3e465]:
+                        - generic [ref=f3e466]: Endereço público *
+                        - 'button "Ajuda: Endereço público" [ref=f3e468]'
+                      - textbox "Endereço público" [ref=f3e472]: cotacao-familiar
+                      - paragraph [ref=f3e473]: kifersaude.com.br/forms/cotacao-familiar
+                  - generic [ref=f3e474]:
+                    - generic [ref=f3e475]: Descrição (SEO, opcional)
+                    - textbox "Descrição (SEO, opcional)" [ref=f3e478]: Descubra opções de planos para sua família.
+                  - generic [ref=f3e479]:
+                    - generic [ref=f3e480]:
+                      - generic [ref=f3e481]: Título da tela de sucesso
+                      - textbox "Título da tela de sucesso" [ref=f3e485]: Recebemos suas informações
+                    - generic [ref=f3e486]:
+                      - generic [ref=f3e487]: Mensagem da tela de sucesso
+                      - textbox "Mensagem da tela de sucesso" [ref=f3e491]: Nossa equipe entrará em contato em breve.
+                  - generic [ref=f3e492]:
+                    - generic [ref=f3e493]:
+                      - switch "Pedir localização (GPS) antes do contato" [checked] [ref=f3e495]
+                      - generic [ref=f3e498] [cursor=pointer]: Pedir localização (GPS) antes do contato
+                    - generic [ref=f3e499]:
+                      - switch "Redirecionar para o WhatsApp após enviar" [ref=f3e501]
+                      - generic [ref=f3e504] [cursor=pointer]: Redirecionar para o WhatsApp após enviar
+                  - generic [ref=f3e505]:
+                    - generic [ref=f3e506]:
+                      - switch "Publicado" [checked] [ref=f3e508]
+                      - generic [ref=f3e511] [cursor=pointer]: Publicado
+                    - group "Ações do formulário" [ref=f3e513]:
+                      - button "Salvar configurações" [ref=f3e514] [cursor=pointer]
+              - generic [ref=f3e520]:
+                - generic [ref=f3e521]:
+                  - generic [ref=f3e523]:
+                    - heading "Perguntas" [level=3] [ref=f3e524]
+                    - button "Informações sobre as etapas do formulário" [ref=f3e526]
+                  - button "Nova pergunta" [ref=f3e529] [cursor=pointer]
+                - generic [ref=f3e533]:
+                  - generic [ref=f3e534]:
+                    - generic [ref=f3e535]:
+                      - group "Ordenar etapa" [ref=f3e536]:
+                        - button "Mover para cima" [disabled] [ref=f3e537]
+                        - button "Mover para baixo" [ref=f3e541] [cursor=pointer]
+                      - generic [ref=f3e549]:
+                        - paragraph [ref=f3e550]: Qual é o tipo de contratação?
+                        - generic [ref=f3e551]:
+                          - generic [ref=f3e552]: Escolha única
+                          - generic [ref=f3e553]: Obrigatória
+                          - generic [ref=f3e554]: → Tipo de contratação
+                    - group "Ações da etapa" [ref=f3e555]:
+                      - button "Editar" [ref=f3e556] [cursor=pointer]
+                      - button "Excluir etapa Qual é o tipo de contratação?" [ref=f3e562] [cursor=pointer]
+                  - generic [ref=f3e567]:
+                    - generic [ref=f3e568]:
+                      - group "Ordenar etapa" [ref=f3e569]:
+                        - button "Mover para cima" [ref=f3e570] [cursor=pointer]
+                        - button "Mover para baixo" [disabled] [ref=f3e574]
+                      - generic [ref=f3e582]:
+                        - paragraph [ref=f3e583]: Quem deseja incluir no plano?
+                        - generic [ref=f3e584]: Múltipla escolha
+                    - group "Ações da etapa" [ref=f3e586]:
+                      - button "Editar" [ref=f3e587] [cursor=pointer]
+                      - button "Excluir etapa Quem deseja incluir no plano?" [ref=f3e593] [cursor=pointer]
+                - generic [ref=f3e598]:
+                  - paragraph [ref=f3e599]: Etapa final (fixa)
+                  - generic [ref=f3e600]:
+                    - generic [ref=f3e601]:
+                      - generic [ref=f3e602]: Título da tela de contato
+                      - textbox "Título da tela de contato" [ref=f3e606]: Quase lá! Como podemos te chamar?
+                    - generic [ref=f3e607]:
+                      - generic [ref=f3e608]: Descrição (opcional)
+                      - textbox "Descrição (opcional)" [ref=f3e612]
+                    - button "Salvar" [ref=f3e613] [cursor=pointer]
+                  - paragraph [ref=f3e618]: A etapa de localização aparece automaticamente antes desta.
+              - generic [ref=f3e622]:
+                - generic [ref=f3e624]:
+                  - heading "Respostas recentes" [level=3] [ref=f3e625]
+                  - generic [ref=f3e626]: 24 envios
+                  - button "Informações sobre as respostas recentes" [ref=f3e628]
+                - generic [ref=f3e638]:
+                  - paragraph [ref=f3e639]: Pessoa de demonstração
+                  - paragraph [ref=f3e640]: (21) 90000-0000 · 30/10/2026, 09:00:00
+  - dialog [ref=f3e644]:
+    - generic [ref=f3e645]:
+      - heading "Nova pergunta" [level=2] [ref=f3e647]
+      - button "Fechar" [active] [ref=f3e648] [cursor=pointer]
+    - generic [ref=f3e653]:
+      - generic [ref=f3e654]:
+        - generic [ref=f3e655]:
+          - generic [ref=f3e656]: Título *
+          - textbox "Título" [ref=f3e660]:
+            - /placeholder: "Ex: Você já tem plano de saúde?"
+        - generic [ref=f3e661]:
+          - generic [ref=f3e662]: Tipo de pergunta
+          - combobox [aria-hidden] [ref=f3e665]
+          - button "Tipo de pergunta" [ref=f3e667] [cursor=pointer]:
+            - generic [ref=f3e668]: Escolha única
+      - generic [ref=f3e671]:
+        - generic [ref=f3e672]: Descrição (opcional)
+        - textbox "Descrição (opcional)" [ref=f3e675]:
+          - /placeholder: Texto de apoio exibido abaixo do título
+      - generic [ref=f3e676]:
+        - generic [ref=f3e677]: Mapear resposta para
+        - combobox [aria-hidden] [ref=f3e680]
+        - button "Mapear resposta para" [ref=f3e682] [cursor=pointer]:
+          - generic [ref=f3e683]: Nenhum (só entra na observação do lead)
+      - generic [ref=f3e686]:
+        - generic [ref=f3e687]: Opções
+        - generic [ref=f3e690]:
+          - generic [ref=f3e691]:
+            - textbox "Opção 1" [ref=f3e693]
+            - button "Remover opção 1" [disabled] [ref=f3e694]
+          - generic [ref=f3e699]:
+            - textbox "Opção 2" [ref=f3e701]
+            - button "Remover opção 2" [disabled] [ref=f3e702]
+          - button "Adicionar opção" [ref=f3e707] [cursor=pointer]
+      - generic [ref=f3e711]:
+        - switch "Resposta obrigatória" [checked] [ref=f3e713]
+        - generic [ref=f3e716] [cursor=pointer]: Resposta obrigatória
+    - generic [ref=f3e717]:
+      - button "Cancelar" [ref=f3e718] [cursor=pointer]
+      - button "Salvar" [ref=f3e719] [cursor=pointer]

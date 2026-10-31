@@ -1,0 +1,687 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "mode": "no-preference",
+      "client": 310,
+      "scroll": 310,
+      "cls": 0,
+      "runs": 66,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 911.6749877929688,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 1721.737548828125,
+          "top": 984.474609375
+        },
+        {
+          "id": "para-quem",
+          "height": 1558.7000732421875,
+          "top": 2706.212890625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1236.5125732421875,
+          "top": 4264.91259765625
+        },
+        {
+          "id": "depoimentos",
+          "height": 897.875,
+          "top": 5501.42529296875
+        },
+        {
+          "id": "quem-somos",
+          "height": 1379.5625,
+          "top": 6399.30029296875
+        },
+        {
+          "id": "faq",
+          "height": 876.9125366210938,
+          "top": 7778.862548828125
+        },
+        {
+          "id": "cotacao",
+          "height": 1938.2000732421875,
+          "top": 8655.775146484375
+        },
+        {
+          "id": "fale-agora",
+          "height": 1664.4000244140625,
+          "top": 10593.975158691406
+        },
+        {
+          "id": "footer",
+          "height": 1941.300048828125,
+          "top": 12258.375183105469
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "mode": "no-preference",
+      "client": 380,
+      "scroll": 380,
+      "cls": 0,
+      "runs": 66,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 893.7125244140625,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 1479.1500244140625,
+          "top": 966.5126953125
+        },
+        {
+          "id": "para-quem",
+          "height": 1363.550048828125,
+          "top": 2445.66259765625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1054.3875732421875,
+          "top": 3809.21240234375
+        },
+        {
+          "id": "depoimentos",
+          "height": 833.0750122070312,
+          "top": 4863.60009765625
+        },
+        {
+          "id": "quem-somos",
+          "height": 1278.9375,
+          "top": 5696.67529296875
+        },
+        {
+          "id": "faq",
+          "height": 738.0375366210938,
+          "top": 6975.612548828125
+        },
+        {
+          "id": "cotacao",
+          "height": 1787.125,
+          "top": 7713.650146484375
+        },
+        {
+          "id": "fale-agora",
+          "height": 1516.8250732421875,
+          "top": 9500.775207519531
+        },
+        {
+          "id": "footer",
+          "height": 1785.9000244140625,
+          "top": 11017.600219726562
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "mode": "no-preference",
+      "client": 758,
+      "scroll": 758,
+      "cls": 0,
+      "runs": 66,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 930.4000244140625,
+          "top": 776.7998046875
+        },
+        {
+          "id": "para-quem",
+          "height": 862.2374877929688,
+          "top": 1707.19970703125
+        },
+        {
+          "id": "como-funciona",
+          "height": 887.9750366210938,
+          "top": 2569.4375
+        },
+        {
+          "id": "depoimentos",
+          "height": 747.3375244140625,
+          "top": 3457.412353515625
+        },
+        {
+          "id": "quem-somos",
+          "height": 894.25,
+          "top": 4204.749755859375
+        },
+        {
+          "id": "faq",
+          "height": 675.0499877929688,
+          "top": 5098.999755859375
+        },
+        {
+          "id": "cotacao",
+          "height": 1298.0875244140625,
+          "top": 5774.0499267578125
+        },
+        {
+          "id": "fale-agora",
+          "height": 945.1375122070312,
+          "top": 7072.137405395508
+        },
+        {
+          "id": "footer",
+          "height": 1273.5999755859375,
+          "top": 8017.27490234375
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "mode": "no-preference",
+      "client": 1430,
+      "scroll": 1430,
+      "cls": 0,
+      "runs": 66,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 814.8125,
+          "top": 776.7998046875
+        },
+        {
+          "id": "para-quem",
+          "height": 823.4625244140625,
+          "top": 1591.6123046875
+        },
+        {
+          "id": "como-funciona",
+          "height": 666.5625,
+          "top": 2415.074951171875
+        },
+        {
+          "id": "depoimentos",
+          "height": 663.6124877929688,
+          "top": 3081.637451171875
+        },
+        {
+          "id": "quem-somos",
+          "height": 778.4750366210938,
+          "top": 3745.25
+        },
+        {
+          "id": "faq",
+          "height": 671.4125366210938,
+          "top": 4523.72509765625
+        },
+        {
+          "id": "cotacao",
+          "height": 803.5125122070312,
+          "top": 5195.1375732421875
+        },
+        {
+          "id": "fale-agora",
+          "height": 729.6875,
+          "top": 5998.650096893311
+        },
+        {
+          "id": "footer",
+          "height": 736.7999877929688,
+          "top": 6728.337585449219
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "mode": "no-preference",
+      "client": 1910,
+      "scroll": 1910,
+      "cls": 0,
+      "runs": 66,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 716.9500122070312,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 885.7750244140625,
+          "top": 789.75
+        },
+        {
+          "id": "para-quem",
+          "height": 964.4000244140625,
+          "top": 1675.52490234375
+        },
+        {
+          "id": "como-funciona",
+          "height": 772.3250122070312,
+          "top": 2639.925048828125
+        },
+        {
+          "id": "depoimentos",
+          "height": 721.7125244140625,
+          "top": 3412.25
+        },
+        {
+          "id": "quem-somos",
+          "height": 842.6500244140625,
+          "top": 4133.962646484375
+        },
+        {
+          "id": "faq",
+          "height": 742.1500244140625,
+          "top": 4976.612548828125
+        },
+        {
+          "id": "cotacao",
+          "height": 920.0499877929688,
+          "top": 5718.7625732421875
+        },
+        {
+          "id": "fale-agora",
+          "height": 807.6000366210938,
+          "top": 6638.812597632408
+        },
+        {
+          "id": "footer",
+          "height": 756,
+          "top": 7446.41259765625
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "mode": "reduce",
+      "client": 310,
+      "scroll": 310,
+      "cls": 0,
+      "runs": 0,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 911.6749877929688,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 1721.737548828125,
+          "top": 984.474609375
+        },
+        {
+          "id": "para-quem",
+          "height": 1558.7000732421875,
+          "top": 2706.212890625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1236.5125732421875,
+          "top": 4264.91259765625
+        },
+        {
+          "id": "depoimentos",
+          "height": 897.875,
+          "top": 5501.42529296875
+        },
+        {
+          "id": "quem-somos",
+          "height": 1379.5625,
+          "top": 6399.30029296875
+        },
+        {
+          "id": "faq",
+          "height": 876.9125366210938,
+          "top": 7778.862548828125
+        },
+        {
+          "id": "cotacao",
+          "height": 1938.2000732421875,
+          "top": 8655.775146484375
+        },
+        {
+          "id": "fale-agora",
+          "height": 1664.4000244140625,
+          "top": 10593.975158691406
+        },
+        {
+          "id": "footer",
+          "height": 1941.300048828125,
+          "top": 12258.375183105469
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "mode": "reduce",
+      "client": 380,
+      "scroll": 380,
+      "cls": 0,
+      "runs": 0,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 893.7125244140625,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 1479.1500244140625,
+          "top": 966.5126953125
+        },
+        {
+          "id": "para-quem",
+          "height": 1363.550048828125,
+          "top": 2445.66259765625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1054.3875732421875,
+          "top": 3809.21240234375
+        },
+        {
+          "id": "depoimentos",
+          "height": 833.0750122070312,
+          "top": 4863.60009765625
+        },
+        {
+          "id": "quem-somos",
+          "height": 1278.9375,
+          "top": 5696.67529296875
+        },
+        {
+          "id": "faq",
+          "height": 738.0375366210938,
+          "top": 6975.612548828125
+        },
+        {
+          "id": "cotacao",
+          "height": 1787.125,
+          "top": 7713.650146484375
+        },
+        {
+          "id": "fale-agora",
+          "height": 1516.8250732421875,
+          "top": 9500.775207519531
+        },
+        {
+          "id": "footer",
+          "height": 1785.9000244140625,
+          "top": 11017.600219726562
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "mode": "reduce",
+      "client": 758,
+      "scroll": 758,
+      "cls": 0,
+      "runs": 0,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 930.4000244140625,
+          "top": 776.7998046875
+        },
+        {
+          "id": "para-quem",
+          "height": 862.2374877929688,
+          "top": 1707.19970703125
+        },
+        {
+          "id": "como-funciona",
+          "height": 887.9750366210938,
+          "top": 2569.4375
+        },
+        {
+          "id": "depoimentos",
+          "height": 747.3375244140625,
+          "top": 3457.412353515625
+        },
+        {
+          "id": "quem-somos",
+          "height": 894.25,
+          "top": 4204.749755859375
+        },
+        {
+          "id": "faq",
+          "height": 675.0499877929688,
+          "top": 5098.999755859375
+        },
+        {
+          "id": "cotacao",
+          "height": 1298.0875244140625,
+          "top": 5774.0499267578125
+        },
+        {
+          "id": "fale-agora",
+          "height": 945.1375122070312,
+          "top": 7072.137405395508
+        },
+        {
+          "id": "footer",
+          "height": 1273.5999755859375,
+          "top": 8017.27490234375
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "mode": "reduce",
+      "client": 1430,
+      "scroll": 1430,
+      "cls": 0,
+      "runs": 0,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 814.8125,
+          "top": 776.7998046875
+        },
+        {
+          "id": "para-quem",
+          "height": 823.4625244140625,
+          "top": 1591.6123046875
+        },
+        {
+          "id": "como-funciona",
+          "height": 666.5625,
+          "top": 2415.074951171875
+        },
+        {
+          "id": "depoimentos",
+          "height": 663.6124877929688,
+          "top": 3081.637451171875
+        },
+        {
+          "id": "quem-somos",
+          "height": 778.4750366210938,
+          "top": 3745.25
+        },
+        {
+          "id": "faq",
+          "height": 671.4125366210938,
+          "top": 4523.72509765625
+        },
+        {
+          "id": "cotacao",
+          "height": 803.5125122070312,
+          "top": 5195.1375732421875
+        },
+        {
+          "id": "fale-agora",
+          "height": 729.6875,
+          "top": 5998.650096893311
+        },
+        {
+          "id": "footer",
+          "height": 736.7999877929688,
+          "top": 6728.337585449219
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "mode": "reduce",
+      "client": 1910,
+      "scroll": 1910,
+      "cls": 0,
+      "runs": 0,
+      "observers": 1,
+      "invisible": 0,
+      "played": 10,
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "passed",
+      "form": "mocked success and validation",
+      "whatsapp": "intercepted",
+      "sections": [
+        {
+          "id": "topo",
+          "height": 716.9500122070312,
+          "top": 72.7998046875
+        },
+        {
+          "id": "prova-social",
+          "height": 885.7750244140625,
+          "top": 789.75
+        },
+        {
+          "id": "para-quem",
+          "height": 964.4000244140625,
+          "top": 1675.52490234375
+        },
+        {
+          "id": "como-funciona",
+          "height": 772.3250122070312,
+          "top": 2639.925048828125
+        },
+        {
+          "id": "depoimentos",
+          "height": 721.7125244140625,
+          "top": 3412.25
+        },
+        {
+          "id": "quem-somos",
+          "height": 842.6500244140625,
+          "top": 4133.962646484375
+        },
+        {
+          "id": "faq",
+          "height": 742.1500244140625,
+          "top": 4976.612548828125
+        },
+        {
+          "id": "cotacao",
+          "height": 920.0499877929688,
+          "top": 5718.7625732421875
+        },
+        {
+          "id": "fale-agora",
+          "height": 807.6000366210938,
+          "top": 6638.812597632408
+        },
+        {
+          "id": "footer",
+          "height": 756,
+          "top": 7446.41259765625
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "pageErrors": [],
+  "mockedLeadCount": 10
+}

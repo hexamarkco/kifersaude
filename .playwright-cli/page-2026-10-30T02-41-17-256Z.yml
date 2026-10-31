@@ -1,0 +1,82 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Kifer Saúde / Operação comercial
+        - generic [ref=e10]:
+          - heading "Gestão de contratos" [level=1] [ref=e11]
+          - button "Informações sobre Gestão de contratos" [ref=e13]
+      - generic [ref=e17]:
+        - group "Ações dos contratos" [ref=e18]:
+          - button "Importar contratos em massa" [ref=e19] [cursor=pointer]
+        - button "Novo contrato" [ref=e25] [cursor=pointer]
+  - generic "Resumo da carteira de contratos" [ref=e29]:
+    - generic [ref=e30]:
+      - heading "Contratos ativos" [level=3] [ref=e35]
+      - generic [ref=e36]: "4"
+      - generic [ref=e37]: Contratos vigentes
+    - generic [ref=e38]:
+      - heading "Em implantação" [level=3] [ref=e43]
+      - generic [ref=e44]: "4"
+      - generic [ref=e45]: Em análise ou emissão
+    - generic [ref=e46]:
+      - heading "Próximos vencimentos" [level=3] [ref=e51]
+      - generic [ref=e52]: "0"
+      - generic [ref=e53]: Nos próximos 30 dias
+    - generic [ref=e54]:
+      - heading "Mensalidade total" [level=3] [ref=e59]
+      - generic [ref=e60]: R$ 8.750,00
+      - generic [ref=e61]: Soma dos valores informados
+  - generic [ref=e62]:
+    - generic [ref=e63]:
+      - textbox "Buscar contratos" [ref=e66]:
+        - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+      - button "Exportar" [ref=e68] [cursor=pointer]
+    - generic [ref=e73]:
+      - button "Todos os status" [ref=e75] [cursor=pointer]
+      - button "Todos os responsáveis" [ref=e83] [cursor=pointer]
+      - button "Todos os períodos" [ref=e94] [cursor=pointer]
+      - button "Filtros avançados" [ref=e101] [cursor=pointer]
+  - generic [ref=e105]:
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - paragraph [ref=e108]: Carteira contratual
+        - generic [ref=e109]:
+          - heading "Contratos em acompanhamento" [level=3] [ref=e110]
+          - button "Informações sobre esta seção" [ref=e112]
+      - generic [ref=e116]:
+        - generic [ref=e118]:
+          - generic [ref=e119]: "0"
+          - generic [ref=e120]: resultados
+        - generic [ref=e122]:
+          - generic [ref=e123]: 1/1
+          - generic [ref=e124]: páginas
+    - region "Rolagem de Carteira de contratos" [ref=e126]:
+      - table "Carteira de contratos" [ref=e127]:
+        - rowgroup [ref=e136]:
+          - row [ref=e137]:
+            - columnheader [ref=e138]:
+              - button "Ordenar por Contrato" [ref=e139] [cursor=pointer]:
+                - generic [ref=e140]: Contrato
+            - columnheader [ref=e141]:
+              - button "Ordenar por Status" [ref=e142] [cursor=pointer]:
+                - generic [ref=e143]: Status
+            - columnheader [ref=e144]:
+              - button "Ordenar por Operadora e plano" [ref=e145] [cursor=pointer]:
+                - generic [ref=e146]: Operadora e plano
+            - columnheader [ref=e147]:
+              - button "Ordenar por Financeiro" [ref=e148] [cursor=pointer]:
+                - generic [ref=e149]: Financeiro
+            - columnheader [ref=e150]:
+              - button "Ordenar por Datas críticas" [ref=e151] [cursor=pointer]:
+                - generic [ref=e152]: Datas críticas
+            - columnheader [ref=e153]:
+              - button "Ordenar por Responsável" [ref=e154] [cursor=pointer]:
+                - generic [ref=e155]: Responsável
+            - columnheader "Ações" [ref=e156]
+        - rowgroup [ref=e157]:
+          - row [ref=e158]:
+            - cell [ref=e159]:
+              - generic [ref=e160]:
+                - paragraph [ref=e165]: Nenhum contrato encontrado
+                - paragraph [ref=e166]: Tente ajustar os filtros ou adicione um novo contrato.

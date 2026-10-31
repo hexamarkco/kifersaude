@@ -1,0 +1,267 @@
+- generic [ref=f4e4]:
+  - banner [ref=f4e5]:
+    - generic [ref=f4e6]:
+      - generic [ref=f4e7]:
+        - paragraph [ref=f4e8]: Kifer Saúde / Operação comercial
+        - generic [ref=f4e10]:
+          - heading "Gestão de contratos" [level=1] [ref=f4e11]
+          - button "Informações sobre Gestão de contratos" [ref=f4e13]
+      - generic [ref=f4e17]:
+        - group "Ações dos contratos" [ref=f4e18]:
+          - button "Importar contratos em massa" [ref=f4e19] [cursor=pointer]
+        - button "Novo contrato" [ref=f4e25] [cursor=pointer]
+  - generic "Resumo da carteira de contratos" [ref=f4e29]:
+    - generic [ref=f4e30]:
+      - heading "Contratos ativos" [level=3] [ref=f4e35]
+      - generic [ref=f4e36]: "4"
+      - generic [ref=f4e37]: Contratos vigentes
+    - generic [ref=f4e38]:
+      - heading "Em implantação" [level=3] [ref=f4e43]
+      - generic [ref=f4e44]: "4"
+      - generic [ref=f4e45]: Em análise ou emissão
+    - generic [ref=f4e46]:
+      - heading "Próximos vencimentos" [level=3] [ref=f4e51]
+      - generic [ref=f4e52]: "0"
+      - generic [ref=f4e53]: Nos próximos 30 dias
+    - generic [ref=f4e54]:
+      - heading "Mensalidade total" [level=3] [ref=f4e59]
+      - generic [ref=f4e60]: R$ 8.750,00
+      - generic [ref=f4e61]: Soma dos valores informados
+  - generic [ref=f4e62]:
+    - generic [ref=f4e63]:
+      - textbox "Buscar contratos" [ref=f4e66]:
+        - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+      - button "Exportar" [ref=f4e68] [cursor=pointer]
+    - generic [ref=f4e73]:
+      - button "Todos os status" [ref=f4e74] [cursor=pointer]
+      - button "Todos os responsáveis" [ref=f4e82] [cursor=pointer]
+      - button "Todos os períodos" [ref=f4e92] [cursor=pointer]
+      - button "Filtros avançados" [expanded] [active] [ref=f4e99] [cursor=pointer]
+    - button "Todas as operadoras" [ref=f4e465] [cursor=pointer]
+  - generic [ref=f4e103]:
+    - generic [ref=f4e104]:
+      - generic [ref=f4e105]:
+        - paragraph [ref=f4e106]: Carteira contratual
+        - generic [ref=f4e107]:
+          - heading "Contratos em acompanhamento" [level=3] [ref=f4e108]
+          - button "Informações sobre esta seção" [ref=f4e110]
+      - generic [ref=f4e114]:
+        - generic [ref=f4e116]:
+          - generic [ref=f4e117]: "8"
+          - generic [ref=f4e118]: resultados
+        - generic [ref=f4e120]:
+          - generic [ref=f4e121]: 1/1
+          - generic [ref=f4e122]: páginas
+    - generic [ref=f4e123]:
+      - generic [ref=f4e124]:
+        - generic [ref=f4e125]:
+          - button [ref=f4e127] [cursor=pointer]:
+            - heading "Pessoa Demonstração 1" [level=3] [ref=f4e128]
+            - paragraph [ref=f4e129]: DEMO-001
+          - 'button "Alterar status do contrato DEMO-001: Ativo" [ref=f4e131] [cursor=pointer]':
+            - generic [ref=f4e132]: Ativo
+        - generic [ref=f4e135]:
+          - generic [ref=f4e136]:
+            - generic [ref=f4e137]: Operadora
+            - generic [ref=f4e138]: Amil
+          - generic [ref=f4e139]:
+            - generic [ref=f4e140]: Plano
+            - generic [ref=f4e141]: Plano Demonstração
+          - generic [ref=f4e142]:
+            - generic [ref=f4e143]: Mensalidade
+            - generic [ref=f4e144]: R$ 0,00
+          - generic [ref=f4e145]:
+            - generic [ref=f4e146]: Responsável
+            - generic [ref=f4e147]: Operador Demonstração
+        - group [ref=f4e148]:
+          - generic "Mais informações" [ref=f4e149] [cursor=pointer]
+        - group "Ações do contrato DEMO-001" [ref=f4e151]:
+          - button "Abrir contrato" [ref=f4e152] [cursor=pointer]
+          - button "Mais ações do contrato demo-001" [ref=f4e158] [cursor=pointer]
+      - generic [ref=f4e164]:
+        - generic [ref=f4e165]:
+          - button [ref=f4e167] [cursor=pointer]:
+            - heading "Pessoa Demonstração 2" [level=3] [ref=f4e168]
+            - paragraph [ref=f4e169]: DEMO-002
+          - 'button "Alterar status do contrato DEMO-002: Em análise" [ref=f4e171] [cursor=pointer]':
+            - generic [ref=f4e172]: Em análise
+        - generic [ref=f4e175]:
+          - generic [ref=f4e176]:
+            - generic [ref=f4e177]: Operadora
+            - generic [ref=f4e178]: Amil
+          - generic [ref=f4e179]:
+            - generic [ref=f4e180]: Plano
+            - generic [ref=f4e181]: Plano Demonstração
+          - generic [ref=f4e182]:
+            - generic [ref=f4e183]: Mensalidade
+            - generic [ref=f4e184]: R$ 950,00
+          - generic [ref=f4e185]:
+            - generic [ref=f4e186]: Responsável
+            - generic [ref=f4e187]: Operador Demonstração
+        - group [ref=f4e188]:
+          - generic "Mais informações" [ref=f4e189] [cursor=pointer]
+        - group "Ações do contrato DEMO-002" [ref=f4e191]:
+          - button "Abrir contrato" [ref=f4e192] [cursor=pointer]
+          - button "Mais ações do contrato demo-002" [ref=f4e198] [cursor=pointer]
+      - generic [ref=f4e204]:
+        - generic [ref=f4e205]:
+          - button [ref=f4e207] [cursor=pointer]:
+            - heading "Pessoa Demonstração 3" [level=3] [ref=f4e208]
+            - paragraph [ref=f4e209]: DEMO-003
+          - 'button "Alterar status do contrato DEMO-003: Ativo" [ref=f4e211] [cursor=pointer]':
+            - generic [ref=f4e212]: Ativo
+        - generic [ref=f4e215]:
+          - generic [ref=f4e216]:
+            - generic [ref=f4e217]: Operadora
+            - generic [ref=f4e218]: Amil
+          - generic [ref=f4e219]:
+            - generic [ref=f4e220]: Plano
+            - generic [ref=f4e221]: Plano Demonstração
+          - generic [ref=f4e222]:
+            - generic [ref=f4e223]: Mensalidade
+            - generic [ref=f4e224]: R$ 1.050,00
+          - generic [ref=f4e225]:
+            - generic [ref=f4e226]: Responsável
+            - generic [ref=f4e227]: Operador Demonstração
+        - group [ref=f4e228]:
+          - generic "Mais informações" [ref=f4e229] [cursor=pointer]
+        - group "Ações do contrato DEMO-003" [ref=f4e231]:
+          - button "Abrir contrato" [ref=f4e232] [cursor=pointer]
+          - button "Mais ações do contrato demo-003" [ref=f4e238] [cursor=pointer]
+      - generic [ref=f4e244]:
+        - generic [ref=f4e245]:
+          - button [ref=f4e247] [cursor=pointer]:
+            - heading "Pessoa Demonstração 4" [level=3] [ref=f4e248]
+            - paragraph [ref=f4e249]: DEMO-004
+          - 'button "Alterar status do contrato DEMO-004: Em análise" [ref=f4e251] [cursor=pointer]':
+            - generic [ref=f4e252]: Em análise
+        - generic [ref=f4e255]:
+          - generic [ref=f4e256]:
+            - generic [ref=f4e257]: Operadora
+            - generic [ref=f4e258]: Amil
+          - generic [ref=f4e259]:
+            - generic [ref=f4e260]: Plano
+            - generic [ref=f4e261]: Plano Demonstração
+          - generic [ref=f4e262]:
+            - generic [ref=f4e263]: Mensalidade
+            - generic [ref=f4e264]: R$ 1.150,00
+          - generic [ref=f4e265]:
+            - generic [ref=f4e266]: Responsável
+            - generic [ref=f4e267]: Operador Demonstração
+        - group [ref=f4e268]:
+          - generic "Mais informações" [ref=f4e269] [cursor=pointer]
+        - group "Ações do contrato DEMO-004" [ref=f4e271]:
+          - button "Abrir contrato" [ref=f4e272] [cursor=pointer]
+          - button "Mais ações do contrato demo-004" [ref=f4e278] [cursor=pointer]
+      - generic [ref=f4e284]:
+        - generic [ref=f4e285]:
+          - button [ref=f4e287] [cursor=pointer]:
+            - heading "Pessoa Demonstração 5" [level=3] [ref=f4e288]
+            - paragraph [ref=f4e289]: DEMO-005
+          - 'button "Alterar status do contrato DEMO-005: Ativo" [ref=f4e291] [cursor=pointer]':
+            - generic [ref=f4e292]: Ativo
+        - generic [ref=f4e295]:
+          - generic [ref=f4e296]:
+            - generic [ref=f4e297]: Operadora
+            - generic [ref=f4e298]: Amil
+          - generic [ref=f4e299]:
+            - generic [ref=f4e300]: Plano
+            - generic [ref=f4e301]: Plano Demonstração
+          - generic [ref=f4e302]:
+            - generic [ref=f4e303]: Mensalidade
+            - generic [ref=f4e304]: R$ 1.250,00
+          - generic [ref=f4e305]:
+            - generic [ref=f4e306]: Responsável
+            - generic [ref=f4e307]: Operador Demonstração
+        - group [ref=f4e308]:
+          - generic "Mais informações" [ref=f4e309] [cursor=pointer]
+        - group "Ações do contrato DEMO-005" [ref=f4e311]:
+          - button "Abrir contrato" [ref=f4e312] [cursor=pointer]
+          - button "Mais ações do contrato demo-005" [ref=f4e318] [cursor=pointer]
+      - generic [ref=f4e324]:
+        - generic [ref=f4e325]:
+          - button [ref=f4e327] [cursor=pointer]:
+            - heading "Pessoa Demonstração 6" [level=3] [ref=f4e328]
+            - paragraph [ref=f4e329]: DEMO-006
+          - 'button "Alterar status do contrato DEMO-006: Em análise" [ref=f4e331] [cursor=pointer]':
+            - generic [ref=f4e332]: Em análise
+        - generic [ref=f4e335]:
+          - generic [ref=f4e336]:
+            - generic [ref=f4e337]: Operadora
+            - generic [ref=f4e338]: Amil
+          - generic [ref=f4e339]:
+            - generic [ref=f4e340]: Plano
+            - generic [ref=f4e341]: Plano Demonstração
+          - generic [ref=f4e342]:
+            - generic [ref=f4e343]: Mensalidade
+            - generic [ref=f4e344]: R$ 1.350,00
+          - generic [ref=f4e345]:
+            - generic [ref=f4e346]: Responsável
+            - generic [ref=f4e347]: Operador Demonstração
+        - group [ref=f4e348]:
+          - generic "Mais informações" [ref=f4e349] [cursor=pointer]
+        - group "Ações do contrato DEMO-006" [ref=f4e351]:
+          - button "Abrir contrato" [ref=f4e352] [cursor=pointer]
+          - button "Mais ações do contrato demo-006" [ref=f4e358] [cursor=pointer]
+      - generic [ref=f4e364]:
+        - generic [ref=f4e365]:
+          - button [ref=f4e367] [cursor=pointer]:
+            - heading "Pessoa Demonstração 7" [level=3] [ref=f4e368]
+            - paragraph [ref=f4e369]: DEMO-007
+          - 'button "Alterar status do contrato DEMO-007: Ativo" [ref=f4e371] [cursor=pointer]':
+            - generic [ref=f4e372]: Ativo
+        - generic [ref=f4e375]:
+          - generic [ref=f4e376]:
+            - generic [ref=f4e377]: Operadora
+            - generic [ref=f4e378]: Amil
+          - generic [ref=f4e379]:
+            - generic [ref=f4e380]: Plano
+            - generic [ref=f4e381]: Plano Demonstração
+          - generic [ref=f4e382]:
+            - generic [ref=f4e383]: Mensalidade
+            - generic [ref=f4e384]: R$ 1.450,00
+          - generic [ref=f4e385]:
+            - generic [ref=f4e386]: Responsável
+            - generic [ref=f4e387]: Operador Demonstração
+        - group [ref=f4e388]:
+          - generic "Mais informações" [ref=f4e389] [cursor=pointer]
+        - group "Ações do contrato DEMO-007" [ref=f4e391]:
+          - button "Abrir contrato" [ref=f4e392] [cursor=pointer]
+          - button "Mais ações do contrato demo-007" [ref=f4e398] [cursor=pointer]
+      - generic [ref=f4e404]:
+        - generic [ref=f4e405]:
+          - button [ref=f4e407] [cursor=pointer]:
+            - heading "Sem titular" [level=3] [ref=f4e408]
+            - paragraph [ref=f4e409]: DEMO-008
+          - 'button "Alterar status do contrato DEMO-008: Em análise" [ref=f4e411] [cursor=pointer]':
+            - generic [ref=f4e412]: Em análise
+        - generic [ref=f4e415]:
+          - generic [ref=f4e416]:
+            - generic [ref=f4e417]: Operadora
+            - generic [ref=f4e418]: Amil
+          - generic [ref=f4e419]:
+            - generic [ref=f4e420]: Plano
+            - generic [ref=f4e421]: Plano Demonstração
+          - generic [ref=f4e422]:
+            - generic [ref=f4e423]: Mensalidade
+            - generic [ref=f4e424]: R$ 1.550,00
+          - generic [ref=f4e425]:
+            - generic [ref=f4e426]: Responsável
+            - generic [ref=f4e427]: Operador Demonstração
+        - group [ref=f4e428]:
+          - generic "Mais informações" [ref=f4e429] [cursor=pointer]
+        - group "Ações do contrato DEMO-008" [ref=f4e431]:
+          - button "Abrir contrato" [ref=f4e432] [cursor=pointer]
+          - button "Mais ações do contrato demo-008" [ref=f4e438] [cursor=pointer]
+    - navigation "Paginação" [ref=f4e444]:
+      - generic [ref=f4e445]:
+        - generic [ref=f4e446]:
+          - generic [ref=f4e447]: Itens por página
+          - combobox [aria-hidden] [ref=f4e448]
+          - button "Itens por página" [ref=f4e450] [cursor=pointer]:
+            - generic [ref=f4e451]: "25"
+        - generic [ref=f4e454]: 1–8 de 8
+      - generic [ref=f4e455]:
+        - button "Pagina anterior" [disabled] [ref=f4e456]
+        - button "1" [ref=f4e460] [cursor=pointer]
+        - button "Próxima página" [disabled] [ref=f4e461]

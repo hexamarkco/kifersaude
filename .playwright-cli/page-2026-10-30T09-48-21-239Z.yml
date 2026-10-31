@@ -1,0 +1,89 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - img "Kifer Saúde CRM" [ref=f3e7]:
+        - generic [ref=f3e8]: kifersaúde
+        - generic [ref=f3e9]: CRM
+      - navigation [ref=f3e10]:
+        - generic [ref=f3e11]:
+          - button "Dashboard" [ref=f3e12] [cursor=pointer]
+          - button "CRM" [ref=f3e21] [cursor=pointer]
+          - button "Comunicação" [ref=f3e31] [cursor=pointer]
+          - button "Financeiro" [ref=f3e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f3e49] [cursor=pointer]
+          - button "Configurações" [ref=f3e56] [cursor=pointer]
+      - generic [ref=f3e62]:
+        - button "Recolher" [ref=f3e63] [cursor=pointer]
+        - button "Notificações" [ref=f3e68] [cursor=pointer]
+        - button "Ativar tema claro" [active] [ref=f3e194] [cursor=pointer]:
+          - generic [ref=f3e79]: Claro
+        - button "Sair" [ref=f3e80] [cursor=pointer]
+  - generic [ref=f3e85]:
+    - banner [ref=f3e86]:
+      - generic [ref=f3e87]:
+        - navigation "Breadcrumb" [ref=f3e88]:
+          - list [ref=f3e89]:
+            - listitem [ref=f3e90]:
+              - button "CRM" [ref=f3e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f3e92]
+            - listitem [ref=f3e95]: Automações e IA
+        - generic [ref=f3e96]:
+          - generic [ref=f3e97]: operador-demo
+          - button "Ativar tema claro" [ref=f3e201] [cursor=pointer]
+          - generic [ref=f3e102]: O
+    - main [ref=f3e104]:
+      - generic [ref=f3e106]:
+        - generic [ref=f3e108]:
+          - generic [ref=f3e109]:
+            - paragraph [ref=f3e110]: Kifer Saúde · Inteligência artificial
+            - heading "Chat e testes de IA" [level=1] [ref=f3e113]
+            - paragraph [ref=f3e114]: Valide o atendimento automatizado em uma simulação controlada. As mensagens desta tela não são enviadas a clientes.
+          - button "Nova simulação" [ref=f3e116] [cursor=pointer]
+        - generic [ref=f3e120]:
+          - generic [ref=f3e121]:
+            - generic [ref=f3e122]:
+              - generic [ref=f3e124]:
+                - heading "Simulação de atendimento" [level=3] [ref=f3e126]
+                - paragraph [ref=f3e127]: Converse como lead para testar o fluxo configurado.
+              - button "Histórico" [ref=f3e129] [cursor=pointer]
+            - log "Mensagens da simulação" [ref=f3e134]:
+              - generic [ref=f3e135]:
+                - paragraph [ref=f3e139]: Comece uma simulação
+                - paragraph [ref=f3e140]: Envie uma mensagem como se fosse o lead ou peça para a IA iniciar a conversa.
+            - generic [ref=f3e141]:
+              - generic [ref=f3e142]: Mensagem de teste
+              - textbox "Mensagem de teste" [ref=f3e143]:
+                - /placeholder: Digite como se fosse o lead...
+              - button "Enviar" [disabled] [ref=f3e144]
+          - generic [ref=f3e149]:
+            - generic [ref=f3e150]:
+              - generic [ref=f3e152]:
+                - heading "Cenário de teste" [level=3] [ref=f3e154]
+                - paragraph [ref=f3e155]: Acompanhe o contexto e o resultado desta simulação.
+              - generic [ref=f3e156]: Ambiente isolado
+            - generic [ref=f3e158]:
+              - generic [ref=f3e159]:
+                - generic [ref=f3e160]:
+                  - paragraph [ref=f3e161]: Conversa atual
+                  - paragraph [ref=f3e162]: Nenhuma selecionada
+                - generic [ref=f3e163]: Aguardando
+              - generic [ref=f3e164]:
+                - generic [ref=f3e165]:
+                  - paragraph [ref=f3e166]: Avaliação mais recente
+                  - paragraph [ref=f3e167]: Nenhum teste nesta conversa
+                - generic [ref=f3e168]: Ainda não executado
+              - generic [ref=f3e169]:
+                - generic [ref=f3e170]:
+                  - paragraph [ref=f3e171]: Uso
+                  - paragraph [ref=f3e172]: Mensagens não são enviadas a clientes.
+                - generic [ref=f3e173]: Simulação
+            - generic [ref=f3e174]:
+              - paragraph [ref=f3e178]: Nenhum cenário executado
+              - paragraph [ref=f3e179]: Escolha um cenário para avaliar as respostas e receber sugestões de melhoria.
+            - generic [ref=f3e180]:
+              - button "Escolher cenário" [ref=f3e181] [cursor=pointer]
+              - generic [ref=f3e185]:
+                - paragraph [ref=f3e186]: Ou deixe a IA iniciar a conversa
+                - textbox "Nome do lead para iniciar a abordagem" [ref=f3e188]:
+                  - /placeholder: Nome do lead (opcional)
+                - button "Iniciar abordagem" [ref=f3e189] [cursor=pointer]

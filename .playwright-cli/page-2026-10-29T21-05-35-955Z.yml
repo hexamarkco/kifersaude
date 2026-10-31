@@ -1,0 +1,55 @@
+- main [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: Comunicação
+      - generic [ref=e10]:
+        - heading "Disparos WhatsApp" [level=1] [ref=e11]
+        - button "Informações sobre Disparos WhatsApp" [ref=e13]
+    - button "Novo disparo" [ref=e17] [cursor=pointer]
+  - generic "Resumo das campanhas" [ref=e22]:
+    - generic [ref=e23]:
+      - heading "Campanhas" [level=3] [ref=e28]
+      - generic [ref=e29]: "12"
+      - generic [ref=e30]: Total cadastrado
+    - generic [ref=e31]:
+      - heading "Rascunhos" [level=3] [ref=e36]
+      - generic [ref=e37]: "3"
+      - generic [ref=e38]: Aguardam revisão
+    - generic [ref=e39]:
+      - heading "Agendadas" [level=3] [ref=e44]
+      - generic [ref=e45]: "5"
+      - generic [ref=e46]: Com horário de envio
+    - generic [ref=e47]:
+      - heading "Ativas ou pausadas" [level=3] [ref=e52]
+      - generic [ref=e53]: "4"
+      - generic [ref=e54]: Na fila, em execução ou pausadas
+  - generic [ref=e55]:
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - heading "Envios automáticos" [level=2] [ref=e61]
+          - button "Informações sobre envios automáticos" [ref=e63]
+          - generic [ref=e66]: Precisa de atenção
+        - paragraph [ref=e67]: "Última verificação: há 6 h."
+      - generic "Resultado da última verificação" [ref=e68]:
+        - generic [ref=e73]:
+          - generic [ref=e74]: "25"
+          - generic [ref=e75]: contatos analisados
+        - generic [ref=e81]:
+          - generic [ref=e82]: "0"
+          - generic [ref=e83]: com envio concluído
+        - generic [ref=e88]:
+          - generic [ref=e89]: "1"
+          - generic [ref=e90]: com falha
+    - group [ref=e91]:
+      - generic "Ver histórico de verificações" [ref=e92] [cursor=pointer]
+  - generic [ref=e93]:
+    - generic [ref=e96]:
+      - heading "Campanhas recentes" [level=2] [ref=e97]
+      - button "Informações sobre esta seção" [ref=e99]
+    - generic [ref=e102]:
+      - generic [ref=e107]:
+        - generic [ref=e108]: Campanha de demonstração
+        - generic [ref=e109]: Planilha CSV · 240 contatos
+      - generic [ref=e110]: Pausado
+      - button "Abrir" [ref=e111] [cursor=pointer]

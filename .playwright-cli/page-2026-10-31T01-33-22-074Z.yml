@@ -1,0 +1,122 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - img "Kifer Saúde CRM" [ref=f1e7]:
+        - generic [ref=f1e8]: kifersaúde
+        - generic [ref=f1e9]: CRM
+      - navigation [ref=f1e10]:
+        - generic [ref=f1e11]:
+          - button "Dashboard" [ref=f1e12] [cursor=pointer]
+          - button "CRM" [ref=f1e21] [cursor=pointer]
+          - button "Comunicação" [ref=f1e31] [cursor=pointer]
+          - button "Financeiro" [ref=f1e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f1e49] [cursor=pointer]
+          - button "Configurações" [ref=f1e56] [cursor=pointer]
+      - generic [ref=f1e62]:
+        - button "Recolher" [ref=f1e63] [cursor=pointer]
+        - button "Notificações" [ref=f1e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f1e76] [cursor=pointer]:
+          - generic [ref=f1e79]: Escuro
+        - button "Sair" [ref=f1e80] [cursor=pointer]
+  - generic [ref=f1e85]:
+    - banner [ref=f1e86]:
+      - generic [ref=f1e87]:
+        - navigation "Breadcrumb" [ref=f1e88]:
+          - list [ref=f1e89]:
+            - listitem [ref=f1e90]:
+              - button "CRM" [ref=f1e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f1e92]
+            - listitem [ref=f1e95]: Automações e IA
+        - generic [ref=f1e96]:
+          - generic [ref=f1e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f1e98] [cursor=pointer]
+          - generic [ref=f1e102]: OD
+    - main [ref=f1e104]:
+      - main [ref=f1e107]:
+        - region "Editor do fluxo automático" [ref=f1e110]:
+          - generic [ref=f1e111]:
+            - button "Voltar aos fluxos" [ref=f1e113] [cursor=pointer]
+            - generic [ref=f1e117]:
+              - generic [ref=f1e118]:
+                - paragraph [ref=f1e119]: Fluxo 1
+                - heading "Abordagem inicial" [level=1] [ref=f1e122]
+                - paragraph [ref=f1e123]: Organize a jornada, as regras operacionais e os testes em um só lugar.
+              - generic [ref=f1e124]:
+                - button "Remover fluxo" [ref=f1e125] [cursor=pointer]
+                - button "Testar fluxo" [ref=f1e130] [cursor=pointer]
+                - button "Salvar fluxo" [ref=f1e135] [cursor=pointer]
+            - tablist [ref=f1e143]:
+              - tab "Jornada" [ref=f1e144] [cursor=pointer]
+              - tab "Regras e agenda" [active] [selected] [ref=f1e148] [cursor=pointer]
+              - tab "Simular e testar" [ref=f1e153] [cursor=pointer]
+          - generic [ref=f1e158]:
+            - generic [ref=f1e261]:
+              - generic [ref=f1e263]:
+                - generic [ref=f1e264]: Nome do fluxo
+                - 'textbox "Ex.: Follow-up de contato inicial" [ref=f1e266]': Abordagem inicial
+              - generic [ref=f1e267]:
+                - generic [ref=f1e268]: Resumo do fluxo
+                - generic [ref=f1e270]:
+                  - switch [checked] [ref=f1e272]
+                  - generic [ref=f1e275]:
+                    - generic [ref=f1e276]: Fluxo ativo
+                    - generic [ref=f1e277]: Desative para pausar este fluxo sem apagá-lo
+                - generic [ref=f1e278]:
+                  - generic [ref=f1e279]: "Status: Contato Inicial"
+                  - generic [ref=f1e280]: Janela 08:00 - 19:00
+                  - generic [ref=f1e281]: 3 etapas
+                  - generic [ref=f1e282]: "Status: Contato Inicial"
+            - generic [ref=f1e283]:
+              - generic [ref=f1e284]:
+                - heading "Agendamento do fluxo" [level=4] [ref=f1e285]
+                - paragraph [ref=f1e286]: Defina a janela diária, os dias permitidos e o limite de envios deste fluxo.
+              - generic [ref=f1e287]:
+                - generic [ref=f1e288]:
+                  - generic [ref=f1e289]: Janela diária
+                  - generic [ref=f1e290]:
+                    - button "08:00" [ref=f1e292] [cursor=pointer]
+                    - generic [ref=f1e297]: até
+                    - button "19:00" [ref=f1e299] [cursor=pointer]
+                - generic [ref=f1e304]:
+                  - generic [ref=f1e305]: Dias permitidos
+                  - generic [ref=f1e306]:
+                    - button "Seg" [ref=f1e307] [cursor=pointer]
+                    - button "Ter" [ref=f1e308] [cursor=pointer]
+                    - button "Qua" [ref=f1e309] [cursor=pointer]
+                    - button "Qui" [ref=f1e310] [cursor=pointer]
+                    - button "Sex" [ref=f1e311] [cursor=pointer]
+                    - button "Sáb" [ref=f1e312] [cursor=pointer]
+                    - button "Dom" [ref=f1e313] [cursor=pointer]
+                - generic [ref=f1e314]:
+                  - generic [ref=f1e315]:
+                    - generic [ref=f1e316]: Limite diário deste fluxo
+                    - button "Informações sobre o limite diário" [ref=f1e318]
+                  - spinbutton "Sem limite" [ref=f1e322]
+            - generic [ref=f1e323]:
+              - generic [ref=f1e324]:
+                - generic [ref=f1e325]:
+                  - heading "Condições de saída" [level=4] [ref=f1e326]
+                  - paragraph [ref=f1e327]: Defina quando este fluxo deve ser encerrado automaticamente.
+                - button "Nova condição" [ref=f1e328] [cursor=pointer]
+              - generic [ref=f1e331]:
+                - generic [ref=f1e332]: Encerrar quando
+                - button "qualquer condição" [ref=f1e335] [cursor=pointer]
+                - generic [ref=f1e342]: forem atendidas
+              - generic [ref=f1e343]: Nenhuma condição de saída configurada. O fluxo seguirá até a última ação.
+            - generic [ref=f1e344]:
+              - generic [ref=f1e345]:
+                - heading "Tags e categorização" [level=4] [ref=f1e346]
+                - paragraph [ref=f1e347]: Organize e encontre fluxos rapidamente com etiquetas personalizadas.
+              - generic [ref=f1e348]:
+                - generic [ref=f1e349]:
+                  - text: "#follow-up"
+                  - button "Remover tag follow-up" [ref=f1e350] [cursor=pointer]: ×
+                - generic [ref=f1e351]:
+                  - text: "#demonstração"
+                  - button "Remover tag demonstração" [ref=f1e352] [cursor=pointer]: ×
+              - generic [ref=f1e353]:
+                - 'textbox "Adicionar tag (ex.: premium, inbound)" [ref=f1e356]'
+                - button "Adicionar" [ref=f1e357] [cursor=pointer]
+            - generic [ref=f1e362]:
+              - generic [ref=f1e363]: Status final se não houver resposta
+              - 'textbox "Ex.: Sem follow-up" [ref=f1e365]'

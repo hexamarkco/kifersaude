@@ -1,0 +1,337 @@
+- generic [ref=e1]:
+  - generic [ref=e9]:
+    - link "Pular para o conteúdo" [ref=e10] [cursor=pointer]:
+      - /url: "#ds-main"
+    - generic [ref=e66]:
+      - banner [ref=e67]:
+        - generic [ref=e68]:
+          - button "Abrir navegação" [ref=e969] [cursor=pointer]
+          - navigation "Breadcrumb" [ref=e69]:
+            - list [ref=e70]:
+              - listitem [ref=e71]:
+                - link "Design system" [ref=e72] [cursor=pointer]:
+                  - /url: "#overview"
+              - listitem [aria-hidden] [ref=e73]
+              - listitem [ref=e76]: Componentes
+        - generic [ref=e77]:
+          - searchbox "Buscar no design system" [ref=e79]
+          - button "Ativar tema escuro" [ref=e81] [cursor=pointer]
+      - main [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: 02 / KIFER SAÚDE
+          - heading "Componentes reais. Possibilidades consistentes." [level=1] [ref=e88]
+          - paragraph [ref=e89]: Blocos que já fazem parte do projeto, organizados por função. Interaja com os exemplos e consulte a origem de cada componente.
+        - tablist "Categorias de componentes" [ref=e92]:
+          - tab "Ações" [ref=e93] [cursor=pointer]
+          - tab "Formulários" [ref=e95] [cursor=pointer]
+          - tab "Navegação" [ref=e97] [cursor=pointer]
+          - tab "Dados" [selected] [ref=e99] [cursor=pointer]
+          - tab "Feedback" [ref=e101] [cursor=pointer]
+          - tab "Interações" [ref=e103] [cursor=pointer]
+          - tab "Aplicação" [ref=e105] [cursor=pointer]
+        - complementary [ref=e353]:
+          - generic [ref=e354]: Padrão de uso
+          - generic [ref=e355]: Busca e filtros precedem os dados. Alinhe valores à direita; preserve nomes legíveis e status textuais. Cards agrupam uma responsabilidade, indicadores mostram valor e contexto.
+        - generic [ref=e356]:
+          - article [ref=e357]:
+            - generic [ref=e358]:
+              - heading "Tabela com comportamento real" [level=3] [ref=e359]
+              - generic "Componente real do projeto" [ref=e360]
+            - paragraph [ref=e361]: Busque, filtre, ordene, selecione linhas e alterne páginas. Os dados são locais.
+            - generic [ref=e363]:
+              - generic [ref=e364]:
+                - searchbox "Buscar contatos" [ref=e367]
+                - button "Todos os status" [ref=e370] [cursor=pointer]
+              - status [ref=e377]:
+                - generic [ref=e378]: 8 contatos na demonstração
+              - generic [ref=e973]:
+                - combobox [aria-hidden] [ref=e974]
+                - button "Ordenar contatos" [ref=e976] [cursor=pointer]:
+                  - generic [ref=e977]: Nome
+                - button "Ordem crescente · inverter" [ref=e980] [cursor=pointer]
+                - generic [ref=e982]:
+                  - generic [ref=e983]:
+                    - generic [ref=e984]:
+                      - generic [ref=e985]: AP
+                      - strong [ref=e987]: Ana Paula Ribeiro
+                    - checkbox "Selecionar Ana Paula Ribeiro" [ref=e989] [cursor=pointer]
+                  - generic [ref=e990]:
+                    - generic [ref=e991]: Amil
+                    - generic [ref=e992]: Em atendimento
+                  - generic [ref=e993]:
+                    - strong [ref=e994]: R$ 1.240,00/mês
+                    - button "Ver detalhes" [ref=e995] [cursor=pointer]
+                - generic [ref=e1000]:
+                  - generic [ref=e1001]:
+                    - generic [ref=e1002]:
+                      - generic [ref=e1003]: BC
+                      - strong [ref=e1005]: Bruno Costa
+                    - checkbox "Selecionar Bruno Costa" [ref=e1007] [cursor=pointer]
+                  - generic [ref=e1008]:
+                    - generic [ref=e1009]: Bradesco Saúde
+                    - generic [ref=e1010]: Proposta enviada
+                  - generic [ref=e1011]:
+                    - strong [ref=e1012]: R$ 1.850,00/mês
+                    - button "Ver detalhes" [ref=e1013] [cursor=pointer]
+                - generic [ref=e1018]:
+                  - generic [ref=e1019]:
+                    - generic [ref=e1020]:
+                      - generic [ref=e1021]: CM
+                      - strong [ref=e1023]: Carolina Mendes
+                    - checkbox "Selecionar Carolina Mendes" [ref=e1025] [cursor=pointer]
+                  - generic [ref=e1026]:
+                    - generic [ref=e1027]: SulAmérica
+                    - generic [ref=e1028]: Novo contato
+                  - generic [ref=e1029]:
+                    - strong [ref=e1030]: R$ 980,00/mês
+                    - button "Ver detalhes" [ref=e1031] [cursor=pointer]
+                - generic [ref=e1036]:
+                  - generic [ref=e1037]:
+                    - generic [ref=e1038]:
+                      - generic [ref=e1039]: DO
+                      - strong [ref=e1041]: Daniel Oliveira
+                    - checkbox "Selecionar Daniel Oliveira" [ref=e1043] [cursor=pointer]
+                  - generic [ref=e1044]:
+                    - generic [ref=e1045]: Amil
+                    - generic [ref=e1046]: Contratado
+                  - generic [ref=e1047]:
+                    - strong [ref=e1048]: R$ 1.620,00/mês
+                    - button "Ver detalhes" [ref=e1049] [cursor=pointer]
+              - navigation "Paginação" [ref=e496]:
+                - generic [ref=e497]: 1–4 de 8
+                - generic [ref=e499]:
+                  - button "Pagina anterior" [disabled] [ref=e500]
+                  - generic [ref=e503]:
+                    - button "1" [ref=e504] [cursor=pointer]
+                    - button "2" [ref=e505] [cursor=pointer]
+                  - button "Próxima página" [ref=e506] [cursor=pointer]
+            - group [ref=e509]:
+              - generic "Implementação no projeto" [ref=e510] [cursor=pointer]
+          - article [ref=e511]:
+            - generic [ref=e512]:
+              - heading "Barra de filtros" [level=3] [ref=e513]
+              - generic "Componente real do projeto" [ref=e514]
+            - paragraph [ref=e515]: Filtros ativos mostram a seleção. Limpar restaura a visão sem restrições.
+            - generic [ref=e516]:
+              - generic [ref=e517]:
+                - searchbox "Busca demonstrativa de filtros" [ref=e520]
+                - generic [ref=e521]:
+                  - button "Status" [ref=e523] [cursor=pointer]
+                  - button "Operadoras" [ref=e530] [cursor=pointer]
+                  - 'button "Período: Qualquer data" [ref=e541] [cursor=pointer]':
+                    - generic [ref=e544]:
+                      - generic [ref=e545]: "Período:"
+                      - text: Qualquer data
+              - group [ref=e549]:
+                - generic "Filtros avançados" [ref=e550] [cursor=pointer]
+              - generic [ref=e556]:
+                - paragraph [ref=e557]: Todos os status · Todas as operadoras
+                - button "Limpar seleção" [ref=e558] [cursor=pointer]
+              - paragraph [ref=e559]: Esta amostra demonstra os controles. A tabela acima aplica busca e status sobre os contatos.
+            - group [ref=e560]:
+              - generic "Implementação no projeto" [ref=e561] [cursor=pointer]
+          - article [ref=e562]:
+            - generic [ref=e563]:
+              - heading "Cards e superfícies" [level=3] [ref=e564]
+              - generic "Componente real do projeto" [ref=e565]
+            - paragraph [ref=e566]: Variantes da biblioteca; a hierarquia de conteúdo permanece constante.
+            - generic [ref=e567]:
+              - generic [ref=e568]:
+                - paragraph [ref=e570]: default
+                - paragraph [ref=e572]: muted
+                - paragraph [ref=e574]: glass
+                - paragraph [ref=e576]: strong
+                - paragraph [ref=e578] [cursor=pointer]: interactive
+              - generic [ref=e579]:
+                - generic [ref=e580]: Família de card
+                - combobox [aria-hidden] [ref=e583]
+                - button "Família de card" [ref=e585] [cursor=pointer]:
+                  - generic [ref=e586]: lead
+              - generic [ref=e597]:
+                - heading "Atendimento em andamento" [level=3] [ref=e598]
+                - paragraph [ref=e599]: Informação principal, contexto e próxima ação.
+              - generic [ref=e600]:
+                - generic [ref=e601]: Superfície semântica
+                - combobox [aria-hidden] [ref=e604]
+                - button "Superfície semântica" [ref=e606] [cursor=pointer]:
+                  - generic [ref=e607]: default
+              - paragraph [ref=e611]: "Superfície selecionada: default."
+            - group [ref=e612]:
+              - generic "Implementação no projeto" [ref=e613] [cursor=pointer]
+          - article [ref=e614]:
+            - generic [ref=e615]:
+              - heading "Indicadores e status" [level=3] [ref=e616]
+              - generic "Componente real do projeto" [ref=e617]
+            - paragraph [ref=e618]: Alinhe títulos, valores e contexto por linha de indicadores. Status usam texto além da cor e um seletor único compartilhado entre Leads e Contratos.
+            - generic [ref=e619]:
+              - generic [ref=e620]:
+                - generic [ref=e621]:
+                  - generic [ref=e631]:
+                    - heading "Vendas" [level=3] [ref=e632]
+                    - button "Informações sobre este cartão" [ref=e634]
+                  - generic [ref=e637]: "24"
+                  - generic [ref=e638]: 80 leads recebidos
+                - generic [ref=e639]:
+                  - generic [ref=e649]:
+                    - heading "Valor mensal vendido" [level=3] [ref=e650]
+                    - button "Informações sobre este cartão" [ref=e652]
+                  - generic [ref=e655]: R$ 62.947,16
+                  - generic [ref=e656]: Mensalidade registrada
+                - generic [ref=e657]:
+                  - generic [ref=e667]:
+                    - heading "Comissão prevista" [level=3] [ref=e668]
+                    - button "Informações sobre este cartão" [ref=e670]
+                  - generic [ref=e673]: R$ 128.234,12
+                  - generic [ref=e674]: Sem previsão adicional
+              - generic [ref=e675]:
+                - generic [ref=e677]:
+                  - generic [ref=e678]: "8"
+                  - generic [ref=e679]: neutral
+                - generic [ref=e681]:
+                  - generic [ref=e682]: "8"
+                  - generic [ref=e683]: accent
+                - generic [ref=e685]:
+                  - generic [ref=e686]: "8"
+                  - generic [ref=e687]: gold
+                - generic [ref=e689]:
+                  - generic [ref=e690]: "8"
+                  - generic [ref=e691]: success
+                - generic [ref=e693]:
+                  - generic [ref=e694]: "8"
+                  - generic [ref=e695]: warning
+                - generic [ref=e697]:
+                  - generic [ref=e698]: "8"
+                  - generic [ref=e699]: danger
+                - generic [ref=e701]:
+                  - generic [ref=e702]: "8"
+                  - generic [ref=e703]: info
+              - generic [ref=e704]:
+                - generic [ref=e705]: Atendimento disponível
+                - paragraph [ref=e708]: Aguardando retorno
+              - generic [ref=e709]:
+                - generic [ref=e710]:
+                  - heading "Status simples" [level=3] [ref=e711]
+                  - paragraph [ref=e712]: Menu compacto para atualizar um status.
+                  - button "Alterar status simples demonstrativo" [ref=e714] [cursor=pointer]:
+                    - generic [ref=e715]: Ativo
+                - generic [ref=e718]:
+                  - heading "Status com contexto" [level=3] [ref=e719]
+                  - paragraph [ref=e720]: Campo auxiliar separado das opções de status.
+                  - button "Alterar status contextual demonstrativo" [expanded] [ref=e722] [cursor=pointer]:
+                    - generic [ref=e723]: Em análise
+              - generic [ref=e726]:
+                - generic [ref=e727]: Contratado
+                - generic [ref=e731]: Contratado
+                - generic [ref=e735]: Contratado
+              - generic [ref=e739]:
+                - generic [ref=e740]: Novo contato
+                - generic [ref=e741]: Em contato
+                - generic [ref=e742]: Qualificado
+                - generic [ref=e743]: Proposta
+                - generic [ref=e744]: Negociação
+                - generic [ref=e745]: Contratado
+                - generic [ref=e746]: Perdido
+                - generic [ref=e747]: Pendente
+                - generic [ref=e748]: Concluído
+                - generic [ref=e749]: Em atraso
+                - generic [ref=e750]: Pago
+                - generic [ref=e751]: WhatsApp
+                - generic [ref=e752]: Indicação
+            - group [ref=e753]:
+              - generic "Implementação no projeto" [ref=e754] [cursor=pointer]
+          - article [ref=e755]:
+            - generic [ref=e756]:
+              - heading "Famílias de cards do CRM" [level=3] [ref=e757]
+              - generic "Componente real do projeto" [ref=e758]
+            - paragraph [ref=e759]: Composições nomeadas reutilizam a mesma base visual, sem uma segunda implementação.
+            - generic [ref=e761]:
+              - generic [ref=e762]:
+                - generic [ref=e770]:
+                  - heading "Cliente" [level=3] [ref=e771]
+                  - button "Informações sobre este cartão" [ref=e773]
+                - paragraph [ref=e776]: Conteúdo organizado com os tokens compartilhados.
+              - generic [ref=e777]:
+                - generic [ref=e785]:
+                  - heading "Contato" [level=3] [ref=e786]
+                  - button "Informações sobre este cartão" [ref=e788]
+                - paragraph [ref=e791]: Conteúdo organizado com os tokens compartilhados.
+              - generic [ref=e792]:
+                - generic [ref=e800]:
+                  - heading "Oportunidade" [level=3] [ref=e801]
+                  - button "Informações sobre este cartão" [ref=e803]
+                - paragraph [ref=e806]: Conteúdo organizado com os tokens compartilhados.
+              - generic [ref=e807]:
+                - generic [ref=e815]:
+                  - heading "Atividade" [level=3] [ref=e816]
+                  - button "Informações sobre este cartão" [ref=e818]
+                - paragraph [ref=e821]: Conteúdo organizado com os tokens compartilhados.
+              - generic [ref=e822]:
+                - generic [ref=e830]:
+                  - heading "Tarefa" [level=3] [ref=e831]
+                  - button "Informações sobre este cartão" [ref=e833]
+                - paragraph [ref=e836]: Conteúdo organizado com os tokens compartilhados.
+              - generic [ref=e837]:
+                - generic [ref=e845]:
+                  - heading "Resumo" [level=3] [ref=e846]
+                  - button "Informações sobre este cartão" [ref=e848]
+                - paragraph [ref=e851]: Conteúdo organizado com os tokens compartilhados.
+              - generic [ref=e852]:
+                - generic [ref=e860]:
+                  - heading "Gráfico" [level=3] [ref=e861]
+                  - button "Informações sobre este cartão" [ref=e863]
+                - paragraph [ref=e866]: Conteúdo organizado com os tokens compartilhados.
+            - group [ref=e867]:
+              - generic "Implementação no projeto" [ref=e868] [cursor=pointer]
+          - article [ref=e869]:
+            - generic [ref=e870]:
+              - heading "Pessoas e equipes" [level=3] [ref=e871]
+              - generic "Componente real do projeto" [ref=e872]
+            - paragraph [ref=e873]: Iniciais quando não há foto; grupos preservam a contagem de pessoas.
+            - generic [ref=e874]:
+              - generic [ref=e875]:
+                - generic [ref=e876]: AP
+                - generic [ref=e878]: AP
+                - generic [ref=e880]: AP
+                - generic [ref=e882]: AP
+                - generic [ref=e884]: AP
+              - generic [ref=e886]:
+                - generic [ref=e887]: AP
+                - generic [ref=e890]: BC
+                - generic [ref=e893]: CM
+                - generic [ref=e896]: "+2"
+              - generic [ref=e899]:
+                - generic [ref=e900]: MC
+                - paragraph [ref=e906]: Marina Costa · disponível
+            - group [ref=e907]:
+              - generic "Implementação no projeto" [ref=e908] [cursor=pointer]
+          - article [ref=e909]:
+            - generic [ref=e910]:
+              - heading "Composição e superfícies públicas" [level=3] [ref=e911]
+              - generic "Componente real do projeto" [ref=e912]
+            - paragraph [ref=e913]: Primitivas já exportadas pelo sistema, disponíveis também fora da área operacional.
+            - generic [ref=e914]:
+              - generic [ref=e915]:
+                - generic [ref=e918]:
+                  - heading "Informações relacionadas" [level=3] [ref=e919]
+                  - button "Informações sobre esta seção" [ref=e921]
+                - generic [ref=e924]:
+                  - generic [ref=e925]: Contato
+                  - generic [ref=e926]: Em atendimento
+              - group [ref=e927]:
+                - generic "Ver composição pública" [ref=e928] [cursor=pointer]
+            - group [ref=e929]:
+              - generic "Implementação no projeto" [ref=e930] [cursor=pointer]
+        - generic [ref=e350]:
+          - generic [ref=e351]: Kifer Saúde / Design system
+          - generic [ref=e352]: Clareza em cada interação.
+  - dialog "Status contextual demonstrativos" [ref=e1054]:
+    - generic [ref=e1056]:
+      - generic [ref=e1057]: Responsável pela venda
+      - combobox [aria-hidden] [ref=e1060]
+      - button "Responsável pela venda" [ref=e1062] [cursor=pointer]:
+        - generic [ref=e1063]: Escolher responsável
+    - listbox "Status disponíveis" [ref=e1066]:
+      - option "Ativo" [active] [ref=e1067] [cursor=pointer]
+      - option "Em análise" [selected] [ref=e1070] [cursor=pointer]
+      - option "Aguardando documentos" [ref=e1073] [cursor=pointer]
+      - option "Cancelado" [ref=e1076] [cursor=pointer]

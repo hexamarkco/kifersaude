@@ -1,0 +1,143 @@
+- generic [ref=e4]:
+  - button "Gestão de contratos" [ref=e5] [cursor=pointer]
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - paragraph [ref=e12]: Contratos
+      - generic [ref=e14]:
+        - heading "Novo contrato" [level=1] [ref=e15]
+        - button "Informações sobre Novo contrato" [ref=e17]
+    - button "Importar de arquivo" [ref=e21] [cursor=pointer]
+  - generic [ref=e27]:
+    - group [ref=e28]:
+      - generic [ref=e29]:
+        - text: Informações do Contrato
+        - 'button "Informações: Informações do Contrato" [ref=e31]'
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]: Código do Contrato *
+          - textbox "Código do Contrato *" [ref=e40]:
+            - /placeholder: Informe o código fornecido pela operadora
+        - generic [ref=e41]:
+          - generic [ref=e42]: Lead Vinculado
+          - button "Nenhum" [ref=e47] [cursor=pointer]
+        - generic [ref=e55]:
+          - generic [ref=e56]: Status *
+          - button "Status" [ref=e60] [cursor=pointer]
+        - generic [ref=e67]:
+          - generic [ref=e68]: Modalidade *
+          - textbox "Modalidade *" [ref=e72]:
+            - /placeholder: Informe a modalidade
+        - generic [ref=e73]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: Operadora *
+            - 'button "Ajuda: Operadora *" [ref=e78]'
+          - button "Selecione uma operadora" [ref=e83] [cursor=pointer]
+          - paragraph [ref=e91]: Comissão e bônus serão preenchidos automaticamente
+        - generic [ref=e92]:
+          - generic [ref=e93]: Produto/Plano *
+          - textbox "Produto/Plano *" [ref=e97]
+        - generic [ref=e98]:
+          - generic [ref=e99]: Abrangência
+          - textbox "Abrangência" [ref=e103]:
+            - /placeholder: Informe a abrangência
+        - generic [ref=e104]:
+          - generic [ref=e105]: Acomodação
+          - textbox "Acomodação" [ref=e109]:
+            - /placeholder: Informe a acomodação
+    - group [ref=e110]:
+      - generic [ref=e111]:
+        - text: Vigência e valores
+        - 'button "Informações: Vigência e valores" [ref=e113]'
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - generic [ref=e118]: Data de Início
+          - button "Data de Início" [ref=e122] [cursor=pointer]:
+            - generic [ref=e125]: Selecionar data
+        - generic [ref=e126]:
+          - generic [ref=e127]: Fim da fidelidade
+          - textbox "Fim da fidelidade" [ref=e131]:
+            - /placeholder: Selecionar mês
+        - generic [ref=e132]:
+          - generic [ref=e133]: Mês de reajuste
+          - button "Selecione" [ref=e137] [cursor=pointer]
+        - generic [ref=e144]:
+          - generic [ref=e145]: Carência
+          - textbox "Carência" [ref=e149]:
+            - /placeholder: Informe a carência
+        - generic [ref=e150]:
+          - generic [ref=e151]: Mensalidade Base (R$)
+          - textbox "Mensalidade Base (R$)" [ref=e155]:
+            - /placeholder: 0,00
+    - group [ref=e156]:
+      - generic [ref=e157]:
+        - text: Comissão e recebimento
+        - 'button "Informações: Comissão e recebimento" [ref=e159]'
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - generic [ref=e164]: Multiplicador de Comissão
+          - generic [ref=e167]:
+            - generic [ref=e168]:
+              - generic [ref=e169]: "Valor do multiplicador:"
+              - generic [ref=e170]: 2.8x
+            - slider [ref=e172] [cursor=pointer]: "2.8"
+            - generic [ref=e173]:
+              - generic [ref=e174]: Digite o multiplicador
+              - spinbutton [ref=e176]: "2.8"
+            - generic [ref=e177]:
+              - generic [ref=e178]: 0x
+              - generic [ref=e179]: 2.8x (padrão)
+              - generic [ref=e180]: 10x
+        - generic [ref=e181]:
+          - generic [ref=e183]:
+            - generic [ref=e184]: Comissão Prevista (R$)
+            - 'button "Ajuda: Comissão Prevista (R$)" [ref=e186]'
+          - textbox "Comissão Prevista (R$)" [ref=e190]:
+            - /placeholder: 0,00
+          - paragraph [ref=e191]: Calculada automaticamente com base no multiplicador
+        - generic [ref=e192]:
+          - generic [ref=e193]: Previsão Recebimento Comissão
+          - button "Previsão Recebimento Comissão" [ref=e197] [cursor=pointer]:
+            - generic [ref=e200]: Selecionar data
+        - generic [ref=e201]:
+          - generic [ref=e202]: Forma de recebimento da comissão
+          - generic [ref=e204]:
+            - checkbox "Receber comissão adiantada (pagamento único) Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a comissão em parcelas com percentuais e datas específicas." [checked] [ref=e205] [cursor=pointer]
+            - generic [ref=e206]:
+              - paragraph [ref=e207]: Receber comissão adiantada (pagamento único)
+              - paragraph [ref=e208]: Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a comissão em parcelas com percentuais e datas específicas.
+    - group [ref=e209]:
+      - generic [ref=e210]:
+        - text: Vidas e bonificações
+        - 'button "Informações: Vidas e bonificações" [ref=e212]'
+      - generic [ref=e216]:
+        - generic [ref=e217]:
+          - generic [ref=e219]:
+            - generic [ref=e220]: Quantidade de Vidas *
+            - 'button "Ajuda: Quantidade de Vidas *" [ref=e222]'
+          - spinbutton "Quantidade de Vidas *" [ref=e226]: "1"
+          - paragraph [ref=e227]: Titular + dependentes
+        - generic [ref=e228]:
+          - generic [ref=e229] [cursor=pointer]:
+            - checkbox "Aplicar Bônus por Vida" [ref=e230]
+            - generic [ref=e231]: Aplicar Bônus por Vida
+          - paragraph [ref=e232]: Pagamento único por vida do contrato
+    - group [ref=e233]:
+      - generic [ref=e234]:
+        - text: Responsáveis e observações
+        - 'button "Informações: Responsáveis e observações" [ref=e236]'
+      - generic [ref=e240]:
+        - generic [ref=e241]:
+          - generic [ref=e242]: Responsável *
+          - textbox "Responsável *" [ref=e246]:
+            - /placeholder: Informe o responsável
+        - generic [ref=e247]:
+          - generic [ref=e248]: Responsável pela venda (produção)
+          - combobox [aria-hidden] [ref=e251]
+          - button "Escolha no fechamento" [ref=e253] [cursor=pointer]
+          - paragraph [ref=e257]: O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.
+        - generic [ref=e258]:
+          - generic [ref=e259]: Observações Internas
+          - textbox "Observações Internas" [ref=e262]
+  - group "Ações do formulário" [ref=e264]:
+    - button "Cancelar" [ref=e265] [cursor=pointer]
+    - button "Continuar para titular" [ref=e266] [cursor=pointer]

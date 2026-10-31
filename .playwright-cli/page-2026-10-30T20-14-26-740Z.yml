@@ -1,0 +1,214 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e4]:
+    - button "Gestão de contratos" [ref=f1e5] [cursor=pointer]
+    - generic [ref=f1e10]:
+      - generic [ref=f1e11]:
+        - paragraph [ref=f1e12]: Kifer Saúde / Contratos
+        - generic [ref=f1e13]:
+          - generic [ref=f1e14]: "413780"
+          - heading "Ficha do contrato" [level=1] [ref=f1e16]
+        - paragraph [ref=f1e17]: Acompanhe as informações contratuais e os beneficiários vinculados.
+      - generic [ref=f1e19]:
+        - button "Excluir contrato" [ref=f1e21] [cursor=pointer]
+        - group "Ações da página" [ref=f1e26]:
+          - button "Editar contrato" [ref=f1e27] [cursor=pointer]
+    - generic [ref=f1e32]:
+      - generic [ref=f1e33]:
+        - heading "Dados do contrato" [level=3] [ref=f1e34]
+        - generic [ref=f1e35]:
+          - generic [ref=f1e36]:
+            - term [ref=f1e37]: Titular
+            - definition [ref=f1e38]: Titular de demonstração
+          - generic [ref=f1e39]:
+            - term [ref=f1e40]: Operadora
+            - definition [ref=f1e41]: Assim Saúde
+          - generic [ref=f1e42]:
+            - term [ref=f1e43]: Plano
+            - definition [ref=f1e44]: Clássico
+          - generic [ref=f1e45]:
+            - term [ref=f1e46]: Modalidade
+            - definition [ref=f1e47]: PME
+          - generic [ref=f1e48]:
+            - term [ref=f1e49]: Vigência
+            - definition [ref=f1e50]: 01/10/2026
+          - generic [ref=f1e51]:
+            - term [ref=f1e52]: Status
+            - definition [ref=f1e53]: Ativo
+      - generic [ref=f1e54]:
+        - heading "Beneficiários" [level=3] [ref=f1e56]
+        - list [ref=f1e57]:
+          - listitem [ref=f1e58]:
+            - generic [ref=f1e59]:
+              - paragraph [ref=f1e60]: Titular de demonstração
+              - paragraph [ref=f1e61]: Dados do titular
+          - listitem [ref=f1e62]:
+            - generic [ref=f1e63]:
+              - paragraph [ref=f1e64]: Dependente de demonstração
+              - paragraph [ref=f1e65]: Dados do dependente · Filho(a)
+    - group [ref=f1e66]:
+      - generic "Mais informações do contrato" [ref=f1e67] [cursor=pointer]
+      - generic [ref=f1e72]:
+        - generic [ref=f1e73]:
+          - generic [ref=f1e74]:
+            - generic [ref=f1e75]:
+              - generic [ref=f1e76]: Status
+              - generic [ref=f1e77]: Ativo
+            - generic [ref=f1e78]:
+              - generic [ref=f1e79]: Modalidade
+              - generic [ref=f1e80]: PME
+            - generic [ref=f1e81]:
+              - generic [ref=f1e82]: Responsável
+              - generic [ref=f1e83]: Equipe de demonstração
+            - generic [ref=f1e84]:
+              - generic [ref=f1e85]: Mensalidade
+              - generic [ref=f1e86]: R$ 441,53
+          - generic [ref=f1e87]:
+            - generic [ref=f1e88]:
+              - paragraph [ref=f1e89]: Comissão prevista
+              - paragraph [ref=f1e90]: R$ 1.236,28
+            - generic [ref=f1e91]:
+              - paragraph [ref=f1e92]: Bônus total
+              - paragraph [ref=f1e93]: Não aplicado
+            - generic [ref=f1e94]:
+              - paragraph [ref=f1e95]: Reajuste anual
+              - paragraph [ref=f1e96]: Não definido
+              - paragraph [ref=f1e97]: Mês de reajuste --
+          - generic [ref=f1e98]:
+            - generic [ref=f1e99]: Datas-chave
+            - generic [ref=f1e101]:
+              - generic [ref=f1e102]: Fim da fidelidade
+              - generic [ref=f1e103]: 31/10/2027
+              - generic [ref=f1e104]: em 366 dias
+          - generic [ref=f1e105]:
+            - generic [ref=f1e106]: Linha do tempo do contrato
+            - generic [ref=f1e107]:
+              - generic [ref=f1e108]:
+                - generic [ref=f1e109]: Início de vigência
+                - generic [ref=f1e110]: 30/09/2026
+              - generic [ref=f1e111]:
+                - generic [ref=f1e112]: Contrato criado
+                - generic [ref=f1e113]: 29/10/2026
+              - generic [ref=f1e114]:
+                - generic [ref=f1e115]: Fim da fidelidade
+                - generic [ref=f1e116]: 31/10/2027
+          - generic [ref=f1e118]:
+            - generic [ref=f1e119]: Comissão prevista
+            - generic [ref=f1e120]: R$ 1.236,28
+        - generic [ref=f1e121]:
+          - generic [ref=f1e122]:
+            - heading "Titulares (1)" [level=4] [ref=f1e123]
+            - button "Adicionar titular" [ref=f1e129] [cursor=pointer]
+          - generic [ref=f1e135]:
+            - generic [ref=f1e136]:
+              - heading "Titular de demonstração" [level=5] [ref=f1e137]
+              - generic [ref=f1e138]:
+                - generic [ref=f1e139]:
+                  - generic [ref=f1e140]: CPF
+                  - text: 000.000.000-00
+                - generic [ref=f1e141]:
+                  - generic [ref=f1e142]: Data nasc.
+                  - text: 12/05/1985
+                - generic [ref=f1e143]:
+                  - generic [ref=f1e144]: Telefone
+                  - text: (21) 00000-0000
+                - generic [ref=f1e145]:
+                  - generic [ref=f1e146]: E-mail
+                  - text: titular@example.invalid
+                - generic [ref=f1e147]:
+                  - generic [ref=f1e148]: Cidade
+                  - text: Rio de Janeiro/RJ
+            - generic [ref=f1e149]:
+              - button "Editar titular Titular de demonstração" [ref=f1e150] [cursor=pointer]
+              - button "Remover titular Titular de demonstração" [ref=f1e155] [cursor=pointer]
+        - generic [ref=f1e160]:
+          - heading "Dependentes (1)" [level=4] [ref=f1e162]
+          - generic [ref=f1e170]:
+            - generic [ref=f1e171]:
+              - generic [ref=f1e172]:
+                - paragraph [ref=f1e173]: Titular
+                - paragraph [ref=f1e174]: Titular de demonstração
+              - button "Adicionar dependente" [ref=f1e175] [cursor=pointer]
+            - generic [ref=f1e180]:
+              - generic [ref=f1e181]:
+                - heading "Dependente de demonstração" [level=5] [ref=f1e182]
+                - generic [ref=f1e183]:
+                  - generic [ref=f1e184]:
+                    - generic [ref=f1e185]: Relação
+                    - text: Filho(a)
+                  - generic [ref=f1e186]:
+                    - generic [ref=f1e187]: Data nasc.
+                    - text: 01/03/2012
+              - generic [ref=f1e188]:
+                - button "Editar dependente Dependente de demonstração" [ref=f1e189] [cursor=pointer]
+                - button "Remover dependente Dependente de demonstração" [ref=f1e194] [cursor=pointer]
+        - generic [ref=f1e199]:
+          - generic [ref=f1e200]:
+            - heading "Documentos" [level=4] [ref=f1e201]
+            - generic [ref=f1e202]: 0 arquivo(s)
+          - generic [ref=f1e203]:
+            - generic [ref=f1e204]:
+              - paragraph [ref=f1e205]: "Titular: Titular de demonstração"
+              - paragraph [ref=f1e206]: Sem documentos enviados.
+            - generic [ref=f1e207]:
+              - paragraph [ref=f1e208]: "Dependente: Dependente de demonstração"
+              - paragraph [ref=f1e209]: Sem documentos enviados.
+        - generic [ref=f1e210]:
+          - generic [ref=f1e211]:
+            - heading "Auditoria" [level=4] [ref=f1e212]
+            - generic [ref=f1e213]: 2 evento(s)
+          - generic [ref=f1e214]:
+            - generic [ref=f1e215]:
+              - paragraph [ref=f1e217]: Contrato criado
+              - generic [ref=f1e218]: 29/10/2026, 09:00
+            - generic [ref=f1e219]:
+              - paragraph [ref=f1e221]: Contrato atualizado
+              - generic [ref=f1e222]: 29/10/2026, 09:00
+        - generic [ref=f1e223]:
+          - generic [ref=f1e224]:
+            - heading "Histórico de interações" [level=4] [ref=f1e225]
+            - button "Nova interação" [ref=f1e226] [cursor=pointer]
+          - paragraph [ref=f1e233]: Nenhuma interação registrada
+  - dialog [ref=f1e237]:
+    - generic [ref=f1e238]:
+      - generic [ref=f1e239]:
+        - heading "Novo Dependente" [level=2] [ref=f1e240]
+        - paragraph [ref=f1e241]:
+          - button "Informações sobre esta janela" [ref=f1e243]
+      - button "Fechar" [ref=f1e246] [cursor=pointer]
+    - generic [ref=f1e252]:
+      - generic [ref=f1e253]:
+        - generic [ref=f1e254]: Titular *
+        - button "Titular de demonstração" [active] [ref=f1e258] [cursor=pointer]
+      - generic [ref=f1e268]:
+        - generic [ref=f1e269]: CPF
+        - generic [ref=f1e272]:
+          - textbox [ref=f1e274]
+          - button "Buscar CPF" [disabled] [ref=f1e275]
+      - generic [ref=f1e280]:
+        - generic [ref=f1e281]: Nome Completo *
+        - textbox "Nome Completo *" [ref=f1e285]
+      - generic [ref=f1e286]:
+        - generic [ref=f1e287]: Data de Nascimento *
+        - button "Data de Nascimento *" [ref=f1e291] [cursor=pointer]:
+          - generic [ref=f1e294]: Selecionar data
+      - generic [ref=f1e296]:
+        - checkbox "Aplicar bonus por vida Marque se este dependente e elegivel ao bonus por vida deste contrato." [checked] [ref=f1e297] [cursor=pointer]
+        - generic [ref=f1e298]:
+          - generic [ref=f1e299]: Aplicar bonus por vida
+          - generic [ref=f1e300]: Marque se este dependente e elegivel ao bonus por vida deste contrato.
+      - generic [ref=f1e301]:
+        - generic [ref=f1e302]: Relação com titular *
+        - button "Filho(a)" [ref=f1e306] [cursor=pointer]
+      - generic [ref=f1e316]:
+        - generic [ref=f1e317]: Valor Individual (R$)
+        - textbox "Valor Individual (R$)" [ref=f1e321]
+      - generic [ref=f1e322]:
+        - generic [ref=f1e323]: Carencia Individual
+        - button "Mesma do titular" [ref=f1e327] [cursor=pointer]
+      - generic [ref=f1e337]:
+        - generic [ref=f1e338]: Elegibilidade
+        - textbox "Elegibilidade" [ref=f1e342]:
+          - /placeholder: "Ex: Filho menor de 21 anos"
+    - generic [ref=f1e343]:
+      - button "Cancelar" [ref=f1e344] [cursor=pointer]
+      - button "Salvar Dependente" [ref=f1e345] [cursor=pointer]

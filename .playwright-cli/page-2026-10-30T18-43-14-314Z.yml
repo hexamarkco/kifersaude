@@ -1,0 +1,143 @@
+- main [ref=e2]:
+  - heading "Uma homepage, dez composições." [level=1] [ref=e3]
+  - paragraph [ref=e4]: Comparação das referências fornecidas com as capturas reais do redesign. As imagens de referência pertencem apenas a esta documentação; não são usadas na interface do site. Clique em uma captura para abri-la no tamanho original.
+  - generic [ref=e5]: O retrato da Luíza e os cinco logos vêm do projeto. Fotografias de contexto são ilustrativas. A composição dos depoimentos fica reservada até haver relatos e imagens autorizados. Contatos, FAQ e formulário usam o conteúdo e a integração reais.
+  - generic [ref=e6]:
+    - generic [ref=e7]: Largura da captura
+    - combobox "Largura da captura" [ref=e8]:
+      - option "320"
+      - option "390"
+      - option "768"
+      - option "1024"
+      - option "1440" [selected]
+      - option "1920"
+    - link "Página completa" [ref=e9] [cursor=pointer]:
+      - /url: 1440/page.png
+    - link "Primeira tela" [ref=e10] [cursor=pointer]:
+      - /url: 1440/viewport.png
+    - link "Relatório de implementação" [ref=e11] [cursor=pointer]:
+      - /url: ../../../docs/homepage-redesign-2026-10-30.md
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - heading "01 — Hero / abertura" [level=2] [ref=e14]
+      - generic [ref=e15]:
+        - figure "Referência visual fornecida" [ref=e16]:
+          - link [ref=e18] [cursor=pointer]:
+            - /url: references/01_HERO_ABERTURA.png
+            - img "Referência visual fornecida — Hero / abertura" [ref=e19]
+        - figure "Implementação · 1440 px" [ref=e20]:
+          - link [ref=e22] [cursor=pointer]:
+            - /url: 1440/01-topo.png
+            - img "Implementação · 1440 px — Hero / abertura" [ref=e23]
+    - generic [ref=e24]:
+      - heading "02 — Confiança e operadoras" [level=2] [ref=e25]
+      - generic [ref=e26]:
+        - figure "Referência visual fornecida" [ref=e27]:
+          - link [ref=e29] [cursor=pointer]:
+            - /url: references/02_CONFIANCA_OPERADORAS.png
+            - img "Referência visual fornecida — Confiança e operadoras" [ref=e30]
+        - figure "Implementação · 1440 px" [ref=e31]:
+          - link [ref=e33] [cursor=pointer]:
+            - /url: 1440/02-prova-social.png
+            - img "Implementação · 1440 px — Confiança e operadoras" [ref=e34]
+    - generic [ref=e35]:
+      - heading "03 — Para quem é" [level=2] [ref=e36]
+      - generic [ref=e37]:
+        - figure "Referência visual fornecida" [ref=e38]:
+          - link [ref=e40] [cursor=pointer]:
+            - /url: references/03_PARA_QUEM_E.png
+            - img "Referência visual fornecida — Para quem é" [ref=e41]
+        - figure "Implementação · 1440 px" [ref=e42]:
+          - link [ref=e44] [cursor=pointer]:
+            - /url: 1440/03-para-quem.png
+            - img "Implementação · 1440 px — Para quem é" [ref=e45]
+    - generic [ref=e46]:
+      - heading "04 — Como funciona" [level=2] [ref=e47]
+      - generic [ref=e48]:
+        - figure "Referência visual fornecida" [ref=e49]:
+          - link "Referência visual fornecida — Como funciona":
+            - /url: references/04_COMO_FUNCIONA.png
+            - img "Referência visual fornecida — Como funciona"
+        - figure "Implementação · 1440 px" [ref=e51]:
+          - link "Implementação · 1440 px — Como funciona":
+            - /url: 1440/04-como-funciona.png
+            - img "Implementação · 1440 px — Como funciona"
+    - generic [ref=e53]:
+      - heading "05 — Depoimentos" [level=2] [ref=e54]
+      - generic [ref=e55]:
+        - figure "Referência visual fornecida" [ref=e56]:
+          - link "Referência visual fornecida — Depoimentos":
+            - /url: references/05_DEPOIMENTOS.png
+            - img "Referência visual fornecida — Depoimentos"
+        - figure "Implementação · 1440 px" [ref=e58]:
+          - link "Implementação · 1440 px — Depoimentos":
+            - /url: 1440/05-depoimentos.png
+            - img "Implementação · 1440 px — Depoimentos"
+    - generic [ref=e60]:
+      - heading "06 — Sobre a Luíza" [level=2] [ref=e61]
+      - generic [ref=e62]:
+        - figure "Referência visual fornecida" [ref=e63]:
+          - link "Referência visual fornecida — Sobre a Luíza":
+            - /url: references/06_SOBRE_LUIZA.png
+            - img "Referência visual fornecida — Sobre a Luíza"
+        - figure "Implementação · 1440 px" [ref=e65]:
+          - link "Implementação · 1440 px — Sobre a Luíza":
+            - /url: 1440/06-quem-somos.png
+            - img "Implementação · 1440 px — Sobre a Luíza"
+    - generic [ref=e67]:
+      - heading "07 — Dúvidas frequentes" [level=2] [ref=e68]
+      - generic [ref=e69]:
+        - figure "Referência visual fornecida" [ref=e70]:
+          - link "Referência visual fornecida — Dúvidas frequentes":
+            - /url: references/07_DUVIDAS_FREQUENTES.png
+            - img "Referência visual fornecida — Dúvidas frequentes"
+        - figure "Implementação · 1440 px" [ref=e72]:
+          - link "Implementação · 1440 px — Dúvidas frequentes":
+            - /url: 1440/07-faq.png
+            - img "Implementação · 1440 px — Dúvidas frequentes"
+    - generic [ref=e74]:
+      - heading "08 — Cotação" [level=2] [ref=e75]
+      - generic [ref=e76]:
+        - figure "Referência visual fornecida" [ref=e77]:
+          - link "Referência visual fornecida — Cotação":
+            - /url: references/08_COTACAO.png
+            - img "Referência visual fornecida — Cotação"
+        - figure "Implementação · 1440 px" [ref=e79]:
+          - link "Implementação · 1440 px — Cotação":
+            - /url: 1440/08-cotacao.png
+            - img "Implementação · 1440 px — Cotação"
+    - generic [ref=e81]:
+      - heading "09 — WhatsApp" [level=2] [ref=e82]
+      - generic [ref=e83]:
+        - figure "Referência visual fornecida" [ref=e84]:
+          - link "Referência visual fornecida — WhatsApp":
+            - /url: references/09_WHATSAPP.png
+            - img "Referência visual fornecida — WhatsApp"
+        - figure "Implementação · 1440 px" [ref=e86]:
+          - link "Implementação · 1440 px — WhatsApp":
+            - /url: 1440/09-fale-agora.png
+            - img "Implementação · 1440 px — WhatsApp"
+    - generic [ref=e88]:
+      - heading "10 — Rodapé" [level=2] [ref=e89]
+      - generic [ref=e90]:
+        - figure "Referência visual fornecida" [ref=e91]:
+          - link "Referência visual fornecida — Rodapé":
+            - /url: references/10_RODAPE.png
+            - img "Referência visual fornecida — Rodapé"
+        - figure "Implementação · 1440 px" [ref=e93]:
+          - link "Implementação · 1440 px — Rodapé":
+            - /url: 1440/10-rodape.png
+            - img "Implementação · 1440 px — Rodapé"
+  - heading "Estados e interações" [level=2] [ref=e95]
+  - generic [ref=e96]:
+    - link "Menu mobile" [ref=e97] [cursor=pointer]:
+      - /url: mobile-menu.png
+    - link "Validação" [ref=e98] [cursor=pointer]:
+      - /url: mobile-form-validation.png
+    - link "Envio em andamento" [ref=e99] [cursor=pointer]:
+      - /url: mobile-form-loading.png
+    - link "Erro preservando os dados" [ref=e100] [cursor=pointer]:
+      - /url: mobile-form-error.png
+    - link "Confirmação simulada" [ref=e101] [cursor=pointer]:
+      - /url: mobile-form-success.png
+  - paragraph [ref=e102]: Foram verificadas navegação, seleção de perfis por teclado, FAQ, autocompletar, soma de idades, bloqueio durante o envio, recuperação de erro e sucesso. Todas as submissões de teste foram interceptadas antes da rede.

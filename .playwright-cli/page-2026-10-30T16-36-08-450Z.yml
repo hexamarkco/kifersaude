@@ -1,0 +1,90 @@
+- generic [ref=f6e3]:
+  - navigation "Navegação principal" [ref=f6e1261]:
+    - button "Início" [ref=f6e1262] [cursor=pointer]
+    - button "Leads" [ref=f6e1269] [cursor=pointer]
+    - button "WhatsApp" [ref=f6e1276] [cursor=pointer]
+    - button "Contratos" [ref=f6e1280] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f6e1285] [cursor=pointer]:
+      - generic [ref=f6e1287]: Mais
+  - generic [ref=f6e85]:
+    - banner [ref=f6e86]:
+      - generic [ref=f6e1288]:
+        - img "Kifer Saúde" [ref=f6e1289]:
+          - generic [ref=f6e1290]: kifersaúde
+        - generic [ref=f6e1291]:
+          - button "Abrir menu" [ref=f6e1292] [cursor=pointer]
+          - generic [ref=f6e1295]: OD
+    - main [ref=f6e104]:
+      - generic [ref=f6e106]:
+        - generic [ref=f6e107]:
+          - generic [ref=f6e109]:
+            - paragraph [ref=f6e110]: Administração
+            - generic [ref=f6e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f6e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=f6e115]
+          - tablist "Áreas de automações e IA" [ref=f6e120]:
+            - tab "Automações" [ref=f6e121] [cursor=pointer]
+            - tab "Integrações" [ref=f6e123] [cursor=pointer]
+            - tab "IA" [selected] [ref=f6e125] [cursor=pointer]
+        - main [ref=f6e127]:
+          - generic [ref=f6e128]:
+            - generic [ref=f6e129]:
+              - generic [ref=f6e130]:
+                - generic [ref=f6e131]:
+                  - heading "Inteligência artificial" [level=2] [ref=f6e133]
+                  - paragraph [ref=f6e134]: Controle central de recursos e políticas.
+                - group "Ações da página" [ref=f6e137]:
+                  - button "Exportar" [ref=f6e138] [cursor=pointer]
+                  - button "Importar" [ref=f6e143] [cursor=pointer]
+                  - button "Atualizar" [ref=f6e148] [cursor=pointer]
+              - generic [ref=f6e155]: Recursos de IA devem ter permissões e limites operacionais claros.
+              - list "Resumo das configurações de IA" [ref=f6e158]:
+                - listitem [ref=f6e159]:
+                  - generic [ref=f6e160]:
+                    - paragraph [ref=f6e161]: Assistência em mensagens
+                    - paragraph [ref=f6e162]: Sugestões e reescrita de atendimento.
+                  - generic [ref=f6e163]: Ativa
+                - listitem [ref=f6e164]:
+                  - generic [ref=f6e165]:
+                    - paragraph [ref=f6e166]: Qualificação de leads
+                    - paragraph [ref=f6e167]: Contexto para acompanhamento comercial.
+                  - generic [ref=f6e168]: Parcial
+                - listitem [ref=f6e169]:
+                  - generic [ref=f6e170]:
+                    - paragraph [ref=f6e171]: Modelos de execução
+                    - paragraph [ref=f6e172]: Configuração de modelo por funcionalidade.
+                  - generic [ref=f6e173]: 5 personalizados
+            - tablist "Áreas das configurações de IA" [ref=f6e175]:
+              - tab "Funcionalidades" [ref=f6e176] [cursor=pointer]
+              - tab "Configurações globais" [active] [selected] [ref=f6e178] [cursor=pointer]
+            - generic [ref=f6e1297]:
+              - generic [ref=f6e1299]:
+                - heading "Configurações globais" [level=3] [ref=f6e1301]
+                - paragraph [ref=f6e1302]: Diretrizes compartilhadas por todos os recursos de inteligência artificial.
+              - generic [ref=f6e1303]:
+                - region "Instruções globais" [ref=f6e1304]:
+                  - generic [ref=f6e1305]:
+                    - generic [ref=f6e1307]:
+                      - generic [ref=f6e1308]: Instruções globais
+                      - 'button "Ajuda: Instruções globais" [ref=f6e1310]'
+                    - textbox "Instruções globais" [ref=f6e1313]:
+                      - /placeholder: Digite instruções globais...
+                      - text: Respeite o contexto da conversa e use linguagem clara.
+                    - paragraph [ref=f6e1314]: Diretrizes gerais aplicadas a todas as funcionalidades de IA.
+                  - generic [ref=f6e1315]:
+                    - paragraph [ref=f6e1316]: Atualizada em 30/10/2026, 09:00:00
+                    - group "Ações da página" [ref=f6e1318]:
+                      - button "Salvar instruções" [disabled] [ref=f6e1319]
+                - region "Estilo global" [ref=f6e1325]:
+                  - generic [ref=f6e1326]:
+                    - generic [ref=f6e1328]:
+                      - generic [ref=f6e1329]: Estilo global
+                      - 'button "Ajuda: Estilo global" [ref=f6e1331]'
+                    - textbox "Estilo global" [ref=f6e1334]:
+                      - /placeholder: Digite estilo global...
+                      - text: Tom cordial, objetivo e acolhedor.
+                    - paragraph [ref=f6e1335]: Tom e formatação padrão para as respostas geradas.
+                  - generic [ref=f6e1336]:
+                    - paragraph [ref=f6e1337]: Atualizada em 30/10/2026, 09:00:00
+                    - group "Ações da página" [ref=f6e1339]:
+                      - button "Salvar estilo" [disabled] [ref=f6e1340]

@@ -1,0 +1,166 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e4]:
+    - button "Gestão de contratos" [ref=f1e5] [cursor=pointer]
+    - generic [ref=f1e10]:
+      - generic [ref=f1e11]:
+        - paragraph [ref=f1e12]: Contratos
+        - generic [ref=f1e14]:
+          - heading "Novo contrato" [level=1] [ref=f1e15]
+          - button "Informações sobre Novo contrato" [ref=f1e17]
+      - button "Importar de arquivo" [ref=f1e21] [cursor=pointer]
+    - generic [ref=f1e27]:
+      - group [ref=f1e28]:
+        - generic [ref=f1e29]:
+          - text: Informações do Contrato
+          - 'button "Informações: Informações do Contrato" [ref=f1e31]'
+        - generic [ref=f1e34]:
+          - generic [ref=f1e35]:
+            - generic [ref=f1e36]: Código do Contrato *
+            - textbox "Código do Contrato *" [ref=f1e40]:
+              - /placeholder: Informe o código fornecido pela operadora
+          - generic [ref=f1e41]:
+            - generic [ref=f1e42]: Lead Vinculado
+            - button "Nenhum" [ref=f1e47] [cursor=pointer]
+          - generic [ref=f1e55]:
+            - generic [ref=f1e56]: Status *
+            - button "Em análise" [ref=f1e60] [cursor=pointer]
+          - generic [ref=f1e67]:
+            - generic [ref=f1e68]: Modalidade *
+            - textbox "Modalidade *" [ref=f1e72]:
+              - /placeholder: Informe a modalidade
+          - generic [ref=f1e73]:
+            - generic [ref=f1e75]:
+              - generic [ref=f1e76]: Operadora *
+              - 'button "Ajuda: Operadora *" [ref=f1e78]'
+            - button "Selecione uma operadora" [ref=f1e83] [cursor=pointer]
+            - paragraph [ref=f1e91]: Comissão e bônus serão preenchidos automaticamente
+          - generic [ref=f1e92]:
+            - generic [ref=f1e93]: Produto/Plano *
+            - textbox "Produto/Plano *" [ref=f1e97]
+          - generic [ref=f1e98]:
+            - generic [ref=f1e99]: Abrangência
+            - textbox "Abrangência" [ref=f1e103]:
+              - /placeholder: Informe a abrangência
+          - generic [ref=f1e104]:
+            - generic [ref=f1e105]: Acomodação
+            - textbox "Acomodação" [ref=f1e109]:
+              - /placeholder: Informe a acomodação
+      - group [ref=f1e110]:
+        - generic [ref=f1e111]:
+          - text: Vigência e valores
+          - 'button "Informações: Vigência e valores" [ref=f1e113]'
+        - generic [ref=f1e116]:
+          - generic [ref=f1e117]:
+            - generic [ref=f1e118]: Data de Início
+            - button "Data de Início" [ref=f1e122] [cursor=pointer]:
+              - generic [ref=f1e125]: Selecionar data
+          - generic [ref=f1e126]:
+            - generic [ref=f1e127]: Fim da fidelidade
+            - textbox "Fim da fidelidade" [ref=f1e131]:
+              - /placeholder: Selecionar mês
+          - generic [ref=f1e132]:
+            - generic [ref=f1e133]: Mês de reajuste
+            - button "Selecione" [ref=f1e137] [cursor=pointer]
+          - generic [ref=f1e144]:
+            - generic [ref=f1e145]: Carência
+            - textbox "Carência" [ref=f1e149]:
+              - /placeholder: Informe a carência
+          - generic [ref=f1e150]:
+            - generic [ref=f1e151]: Mensalidade Base (R$)
+            - textbox "Mensalidade Base (R$)" [ref=f1e155]:
+              - /placeholder: 0,00
+      - group [ref=f1e156]:
+        - generic [ref=f1e157]:
+          - text: Comissão e recebimento
+          - 'button "Informações: Comissão e recebimento" [ref=f1e159]'
+        - generic [ref=f1e162]:
+          - generic [ref=f1e163]:
+            - generic [ref=f1e164]: Multiplicador de Comissão
+            - generic [ref=f1e167]:
+              - generic [ref=f1e168]:
+                - generic [ref=f1e169]: "Valor do multiplicador:"
+                - generic [ref=f1e170]: 2.8x
+              - slider [ref=f1e172] [cursor=pointer]: "2.8"
+              - generic [ref=f1e173]:
+                - generic [ref=f1e174]: Digite o multiplicador
+                - spinbutton [ref=f1e176]: "2.8"
+              - generic [ref=f1e177]:
+                - generic [ref=f1e178]: 0x
+                - generic [ref=f1e179]: 2.8x (padrão)
+                - generic [ref=f1e180]: 10x
+          - generic [ref=f1e181]:
+            - generic [ref=f1e183]:
+              - generic [ref=f1e184]: Comissão Prevista (R$)
+              - 'button "Ajuda: Comissão Prevista (R$)" [ref=f1e186]'
+            - textbox "Comissão Prevista (R$)" [ref=f1e190]:
+              - /placeholder: 0,00
+            - paragraph [ref=f1e191]: Calculada automaticamente com base no multiplicador
+          - generic [ref=f1e192]:
+            - generic [ref=f1e193]: Previsão Recebimento Comissão
+            - button "Previsão Recebimento Comissão" [ref=f1e197] [cursor=pointer]:
+              - generic [ref=f1e200]: Selecionar data
+          - generic [ref=f1e201]:
+            - generic [ref=f1e202]: Forma de recebimento da comissão
+            - generic [ref=f1e204]:
+              - checkbox "Receber comissão adiantada (pagamento único) Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a comissão em parcelas com percentuais e datas específicas." [checked] [ref=f1e205] [cursor=pointer]
+              - generic [ref=f1e206]:
+                - paragraph [ref=f1e207]: Receber comissão adiantada (pagamento único)
+                - paragraph [ref=f1e208]: Quando marcado, todo o valor previsto será considerado no primeiro mês. Desmarque para distribuir a comissão em parcelas com percentuais e datas específicas.
+      - group [ref=f1e209]:
+        - generic [ref=f1e210]:
+          - text: Vidas e bonificações
+          - 'button "Informações: Vidas e bonificações" [ref=f1e212]'
+        - generic [ref=f1e216]:
+          - generic [ref=f1e217]:
+            - generic [ref=f1e219]:
+              - generic [ref=f1e220]: Quantidade de Vidas *
+              - 'button "Ajuda: Quantidade de Vidas *" [ref=f1e222]'
+            - spinbutton "Quantidade de Vidas *" [ref=f1e226]: "1"
+            - paragraph [ref=f1e227]: Titular + dependentes
+          - generic [ref=f1e228]:
+            - generic [ref=f1e229] [cursor=pointer]:
+              - checkbox "Aplicar Bônus por Vida" [ref=f1e230]
+              - generic [ref=f1e231]: Aplicar Bônus por Vida
+            - paragraph [ref=f1e232]: Pagamento único por vida do contrato
+      - group [ref=f1e233]:
+        - generic [ref=f1e234]:
+          - text: Responsáveis e observações
+          - 'button "Informações: Responsáveis e observações" [ref=f1e236]'
+        - generic [ref=f1e240]:
+          - generic [ref=f1e241]:
+            - generic [ref=f1e242]: Responsável *
+            - textbox "Responsável *" [ref=f1e246]:
+              - /placeholder: Informe o responsável
+          - generic [ref=f1e247]:
+            - generic [ref=f1e248]: Responsável pela venda (produção)
+            - combobox [aria-hidden] [ref=f1e251]
+            - button "Escolha no fechamento" [ref=f1e253] [cursor=pointer]
+            - paragraph [ref=f1e257]: O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.
+          - generic [ref=f1e258]:
+            - generic [ref=f1e259]: Observações Internas
+            - textbox "Observações Internas" [ref=f1e262]
+    - group "Ações do formulário" [ref=f1e264]:
+      - button "Cancelar" [ref=f1e265] [cursor=pointer]
+      - button "Continuar para titular" [ref=f1e266] [cursor=pointer]
+  - dialog [ref=f1e270]:
+    - generic [ref=f1e271]:
+      - generic [ref=f1e272]:
+        - heading "Importar contrato de arquivo" [level=2] [ref=f1e273]
+        - paragraph [ref=f1e274]: Selecione um arquivo .json preenchido conforme o modelo abaixo. Revise os dados no formulário antes de salvar o contrato.
+      - button "Fechar" [active] [ref=f1e275] [cursor=pointer]
+    - generic [ref=f1e279]:
+      - generic [ref=f1e280]:
+        - generic [ref=f1e281]:
+          - paragraph [ref=f1e282]: Baixe o modelo esperado
+          - paragraph [ref=f1e283]: O arquivo inclui os dados do contrato e, opcionalmente, do titular.
+        - button "Baixar modelo de arquivo" [ref=f1e284] [cursor=pointer]
+      - generic [ref=f1e289]:
+        - paragraph [ref=f1e294]: Escolha o arquivo .json do contrato
+        - paragraph [ref=f1e295]: Use o modelo de arquivo para preencher os dados. Depois de importar, confira valores, datas e a taxa de adesão no formulário.
+        - group [ref=f1e296]:
+          - generic "Orientações de formato para quem prepara o arquivo" [ref=f1e297] [cursor=pointer]
+        - button "Choose File" [ref=f1e298]
+        - button "Selecionar arquivo" [ref=f1e299] [cursor=pointer]
+    - generic [ref=f1e300]:
+      - button "Cancelar" [ref=f1e301] [cursor=pointer]
+      - button "Validar arquivo" [disabled] [ref=f1e302]

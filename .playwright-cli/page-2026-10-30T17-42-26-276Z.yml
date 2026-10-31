@@ -1,0 +1,252 @@
+- generic [ref=f4e2]:
+  - generic [ref=f4e3]:
+    - complementary [ref=f4e4]:
+      - generic [ref=f4e5]:
+        - img "Kifer Saúde CRM" [ref=f4e7]:
+          - generic [ref=f4e8]: kifersaúde
+          - generic [ref=f4e9]: CRM
+        - navigation [ref=f4e10]:
+          - generic [ref=f4e11]:
+            - button "Dashboard" [ref=f4e12] [cursor=pointer]
+            - button "CRM" [ref=f4e21] [cursor=pointer]
+            - button "Comunicação" [ref=f4e31] [cursor=pointer]
+            - button "Financeiro" [ref=f4e40] [cursor=pointer]
+            - button "Automações e IA" [ref=f4e49] [cursor=pointer]
+            - button "Configurações" [ref=f4e56] [cursor=pointer]
+        - generic [ref=f4e62]:
+          - button "Recolher" [ref=f4e63] [cursor=pointer]
+          - button "Notificações" [ref=f4e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=f4e76] [cursor=pointer]:
+            - generic [ref=f4e79]: Escuro
+          - button "Sair" [ref=f4e80] [cursor=pointer]
+    - generic [ref=f4e85]:
+      - banner [ref=f4e86]:
+        - generic [ref=f4e87]:
+          - navigation "Breadcrumb" [ref=f4e88]:
+            - list [ref=f4e89]:
+              - listitem [ref=f4e90]:
+                - button "CRM" [ref=f4e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f4e92]
+              - listitem [ref=f4e95]: Configurações
+          - generic [ref=f4e96]:
+            - generic [ref=f4e97]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=f4e98] [cursor=pointer]
+            - generic [ref=f4e102]: OD
+      - main [ref=f4e104]:
+        - generic [ref=f4e106]:
+          - generic [ref=f4e107]:
+            - generic [ref=f4e109]:
+              - paragraph [ref=f4e110]: Administração
+              - generic [ref=f4e112]:
+                - heading "Perfis e acessos" [level=1] [ref=f4e113]
+                - button "Informações sobre Perfis e acessos" [ref=f4e115]
+            - tablist "Áreas de configurações" [ref=f4e120]:
+              - tab "Geral" [selected] [ref=f4e121] [cursor=pointer]
+              - tab "Usuários" [ref=f4e126] [cursor=pointer]
+              - tab "Links" [ref=f4e133] [cursor=pointer]
+              - tab "Formulários" [ref=f4e138] [cursor=pointer]
+          - main [ref=f4e143]:
+            - generic [ref=f4e144]:
+              - generic [ref=f4e145]:
+                - tablist "Seções das configurações gerais" [ref=f4e147]:
+                  - tab "Preferências do sistema" [ref=f4e148] [cursor=pointer]
+                  - tab "Perfis e acessos" [selected] [ref=f4e150] [cursor=pointer]
+                  - tab "Leads" [ref=f4e152] [cursor=pointer]
+                  - tab "Contratos" [ref=f4e154] [cursor=pointer]
+                - textbox "Buscar nas configurações gerais" [ref=f4e158]:
+                  - /placeholder: Buscar em configurações, leads ou contratos
+              - generic [ref=f4e162]:
+                - generic [ref=f4e163]:
+                  - generic [ref=f4e164]:
+                    - generic [ref=f4e165]:
+                      - heading "Perfis" [level=4] [ref=f4e166]
+                      - generic [ref=f4e167]: "3"
+                    - button "Novo perfil" [active] [ref=f4e168] [cursor=pointer]
+                  - textbox "Buscar perfil" [ref=f4e172]
+                  - navigation "Perfis de acesso" [ref=f4e173]:
+                    - button "Administrador Acesso total" [ref=f4e174] [cursor=pointer]:
+                      - generic [ref=f4e175]:
+                        - generic [ref=f4e176]: Administrador
+                        - generic [ref=f4e177]: Acesso total
+                    - button "Equipe comercial Acesso personalizado" [ref=f4e180] [cursor=pointer]:
+                      - generic [ref=f4e181]:
+                        - generic [ref=f4e182]: Equipe comercial
+                        - generic [ref=f4e183]: Acesso personalizado
+                    - button "Equipe temporária Acesso personalizado" [pressed] [ref=f4e460] [cursor=pointer]:
+                      - generic [ref=f4e461]:
+                        - generic [ref=f4e462]: Equipe temporária
+                        - generic [ref=f4e463]: Acesso personalizado
+                - generic [ref=f4e466]:
+                  - generic [ref=f4e186]:
+                    - generic [ref=f4e187]:
+                      - generic [ref=f4e188]: Acesso personalizado
+                      - heading "Equipe temporária" [level=4] [ref=f4e467]
+                    - generic [ref=f4e468]:
+                      - button "Editar perfil" [ref=f4e469] [cursor=pointer]
+                      - button "Excluir" [ref=f4e474] [cursor=pointer]
+                  - generic [ref=f4e197]:
+                    - generic [ref=f4e198]:
+                      - generic [ref=f4e199]:
+                        - heading "Acesso por área" [level=5] [ref=f4e200]
+                        - paragraph [ref=f4e201]: 0 de 16 áreas com acesso · alterações salvas automaticamente.
+                      - textbox "Buscar área" [ref=f4e204]
+                    - generic [ref=f4e205]:
+                      - region [ref=f4e206]:
+                        - heading "Operação diária" [level=6] [ref=f4e207]
+                        - generic [ref=f4e208]:
+                          - list [ref=f4e209]:
+                            - listitem [ref=f4e210]:
+                              - generic [ref=f4e211]:
+                                - paragraph [ref=f4e212]: Dashboard
+                                - paragraph [ref=f4e213]: Resumo geral das operações e indicadores-chave.
+                              - generic [ref=f4e215]:
+                                - generic: Acesso a Dashboard
+                                - combobox [aria-hidden] [ref=f4e217]
+                                - button "Acesso a Dashboard" [ref=f4e219] [cursor=pointer]:
+                                  - generic [ref=f4e220]: Sem acesso
+                            - listitem [ref=f4e223]:
+                              - generic [ref=f4e224]:
+                                - paragraph [ref=f4e225]: Leads
+                                - paragraph [ref=f4e226]: Gestão completa do funil de leads.
+                              - generic [ref=f4e228]:
+                                - generic: Acesso a Leads
+                                - combobox [aria-hidden] [ref=f4e230]
+                                - button "Acesso a Leads" [ref=f4e232] [cursor=pointer]:
+                                  - generic [ref=f4e233]: Sem acesso
+                            - listitem [ref=f4e236]:
+                              - generic [ref=f4e237]:
+                                - paragraph [ref=f4e238]: Contratos
+                                - paragraph [ref=f4e239]: Gestão de contratos, titulares e dependentes.
+                              - generic [ref=f4e241]:
+                                - generic: Acesso a Contratos
+                                - combobox [aria-hidden] [ref=f4e243]
+                                - button "Acesso a Contratos" [ref=f4e245] [cursor=pointer]:
+                                  - generic [ref=f4e246]: Sem acesso
+                            - listitem [ref=f4e249]:
+                              - generic [ref=f4e250]:
+                                - paragraph [ref=f4e251]: Lembretes
+                                - paragraph [ref=f4e252]: Agenda e lembretes automáticos para acompanhamento.
+                              - generic [ref=f4e254]:
+                                - generic: Acesso a Lembretes
+                                - combobox [aria-hidden] [ref=f4e256]
+                                - button "Acesso a Lembretes" [ref=f4e258] [cursor=pointer]:
+                                  - generic [ref=f4e259]: Sem acesso
+                            - listitem [ref=f4e262]:
+                              - generic [ref=f4e263]:
+                                - paragraph [ref=f4e264]: Financeiro - Tarefas
+                                - paragraph [ref=f4e265]: Acesso às tarefas do módulo financeiro.
+                              - generic [ref=f4e267]:
+                                - generic: Acesso a Financeiro - Tarefas
+                                - combobox [aria-hidden] [ref=f4e269]
+                                - button "Acesso a Financeiro - Tarefas" [ref=f4e271] [cursor=pointer]:
+                                  - generic [ref=f4e272]: Sem acesso
+                          - list [ref=f4e275]:
+                            - listitem [ref=f4e276]:
+                              - generic [ref=f4e277]:
+                                - paragraph [ref=f4e278]: Financeiro - Comissões
+                                - paragraph [ref=f4e279]: Acesso ao acompanhamento de comissões.
+                              - generic [ref=f4e281]:
+                                - generic: Acesso a Financeiro - Comissões
+                                - combobox [aria-hidden] [ref=f4e283]
+                                - button "Acesso a Financeiro - Comissões" [ref=f4e285] [cursor=pointer]:
+                                  - generic [ref=f4e286]: Sem acesso
+                            - listitem [ref=f4e289]:
+                              - generic [ref=f4e290]:
+                                - paragraph [ref=f4e291]: Comunicação - WhatsApp Inbox
+                                - paragraph [ref=f4e292]: Acesso ao inbox compartilhado do WhatsApp via Whapi.
+                              - generic [ref=f4e294]:
+                                - generic: Acesso a Comunicação - WhatsApp Inbox
+                                - combobox [aria-hidden] [ref=f4e296]
+                                - button "Acesso a Comunicação - WhatsApp Inbox" [ref=f4e298] [cursor=pointer]:
+                                  - generic [ref=f4e299]: Sem acesso
+                            - listitem [ref=f4e302]:
+                              - generic [ref=f4e303]:
+                                - paragraph [ref=f4e304]: Comunicação - Disparos WhatsApp
+                                - paragraph [ref=f4e305]: Criação e acompanhamento de campanhas e disparos conversacionais no WhatsApp.
+                              - generic [ref=f4e307]:
+                                - generic: Acesso a Comunicação - Disparos WhatsApp
+                                - combobox [aria-hidden] [ref=f4e309]
+                                - button "Acesso a Comunicação - Disparos WhatsApp" [ref=f4e311] [cursor=pointer]:
+                                  - generic [ref=f4e312]: Sem acesso
+                            - listitem [ref=f4e315]:
+                              - generic [ref=f4e316]:
+                                - paragraph [ref=f4e317]: Blog
+                                - paragraph [ref=f4e318]: Gestão de conteúdo do blog e SEO.
+                              - generic [ref=f4e320]:
+                                - generic: Acesso a Blog
+                                - combobox [aria-hidden] [ref=f4e322]
+                                - button "Acesso a Blog" [ref=f4e324] [cursor=pointer]:
+                                  - generic [ref=f4e325]: Sem acesso
+                      - region [ref=f4e328]:
+                        - heading "Configurações do sistema" [level=6] [ref=f4e329]
+                        - generic [ref=f4e330]:
+                          - list [ref=f4e331]:
+                            - listitem [ref=f4e332]:
+                              - generic [ref=f4e333]:
+                                - paragraph [ref=f4e334]: Configurações - Sistema
+                                - paragraph [ref=f4e335]: Preferências do sistema, operadoras, leads e contratos.
+                              - generic [ref=f4e337]:
+                                - generic: Acesso a Configurações - Sistema
+                                - combobox [aria-hidden] [ref=f4e339]
+                                - button "Acesso a Configurações - Sistema" [ref=f4e341] [cursor=pointer]:
+                                  - generic [ref=f4e342]: Sem acesso
+                            - listitem [ref=f4e345]:
+                              - generic [ref=f4e346]:
+                                - paragraph [ref=f4e347]: Configurações - Perfis e Acessos
+                                - paragraph [ref=f4e348]: Criação de perfis e definição detalhada de acessos.
+                              - generic [ref=f4e350]:
+                                - generic: Acesso a Configurações - Perfis e Acessos
+                                - combobox [aria-hidden] [ref=f4e352]
+                                - button "Acesso a Configurações - Perfis e Acessos" [ref=f4e354] [cursor=pointer]:
+                                  - generic [ref=f4e355]: Sem acesso
+                            - listitem [ref=f4e358]:
+                              - generic [ref=f4e359]:
+                                - paragraph [ref=f4e360]: Configurações - Usuários
+                                - paragraph [ref=f4e361]: Criação, edição e exclusão de usuários do sistema.
+                              - generic [ref=f4e363]:
+                                - generic: Acesso a Configurações - Usuários
+                                - combobox [aria-hidden] [ref=f4e365]
+                                - button "Acesso a Configurações - Usuários" [ref=f4e367] [cursor=pointer]:
+                                  - generic [ref=f4e368]: Sem acesso
+                            - listitem [ref=f4e371]:
+                              - generic [ref=f4e372]:
+                                - paragraph [ref=f4e373]: Configurações - Automações
+                                - paragraph [ref=f4e374]: Gestão dos fluxos de automação do sistema.
+                              - generic [ref=f4e376]:
+                                - generic: Acesso a Configurações - Automações
+                                - combobox [aria-hidden] [ref=f4e378]
+                                - button "Acesso a Configurações - Automações" [ref=f4e380] [cursor=pointer]:
+                                  - generic [ref=f4e381]: Sem acesso
+                          - list [ref=f4e384]:
+                            - listitem [ref=f4e385]:
+                              - generic [ref=f4e386]:
+                                - paragraph [ref=f4e387]: Configurações - Integrações
+                                - paragraph [ref=f4e388]: Parâmetros e credenciais de integrações.
+                              - generic [ref=f4e390]:
+                                - generic: Acesso a Configurações - Integrações
+                                - combobox [aria-hidden] [ref=f4e392]
+                                - button "Acesso a Configurações - Integrações" [ref=f4e394] [cursor=pointer]:
+                                  - generic [ref=f4e395]: Sem acesso
+                            - listitem [ref=f4e398]:
+                              - generic [ref=f4e399]:
+                                - paragraph [ref=f4e400]: Configurações - IA
+                                - paragraph [ref=f4e401]: Configuração de prompts, parâmetros e versões de features de inteligência artificial.
+                              - generic [ref=f4e403]:
+                                - generic: Acesso a Configurações - IA
+                                - combobox [aria-hidden] [ref=f4e405]
+                                - button "Acesso a Configurações - IA" [ref=f4e407] [cursor=pointer]:
+                                  - generic [ref=f4e408]: Sem acesso
+                            - listitem [ref=f4e411]:
+                              - generic [ref=f4e412]:
+                                - paragraph [ref=f4e413]: Configurações - Links
+                                - paragraph [ref=f4e414]: Gestão da página pública de links (/links).
+                              - generic [ref=f4e416]:
+                                - generic: Acesso a Configurações - Links
+                                - combobox [aria-hidden] [ref=f4e418]
+                                - button "Acesso a Configurações - Links" [ref=f4e420] [cursor=pointer]:
+                                  - generic [ref=f4e421]: Sem acesso
+  - status [ref=f4e479]:
+    - generic [ref=f4e483]:
+      - paragraph [ref=f4e484]: Sucesso
+      - paragraph [ref=f4e485]: Perfil criado. Defina as permissões de acesso abaixo.
+    - button "Fechar notificação" [ref=f4e486] [cursor=pointer]

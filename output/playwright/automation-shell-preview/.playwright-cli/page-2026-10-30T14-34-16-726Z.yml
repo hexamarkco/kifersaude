@@ -1,0 +1,142 @@
+- generic [ref=f10e3]:
+  - complementary [ref=f10e276]:
+    - generic [ref=f10e277]:
+      - img "Kifer Saúde CRM" [ref=f10e279]:
+        - generic [ref=f10e280]: kifersaúde
+        - generic [ref=f10e281]: CRM
+      - navigation [ref=f10e282]:
+        - generic [ref=f10e283]:
+          - button "Dashboard" [ref=f10e284] [cursor=pointer]
+          - button "CRM" [ref=f10e293] [cursor=pointer]
+          - button "Comunicação" [ref=f10e303] [cursor=pointer]
+          - button "Financeiro" [ref=f10e312] [cursor=pointer]
+          - button "Automações e IA" [ref=f10e321] [cursor=pointer]
+          - button "Configurações" [ref=f10e328] [cursor=pointer]
+      - generic [ref=f10e334]:
+        - button "Recolher" [ref=f10e335] [cursor=pointer]
+        - button "Notificações" [ref=f10e340] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f10e348] [cursor=pointer]:
+          - generic [ref=f10e351]: Escuro
+        - button "Sair" [ref=f10e352] [cursor=pointer]
+  - generic [ref=f10e31]:
+    - banner [ref=f10e32]:
+      - generic [ref=f10e357]:
+        - navigation "Breadcrumb" [ref=f10e358]:
+          - list [ref=f10e359]:
+            - listitem [ref=f10e360]:
+              - button "CRM" [ref=f10e361] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f10e362]
+            - listitem [ref=f10e365]: Automações e IA
+        - generic [ref=f10e366]:
+          - generic [ref=f10e367]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f10e368] [cursor=pointer]
+          - generic [ref=f10e372]: OD
+    - main [ref=f10e42]:
+      - generic [ref=f10e44]:
+        - generic [ref=f10e45]:
+          - generic [ref=f10e47]:
+            - paragraph [ref=f10e48]: Administração
+            - generic [ref=f10e50]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f10e51]
+              - button "Informações sobre Automações, integrações e IA" [ref=f10e53]
+          - tablist "Áreas de automações e IA" [ref=f10e58]:
+            - tab "Automações" [selected] [ref=f10e59] [cursor=pointer]
+            - tab "Integrações" [ref=f10e61] [cursor=pointer]
+            - tab "IA" [ref=f10e63] [cursor=pointer]
+        - main [ref=f10e65]:
+          - generic [ref=f10e67]:
+            - generic [ref=f10e68]:
+              - tablist [ref=f10e70]:
+                - tab "Fluxos" [ref=f10e71] [cursor=pointer]
+                - tab "Templates" [ref=f10e73] [cursor=pointer]
+                - tab "Operação" [active] [selected] [ref=f10e75] [cursor=pointer]
+              - status [ref=f10e78]: Autosave ativo
+            - region [ref=f10e657]:
+              - generic [ref=f10e658]:
+                - generic [ref=f10e659]:
+                  - generic [ref=f10e664]:
+                    - paragraph [ref=f10e665]: Resumo operacional
+                    - heading "Visão geral da operação" [level=3] [ref=f10e666]
+                    - button "Informações sobre o resumo operacional" [ref=f10e669]
+                  - generic [ref=f10e672]:
+                    - generic [ref=f10e673]: Envios automáticos ativos
+                    - generic [ref=f10e677]: Autosave ativo
+                - generic [ref=f10e682]:
+                  - generic [ref=f10e687]:
+                    - generic [ref=f10e688]: "8"
+                    - generic [ref=f10e689]: fluxos
+                  - generic [ref=f10e695]:
+                    - generic [ref=f10e696]: "24"
+                    - generic [ref=f10e697]: etapas
+                  - generic [ref=f10e703]:
+                    - generic [ref=f10e704]: "8"
+                    - generic [ref=f10e705]: com tags
+                  - generic [ref=f10e710]:
+                    - generic [ref=f10e711]: 11:33
+                    - generic [ref=f10e712]: última atualização
+                  - generic [ref=f10e722]:
+                    - generic [ref=f10e723]: "46"
+                    - generic [ref=f10e724]: envios hoje
+              - region [ref=f10e725]:
+                - generic [ref=f10e726]:
+                  - paragraph [ref=f10e727]: Preferências da operação
+                  - generic [ref=f10e728]:
+                    - heading "Configurações globais" [level=3] [ref=f10e729]
+                    - button "Informações sobre as configurações globais" [ref=f10e731]
+                - generic [ref=f10e734]:
+                  - generic [ref=f10e735]:
+                    - generic [ref=f10e741]:
+                      - heading "Envio automático" [level=4] [ref=f10e742]
+                      - button "Informações sobre o processamento dos fluxos" [ref=f10e745]
+                    - generic [ref=f10e748]:
+                      - generic [ref=f10e749]:
+                        - paragraph [ref=f10e750]: Ativar automação
+                        - paragraph [ref=f10e751]: A alteração é salva automaticamente.
+                      - switch "Ativar envio automático dos fluxos" [checked] [ref=f10e753]
+                  - generic [ref=f10e756]:
+                    - generic [ref=f10e766]:
+                      - heading "Agendamento avançado" [level=4] [ref=f10e767]
+                      - button "Informações sobre o calendário operacional" [ref=f10e770]
+                    - generic [ref=f10e773]:
+                      - generic [ref=f10e774]:
+                        - generic [ref=f10e775]: Fuso horário
+                        - button "São Paulo (UTC-3)" [ref=f10e777] [cursor=pointer]
+                      - generic [ref=f10e787]:
+                        - generic [ref=f10e788]:
+                          - paragraph [ref=f10e789]: Pausar em feriados
+                          - paragraph [ref=f10e790]: Feriados oficiais e datas extras.
+                        - switch "Pausar envios em feriados nacionais e estaduais" [checked] [ref=f10e792]
+                    - paragraph [ref=f10e795]: A janela diária, os dias permitidos e o limite diário são definidos em cada fluxo.
+              - generic [ref=f10e796]:
+                - generic [ref=f10e802]:
+                  - heading "Observabilidade e auditoria" [level=4] [ref=f10e803]
+                  - button "Informações sobre observabilidade e auditoria" [ref=f10e806]
+                - generic [ref=f10e809]:
+                  - region [ref=f10e810]:
+                    - generic [ref=f10e811]:
+                      - generic [ref=f10e813]:
+                        - heading "Monitoramento em tempo real" [level=5] [ref=f10e814]
+                        - button "Informações sobre o monitoramento em tempo real" [ref=f10e816]
+                      - switch "Ativar monitoramento em tempo real" [checked] [ref=f10e820]
+                    - generic [ref=f10e823]:
+                      - generic [ref=f10e824]:
+                        - generic [ref=f10e825]: Atualização (segundos)
+                        - spinbutton "Intervalo de atualização em segundos" [ref=f10e827]: "30"
+                      - generic [ref=f10e828]:
+                        - generic [ref=f10e829]: Última atualização
+                        - status [ref=f10e830]: 11:33
+                  - region [ref=f10e831]:
+                    - generic [ref=f10e832]:
+                      - generic [ref=f10e834]:
+                        - heading "Histórico de atividades" [level=5] [ref=f10e835]
+                        - button "Informações sobre o histórico de atividades" [ref=f10e837]
+                      - switch "Ativar histórico de atividades" [checked] [ref=f10e841]
+                    - generic [ref=f10e844]:
+                      - generic [ref=f10e845]:
+                        - generic [ref=f10e846]: Retenção (dias)
+                        - spinbutton "Dias para guardar o histórico" [ref=f10e848]: "30"
+                      - generic [ref=f10e850]:
+                        - generic [ref=f10e851]:
+                          - switch "Salvar conteúdo completo no histórico" [ref=f10e853]
+                          - generic [ref=f10e856] [cursor=pointer]: Salvar conteúdo completo
+                        - paragraph [ref=f10e857]: Inclui o conteúdo integral dos eventos.

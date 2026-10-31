@@ -6,6 +6,12 @@
   --home-width: 84rem;
   --home-space: clamp(3rem, 4vw, 5rem);
   --home-body: clamp(1rem, 1.1vw, 1.125rem);
+  --home-motion-entry: 560ms;
+  --home-motion-profile: 280ms;
+  --home-motion-micro: 220ms;
+  --home-motion-stagger: 60ms;
+  --home-motion-distance: 18px;
+  --home-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --home-ink: var(--text-primary);
   --home-paper: var(--bg-canvas-subtle);
   --home-soft: color-mix(in srgb, var(--brand-primary) 9%, var(--home-paper));
@@ -52,6 +58,7 @@
 .kifer-home .home-hero-copy { position: relative; z-index: 2; padding-block: clamp(2rem, 3vw, 3rem); }
 .kifer-home .home-hero-title { font: 500 clamp(2.75rem, min(4.7vw, 8.5svh), 5rem) / 1.04 var(--font-display); letter-spacing: -0.055em; margin-block: var(--space-6) var(--space-5); }
 .kifer-home .home-hero-title em { font-style: italic; font-weight: 500; }
+.kifer-home .home-hero-line { display: block; }
 .kifer-home .home-hero-description { max-width: 36rem; }
 .kifer-home .home-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-6); --control-height-lg: 3rem; --control-padding-lg: 1.25rem; }
 .kifer-home .home-hero-actions .kds-button { font-size: clamp(0.875rem, 1vw, 1rem); white-space: normal; }
@@ -107,13 +114,15 @@
 .kifer-home .home-audience { padding-block: clamp(2.5rem, 3vw, 3.5rem); }
 .kifer-home .home-audience .home-section-intro .home-title { font-size: clamp(2rem, 2.7vw, 3.25rem); }
 .kifer-home .home-audience-layout { display: grid; grid-template-columns: 21.5% minmax(0, 1fr); gap: var(--space-4); }
-.kifer-home .home-audience-selector { border: 1px solid var(--border-default); border-radius: var(--radius-xl); padding: var(--space-3); background: var(--home-paper); }
+.kifer-home .home-audience-selector { --home-profile-index: 0; --home-selector-pad: var(--space-3); --home-selector-gap: 0px; position: relative; border: 1px solid var(--border-default); border-radius: var(--radius-xl); padding: var(--space-3); background: var(--home-paper); }
 .kifer-home .home-audience-selector .kds-radio-group { height: 100%; gap: 0; }
 .kifer-home .home-audience-selector .kds-radio { flex: 1; display: flex; align-items: center; position: relative; padding: var(--space-5); border-radius: var(--radius-lg); transition: background 180ms; }
 .kifer-home .home-audience-selector .kds-radio + .kds-radio { border-top: 1px solid var(--border-subtle); }
 .kifer-home .home-audience-selector .kds-radio-indicator { position: absolute; width: 0; height: 0; overflow: hidden; border: 0; }
 .kifer-home .home-audience-selector .kds-radio-checked { background: var(--brand-primary-muted); }
-.kifer-home .home-audience-selector .kds-radio-checked::before { content: ''; position: absolute; left: calc(-1 * var(--space-3)); top: var(--space-3); bottom: var(--space-3); width: var(--space-1); background: var(--brand-primary); border-radius: var(--radius-sm); }
+.kifer-home .home-audience-selector[data-profile='MEI'] { --home-profile-index: 1; }
+.kifer-home .home-audience-selector[data-profile='CNPJ'] { --home-profile-index: 2; }
+.kifer-home .home-audience-selector::before { content: ''; pointer-events: none; position: absolute; z-index: 2; left: 0; top: calc(var(--home-selector-pad) * 2); width: var(--space-1); height: calc((100% - var(--home-selector-pad) * 2 - 2px) / 3 - var(--home-selector-pad) * 2); background: var(--brand-primary); border-radius: var(--radius-sm); transform: translateY(calc(var(--home-profile-index) * (100% + var(--home-selector-pad) * 2))); transition: transform var(--home-motion-profile) var(--home-motion-ease); }
 .kifer-home .home-audience-selector .kds-radio:has(:focus-visible) { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
 .kifer-home .home-audience-option { display: flex; flex-direction: column; gap: var(--space-3); color: var(--text-secondary); font-size: clamp(0.8125rem, 1.1vw, 1.125rem); font-weight: 400; }
 .kifer-home .home-audience-option strong { color: var(--brand-primary-active); font-size: 0.9375rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
@@ -202,6 +211,9 @@
 .kifer-home .home-faq-trigger .kds-button-content > span:nth-child(2) { min-width: 0; overflow-wrap: break-word; }
 .kifer-home .home-faq-trigger .kds-control-icon { color: var(--brand-primary); justify-self: end; transition: transform 180ms; }
 .kifer-home .home-faq-item.is-open .home-faq-trigger .kds-control-icon { transform: rotate(180deg); }
+.kifer-home .home-faq-answer { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows var(--home-motion-micro) var(--home-motion-ease), opacity var(--home-motion-micro), visibility 0s var(--home-motion-micro); }
+.kifer-home .home-faq-answer > [role='region'] { min-height: 0; overflow: hidden; }
+.kifer-home .home-faq-item.is-open .home-faq-answer { grid-template-rows: 1fr; opacity: 1; visibility: visible; transition-delay: 0s; }
 .kifer-home .home-faq-item [role='region'] > .kds-text { padding: var(--space-4) var(--space-6) var(--space-6) calc(3rem + var(--space-10)); font-size: 1rem; }
 
 /* 08 — Editorial quote and preserved production form */
@@ -325,6 +337,32 @@
 .kifer-home .home-footer-bottom a { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .kifer-home .home-footer-bottom > div > div { display: flex; align-items: center; gap: var(--space-4); }
 
+/* Motion never supplies resting visibility: the page also works without observers or animations. */
+.kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button,
+.kifer-home .home-partner-logos a,
+.kifer-home .home-footer-social a { transition: transform var(--home-motion-micro) var(--home-motion-ease), background-color var(--home-motion-micro), border-color var(--home-motion-micro), box-shadow var(--home-motion-micro); }
+.kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button:focus-visible,
+.kifer-home .home-partner-logos a:focus-visible,
+.kifer-home .home-footer-social a:focus-visible { transform: translateY(-2px); }
+@media (hover: hover) {
+  .kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button:hover,
+  .kifer-home .home-partner-logos a:hover,
+  .kifer-home .home-footer-social a:hover { transform: translateY(-2px); }
+}
+.kifer-home .home-quote-fields :is(.kds-input, .kds-radio) { transition: border-color var(--home-motion-micro), background-color var(--home-motion-micro), box-shadow var(--home-motion-micro); }
+.kifer-home .home-quote-fields .kds-input:focus-visible { box-shadow: 0 0 0 3px var(--brand-primary-muted); }
+.kifer-home .home-quote-form[aria-busy='true'] .kds-button-primary { opacity: 0.8; }
+.kifer-home :is(.home-form-feedback, .home-quote-fields .kds-field-error) { animation: home-motion-feedback var(--home-motion-micro) var(--home-motion-ease); }
+.kifer-home .home-trust.home-motion-entering .home-trust-list li::after,
+.kifer-home .home-process.home-motion-entering .home-process-line li::after { transform-origin: center top; animation: home-motion-line-y var(--home-motion-entry) var(--home-motion-ease) backwards; }
+.kifer-home .home-trust.home-motion-entering .home-trust-list li:nth-child(2)::after,
+.kifer-home .home-process.home-motion-entering .home-process-line li:nth-child(2)::after { animation-delay: var(--home-motion-stagger); }
+.kifer-home .home-process.home-motion-entering .home-process-line li:nth-child(3)::after { animation-delay: calc(var(--home-motion-stagger) * 2); }
+.kifer-home .home-footer.home-motion-entering h2::after { transform-origin: left center; animation: home-motion-line-x var(--home-motion-entry) var(--home-motion-ease); }
+@keyframes home-motion-line-y { from { transform: scaleY(0); opacity: 0.3; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes home-motion-line-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes home-motion-feedback { from { opacity: 0.5; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
 @media (min-width: 1920px) {
   .kifer-home .home-hero-portrait { right: calc((var(--home-width) - 100vw) / 2); width: calc(54% + (100vw - var(--home-width)) / 2); }
 }
@@ -393,11 +431,12 @@
   .kifer-home .home-trust-list h3 { font-size: 1.5rem; }
   .kifer-home .home-partner-logos a { padding-inline: var(--space-5); }
   .kifer-home .home-audience-layout { grid-template-columns: minmax(0, 1fr); }
-  .kifer-home .home-audience-selector { padding: var(--space-2); }
+  .kifer-home .home-audience-selector { --home-selector-pad: var(--space-2); --home-selector-gap: var(--space-2); padding: var(--space-2); }
+  .kifer-home .home-audience-selector::before { top: auto; bottom: var(--space-1); left: var(--home-selector-pad); width: calc((100% - var(--home-selector-pad) * 2 - var(--home-selector-gap) * 2 - 2px) / 3); height: var(--space-1); transform: translateX(calc(var(--home-profile-index) * (100% + var(--home-selector-gap)))); }
   .kifer-home .home-audience-selector .kds-radio-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
   .kifer-home .home-audience-selector .kds-radio { border: 0; padding: var(--space-4); justify-content: center; }
   .kifer-home .home-audience-selector .kds-radio + .kds-radio { border: 0; }
-  .kifer-home .home-audience-selector .kds-radio-checked::before, .kifer-home .home-audience-arrow { display: none; }
+  .kifer-home .home-audience-arrow { display: none; }
   .kifer-home .home-audience-option { flex-direction: row; align-items: center; gap: var(--space-2); }
   .kifer-home .home-audience-option > span:not(.home-icon) { display: none; }
   .kifer-home .home-audience-option .home-icon { width: 2rem; height: 2rem; margin: 0; }
@@ -464,7 +503,7 @@
   .kifer-home .home-section-intro { margin-bottom: var(--space-6); }
 }
 @media (width < 640px) {
-  .painel-theme.kifer-ds.kifer-home { --home-gutter: 6%; --home-space: 3.75rem; --home-body: 1rem; }
+  .painel-theme.kifer-ds.kifer-home { --home-gutter: 6%; --home-space: 3.75rem; --home-body: 1rem; --home-motion-entry: 420ms; --home-motion-profile: 180ms; --home-motion-stagger: 35ms; --home-motion-distance: 8px; }
   .kifer-home section { scroll-margin-top: 5.5rem; }
   .kifer-home .kds-public-header-inner { min-height: 4.5rem; }
   .kifer-home .kds-public-header-brand { min-width: 0; }
@@ -511,7 +550,7 @@
   .kifer-home .home-partner-logos a { padding-inline: var(--space-4); min-height: 3rem; }
   .kifer-home .home-partner-logos img { max-height: 3rem; }
   .kifer-home .home-audience .home-section-intro .home-title { font-size: 2.15rem; }
-  .kifer-home .home-audience-selector { padding: var(--space-1); }
+  .kifer-home .home-audience-selector { --home-selector-pad: var(--space-1); --home-selector-gap: var(--space-1); padding: var(--space-1); }
   .kifer-home .home-audience-selector .kds-radio-group { gap: var(--space-1); }
   .kifer-home .home-audience-selector .kds-radio { padding: var(--space-3) var(--space-1); min-height: 3.5rem; }
   .kifer-home .home-audience-option { flex-direction: column; gap: var(--space-1); }
@@ -618,5 +657,5 @@
   .kifer-home .home-footer-bottom .kds-text { font-size: 0.6875rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kifer-home *, .kifer-home *::before, .kifer-home *::after { scroll-behavior: auto; transition: none; animation: none; }
+  .kifer-home *, .kifer-home *::before, .kifer-home *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }

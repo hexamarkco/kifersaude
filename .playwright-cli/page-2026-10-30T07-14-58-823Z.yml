@@ -1,0 +1,4 @@
+- generic [ref=e3]:
+  - 'button "Alterar status do contrato DEMO: Ativo" [active] [ref=e38] [cursor=pointer]':
+    - generic [ref=e6]: Ativo
+  - paragraph [ref=e39]: operador

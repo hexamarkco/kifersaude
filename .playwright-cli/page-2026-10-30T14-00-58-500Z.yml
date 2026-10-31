@@ -1,0 +1,160 @@
+- generic [ref=f17e3]:
+  - complementary [ref=f17e4]:
+    - generic [ref=f17e5]:
+      - img "Kifer Saúde CRM" [ref=f17e7]:
+        - generic [ref=f17e8]: kifersaúde
+        - generic [ref=f17e9]: CRM
+      - navigation [ref=f17e10]:
+        - generic [ref=f17e11]:
+          - button "Dashboard" [ref=f17e12] [cursor=pointer]
+          - button "CRM" [ref=f17e21] [cursor=pointer]
+          - button "Comunicação" [ref=f17e31] [cursor=pointer]
+          - button "Financeiro" [ref=f17e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f17e49] [cursor=pointer]
+          - button "Configurações" [ref=f17e56] [cursor=pointer]
+  - generic [ref=f17e64]:
+    - banner [ref=f17e65]:
+      - generic [ref=f17e66]:
+        - navigation "Breadcrumb" [ref=f17e67]:
+          - list [ref=f17e68]:
+            - listitem [ref=f17e69]:
+              - button "CRM" [ref=f17e70] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f17e71]
+            - listitem [ref=f17e74]: Configurações
+        - generic [ref=f17e75]:
+          - generic [ref=f17e76]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f17e77] [cursor=pointer]
+          - generic [ref=f17e81]: OD
+    - main [ref=f17e83]:
+      - generic [ref=f17e85]:
+        - generic [ref=f17e86]:
+          - generic [ref=f17e87]:
+            - generic [ref=f17e88]:
+              - paragraph [ref=f17e89]: Administração
+              - generic [ref=f17e91]:
+                - heading "Formulários de captação" [level=1] [ref=f17e92]
+                - button "Informações sobre Formulários de captação" [ref=f17e94]
+            - button "Novo formulário" [ref=f17e98] [cursor=pointer]
+          - tablist "Áreas de configurações" [ref=f17e103]:
+            - tab "Geral" [ref=f17e104] [cursor=pointer]
+            - tab "Usuários" [ref=f17e109] [cursor=pointer]
+            - tab "Links" [ref=f17e116] [cursor=pointer]
+            - tab "Formulários" [selected] [ref=f17e121] [cursor=pointer]
+        - main [ref=f17e126]:
+          - generic [ref=f17e127]:
+            - generic [ref=f17e129]:
+              - searchbox "Buscar formulários" [ref=f17e132]
+              - button "Todos os status" [ref=f17e135] [cursor=pointer]
+            - generic [ref=f17e142]:
+              - generic [ref=f17e144]:
+                - heading "Seus formulários" [level=3] [ref=f17e145]
+                - button "Como os formulários publicados funcionam" [ref=f17e147]
+              - generic [ref=f17e152]:
+                - generic [ref=f17e153]:
+                  - generic [ref=f17e154]:
+                    - generic [ref=f17e155]:
+                      - paragraph [ref=f17e156]: Cotação familiar
+                      - paragraph [ref=f17e157]: /forms/cotacao-familiar
+                    - group "Ações de Cotação familiar" [ref=f17e158]:
+                      - button "Mais ações de cotação familiar" [ref=f17e160] [cursor=pointer]
+                  - generic [ref=f17e166]:
+                    - paragraph [ref=f17e167]: 24 envios
+                    - generic [ref=f17e168]:
+                      - switch "Publicado" [checked] [ref=f17e170]
+                      - generic [ref=f17e173] [cursor=pointer]: Publicado
+                - generic [ref=f17e174]:
+                  - generic [ref=f17e175]:
+                    - generic [ref=f17e176]:
+                      - paragraph [ref=f17e177]: Solicitação de contato
+                      - paragraph [ref=f17e178]: /forms/formulario-2
+                    - group "Ações de Solicitação de contato" [ref=f17e179]:
+                      - button "Mais ações de solicitação de contato" [ref=f17e181] [cursor=pointer]
+                  - generic [ref=f17e187]:
+                    - paragraph [ref=f17e188]: 18 envios
+                    - generic [ref=f17e189]:
+                      - switch "Publicado" [checked] [ref=f17e191]
+                      - generic [ref=f17e194] [cursor=pointer]: Publicado
+                - generic [ref=f17e195]:
+                  - generic [ref=f17e196]:
+                    - generic [ref=f17e197]:
+                      - paragraph [ref=f17e198]: Pesquisa pós-atendimento
+                      - paragraph [ref=f17e199]: /forms/formulario-3
+                    - group "Ações de Pesquisa pós-atendimento" [ref=f17e200]:
+                      - button "Mais ações de pesquisa pós-atendimento" [ref=f17e202] [cursor=pointer]
+                  - generic [ref=f17e208]:
+                    - paragraph [ref=f17e209]: 12 envios
+                    - generic [ref=f17e210]:
+                      - switch "Publicado" [checked] [ref=f17e212]
+                      - generic [ref=f17e215] [cursor=pointer]: Publicado
+                - generic [ref=f17e216]:
+                  - generic [ref=f17e217]:
+                    - generic [ref=f17e218]:
+                      - paragraph [ref=f17e219]: Simulação empresarial
+                      - paragraph [ref=f17e220]: /forms/formulario-4
+                    - group "Ações de Simulação empresarial" [ref=f17e221]:
+                      - button "Mais ações de simulação empresarial" [ref=f17e223] [cursor=pointer]
+                  - generic [ref=f17e229]:
+                    - paragraph [ref=f17e230]: 7 envios
+                    - generic [ref=f17e231]:
+                      - switch "Publicado" [checked] [ref=f17e233]
+                      - generic [ref=f17e236] [cursor=pointer]: Publicado
+                - generic [ref=f17e237]:
+                  - generic [ref=f17e238]:
+                    - generic [ref=f17e239]:
+                      - paragraph [ref=f17e240]: Contato pelo site
+                      - paragraph [ref=f17e241]: /forms/formulario-5
+                    - group "Ações de Contato pelo site" [ref=f17e242]:
+                      - button "Mais ações de contato pelo site" [ref=f17e244] [cursor=pointer]
+                  - generic [ref=f17e250]:
+                    - paragraph [ref=f17e251]: 5 envios
+                    - generic [ref=f17e252]:
+                      - switch "Publicado" [checked] [ref=f17e254]
+                      - generic [ref=f17e257] [cursor=pointer]: Publicado
+                - generic [ref=f17e258]:
+                  - generic [ref=f17e259]:
+                    - generic [ref=f17e260]:
+                      - paragraph [ref=f17e261]: Retorno de proposta
+                      - paragraph [ref=f17e262]: /forms/formulario-6
+                    - group "Ações de Retorno de proposta" [ref=f17e263]:
+                      - button "Mais ações de retorno de proposta" [ref=f17e265] [cursor=pointer]
+                  - generic [ref=f17e271]:
+                    - paragraph [ref=f17e272]: 2 envios
+                    - generic [ref=f17e273]:
+                      - switch "Rascunho" [ref=f17e275]
+                      - generic [ref=f17e278] [cursor=pointer]: Rascunho
+                - generic [ref=f17e279]:
+                  - generic [ref=f17e280]:
+                    - generic [ref=f17e281]:
+                      - paragraph [ref=f17e282]: Campanha regional
+                      - paragraph [ref=f17e283]: /forms/formulario-7
+                    - group "Ações de Campanha regional" [ref=f17e284]:
+                      - button "Mais ações de campanha regional" [ref=f17e286] [cursor=pointer]
+                  - generic [ref=f17e292]:
+                    - paragraph [ref=f17e293]: 1 envio
+                    - generic [ref=f17e294]:
+                      - switch "Publicado" [checked] [ref=f17e296]
+                      - generic [ref=f17e299] [cursor=pointer]: Publicado
+                - generic [ref=f17e300]:
+                  - generic [ref=f17e301]:
+                    - generic [ref=f17e302]:
+                      - paragraph [ref=f17e303]: Atualização cadastral
+                      - paragraph [ref=f17e304]: /forms/formulario-8
+                    - group "Ações de Atualização cadastral" [ref=f17e305]:
+                      - button "Mais ações de atualização cadastral" [ref=f17e307] [cursor=pointer]
+                  - generic [ref=f17e313]:
+                    - paragraph [ref=f17e314]: 0 envios
+                    - generic [ref=f17e315]:
+                      - switch "Publicado" [checked] [ref=f17e317]
+                      - generic [ref=f17e320] [cursor=pointer]: Publicado
+              - navigation "Paginação" [ref=f17e321]:
+                - generic [ref=f17e322]:
+                  - generic [ref=f17e323]:
+                    - generic [ref=f17e324]: Itens por página
+                    - combobox [aria-hidden] [ref=f17e325]
+                    - button "Itens por página" [ref=f17e327] [cursor=pointer]:
+                      - generic [ref=f17e328]: "10"
+                  - generic [ref=f17e331]: 1–8 de 8
+                - generic [ref=f17e332]:
+                  - button "Pagina anterior" [disabled] [ref=f17e333]
+                  - button "1" [ref=f17e337] [cursor=pointer]
+                  - button "Próxima página" [disabled] [ref=f17e338]

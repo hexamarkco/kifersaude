@@ -1,0 +1,15 @@
+- main [ref=f141e3]:
+  - generic [ref=f141e4]:
+    - heading "Estrutura e parametrização" [level=1] [ref=f141e5]
+    - paragraph [ref=f141e6]: Acesse os cadastros que alimentam os formulários e a operação do CRM.
+    - generic [ref=f141e7]:
+      - button "Abrir perfis e acessos" [ref=f141e8] [cursor=pointer]:
+        - generic [ref=f141e10]:
+          - generic [ref=f141e11]: Perfis e acessos
+          - generic [ref=f141e12]: Permissões por área do CRM
+      - button "Abrir etapas do funil" [ref=f141e16] [cursor=pointer]:
+        - generic [ref=f141e17]:
+          - generic [ref=f141e18]:
+            - generic [ref=f141e19]: Etapas do funil
+            - generic [ref=f141e20]: Nome, cor e etapa inicial dos leads
+          - generic [ref=f141e21]: "6"

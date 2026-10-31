@@ -1,0 +1,80 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "Kifer Saúde CRM" [ref=e7]:
+        - generic [ref=e8]: kifersaúde
+        - generic [ref=e9]: CRM
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "CRM" [ref=e21] [cursor=pointer]
+          - button "Comunicação" [ref=e31] [cursor=pointer]
+          - button "Financeiro" [ref=e40] [cursor=pointer]
+          - button "Automações e IA" [ref=e49] [cursor=pointer]
+          - button "Configurações" [ref=e56] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Recolher" [ref=e63] [cursor=pointer]
+        - button "Notificações" [ref=e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=e76] [cursor=pointer]:
+          - generic [ref=e79]: Escuro
+        - button "Sair" [ref=e80] [cursor=pointer]
+  - generic [ref=e85]:
+    - banner [ref=e86]:
+      - generic [ref=e87]:
+        - navigation "Breadcrumb" [ref=e88]:
+          - list [ref=e89]:
+            - listitem [ref=e90]:
+              - button "CRM" [ref=e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=e92]
+            - listitem [ref=e95]: Automações e IA
+        - generic [ref=e96]:
+          - generic [ref=e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=e98] [cursor=pointer]
+          - generic [ref=e102]: OD
+    - main [ref=e104]:
+      - main [ref=e107]:
+        - region "Editor do fluxo automático" [ref=e110]:
+          - generic [ref=e111]:
+            - button "Voltar aos fluxos" [ref=e113] [cursor=pointer]
+            - generic [ref=e117]:
+              - generic [ref=e118]:
+                - paragraph [ref=e119]: Fluxo 1
+                - heading "Abordagem inicial" [level=1] [ref=e122]
+                - paragraph [ref=e123]: Organize a jornada, as regras operacionais e os testes em um só lugar.
+              - generic [ref=e124]:
+                - button "Remover fluxo" [ref=e125] [cursor=pointer]
+                - button "Testar fluxo" [ref=e130] [cursor=pointer]
+                - button "Salvar fluxo" [ref=e135] [cursor=pointer]
+            - tablist [ref=e143]:
+              - tab "Jornada" [selected] [ref=e144] [cursor=pointer]
+              - tab "Regras e agenda" [ref=e148] [cursor=pointer]
+              - tab "Simular e testar" [ref=e153] [cursor=pointer]
+          - generic [ref=e158]:
+            - generic [ref=e159]:
+              - generic [ref=e161]:
+                - heading "Jornada do lead" [level=5] [ref=e162]
+                - button "Informações sobre a jornada do lead" [ref=e164]
+              - generic [ref=e167]:
+                - generic [ref=e168]: 3 etapas
+                - generic [ref=e169]: "Status: Contato Inicial"
+            - generic [ref=e170]:
+              - generic [ref=e171]:
+                - generic [ref=e172]:
+                  - generic:
+                    - generic: Construtor avançado
+                    - generic: Arraste e conecte as etapas do seu fluxo.
+                    - generic: Clique em uma linha para remover.
+                  - group "Ações do fluxo" [ref=e173]:
+                    - button "+ Condição" [ref=e174] [cursor=pointer]
+                    - button "+ Ação" [ref=e175] [cursor=pointer]
+                    - button "PNG" [ref=e176] [cursor=pointer]
+                    - button "TXT" [ref=e181] [cursor=pointer]
+                    - button "Reorganizar" [ref=e186] [cursor=pointer]
+                - generic [ref=e194]:
+                  - img "React Flow mini map" [ref=e198]
+                  - link "React Flow attribution" [ref=e202] [cursor=pointer]:
+                    - /url: https://reactflow.dev
+                    - text: React Flow
+              - generic [ref=e204]:
+                - generic [ref=e205]: Inspector
+                - generic [ref=e206]: Selecione um no para editar.

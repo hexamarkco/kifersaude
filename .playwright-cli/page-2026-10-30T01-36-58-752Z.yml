@@ -1,0 +1,36 @@
+- generic [ref=f11e2]:
+  - complementary "Navegação CRM" [ref=f11e3]: K
+  - main [ref=f11e4]:
+    - generic [ref=f11e5]:
+      - strong [ref=f11e6]: WhatsApp Inbox
+      - button "＋ Nova conversa" [ref=f11e7] [cursor=pointer]
+    - generic [ref=f11e8]:
+      - complementary "Conversas" [ref=f11e9]:
+        - generic [ref=f11e11]:
+          - strong [ref=f11e12]: Contato de demonstração
+          - text: Última mensagem · 10:20
+        - generic [ref=f11e13]: Contato de demonstração 02
+      - region "Conversa de demonstração" [ref=f11e14]:
+        - generic [ref=f11e15]:
+          - strong [ref=f11e16]: Contato de demonstração
+          - button "Informações do contato" [ref=f11e17] [cursor=pointer]: ⓘ
+        - generic [ref=f11e18]:
+          - generic [ref=f11e19]: Olá! Gostaria de conhecer as opções de planos para minha família. Esta mensagem de demonstração permite conferir se o painel lateral cobre ou corta o histórico em larguras diferentes.
+          - generic [ref=f11e20]: Claro, posso ajudar. Quantas pessoas terão cobertura e em qual cidade vocês moram?
+          - generic [ref=f11e21]: Seremos três pessoas. Quero comparar as opções com calma e ver as informações completas antes de decidir.
+          - generic [ref=f11e22]: Perfeito. Vou preparar uma comparação para você.
+        - textbox "Digite uma mensagem" [ref=f11e24]
+      - complementary "Informações do contato" [ref=f11e25]:
+        - generic [ref=f11e26]:
+          - generic [ref=f11e27]:
+            - strong [ref=f11e28]: INFORMAÇÕES DO CONTATO
+            - generic [ref=f11e29]: Contato de demonstração
+          - button "Fechar painel" [ref=f11e30] [cursor=pointer]: ×
+        - generic [ref=f11e31]:
+          - paragraph [ref=f11e32]: +55 (21) 90000-0000
+          - paragraph [ref=f11e33]:
+            - generic [ref=f11e34]: Convertido
+          - separator [ref=f11e35]
+          - paragraph [ref=f11e36]: ResponsávelOperador de demonstração
+          - separator [ref=f11e37]
+          - paragraph [ref=f11e38]: Próximo lembreteRetorno sobre a proposta

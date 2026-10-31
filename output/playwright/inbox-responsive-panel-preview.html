@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Validação visual Inbox — fixture sintética</title>
+  <link rel="stylesheet" href="/src/index.css">
+  <style>
+    html, body, #app { width: 100%; height: 100%; margin: 0; }
+    #app { position: fixed; inset: 0; display: grid; grid-template-columns: 4rem minmax(0,1fr); overflow: hidden; }
+    .fixture-rail { display:flex; align-items:flex-start; justify-content:center; padding-top:1rem; border-right:1px solid var(--border-subtle); background:var(--bg-surface); color:var(--brand-primary); font-weight:700; }
+    .fixture-main { display:flex; min-width:0; min-height:0; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); }
+    .whatsapp-inbox-page-header { display:flex; align-items:center; justify-content:space-between; min-height:4.5rem; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--border-subtle); }
+    .kds-inbox-workspace-grid { display:grid; min-width:0; min-height:0; flex:1; }
+    .whatsapp-inbox-sidebar { min-width:0; overflow:hidden; border-right:1px solid var(--border-subtle); background:var(--bg-surface); }
+    .fixture-sidebar-heading { padding:var(--space-4); border-bottom:1px solid var(--border-subtle); font-weight:600; }
+    .fixture-chat-item { padding:var(--space-4); border-bottom:1px solid var(--border-subtle); }
+    .whatsapp-inbox-thread { display:flex; min-width:0; min-height:0; flex-direction:column; overflow:hidden; background:var(--bg-canvas); }
+    .fixture-thread-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); min-height:4rem; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--border-subtle); }
+    .fixture-messages { display:flex; min-height:0; flex:1; flex-direction:column; gap:var(--space-3); overflow:auto; padding:var(--space-4); }
+    .fixture-message { max-width:min(42rem,82%); padding:var(--space-3); border:1px solid var(--border-subtle); border-radius:var(--kds-radius-md); background:var(--bg-surface); overflow-wrap:anywhere; }
+    .fixture-message.outgoing { align-self:flex-end; border-color:var(--brand-primary-border); background:var(--brand-primary-muted); }
+    .fixture-composer { padding:var(--space-3) var(--space-4); border-top:1px solid var(--border-subtle); }
+    .fixture-panel-header { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); padding:var(--space-4); border-bottom:1px solid var(--border-subtle); }
+    .fixture-panel-body { min-height:0; width:100%; box-sizing:border-box; overflow:auto; padding:var(--space-4); }
+    .fixture-panel-header { width:100%; box-sizing:border-box; flex:0 0 auto; }
+    @media(max-width:1023px) { .whatsapp-inbox-sidebar { display:none; } .kds-inbox-workspace-grid { grid-template-columns:minmax(0,1fr); } }
+    @media(max-width:767px) { #app { grid-template-columns:minmax(0,1fr); } .fixture-rail { display:none; } .whatsapp-inbox-page-header { display:none; } }
+    .fixture-chip { display:inline-flex; align-items:center; min-height:1.5rem; padding:0 var(--space-2); border-radius:var(--kds-radius-sm); background:var(--bg-inset); color:var(--text-secondary); font-size:.75rem; }
+  </style>
+</head>
+<body class="painel-theme kifer-ds theme-dark">
+  <div id="app">
+    <aside class="fixture-rail" aria-label="Navegação CRM">K</aside>
+    <main class="fixture-main whatsapp-inbox-shell">
+      <header class="whatsapp-inbox-page-header"><strong>WhatsApp Inbox</strong><button class="kds-button kds-button-primary kds-control-md">＋ Nova conversa</button></header>
+      <section class="kds-inbox-workspace-grid is-contact-panel-open">
+        <aside class="whatsapp-inbox-sidebar" aria-label="Conversas"><div class="fixture-sidebar-heading">Conversas</div><div class="fixture-chat-item"><strong>Contato de demonstração</strong><br><small>Última mensagem · 10:20</small></div><div class="fixture-chat-item">Contato de demonstração 02</div></aside>
+        <section class="whatsapp-inbox-thread" aria-label="Conversa de demonstração">
+          <header class="fixture-thread-heading"><strong>Contato de demonstração</strong><button class="kds-button kds-button-secondary kds-control-md" aria-label="Informações do contato">ⓘ</button></header>
+          <div class="fixture-messages">
+            <div class="fixture-message">Olá! Gostaria de conhecer as opções de planos para minha família. Esta mensagem de demonstração permite conferir se o painel lateral cobre ou corta o histórico em larguras diferentes.</div>
+            <div class="fixture-message outgoing">Claro, posso ajudar. Quantas pessoas terão cobertura e em qual cidade vocês moram?</div>
+            <div class="fixture-message">Seremos três pessoas. Quero comparar as opções com calma e ver as informações completas antes de decidir.</div>
+            <div class="fixture-message outgoing">Perfeito. Vou preparar uma comparação para você.</div>
+          </div>
+          <footer class="fixture-composer"><input class="kds-input" value="" placeholder="Digite uma mensagem" aria-label="Digite uma mensagem"></footer>
+        </section>
+        <aside class="kds-inbox-lead-context-panel is-open flex flex-col" style="background:var(--bg-surface)" aria-label="Informações do contato"><header class="fixture-panel-header"><div><strong>INFORMAÇÕES DO CONTATO</strong><div>Contato de demonstração</div></div><button class="kds-button kds-button-ghost kds-control-sm" aria-label="Fechar painel">×</button></header><div class="fixture-panel-body"><p>+55 (21) 90000-0000</p><p><span class="fixture-chip">Convertido</span></p><hr><p><small>Responsável</small><br>Operador de demonstração</p><hr><p>Próximo lembrete<br>Retorno sobre a proposta</p></div></aside>
+        <button class="kds-inbox-context-backdrop" aria-label="Fechar informações do contato"></button>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+
+
+
+

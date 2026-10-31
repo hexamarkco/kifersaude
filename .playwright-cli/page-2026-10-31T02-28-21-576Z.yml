@@ -1,0 +1,102 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - complementary [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - img "Kifer Saúde CRM" [ref=f3e7]:
+          - generic [ref=f3e8]: kifersaúde
+          - generic [ref=f3e9]: CRM
+        - navigation [ref=f3e10]:
+          - generic [ref=f3e11]:
+            - button "Dashboard" [ref=f3e12] [cursor=pointer]
+            - button "CRM" [ref=f3e21] [cursor=pointer]
+            - button "Comunicação" [ref=f3e31] [cursor=pointer]
+            - button "Financeiro" [ref=f3e40] [cursor=pointer]
+            - button "Automações e IA" [ref=f3e49] [cursor=pointer]
+            - button "Configurações" [ref=f3e56] [cursor=pointer]
+        - generic [ref=f3e62]:
+          - button "Recolher" [ref=f3e63] [cursor=pointer]
+          - button "Notificações" [ref=f3e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=f3e76] [cursor=pointer]:
+            - generic [ref=f3e79]: Escuro
+          - button "Sair" [ref=f3e80] [cursor=pointer]
+    - generic [ref=f3e85]:
+      - banner [ref=f3e86]:
+        - generic [ref=f3e87]:
+          - navigation "Breadcrumb" [ref=f3e88]:
+            - list [ref=f3e89]:
+              - listitem [ref=f3e90]:
+                - button "CRM" [ref=f3e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f3e92]
+              - listitem [ref=f3e95]: Automações e IA
+          - generic [ref=f3e96]:
+            - generic [ref=f3e97]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=f3e98] [cursor=pointer]
+            - generic [ref=f3e102]: OD
+      - main [ref=f3e104]:
+        - generic [ref=f3e106]:
+          - generic [ref=f3e279]:
+            - generic [ref=f3e281]:
+              - paragraph [ref=f3e282]: Administração
+              - generic [ref=f3e284]:
+                - heading "Automações, integrações e IA" [level=1] [ref=f3e285]
+                - button "Informações sobre Automações, integrações e IA" [ref=f3e287]
+            - tablist "Áreas de automações e IA" [ref=f3e292]:
+              - tab "Automações" [selected] [ref=f3e293] [cursor=pointer]
+              - tab "Integrações" [ref=f3e295] [cursor=pointer]
+              - tab "IA" [ref=f3e297] [cursor=pointer]
+          - main [ref=f3e107]:
+            - generic [ref=f3e109]:
+              - generic [ref=f3e299]:
+                - tablist [ref=f3e301]:
+                  - tab "Fluxos" [ref=f3e302] [cursor=pointer]
+                  - tab "Templates" [selected] [ref=f3e304] [cursor=pointer]
+                  - tab "Operação" [ref=f3e306] [cursor=pointer]
+                - status [ref=f3e309]: Autosave ativo
+              - generic [ref=f3e523]:
+                - generic [ref=f3e524]:
+                  - generic [ref=f3e525]:
+                    - heading "Biblioteca de templates" [level=3] [ref=f3e526]
+                    - paragraph [ref=f3e527]: Crie e edite templates pré-fabricados para usar na automação ou em disparos manuais.
+                  - button "Novo modelo" [ref=f3e528] [cursor=pointer]
+                - generic [ref=f3e531]:
+                  - generic [ref=f3e532]:
+                    - generic [ref=f3e533]:
+                      - generic [ref=f3e534]:
+                        - heading "Contato inicial" [level=4] [ref=f3e536]
+                        - paragraph [ref=f3e537]: 1 mensagens configuradas
+                      - group "Ações do modelo" [ref=f3e538]:
+                        - button "Editar" [ref=f3e539] [cursor=pointer]
+                        - button "Remover modelo" [ref=f3e543] [cursor=pointer]
+                    - generic [ref=f3e552]:
+                      - generic [ref=f3e553]: Texto 1
+                      - paragraph [ref=f3e554]: "Oi {{primeiro_nome}}, tudo bem? Sou a Luiza Kifer, especialista em planos de saúde, e vi que você demonstrou interesse em receber uma cotação."
+                  - generic [ref=f3e555]:
+                    - generic [ref=f3e556]:
+                      - generic [ref=f3e557]:
+                        - heading "Convite para conversar" [level=4] [ref=f3e559]
+                        - paragraph [ref=f3e560]: 1 mensagens configuradas
+                      - group "Ações do modelo" [ref=f3e561]:
+                        - button "Editar" [ref=f3e562] [cursor=pointer]
+                        - button "Remover modelo" [ref=f3e566] [cursor=pointer]
+                    - generic [ref=f3e575]:
+                      - generic [ref=f3e576]: Texto 1
+                      - paragraph [ref=f3e577]: Será que você tem um minutinho pra conversarmos? Quero entender melhor o que você está buscando no plano de saúde 😊
+                  - generic [ref=f3e578]:
+                    - generic [ref=f3e579]:
+                      - generic [ref=f3e580]:
+                        - heading "Lembrete cordial" [level=4] [ref=f3e582]
+                        - paragraph [ref=f3e583]: 1 mensagens configuradas
+                      - group "Ações do modelo" [ref=f3e584]:
+                        - button "Editar" [ref=f3e585] [cursor=pointer]
+                        - button "Remover modelo" [ref=f3e589] [cursor=pointer]
+                    - generic [ref=f3e598]:
+                      - generic [ref=f3e599]: Texto 1
+                      - paragraph [ref=f3e600]: "Oi {{primeiro_nome}}, passando para ver se conseguiu analisar a proposta. Posso te ajudar em algo?"
+  - dialog [ref=f3e604]:
+    - generic [ref=f3e605]:
+      - heading "Remover template?" [level=2] [ref=f3e607]
+      - button "Fechar" [active] [ref=f3e608] [cursor=pointer]
+    - generic [ref=f3e612]: O modelo "Contato inicial" será removido do rascunho. Salve a automação para aplicar a alteração.
+    - generic [ref=f3e616]:
+      - button "Cancelar" [ref=f3e617] [cursor=pointer]
+      - button "Remover template" [ref=f3e618] [cursor=pointer]

@@ -14,9 +14,10 @@ function setupHeader() {
   };
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => media });
   const navigated: string[] = [];
+  const callbackOverflowStates: string[] = [];
   let quoteRequestCount = 0;
-  const onNavigate = (section: string) => { navigated.push(section); };
-  const onRequestQuote = () => { quoteRequestCount += 1; };
+  const onNavigate = (section: string) => { navigated.push(section); callbackOverflowStates.push(document.body.style.overflow); };
+  const onRequestQuote = () => { quoteRequestCount += 1; callbackOverflowStates.push(document.body.style.overflow); };
   const view = render(<PublicHomeHeader onNavigate={onNavigate} onRequestQuote={onRequestQuote} />);
   const trigger = view.container.querySelector<HTMLButtonElement>('[aria-label="Abrir menu"]');
   assert.ok(trigger);
@@ -24,6 +25,7 @@ function setupHeader() {
     ...view,
     trigger,
     navigated,
+    callbackOverflowStates,
     get quoteRequestCount() { return quoteRequestCount; },
     resizeToDesktop: () => { media.matches = true; desktopChanged?.(); },
     unmount: () => {
@@ -83,6 +85,7 @@ test('mobile menu traps keyboard focus and restores focus and scrolling on Escap
 
 test('mobile navigation, quote action and resizing close the menu', () => {
   const view = setupHeader();
+  const previousOverflow = document.body.style.overflow;
   try {
     act(() => view.trigger.click());
     act(() => document.body.querySelector<HTMLAnchorElement>('[aria-label="Navegação móvel"] a[href="#faq"]')?.click());
@@ -92,6 +95,7 @@ test('mobile navigation, quote action and resizing close the menu', () => {
     act(() => document.body.querySelector<HTMLButtonElement>('[role="dialog"] .kds-button-primary')?.click());
     assert.equal(view.quoteRequestCount, 1);
     assert.equal(document.body.querySelector('[role="dialog"]'), null);
+    assert.deepEqual(view.callbackOverflowStates, [previousOverflow, previousOverflow]);
     act(() => view.trigger.click());
     act(() => view.resizeToDesktop());
     assert.equal(document.body.querySelector('[role="dialog"]'), null);

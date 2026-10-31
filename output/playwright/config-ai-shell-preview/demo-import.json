@@ -1,0 +1,1 @@
+{"version":1,"features":[{"key":"message.rewrite","active_config":{"feature_prompt":"Instruções de demonstração para revisão visual.","output_instructions":"Responda com clareza e em português brasileiro.","temperature":0.4,"max_output_tokens":700}}]}

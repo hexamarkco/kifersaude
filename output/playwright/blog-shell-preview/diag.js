@@ -1,0 +1,1 @@
+async (page) => ({viewport:page.viewportSize(),root:await page.locator('.kds-app-shell').getAttribute('class'),stored:await page.evaluate(()=>localStorage.getItem('painel.theme.v2')),html:await page.locator('html').getAttribute('class'),sidebar:(await page.locator('.terracota-sidebar').boundingBox())})

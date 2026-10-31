@@ -1,0 +1,10 @@
+async(page)=>{
+ await page.route('**/*',async route=>{const q=route.request(),u=new URL(q.url());if(['127.0.0.1','localhost'].includes(u.hostname))return route.continue();return route.abort()});
+ const out='kifersaude-ui-redesign/validacao/revisao-visual/api/';const body=JSON.stringify({nome_completo:'Contato de demonstração',telefone:'11999999999',origem_id:'00000000-0000-4000-8000-000000000001',tipo_contratacao_id:'00000000-0000-4000-8000-000000000002',responsavel_id:'00000000-0000-4000-8000-000000000003',skip_automation:true},null,2);
+ await page.setViewportSize({width:1920,height:1080});await page.addInitScript(()=>{localStorage.setItem('painel.theme.v2','light');localStorage.setItem('painel.sidebar.collapsed','true')});await page.goto('http://127.0.0.1:5182/');await page.evaluate(()=>document.fonts.ready);await page.getByRole('heading',{name:'Documentação da API'}).waitFor();
+ const capture=async(file)=>{await page.locator('.kds-api-endpoint').filter({hasText:'Criar lead'}).first().click();await page.locator('textarea').fill(body);await page.getByRole('button',{name:'Executar chamada'}).click();await page.getByRole('dialog').waitFor();await page.screenshot({path:out+file});const d=page.getByRole('dialog');const metrics=await d.evaluate(e=>({scrollHeight:e.scrollHeight,clientHeight:e.clientHeight,scrollTop:e.scrollTop}));if(metrics.scrollHeight>metrics.clientHeight){await d.evaluate(e=>e.scrollTop=e.scrollHeight);await page.screenshot({path:out+file.replace('.png','-scroll-bottom.png')});}await page.getByRole('button',{name:'Revisar dados'}).click();return metrics};
+ const desktop=await capture('confirmation-create-desktop-light.png');
+ await page.setViewportSize({width:390,height:844});await page.reload();await page.getByRole('heading',{name:'Documentação da API'}).waitFor();const mobile=await capture('confirmation-create-mobile-light.png');
+ await page.setViewportSize({width:320,height:640});await page.reload();await page.getByRole('heading',{name:'Documentação da API'}).waitFor();const compact=await capture('confirmation-create-compact-light.png');
+ return{desktop,mobile,compact,confirmationCancelled:true,networkWrites:0};
+}

@@ -1,0 +1,107 @@
+- generic [ref=f6e3]:
+  - complementary [ref=f6e4]:
+    - generic [ref=f6e5]:
+      - img "Kifer Saúde CRM" [ref=f6e7]:
+        - generic [ref=f6e8]: kifersaúde
+        - generic [ref=f6e9]: CRM
+      - navigation [ref=f6e10]:
+        - generic [ref=f6e11]:
+          - button "Dashboard" [ref=f6e12] [cursor=pointer]
+          - button "CRM" [ref=f6e21] [cursor=pointer]
+          - button "Comunicação" [ref=f6e31] [cursor=pointer]
+          - button "Financeiro" [ref=f6e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f6e49] [cursor=pointer]
+          - button "Configurações" [ref=f6e56] [cursor=pointer]
+      - generic [ref=f6e62]:
+        - button "Recolher" [ref=f6e63] [cursor=pointer]
+        - button "Notificações" [ref=f6e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f6e76] [cursor=pointer]:
+          - generic [ref=f6e79]: Escuro
+        - button "Sair" [ref=f6e80] [cursor=pointer]
+  - generic [ref=f6e85]:
+    - banner [ref=f6e86]:
+      - generic [ref=f6e87]:
+        - navigation "Breadcrumb" [ref=f6e88]:
+          - list [ref=f6e89]:
+            - listitem [ref=f6e90]:
+              - button "CRM" [ref=f6e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f6e92]
+            - listitem [ref=f6e95]: Automações e IA
+        - generic [ref=f6e96]:
+          - generic [ref=f6e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f6e98] [cursor=pointer]
+          - generic [ref=f6e102]: OD
+    - main [ref=f6e104]:
+      - generic [ref=f6e106]:
+        - generic [ref=f6e107]:
+          - generic [ref=f6e109]:
+            - paragraph [ref=f6e110]: Administração
+            - generic [ref=f6e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f6e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=f6e115]
+          - tablist "Áreas de automações e IA" [ref=f6e120]:
+            - tab "Automações" [ref=f6e121] [cursor=pointer]
+            - tab "Integrações" [ref=f6e123] [cursor=pointer]
+            - tab "IA" [selected] [ref=f6e125] [cursor=pointer]
+        - main [ref=f6e127]:
+          - generic [ref=f6e128]:
+            - generic [ref=f6e129]:
+              - generic [ref=f6e130]:
+                - generic [ref=f6e131]:
+                  - heading "Inteligência artificial" [level=2] [ref=f6e133]
+                  - paragraph [ref=f6e134]: Controle central de recursos e políticas.
+                - group "Ações da página" [ref=f6e137]:
+                  - button "Exportar" [ref=f6e138] [cursor=pointer]
+                  - button "Importar" [ref=f6e143] [cursor=pointer]
+                  - button "Atualizar" [ref=f6e148] [cursor=pointer]
+              - generic [ref=f6e155]: Recursos de IA devem ter permissões e limites operacionais claros.
+              - list "Resumo das configurações de IA" [ref=f6e158]:
+                - listitem [ref=f6e159]:
+                  - generic [ref=f6e160]:
+                    - paragraph [ref=f6e161]: Assistência em mensagens
+                    - paragraph [ref=f6e162]: Sugestões e reescrita de atendimento.
+                  - generic [ref=f6e163]: Ativa
+                - listitem [ref=f6e164]:
+                  - generic [ref=f6e165]:
+                    - paragraph [ref=f6e166]: Qualificação de leads
+                    - paragraph [ref=f6e167]: Contexto para acompanhamento comercial.
+                  - generic [ref=f6e168]: Parcial
+                - listitem [ref=f6e169]:
+                  - generic [ref=f6e170]:
+                    - paragraph [ref=f6e171]: Modelos de execução
+                    - paragraph [ref=f6e172]: Configuração de modelo por funcionalidade.
+                  - generic [ref=f6e173]: 5 personalizados
+            - tablist "Áreas das configurações de IA" [ref=f6e175]:
+              - tab "Funcionalidades" [ref=f6e176] [cursor=pointer]
+              - tab "Configurações globais" [active] [selected] [ref=f6e178] [cursor=pointer]
+            - generic [ref=f6e490]:
+              - generic [ref=f6e492]:
+                - heading "Configurações globais" [level=3] [ref=f6e494]
+                - paragraph [ref=f6e495]: Diretrizes compartilhadas por todos os recursos de inteligência artificial.
+              - generic [ref=f6e496]:
+                - region "Instruções globais" [ref=f6e497]:
+                  - generic [ref=f6e498]:
+                    - generic [ref=f6e500]:
+                      - generic [ref=f6e501]: Instruções globais
+                      - 'button "Ajuda: Instruções globais" [ref=f6e503]'
+                    - textbox "Instruções globais" [ref=f6e506]:
+                      - /placeholder: Digite instruções globais...
+                      - text: Respeite o contexto da conversa e use linguagem clara.
+                    - paragraph [ref=f6e507]: Diretrizes gerais aplicadas a todas as funcionalidades de IA.
+                  - generic [ref=f6e508]:
+                    - paragraph [ref=f6e509]: Atualizada em 30/10/2026, 09:00:00
+                    - group "Ações da página" [ref=f6e511]:
+                      - button "Salvar instruções" [disabled] [ref=f6e512]
+                - region "Estilo global" [ref=f6e518]:
+                  - generic [ref=f6e519]:
+                    - generic [ref=f6e521]:
+                      - generic [ref=f6e522]: Estilo global
+                      - 'button "Ajuda: Estilo global" [ref=f6e524]'
+                    - textbox "Estilo global" [ref=f6e527]:
+                      - /placeholder: Digite estilo global...
+                      - text: Tom cordial, objetivo e acolhedor.
+                    - paragraph [ref=f6e528]: Tom e formatação padrão para as respostas geradas.
+                  - generic [ref=f6e529]:
+                    - paragraph [ref=f6e530]: Atualizada em 30/10/2026, 09:00:00
+                    - group "Ações da página" [ref=f6e532]:
+                      - button "Salvar estilo" [disabled] [ref=f6e533]

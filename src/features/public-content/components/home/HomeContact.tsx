@@ -91,13 +91,15 @@ export function HomeFaq() {
                     />
                   </Button>
                 </Heading>
-                <div
-                  id={`faq-answer-${index}`}
-                  role="region"
-                  aria-labelledby={`faq-trigger-${index}`}
-                  hidden={open !== index}
-                >
-                  <Text>{item.answer}</Text>
+                <div className="home-faq-answer">
+                  <div
+                    id={`faq-answer-${index}`}
+                    role="region"
+                    aria-labelledby={`faq-trigger-${index}`}
+                    aria-hidden={open !== index}
+                  >
+                    <Text>{item.answer}</Text>
+                  </div>
                 </div>
               </div>
             );

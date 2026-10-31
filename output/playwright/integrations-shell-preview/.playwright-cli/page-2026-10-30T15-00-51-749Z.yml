@@ -1,0 +1,35 @@
+- generic [ref=f7e3]:
+  - navigation "Navegação principal" [ref=f7e4]:
+    - button "Início" [ref=f7e5] [cursor=pointer]
+    - button "Leads" [ref=f7e12] [cursor=pointer]
+    - button "WhatsApp" [ref=f7e19] [cursor=pointer]
+    - button "Contratos" [ref=f7e23] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f7e28] [cursor=pointer]:
+      - generic [ref=f7e30]: Mais
+  - generic [ref=f7e31]:
+    - banner [ref=f7e32]:
+      - generic [ref=f7e33]:
+        - img "Kifer Saúde" [ref=f7e34]:
+          - generic [ref=f7e35]: kifersaúde
+        - generic [ref=f7e36]:
+          - button "Abrir menu" [ref=f7e37] [cursor=pointer]
+          - generic [ref=f7e40]: OD
+    - main [ref=f7e42]:
+      - generic [ref=f7e45]:
+        - heading "Estrutura e parametrização" [level=3] [ref=f7e46]
+        - paragraph [ref=f7e47]: Acesse os cadastros que alimentam os formulários e a operação do CRM.
+        - generic [ref=f7e48]:
+          - button "Abrir perfis e acessos" [ref=f7e49] [cursor=pointer]:
+            - generic [ref=f7e51]:
+              - generic [ref=f7e52]: Perfis e acessos
+              - generic [ref=f7e53]: Permissões por área do CRM
+          - button "Abrir etapas do funil" [ref=f7e57] [cursor=pointer]:
+            - generic [ref=f7e59]:
+              - generic [ref=f7e60]: Etapas do funil
+              - generic [ref=f7e61]: Nome, cor e etapa inicial dos leads
+          - button "Abrir origens dos leads" [ref=f7e65] [cursor=pointer]:
+            - generic [ref=f7e66]:
+              - generic [ref=f7e67]:
+                - generic [ref=f7e68]: Origens dos leads
+                - generic [ref=f7e69]: Canais de entrada e visibilidade
+              - generic [ref=f7e70]: "12"

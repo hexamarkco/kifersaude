@@ -1,0 +1,244 @@
+- generic [ref=f11e5]:
+  - banner [ref=f11e6]:
+    - generic [ref=f11e7]:
+      - generic [ref=f11e8]:
+        - paragraph [ref=f11e9]: Configurações
+        - heading "Links públicos" [level=1] [ref=f11e12]
+        - paragraph [ref=f11e13]: Gerencie o perfil público e os links exibidos em /links.
+      - group "Ações da página" [ref=f11e16]:
+        - button "Novo link" [ref=f11e17] [cursor=pointer]
+  - group [ref=f11e20]:
+    - generic "Editar perfil público · Publicado" [active] [ref=f11e21] [cursor=pointer]
+    - generic [ref=f11e510]:
+      - generic [ref=f11e511]:
+        - generic [ref=f11e513]:
+          - heading "Perfil público" [level=3] [ref=f11e514]
+          - button "Informações sobre o perfil da página" [ref=f11e516]
+        - generic [ref=f11e519]:
+          - button "Copiar link" [ref=f11e520] [cursor=pointer]
+          - button "Abrir página" [ref=f11e526] [cursor=pointer]
+      - generic [ref=f11e533]:
+        - generic [ref=f11e534]:
+          - generic [ref=f11e535]: Foto
+          - generic [ref=f11e538]:
+            - generic [ref=f11e545] [cursor=pointer]
+            - generic [ref=f11e549]:
+              - textbox "Cole a URL de uma imagem ou envie um arquivo" [ref=f11e551]
+              - paragraph [ref=f11e552]: JPG, PNG, WEBP ou GIF — máx 5MB.
+        - generic [ref=f11e553]:
+          - generic [ref=f11e554]: Título da página
+          - textbox "Título da página" [ref=f11e558]:
+            - /placeholder: "Ex: Kifer Saúde"
+            - text: Kifer Saúde
+        - generic [ref=f11e559]:
+          - generic [ref=f11e560]: Subtítulo
+          - textbox "Subtítulo" [ref=f11e564]:
+            - /placeholder: "Ex: Planos de saúde no RJ"
+            - text: Planos de saúde com atendimento humano
+        - generic [ref=f11e565]:
+          - generic [ref=f11e566]: Biografia
+          - textbox "Biografia" [ref=f11e569]:
+            - /placeholder: Um resumo curto sobre você ou a Kifer Saúde.
+            - text: Conheça nossos canais e fale com a equipe.
+      - generic [ref=f11e570]:
+        - generic [ref=f11e571]:
+          - generic [ref=f11e572]:
+            - switch "Página publicada" [checked] [ref=f11e574]
+            - generic [ref=f11e577] [cursor=pointer]: Página publicada
+          - generic [ref=f11e578]:
+            - switch "Selo de verificado na foto" [checked] [ref=f11e580]
+            - generic [ref=f11e583] [cursor=pointer]: Selo de verificado na foto
+        - group "Ações da página" [ref=f11e585]:
+          - button "Salvar perfil" [ref=f11e586] [cursor=pointer]
+  - generic [ref=f11e30]:
+    - generic [ref=f11e32]:
+      - generic [ref=f11e33]:
+        - heading "Links cadastrados" [level=3] [ref=f11e34]
+        - button "Informações sobre a lista de links" [ref=f11e36]
+      - paragraph [ref=f11e39]: A ordem define como os links aparecem na página pública.
+    - searchbox "Buscar links públicos por nome ou endereço" [ref=f11e43]
+    - region "Rolagem de Links públicos" [ref=f11e46]:
+      - table "Links públicos" [ref=f11e47]:
+        - rowgroup [ref=f11e54]:
+          - row [ref=f11e55]:
+            - columnheader "Nome" [ref=f11e56]
+            - columnheader "Ordem" [ref=f11e57]
+            - columnheader "Atualização" [ref=f11e58]
+            - columnheader "Status" [ref=f11e59]
+            - columnheader "Ações" [ref=f11e60]
+        - rowgroup [ref=f11e61]:
+          - row [ref=f11e476]:
+            - cell [ref=f11e477]:
+              - generic [ref=f11e64]:
+                - generic [ref=f11e478]:
+                  - generic [ref=f11e479]: Nome do link
+                  - textbox "Nome do link" [ref=f11e483]:
+                    - /placeholder: Título
+                    - text: Formulário de cotação
+                - generic [ref=f11e484]:
+                  - generic [ref=f11e485]: Endereço
+                  - textbox "Endereço" [ref=f11e489]:
+                    - /placeholder: https://...
+                    - text: https://kifersaude.com.br/forms/demonstracao
+                - generic [ref=f11e490]:
+                  - generic [ref=f11e491]: Ícone
+                  - combobox [aria-hidden] [ref=f11e494]
+                  - button "Ícone" [ref=f11e496] [cursor=pointer]:
+                    - generic [ref=f11e497]: Selecione
+                - group "Ações da edição de Formulário de cotação" [ref=f11e500]:
+                  - button "Salvar alterações em Formulário de cotação" [ref=f11e501] [cursor=pointer]
+                  - button "Cancelar edição de Formulário de cotação" [ref=f11e505] [cursor=pointer]
+          - row [ref=f11e108]:
+            - cell [ref=f11e109]:
+              - generic [ref=f11e115]:
+                - paragraph [ref=f11e116]: Canal WhatsApp
+                - paragraph [ref=f11e117]: https://wa.me/5521999999999
+                - paragraph [ref=f11e118]: 42 cliques
+            - cell [ref=f11e119]:
+              - generic [ref=f11e120]:
+                - paragraph [ref=f11e121]: "2"
+                - group "Ordenar Canal WhatsApp" [ref=f11e122]:
+                  - button "Mover Canal WhatsApp para cima" [ref=f11e123] [cursor=pointer]
+                  - button "Mover Canal WhatsApp para baixo" [ref=f11e127] [cursor=pointer]
+            - cell [ref=f11e131]:
+              - paragraph [ref=f11e132]: 29/10/2026
+            - cell "Ativo Ativo" [ref=f11e133]:
+              - generic [ref=f11e134]:
+                - switch "Ativo" [checked] [ref=f11e136]
+                - generic [ref=f11e139] [cursor=pointer]: Ativo
+            - cell [ref=f11e140]:
+              - group "Ações de Canal WhatsApp" [ref=f11e141]:
+                - button "Editar Canal WhatsApp" [ref=f11e142] [cursor=pointer]
+                - button "Mais ações de canal whatsapp" [ref=f11e148] [cursor=pointer]
+          - row [ref=f11e154]:
+            - cell [ref=f11e155]:
+              - generic [ref=f11e161]:
+                - paragraph [ref=f11e162]: Página de atendimento
+                - paragraph [ref=f11e163]: https://kifersaude.com.br/links/atendimento
+                - paragraph [ref=f11e164]: 21 cliques
+            - cell [ref=f11e165]:
+              - generic [ref=f11e166]:
+                - paragraph [ref=f11e167]: "3"
+                - group "Ordenar Página de atendimento" [ref=f11e168]:
+                  - button "Mover Página de atendimento para cima" [ref=f11e169] [cursor=pointer]
+                  - button "Mover Página de atendimento para baixo" [ref=f11e173] [cursor=pointer]
+            - cell [ref=f11e177]:
+              - paragraph [ref=f11e178]: 26/10/2026
+            - cell "Ativo Ativo" [ref=f11e179]:
+              - generic [ref=f11e180]:
+                - switch "Ativo" [checked] [ref=f11e182]
+                - generic [ref=f11e185] [cursor=pointer]: Ativo
+            - cell [ref=f11e186]:
+              - group "Ações de Página de atendimento" [ref=f11e187]:
+                - button "Editar Página de atendimento" [ref=f11e188] [cursor=pointer]
+                - button "Mais ações de página de atendimento" [ref=f11e194] [cursor=pointer]
+          - row [ref=f11e200]:
+            - cell [ref=f11e201]:
+              - generic [ref=f11e207]:
+                - paragraph [ref=f11e208]: Site Kifer Saúde
+                - paragraph [ref=f11e209]: https://kifersaude.com.br
+                - paragraph [ref=f11e210]: 13 cliques
+            - cell [ref=f11e211]:
+              - generic [ref=f11e212]:
+                - paragraph [ref=f11e213]: "4"
+                - group "Ordenar Site Kifer Saúde" [ref=f11e214]:
+                  - button "Mover Site Kifer Saúde para cima" [ref=f11e215] [cursor=pointer]
+                  - button "Mover Site Kifer Saúde para baixo" [ref=f11e219] [cursor=pointer]
+            - cell [ref=f11e223]:
+              - paragraph [ref=f11e224]: 25/10/2026
+            - cell "Inativo Inativo" [ref=f11e225]:
+              - generic [ref=f11e226]:
+                - switch "Inativo" [ref=f11e228]
+                - generic [ref=f11e231] [cursor=pointer]: Inativo
+            - cell [ref=f11e232]:
+              - group "Ações de Site Kifer Saúde" [ref=f11e233]:
+                - button "Editar Site Kifer Saúde" [ref=f11e234] [cursor=pointer]
+                - button "Mais ações de site kifer saúde" [ref=f11e240] [cursor=pointer]
+          - row [ref=f11e246]:
+            - cell [ref=f11e247]:
+              - generic [ref=f11e253]:
+                - paragraph [ref=f11e254]: Instagram
+                - paragraph [ref=f11e255]: https://instagram.com/kifersaude
+                - paragraph [ref=f11e256]: 18 cliques
+            - cell [ref=f11e257]:
+              - generic [ref=f11e258]:
+                - paragraph [ref=f11e259]: "5"
+                - group "Ordenar Instagram" [ref=f11e260]:
+                  - button "Mover Instagram para cima" [ref=f11e261] [cursor=pointer]
+                  - button "Mover Instagram para baixo" [ref=f11e265] [cursor=pointer]
+            - cell [ref=f11e269]:
+              - paragraph [ref=f11e270]: 24/10/2026
+            - cell "Ativo Ativo" [ref=f11e271]:
+              - generic [ref=f11e272]:
+                - switch "Ativo" [checked] [ref=f11e274]
+                - generic [ref=f11e277] [cursor=pointer]: Ativo
+            - cell [ref=f11e278]:
+              - group "Ações de Instagram" [ref=f11e279]:
+                - button "Editar Instagram" [ref=f11e280] [cursor=pointer]
+                - button "Mais ações de instagram" [ref=f11e286] [cursor=pointer]
+          - row [ref=f11e292]:
+            - cell [ref=f11e293]:
+              - generic [ref=f11e298]:
+                - paragraph [ref=f11e299]: Facebook
+                - paragraph [ref=f11e300]: https://facebook.com/kifersaude
+                - paragraph [ref=f11e301]: 6 cliques
+            - cell [ref=f11e302]:
+              - generic [ref=f11e303]:
+                - paragraph [ref=f11e304]: "6"
+                - group "Ordenar Facebook" [ref=f11e305]:
+                  - button "Mover Facebook para cima" [ref=f11e306] [cursor=pointer]
+                  - button "Mover Facebook para baixo" [ref=f11e310] [cursor=pointer]
+            - cell [ref=f11e314]:
+              - paragraph [ref=f11e315]: 23/10/2026
+            - cell "Ativo Ativo" [ref=f11e316]:
+              - generic [ref=f11e317]:
+                - switch "Ativo" [checked] [ref=f11e319]
+                - generic [ref=f11e322] [cursor=pointer]: Ativo
+            - cell [ref=f11e323]:
+              - group "Ações de Facebook" [ref=f11e324]:
+                - button "Editar Facebook" [ref=f11e325] [cursor=pointer]
+                - button "Mais ações de facebook" [ref=f11e331] [cursor=pointer]
+          - row [ref=f11e337]:
+            - cell [ref=f11e338]:
+              - generic [ref=f11e344]:
+                - paragraph [ref=f11e345]: YouTube
+                - paragraph [ref=f11e346]: https://youtube.com/@kifersaude
+                - paragraph [ref=f11e347]: 5 cliques
+            - cell [ref=f11e348]:
+              - generic [ref=f11e349]:
+                - paragraph [ref=f11e350]: "7"
+                - group "Ordenar YouTube" [ref=f11e351]:
+                  - button "Mover YouTube para cima" [ref=f11e352] [cursor=pointer]
+                  - button "Mover YouTube para baixo" [ref=f11e356] [cursor=pointer]
+            - cell [ref=f11e360]:
+              - paragraph [ref=f11e361]: 22/10/2026
+            - cell "Ativo Ativo" [ref=f11e362]:
+              - generic [ref=f11e363]:
+                - switch "Ativo" [checked] [ref=f11e365]
+                - generic [ref=f11e368] [cursor=pointer]: Ativo
+            - cell [ref=f11e369]:
+              - group "Ações de YouTube" [ref=f11e370]:
+                - button "Editar YouTube" [ref=f11e371] [cursor=pointer]
+                - button "Mais ações de youtube" [ref=f11e377] [cursor=pointer]
+          - row [ref=f11e383]:
+            - cell [ref=f11e384]:
+              - generic [ref=f11e390]:
+                - paragraph [ref=f11e391]: Conteúdos de saúde
+                - paragraph [ref=f11e392]: https://kifersaude.com.br/blog
+                - paragraph [ref=f11e393]: 9 cliques
+            - cell [ref=f11e394]:
+              - generic [ref=f11e395]:
+                - paragraph [ref=f11e396]: "8"
+                - group "Ordenar Conteúdos de saúde" [ref=f11e397]:
+                  - button "Mover Conteúdos de saúde para cima" [ref=f11e398] [cursor=pointer]
+                  - button "Mover Conteúdos de saúde para baixo" [disabled] [ref=f11e402]
+            - cell [ref=f11e406]:
+              - paragraph [ref=f11e407]: 21/10/2026
+            - cell "Ativo Ativo" [ref=f11e408]:
+              - generic [ref=f11e409]:
+                - switch "Ativo" [checked] [ref=f11e411]
+                - generic [ref=f11e414] [cursor=pointer]: Ativo
+            - cell [ref=f11e415]:
+              - group "Ações de Conteúdos de saúde" [ref=f11e416]:
+                - button "Editar Conteúdos de saúde" [ref=f11e417] [cursor=pointer]
+                - button "Mais ações de conteúdos de saúde" [ref=f11e423] [cursor=pointer]

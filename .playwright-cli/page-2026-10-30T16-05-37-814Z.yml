@@ -1,0 +1,55 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "Kifer Saúde CRM" [ref=e7]:
+        - generic [ref=e8]: kifersaúde
+        - generic [ref=e9]: CRM
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "CRM" [ref=e21] [cursor=pointer]
+          - button "Comunicação" [ref=e31] [cursor=pointer]
+          - button "Financeiro" [ref=e40] [cursor=pointer]
+  - generic [ref=e51]:
+    - banner [ref=e52]:
+      - generic [ref=e53]:
+        - navigation "Breadcrumb" [ref=e54]:
+          - list [ref=e55]:
+            - listitem [ref=e56]:
+              - button "CRM" [ref=e57] [cursor=pointer]
+            - listitem [aria-hidden] [ref=e58]
+            - listitem [ref=e61]: Automações e IA
+        - generic [ref=e62]:
+          - generic [ref=e63]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=e64] [cursor=pointer]
+          - generic [ref=e68]: OD
+    - main [ref=e70]:
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e75]:
+            - paragraph [ref=e76]: Administração
+            - generic [ref=e78]:
+              - heading "Automações, integrações e IA" [level=1] [ref=e79]
+              - button "Informações sobre Automações, integrações e IA" [ref=e81]
+          - tablist "Áreas de automações e IA" [ref=e86]:
+            - tab "Automações" [ref=e87] [cursor=pointer]
+            - tab "Integrações" [ref=e89] [cursor=pointer]
+            - tab "IA" [selected] [ref=e91] [cursor=pointer]
+        - main [ref=e93]:
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - generic [ref=e96]:
+                - paragraph [ref=e97]: Inteligência Artificial
+                - generic [ref=e98]:
+                  - heading "Configurações de IA" [level=2] [ref=e99]
+                  - button "Informações sobre esta seção" [ref=e101]
+              - group "Ações das configurações de IA" [ref=e105]:
+                - button "Exportar" [disabled] [ref=e106]
+                - button "Importar" [disabled] [ref=e111]
+                - button "Atualizar configurações de IA" [disabled] [ref=e116]
+            - tablist [ref=e120]:
+              - tab "Funcionalidades" [selected] [ref=e121] [cursor=pointer]
+              - tab "Configurações globais" [ref=e125] [cursor=pointer]
+            - generic [ref=e131]:
+              - searchbox "Buscar funcionalidade..." [ref=e133]
+              - generic [ref=e134]: 0/0 ativas

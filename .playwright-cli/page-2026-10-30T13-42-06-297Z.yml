@@ -1,0 +1,96 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - img "Kifer Saúde CRM" [ref=e7]:
+          - generic [ref=e8]: kifersaúde
+          - generic [ref=e9]: CRM
+        - navigation [ref=e10]:
+          - generic [ref=e11]:
+            - button "Dashboard" [ref=e12] [cursor=pointer]
+            - button "CRM" [ref=e21] [cursor=pointer]
+            - button "Comunicação" [ref=e31] [cursor=pointer]
+            - button "Financeiro" [ref=e40] [cursor=pointer]
+            - button "Automações e IA" [ref=e49] [cursor=pointer]
+            - button "Configurações" [ref=e56] [cursor=pointer]
+        - generic [ref=e62]:
+          - button "Recolher" [ref=e63] [cursor=pointer]
+          - button "Notificações" [ref=e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=e421] [cursor=pointer]:
+            - generic [ref=e79]: Escuro
+          - button "Sair" [ref=e80] [cursor=pointer]
+    - generic [ref=e85]:
+      - banner [ref=e86]:
+        - generic [ref=e87]:
+          - navigation "Breadcrumb" [ref=e88]:
+            - list [ref=e89]:
+              - listitem [ref=e90]:
+                - button "CRM" [ref=e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=e92]
+              - listitem [ref=e95]: Configurações
+          - generic [ref=e96]:
+            - generic [ref=e97]: Operador Demonstração
+            - button "Ativar tema escuro" [ref=e424] [cursor=pointer]
+            - generic [ref=e102]: OD
+      - main [ref=e104]:
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]:
+                - paragraph [ref=e110]: Administração
+                - generic [ref=e112]:
+                  - heading "Formulários de captação" [level=1] [ref=e113]
+                  - button "Informações sobre Formulários de captação" [ref=e115]
+              - button "Novo formulário" [ref=e404] [cursor=pointer]
+            - tablist "Áreas de configurações" [ref=e120]:
+              - tab "Geral" [ref=e121] [cursor=pointer]
+              - tab "Usuários" [ref=e126] [cursor=pointer]
+              - tab "Links" [ref=e133] [cursor=pointer]
+              - tab "Formulários" [selected] [ref=e138] [cursor=pointer]
+          - main [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e146]:
+                - searchbox "Buscar formulários" [ref=e149]
+                - button "Rascunho" [expanded] [active] [ref=e434] [cursor=pointer]
+              - generic [ref=e159]:
+                - generic [ref=e161]:
+                  - heading "Seus formulários" [level=3] [ref=e162]
+                  - button "Como os formulários publicados funcionam" [ref=e164]
+                - region "Rolagem de Formulários de captação" [ref=e169]:
+                  - table "Formulários de captação" [ref=e170]:
+                    - rowgroup [ref=e176]:
+                      - row [ref=e177]:
+                        - columnheader "Formulário" [ref=e178]
+                        - columnheader "Envios" [ref=e179]
+                        - columnheader "Publicação" [ref=e180]
+                        - columnheader "Ações" [ref=e181]
+                    - rowgroup [ref=e182]:
+                      - row [ref=e308]:
+                        - cell [ref=e309]:
+                          - paragraph [ref=e310]: Retorno de proposta
+                          - paragraph [ref=e311]: /forms/formulario-6
+                        - cell "2" [ref=e312]
+                        - cell "Rascunho Rascunho" [ref=e313]:
+                          - generic [ref=e314]:
+                            - switch "Rascunho" [ref=e316]
+                            - generic [ref=e319] [cursor=pointer]: Rascunho
+                        - cell [ref=e320]:
+                          - group "Ações de Retorno de proposta" [ref=e321]:
+                            - button "Editar" [ref=e322] [cursor=pointer]
+                            - button "Mais ações de retorno de proposta" [ref=e327] [cursor=pointer]
+                - navigation "Paginação" [ref=e383]:
+                  - generic [ref=e384]:
+                    - generic [ref=e385]:
+                      - generic [ref=e386]: Itens por página
+                      - combobox [aria-hidden] [ref=e387]
+                      - button "Itens por página" [ref=e389] [cursor=pointer]:
+                        - generic [ref=e390]: "10"
+                    - generic [ref=e393]: 1–1 de 1
+                  - generic [ref=e394]:
+                    - button "Pagina anterior" [disabled] [ref=e395]
+                    - button "1" [ref=e399] [cursor=pointer]
+                    - button "Próxima página" [disabled] [ref=e400]
+  - listbox "Todos os status" [ref=e468]:
+    - option "Todos os status" [ref=e469] [cursor=pointer]
+    - option "Publicado" [ref=e471] [cursor=pointer]
+    - option "Rascunho" [selected] [ref=e473] [cursor=pointer]

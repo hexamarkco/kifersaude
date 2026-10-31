@@ -1,0 +1,52 @@
+- generic [ref=f5e3]:
+  - complementary [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - img "Kifer Saúde CRM" [ref=f5e7]:
+        - generic [ref=f5e8]: kifersaúde
+        - generic [ref=f5e9]: CRM
+      - navigation [ref=f5e10]:
+        - generic [ref=f5e11]:
+          - button "Dashboard" [ref=f5e12] [cursor=pointer]
+          - button "CRM" [ref=f5e21] [cursor=pointer]
+          - button "Comunicação" [ref=f5e31] [cursor=pointer]
+          - button "Financeiro" [ref=f5e40] [cursor=pointer]
+          - generic [ref=f5e49] [cursor=pointer]: Automações e IA
+          - generic [ref=f5e55] [cursor=pointer]: Configurações
+      - generic [ref=f5e60]:
+        - button "Recolher" [ref=f5e61] [cursor=pointer]
+        - button "Notificações" [ref=f5e66] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f5e74] [cursor=pointer]:
+          - generic [ref=f5e77]: Escuro
+        - button "Sair" [ref=f5e78] [cursor=pointer]
+  - generic [ref=f5e83]:
+    - banner [ref=f5e84]:
+      - generic [ref=f5e85]:
+        - navigation "Breadcrumb" [ref=f5e86]:
+          - list [ref=f5e87]:
+            - listitem [ref=f5e88]:
+              - button "CRM" [ref=f5e89] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f5e90]
+            - listitem [ref=f5e93]: CRM
+        - generic [ref=f5e94]:
+          - generic [ref=f5e95]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f5e96] [cursor=pointer]
+          - generic [ref=f5e100]: OD
+    - main [ref=f5e102]:
+      - generic [ref=f5e105]:
+        - heading "Estrutura e parametrização" [level=3] [ref=f5e106]
+        - paragraph [ref=f5e107]: Acesse os cadastros que alimentam os formulários e a operação do CRM.
+        - generic [ref=f5e108]:
+          - button "Abrir perfis e acessos" [ref=f5e109] [cursor=pointer]:
+            - generic [ref=f5e111]:
+              - generic [ref=f5e112]: Perfis e acessos
+              - generic [ref=f5e113]: Permissões por área do CRM
+          - button "Abrir etapas do funil" [ref=f5e117] [cursor=pointer]:
+            - generic [ref=f5e119]:
+              - generic [ref=f5e120]: Etapas do funil
+              - generic [ref=f5e121]: Nome, cor e etapa inicial dos leads
+          - button "Abrir origens dos leads" [ref=f5e125] [cursor=pointer]:
+            - generic [ref=f5e126]:
+              - generic [ref=f5e127]:
+                - generic [ref=f5e128]: Origens dos leads
+                - generic [ref=f5e129]: Canais de entrada e visibilidade
+              - generic [ref=f5e130]: "12"

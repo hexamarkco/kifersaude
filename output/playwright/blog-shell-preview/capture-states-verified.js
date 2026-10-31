@@ -1,0 +1,62 @@
+async (page) => {
+  await page.unrouteAll({behavior:'ignoreErrors'});
+  const dir='kifersaude-ui-redesign/validacao/revisao-visual/blog';
+  let reads=0,writes=0,blocked=0;
+  const demo=Array.from({length:12},(_,i)=>({id:`demo-${String(i+1).padStart(2,'0')}`,title:`Artigo de demonstração ${String(i+1).padStart(2,'0')}`,slug:`artigo-demonstracao-${i+1}`,excerpt:'Conteúdo sintético para revisar a listagem do blog com o shell real do CRM.',content:`<p>Conteúdo fictício de demonstração para o artigo ${i+1}.</p><p>Esta prévia preserva as interações reais sem salvar nem publicar.</p>`,category:['Guias','Planos','Dicas'][i%3],read_time:`${3+i%4} min`,author_id:'demo-operator',published:i%3===0,published_at:i%3===0?'2026-10-29T12:00:00Z':null,created_at:new Date(Date.UTC(2026,9,29-i,12,0,0)).toISOString(),updated_at:new Date(Date.UTC(2026,9,29-i,12,0,0)).toISOString(),views_count:120-i*7,meta_title:`Artigo de demonstração ${i+1}`,meta_description:'Metadados sintéticos para teste visual.'}));
+  await page.route('**/*',async route=>{const req=route.request(),u=new URL(req.url());if(['127.0.0.1','localhost'].includes(u.hostname))return route.continue();if(u.pathname.endsWith('/rest/v1/blog_posts')){if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS'}});if(req.method()==='GET'){reads++;return route.fulfill({status:200,headers:{'access-control-allow-origin':'*','content-type':'application/json'},body:JSON.stringify(demo)});}writes++;return route.fulfill({status:204,headers:{'access-control-allow-origin':'*'}});}blocked++;return route.abort();});
+  await page.addInitScript(()=>{localStorage.setItem('painel.theme.v2','light');localStorage.setItem('painel.sidebar.collapsed','false');});
+  await page.setViewportSize({width:1920,height:1080});
+  await page.goto('http://127.0.0.1:5181/?theme=light',{waitUntil:'domcontentloaded'});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  const disableMotion=()=>page.addStyleTag({content:'*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}'});
+  await disableMotion(); await page.evaluate(()=>document.fonts.ready);
+  await page.getByRole('heading',{name:'Gestão de conteúdo'}).waitFor();
+  await page.waitForFunction(()=>[...document.querySelectorAll('p')].some(e=>e.textContent?.trim()==='Artigo de demonstração 01'&&e.getClientRects().length>0));
+  const openAction=async()=>{await page.getByRole('button',{name:'Mais ações de artigo de demonstração 01'}).click();await page.getByRole('menu').waitFor();};
+  const responsiveForms=[];
+  const captureForm=async(name)=>{
+    await page.setViewportSize({width:1920,height:1080}); await page.screenshot({path:`${dir}/${name}-desktop-light-full.png`,fullPage:true});
+    for(const [label,width,height] of [['tablet',768,1024],['mobile',390,844],['mobile-compacto',320,640]]){
+      await page.setViewportSize({width,height}); await page.screenshot({path:`${dir}/${name}-${label}-light-viewport.png`,fullPage:false});
+      const d=await page.evaluate(()=>({width:innerWidth,client:document.documentElement.clientWidth,document:document.documentElement.scrollWidth,body:document.body.scrollWidth})); responsiveForms.push({name,label,...d,overflow:d.document>d.client||d.body>d.client});
+    }
+    await page.setViewportSize({width:1920,height:1080});
+  };
+  await page.getByRole('textbox',{name:'Buscar artigos'}).fill('demonstração 05');
+  await page.getByText('Artigo de demonstração 05',{exact:true}).first().waitFor();
+  const filteredSearch=await page.getByText('Artigo de demonstração 01',{exact:true}).count();
+  await page.getByRole('textbox',{name:'Buscar artigos'}).fill('');
+  await page.getByRole('button',{name:'Todos os status'}).click();
+  await page.getByRole('listbox',{name:'Todos os status'}).waitFor();
+  await page.screenshot({path:`${dir}/filter-status-open-desktop-light.png`,fullPage:false});
+  await page.getByRole('option',{name:'Publicado'}).click(); await page.waitForFunction(()=>document.querySelectorAll('tbody tr').length===4);
+  const publishedRows=await page.locator('tbody tr').count(); await page.screenshot({path:`${dir}/filter-status-applied-desktop-light.png`,fullPage:false});
+  await page.getByRole('button',{name:'Publicado'}).click(); await page.getByRole('option',{name:'Todos os status'}).click();
+  await openAction(); await page.screenshot({path:`${dir}/actions-menu-open-desktop-light.png`,fullPage:false});
+  await page.getByRole('menuitem',{name:'Editar'}).click(); await page.getByRole('heading',{name:'Editar post'}).waitFor(); await captureForm('edit-form');
+  await page.getByRole('button',{name:'Cancelar',exact:true}).click(); await page.getByRole('heading',{name:'Gestão de conteúdo'}).waitFor();
+  await page.getByRole('button',{name:'Novo post',exact:true}).click(); await page.getByRole('heading',{name:'Novo post'}).waitFor(); await captureForm('create-form');
+  await page.getByRole('button',{name:'Salvar',exact:true}).click();
+  await page.getByText('Informe o título do artigo.',{exact:true}).waitFor();
+  const validationErrors=await page.getByText(/Informe o título do artigo\.|Informe a URL do artigo\.|Informe um resumo do artigo\.|Escreva o conteúdo do artigo\./).count();
+  await page.setViewportSize({width:1920,height:1080}); await page.screenshot({path:`${dir}/create-validation-desktop-light-full.png`,fullPage:true});
+  await page.setViewportSize({width:320,height:640}); await page.screenshot({path:`${dir}/create-validation-mobile-compacto-light-viewport.png`,fullPage:false});
+  await page.getByRole('button',{name:'Cancelar',exact:true}).click(); await page.getByRole('heading',{name:'Gestão de conteúdo'}).waitFor();
+  await page.setViewportSize({width:1920,height:1080});
+  await page.locator('button[aria-label="Visualizar"]:visible').first().click(); await page.getByRole('dialog',{name:'Prévia do artigo'}).waitFor();
+  const previewText=await page.getByRole('dialog',{name:'Prévia do artigo'}).innerText();
+  await page.screenshot({path:`${dir}/view-dialog-desktop-light.png`,fullPage:false});
+  await page.keyboard.press('Escape'); const focusReturnedDesktop=await page.evaluate(()=>document.activeElement?.getAttribute('aria-label'));
+  await page.setViewportSize({width:390,height:844}); await openAction(); await page.getByRole('menuitem',{name:'Visualizar'}).click(); await page.getByRole('dialog',{name:'Prévia do artigo'}).waitFor();
+  await page.screenshot({path:`${dir}/view-dialog-mobile-light.png`,fullPage:false});
+  await page.setViewportSize({width:320,height:640}); await page.screenshot({path:`${dir}/view-dialog-mobile-compacto-light.png`,fullPage:false});
+  const modalDimensions=await page.evaluate(()=>({viewport:innerWidth,client:document.documentElement.clientWidth,document:document.documentElement.scrollWidth}));
+  await page.keyboard.press('Escape'); const focusReturnedMobile=await page.evaluate(()=>document.activeElement?.getAttribute('aria-label'));
+  await page.setViewportSize({width:1920,height:1080}); await openAction(); await page.getByRole('menuitem',{name:'Excluir'}).click(); await page.getByRole('dialog',{name:'Excluir post?'}).waitFor();
+  await page.screenshot({path:`${dir}/delete-confirmation-desktop-light.png`,fullPage:false});
+  await page.setViewportSize({width:390,height:844}); await page.screenshot({path:`${dir}/delete-confirmation-mobile-light.png`,fullPage:false});
+  await page.setViewportSize({width:320,height:640}); await page.screenshot({path:`${dir}/delete-confirmation-mobile-compacto-light.png`,fullPage:false});
+  const deleteDimensions=await page.evaluate(()=>({viewport:innerWidth,client:document.documentElement.clientWidth,document:document.documentElement.scrollWidth}));
+  await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+  return {reads,writes,blocked,filteredSearch,publishedRows,validationErrors,previewHasContent:previewText.includes('Conteúdo fictício'),focusReturnedDesktop,focusReturnedMobile,modalDimensions,deleteDimensions,responsiveForms};
+}

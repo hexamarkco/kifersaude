@@ -1,0 +1,280 @@
+- generic [ref=f9e1]:
+  - generic [ref=f9e4]:
+    - banner [ref=f9e5]:
+      - generic [ref=f9e6]:
+        - generic [ref=f9e7]:
+          - paragraph [ref=f9e8]: Kifer Saúde / Operação comercial
+          - generic [ref=f9e10]:
+            - heading "Gestão de contratos" [level=1] [ref=f9e11]
+            - button "Informações sobre Gestão de contratos" [ref=f9e13]
+        - generic [ref=f9e17]:
+          - group "Ações dos contratos" [ref=f9e18]:
+            - button "Importar contratos em massa" [ref=f9e19] [cursor=pointer]
+          - button "Novo contrato" [ref=f9e25] [cursor=pointer]
+    - generic "Resumo da carteira de contratos" [ref=f9e29]:
+      - generic [ref=f9e30]:
+        - heading "Contratos ativos" [level=3] [ref=f9e35]
+        - generic [ref=f9e36]: "4"
+        - generic [ref=f9e37]: Contratos vigentes
+      - generic [ref=f9e38]:
+        - heading "Em implantação" [level=3] [ref=f9e43]
+        - generic [ref=f9e44]: "4"
+        - generic [ref=f9e45]: Em análise ou emissão
+      - generic [ref=f9e46]:
+        - heading "Próximos vencimentos" [level=3] [ref=f9e51]
+        - generic [ref=f9e52]: "0"
+        - generic [ref=f9e53]: Nos próximos 30 dias
+      - generic [ref=f9e54]:
+        - heading "Mensalidade total" [level=3] [ref=f9e59]
+        - generic [ref=f9e60]: R$ 8.750,00
+        - generic [ref=f9e61]: Soma dos valores informados
+    - generic [ref=f9e62]:
+      - generic [ref=f9e63]:
+        - textbox "Buscar contratos" [ref=f9e66]:
+          - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+        - generic [ref=f9e67]:
+          - button "Limpar filtros" [ref=f9e487] [cursor=pointer]
+          - button "Exportar" [ref=f9e68] [cursor=pointer]
+      - generic [ref=f9e73]:
+        - button "Todos os status" [ref=f9e74] [cursor=pointer]
+        - button "Todos os responsáveis" [ref=f9e82] [cursor=pointer]
+        - button "Todos os períodos" [ref=f9e92] [cursor=pointer]
+        - button "Filtros avançados · 1" [expanded] [ref=f9e488] [cursor=pointer]
+      - button "Amil" [ref=f9e489] [cursor=pointer]
+    - generic [ref=f9e103]:
+      - generic [ref=f9e104]:
+        - generic [ref=f9e105]:
+          - paragraph [ref=f9e106]: Carteira contratual
+          - generic [ref=f9e107]:
+            - heading "Contratos em acompanhamento" [level=3] [ref=f9e108]
+            - button "Informações sobre esta seção" [ref=f9e110]
+        - generic [ref=f9e114]:
+          - generic [ref=f9e116]:
+            - generic [ref=f9e117]: "8"
+            - generic [ref=f9e118]: resultados
+          - generic [ref=f9e120]:
+            - generic [ref=f9e121]: 1/1
+            - generic [ref=f9e122]: páginas
+      - region "Rolagem de Carteira de contratos" [ref=f9e124]:
+        - table "Carteira de contratos" [ref=f9e125]:
+          - rowgroup [ref=f9e134]:
+            - row [ref=f9e135]:
+              - columnheader [ref=f9e136]:
+                - button "Ordenar por Contrato" [ref=f9e137] [cursor=pointer]:
+                  - generic [ref=f9e138]: Contrato
+              - columnheader [ref=f9e139]:
+                - button "Ordenar por Status" [ref=f9e140] [cursor=pointer]:
+                  - generic [ref=f9e141]: Status
+              - columnheader [ref=f9e142]:
+                - button "Ordenar por Operadora e plano" [ref=f9e143] [cursor=pointer]:
+                  - generic [ref=f9e144]: Operadora e plano
+              - columnheader [ref=f9e145]:
+                - button "Ordenar por Financeiro" [ref=f9e146] [cursor=pointer]:
+                  - generic [ref=f9e147]: Financeiro
+              - columnheader [ref=f9e148]:
+                - button "Ordenar por Datas críticas" [ref=f9e149] [cursor=pointer]:
+                  - generic [ref=f9e150]: Datas críticas
+              - columnheader [ref=f9e151]:
+                - button "Ordenar por Responsável" [ref=f9e152] [cursor=pointer]:
+                  - generic [ref=f9e153]: Responsável
+              - columnheader "Ações" [ref=f9e154]
+          - rowgroup [ref=f9e155]:
+            - row [ref=f9e156]:
+              - cell [ref=f9e157]:
+                - button "Pessoa Demonstração 1 DEMO-001" [ref=f9e158] [cursor=pointer]:
+                  - generic [ref=f9e159]:
+                    - generic [ref=f9e160]: Pessoa Demonstração 1
+                    - generic [ref=f9e161]: DEMO-001
+              - cell [ref=f9e162]:
+                - 'button "Alterar status do contrato DEMO-001: Ativo" [ref=f9e164] [cursor=pointer]':
+                  - generic [ref=f9e165]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e168]:
+                - generic "Amil" [ref=f9e169]
+                - generic "Plano Demonstração · Individual" [ref=f9e170]
+              - 'cell "R$ 0,00 Comissão: R$ 0,00" [ref=f9e171]':
+                - generic "R$ 0,00" [ref=f9e172]
+                - 'generic "Comissão: R$ 0,00" [ref=f9e173]'
+              - cell "Sem destaque" [ref=f9e174]
+              - cell "Operador Demonstração" [ref=f9e175]
+              - cell [ref=f9e177]:
+                - group "Ações do contrato DEMO-001" [ref=f9e178]:
+                  - button "Abrir contrato" [ref=f9e179] [cursor=pointer]
+                  - button "Mais ações do contrato demo-001" [ref=f9e185] [cursor=pointer]
+            - row [ref=f9e191]:
+              - cell [ref=f9e192]:
+                - button "Pessoa Demonstração 2 DEMO-002" [ref=f9e193] [cursor=pointer]:
+                  - generic [ref=f9e194]:
+                    - generic [ref=f9e195]: Pessoa Demonstração 2
+                    - generic [ref=f9e196]: DEMO-002
+              - cell [ref=f9e197]:
+                - 'button "Alterar status do contrato DEMO-002: Em análise" [ref=f9e199] [cursor=pointer]':
+                  - generic [ref=f9e200]: Em análise
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e203]:
+                - generic "Amil" [ref=f9e204]
+                - generic "Plano Demonstração · Individual" [ref=f9e205]
+              - 'cell "R$ 950,00 Comissão: R$ 1.900,00" [ref=f9e206]':
+                - generic "R$ 950,00" [ref=f9e207]
+                - 'generic "Comissão: R$ 1.900,00" [ref=f9e208]'
+              - cell "Sem destaque" [ref=f9e209]
+              - cell "Operador Demonstração" [ref=f9e210]
+              - cell [ref=f9e212]:
+                - group "Ações do contrato DEMO-002" [ref=f9e213]:
+                  - button "Abrir contrato" [ref=f9e214] [cursor=pointer]
+                  - button "Mais ações do contrato demo-002" [ref=f9e220] [cursor=pointer]
+            - row [ref=f9e226]:
+              - cell [ref=f9e227]:
+                - button "Pessoa Demonstração 3 DEMO-003" [ref=f9e228] [cursor=pointer]:
+                  - generic [ref=f9e229]:
+                    - generic [ref=f9e230]: Pessoa Demonstração 3
+                    - generic [ref=f9e231]: DEMO-003
+              - cell [ref=f9e232]:
+                - 'button "Alterar status do contrato DEMO-003: Ativo" [ref=f9e234] [cursor=pointer]':
+                  - generic [ref=f9e235]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e238]:
+                - generic "Amil" [ref=f9e239]
+                - generic "Plano Demonstração · Individual" [ref=f9e240]
+              - 'cell "R$ 1.050,00 Comissão: R$ 2.100,00" [ref=f9e241]':
+                - generic "R$ 1.050,00" [ref=f9e242]
+                - 'generic "Comissão: R$ 2.100,00" [ref=f9e243]'
+              - cell "Sem destaque" [ref=f9e244]
+              - cell "Operador Demonstração" [ref=f9e245]
+              - cell [ref=f9e247]:
+                - group "Ações do contrato DEMO-003" [ref=f9e248]:
+                  - button "Abrir contrato" [ref=f9e249] [cursor=pointer]
+                  - button "Mais ações do contrato demo-003" [ref=f9e255] [cursor=pointer]
+            - row [ref=f9e261]:
+              - cell [ref=f9e262]:
+                - button "Pessoa Demonstração 4 DEMO-004" [ref=f9e263] [cursor=pointer]:
+                  - generic [ref=f9e264]:
+                    - generic [ref=f9e265]: Pessoa Demonstração 4
+                    - generic [ref=f9e266]: DEMO-004
+              - cell [ref=f9e267]:
+                - 'button "Alterar status do contrato DEMO-004: Em análise" [ref=f9e269] [cursor=pointer]':
+                  - generic [ref=f9e270]: Em análise
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e273]:
+                - generic "Amil" [ref=f9e274]
+                - generic "Plano Demonstração · Individual" [ref=f9e275]
+              - 'cell "R$ 1.150,00 Comissão: R$ 2.300,00" [ref=f9e276]':
+                - generic "R$ 1.150,00" [ref=f9e277]
+                - 'generic "Comissão: R$ 2.300,00" [ref=f9e278]'
+              - cell "Sem destaque" [ref=f9e279]
+              - cell "Operador Demonstração" [ref=f9e280]
+              - cell [ref=f9e282]:
+                - group "Ações do contrato DEMO-004" [ref=f9e283]:
+                  - button "Abrir contrato" [ref=f9e284] [cursor=pointer]
+                  - button "Mais ações do contrato demo-004" [ref=f9e290] [cursor=pointer]
+            - row [ref=f9e296]:
+              - cell [ref=f9e297]:
+                - button "Pessoa Demonstração 5 DEMO-005" [ref=f9e298] [cursor=pointer]:
+                  - generic [ref=f9e299]:
+                    - generic [ref=f9e300]: Pessoa Demonstração 5
+                    - generic [ref=f9e301]: DEMO-005
+              - cell [ref=f9e302]:
+                - 'button "Alterar status do contrato DEMO-005: Ativo" [ref=f9e304] [cursor=pointer]':
+                  - generic [ref=f9e305]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e308]:
+                - generic "Amil" [ref=f9e309]
+                - generic "Plano Demonstração · Individual" [ref=f9e310]
+              - 'cell "R$ 1.250,00 Comissão: R$ 2.500,00" [ref=f9e311]':
+                - generic "R$ 1.250,00" [ref=f9e312]
+                - 'generic "Comissão: R$ 2.500,00" [ref=f9e313]'
+              - cell "Sem destaque" [ref=f9e314]
+              - cell "Operador Demonstração" [ref=f9e315]
+              - cell [ref=f9e317]:
+                - group "Ações do contrato DEMO-005" [ref=f9e318]:
+                  - button "Abrir contrato" [ref=f9e319] [cursor=pointer]
+                  - button "Mais ações do contrato demo-005" [ref=f9e325] [cursor=pointer]
+            - row [ref=f9e331]:
+              - cell [ref=f9e332]:
+                - button "Pessoa Demonstração 6 DEMO-006" [ref=f9e333] [cursor=pointer]:
+                  - generic [ref=f9e334]:
+                    - generic [ref=f9e335]: Pessoa Demonstração 6
+                    - generic [ref=f9e336]: DEMO-006
+              - cell [ref=f9e337]:
+                - 'button "Alterar status do contrato DEMO-006: Em análise" [ref=f9e339] [cursor=pointer]':
+                  - generic [ref=f9e340]: Em análise
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e343]:
+                - generic "Amil" [ref=f9e344]
+                - generic "Plano Demonstração · Individual" [ref=f9e345]
+              - 'cell "R$ 1.350,00 Comissão: R$ 2.700,00" [ref=f9e346]':
+                - generic "R$ 1.350,00" [ref=f9e347]
+                - 'generic "Comissão: R$ 2.700,00" [ref=f9e348]'
+              - cell "Sem destaque" [ref=f9e349]
+              - cell "Operador Demonstração" [ref=f9e350]
+              - cell [ref=f9e352]:
+                - group "Ações do contrato DEMO-006" [ref=f9e353]:
+                  - button "Abrir contrato" [ref=f9e354] [cursor=pointer]
+                  - button "Mais ações do contrato demo-006" [ref=f9e360] [cursor=pointer]
+            - row [ref=f9e366]:
+              - cell [ref=f9e367]:
+                - button "Pessoa Demonstração 7 DEMO-007" [ref=f9e368] [cursor=pointer]:
+                  - generic [ref=f9e369]:
+                    - generic [ref=f9e370]: Pessoa Demonstração 7
+                    - generic [ref=f9e371]: DEMO-007
+              - cell [ref=f9e372]:
+                - 'button "Alterar status do contrato DEMO-007: Ativo" [ref=f9e374] [cursor=pointer]':
+                  - generic [ref=f9e375]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e378]:
+                - generic "Amil" [ref=f9e379]
+                - generic "Plano Demonstração · Individual" [ref=f9e380]
+              - 'cell "R$ 1.450,00 Comissão: R$ 2.900,00" [ref=f9e381]':
+                - generic "R$ 1.450,00" [ref=f9e382]
+                - 'generic "Comissão: R$ 2.900,00" [ref=f9e383]'
+              - cell "Sem destaque" [ref=f9e384]
+              - cell "Operador Demonstração" [ref=f9e385]
+              - cell [ref=f9e387]:
+                - group "Ações do contrato DEMO-007" [ref=f9e388]:
+                  - button "Abrir contrato" [ref=f9e389] [cursor=pointer]
+                  - button "Mais ações do contrato demo-007" [ref=f9e395] [cursor=pointer]
+            - row [ref=f9e401]:
+              - cell [ref=f9e402]:
+                - button "Sem titular DEMO-008" [ref=f9e403] [cursor=pointer]:
+                  - generic [ref=f9e404]:
+                    - generic [ref=f9e405]: Sem titular
+                    - generic [ref=f9e406]: DEMO-008
+              - cell [ref=f9e407]:
+                - 'button "Alterar status do contrato DEMO-008: Em análise" [ref=f9e409] [cursor=pointer]':
+                  - generic [ref=f9e410]: Em análise
+              - cell "Amil Plano Demonstração · Individual" [ref=f9e413]:
+                - generic "Amil" [ref=f9e414]
+                - generic "Plano Demonstração · Individual" [ref=f9e415]
+              - 'cell "R$ 1.550,00 Comissão: R$ 3.100,00" [ref=f9e416]':
+                - generic "R$ 1.550,00" [ref=f9e417]
+                - 'generic "Comissão: R$ 3.100,00" [ref=f9e418]'
+              - cell "Sem destaque" [ref=f9e419]
+              - cell "Operador Demonstração" [ref=f9e420]
+              - cell [ref=f9e422]:
+                - group "Ações do contrato DEMO-008" [ref=f9e423]:
+                  - button "Abrir contrato" [ref=f9e424] [cursor=pointer]
+                  - button "Mais ações do contrato demo-008" [ref=f9e430] [cursor=pointer]
+      - navigation "Paginação" [ref=f9e436]:
+        - generic [ref=f9e437]:
+          - generic [ref=f9e438]:
+            - generic [ref=f9e439]: Itens por página
+            - combobox [aria-hidden] [ref=f9e440]
+            - button "Itens por página" [ref=f9e442] [cursor=pointer]:
+              - generic [ref=f9e443]: "25"
+          - generic [ref=f9e446]: 1–8 de 8
+        - generic [ref=f9e447]:
+          - button "Pagina anterior" [disabled] [ref=f9e448]
+          - button "1" [ref=f9e452] [cursor=pointer]
+          - button "Próxima página" [disabled] [ref=f9e453]
+  - dialog [ref=f9e506]:
+    - generic [ref=f9e507]:
+      - generic [ref=f9e508]:
+        - heading "Excluir contrato" [level=2] [ref=f9e509]
+        - paragraph [ref=f9e510]: Confira o contrato selecionado e o efeito da exclusão.
+      - button "Fechar" [active] [ref=f9e511] [cursor=pointer]
+    - generic [ref=f9e516]:
+      - note [ref=f9e517]:
+        - generic [ref=f9e518]: A exclusão é permanente. Este contrato será removido da carteira.
+      - generic [ref=f9e520]:
+        - generic [ref=f9e521]:
+          - term [ref=f9e522]: Contrato
+          - definition [ref=f9e523]: DEMO-001
+        - generic [ref=f9e524]:
+          - term [ref=f9e525]: Titular
+          - definition [ref=f9e526]: Pessoa Demonstração 1
+    - generic [ref=f9e527]:
+      - button "Cancelar" [ref=f9e528] [cursor=pointer]
+      - button "Excluir" [ref=f9e529] [cursor=pointer]

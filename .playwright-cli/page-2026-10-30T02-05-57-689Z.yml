@@ -1,0 +1,14 @@
+- generic [ref=f12e5]:
+  - banner [ref=f12e6]:
+    - generic [ref=f12e7]:
+      - generic [ref=f12e8]:
+        - paragraph [ref=f12e9]: Configurações
+        - heading "Links públicos" [level=1] [ref=f12e12]
+        - paragraph [ref=f12e13]: Gerencie o perfil público e os links exibidos em /links.
+      - group "Ações da página" [ref=f12e16]:
+        - button "Novo link" [ref=f12e17] [cursor=pointer]
+  - generic [ref=f12e21]:
+    - generic [ref=f12e22]:
+      - paragraph [ref=f12e23]: Não foi possível carregar a página de links.
+      - generic [ref=f12e24]: Verifique sua conexão ou sessão e tente novamente. Nenhuma configuração foi apagada.
+    - button "Tentar novamente" [ref=f12e26] [cursor=pointer]

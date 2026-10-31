@@ -1,0 +1,270 @@
+{
+  "format": "kifer-saude-ai-config",
+  "version": 3,
+  "exported_at": "2026-10-30T17:02:08.639Z",
+  "documentation": {
+    "description": "Backup autocontido das Configurações de IA da Kifer Saúde.",
+    "import_behavior": [
+      "Somente os itens de features e global_configs são candidatos à importação.",
+      "configuration_examples, model_catalog_snapshot, routing_snapshot e campos effective_* são apenas informativos.",
+      "model_override_enabled=false mantém o roteamento padrão atual; effective_model nunca vira override.",
+      "Overrides inválidos são preservados com aviso, sem substituição silenciosa de modelo."
+    ],
+    "field_notes": {
+      "reasoning_effort": "null usa o comportamento automático; valores explícitos só devem ser usados quando suportados pelo modelo.",
+      "model_config": "mode descreve a intenção e deve ser coerente com model_override_enabled.",
+      "configuration_examples": "Exemplos ilustrativos com importable=false; o importador nunca os aplica."
+    }
+  },
+  "configuration_examples": [
+    {
+      "id": "default-routing-automatic-reasoning",
+      "title": "Roteamento padrão com raciocínio automático",
+      "description": "A Feature acompanha o roteamento global atual e deixa o provider escolher o esforço suportado.",
+      "importable": false,
+      "example": {
+        "key": "example.default-routing",
+        "active_config": {
+          "feature_prompt": "Instruções específicas da Feature.",
+          "output_instructions": "Retorne somente o conteúdo final.",
+          "temperature": 0.4,
+          "max_output_tokens": 800,
+          "reasoning_effort": null,
+          "model_config": {
+            "mode": "default",
+            "model_override_enabled": false,
+            "provider": null,
+            "model": null,
+            "effective_provider": "openai",
+            "effective_model": "gpt-5.6-sol",
+            "resolution_source": "ai_routing"
+          }
+        }
+      }
+    },
+    {
+      "id": "custom-reasoning-model",
+      "title": "Modelo personalizado com esforço explícito",
+      "description": "A Feature fixa provider/model e seleciona um esforço aceito pelo modelo.",
+      "importable": false,
+      "example": {
+        "key": "example.custom-reasoning",
+        "active_config": {
+          "feature_prompt": "Instruções específicas da Feature.",
+          "output_instructions": "Retorne somente o conteúdo final.",
+          "temperature": 0.4,
+          "max_output_tokens": 1200,
+          "reasoning_effort": "high",
+          "model_config": {
+            "mode": "custom",
+            "model_override_enabled": true,
+            "provider": "openai",
+            "model": "gpt-5.6-sol",
+            "effective_provider": "openai",
+            "effective_model": "gpt-5.6-sol",
+            "resolution_source": "feature"
+          }
+        }
+      }
+    },
+    {
+      "id": "custom-non-reasoning-model",
+      "title": "Modelo personalizado sem esforço de raciocínio",
+      "description": "Modelos sem reasoning usam reasoning_effort null; a temperatura continua configurável quando suportada.",
+      "importable": false,
+      "example": {
+        "key": "example.custom-non-reasoning",
+        "active_config": {
+          "feature_prompt": "Instruções específicas da Feature.",
+          "output_instructions": "Retorne somente o conteúdo final.",
+          "temperature": 0.7,
+          "max_output_tokens": 800,
+          "reasoning_effort": null,
+          "model_config": {
+            "mode": "custom",
+            "model_override_enabled": true,
+            "provider": "openai",
+            "model": "gpt-4.1-mini",
+            "effective_provider": "openai",
+            "effective_model": "gpt-4.1-mini",
+            "resolution_source": "feature"
+          }
+        }
+      }
+    }
+  ],
+  "features": [
+    {
+      "key": "message.rewrite",
+      "name": "Reescrita de mensagem",
+      "active_config": {
+        "feature_prompt": "Use o contexto da conversa para produzir uma resposta clara e acolhedora.",
+        "output_instructions": "Responda em português brasileiro, com objetividade e cordialidade.",
+        "temperature": 0.4,
+        "max_output_tokens": 700,
+        "reasoning_effort": "low",
+        "model_config": {
+          "mode": "custom",
+          "model_override_enabled": true,
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "effective_provider": "openai",
+          "effective_model": "gpt-4o-mini",
+          "resolution_source": "ai_routing"
+        }
+      }
+    },
+    {
+      "key": "message.suggest",
+      "name": "Sugestão de resposta",
+      "active_config": {
+        "feature_prompt": "Use o contexto da conversa para produzir uma resposta clara e acolhedora.",
+        "output_instructions": "Responda em português brasileiro, com objetividade e cordialidade.",
+        "temperature": 0.4,
+        "max_output_tokens": 700,
+        "reasoning_effort": "low",
+        "model_config": {
+          "mode": "custom",
+          "model_override_enabled": true,
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "effective_provider": "openai",
+          "effective_model": "gpt-4o-mini",
+          "resolution_source": "ai_routing"
+        }
+      }
+    },
+    {
+      "key": "audio.transcribe",
+      "name": "Transcrição de áudio",
+      "active_config": {
+        "feature_prompt": "Use o contexto da conversa para produzir uma resposta clara e acolhedora.",
+        "output_instructions": "Responda em português brasileiro, com objetividade e cordialidade.",
+        "temperature": 0.4,
+        "max_output_tokens": 700,
+        "reasoning_effort": "low",
+        "model_config": {
+          "mode": "custom",
+          "model_override_enabled": true,
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "effective_provider": "openai",
+          "effective_model": "gpt-4o-mini",
+          "resolution_source": "ai_routing"
+        }
+      }
+    },
+    {
+      "key": "campaign.intent",
+      "name": "Classificação de intenção",
+      "active_config": {
+        "feature_prompt": "Use o contexto da conversa para produzir uma resposta clara e acolhedora.",
+        "output_instructions": "Responda em português brasileiro, com objetividade e cordialidade.",
+        "temperature": 0.4,
+        "max_output_tokens": 700,
+        "reasoning_effort": "low",
+        "model_config": {
+          "mode": "custom",
+          "model_override_enabled": true,
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "effective_provider": "openai",
+          "effective_model": "gpt-4o-mini",
+          "resolution_source": "ai_routing"
+        }
+      }
+    },
+    {
+      "key": "followup.generate",
+      "name": "Gerar follow-up",
+      "active_config": null
+    },
+    {
+      "key": "autonomous.reply",
+      "name": "Resposta autônoma",
+      "active_config": {
+        "feature_prompt": "Use o contexto da conversa para produzir uma resposta clara e acolhedora.",
+        "output_instructions": "Responda em português brasileiro, com objetividade e cordialidade.",
+        "temperature": 0.4,
+        "max_output_tokens": 700,
+        "reasoning_effort": "low",
+        "model_config": {
+          "mode": "custom",
+          "model_override_enabled": true,
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "effective_provider": "openai",
+          "effective_model": "gpt-4o-mini",
+          "resolution_source": "ai_routing"
+        }
+      }
+    },
+    {
+      "key": "contract.document_extract",
+      "name": "Leitura de documentos de contrato",
+      "active_config": {
+        "feature_prompt": "Use o contexto da conversa para produzir uma resposta clara e acolhedora.",
+        "output_instructions": "Responda em português brasileiro, com objetividade e cordialidade.",
+        "temperature": 0.4,
+        "max_output_tokens": 700,
+        "reasoning_effort": "low",
+        "model_config": {
+          "mode": "custom",
+          "model_override_enabled": true,
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "effective_provider": null,
+          "effective_model": null,
+          "resolution_source": null
+        }
+      }
+    }
+  ],
+  "global_configs": [
+    {
+      "key": "global_instructions",
+      "value": "Respeite o contexto da conversa e use linguagem clara."
+    },
+    {
+      "key": "global_style",
+      "value": "Tom cordial, objetivo e acolhedor."
+    }
+  ],
+  "model_catalog_snapshot": {
+    "generated_at": "2026-10-30T17:02:08.639Z",
+    "providers": {
+      "openai": [
+        {
+          "model": "gpt-4o-mini",
+          "display_name": "GPT-4o mini",
+          "capabilities": [
+            "text",
+            "structured_output",
+            "reasoning",
+            "multimodal"
+          ],
+          "active": true,
+          "deprecated": false,
+          "pricing_available": true,
+          "reasoning_efforts": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        {
+          "model": "gpt-4o-mini-transcribe",
+          "display_name": "GPT-4o mini transcribe",
+          "capabilities": [
+            "transcription"
+          ],
+          "active": true,
+          "deprecated": false,
+          "pricing_available": true,
+          "reasoning_efforts": []
+        }
+      ]
+    }
+  },
+  "routing_snapshot": {}
+}

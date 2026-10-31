@@ -1,0 +1,102 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - complementary [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - img "Kifer Saúde CRM" [ref=f3e7]:
+          - generic [ref=f3e8]: kifersaúde
+          - generic [ref=f3e9]: CRM
+        - navigation [ref=f3e10]:
+          - generic [ref=f3e11]:
+            - button "Dashboard" [ref=f3e12] [cursor=pointer]
+            - button "CRM" [ref=f3e21] [cursor=pointer]
+            - button "Comunicação" [ref=f3e31] [cursor=pointer]
+            - button "Financeiro" [ref=f3e40] [cursor=pointer]
+            - button "Automações e IA" [ref=f3e49] [cursor=pointer]
+            - button "Configurações" [ref=f3e56] [cursor=pointer]
+        - generic [ref=f3e62]:
+          - button "Recolher" [ref=f3e63] [cursor=pointer]
+          - button "Notificações" [ref=f3e68] [cursor=pointer]
+          - button "Ativar tema escuro" [ref=f3e208] [cursor=pointer]:
+            - generic [ref=f3e79]: Escuro
+          - button "Sair" [ref=f3e80] [cursor=pointer]
+    - generic [ref=f3e85]:
+      - banner [ref=f3e86]:
+        - generic [ref=f3e87]:
+          - navigation "Breadcrumb" [ref=f3e88]:
+            - list [ref=f3e89]:
+              - listitem [ref=f3e90]:
+                - button "CRM" [ref=f3e91] [cursor=pointer]
+              - listitem [aria-hidden] [ref=f3e92]
+              - listitem [ref=f3e95]: Chat e testes de IA
+          - generic [ref=f3e96]:
+            - generic [ref=f3e97]: operador-demo
+            - button "Ativar tema escuro" [ref=f3e211] [cursor=pointer]
+            - generic [ref=f3e102]: O
+      - main [ref=f3e104]:
+        - generic [ref=f3e106]:
+          - generic [ref=f3e108]:
+            - generic [ref=f3e109]:
+              - paragraph [ref=f3e110]: Kifer Saúde · Inteligência artificial
+              - heading "Chat e testes de IA" [level=1] [ref=f3e113]
+              - paragraph [ref=f3e114]: Valide o atendimento automatizado em uma simulação controlada. As mensagens desta tela não são enviadas a clientes.
+            - button "Nova simulação" [ref=f3e116] [cursor=pointer]
+          - generic [ref=f3e120]:
+            - generic [ref=f3e121]:
+              - generic [ref=f3e122]:
+                - generic [ref=f3e124]:
+                  - heading "Simulação de atendimento" [level=3] [ref=f3e126]
+                  - paragraph [ref=f3e127]: Simulação de qualificação — família em Niterói
+                - generic [ref=f3e128]:
+                  - button "Histórico" [ref=f3e129] [cursor=pointer]
+                  - button "Exportar conversa" [ref=f3e705] [cursor=pointer]
+              - log "Mensagens da simulação" [ref=f3e134]:
+                - paragraph [ref=f3e712]: Tenho 42 anos e gostaria de conhecer os planos disponíveis.
+                - paragraph [ref=f3e715]: Claro! Posso ajudar. Você procura um plano para você ou também para outras pessoas da família?
+                - paragraph [ref=f3e718]: Para mim e minha esposa. Moramos em Niterói.
+                - paragraph [ref=f3e721]: Entendi. Vou considerar duas pessoas em Niterói. Vocês já possuem algum plano de saúde atualmente?
+              - generic [ref=f3e141]:
+                - generic [ref=f3e142]: Mensagem de teste
+                - textbox "Mensagem de teste" [ref=f3e143]:
+                  - /placeholder: Digite como se fosse o lead...
+                - button "Enviar" [disabled] [ref=f3e144]
+            - generic [ref=f3e149]:
+              - generic [ref=f3e150]:
+                - generic [ref=f3e152]:
+                  - heading "Cenário de teste" [level=3] [ref=f3e154]
+                  - paragraph [ref=f3e155]: Acompanhe o contexto e o resultado desta simulação.
+                - generic [ref=f3e156]: Ambiente isolado
+              - generic [ref=f3e158]:
+                - generic [ref=f3e159]:
+                  - generic [ref=f3e160]:
+                    - paragraph [ref=f3e161]: Conversa atual
+                    - paragraph [ref=f3e162]: Simulação de qualificação — família em Niterói
+                  - generic [ref=f3e163]: Manual
+                - generic [ref=f3e164]:
+                  - generic [ref=f3e165]:
+                    - paragraph [ref=f3e166]: Avaliação mais recente
+                    - paragraph [ref=f3e167]: Dados todos de uma vez
+                  - generic [ref=f3e168]: Aprovado
+                - generic [ref=f3e169]:
+                  - generic [ref=f3e170]:
+                    - paragraph [ref=f3e171]: Uso
+                    - paragraph [ref=f3e172]: Mensagens não são enviadas a clientes.
+                  - generic [ref=f3e173]: Simulação
+              - region "Resultado do teste" [ref=f3e722]:
+                - generic [ref=f3e724]:
+                  - paragraph [ref=f3e725]: Teste aprovado
+                  - generic [ref=f3e726]: O atendimento coletou as informações necessárias com clareza e acolhimento.
+                - generic [ref=f3e727]:
+                  - paragraph [ref=f3e728]: Sugestões para o playbook
+                  - list [ref=f3e731]:
+                    - listitem [ref=f3e732]: Confirmar a região antes de apresentar alternativas.
+              - button "Escolher cenário" [ref=f3e181] [cursor=pointer]
+  - dialog "Histórico de simulações" [ref=f3e736]:
+    - generic [ref=f3e737]:
+      - generic [ref=f3e739]:
+        - heading "Histórico de simulações" [level=2] [ref=f3e740]
+        - paragraph [ref=f3e741]: Abra uma conversa anterior ou remova uma simulação.
+      - button "Fechar" [active] [ref=f3e742] [cursor=pointer]
+    - list [ref=f3e747]:
+      - listitem [ref=f3e748]:
+        - button "Simulação de qualificação — família em Niterói" [ref=f3e749] [cursor=pointer]
+        - button "Apagar simulação Simulação de qualificação — família em Niterói" [ref=f3e752] [cursor=pointer]

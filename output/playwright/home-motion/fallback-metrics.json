@@ -1,0 +1,37 @@
+{
+  "results": [
+    {
+      "mode": "no-observer",
+      "invisible": 0,
+      "profiles": "passed",
+      "faq": "passed"
+    },
+    {
+      "mode": "broken-observer",
+      "invisible": 0,
+      "profiles": "passed",
+      "faq": "passed"
+    },
+    {
+      "mode": "silent-observer",
+      "invisible": 0,
+      "profiles": "passed",
+      "faq": "passed"
+    },
+    {
+      "mode": "no-animation",
+      "invisible": 0,
+      "profiles": "passed",
+      "faq": "passed"
+    },
+    {
+      "mode": "broken-animation",
+      "invisible": 0,
+      "profiles": "passed",
+      "faq": "passed"
+    }
+  ],
+  "dynamicPreference": "passed",
+  "backgroundCleanup": "passed",
+  "errors": []
+}

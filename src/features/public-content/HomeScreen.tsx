@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import PublicSeo from "../../components/public/PublicSeo";
 import { PublicShell, TextLink } from "../../design-system";
 import PublicHomeHeader from "./components/PublicHomeHeader";
@@ -14,9 +14,12 @@ import {
 import HomeQuoteForm from "./components/home/HomeQuoteForm";
 import { homeFaqs, homePhotos, type ContractKind } from "./domain/homeContent";
 import { useHomeQuote } from "./hooks/useHomeQuote";
+import { useHomeMotion } from "./hooks/useHomeMotion";
 
 export default function HomeScreen() {
   const quote = useHomeQuote();
+  const motionAnchor = useRef<HTMLElement>(null);
+  useHomeMotion(motionAnchor);
   const scrollToSection = (id: string) => {
     const section = document.getElementById(id);
     if (!section) return;
@@ -68,7 +71,7 @@ export default function HomeScreen() {
           onNavigate={scrollToSection}
           onRequestQuote={() => requestQuote()}
         />
-        <main id="conteudo-principal">
+        <main id="conteudo-principal" ref={motionAnchor}>
           <HomeHero onQuote={() => requestQuote()} />
           <HomeTrust />
           <HomeAudience onQuote={requestQuote} />

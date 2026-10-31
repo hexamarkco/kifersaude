@@ -1,0 +1,159 @@
+- generic [ref=f7e3]:
+  - complementary [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - img "Kifer Saúde CRM" [ref=f7e7]:
+        - generic [ref=f7e8]: kifersaúde
+        - generic [ref=f7e9]: CRM
+      - navigation [ref=f7e10]:
+        - generic [ref=f7e11]:
+          - button "Dashboard" [ref=f7e12] [cursor=pointer]
+          - button "CRM" [ref=f7e21] [cursor=pointer]
+          - button "Comunicação" [ref=f7e31] [cursor=pointer]
+          - button "Financeiro" [ref=f7e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f7e49] [cursor=pointer]
+          - button "Configurações" [ref=f7e56] [cursor=pointer]
+      - button "Recolher" [ref=f7e63] [cursor=pointer]
+  - generic [ref=f7e68]:
+    - banner [ref=f7e69]:
+      - generic [ref=f7e70]:
+        - navigation "Breadcrumb" [ref=f7e71]:
+          - list [ref=f7e72]:
+            - listitem [ref=f7e73]:
+              - button "CRM" [ref=f7e74] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f7e75]
+            - listitem [ref=f7e78]: Configurações
+        - generic [ref=f7e79]:
+          - generic [ref=f7e80]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f7e81] [cursor=pointer]
+          - generic [ref=f7e85]: OD
+    - main [ref=f7e87]:
+      - generic [ref=f7e89]:
+        - generic [ref=f7e90]:
+          - generic [ref=f7e92]:
+            - paragraph [ref=f7e93]: Administração
+            - generic [ref=f7e95]:
+              - heading "Formulários de captação" [level=1] [ref=f7e96]
+              - button "Informações sobre Formulários de captação" [ref=f7e98]
+          - tablist "Áreas de configurações" [ref=f7e103]:
+            - tab "Geral" [ref=f7e104] [cursor=pointer]
+            - tab "Usuários" [ref=f7e109] [cursor=pointer]
+            - tab "Links" [ref=f7e116] [cursor=pointer]
+            - tab "Formulários" [selected] [ref=f7e121] [cursor=pointer]
+        - main [ref=f7e126]:
+          - generic [ref=f7e127]:
+            - generic [ref=f7e129]:
+              - searchbox "Buscar formulários" [ref=f7e132]
+              - button "Todos os status" [ref=f7e135] [cursor=pointer]
+            - generic [ref=f7e142]:
+              - generic [ref=f7e144]:
+                - heading "Seus formulários" [level=3] [ref=f7e145]
+                - button "Como os formulários publicados funcionam" [ref=f7e147]
+              - generic [ref=f7e152]:
+                - generic [ref=f7e153]:
+                  - generic [ref=f7e154]:
+                    - generic [ref=f7e155]:
+                      - paragraph [ref=f7e156]: Cotação familiar
+                      - paragraph [ref=f7e157]: /forms/cotacao-familiar
+                    - group "Ações de Cotação familiar" [ref=f7e158]:
+                      - button "Mais ações de cotação familiar" [ref=f7e160] [cursor=pointer]
+                  - generic [ref=f7e166]:
+                    - paragraph [ref=f7e167]: 24 envios
+                    - generic [ref=f7e168]:
+                      - switch "Publicado" [checked] [ref=f7e170]
+                      - generic [ref=f7e173] [cursor=pointer]: Publicado
+                - generic [ref=f7e174]:
+                  - generic [ref=f7e175]:
+                    - generic [ref=f7e176]:
+                      - paragraph [ref=f7e177]: Solicitação de contato
+                      - paragraph [ref=f7e178]: /forms/formulario-2
+                    - group "Ações de Solicitação de contato" [ref=f7e179]:
+                      - button "Mais ações de solicitação de contato" [ref=f7e181] [cursor=pointer]
+                  - generic [ref=f7e187]:
+                    - paragraph [ref=f7e188]: 18 envios
+                    - generic [ref=f7e189]:
+                      - switch "Publicado" [checked] [ref=f7e191]
+                      - generic [ref=f7e194] [cursor=pointer]: Publicado
+                - generic [ref=f7e195]:
+                  - generic [ref=f7e196]:
+                    - generic [ref=f7e197]:
+                      - paragraph [ref=f7e198]: Pesquisa pós-atendimento
+                      - paragraph [ref=f7e199]: /forms/formulario-3
+                    - group "Ações de Pesquisa pós-atendimento" [ref=f7e200]:
+                      - button "Mais ações de pesquisa pós-atendimento" [ref=f7e202] [cursor=pointer]
+                  - generic [ref=f7e208]:
+                    - paragraph [ref=f7e209]: 12 envios
+                    - generic [ref=f7e210]:
+                      - switch "Publicado" [checked] [ref=f7e212]
+                      - generic [ref=f7e215] [cursor=pointer]: Publicado
+                - generic [ref=f7e216]:
+                  - generic [ref=f7e217]:
+                    - generic [ref=f7e218]:
+                      - paragraph [ref=f7e219]: Simulação empresarial
+                      - paragraph [ref=f7e220]: /forms/formulario-4
+                    - group "Ações de Simulação empresarial" [ref=f7e221]:
+                      - button "Mais ações de simulação empresarial" [ref=f7e223] [cursor=pointer]
+                  - generic [ref=f7e229]:
+                    - paragraph [ref=f7e230]: 7 envios
+                    - generic [ref=f7e231]:
+                      - switch "Publicado" [checked] [ref=f7e233]
+                      - generic [ref=f7e236] [cursor=pointer]: Publicado
+                - generic [ref=f7e237]:
+                  - generic [ref=f7e238]:
+                    - generic [ref=f7e239]:
+                      - paragraph [ref=f7e240]: Contato pelo site
+                      - paragraph [ref=f7e241]: /forms/formulario-5
+                    - group "Ações de Contato pelo site" [ref=f7e242]:
+                      - button "Mais ações de contato pelo site" [ref=f7e244] [cursor=pointer]
+                  - generic [ref=f7e250]:
+                    - paragraph [ref=f7e251]: 5 envios
+                    - generic [ref=f7e252]:
+                      - switch "Publicado" [checked] [ref=f7e254]
+                      - generic [ref=f7e257] [cursor=pointer]: Publicado
+                - generic [ref=f7e258]:
+                  - generic [ref=f7e259]:
+                    - generic [ref=f7e260]:
+                      - paragraph [ref=f7e261]: Retorno de proposta
+                      - paragraph [ref=f7e262]: /forms/formulario-6
+                    - group "Ações de Retorno de proposta" [ref=f7e263]:
+                      - button "Mais ações de retorno de proposta" [ref=f7e265] [cursor=pointer]
+                  - generic [ref=f7e271]:
+                    - paragraph [ref=f7e272]: 2 envios
+                    - generic [ref=f7e273]:
+                      - switch "Rascunho" [ref=f7e275]
+                      - generic [ref=f7e278] [cursor=pointer]: Rascunho
+                - generic [ref=f7e279]:
+                  - generic [ref=f7e280]:
+                    - generic [ref=f7e281]:
+                      - paragraph [ref=f7e282]: Campanha regional
+                      - paragraph [ref=f7e283]: /forms/formulario-7
+                    - group "Ações de Campanha regional" [ref=f7e284]:
+                      - button "Mais ações de campanha regional" [ref=f7e286] [cursor=pointer]
+                  - generic [ref=f7e292]:
+                    - paragraph [ref=f7e293]: 1 envio
+                    - generic [ref=f7e294]:
+                      - switch "Publicado" [checked] [ref=f7e296]
+                      - generic [ref=f7e299] [cursor=pointer]: Publicado
+                - generic [ref=f7e300]:
+                  - generic [ref=f7e301]:
+                    - generic [ref=f7e302]:
+                      - paragraph [ref=f7e303]: Atualização cadastral
+                      - paragraph [ref=f7e304]: /forms/formulario-8
+                    - group "Ações de Atualização cadastral" [ref=f7e305]:
+                      - button "Mais ações de atualização cadastral" [ref=f7e307] [cursor=pointer]
+                  - generic [ref=f7e313]:
+                    - paragraph [ref=f7e314]: 0 envios
+                    - generic [ref=f7e315]:
+                      - switch "Publicado" [checked] [ref=f7e317]
+                      - generic [ref=f7e320] [cursor=pointer]: Publicado
+              - navigation "Paginação" [ref=f7e321]:
+                - generic [ref=f7e322]:
+                  - generic [ref=f7e323]:
+                    - generic [ref=f7e324]: Itens por página
+                    - combobox [aria-hidden] [ref=f7e325]
+                    - button "Itens por página" [ref=f7e327] [cursor=pointer]:
+                      - generic [ref=f7e328]: "10"
+                  - generic [ref=f7e331]: 1–8 de 8
+                - generic [ref=f7e332]:
+                  - button "Pagina anterior" [disabled] [ref=f7e333]
+                  - button "1" [ref=f7e337] [cursor=pointer]
+                  - button "Próxima página" [disabled] [ref=f7e338]

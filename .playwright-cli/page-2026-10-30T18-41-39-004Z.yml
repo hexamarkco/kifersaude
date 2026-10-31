@@ -1,0 +1,98 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - button "Gestão de contratos" [ref=e5] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - paragraph [ref=e12]: Kifer Saúde / Contratos
+        - generic [ref=e13]:
+          - generic [ref=e14]: "413780"
+          - heading "Ficha do contrato" [level=1] [ref=e16]
+        - paragraph [ref=e17]: Acompanhe as informações contratuais e os beneficiários vinculados.
+      - generic [ref=e19]:
+        - button "Excluir contrato" [ref=e21] [cursor=pointer]
+        - group "Ações da página" [ref=e26]:
+          - button "Editar contrato" [ref=e27] [cursor=pointer]
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - heading "Dados do contrato" [level=3] [ref=e34]
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - term [ref=e37]: Titular
+            - definition [ref=e38]: Titular de demonstração
+          - generic [ref=e39]:
+            - term [ref=e40]: Operadora
+            - definition [ref=e41]: Assim Saúde
+          - generic [ref=e42]:
+            - term [ref=e43]: Plano
+            - definition [ref=e44]: Clássico
+          - generic [ref=e45]:
+            - term [ref=e46]: Modalidade
+            - definition [ref=e47]: PME
+          - generic [ref=e48]:
+            - term [ref=e49]: Vigência
+            - definition [ref=e50]: 01/10/2026
+          - generic [ref=e51]:
+            - term [ref=e52]: Status
+            - definition [ref=e53]: Ativo
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - heading "Beneficiários" [level=3] [ref=e56]
+          - generic [ref=e57]:
+            - button "Adicionar titular" [ref=e58] [cursor=pointer]
+            - button "Dependente" [ref=e61] [cursor=pointer]
+        - list [ref=e64]:
+          - listitem [ref=e65]:
+            - generic [ref=e66]:
+              - paragraph [ref=e67]: Titular de demonstração
+              - paragraph [ref=e68]: Dados do titular
+          - listitem [ref=e69]:
+            - generic [ref=e70]:
+              - paragraph [ref=e71]: Dependente de demonstração
+              - paragraph [ref=e72]: Dados do dependente · Filho(a)
+    - group [ref=e73]:
+      - generic "Mais informações do contrato" [ref=e74] [cursor=pointer]
+  - dialog [ref=e81]:
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - heading "Novo Dependente" [level=2] [ref=e84]
+        - paragraph [ref=e85]:
+          - button "Informações sobre esta janela" [active] [ref=e87]
+      - button "Fechar" [ref=e90] [cursor=pointer]
+    - generic [ref=e96]:
+      - generic [ref=e97]:
+        - generic [ref=e98]: Titular *
+        - button "Titular de demonstração" [ref=e102] [cursor=pointer]
+      - generic [ref=e112]:
+        - generic [ref=e113]: CPF
+        - generic [ref=e116]:
+          - textbox [ref=e118]
+          - button "Buscar CPF" [disabled] [ref=e119]
+      - generic [ref=e124]:
+        - generic [ref=e125]: Nome Completo *
+        - textbox "Nome Completo *" [ref=e129]
+      - generic [ref=e130]:
+        - generic [ref=e131]: Data de Nascimento *
+        - button "Data de Nascimento *" [ref=e135] [cursor=pointer]:
+          - generic [ref=e138]: Selecionar data
+      - generic [ref=e140]:
+        - checkbox "Aplicar bonus por vida Marque se este dependente e elegivel ao bonus por vida deste contrato." [checked] [ref=e141] [cursor=pointer]
+        - generic [ref=e142]:
+          - generic [ref=e143]: Aplicar bonus por vida
+          - generic [ref=e144]: Marque se este dependente e elegivel ao bonus por vida deste contrato.
+      - generic [ref=e145]:
+        - generic [ref=e146]: Relação com titular *
+        - button "Filho(a)" [ref=e150] [cursor=pointer]
+      - generic [ref=e160]:
+        - generic [ref=e161]: Valor Individual (R$)
+        - textbox "Valor Individual (R$)" [ref=e165]
+      - generic [ref=e166]:
+        - generic [ref=e167]: Carencia Individual
+        - button "Mesma do titular" [ref=e171] [cursor=pointer]
+      - generic [ref=e181]:
+        - generic [ref=e182]: Elegibilidade
+        - textbox "Elegibilidade" [ref=e186]:
+          - /placeholder: "Ex: Filho menor de 21 anos"
+    - generic [ref=e187]:
+      - button "Cancelar" [ref=e188] [cursor=pointer]
+      - button "Salvar Dependente" [ref=e189] [cursor=pointer]
+  - tooltip "Vincule o dependente ao titular e informe as condicoes individuais."

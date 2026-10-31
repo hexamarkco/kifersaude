@@ -1,0 +1,39 @@
+- generic [ref=f1e4]:
+  - banner [ref=f1e5]:
+    - generic [ref=f1e6]:
+      - generic [ref=f1e7]:
+        - paragraph [ref=f1e8]: Kifer Saúde / Operação comercial
+        - generic [ref=f1e10]:
+          - heading "Gestão de contratos" [level=1] [ref=f1e11]
+          - button "Informações sobre Gestão de contratos" [ref=f1e13]
+      - generic [ref=f1e17]:
+        - group "Ações dos contratos" [ref=f1e18]:
+          - button "Importar contratos em massa" [ref=f1e19] [cursor=pointer]
+        - button "Novo contrato" [ref=f1e25] [cursor=pointer]
+  - generic "Resumo da carteira de contratos" [ref=f1e29]:
+    - generic [ref=f1e30]:
+      - heading "Contratos ativos" [level=3] [ref=f1e35]
+      - generic [ref=f1e36]: "4"
+      - generic [ref=f1e37]: Contratos vigentes
+    - generic [ref=f1e38]:
+      - heading "Em implantação" [level=3] [ref=f1e43]
+      - generic [ref=f1e44]: "4"
+      - generic [ref=f1e45]: Em análise ou emissão
+    - generic [ref=f1e46]:
+      - heading "Próximos vencimentos" [level=3] [ref=f1e51]
+      - generic [ref=f1e52]: "0"
+      - generic [ref=f1e53]: Nos próximos 30 dias
+    - generic [ref=f1e54]:
+      - heading "Mensalidade total" [level=3] [ref=f1e59]
+      - generic [ref=f1e60]: R$ 8.750,00
+      - generic [ref=f1e61]: Soma dos valores informados
+  - generic [ref=f1e62]:
+    - generic [ref=f1e63]:
+      - textbox "Buscar contratos" [ref=f1e66]:
+        - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+      - button "Exportar" [ref=f1e68] [cursor=pointer]
+    - generic [ref=f1e73]:
+      - button "Todos os status" [ref=f1e74] [cursor=pointer]
+      - button "Todos os responsáveis" [ref=f1e82] [cursor=pointer]
+      - button "Todos os períodos" [ref=f1e92] [cursor=pointer]
+      - button "Filtros avançados" [ref=f1e99] [cursor=pointer]

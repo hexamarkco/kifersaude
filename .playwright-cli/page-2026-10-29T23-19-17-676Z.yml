@@ -1,0 +1,240 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e9]:
+        - heading "Campanha de demonstração" [level=1] [ref=e10]
+        - button "Informações sobre Campanha de demonstração" [ref=e12]
+      - generic [ref=e16]:
+        - generic [ref=e17]: Atualizando automaticamente
+        - group "Ações do disparo" [ref=e19]:
+          - button "Voltar" [ref=e20] [cursor=pointer]
+          - button "Atualizar" [ref=e24] [cursor=pointer]
+  - generic [ref=e31]:
+    - generic [ref=e32]:
+      - heading "Destinatários" [level=3] [ref=e37]
+      - generic [ref=e38]: "18"
+    - generic [ref=e39]:
+      - heading "Pendentes" [level=3] [ref=e44]
+      - generic [ref=e45]: "5"
+    - generic [ref=e46]:
+      - heading "Enviadas" [level=3] [ref=e51]
+      - generic [ref=e52]: "8"
+    - generic [ref=e53]:
+      - heading "Responderam" [level=3] [ref=e58]
+      - generic [ref=e59]: "3"
+  - generic [ref=e61]:
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e65]:
+          - heading "Status do disparo" [level=2] [ref=e66]
+          - button "Informações sobre esta seção" [ref=e68]
+        - generic [ref=e71]: Em andamento
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - term [ref=e75]: Programação
+          - definition [ref=e76]:
+            - paragraph [ref=e77]: 29/10/2026, 09:00
+        - generic [ref=e78]:
+          - term [ref=e79]: Enviados
+          - definition [ref=e80]:
+            - paragraph [ref=e81]: 8 contato(s)
+            - paragraph [ref=e82]: 5 ainda na fila
+        - generic [ref=e83]:
+          - term [ref=e84]: Respostas
+          - definition [ref=e85]:
+            - paragraph [ref=e86]: 3 contato(s)
+            - paragraph [ref=e87]: 23.1% dos contatos com tentativa
+      - generic [ref=e88]:
+        - button "Cancelar" [ref=e90] [cursor=pointer]
+        - group "Ações da página" [ref=e95]:
+          - button "Pausar" [ref=e96] [cursor=pointer]
+          - button "Processar lote" [ref=e100] [cursor=pointer]
+    - generic [ref=e105]:
+      - generic [ref=e106]:
+        - generic [ref=e108]:
+          - heading "Público selecionado" [level=2] [ref=e109]
+          - button "Informações sobre esta seção" [ref=e111]
+        - generic [ref=e114]: Base do CRM
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - term [ref=e118]: Contatos selecionados
+          - definition [ref=e119]:
+            - paragraph [ref=e120]: 18 contato(s)
+        - generic [ref=e121]:
+          - term [ref=e122]: Janela de envio
+          - definition [ref=e123]:
+            - paragraph [ref=e124]: 09:00 - 18:00 (Seg, Ter, Qua, Qui, Sex)
+        - generic [ref=e125]:
+          - term [ref=e126]: Intervalo por contato
+          - definition [ref=e127]:
+            - paragraph [ref=e128]: Aprox. 1 novo contato a cada 30 min
+  - generic [ref=e129]:
+    - generic [ref=e130]: Validando
+    - paragraph [ref=e131]: 2 contato(s) aguardando confirmação de que o número tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; números sem WhatsApp são marcados como inválidos automaticamente.
+  - generic [ref=e132]:
+    - generic [ref=e133]:
+      - generic [ref=e135]:
+        - heading "Relatório" [level=2] [ref=e136]
+        - button "Informações sobre esta seção" [ref=e138]
+      - generic [ref=e141]: 2 com atenção
+    - generic [ref=e143]:
+      - generic [ref=e144]:
+        - paragraph [ref=e145]: Taxa de resposta
+        - paragraph [ref=e146]: 23.1%
+      - generic [ref=e147]:
+        - paragraph [ref=e148]: Taxa de falha
+        - paragraph [ref=e149]: 15.4%
+    - generic [ref=e151]:
+      - heading "O que precisa de atenção" [level=3] [ref=e152]
+      - list [ref=e153]:
+        - listitem [ref=e154]:
+          - generic [ref=e155]:
+            - paragraph [ref=e156]: Não foi possível concluir o envio
+            - paragraph [ref=e157]: Confira a conversa para saber o que chegou ao contato. Se precisar de ajuda, compartilhe os detalhes com o responsável pelo sistema.
+            - group [ref=e158]:
+              - generic "Informações para o suporte" [ref=e159] [cursor=pointer]
+          - generic [ref=e160]: "2"
+  - generic [ref=e161]:
+    - generic [ref=e163]:
+      - heading "Contatos da campanha" [level=2] [ref=e164]
+      - paragraph [ref=e165]: Mostrando 1-10 de 18 contato(s).
+    - generic [ref=e171]:
+      - textbox "Buscar por nome ou telefone..." [ref=e174]
+      - button "Todos os status" [ref=e176] [cursor=pointer]
+    - region "Tabela com rolagem horizontal" [ref=e184]:
+      - table [ref=e185]:
+        - rowgroup [ref=e193]:
+          - row [ref=e194]:
+            - columnheader [ref=e195]:
+              - button "Ordenar por Contato" [ref=e196] [cursor=pointer]:
+                - generic [ref=e197]: Contato
+            - columnheader [ref=e201]:
+              - button "Ordenar por Status" [ref=e202] [cursor=pointer]:
+                - generic [ref=e203]: Status
+            - columnheader [ref=e207]:
+              - button "Ordenar por Etapa" [ref=e208] [cursor=pointer]:
+                - generic [ref=e209]: Etapa
+            - columnheader [ref=e213]:
+              - button "Ordenar por Próximo envio" [ref=e214] [cursor=pointer]:
+                - generic [ref=e215]: Próximo envio
+            - columnheader [ref=e219]:
+              - button "Ordenar por Última tentativa" [ref=e220] [cursor=pointer]:
+                - generic [ref=e221]: Última tentativa
+            - columnheader [ref=e225]:
+              - button "Ordenar por O que fazer" [ref=e226] [cursor=pointer]:
+                - generic [ref=e227]: O que fazer
+        - rowgroup [ref=e231]:
+          - row [ref=e232]:
+            - cell [ref=e233]:
+              - paragraph [ref=e234]: Contato de demonstração 01
+              - paragraph [ref=e235]: +55 (21) 90000-0001
+            - cell "Enviado" [ref=e236]
+            - cell "1" [ref=e238]
+            - cell "-" [ref=e239]
+            - cell "29/10/2026, 05:30" [ref=e240]
+            - cell "—" [ref=e241]
+          - row [ref=e242]:
+            - cell [ref=e243]:
+              - paragraph [ref=e244]: Contato de demonstração 02
+              - paragraph [ref=e245]: +55 (21) 90000-0002
+            - cell "Respondeu" [ref=e246]
+            - cell "2" [ref=e248]
+            - cell "-" [ref=e249]
+            - cell "29/10/2026, 06:30" [ref=e250]
+            - cell "—" [ref=e251]
+          - row [ref=e252]:
+            - cell [ref=e253]:
+              - paragraph [ref=e254]: Contato de demonstração 03
+              - paragraph [ref=e255]: +55 (21) 90000-0003
+            - cell "Pendente" [ref=e256]
+            - cell "3" [ref=e258]
+            - cell "29/10/2026, 12:00" [ref=e259]
+            - cell "-" [ref=e260]
+            - cell "—" [ref=e261]
+          - row [ref=e262]:
+            - cell [ref=e263]:
+              - paragraph [ref=e264]: Contato de demonstração 04
+              - paragraph [ref=e265]: +55 (21) 90000-0004
+            - cell "Agendado" [ref=e266]
+            - cell "1" [ref=e268]
+            - cell "29/10/2026, 13:00" [ref=e269]
+            - cell "-" [ref=e270]
+            - cell "—" [ref=e271]
+          - row [ref=e272]:
+            - cell [ref=e273]:
+              - paragraph [ref=e274]: Contato de demonstração 05
+              - paragraph [ref=e275]: +55 (21) 90000-0005
+            - cell "Precisa de atenção" [ref=e276]
+            - cell "2" [ref=e278]
+            - cell "-" [ref=e279]
+            - cell "29/10/2026, 09:30" [ref=e280]
+            - cell [ref=e281]:
+              - generic [ref=e282]:
+                - paragraph [ref=e283]: Não foi possível concluir o envio
+                - paragraph [ref=e284]: Confira a conversa para saber o que chegou ao contato. Se precisar de ajuda, compartilhe os detalhes com o responsável pelo sistema.
+                - group [ref=e285]:
+                  - generic "Informações para o suporte" [ref=e286] [cursor=pointer]
+          - row [ref=e287]:
+            - cell [ref=e288]:
+              - paragraph [ref=e289]: Contato de demonstração 06
+              - paragraph [ref=e290]: +55 (21) 90000-0006
+            - cell "Inválido" [ref=e291]
+            - cell "3" [ref=e293]
+            - cell "-" [ref=e294]
+            - cell "29/10/2026, 05:30" [ref=e295]
+            - cell [ref=e296]:
+              - generic [ref=e297]:
+                - paragraph [ref=e298]: Não foi possível concluir o envio
+                - paragraph [ref=e299]: Confira a conversa para saber o que chegou ao contato. Se precisar de ajuda, compartilhe os detalhes com o responsável pelo sistema.
+                - group [ref=e300]:
+                  - generic "Informações para o suporte" [ref=e301] [cursor=pointer]
+          - row [ref=e302]:
+            - cell [ref=e303]:
+              - paragraph [ref=e304]: Contato de demonstração 07
+              - paragraph [ref=e305]: +55 (21) 90000-0007
+            - cell "Enviado" [ref=e306]
+            - cell "1" [ref=e308]
+            - cell "-" [ref=e309]
+            - cell "29/10/2026, 06:30" [ref=e310]
+            - cell "—" [ref=e311]
+          - row [ref=e312]:
+            - cell [ref=e313]:
+              - paragraph [ref=e314]: Contato de demonstração 08
+              - paragraph [ref=e315]: +55 (21) 90000-0008
+            - cell "Pendente" [ref=e316]
+            - cell "2" [ref=e318]
+            - cell "29/10/2026, 12:00" [ref=e319]
+            - cell "-" [ref=e320]
+            - cell "—" [ref=e321]
+          - row [ref=e322]:
+            - cell [ref=e323]:
+              - paragraph [ref=e324]: Contato de demonstração 09
+              - paragraph [ref=e325]: +55 (21) 90000-0009
+            - cell "Respondeu" [ref=e326]
+            - cell "3" [ref=e328]
+            - cell "-" [ref=e329]
+            - cell "29/10/2026, 08:30" [ref=e330]
+            - cell "—" [ref=e331]
+          - row [ref=e332]:
+            - cell [ref=e333]:
+              - paragraph [ref=e334]: Contato de demonstração 10
+              - paragraph [ref=e335]: +55 (21) 90000-0010
+            - cell "Enviado" [ref=e336]
+            - cell "1" [ref=e338]
+            - cell "-" [ref=e339]
+            - cell "29/10/2026, 09:30" [ref=e340]
+            - cell "—" [ref=e341]
+    - navigation "Paginação" [ref=e342]:
+      - generic [ref=e343]:
+        - generic [ref=e344]:
+          - generic [ref=e345]: Itens por página
+          - combobox [aria-hidden] [ref=e346]
+          - button "Itens por página" [ref=e348] [cursor=pointer]:
+            - generic [ref=e349]: "10"
+        - generic [ref=e352]: 1–10 de 18
+      - generic [ref=e353]:
+        - button "Pagina anterior" [disabled] [ref=e354]
+        - generic [ref=e357]:
+          - button "1" [ref=e358] [cursor=pointer]
+          - button "2" [ref=e359] [cursor=pointer]
+        - button "Próxima página" [ref=e360] [cursor=pointer]

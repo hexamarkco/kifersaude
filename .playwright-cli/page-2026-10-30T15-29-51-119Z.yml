@@ -1,0 +1,106 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - img "Kifer Saúde CRM" [ref=f2e7]:
+        - generic [ref=f2e8]: kifersaúde
+        - generic [ref=f2e9]: CRM
+      - navigation [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - button "Dashboard" [ref=f2e12] [cursor=pointer]
+          - button "CRM" [ref=f2e21] [cursor=pointer]
+          - button "Comunicação" [ref=f2e31] [cursor=pointer]
+          - button "Financeiro" [ref=f2e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f2e49] [cursor=pointer]
+          - button "Configurações" [ref=f2e56] [cursor=pointer]
+      - generic [ref=f2e62]:
+        - button "Recolher" [ref=f2e63] [cursor=pointer]
+        - button "Notificações" [ref=f2e68] [cursor=pointer]
+        - button "Ativar tema claro" [ref=f2e220] [cursor=pointer]:
+          - generic [ref=f2e79]: Claro
+        - button "Sair" [ref=f2e80] [cursor=pointer]
+  - generic [ref=f2e85]:
+    - banner [ref=f2e86]:
+      - generic [ref=f2e87]:
+        - navigation "Breadcrumb" [ref=f2e88]:
+          - list [ref=f2e89]:
+            - listitem [ref=f2e90]:
+              - button "CRM" [ref=f2e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f2e92]
+            - listitem [ref=f2e95]: Automações e IA
+        - generic [ref=f2e96]:
+          - generic [ref=f2e97]: Operador Demonstração
+          - button "Ativar tema claro" [active] [ref=f2e227] [cursor=pointer]
+          - generic [ref=f2e102]: OD
+    - main [ref=f2e104]:
+      - generic [ref=f2e106]:
+        - generic [ref=f2e107]:
+          - generic [ref=f2e109]:
+            - paragraph [ref=f2e110]: Administração
+            - generic [ref=f2e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f2e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=f2e115]
+          - tablist "Áreas de automações e IA" [ref=f2e120]:
+            - tab "Automações" [ref=f2e121] [cursor=pointer]
+            - tab "Integrações" [selected] [ref=f2e123] [cursor=pointer]
+            - tab "IA" [ref=f2e125] [cursor=pointer]
+        - main [ref=f2e127]:
+          - generic [ref=f2e130]:
+            - generic [ref=f2e131]:
+              - generic [ref=f2e133]:
+                - heading "Integrações conectadas" [level=2] [ref=f2e135]
+                - paragraph [ref=f2e136]: Acompanhe o estado dos canais usados pela operação.
+              - generic [ref=f2e137]:
+                - 'button "Abrir configuração: WhatsApp" [ref=f2e139] [cursor=pointer]':
+                  - generic [ref=f2e143]:
+                    - generic [ref=f2e144]: WhatsApp
+                    - generic [ref=f2e145]: Conexão, autenticação e estabilidade do canal.
+                  - generic [ref=f2e146]: Conectado
+                - 'button "Abrir configuração: Meta Ads" [ref=f2e151] [cursor=pointer]':
+                  - generic [ref=f2e155]:
+                    - generic [ref=f2e156]: Meta Ads
+                    - generic [ref=f2e157]: Leads recebidos pelo CRM
+                  - generic [ref=f2e158]: Ativo
+                - 'button "Abrir configuração: Rastreamento" [ref=f2e163] [cursor=pointer]':
+                  - generic [ref=f2e170]:
+                    - generic [ref=f2e171]: Rastreamento
+                    - generic [ref=f2e172]: Meta Pixel e Google Tag Manager estão preenchidos.
+                  - generic [ref=f2e173]: Configurado
+            - generic [ref=f2e177]:
+              - heading "Conexão e credenciais" [level=3] [ref=f2e178]
+              - generic [ref=f2e179]: Tokens e chaves privadas ficam protegidos no servidor e não são exibidos no CRM.
+              - generic [ref=f2e182]:
+                - generic [ref=f2e183]:
+                  - generic [ref=f2e184]:
+                    - paragraph [ref=f2e185]: Acesso ao WhatsApp
+                    - paragraph [ref=f2e186]: Chave usada para consultar o canal.
+                  - generic [ref=f2e187]: Protegido
+                - generic [ref=f2e188]:
+                  - generic [ref=f2e189]:
+                    - paragraph [ref=f2e190]: Servidor Meta Ads
+                    - paragraph [ref=f2e191]: Recebimento e processamento de formulários.
+                  - generic [ref=f2e192]: Configurado
+                - generic [ref=f2e193]:
+                  - generic [ref=f2e194]:
+                    - paragraph [ref=f2e195]: Última verificação do canal
+                    - paragraph [ref=f2e196]: 30/10/2026, 11:00
+                  - generic [ref=f2e197]: Verificado
+            - generic [ref=f2e198]:
+              - generic [ref=f2e200]:
+                - heading "Diagnóstico do canal" [level=2] [ref=f2e202]
+                - paragraph [ref=f2e203]: Confira a chegada de mensagens e a fila de processamento.
+              - generic [ref=f2e204]:
+                - generic [ref=f2e205]:
+                  - generic [ref=f2e206]:
+                    - paragraph [ref=f2e207]: Webhook WhatsApp
+                    - paragraph [ref=f2e208]: "Última mensagem: 30/10/2026, 11:05"
+                  - generic [ref=f2e209]: Recebendo mensagens
+                - generic [ref=f2e210]:
+                  - generic [ref=f2e211]:
+                    - paragraph [ref=f2e212]: Fila Meta Ads
+                    - paragraph [ref=f2e213]: Itens aguardando processamento.
+                  - generic [ref=f2e214]: 1 pendente(s)
+                - generic [ref=f2e215]:
+                  - generic [ref=f2e216]:
+                    - paragraph [ref=f2e217]: Última importação
+                    - paragraph [ref=f2e218]: 30/10/2026, 11:02
+                  - generic [ref=f2e219]: Concluída

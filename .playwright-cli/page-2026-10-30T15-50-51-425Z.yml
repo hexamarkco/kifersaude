@@ -1,0 +1,115 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img "Kifer Saúde CRM" [ref=e7]:
+        - generic [ref=e8]: kifersaúde
+        - generic [ref=e9]: CRM
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "CRM" [ref=e21] [cursor=pointer]
+          - button "Comunicação" [ref=e31] [cursor=pointer]
+          - button "Financeiro" [ref=e40] [cursor=pointer]
+          - button "Automações e IA" [ref=e49] [cursor=pointer]
+          - button "Configurações" [ref=e56] [cursor=pointer]
+      - generic [ref=e62]:
+        - button "Recolher" [ref=e63] [cursor=pointer]
+        - button "Notificações" [ref=e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=e76] [cursor=pointer]:
+          - generic [ref=e79]: Escuro
+        - button "Sair" [ref=e80] [cursor=pointer]
+  - generic [ref=e85]:
+    - banner [ref=e86]:
+      - generic [ref=e87]:
+        - navigation "Breadcrumb" [ref=e88]:
+          - list [ref=e89]:
+            - listitem [ref=e90]:
+              - button "CRM" [ref=e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=e92]
+            - listitem [ref=e95]: Automações e IA
+        - generic [ref=e96]:
+          - generic [ref=e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=e98] [cursor=pointer]
+          - generic [ref=e102]: OD
+    - main [ref=e104]:
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Administração
+            - generic [ref=e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=e115]
+          - tablist "Áreas de automações e IA" [ref=e120]:
+            - tab "Automações" [ref=e121] [cursor=pointer]
+            - tab "Integrações" [selected] [ref=e123] [cursor=pointer]
+            - tab "IA" [ref=e125] [cursor=pointer]
+        - main [ref=e127]:
+          - generic [ref=e401]:
+            - generic [ref=e403]:
+              - paragraph [ref=e404]: Canais e inteligência
+              - generic [ref=e405]:
+                - heading "WhatsApp" [level=2] [ref=e586]
+                - button "Informações sobre esta seção" [ref=e408]
+            - tablist [ref=e412]:
+              - tab "Visão geral" [ref=e413] [cursor=pointer]
+              - tab "Inteligência artificial" [ref=e415] [cursor=pointer]
+              - tab "WhatsApp" [selected] [ref=e419] [cursor=pointer]
+              - tab "Meta Ads" [ref=e423] [cursor=pointer]
+              - tab "Rastreamento" [ref=e427] [cursor=pointer]
+            - generic [ref=e587]:
+              - generic [ref=e590]:
+                - heading "Conexão do WhatsApp" [level=2] [ref=e591]
+                - button "Informações sobre esta seção" [ref=e593]
+              - generic [ref=e596]:
+                - generic [ref=e597]:
+                  - generic [ref=e598]:
+                    - generic [ref=e599]:
+                      - heading "Conexão do WhatsApp" [level=3] [ref=e600]
+                      - paragraph [ref=e601]: Conectado
+                      - paragraph [ref=e602]: Confira a conexão antes de ativar as mensagens automáticas.
+                      - paragraph [ref=e603]: As mensagens estão chegando ao sistema.
+                    - button "Atualizar conexão" [ref=e604] [cursor=pointer]
+                  - generic [ref=e605]:
+                    - generic [ref=e606]:
+                      - generic [ref=e607]:
+                        - generic [ref=e608]: Ativar canal para automações
+                        - paragraph [ref=e609]: Quando desligado, nenhum lead entra nos fluxos mesmo com a automação marcada como ativa.
+                      - switch "Ativar canal para automações" [checked] [active] [ref=e611]
+                    - paragraph [ref=e614]: O disparo automático dos fluxos continua sendo controlado em Configurações > Automações.
+                  - generic [ref=e618]:
+                    - paragraph [ref=e619]: Acesso ao serviço de WhatsApp
+                    - paragraph [ref=e620]: A chave de acesso está configurada e protegida no sistema.
+                  - group [ref=e621]:
+                    - generic "Configuração avançada para o suporte" [ref=e622] [cursor=pointer]
+                    - group [ref=e631]:
+                      - generic "Ajuda para configurar a conexão (responsável técnico)" [ref=e632] [cursor=pointer]
+                      - generic [ref=e669]:
+                        - paragraph [ref=e670]: "Como obter seu token da Whapi Cloud:"
+                        - list [ref=e671]:
+                          - listitem [ref=e672]:
+                            - text: Acesse
+                            - link "whapi.cloud" [ref=e673] [cursor=pointer]:
+                              - /url: https://whapi.cloud
+                            - text: e crie uma conta
+                          - listitem [ref=e674]: Após o login, vá para o painel de controle
+                          - listitem [ref=e675]: Configure um canal conectando seu WhatsApp
+                          - listitem [ref=e676]: Copie o token de autenticação do seu canal
+                          - listitem [ref=e677]:
+                            - text: Adicione-o como
+                            - code [ref=e678]: WHAPI_TOKEN
+                            - text: nos Edge Secrets do Supabase
+                    - generic [ref=e633]:
+                      - generic [ref=e634]:
+                        - generic [ref=e635]:
+                          - generic [ref=e636]: Configuração de recebimento (webhook)
+                          - paragraph [ref=e637]: Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header X-Demo-Secret.
+                          - paragraph [ref=e638]: "Status atual: Conectado"
+                        - button "Atualizar conexão do WhatsApp" [ref=e639] [cursor=pointer]
+                      - generic [ref=e647]:
+                        - textbox [ref=e648]: https://local.invalid/demo-webhook
+                        - button "Copiar endereço da conexão" [ref=e650] [cursor=pointer]
+                      - paragraph [ref=e655]: O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
+                      - generic [ref=e660]:
+                        - paragraph [ref=e661]: Eventos de mensagem estão chegando
+                        - paragraph [ref=e662]: "Último evento persistido: 30/10/2026, 11:04:30."
+                - button "Salvar configuração" [ref=e624] [cursor=pointer]

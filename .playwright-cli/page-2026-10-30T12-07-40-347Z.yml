@@ -1,0 +1,113 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e336]:
+    - generic [ref=f1e337]:
+      - img "Kifer Saúde CRM" [ref=f1e339]:
+        - generic [ref=f1e340]: kifersaúde
+        - generic [ref=f1e341]: CRM
+      - navigation [ref=f1e342]:
+        - generic [ref=f1e343]:
+          - button "Dashboard" [ref=f1e344] [cursor=pointer]
+          - button "CRM" [ref=f1e353] [cursor=pointer]
+          - button "Comunicação" [ref=f1e363] [cursor=pointer]
+          - button "Financeiro" [ref=f1e372] [cursor=pointer]
+          - button "Automações e IA" [ref=f1e381] [cursor=pointer]
+          - button "Configurações" [ref=f1e388] [cursor=pointer]
+      - generic [ref=f1e394]:
+        - button "Recolher" [ref=f1e395] [cursor=pointer]
+        - button "Notificações" [ref=f1e400] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f1e408] [cursor=pointer]:
+          - generic [ref=f1e411]: Escuro
+        - button "Sair" [ref=f1e412] [cursor=pointer]
+  - generic [ref=f1e31]:
+    - banner [ref=f1e32]:
+      - generic [ref=f1e417]:
+        - navigation "Breadcrumb" [ref=f1e418]:
+          - list [ref=f1e419]:
+            - listitem [ref=f1e420]:
+              - button "CRM" [ref=f1e421] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f1e422]
+            - listitem [ref=f1e425]: Configurações
+        - generic [ref=f1e426]:
+          - generic [ref=f1e427]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f1e428] [cursor=pointer]
+          - generic [ref=f1e432]: OD
+    - main [ref=f1e42]:
+      - generic [ref=f1e44]:
+        - generic [ref=f1e45]:
+          - generic [ref=f1e47]:
+            - paragraph [ref=f1e48]: Administração
+            - generic [ref=f1e50]:
+              - heading "Editor de formulários" [level=1] [ref=f1e649]
+              - button "Informações sobre Editor de formulários" [ref=f1e650]
+          - tablist "Áreas de configurações" [ref=f1e62]:
+            - tab "Geral" [ref=f1e63] [cursor=pointer]
+            - tab "Usuários" [ref=f1e68] [cursor=pointer]
+            - tab "Links" [ref=f1e75] [cursor=pointer]
+            - tab "Formulários" [selected] [ref=f1e80] [cursor=pointer]
+        - main [ref=f1e85]:
+          - generic [ref=f1e651]:
+            - generic [ref=f1e652]:
+              - button "Voltar para formulários" [ref=f1e653] [cursor=pointer]
+              - generic [ref=f1e657]:
+                - generic [ref=f1e658]:
+                  - paragraph [ref=f1e659]: Editor de formulário
+                  - generic [ref=f1e660]:
+                    - heading "Atualização cadastral" [level=2] [ref=f1e661]
+                    - button "Informações sobre esta seção" [ref=f1e663]
+                - group "Ações da página" [ref=f1e668]:
+                  - button "Salvar configurações" [ref=f1e669] [cursor=pointer]
+            - generic [ref=f1e675]:
+              - generic [ref=f1e676]:
+                - generic [ref=f1e677]:
+                  - heading "Dados e publicação" [level=3] [ref=f1e678]
+                  - button "Informações sobre os dados e publicação" [ref=f1e680]
+                - generic [ref=f1e683]:
+                  - button "Copiar link" [ref=f1e684] [cursor=pointer]
+                  - button "Abrir" [ref=f1e690] [cursor=pointer]
+              - generic [ref=f1e697]:
+                - generic [ref=f1e698]:
+                  - generic [ref=f1e699]:
+                    - generic [ref=f1e700]: Título *
+                    - textbox "Título" [ref=f1e704]: Atualização cadastral
+                  - generic [ref=f1e705]:
+                    - generic [ref=f1e707]:
+                      - generic [ref=f1e708]: Endereço público *
+                      - 'button "Ajuda: Endereço público" [ref=f1e710]'
+                    - textbox "Endereço público" [ref=f1e714]: formulario-8
+                    - paragraph [ref=f1e715]: kifersaude.com.br/forms/formulario-8
+                - generic [ref=f1e716]:
+                  - generic [ref=f1e717]: Descrição (SEO, opcional)
+                  - textbox "Descrição (SEO, opcional)" [ref=f1e720]
+                - generic [ref=f1e721]:
+                  - generic [ref=f1e722]:
+                    - generic [ref=f1e723]: Título da tela de sucesso
+                    - textbox "Título da tela de sucesso" [ref=f1e727]: Recebemos suas informações
+                  - generic [ref=f1e728]:
+                    - generic [ref=f1e729]: Mensagem da tela de sucesso
+                    - textbox "Mensagem da tela de sucesso" [ref=f1e733]: Nossa equipe entrará em contato em breve.
+                - generic [ref=f1e734]:
+                  - generic [ref=f1e735]:
+                    - switch "Pedir localização (GPS) antes do contato" [ref=f1e737]
+                    - generic [ref=f1e740] [cursor=pointer]: Pedir localização (GPS) antes do contato
+                  - generic [ref=f1e741]:
+                    - switch "Redirecionar para o WhatsApp após enviar" [ref=f1e743]
+                    - generic [ref=f1e746] [cursor=pointer]: Redirecionar para o WhatsApp após enviar
+                - generic [ref=f1e747]:
+                  - generic [ref=f1e748]:
+                    - switch "Publicado" [checked] [ref=f1e750]
+                    - generic [ref=f1e753] [cursor=pointer]: Publicado
+                  - group "Ações do formulário" [ref=f1e755]:
+                    - button "Salvar configurações" [ref=f1e756] [cursor=pointer]
+            - generic [ref=f1e762]:
+              - generic [ref=f1e763]:
+                - generic [ref=f1e765]:
+                  - heading "Perguntas" [level=3] [ref=f1e766]
+                  - button "Informações sobre as etapas do formulário" [ref=f1e768]
+                - button "Nova pergunta" [ref=f1e771] [cursor=pointer]
+              - paragraph [ref=f1e775]: Nenhuma pergunta ainda. Adicione a primeira acima.
+            - generic [ref=f1e776]:
+              - generic [ref=f1e778]:
+                - heading "Respostas recentes" [level=3] [ref=f1e779]
+                - generic [ref=f1e780]: 0 envios
+                - button "Informações sobre as respostas recentes" [ref=f1e782]
+              - paragraph [ref=f1e790]: Nenhuma resposta recebida ainda.

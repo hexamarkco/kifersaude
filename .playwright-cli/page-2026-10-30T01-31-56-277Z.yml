@@ -1,0 +1,37 @@
+- generic [ref=f1e2]:
+  - complementary "Navegação CRM" [ref=f1e3]: K
+  - main [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - strong [ref=f1e6]: WhatsApp Inbox
+      - button "＋ Nova conversa" [ref=f1e7] [cursor=pointer]
+    - generic [ref=f1e8]:
+      - complementary "Conversas" [ref=f1e9]:
+        - generic [ref=f1e11]:
+          - strong [ref=f1e12]: Contato de demonstração
+          - text: Última mensagem · 10:20
+        - generic [ref=f1e13]: Contato de demonstração 02
+      - region "Conversa de demonstração" [ref=f1e14]:
+        - generic [ref=f1e15]:
+          - strong [ref=f1e16]: Contato de demonstração
+          - button "Informações do contato" [ref=f1e17] [cursor=pointer]: ⓘ
+        - generic [ref=f1e18]:
+          - generic [ref=f1e19]: Olá! Gostaria de conhecer as opções de planos para minha família. Esta mensagem de demonstração permite conferir se o painel lateral cobre ou corta o histórico em larguras diferentes.
+          - generic [ref=f1e20]: Claro, posso ajudar. Quantas pessoas terão cobertura e em qual cidade vocês moram?
+          - generic [ref=f1e21]: Seremos três pessoas. Quero comparar as opções com calma e ver as informações completas antes de decidir.
+          - generic [ref=f1e22]: Perfeito. Vou preparar uma comparação para você.
+        - textbox "Digite uma mensagem" [ref=f1e24]
+      - complementary "Informações do contato" [ref=f1e25]:
+        - generic [ref=f1e26]:
+          - generic [ref=f1e27]:
+            - strong [ref=f1e28]: INFORMAÇÕES DO CONTATO
+            - generic [ref=f1e29]: Contato de demonstração
+          - button "Fechar painel" [ref=f1e30] [cursor=pointer]: ×
+        - generic [ref=f1e31]:
+          - paragraph [ref=f1e32]: +55 (21) 90000-0000
+          - paragraph [ref=f1e33]:
+            - generic [ref=f1e34]: Convertido
+          - separator [ref=f1e35]
+          - paragraph [ref=f1e36]: ResponsávelOperador de demonstração
+          - separator [ref=f1e37]
+          - paragraph [ref=f1e38]: Próximo lembreteRetorno sobre a proposta
+      - button "Fechar informações do contato" [ref=f1e39]

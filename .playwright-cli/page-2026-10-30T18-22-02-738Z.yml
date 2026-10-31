@@ -1,0 +1,98 @@
+- generic [ref=f4e1]:
+  - generic [ref=f4e4]:
+    - banner [ref=f4e5]:
+      - generic [ref=f4e6]:
+        - generic [ref=f4e7]:
+          - paragraph [ref=f4e8]: Kifer Saúde / Operação comercial
+          - generic [ref=f4e10]:
+            - heading "Gestão de contratos" [level=1] [ref=f4e11]
+            - button "Informações sobre Gestão de contratos" [ref=f4e13]
+        - generic [ref=f4e17]:
+          - group "Ações dos contratos" [ref=f4e18]:
+            - button "Importar contratos em massa" [ref=f4e19] [cursor=pointer]
+          - button "Novo contrato" [ref=f4e25] [cursor=pointer]
+    - generic "Resumo da carteira de contratos" [ref=f4e29]:
+      - generic [ref=f4e30]:
+        - heading "Contratos ativos" [level=3] [ref=f4e35]
+        - generic [ref=f4e36]: "4"
+        - generic [ref=f4e37]: Contratos vigentes
+      - generic [ref=f4e38]:
+        - heading "Em implantação" [level=3] [ref=f4e43]
+        - generic [ref=f4e44]: "4"
+        - generic [ref=f4e45]: Em análise ou emissão
+      - generic [ref=f4e46]:
+        - heading "Próximos vencimentos" [level=3] [ref=f4e51]
+        - generic [ref=f4e52]: "0"
+        - generic [ref=f4e53]: Nos próximos 30 dias
+      - generic [ref=f4e54]:
+        - heading "Mensalidade total" [level=3] [ref=f4e59]
+        - generic [ref=f4e60]: R$ 8.750,00
+        - generic [ref=f4e61]: Soma dos valores informados
+    - generic [ref=f4e62]:
+      - generic [ref=f4e63]:
+        - textbox "Buscar contratos" [ref=f4e66]:
+          - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+          - text: DEMO-002
+        - generic [ref=f4e67]:
+          - button "Limpar filtros" [ref=f4e473] [cursor=pointer]
+          - button "Exportar" [ref=f4e68] [cursor=pointer]
+      - generic [ref=f4e73]:
+        - button "Todos os status" [ref=f4e74] [cursor=pointer]
+        - button "Todos os responsáveis" [ref=f4e82] [cursor=pointer]
+        - button "Todos os períodos" [ref=f4e92] [cursor=pointer]
+        - button "Filtros avançados" [expanded] [ref=f4e99] [cursor=pointer]
+      - button "Todas as operadoras" [ref=f4e465] [cursor=pointer]
+    - generic [ref=f4e103]:
+      - generic [ref=f4e104]:
+        - generic [ref=f4e105]:
+          - paragraph [ref=f4e106]: Carteira contratual
+          - generic [ref=f4e107]:
+            - heading "Contratos em acompanhamento" [level=3] [ref=f4e108]
+            - button "Informações sobre esta seção" [ref=f4e110]
+        - generic [ref=f4e114]:
+          - generic [ref=f4e116]:
+            - generic [ref=f4e117]: "1"
+            - generic [ref=f4e118]: resultados
+          - generic [ref=f4e120]:
+            - generic [ref=f4e121]: 1/1
+            - generic [ref=f4e122]: páginas
+      - generic [ref=f4e164]:
+        - generic [ref=f4e165]:
+          - button [ref=f4e167] [cursor=pointer]:
+            - heading "Pessoa Demonstração 2" [level=3] [ref=f4e168]
+            - paragraph [ref=f4e169]: DEMO-002
+          - 'button "Alterar status do contrato DEMO-002: Em análise" [expanded] [ref=f4e171] [cursor=pointer]':
+            - generic [ref=f4e172]: Em análise
+        - generic [ref=f4e175]:
+          - generic [ref=f4e176]:
+            - generic [ref=f4e177]: Operadora
+            - generic [ref=f4e178]: Amil
+          - generic [ref=f4e179]:
+            - generic [ref=f4e180]: Plano
+            - generic [ref=f4e181]: Plano Demonstração
+          - generic [ref=f4e182]:
+            - generic [ref=f4e183]: Mensalidade
+            - generic [ref=f4e184]: R$ 950,00
+          - generic [ref=f4e185]:
+            - generic [ref=f4e186]: Responsável
+            - generic [ref=f4e187]: Operador Demonstração
+        - group [ref=f4e188]:
+          - generic "Mais informações" [ref=f4e189] [cursor=pointer]
+        - group "Ações do contrato DEMO-002" [ref=f4e191]:
+          - button "Abrir contrato" [ref=f4e192] [cursor=pointer]
+          - button "Mais ações do contrato demo-002" [ref=f4e198] [cursor=pointer]
+      - navigation "Paginação" [ref=f4e444]:
+        - generic [ref=f4e445]:
+          - generic [ref=f4e446]:
+            - generic [ref=f4e447]: Itens por página
+            - combobox [aria-hidden] [ref=f4e448]
+            - button "Itens por página" [ref=f4e450] [cursor=pointer]:
+              - generic [ref=f4e451]: "25"
+          - generic [ref=f4e454]: 1–1 de 1
+        - generic [ref=f4e455]:
+          - button "Pagina anterior" [disabled] [ref=f4e456]
+          - button "1" [ref=f4e460] [cursor=pointer]
+          - button "Próxima página" [disabled] [ref=f4e461]
+  - listbox "Status do contrato DEMO-002" [ref=f4e474]:
+    - option "Ativo" [active] [ref=f4e475] [cursor=pointer]
+    - option "Cancelado" [ref=f4e478] [cursor=pointer]

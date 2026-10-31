@@ -1,0 +1,196 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - paragraph [ref=e8]: Kifer Saúde / Operação comercial
+          - generic [ref=e10]:
+            - heading "Gestão de contratos" [level=1] [ref=e11]
+            - button "Informações sobre Gestão de contratos" [ref=e13]
+        - generic [ref=e17]:
+          - group "Ações dos contratos" [ref=e18]:
+            - button "Importar contratos em massa" [ref=e19] [cursor=pointer]
+          - button "Novo contrato" [ref=e25] [cursor=pointer]
+    - generic "Resumo da carteira de contratos" [ref=e29]:
+      - generic [ref=e30]:
+        - heading "Contratos ativos" [level=3] [ref=e35]
+        - generic [ref=e36]: "4"
+        - generic [ref=e37]: Contratos vigentes
+      - generic [ref=e38]:
+        - heading "Em implantação" [level=3] [ref=e43]
+        - generic [ref=e44]: "4"
+        - generic [ref=e45]: Em análise ou emissão
+      - generic [ref=e46]:
+        - heading "Próximos vencimentos" [level=3] [ref=e51]
+        - generic [ref=e52]: "0"
+        - generic [ref=e53]: Nos próximos 30 dias
+      - generic [ref=e54]:
+        - heading "Mensalidade total" [level=3] [ref=e59]
+        - generic [ref=e60]: R$ 8.750,00
+        - generic [ref=e61]: Soma dos valores informados
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - textbox "Buscar contratos" [ref=e66]:
+          - /placeholder: Buscar por cliente, contrato, CNPJ ou plano...
+        - generic [ref=e67]:
+          - button "Limpar filtros" [ref=e664] [cursor=pointer]
+          - button "Exportar" [ref=e68] [cursor=pointer]
+      - generic [ref=e73]:
+        - button "Ativo" [expanded] [ref=e665] [cursor=pointer]
+        - button "Todos os responsáveis" [ref=e82] [cursor=pointer]
+        - button "Todos os períodos" [ref=e92] [cursor=pointer]
+        - button "Filtros avançados" [ref=e99] [cursor=pointer]
+    - generic [ref=e103]:
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - paragraph [ref=e106]: Carteira contratual
+          - generic [ref=e107]:
+            - heading "Contratos em acompanhamento" [level=3] [ref=e108]
+            - button "Informações sobre esta seção" [ref=e110]
+        - generic [ref=e114]:
+          - generic [ref=e116]:
+            - generic [ref=e117]: "4"
+            - generic [ref=e118]: resultados
+          - generic [ref=e120]:
+            - generic [ref=e121]: 1/1
+            - generic [ref=e122]: páginas
+      - region "Rolagem de Carteira de contratos" [ref=e124]:
+        - table "Carteira de contratos" [ref=e125]:
+          - rowgroup [ref=e134]:
+            - row [ref=e135]:
+              - columnheader [ref=e136]:
+                - button "Ordenar por Contrato" [ref=e137] [cursor=pointer]:
+                  - generic [ref=e138]: Contrato
+              - columnheader [ref=e139]:
+                - button "Ordenar por Status" [ref=e140] [cursor=pointer]:
+                  - generic [ref=e141]: Status
+              - columnheader [ref=e142]:
+                - button "Ordenar por Operadora e plano" [ref=e143] [cursor=pointer]:
+                  - generic [ref=e144]: Operadora e plano
+              - columnheader [ref=e145]:
+                - button "Ordenar por Financeiro" [ref=e146] [cursor=pointer]:
+                  - generic [ref=e147]: Financeiro
+              - columnheader [ref=e148]:
+                - button "Ordenar por Datas críticas" [ref=e149] [cursor=pointer]:
+                  - generic [ref=e150]: Datas críticas
+              - columnheader [ref=e151]:
+                - button "Ordenar por Responsável" [ref=e152] [cursor=pointer]:
+                  - generic [ref=e153]: Responsável
+              - columnheader "Ações" [ref=e154]
+          - rowgroup [ref=e155]:
+            - row [ref=e165]:
+              - cell [ref=e166]:
+                - button "Pessoa Demonstração 1 DEMO-001" [ref=e167] [cursor=pointer]:
+                  - generic [ref=e168]:
+                    - generic [ref=e169]: Pessoa Demonstração 1
+                    - generic [ref=e170]: DEMO-001
+              - cell [ref=e171]:
+                - 'button "Alterar status do contrato DEMO-001: Ativo" [ref=e173] [cursor=pointer]':
+                  - generic [ref=e174]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=e177]:
+                - generic "Amil" [ref=e178]
+                - generic "Plano Demonstração · Individual" [ref=e179]
+              - 'cell "R$ 0,00 Comissão: R$ 0,00" [ref=e180]':
+                - generic "R$ 0,00" [ref=e181]
+                - 'generic "Comissão: R$ 0,00" [ref=e182]'
+              - cell "Sem destaque" [ref=e183]
+              - cell "Operador Demonstração" [ref=e184]
+              - cell [ref=e186]:
+                - group "Ações do contrato DEMO-001" [ref=e187]:
+                  - button "Abrir contrato" [ref=e188] [cursor=pointer]
+                  - button "Mais ações do contrato demo-001" [ref=e194] [cursor=pointer]
+            - row [ref=e235]:
+              - cell [ref=e236]:
+                - button "Pessoa Demonstração 3 DEMO-003" [ref=e237] [cursor=pointer]:
+                  - generic [ref=e238]:
+                    - generic [ref=e239]: Pessoa Demonstração 3
+                    - generic [ref=e240]: DEMO-003
+              - cell [ref=e241]:
+                - 'button "Alterar status do contrato DEMO-003: Ativo" [ref=e243] [cursor=pointer]':
+                  - generic [ref=e244]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=e247]:
+                - generic "Amil" [ref=e248]
+                - generic "Plano Demonstração · Individual" [ref=e249]
+              - 'cell "R$ 1.050,00 Comissão: R$ 2.100,00" [ref=e250]':
+                - generic "R$ 1.050,00" [ref=e251]
+                - 'generic "Comissão: R$ 2.100,00" [ref=e252]'
+              - cell "Sem destaque" [ref=e253]
+              - cell "Operador Demonstração" [ref=e254]
+              - cell [ref=e256]:
+                - group "Ações do contrato DEMO-003" [ref=e257]:
+                  - button "Abrir contrato" [ref=e258] [cursor=pointer]
+                  - button "Mais ações do contrato demo-003" [ref=e264] [cursor=pointer]
+            - row [ref=e305]:
+              - cell [ref=e306]:
+                - button "Pessoa Demonstração 5 DEMO-005" [ref=e307] [cursor=pointer]:
+                  - generic [ref=e308]:
+                    - generic [ref=e309]: Pessoa Demonstração 5
+                    - generic [ref=e310]: DEMO-005
+              - cell [ref=e311]:
+                - 'button "Alterar status do contrato DEMO-005: Ativo" [ref=e313] [cursor=pointer]':
+                  - generic [ref=e314]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=e317]:
+                - generic "Amil" [ref=e318]
+                - generic "Plano Demonstração · Individual" [ref=e319]
+              - 'cell "R$ 1.250,00 Comissão: R$ 2.500,00" [ref=e320]':
+                - generic "R$ 1.250,00" [ref=e321]
+                - 'generic "Comissão: R$ 2.500,00" [ref=e322]'
+              - cell "Sem destaque" [ref=e323]
+              - cell "Operador Demonstração" [ref=e324]
+              - cell [ref=e326]:
+                - group "Ações do contrato DEMO-005" [ref=e327]:
+                  - button "Abrir contrato" [ref=e328] [cursor=pointer]
+                  - button "Mais ações do contrato demo-005" [ref=e334] [cursor=pointer]
+            - row [ref=e375]:
+              - cell [ref=e376]:
+                - button "Pessoa Demonstração 7 DEMO-007" [ref=e377] [cursor=pointer]:
+                  - generic [ref=e378]:
+                    - generic [ref=e379]: Pessoa Demonstração 7
+                    - generic [ref=e380]: DEMO-007
+              - cell [ref=e381]:
+                - 'button "Alterar status do contrato DEMO-007: Ativo" [ref=e383] [cursor=pointer]':
+                  - generic [ref=e384]: Ativo
+              - cell "Amil Plano Demonstração · Individual" [ref=e387]:
+                - generic "Amil" [ref=e388]
+                - generic "Plano Demonstração · Individual" [ref=e389]
+              - 'cell "R$ 1.450,00 Comissão: R$ 2.900,00" [ref=e390]':
+                - generic "R$ 1.450,00" [ref=e391]
+                - 'generic "Comissão: R$ 2.900,00" [ref=e392]'
+              - cell "Sem destaque" [ref=e393]
+              - cell "Operador Demonstração" [ref=e394]
+              - cell [ref=e396]:
+                - group "Ações do contrato DEMO-007" [ref=e397]:
+                  - button "Abrir contrato" [ref=e398] [cursor=pointer]
+                  - button "Mais ações do contrato demo-007" [ref=e404] [cursor=pointer]
+      - navigation "Paginação" [ref=e445]:
+        - generic [ref=e446]:
+          - generic [ref=e447]:
+            - generic [ref=e448]: Itens por página
+            - combobox [aria-hidden] [ref=e449]
+            - button "Itens por página" [ref=e451] [cursor=pointer]:
+              - generic [ref=e452]: "25"
+          - generic [ref=e455]: 1–4 de 4
+        - generic [ref=e456]:
+          - button "Pagina anterior" [disabled] [ref=e457]
+          - button "1" [ref=e461] [cursor=pointer]
+          - button "Próxima página" [disabled] [ref=e462]
+  - dialog [ref=e669]:
+    - generic [ref=e670]:
+      - heading "Filtrar contratos por status" [level=2] [ref=e672]
+      - button "Fechar" [active] [ref=e673] [cursor=pointer]
+    - group "Filtrar contratos por status" [ref=e678]:
+      - generic [ref=e679] [cursor=pointer]:
+        - checkbox "Todos" [ref=e680]
+        - generic [ref=e681]: Todos
+      - generic [ref=e682] [cursor=pointer]:
+        - checkbox "Ativo" [checked] [ref=e683]
+        - generic [ref=e684]: Ativo
+      - generic [ref=e685] [cursor=pointer]:
+        - checkbox "Cancelado" [ref=e686]
+        - generic [ref=e687]: Cancelado
+      - generic [ref=e688] [cursor=pointer]:
+        - checkbox "Em análise" [ref=e689]
+        - generic [ref=e690]: Em análise
+    - generic [ref=e691]:
+      - button "Cancelar" [ref=e692] [cursor=pointer]
+      - button "Aplicar filtros" [ref=e693] [cursor=pointer]

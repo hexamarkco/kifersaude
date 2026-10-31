@@ -1,0 +1,138 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - img "Kifer Saúde CRM" [ref=f2e7]:
+        - generic [ref=f2e8]: kifersaúde
+        - generic [ref=f2e9]: CRM
+      - navigation [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - button "Dashboard" [ref=f2e12] [cursor=pointer]
+          - button "CRM" [ref=f2e21] [cursor=pointer]
+          - button "Comunicação" [ref=f2e31] [cursor=pointer]
+          - button "Financeiro" [ref=f2e40] [cursor=pointer]
+          - generic [ref=f2e49] [cursor=pointer]: Automações e IA
+          - generic [ref=f2e55] [cursor=pointer]: Configurações
+      - generic [ref=f2e60]:
+        - button "Recolher" [ref=f2e61] [cursor=pointer]
+        - button "Notificações" [ref=f2e66] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f2e74] [cursor=pointer]:
+          - generic [ref=f2e77]: Escuro
+        - button "Sair" [ref=f2e78] [cursor=pointer]
+  - generic [ref=f2e83]:
+    - banner [ref=f2e84]:
+      - generic [ref=f2e85]:
+        - navigation "Breadcrumb" [ref=f2e86]:
+          - list [ref=f2e87]:
+            - listitem [ref=f2e88]:
+              - button "CRM" [ref=f2e89] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f2e90]
+            - listitem [ref=f2e93]: Configurações
+        - generic [ref=f2e94]:
+          - generic [ref=f2e95]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f2e96] [cursor=pointer]
+          - generic [ref=f2e100]: OD
+    - main [ref=f2e102]:
+      - generic [ref=f2e104]:
+        - generic [ref=f2e105]:
+          - generic [ref=f2e107]:
+            - paragraph [ref=f2e108]: Administração
+            - generic [ref=f2e110]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f2e111]
+              - button "Informações sobre Automações, integrações e IA" [ref=f2e113]
+          - tablist "Áreas de automações e IA" [ref=f2e118]:
+            - tab "Automações" [selected] [ref=f2e119] [cursor=pointer]
+            - tab "Integrações" [ref=f2e125] [cursor=pointer]
+            - tab "IA" [ref=f2e129] [cursor=pointer]
+        - main [ref=f2e141]:
+          - generic [ref=f2e143]:
+            - generic [ref=f2e144]:
+              - tablist [ref=f2e146]:
+                - tab "Fluxos" [selected] [ref=f2e147] [cursor=pointer]
+                - tab "Templates" [ref=f2e152] [cursor=pointer]
+                - tab "Operação" [ref=f2e156] [cursor=pointer]
+              - generic [ref=f2e160]:
+                - status [ref=f2e161]: Autosave ativo
+                - button "Novo fluxo" [ref=f2e163] [cursor=pointer]
+            - generic [ref=f2e166]:
+              - region "Resumo das automações" [ref=f2e167]:
+                - generic [ref=f2e168]:
+                  - paragraph [ref=f2e170]: Fluxos ativos
+                  - generic [ref=f2e173]:
+                    - paragraph [ref=f2e174]: "1"
+                    - paragraph [ref=f2e175]: 1 configurados
+                - generic [ref=f2e176]:
+                  - paragraph [ref=f2e178]: Etapas configuradas
+                  - generic [ref=f2e183]:
+                    - paragraph [ref=f2e184]: "3"
+                    - paragraph [ref=f2e185]: Distribuídas entre os fluxos
+                - generic [ref=f2e186]:
+                  - paragraph [ref=f2e188]: Templates
+                  - generic [ref=f2e191]:
+                    - paragraph [ref=f2e192]: "3"
+                    - paragraph [ref=f2e193]: Disponíveis para as mensagens
+                - generic [ref=f2e194]:
+                  - paragraph [ref=f2e196]: Mensagens hoje
+                  - generic [ref=f2e200]:
+                    - paragraph [ref=f2e201]: "46"
+                    - paragraph [ref=f2e202]: Mensagens automáticas registradas hoje
+              - generic [ref=f2e203]:
+                - generic [ref=f2e205]:
+                  - paragraph [ref=f2e206]: Automação comercial
+                  - generic [ref=f2e207]:
+                    - heading "Fluxos de automação" [level=2] [ref=f2e208]
+                    - button "Informações sobre esta seção" [ref=f2e210]
+                - generic [ref=f2e213]:
+                  - searchbox "Buscar fluxo por nome, condição ou tag" [ref=f2e215]
+                  - button "Todas as tags" [ref=f2e217] [cursor=pointer]
+                  - paragraph [ref=f2e225]: 1 fluxo encontrado
+                - region "Rolagem de Fluxos de automação" [ref=f2e226]:
+                  - table "Fluxos de automação" [ref=f2e227]:
+                    - rowgroup [ref=f2e234]:
+                      - row [ref=f2e235]:
+                        - columnheader "Fluxo" [ref=f2e236]
+                        - columnheader "Gatilho" [ref=f2e237]
+                        - columnheader "Status" [ref=f2e238]
+                        - columnheader "Etapas" [ref=f2e239]
+                        - columnheader "Ações" [ref=f2e240]
+                    - rowgroup [ref=f2e241]:
+                      - row [ref=f2e242]:
+                        - cell [ref=f2e243]:
+                          - generic [ref=f2e244]:
+                            - paragraph [ref=f2e245]: Abordagem inicial
+                            - paragraph [ref=f2e246]: "Status: Contato Inicial"
+                        - cell "Novo lead" [ref=f2e247]
+                        - cell "Ativo" [ref=f2e248]
+                        - cell "3" [ref=f2e250]
+                        - cell [ref=f2e251]:
+                          - button "Editar fluxo Abordagem inicial" [ref=f2e252] [cursor=pointer]:
+                            - generic [ref=f2e253]: Editar
+                - navigation "Paginação" [ref=f2e256]:
+                  - generic [ref=f2e257]:
+                    - generic [ref=f2e258]:
+                      - generic [ref=f2e259]: Itens por página
+                      - combobox [aria-hidden] [ref=f2e260]
+                      - button "Itens por página" [ref=f2e262] [cursor=pointer]:
+                        - generic [ref=f2e263]: "10"
+                    - generic [ref=f2e266]: 1–1 de 1
+                  - generic [ref=f2e267]:
+                    - button "Pagina anterior" [disabled] [ref=f2e268]
+                    - button "1" [ref=f2e272] [cursor=pointer]
+                    - button "Próxima página" [disabled] [ref=f2e273]
+            - generic [ref=f2e278]:
+              - generic [ref=f2e279]: "Variáveis disponíveis:"
+              - generic [ref=f2e280]:
+                - generic [ref=f2e281]:
+                  - code [ref=f2e282]: "{{nome}}"
+                  - text: nome completo
+                - generic [ref=f2e283]:
+                  - code [ref=f2e284]: "{{primeiro_nome}}"
+                  - text: primeiro nome
+                - generic [ref=f2e285]:
+                  - code [ref=f2e286]: "{{origem}}"
+                  - text: origem do lead
+                - generic [ref=f2e287]:
+                  - code [ref=f2e288]: "{{cidade}}"
+                  - text: cidade
+                - generic [ref=f2e289]:
+                  - code [ref=f2e290]: "{{responsavel}}"
+                  - text: responsável

@@ -1,0 +1,98 @@
+- generic [ref=f2e78]:
+  - button "Voltar à ficha do contrato" [ref=f2e79] [cursor=pointer]
+  - generic [ref=f2e85]:
+    - paragraph [ref=f2e86]: Contratos / Beneficiários
+    - heading "Dados do titular" [level=1] [ref=f2e89]
+    - paragraph [ref=f2e90]: Cadastre informações pessoais, de contato e de elegibilidade do titular.
+  - generic [ref=f2e93]:
+    - generic [ref=f2e94]:
+      - heading "Informações Pessoais" [level=4] [ref=f2e95]
+      - generic [ref=f2e96]:
+        - generic [ref=f2e97]:
+          - generic [ref=f2e98]: CPF *
+          - generic [ref=f2e101]:
+            - textbox [ref=f2e103]
+            - button "Buscar CPF" [disabled] [ref=f2e104]
+        - generic [ref=f2e109]:
+          - generic [ref=f2e110]: Nome Completo *
+          - textbox "Nome Completo *" [ref=f2e114]
+        - generic [ref=f2e115]:
+          - generic [ref=f2e116]: RG
+          - textbox "RG" [ref=f2e120]
+        - generic [ref=f2e121]:
+          - generic [ref=f2e122]: Data de Nascimento *
+          - button "Data de Nascimento *" [ref=f2e126] [cursor=pointer]:
+            - generic [ref=f2e129]: Selecionar data
+        - generic [ref=f2e131]:
+          - checkbox "Aplicar bonus por vida Marque se este titular e elegivel ao bonus por vida deste contrato." [checked] [ref=f2e132] [cursor=pointer]
+          - generic [ref=f2e133]:
+            - generic [ref=f2e134]: Aplicar bonus por vida
+            - generic [ref=f2e135]: Marque se este titular e elegivel ao bonus por vida deste contrato.
+        - generic [ref=f2e136]:
+          - generic [ref=f2e137]: Sexo
+          - button "Selecione" [ref=f2e141] [cursor=pointer]
+        - generic [ref=f2e149]:
+          - generic [ref=f2e150]: Estado Civil
+          - button "Selecione" [ref=f2e154] [cursor=pointer]
+        - generic [ref=f2e162]:
+          - generic [ref=f2e163]: Telefone *
+          - textbox "Telefone *" [ref=f2e167]
+        - generic [ref=f2e168]:
+          - generic [ref=f2e169]: E-mail
+          - textbox "E-mail" [ref=f2e173]
+        - generic [ref=f2e174]:
+          - generic [ref=f2e175]: CNS (Cartão SUS)
+          - textbox "CNS (Cartão SUS)" [ref=f2e179]
+    - generic [ref=f2e180]:
+      - heading "Endereço" [level=4] [ref=f2e181]
+      - generic [ref=f2e182]:
+        - generic [ref=f2e183]:
+          - generic [ref=f2e184]: CEP
+          - generic [ref=f2e187]:
+            - textbox "00000-000" [ref=f2e189]
+            - button "Buscar CEP" [ref=f2e190] [cursor=pointer]
+        - generic [ref=f2e195]:
+          - generic [ref=f2e196]: Endereço
+          - textbox "Endereço" [ref=f2e200]
+        - generic [ref=f2e201]:
+          - generic [ref=f2e202]: Número
+          - textbox "Número" [ref=f2e206]
+        - generic [ref=f2e207]:
+          - generic [ref=f2e208]: Complemento
+          - textbox "Complemento" [ref=f2e212]
+        - generic [ref=f2e213]:
+          - generic [ref=f2e214]: Bairro
+          - textbox "Bairro" [ref=f2e218]
+        - generic [ref=f2e219]:
+          - generic [ref=f2e220]: Estado
+          - button "Selecione o estado" [ref=f2e224] [cursor=pointer]
+        - generic [ref=f2e232]:
+          - generic [ref=f2e234]:
+            - generic [ref=f2e235]: Cidade
+            - 'button "Ajuda: Cidade" [ref=f2e237]'
+          - button "Escolha primeiro o estado" [disabled] [ref=f2e241]
+          - paragraph [ref=f2e250]: Selecione um estado para liberar as cidades.
+    - generic [ref=f2e251]:
+      - heading "Informações Empresariais" [level=4] [ref=f2e252]
+      - generic [ref=f2e253]:
+        - generic [ref=f2e254]:
+          - generic [ref=f2e255]: CNPJ
+          - generic [ref=f2e258]:
+            - textbox [ref=f2e260]
+            - button "Buscar" [ref=f2e261] [cursor=pointer]
+        - generic [ref=f2e262]:
+          - generic [ref=f2e263]: Data de Abertura do CNPJ
+          - button "Data de Abertura do CNPJ" [ref=f2e267] [cursor=pointer]:
+            - generic [ref=f2e270]: Selecionar data
+        - generic [ref=f2e271]:
+          - generic [ref=f2e272]: Razão Social
+          - textbox "Razão Social" [ref=f2e276]
+        - generic [ref=f2e277]:
+          - generic [ref=f2e278]: Nome Fantasia
+          - textbox "Nome Fantasia" [ref=f2e282]
+        - generic [ref=f2e283]:
+          - generic [ref=f2e284]: Percentual Societário (%)
+          - spinbutton "Percentual Societário (%)" [ref=f2e288]
+  - group "Ações do formulário" [ref=f2e290]:
+    - button "Cancelar" [ref=f2e291] [cursor=pointer]
+    - button "Salvar titular" [ref=f2e292] [cursor=pointer]

@@ -1,0 +1,175 @@
+- generic [ref=f3e4]:
+  - button "Gestão de contratos" [ref=f3e5] [cursor=pointer]
+  - generic [ref=f3e10]:
+    - generic [ref=f3e11]:
+      - paragraph [ref=f3e12]: Kifer Saúde / Contratos
+      - generic [ref=f3e13]:
+        - generic [ref=f3e14]: "413780"
+        - heading "Ficha do contrato" [level=1] [ref=f3e16]
+      - paragraph [ref=f3e17]: Acompanhe as informações contratuais e os beneficiários vinculados.
+    - generic [ref=f3e19]:
+      - button "Excluir contrato" [ref=f3e21] [cursor=pointer]
+      - group "Ações da página" [ref=f3e26]:
+        - button "Editar contrato" [ref=f3e27] [cursor=pointer]
+  - generic [ref=f3e32]:
+    - generic [ref=f3e33]:
+      - heading "Dados do contrato" [level=3] [ref=f3e34]
+      - generic [ref=f3e35]:
+        - generic [ref=f3e36]:
+          - term [ref=f3e37]: Titular
+          - definition [ref=f3e38]: Titular de demonstração
+        - generic [ref=f3e39]:
+          - term [ref=f3e40]: Operadora
+          - definition [ref=f3e41]: Assim Saúde
+        - generic [ref=f3e42]:
+          - term [ref=f3e43]: Plano
+          - definition [ref=f3e44]: Clássico
+        - generic [ref=f3e45]:
+          - term [ref=f3e46]: Modalidade
+          - definition [ref=f3e47]: PME
+        - generic [ref=f3e48]:
+          - term [ref=f3e49]: Vigência
+          - definition [ref=f3e50]: 01/10/2026
+        - generic [ref=f3e51]:
+          - term [ref=f3e52]: Status
+          - definition [ref=f3e53]: Ativo
+    - generic [ref=f3e54]:
+      - generic [ref=f3e55]:
+        - heading "Beneficiários" [level=3] [ref=f3e56]
+        - generic [ref=f3e57]:
+          - button "Adicionar titular" [ref=f3e58] [cursor=pointer]
+          - button "Dependente" [ref=f3e61] [cursor=pointer]
+      - list [ref=f3e64]:
+        - listitem [ref=f3e65]:
+          - generic [ref=f3e66]:
+            - paragraph [ref=f3e67]: Titular de demonstração
+            - paragraph [ref=f3e68]: Dados do titular
+        - listitem [ref=f3e69]:
+          - generic [ref=f3e70]:
+            - paragraph [ref=f3e71]: Dependente de demonstração
+            - paragraph [ref=f3e72]: Dados do dependente · Filho(a)
+  - group [ref=f3e73]:
+    - generic "Mais informações do contrato" [active] [ref=f3e74] [cursor=pointer]
+    - generic [ref=f3e79]:
+      - generic [ref=f3e80]:
+        - generic [ref=f3e81]:
+          - generic [ref=f3e82]:
+            - generic [ref=f3e83]: Status
+            - generic [ref=f3e84]: Ativo
+          - generic [ref=f3e85]:
+            - generic [ref=f3e86]: Modalidade
+            - generic [ref=f3e87]: PME
+          - generic [ref=f3e88]:
+            - generic [ref=f3e89]: Responsável
+            - generic [ref=f3e90]: Equipe de demonstração
+          - generic [ref=f3e91]:
+            - generic [ref=f3e92]: Mensalidade
+            - generic [ref=f3e93]: R$ 441,53
+        - generic [ref=f3e94]:
+          - generic [ref=f3e95]:
+            - paragraph [ref=f3e96]: Comissão prevista
+            - paragraph [ref=f3e97]: R$ 1.236,28
+          - generic [ref=f3e98]:
+            - paragraph [ref=f3e99]: Bônus total
+            - paragraph [ref=f3e100]: Não aplicado
+          - generic [ref=f3e101]:
+            - paragraph [ref=f3e102]: Reajuste anual
+            - paragraph [ref=f3e103]: Não definido
+            - paragraph [ref=f3e104]: Mês de reajuste --
+        - generic [ref=f3e105]:
+          - generic [ref=f3e106]: Datas-chave
+          - generic [ref=f3e108]:
+            - generic [ref=f3e109]: Fim da fidelidade
+            - generic [ref=f3e110]: 31/10/2027
+            - generic [ref=f3e111]: em 366 dias
+        - generic [ref=f3e112]:
+          - generic [ref=f3e113]: Linha do tempo do contrato
+          - generic [ref=f3e114]:
+            - generic [ref=f3e115]:
+              - generic [ref=f3e116]: Início de vigência
+              - generic [ref=f3e117]: 30/09/2026
+            - generic [ref=f3e118]:
+              - generic [ref=f3e119]: Contrato criado
+              - generic [ref=f3e120]: 29/10/2026
+            - generic [ref=f3e121]:
+              - generic [ref=f3e122]: Fim da fidelidade
+              - generic [ref=f3e123]: 31/10/2027
+        - generic [ref=f3e125]:
+          - generic [ref=f3e126]: Comissão prevista
+          - generic [ref=f3e127]: R$ 1.236,28
+      - generic [ref=f3e128]:
+        - generic [ref=f3e129]:
+          - heading "Titulares (1)" [level=4] [ref=f3e130]
+          - button "Adicionar titular" [ref=f3e136] [cursor=pointer]
+        - generic [ref=f3e142]:
+          - generic [ref=f3e143]:
+            - heading "Titular de demonstração" [level=5] [ref=f3e144]
+            - generic [ref=f3e145]:
+              - generic [ref=f3e146]:
+                - generic [ref=f3e147]: CPF
+                - text: 000.000.000-00
+              - generic [ref=f3e148]:
+                - generic [ref=f3e149]: Data nasc.
+                - text: 12/05/1985
+              - generic [ref=f3e150]:
+                - generic [ref=f3e151]: Telefone
+                - text: (21) 00000-0000
+              - generic [ref=f3e152]:
+                - generic [ref=f3e153]: E-mail
+                - text: titular@example.invalid
+              - generic [ref=f3e154]:
+                - generic [ref=f3e155]: Cidade
+                - text: Rio de Janeiro/RJ
+          - generic [ref=f3e156]:
+            - button "Editar titular Titular de demonstração" [ref=f3e157] [cursor=pointer]
+            - button "Remover titular Titular de demonstração" [ref=f3e162] [cursor=pointer]
+      - generic [ref=f3e167]:
+        - generic [ref=f3e168]:
+          - heading "Dependentes (1)" [level=4] [ref=f3e169]
+          - button "Adicionar" [ref=f3e176] [cursor=pointer]
+        - generic [ref=f3e181]:
+          - generic [ref=f3e182]:
+            - generic [ref=f3e183]:
+              - paragraph [ref=f3e184]: Titular
+              - paragraph [ref=f3e185]: Titular de demonstração
+            - button "Adicionar dependente" [ref=f3e186] [cursor=pointer]
+          - generic [ref=f3e191]:
+            - generic [ref=f3e192]:
+              - heading "Dependente de demonstração" [level=5] [ref=f3e193]
+              - generic [ref=f3e194]:
+                - generic [ref=f3e195]:
+                  - generic [ref=f3e196]: Relação
+                  - text: Filho(a)
+                - generic [ref=f3e197]:
+                  - generic [ref=f3e198]: Data nasc.
+                  - text: 01/03/2012
+            - generic [ref=f3e199]:
+              - button "Editar dependente Dependente de demonstração" [ref=f3e200] [cursor=pointer]
+              - button "Remover dependente Dependente de demonstração" [ref=f3e205] [cursor=pointer]
+      - generic [ref=f3e210]:
+        - generic [ref=f3e211]:
+          - heading "Documentos" [level=4] [ref=f3e212]
+          - generic [ref=f3e213]: 0 arquivo(s)
+        - generic [ref=f3e214]:
+          - generic [ref=f3e215]:
+            - paragraph [ref=f3e216]: "Titular: Titular de demonstração"
+            - paragraph [ref=f3e217]: Sem documentos enviados.
+          - generic [ref=f3e218]:
+            - paragraph [ref=f3e219]: "Dependente: Dependente de demonstração"
+            - paragraph [ref=f3e220]: Sem documentos enviados.
+      - generic [ref=f3e221]:
+        - generic [ref=f3e222]:
+          - heading "Auditoria" [level=4] [ref=f3e223]
+          - generic [ref=f3e224]: 2 evento(s)
+        - generic [ref=f3e225]:
+          - generic [ref=f3e226]:
+            - paragraph [ref=f3e228]: Contrato criado
+            - generic [ref=f3e229]: 29/10/2026, 09:00
+          - generic [ref=f3e230]:
+            - paragraph [ref=f3e232]: Contrato atualizado
+            - generic [ref=f3e233]: 29/10/2026, 09:00
+      - generic [ref=f3e234]:
+        - generic [ref=f3e235]:
+          - heading "Histórico de interações" [level=4] [ref=f3e236]
+          - button "Nova interação" [ref=f3e237] [cursor=pointer]
+        - paragraph [ref=f3e244]: Nenhuma interação registrada

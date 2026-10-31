@@ -1,0 +1,89 @@
+- generic [ref=f11e3]:
+  - navigation "Navegação principal" [ref=f11e4]:
+    - button "Início" [ref=f11e5] [cursor=pointer]
+    - button "Leads" [ref=f11e12] [cursor=pointer]
+    - button "WhatsApp" [ref=f11e19] [cursor=pointer]
+    - button "Contratos" [ref=f11e23] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f11e28] [cursor=pointer]:
+      - generic [ref=f11e30]: Mais
+  - generic [ref=f11e31]:
+    - banner [ref=f11e32]:
+      - generic [ref=f11e33]:
+        - img "Kifer Saúde" [ref=f11e34]:
+          - generic [ref=f11e35]: kifersaúde
+        - generic [ref=f11e36]:
+          - button "Abrir menu" [ref=f11e37] [cursor=pointer]
+          - generic [ref=f11e40]: OD
+    - main [ref=f11e42]:
+      - generic [ref=f11e44]:
+        - generic [ref=f11e45]:
+          - generic [ref=f11e47]:
+            - paragraph [ref=f11e48]: Administração
+            - generic [ref=f11e50]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f11e51]
+              - button "Informações sobre Automações, integrações e IA" [ref=f11e53]
+          - tablist "Áreas de automações e IA" [ref=f11e58]:
+            - tab "Automações" [ref=f11e59] [cursor=pointer]
+            - tab "Integrações" [selected] [ref=f11e61] [cursor=pointer]
+            - tab "IA" [ref=f11e63] [cursor=pointer]
+        - main [ref=f11e65]:
+          - generic [ref=f11e68]:
+            - generic [ref=f11e69]:
+              - generic [ref=f11e71]:
+                - heading "Integrações conectadas" [level=2] [ref=f11e73]
+                - paragraph [ref=f11e74]: Acompanhe o estado dos canais usados pela operação.
+              - generic [ref=f11e75]:
+                - 'button "Abrir configuração: WhatsApp" [ref=f11e76] [cursor=pointer]':
+                  - generic [ref=f11e80]:
+                    - generic [ref=f11e81]: WhatsApp
+                    - generic [ref=f11e82]: Conexão, autenticação e estabilidade do canal.
+                  - generic [ref=f11e83]: Conectado
+                - 'button "Abrir configuração: Meta Ads" [ref=f11e87] [cursor=pointer]':
+                  - generic [ref=f11e91]:
+                    - generic [ref=f11e92]: Meta Ads
+                    - generic [ref=f11e93]: Os formulários recebidos estão chegando ao CRM.
+                  - generic [ref=f11e94]: Ativo
+                - 'button "Abrir configuração: Rastreamento" [ref=f11e98] [cursor=pointer]':
+                  - generic [ref=f11e105]:
+                    - generic [ref=f11e106]: Rastreamento
+                    - generic [ref=f11e107]: Meta Pixel e Google Tag Manager estão preenchidos.
+                  - generic [ref=f11e108]: Configurado
+            - generic [ref=f11e112]:
+              - heading "Conexão e credenciais" [level=3] [ref=f11e113]
+              - generic [ref=f11e114]: Tokens e chaves privadas ficam protegidos no servidor e não são exibidos no CRM.
+              - generic [ref=f11e117]:
+                - generic [ref=f11e118]:
+                  - generic [ref=f11e119]:
+                    - paragraph [ref=f11e120]: Acesso ao WhatsApp
+                    - paragraph [ref=f11e121]: Chave usada para consultar o canal.
+                  - generic [ref=f11e122]: Protegido
+                - generic [ref=f11e123]:
+                  - generic [ref=f11e124]:
+                    - paragraph [ref=f11e125]: Servidor Meta Ads
+                    - paragraph [ref=f11e126]: Recebimento e processamento de formulários.
+                  - generic [ref=f11e127]: Configurado
+                - generic [ref=f11e128]:
+                  - generic [ref=f11e129]:
+                    - paragraph [ref=f11e130]: Última verificação do canal
+                    - paragraph [ref=f11e131]: 30/10/2026, 11:00
+                  - generic [ref=f11e132]: Verificado
+            - generic [ref=f11e133]:
+              - generic [ref=f11e135]:
+                - heading "Diagnóstico do canal" [level=2] [ref=f11e137]
+                - paragraph [ref=f11e138]: Confira a chegada de mensagens e a fila de processamento.
+              - generic [ref=f11e139]:
+                - generic [ref=f11e140]:
+                  - generic [ref=f11e141]:
+                    - paragraph [ref=f11e142]: Webhook WhatsApp
+                    - paragraph [ref=f11e143]: "Última mensagem: 30/10/2026, 11:05"
+                  - generic [ref=f11e144]: Recebendo mensagens
+                - generic [ref=f11e145]:
+                  - generic [ref=f11e146]:
+                    - paragraph [ref=f11e147]: Fila Meta Ads
+                    - paragraph [ref=f11e148]: Itens aguardando processamento.
+                  - generic [ref=f11e149]: 1 pendente(s)
+                - generic [ref=f11e150]:
+                  - generic [ref=f11e151]:
+                    - paragraph [ref=f11e152]: Última importação
+                    - paragraph [ref=f11e153]: 30/10/2026, 11:02
+                  - generic [ref=f11e154]: Concluída

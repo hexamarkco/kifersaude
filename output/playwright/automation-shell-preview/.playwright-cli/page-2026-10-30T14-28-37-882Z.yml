@@ -1,0 +1,179 @@
+- generic [ref=f7e3]:
+  - navigation "Navegação principal" [ref=f7e4]:
+    - button "Início" [ref=f7e5] [cursor=pointer]
+    - button "Leads" [ref=f7e12] [cursor=pointer]
+    - button "WhatsApp" [ref=f7e19] [cursor=pointer]
+    - button "Contratos" [ref=f7e23] [cursor=pointer]
+    - button "Abrir mais opções" [ref=f7e28] [cursor=pointer]:
+      - generic [ref=f7e30]: Mais
+  - generic [ref=f7e31]:
+    - banner [ref=f7e32]:
+      - generic [ref=f7e33]:
+        - img "Kifer Saúde" [ref=f7e34]:
+          - generic [ref=f7e35]: kifersaúde
+        - generic [ref=f7e36]:
+          - button "Abrir menu" [ref=f7e37] [cursor=pointer]
+          - generic [ref=f7e40]: OD
+    - main [ref=f7e42]:
+      - generic [ref=f7e44]:
+        - generic [ref=f7e45]:
+          - generic [ref=f7e47]:
+            - paragraph [ref=f7e48]: Administração
+            - generic [ref=f7e50]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f7e51]
+              - button "Informações sobre Automações, integrações e IA" [ref=f7e53]
+          - tablist "Áreas de automações e IA" [ref=f7e58]:
+            - tab "Automações" [selected] [ref=f7e59] [cursor=pointer]
+            - tab "Integrações" [ref=f7e65] [cursor=pointer]
+            - tab "IA" [ref=f7e69] [cursor=pointer]
+        - main [ref=f7e81]:
+          - generic [ref=f7e83]:
+            - generic [ref=f7e84]:
+              - tablist [ref=f7e86]:
+                - tab "Fluxos" [selected] [ref=f7e87] [cursor=pointer]
+                - tab "Templates" [ref=f7e89] [cursor=pointer]
+                - tab "Operação" [ref=f7e91] [cursor=pointer]
+              - generic [ref=f7e93]:
+                - status [ref=f7e94]: Autosave ativo
+                - button "Novo fluxo" [ref=f7e96] [cursor=pointer]
+            - generic [ref=f7e99]:
+              - region "Resumo das automações" [ref=f7e100]:
+                - generic [ref=f7e101]:
+                  - paragraph [ref=f7e103]: Fluxos ativos
+                  - generic [ref=f7e106]:
+                    - paragraph [ref=f7e107]: "6"
+                    - paragraph [ref=f7e108]: 8 configurados
+                - generic [ref=f7e109]:
+                  - paragraph [ref=f7e111]: Etapas configuradas
+                  - generic [ref=f7e116]:
+                    - paragraph [ref=f7e117]: "24"
+                    - paragraph [ref=f7e118]: Distribuídas entre os fluxos
+                - generic [ref=f7e119]:
+                  - paragraph [ref=f7e121]: Templates
+                  - generic [ref=f7e124]:
+                    - paragraph [ref=f7e125]: "3"
+                    - paragraph [ref=f7e126]: Disponíveis para as mensagens
+                - generic [ref=f7e127]:
+                  - paragraph [ref=f7e129]: Mensagens hoje
+                  - generic [ref=f7e133]:
+                    - paragraph [ref=f7e134]: "46"
+                    - paragraph [ref=f7e135]: Mensagens automáticas registradas hoje
+              - generic [ref=f7e136]:
+                - generic [ref=f7e138]:
+                  - paragraph [ref=f7e139]: Automação comercial
+                  - generic [ref=f7e140]:
+                    - heading "Fluxos de automação" [level=2] [ref=f7e141]
+                    - button "Informações sobre esta seção" [ref=f7e143]
+                - generic [ref=f7e146]:
+                  - searchbox "Buscar fluxo por nome, condição ou tag" [ref=f7e148]
+                  - button "Todas as tags" [ref=f7e150] [cursor=pointer]
+                  - paragraph [ref=f7e158]: 8 fluxos encontrados
+                - list "Fluxos de automação em cartões" [ref=f7e159]:
+                  - listitem [ref=f7e160]:
+                    - generic [ref=f7e161]:
+                      - generic [ref=f7e162]:
+                        - generic [ref=f7e163]:
+                          - paragraph [ref=f7e164]: Abordagem inicial
+                          - paragraph [ref=f7e165]: Novo lead
+                        - generic [ref=f7e166]: Ativo
+                      - paragraph [ref=f7e167]: "Status: Contato Inicial"
+                      - generic [ref=f7e168]:
+                        - paragraph [ref=f7e169]: 3 etapas
+                        - button "Editar fluxo Abordagem inicial" [ref=f7e170] [cursor=pointer]:
+                          - generic [ref=f7e171]: Editar
+                  - listitem [ref=f7e174]:
+                    - generic [ref=f7e175]:
+                      - generic [ref=f7e176]:
+                        - generic [ref=f7e177]:
+                          - paragraph [ref=f7e178]: Proposta sem retorno
+                          - paragraph [ref=f7e179]: Mudança de status
+                        - generic [ref=f7e180]: Ativo
+                      - paragraph [ref=f7e181]: "Status: Proposta enviada"
+                      - generic [ref=f7e182]:
+                        - paragraph [ref=f7e183]: 3 etapas
+                        - button "Editar fluxo Proposta sem retorno" [ref=f7e184] [cursor=pointer]:
+                          - generic [ref=f7e185]: Editar
+                  - listitem [ref=f7e188]:
+                    - generic [ref=f7e189]:
+                      - generic [ref=f7e190]:
+                        - generic [ref=f7e191]:
+                          - paragraph [ref=f7e192]: Reativação de contatos
+                          - paragraph [ref=f7e193]: Tempo no status
+                        - generic [ref=f7e194]: Pausado
+                      - paragraph [ref=f7e195]: "Status: Decisão"
+                      - generic [ref=f7e196]:
+                        - paragraph [ref=f7e197]: 3 etapas
+                        - button "Editar fluxo Reativação de contatos" [ref=f7e198] [cursor=pointer]:
+                          - generic [ref=f7e199]: Editar
+                  - listitem [ref=f7e202]:
+                    - generic [ref=f7e203]:
+                      - generic [ref=f7e204]:
+                        - generic [ref=f7e205]:
+                          - paragraph [ref=f7e206]: Pós-venda e acompanhamento
+                          - paragraph [ref=f7e207]: Tempo sem contato
+                        - generic [ref=f7e208]: Ativo
+                      - paragraph [ref=f7e209]: "Status: Atendimento"
+                      - generic [ref=f7e210]:
+                        - paragraph [ref=f7e211]: 3 etapas
+                        - button "Editar fluxo Pós-venda e acompanhamento" [ref=f7e212] [cursor=pointer]:
+                          - generic [ref=f7e213]: Editar
+                  - listitem [ref=f7e216]:
+                    - generic [ref=f7e217]:
+                      - generic [ref=f7e218]:
+                        - generic [ref=f7e219]:
+                          - paragraph [ref=f7e220]: Lead aguardando cotação
+                          - paragraph [ref=f7e221]: Mudança de status
+                        - generic [ref=f7e222]: Ativo
+                      - paragraph [ref=f7e223]: "Status: Contato Inicial"
+                      - generic [ref=f7e224]:
+                        - paragraph [ref=f7e225]: 3 etapas
+                        - button "Editar fluxo Lead aguardando cotação" [ref=f7e226] [cursor=pointer]:
+                          - generic [ref=f7e227]: Editar
+                  - listitem [ref=f7e230]:
+                    - generic [ref=f7e231]:
+                      - generic [ref=f7e232]:
+                        - generic [ref=f7e233]:
+                          - paragraph [ref=f7e234]: Retorno após simulação
+                          - paragraph [ref=f7e235]: Novo lead
+                        - generic [ref=f7e236]: Pausado
+                      - paragraph [ref=f7e237]: "Status: Proposta enviada"
+                      - generic [ref=f7e238]:
+                        - paragraph [ref=f7e239]: 3 etapas
+                        - button "Editar fluxo Retorno após simulação" [ref=f7e240] [cursor=pointer]:
+                          - generic [ref=f7e241]: Editar
+                  - listitem [ref=f7e244]:
+                    - generic [ref=f7e245]:
+                      - generic [ref=f7e246]:
+                        - generic [ref=f7e247]:
+                          - paragraph [ref=f7e248]: Contato sem resposta
+                          - paragraph [ref=f7e249]: Tempo sem contato
+                        - generic [ref=f7e250]: Ativo
+                      - paragraph [ref=f7e251]: "Status: Decisão"
+                      - generic [ref=f7e252]:
+                        - paragraph [ref=f7e253]: 3 etapas
+                        - button "Editar fluxo Contato sem resposta" [ref=f7e254] [cursor=pointer]:
+                          - generic [ref=f7e255]: Editar
+                  - listitem [ref=f7e258]:
+                    - generic [ref=f7e259]:
+                      - generic [ref=f7e260]:
+                        - generic [ref=f7e261]:
+                          - paragraph [ref=f7e262]: Nova oportunidade
+                          - paragraph [ref=f7e263]: Tempo no status
+                        - generic [ref=f7e264]: Ativo
+                      - paragraph [ref=f7e265]: "Status: Atendimento"
+                      - generic [ref=f7e266]:
+                        - paragraph [ref=f7e267]: 3 etapas
+                        - button "Editar fluxo Nova oportunidade" [ref=f7e268] [cursor=pointer]:
+                          - generic [ref=f7e269]: Editar
+                - navigation "Paginação" [ref=f7e272]:
+                  - generic [ref=f7e273]:
+                    - generic [ref=f7e274]:
+                      - generic [ref=f7e275]: Itens por página
+                      - combobox [aria-hidden] [ref=f7e276]
+                      - button "Itens por página" [ref=f7e278] [cursor=pointer]:
+                        - generic [ref=f7e279]: "10"
+                    - generic [ref=f7e282]: 1–8 de 8
+                  - generic [ref=f7e283]:
+                    - button "Pagina anterior" [disabled] [ref=f7e284]
+                    - button "1" [ref=f7e288] [cursor=pointer]
+                    - button "Próxima página" [disabled] [ref=f7e289]

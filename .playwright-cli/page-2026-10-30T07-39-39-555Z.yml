@@ -1,0 +1,26 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e4]:
+    - heading "Gestão de contratos" [level=1] [ref=f3e5]
+    - paragraph [ref=f3e6]: Base sintética para revisar o diálogo de importação sem dados do CRM.
+  - dialog [ref=f3e10]:
+    - generic [ref=f3e11]:
+      - generic [ref=f3e12]:
+        - heading "Importar contrato de arquivo" [level=2] [ref=f3e13]
+        - paragraph [ref=f3e14]: Selecione um arquivo .json preenchido conforme o modelo abaixo. Revise os dados no formulário antes de salvar o contrato.
+      - button "Fechar" [active] [ref=f3e15] [cursor=pointer]
+    - generic [ref=f3e19]:
+      - generic [ref=f3e20]:
+        - generic [ref=f3e21]:
+          - paragraph [ref=f3e22]: Baixe o modelo esperado
+          - paragraph [ref=f3e23]: O arquivo inclui os dados do contrato e, opcionalmente, do titular.
+        - button "Baixar modelo de arquivo" [ref=f3e24] [cursor=pointer]
+      - generic [ref=f3e29]:
+        - paragraph [ref=f3e34]: Escolha o arquivo .json do contrato
+        - paragraph [ref=f3e35]: Use o modelo de arquivo para preencher os dados. Depois de importar, confira valores, datas e a taxa de adesão no formulário.
+        - group [ref=f3e36]:
+          - generic "Orientações de formato para quem prepara o arquivo" [ref=f3e37] [cursor=pointer]
+        - button "Choose File" [ref=f3e38]
+        - button "Selecionar arquivo" [ref=f3e39] [cursor=pointer]
+    - generic [ref=f3e40]:
+      - button "Cancelar" [ref=f3e41] [cursor=pointer]
+      - button "Validar arquivo" [disabled] [ref=f3e42]

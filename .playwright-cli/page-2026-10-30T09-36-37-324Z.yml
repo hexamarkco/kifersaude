@@ -1,0 +1,53 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Kifer Saúde · Inteligência artificial
+        - heading "Chat e testes de IA" [level=1] [ref=e11]
+        - paragraph [ref=e12]: Valide o atendimento automatizado em uma simulação controlada. As mensagens desta tela não são enviadas a clientes.
+      - button "Nova simulação" [ref=e14] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e22]:
+          - heading "Simulação de atendimento" [level=3] [ref=e24]
+          - paragraph [ref=e25]: Tenho 42 anos e gostaria de conhecer os planos disponíveis.
+        - generic [ref=e26]:
+          - button "Histórico" [ref=e27] [cursor=pointer]
+          - button "Exportar conversa" [ref=e32] [cursor=pointer]
+      - log "Mensagens da simulação" [ref=e37]:
+        - paragraph [ref=e40]: Tenho 42 anos e gostaria de conhecer os planos disponíveis.
+        - paragraph [ref=e43]: Claro! Posso ajudar. Você procura um plano para você ou também para outras pessoas da família?
+        - paragraph [ref=e46]: Para mim e minha esposa. Moramos em Niterói.
+        - paragraph [ref=e49]: Entendi. Vou considerar duas pessoas em Niterói. Vocês já possuem algum plano de saúde atualmente?
+      - generic [ref=e50]:
+        - generic [ref=e51]: Mensagem de teste
+        - textbox "Mensagem de teste" [ref=e52]:
+          - /placeholder: Digite como se fosse o lead...
+        - button "Enviar" [disabled] [ref=e53]
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - generic [ref=e61]:
+          - heading "Cenário de teste" [level=3] [ref=e63]
+          - paragraph [ref=e64]: Acompanhe o contexto e o resultado desta simulação.
+        - generic [ref=e65]: Ambiente isolado
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - paragraph [ref=e70]: Conversa atual
+            - paragraph [ref=e71]: Tenho 42 anos e gostaria de conhecer os planos disponíveis.
+          - generic [ref=e72]: Manual
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - paragraph [ref=e75]: Avaliação mais recente
+            - paragraph [ref=e76]: Nenhum teste nesta conversa
+          - generic [ref=e77]: Ainda não executado
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - paragraph [ref=e80]: Uso
+            - paragraph [ref=e81]: Mensagens não são enviadas a clientes.
+          - generic [ref=e82]: Simulação
+      - generic [ref=e83]:
+        - paragraph [ref=e87]: Nenhum cenário executado
+        - paragraph [ref=e88]: Escolha um cenário para avaliar as respostas e receber sugestões de melhoria.
+      - button "Escolher cenário" [ref=e90] [cursor=pointer]

@@ -1,0 +1,207 @@
+- generic [ref=e1]:
+  - generic [ref=e9]:
+    - link "Pular para o conteúdo" [ref=e10] [cursor=pointer]:
+      - /url: "#ds-main"
+    - complementary [ref=e11]:
+      - link "Kifer Saúde, visão geral do design system" [ref=e12] [cursor=pointer]:
+        - /url: "#overview"
+        - generic [ref=e13]: k.
+        - strong [ref=e14]:
+          - text: Kifer Saúde
+          - generic [ref=e15]: DESIGN SYSTEM
+      - generic [ref=e16]: BIBLIOTECA DO CRM
+      - navigation "Seções do design system" [ref=e18]:
+        - link "Visão geral" [ref=e19] [cursor=pointer]:
+          - /url: "#overview"
+        - link "Fundamentos visuais" [ref=e24] [cursor=pointer]:
+          - /url: "#foundations"
+        - link "Componentes" [ref=e32] [cursor=pointer]:
+          - /url: "#components"
+        - link "Estados e validação" [ref=e44] [cursor=pointer]:
+          - /url: "#states"
+        - link "Padrões de layout" [ref=e49] [cursor=pointer]:
+          - /url: "#patterns"
+        - link "Responsividade" [ref=e55] [cursor=pointer]:
+          - /url: "#responsive"
+      - generic [ref=e60]:
+        - text: Componentes reais do CRM
+        - paragraph [ref=e62]: Uma base compartilhada.Cada experiência conectada.
+        - link "Acessar o CRM" [ref=e63] [cursor=pointer]:
+          - /url: /painel
+    - generic [ref=e66]:
+      - banner [ref=e67]:
+        - navigation "Breadcrumb" [ref=e69]:
+          - list [ref=e70]:
+            - listitem [ref=e71]:
+              - link "Design system" [ref=e72] [cursor=pointer]:
+                - /url: "#overview"
+            - listitem [aria-hidden] [ref=e73]
+            - listitem [ref=e76]: Componentes
+        - generic [ref=e77]:
+          - searchbox "Buscar no design system" [ref=e79]
+          - button "Ativar tema claro" [active] [ref=e592] [cursor=pointer]
+      - main [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: 02 / KIFER SAÚDE
+          - heading "Componentes reais. Possibilidades consistentes." [level=1] [ref=e88]
+          - paragraph [ref=e89]: Blocos que já fazem parte do projeto, organizados por função. Interaja com os exemplos e consulte a origem de cada componente.
+        - tablist "Categorias de componentes" [ref=e92]:
+          - tab "Ações" [selected] [ref=e93] [cursor=pointer]
+          - tab "Formulários" [ref=e95] [cursor=pointer]
+          - tab "Navegação" [ref=e97] [cursor=pointer]
+          - tab "Dados" [ref=e99] [cursor=pointer]
+          - tab "Feedback" [ref=e101] [cursor=pointer]
+          - tab "Interações" [ref=e103] [cursor=pointer]
+          - tab "Aplicação" [ref=e105] [cursor=pointer]
+        - complementary [ref=e107]:
+          - generic [ref=e108]: Padrão de uso
+          - generic [ref=e109]: "Uma ação primária por contexto. Use verbos claros: criar contato, salvar alterações, aplicar filtros. Ações destrutivas ficam separadas e explicam o impacto antes de executar."
+        - generic [ref=e110]:
+          - article [ref=e111]:
+            - generic [ref=e112]:
+              - heading "Hierarquia de ações" [level=3] [ref=e113]
+              - generic "Componente real do projeto" [ref=e114]
+            - paragraph [ref=e115]: Todas as variantes públicas compartilham geometria, foco e estados.
+            - generic [ref=e117]:
+              - button "Primário" [ref=e118] [cursor=pointer]
+              - button "Secundário" [ref=e119] [cursor=pointer]
+              - button "Terciário" [ref=e120] [cursor=pointer]
+              - button "Discreto" [ref=e121] [cursor=pointer]
+              - button "Texto" [ref=e122] [cursor=pointer]
+              - button "Suave" [ref=e123] [cursor=pointer]
+              - button "Destrutivo" [ref=e124] [cursor=pointer]
+              - button "Erro" [ref=e125] [cursor=pointer]
+              - button "Sucesso" [ref=e126] [cursor=pointer]
+              - button "Atenção" [ref=e127] [cursor=pointer]
+              - button "Informação" [ref=e128] [cursor=pointer]
+              - button "Destaque" [ref=e129] [cursor=pointer]
+            - group [ref=e130]:
+              - generic "Implementação no projeto" [ref=e131] [cursor=pointer]
+          - article [ref=e132]:
+            - generic [ref=e133]:
+              - heading "Escala de tamanho" [level=3] [ref=e134]
+              - generic "Componente real do projeto" [ref=e135]
+            - paragraph [ref=e136]: "Desktop: 32, 40 e 48 px. Em telas pequenas, alvos com no mínimo 44 px."
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - button "Criar contato" [ref=e139] [cursor=pointer]
+                - button "Criar contato" [ref=e142] [cursor=pointer]
+                - button "Criar contato" [ref=e145] [cursor=pointer]
+              - button "Largura total" [ref=e148] [cursor=pointer]
+            - group [ref=e149]:
+              - generic "Implementação no projeto" [ref=e150] [cursor=pointer]
+          - article [ref=e151]:
+            - generic [ref=e152]:
+              - heading "Controles alinhados na mesma barra" [level=3] [ref=e153]
+              - generic "Componente real do projeto" [ref=e154]
+            - paragraph [ref=e155]: Use md (40 px) em cabeçalhos, filtros e ações de formulários. Use sm (32 px) apenas em grupos compactos. No mobile, ambos têm no mínimo 44 px. O grupo determina a altura, os ícones e a tipografia dos controles; rótulos longos podem quebrar linha.
+            - generic [ref=e156]:
+              - group "Controles sm" [ref=e157]:
+                - button "Dia anterior sm" [ref=e158] [cursor=pointer]
+                - button "Data sm" [ref=e164] [cursor=pointer]:
+                  - generic [ref=e167]: 26/10/2026
+                - button "Hoje" [ref=e168] [cursor=pointer]
+                - button "Nova tarefa" [ref=e169] [cursor=pointer]
+              - group "Controles md" [ref=e172]:
+                - button "Dia anterior md" [ref=e173] [cursor=pointer]
+                - button "Data md" [ref=e179] [cursor=pointer]:
+                  - generic [ref=e182]: 26/10/2026
+                - button "Hoje" [ref=e183] [cursor=pointer]
+                - button "Nova tarefa" [ref=e184] [cursor=pointer]
+            - group [ref=e187]:
+              - generic "Implementação no projeto" [ref=e188] [cursor=pointer]
+          - article [ref=e189]:
+            - generic [ref=e190]:
+              - heading "Ícones e ações compactas" [level=3] [ref=e191]
+              - generic "Componente real do projeto" [ref=e192]
+            - paragraph [ref=e193]: Rótulos acessíveis para ações sem texto. Tooltip reforça o significado.
+            - generic [ref=e195]:
+              - button "Salvar exemplo" [ref=e196] [cursor=pointer]
+              - button "Voltar" [ref=e202] [cursor=pointer]
+              - button "Editar exemplo" [ref=e207] [cursor=pointer]
+              - button "Excluir exemplo" [ref=e213] [cursor=pointer]
+              - button "Mais ações" [ref=e219] [cursor=pointer]
+            - group [ref=e225]:
+              - generic "Implementação no projeto" [ref=e226] [cursor=pointer]
+          - article [ref=e227]:
+            - generic [ref=e228]:
+              - heading "Grupos e alternância" [level=3] [ref=e229]
+              - generic "Componente real do projeto" [ref=e230]
+            - paragraph [ref=e231]: Agrupe opções relacionadas. A seleção fica evidente além da cor.
+            - generic [ref=e232]:
+              - group [ref=e233]:
+                - button "Dia" [ref=e234] [cursor=pointer]
+                - button "Semana" [pressed] [ref=e235] [cursor=pointer]
+                - button "Mês" [ref=e236] [cursor=pointer]
+              - tablist "Modo de exibição" [ref=e238]:
+                - tab "Lista" [selected] [ref=e239] [cursor=pointer]
+                - tab "Cards" [ref=e242] [cursor=pointer]
+              - paragraph [ref=e249]: "Exibição selecionada: lista."
+            - group [ref=e250]:
+              - generic "Implementação no projeto" [ref=e251] [cursor=pointer]
+          - article [ref=e252]:
+            - generic [ref=e253]:
+              - heading "Ações de registros" [level=3] [ref=e254]
+              - generic "Componente real do projeto" [ref=e255]
+            - paragraph [ref=e256]: Use ButtonGroup para ações relacionadas do mesmo registro. O contorno acompanha o conteúdo, mesmo em colunas largas. Mantenha abrir/editar antes de excluir. Use orientação vertical somente para ordenação.
+            - generic [ref=e258]:
+              - group "Ações do contato demonstrativo" [ref=e259]:
+                - button "Abrir contato" [ref=e260] [cursor=pointer]
+                - button "Mais ações do contato demonstrativo" [ref=e266] [cursor=pointer]
+              - group "Ações do registro demonstrativo" [ref=e272]:
+                - button "Editar registro demonstrativo" [ref=e273] [cursor=pointer]
+                - button "Excluir registro demonstrativo" [ref=e278] [cursor=pointer]
+              - group "Ordenar registro demonstrativo" [ref=e283]:
+                - button "Mover registro para cima" [ref=e284] [cursor=pointer]
+                - button "Mover registro para baixo" [ref=e288] [cursor=pointer]
+            - group [ref=e292]:
+              - generic "Implementação no projeto" [ref=e293] [cursor=pointer]
+          - article [ref=e294]:
+            - generic [ref=e295]:
+              - heading "Links e superfícies interativas" [level=3] [ref=e296]
+              - generic "Componente real do projeto" [ref=e297]
+            - paragraph [ref=e298]: Links navegam; botões executam ações. Superfícies selecionáveis usam estado explícito.
+            - generic [ref=e299]:
+              - generic [ref=e300]:
+                - link "Ver fundamentos" [ref=e301] [cursor=pointer]:
+                  - /url: "#foundations"
+                - link "Ver padrões" [ref=e302] [cursor=pointer]:
+                  - /url: /design-system#patterns
+              - button "Plano empresarial Clique para selecionar" [ref=e305] [cursor=pointer]:
+                - generic [ref=e306]: Plano empresarial
+                - paragraph [ref=e309]: Clique para selecionar
+              - group [ref=e310]:
+                - generic "Referência externa" [ref=e311] [cursor=pointer]
+            - group [ref=e312]:
+              - generic "Implementação no projeto" [ref=e313] [cursor=pointer]
+          - article [ref=e314]:
+            - generic [ref=e315]:
+              - heading "Ações da página" [level=3] [ref=e316]
+              - generic "Componente real do projeto" [ref=e317]
+            - paragraph [ref=e318]: "Uma ordem oficial: exclusão isolada, secundárias antes da principal. A exclusão exige confirmação."
+            - generic [ref=e319]:
+              - status [ref=e320]:
+                - generic [ref=e321]: 1 exemplos neste bloco
+              - generic [ref=e322]:
+                - button "Excluir exemplo" [ref=e324] [cursor=pointer]
+                - group "Ações da página" [ref=e329]:
+                  - button "Reiniciar" [ref=e330] [cursor=pointer]
+                  - button "Adicionar exemplo" [ref=e331] [cursor=pointer]
+            - group [ref=e334]:
+              - generic "Implementação no projeto" [ref=e335] [cursor=pointer]
+          - article [ref=e336]:
+            - generic [ref=e337]:
+              - heading "Salvar e cancelar" [level=3] [ref=e338]
+              - generic "Componente real do projeto" [ref=e339]
+            - paragraph [ref=e340]: Cancelar antes de Salvar. A mensagem de contexto fica próxima das ações.
+            - generic [ref=e343]:
+              - generic [ref=e344]: As ações se alinham ao final do formulário.
+              - group "Ações do formulário" [ref=e345]:
+                - button "Cancelar" [ref=e346] [cursor=pointer]
+                - button "Salvar alterações" [ref=e347] [cursor=pointer]
+            - group [ref=e348]:
+              - generic "Implementação no projeto" [ref=e349] [cursor=pointer]
+        - generic [ref=e350]:
+          - generic [ref=e351]: Kifer Saúde / Design system
+          - generic [ref=e352]: Clareza em cada interação.
+  - tooltip "Ativar tema claro"

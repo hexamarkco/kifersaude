@@ -1,0 +1,120 @@
+- generic [ref=f10e3]:
+  - complementary [ref=f10e276]:
+    - generic [ref=f10e277]:
+      - img "Kifer Saúde CRM" [ref=f10e279]:
+        - generic [ref=f10e280]: kifersaúde
+        - generic [ref=f10e281]: CRM
+      - navigation [ref=f10e282]:
+        - generic [ref=f10e283]:
+          - button "Dashboard" [ref=f10e284] [cursor=pointer]
+          - button "CRM" [ref=f10e293] [cursor=pointer]
+          - button "Comunicação" [ref=f10e303] [cursor=pointer]
+          - button "Financeiro" [ref=f10e312] [cursor=pointer]
+          - button "Automações e IA" [ref=f10e321] [cursor=pointer]
+          - button "Configurações" [ref=f10e328] [cursor=pointer]
+      - generic [ref=f10e334]:
+        - button "Recolher" [ref=f10e335] [cursor=pointer]
+        - button "Notificações" [ref=f10e340] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f10e348] [cursor=pointer]:
+          - generic [ref=f10e351]: Escuro
+        - button "Sair" [ref=f10e352] [cursor=pointer]
+  - generic [ref=f10e31]:
+    - banner [ref=f10e32]:
+      - generic [ref=f10e357]:
+        - navigation "Breadcrumb" [ref=f10e358]:
+          - list [ref=f10e359]:
+            - listitem [ref=f10e360]:
+              - button "CRM" [ref=f10e361] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f10e362]
+            - listitem [ref=f10e365]: Automações e IA
+        - generic [ref=f10e366]:
+          - generic [ref=f10e367]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f10e368] [cursor=pointer]
+          - generic [ref=f10e372]: OD
+    - main [ref=f10e42]:
+      - generic [ref=f10e44]:
+        - generic [ref=f10e45]:
+          - generic [ref=f10e47]:
+            - paragraph [ref=f10e48]: Administração
+            - generic [ref=f10e50]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f10e51]
+              - button "Informações sobre Automações, integrações e IA" [ref=f10e53]
+          - tablist "Áreas de automações e IA" [ref=f10e58]:
+            - tab "Automações" [selected] [ref=f10e59] [cursor=pointer]
+            - tab "Integrações" [ref=f10e61] [cursor=pointer]
+            - tab "IA" [ref=f10e63] [cursor=pointer]
+        - main [ref=f10e65]:
+          - generic [ref=f10e67]:
+            - generic [ref=f10e68]:
+              - tablist [ref=f10e70]:
+                - tab "Fluxos" [active] [selected] [ref=f10e71] [cursor=pointer]
+                - tab "Templates" [ref=f10e73] [cursor=pointer]
+                - tab "Operação" [ref=f10e75] [cursor=pointer]
+              - generic [ref=f10e77]:
+                - status [ref=f10e78]: Autosave ativo
+                - button "Novo fluxo" [ref=f10e858] [cursor=pointer]
+            - generic [ref=f10e861]:
+              - region "Resumo das automações" [ref=f10e862]:
+                - generic [ref=f10e863]:
+                  - paragraph [ref=f10e865]: Fluxos ativos
+                  - generic [ref=f10e868]:
+                    - paragraph [ref=f10e869]: "6"
+                    - paragraph [ref=f10e870]: 8 configurados
+                - generic [ref=f10e871]:
+                  - paragraph [ref=f10e873]: Etapas configuradas
+                  - generic [ref=f10e878]:
+                    - paragraph [ref=f10e879]: "24"
+                    - paragraph [ref=f10e880]: Distribuídas entre os fluxos
+                - generic [ref=f10e881]:
+                  - paragraph [ref=f10e883]: Templates
+                  - generic [ref=f10e886]:
+                    - paragraph [ref=f10e887]: "3"
+                    - paragraph [ref=f10e888]: Disponíveis para as mensagens
+                - generic [ref=f10e889]:
+                  - paragraph [ref=f10e891]: Mensagens hoje
+                  - generic [ref=f10e895]:
+                    - paragraph [ref=f10e896]: "46"
+                    - paragraph [ref=f10e897]: Mensagens automáticas registradas hoje
+              - generic [ref=f10e898]:
+                - generic [ref=f10e900]:
+                  - paragraph [ref=f10e901]: Automação comercial
+                  - generic [ref=f10e902]:
+                    - heading "Fluxos de automação" [level=2] [ref=f10e903]
+                    - button "Informações sobre esta seção" [ref=f10e905]
+                - generic [ref=f10e908]:
+                  - searchbox "Buscar fluxo por nome, condição ou tag" [ref=f10e910]: sem resposta
+                  - button "Todas as tags" [ref=f10e912] [cursor=pointer]
+                  - paragraph [ref=f10e920]: 1 fluxo encontrado
+                - region "Rolagem de Fluxos de automação" [ref=f10e922]:
+                  - table "Fluxos de automação" [ref=f10e923]:
+                    - rowgroup [ref=f10e930]:
+                      - row [ref=f10e931]:
+                        - columnheader "Fluxo" [ref=f10e932]
+                        - columnheader "Gatilho" [ref=f10e933]
+                        - columnheader "Status" [ref=f10e934]
+                        - columnheader "Etapas" [ref=f10e935]
+                        - columnheader "Ações" [ref=f10e936]
+                    - rowgroup [ref=f10e937]:
+                      - row [ref=f10e938]:
+                        - cell [ref=f10e939]:
+                          - generic [ref=f10e940]:
+                            - paragraph [ref=f10e941]: Contato sem resposta
+                            - paragraph [ref=f10e942]: "Status: Decisão"
+                        - cell "Tempo sem contato" [ref=f10e943]
+                        - cell "Ativo" [ref=f10e944]
+                        - cell "3" [ref=f10e946]
+                        - cell [ref=f10e947]:
+                          - button "Editar fluxo Contato sem resposta" [ref=f10e948] [cursor=pointer]:
+                            - generic [ref=f10e949]: Editar
+                - navigation "Paginação" [ref=f10e952]:
+                  - generic [ref=f10e953]:
+                    - generic [ref=f10e954]:
+                      - generic [ref=f10e955]: Itens por página
+                      - combobox [aria-hidden] [ref=f10e956]
+                      - button "Itens por página" [ref=f10e958] [cursor=pointer]:
+                        - generic [ref=f10e959]: "10"
+                    - generic [ref=f10e962]: 1–1 de 1
+                  - generic [ref=f10e963]:
+                    - button "Pagina anterior" [disabled] [ref=f10e964]
+                    - button "1" [ref=f10e968] [cursor=pointer]
+                    - button "Próxima página" [disabled] [ref=f10e969]

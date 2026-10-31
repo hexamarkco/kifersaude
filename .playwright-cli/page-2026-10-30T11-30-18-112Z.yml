@@ -1,0 +1,246 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - img "Kifer Saúde CRM" [ref=f2e7]:
+        - generic [ref=f2e8]: kifersaúde
+        - generic [ref=f2e9]: CRM
+      - navigation [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - button "Dashboard" [ref=f2e12] [cursor=pointer]
+          - button "CRM" [ref=f2e21] [cursor=pointer]
+          - button "Comunicação" [ref=f2e31] [cursor=pointer]
+          - button "Financeiro" [ref=f2e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f2e49] [cursor=pointer]
+          - button "Configurações" [ref=f2e56] [cursor=pointer]
+      - generic [ref=f2e62]:
+        - button "Recolher" [ref=f2e63] [cursor=pointer]
+        - button "Notificações" [ref=f2e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f2e76] [cursor=pointer]:
+          - generic [ref=f2e79]: Escuro
+        - button "Sair" [ref=f2e80] [cursor=pointer]
+  - generic [ref=f2e85]:
+    - banner [ref=f2e86]:
+      - generic [ref=f2e87]:
+        - navigation "Breadcrumb" [ref=f2e88]:
+          - list [ref=f2e89]:
+            - listitem [ref=f2e90]:
+              - button "CRM" [ref=f2e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f2e92]
+            - listitem [ref=f2e95]: Configurações
+        - generic [ref=f2e96]:
+          - generic [ref=f2e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f2e98] [cursor=pointer]
+          - generic [ref=f2e102]: OD
+    - main [ref=f2e104]:
+      - generic [ref=f2e106]:
+        - generic [ref=f2e107]:
+          - generic [ref=f2e108]:
+            - generic [ref=f2e109]:
+              - paragraph [ref=f2e110]: Administração
+              - generic [ref=f2e112]:
+                - heading "Links públicos" [level=1] [ref=f2e113]
+                - button "Informações sobre Links públicos" [ref=f2e115]
+            - button "Novo link" [ref=f2e119] [cursor=pointer]
+          - tablist "Áreas de configurações" [ref=f2e124]:
+            - tab "Geral" [ref=f2e125] [cursor=pointer]
+            - tab "Usuários" [ref=f2e130] [cursor=pointer]
+            - tab "Links" [selected] [ref=f2e137] [cursor=pointer]
+            - tab "Formulários" [ref=f2e142] [cursor=pointer]
+        - main [ref=f2e147]:
+          - generic [ref=f2e148]:
+            - group [ref=f2e149]:
+              - generic "Editar perfil público · Publicado" [ref=f2e150] [cursor=pointer]
+              - generic [ref=f2e158] [cursor=pointer]: Salvar perfil
+            - generic [ref=f2e159]:
+              - generic [ref=f2e161]:
+                - generic [ref=f2e162]:
+                  - heading "Links cadastrados" [level=3] [ref=f2e163]
+                  - button "Informações sobre a lista de links" [ref=f2e165]
+                - paragraph [ref=f2e168]: A ordem define como os links aparecem na página pública.
+              - searchbox "Buscar links públicos por nome ou endereço" [ref=f2e172]
+              - region "Rolagem de Links públicos" [ref=f2e175]:
+                - table "Links públicos" [ref=f2e176]:
+                  - rowgroup [ref=f2e183]:
+                    - row [ref=f2e184]:
+                      - columnheader "Nome" [ref=f2e185]
+                      - columnheader "Ordem" [ref=f2e186]
+                      - columnheader "Atualização" [ref=f2e187]
+                      - columnheader "Status" [ref=f2e188]
+                      - columnheader "Ações" [ref=f2e189]
+                  - rowgroup [ref=f2e190]:
+                    - row [ref=f2e191]:
+                      - cell [ref=f2e192]:
+                        - generic [ref=f2e198]:
+                          - paragraph [ref=f2e199]: Formulário de cotação
+                          - paragraph [ref=f2e200]: https://example.invalid/forms/demo
+                          - paragraph [ref=f2e201]: 8 cliques
+                      - cell [ref=f2e202]:
+                        - generic [ref=f2e203]:
+                          - paragraph [ref=f2e204]: "1"
+                          - group "Ordenar Formulário de cotação" [ref=f2e205]:
+                            - button "Mover Formulário de cotação para cima" [disabled] [ref=f2e206]
+                            - button "Mover Formulário de cotação para baixo" [ref=f2e210] [cursor=pointer]
+                      - cell [ref=f2e214]:
+                        - paragraph [ref=f2e215]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e216]:
+                        - generic [ref=f2e217]:
+                          - switch "Ativo" [checked] [ref=f2e219]
+                          - generic [ref=f2e222] [cursor=pointer]: Ativo
+                      - cell [ref=f2e223]:
+                        - group "Ações de Formulário de cotação" [ref=f2e224]:
+                          - button "Editar Formulário de cotação" [ref=f2e225] [cursor=pointer]
+                          - button "Mais ações de formulário de cotação" [ref=f2e231] [cursor=pointer]
+                    - row [ref=f2e237]:
+                      - cell [ref=f2e238]:
+                        - generic [ref=f2e243]:
+                          - paragraph [ref=f2e244]: Canal WhatsApp
+                          - paragraph [ref=f2e245]: https://example.invalid/whatsapp
+                          - paragraph [ref=f2e246]: 42 cliques
+                      - cell [ref=f2e247]:
+                        - generic [ref=f2e248]:
+                          - paragraph [ref=f2e249]: "2"
+                          - group "Ordenar Canal WhatsApp" [ref=f2e250]:
+                            - button "Mover Canal WhatsApp para cima" [ref=f2e251] [cursor=pointer]
+                            - button "Mover Canal WhatsApp para baixo" [ref=f2e255] [cursor=pointer]
+                      - cell [ref=f2e259]:
+                        - paragraph [ref=f2e260]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e261]:
+                        - generic [ref=f2e262]:
+                          - switch "Ativo" [checked] [ref=f2e264]
+                          - generic [ref=f2e267] [cursor=pointer]: Ativo
+                      - cell [ref=f2e268]:
+                        - group "Ações de Canal WhatsApp" [ref=f2e269]:
+                          - button "Editar Canal WhatsApp" [ref=f2e270] [cursor=pointer]
+                          - button "Mais ações de canal whatsapp" [ref=f2e276] [cursor=pointer]
+                    - row [ref=f2e282]:
+                      - cell [ref=f2e283]:
+                        - generic [ref=f2e289]:
+                          - paragraph [ref=f2e290]: Página de atendimento
+                          - paragraph [ref=f2e291]: https://example.invalid/atendimento
+                          - paragraph [ref=f2e292]: 21 cliques
+                      - cell [ref=f2e293]:
+                        - generic [ref=f2e294]:
+                          - paragraph [ref=f2e295]: "3"
+                          - group "Ordenar Página de atendimento" [ref=f2e296]:
+                            - button "Mover Página de atendimento para cima" [ref=f2e297] [cursor=pointer]
+                            - button "Mover Página de atendimento para baixo" [ref=f2e301] [cursor=pointer]
+                      - cell [ref=f2e305]:
+                        - paragraph [ref=f2e306]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e307]:
+                        - generic [ref=f2e308]:
+                          - switch "Ativo" [checked] [ref=f2e310]
+                          - generic [ref=f2e313] [cursor=pointer]: Ativo
+                      - cell [ref=f2e314]:
+                        - group "Ações de Página de atendimento" [ref=f2e315]:
+                          - button "Editar Página de atendimento" [ref=f2e316] [cursor=pointer]
+                          - button "Mais ações de página de atendimento" [ref=f2e322] [cursor=pointer]
+                    - row [ref=f2e328]:
+                      - cell [ref=f2e329]:
+                        - generic [ref=f2e335]:
+                          - paragraph [ref=f2e336]: Site Kifer Saúde
+                          - paragraph [ref=f2e337]: https://example.invalid
+                          - paragraph [ref=f2e338]: 13 cliques
+                      - cell [ref=f2e339]:
+                        - generic [ref=f2e340]:
+                          - paragraph [ref=f2e341]: "4"
+                          - group "Ordenar Site Kifer Saúde" [ref=f2e342]:
+                            - button "Mover Site Kifer Saúde para cima" [ref=f2e343] [cursor=pointer]
+                            - button "Mover Site Kifer Saúde para baixo" [ref=f2e347] [cursor=pointer]
+                      - cell [ref=f2e351]:
+                        - paragraph [ref=f2e352]: 30/10/2026
+                      - cell "Inativo Inativo" [ref=f2e353]:
+                        - generic [ref=f2e354]:
+                          - switch "Inativo" [ref=f2e356]
+                          - generic [ref=f2e359] [cursor=pointer]: Inativo
+                      - cell [ref=f2e360]:
+                        - group "Ações de Site Kifer Saúde" [ref=f2e361]:
+                          - button "Editar Site Kifer Saúde" [ref=f2e362] [cursor=pointer]
+                          - button "Mais ações de site kifer saúde" [ref=f2e368] [cursor=pointer]
+                    - row [ref=f2e374]:
+                      - cell [ref=f2e375]:
+                        - generic [ref=f2e381]:
+                          - paragraph [ref=f2e382]: Instagram
+                          - paragraph [ref=f2e383]: https://example.invalid/instagram
+                          - paragraph [ref=f2e384]: 18 cliques
+                      - cell [ref=f2e385]:
+                        - generic [ref=f2e386]:
+                          - paragraph [ref=f2e387]: "5"
+                          - group "Ordenar Instagram" [ref=f2e388]:
+                            - button "Mover Instagram para cima" [ref=f2e389] [cursor=pointer]
+                            - button "Mover Instagram para baixo" [ref=f2e393] [cursor=pointer]
+                      - cell [ref=f2e397]:
+                        - paragraph [ref=f2e398]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e399]:
+                        - generic [ref=f2e400]:
+                          - switch "Ativo" [checked] [ref=f2e402]
+                          - generic [ref=f2e405] [cursor=pointer]: Ativo
+                      - cell [ref=f2e406]:
+                        - group "Ações de Instagram" [ref=f2e407]:
+                          - button "Editar Instagram" [ref=f2e408] [cursor=pointer]
+                          - button "Mais ações de instagram" [ref=f2e414] [cursor=pointer]
+                    - row [ref=f2e420]:
+                      - cell [ref=f2e421]:
+                        - generic [ref=f2e426]:
+                          - paragraph [ref=f2e427]: Facebook
+                          - paragraph [ref=f2e428]: https://example.invalid/facebook
+                          - paragraph [ref=f2e429]: 6 cliques
+                      - cell [ref=f2e430]:
+                        - generic [ref=f2e431]:
+                          - paragraph [ref=f2e432]: "6"
+                          - group "Ordenar Facebook" [ref=f2e433]:
+                            - button "Mover Facebook para cima" [ref=f2e434] [cursor=pointer]
+                            - button "Mover Facebook para baixo" [ref=f2e438] [cursor=pointer]
+                      - cell [ref=f2e442]:
+                        - paragraph [ref=f2e443]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e444]:
+                        - generic [ref=f2e445]:
+                          - switch "Ativo" [checked] [ref=f2e447]
+                          - generic [ref=f2e450] [cursor=pointer]: Ativo
+                      - cell [ref=f2e451]:
+                        - group "Ações de Facebook" [ref=f2e452]:
+                          - button "Editar Facebook" [ref=f2e453] [cursor=pointer]
+                          - button "Mais ações de facebook" [ref=f2e459] [cursor=pointer]
+                    - row [ref=f2e465]:
+                      - cell [ref=f2e466]:
+                        - generic [ref=f2e472]:
+                          - paragraph [ref=f2e473]: YouTube
+                          - paragraph [ref=f2e474]: https://example.invalid/youtube
+                          - paragraph [ref=f2e475]: 5 cliques
+                      - cell [ref=f2e476]:
+                        - generic [ref=f2e477]:
+                          - paragraph [ref=f2e478]: "7"
+                          - group "Ordenar YouTube" [ref=f2e479]:
+                            - button "Mover YouTube para cima" [ref=f2e480] [cursor=pointer]
+                            - button "Mover YouTube para baixo" [ref=f2e484] [cursor=pointer]
+                      - cell [ref=f2e488]:
+                        - paragraph [ref=f2e489]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e490]:
+                        - generic [ref=f2e491]:
+                          - switch "Ativo" [checked] [ref=f2e493]
+                          - generic [ref=f2e496] [cursor=pointer]: Ativo
+                      - cell [ref=f2e497]:
+                        - group "Ações de YouTube" [ref=f2e498]:
+                          - button "Editar YouTube" [ref=f2e499] [cursor=pointer]
+                          - button "Mais ações de youtube" [ref=f2e505] [cursor=pointer]
+                    - row [ref=f2e511]:
+                      - cell [ref=f2e512]:
+                        - generic [ref=f2e518]:
+                          - paragraph [ref=f2e519]: Conteúdos de saúde
+                          - paragraph [ref=f2e520]: https://example.invalid/blog
+                          - paragraph [ref=f2e521]: 9 cliques
+                      - cell [ref=f2e522]:
+                        - generic [ref=f2e523]:
+                          - paragraph [ref=f2e524]: "8"
+                          - group "Ordenar Conteúdos de saúde" [ref=f2e525]:
+                            - button "Mover Conteúdos de saúde para cima" [ref=f2e526] [cursor=pointer]
+                            - button "Mover Conteúdos de saúde para baixo" [disabled] [ref=f2e530]
+                      - cell [ref=f2e534]:
+                        - paragraph [ref=f2e535]: 30/10/2026
+                      - cell "Ativo Ativo" [ref=f2e536]:
+                        - generic [ref=f2e537]:
+                          - switch "Ativo" [checked] [ref=f2e539]
+                          - generic [ref=f2e542] [cursor=pointer]: Ativo
+                      - cell [ref=f2e543]:
+                        - group "Ações de Conteúdos de saúde" [ref=f2e544]:
+                          - button "Editar Conteúdos de saúde" [ref=f2e545] [cursor=pointer]
+                          - button "Mais ações de conteúdos de saúde" [ref=f2e551] [cursor=pointer]

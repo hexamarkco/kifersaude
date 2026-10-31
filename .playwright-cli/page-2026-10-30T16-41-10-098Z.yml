@@ -1,0 +1,80 @@
+- generic [ref=f8e3]:
+  - complementary [ref=f8e4]:
+    - generic [ref=f8e5]:
+      - img "Kifer Saúde CRM" [ref=f8e7]:
+        - generic [ref=f8e8]: kifersaúde
+        - generic [ref=f8e9]: CRM
+      - navigation [ref=f8e10]:
+        - generic [ref=f8e11]:
+          - button "Dashboard" [ref=f8e12] [cursor=pointer]
+          - button "CRM" [ref=f8e21] [cursor=pointer]
+          - button "Comunicação" [ref=f8e31] [cursor=pointer]
+          - button "Financeiro" [ref=f8e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f8e49] [cursor=pointer]
+          - button "Configurações" [ref=f8e56] [cursor=pointer]
+      - generic [ref=f8e62]:
+        - button "Recolher" [ref=f8e63] [cursor=pointer]
+        - button "Notificações" [ref=f8e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f8e76] [cursor=pointer]:
+          - generic [ref=f8e79]: Escuro
+        - button "Sair" [ref=f8e80] [cursor=pointer]
+  - generic [ref=f8e85]:
+    - banner [ref=f8e86]:
+      - generic [ref=f8e87]:
+        - navigation "Breadcrumb" [ref=f8e88]:
+          - list [ref=f8e89]:
+            - listitem [ref=f8e90]:
+              - button "CRM" [ref=f8e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f8e92]
+            - listitem [ref=f8e95]: Automações e IA
+        - generic [ref=f8e96]:
+          - generic [ref=f8e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f8e98] [cursor=pointer]
+          - generic [ref=f8e102]: OD
+    - main [ref=f8e104]:
+      - generic [ref=f8e106]:
+        - generic [ref=f8e107]:
+          - generic [ref=f8e109]:
+            - paragraph [ref=f8e110]: Administração
+            - generic [ref=f8e112]:
+              - heading "Automações, integrações e IA" [level=1] [ref=f8e113]
+              - button "Informações sobre Automações, integrações e IA" [ref=f8e115]
+          - tablist "Áreas de automações e IA" [ref=f8e120]:
+            - tab "Automações" [ref=f8e121] [cursor=pointer]
+            - tab "Integrações" [ref=f8e123] [cursor=pointer]
+            - tab "IA" [selected] [ref=f8e125] [cursor=pointer]
+        - main [ref=f8e127]:
+          - generic [ref=f8e128]:
+            - generic [ref=f8e129]:
+              - generic [ref=f8e130]:
+                - generic [ref=f8e131]:
+                  - heading "Inteligência artificial" [level=2] [ref=f8e133]
+                  - paragraph [ref=f8e134]: Controle central de recursos e políticas.
+                - group "Ações da página" [ref=f8e137]:
+                  - button "Exportar" [ref=f8e138] [cursor=pointer]
+                  - button "Importar" [ref=f8e143] [cursor=pointer]
+                  - button "Atualizar" [ref=f8e148] [cursor=pointer]
+              - generic [ref=f8e155]: Recursos de IA devem ter permissões e limites operacionais claros.
+              - list "Resumo das configurações de IA" [ref=f8e158]:
+                - listitem [ref=f8e159]:
+                  - generic [ref=f8e160]:
+                    - paragraph [ref=f8e161]: Assistência em mensagens
+                    - paragraph [ref=f8e162]: Sugestões e reescrita de atendimento.
+                  - generic [ref=f8e163]: Indisponível
+                - listitem [ref=f8e164]:
+                  - generic [ref=f8e165]:
+                    - paragraph [ref=f8e166]: Qualificação de leads
+                    - paragraph [ref=f8e167]: Contexto para acompanhamento comercial.
+                  - generic [ref=f8e168]: Indisponível
+                - listitem [ref=f8e169]:
+                  - generic [ref=f8e170]:
+                    - paragraph [ref=f8e171]: Modelos de execução
+                    - paragraph [ref=f8e172]: Configuração de modelo por funcionalidade.
+                  - generic [ref=f8e173]: Indisponível
+            - tablist "Áreas das configurações de IA" [ref=f8e175]:
+              - tab "Funcionalidades" [ref=f8e176] [cursor=pointer]
+              - tab "Configurações globais" [active] [selected] [ref=f8e178] [cursor=pointer]
+            - generic [ref=f8e207]:
+              - paragraph [ref=f8e219]: Não foi possível carregar as configurações globais
+              - paragraph [ref=f8e220]: Tente atualizar os dados antes de editar ou salvar instruções.
+              - button "Tentar novamente" [ref=f8e222] [cursor=pointer]

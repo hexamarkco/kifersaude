@@ -1,0 +1,351 @@
+{
+  "captures": [
+    {
+      "version": "before",
+      "width": 320,
+      "file": "320-full-before.png",
+      "client": 310,
+      "scroll": 310
+    },
+    {
+      "version": "before",
+      "width": 390,
+      "file": "390-full-before.png",
+      "client": 380,
+      "scroll": 380
+    },
+    {
+      "version": "before",
+      "width": 768,
+      "file": "768-full-before.png",
+      "client": 758,
+      "scroll": 758
+    },
+    {
+      "version": "before",
+      "width": 1440,
+      "file": "1440-full-before.png",
+      "client": 1430,
+      "scroll": 1430
+    },
+    {
+      "version": "before",
+      "width": 1920,
+      "file": "1920-full-before.png",
+      "client": 1910,
+      "scroll": 1910
+    },
+    {
+      "version": "after",
+      "width": 320,
+      "file": "320-full-after.png",
+      "client": 310,
+      "scroll": 310
+    },
+    {
+      "version": "after",
+      "width": 390,
+      "file": "390-full-after.png",
+      "client": 380,
+      "scroll": 380
+    },
+    {
+      "version": "after",
+      "width": 768,
+      "file": "768-full-after.png",
+      "client": 758,
+      "scroll": 758
+    },
+    {
+      "version": "after",
+      "width": 1440,
+      "file": "1440-full-after.png",
+      "client": 1430,
+      "scroll": 1430
+    },
+    {
+      "version": "after",
+      "width": 1920,
+      "file": "1920-full-after.png",
+      "client": 1910,
+      "scroll": 1910
+    }
+  ],
+  "comparison": [
+    {
+      "width": 320,
+      "sections": [
+        {
+          "id": "topo",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "prova-social",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "para-quem",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "como-funciona",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "depoimentos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "quem-somos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "faq",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "cotacao",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "fale-agora",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "footer",
+          "delta": 0,
+          "sameText": true
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "sections": [
+        {
+          "id": "topo",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "prova-social",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "para-quem",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "como-funciona",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "depoimentos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "quem-somos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "faq",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "cotacao",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "fale-agora",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "footer",
+          "delta": 0,
+          "sameText": true
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "sections": [
+        {
+          "id": "topo",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "prova-social",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "para-quem",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "como-funciona",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "depoimentos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "quem-somos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "faq",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "cotacao",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "fale-agora",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "footer",
+          "delta": 0,
+          "sameText": true
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "sections": [
+        {
+          "id": "topo",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "prova-social",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "para-quem",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "como-funciona",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "depoimentos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "quem-somos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "faq",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "cotacao",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "fale-agora",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "footer",
+          "delta": 0,
+          "sameText": true
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "sections": [
+        {
+          "id": "topo",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "prova-social",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "para-quem",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "como-funciona",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "depoimentos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "quem-somos",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "faq",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "cotacao",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "fale-agora",
+          "delta": 0,
+          "sameText": true
+        },
+        {
+          "id": "footer",
+          "delta": 0,
+          "sameText": true
+        }
+      ]
+    }
+  ]
+}

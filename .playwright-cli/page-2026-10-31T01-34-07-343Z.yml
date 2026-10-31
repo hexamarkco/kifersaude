@@ -1,0 +1,113 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - img "Kifer Saúde CRM" [ref=f1e7]:
+        - generic [ref=f1e8]: kifersaúde
+        - generic [ref=f1e9]: CRM
+      - navigation [ref=f1e10]:
+        - generic [ref=f1e11]:
+          - button "Dashboard" [ref=f1e12] [cursor=pointer]
+          - button "CRM" [ref=f1e21] [cursor=pointer]
+          - button "Comunicação" [ref=f1e31] [cursor=pointer]
+          - button "Financeiro" [ref=f1e40] [cursor=pointer]
+          - button "Automações e IA" [ref=f1e49] [cursor=pointer]
+          - button "Configurações" [ref=f1e56] [cursor=pointer]
+      - generic [ref=f1e62]:
+        - button "Recolher" [ref=f1e63] [cursor=pointer]
+        - button "Notificações" [ref=f1e68] [cursor=pointer]
+        - button "Ativar tema escuro" [ref=f1e76] [cursor=pointer]:
+          - generic [ref=f1e79]: Escuro
+        - button "Sair" [ref=f1e80] [cursor=pointer]
+  - generic [ref=f1e85]:
+    - banner [ref=f1e86]:
+      - generic [ref=f1e87]:
+        - navigation "Breadcrumb" [ref=f1e88]:
+          - list [ref=f1e89]:
+            - listitem [ref=f1e90]:
+              - button "CRM" [ref=f1e91] [cursor=pointer]
+            - listitem [aria-hidden] [ref=f1e92]
+            - listitem [ref=f1e95]: Automações e IA
+        - generic [ref=f1e96]:
+          - generic [ref=f1e97]: Operador Demonstração
+          - button "Ativar tema escuro" [ref=f1e98] [cursor=pointer]
+          - generic [ref=f1e102]: OD
+    - main [ref=f1e104]:
+      - main [ref=f1e107]:
+        - region "Editor do fluxo automático" [ref=f1e110]:
+          - generic [ref=f1e111]:
+            - button "Voltar aos fluxos" [ref=f1e113] [cursor=pointer]
+            - generic [ref=f1e117]:
+              - generic [ref=f1e118]:
+                - paragraph [ref=f1e119]: Fluxo 1
+                - heading "Abordagem inicial" [level=1] [ref=f1e122]
+                - paragraph [ref=f1e123]: Organize a jornada, as regras operacionais e os testes em um só lugar.
+              - generic [ref=f1e124]:
+                - button "Remover fluxo" [ref=f1e125] [cursor=pointer]
+                - button "Testar fluxo" [ref=f1e130] [cursor=pointer]
+                - button "Salvar fluxo" [ref=f1e135] [cursor=pointer]
+            - tablist [ref=f1e143]:
+              - tab "Jornada" [active] [selected] [ref=f1e144] [cursor=pointer]
+              - tab "Regras e agenda" [ref=f1e148] [cursor=pointer]
+              - tab "Simular e testar" [ref=f1e153] [cursor=pointer]
+          - generic [ref=f1e158]:
+            - generic [ref=f1e494]:
+              - generic [ref=f1e496]:
+                - heading "Jornada do lead" [level=5] [ref=f1e497]
+                - button "Informações sobre a jornada do lead" [ref=f1e499]
+              - generic [ref=f1e502]:
+                - generic [ref=f1e503]: 3 etapas
+                - generic [ref=f1e504]: "Status: Contato Inicial"
+            - generic [ref=f1e505]:
+              - generic [ref=f1e506]:
+                - generic [ref=f1e507]:
+                  - generic [ref=f1e508]:
+                    - generic [ref=f1e509]: Builder avancado
+                    - generic [ref=f1e510]: Arraste e conecte as etapas do seu fluxo.
+                    - generic [ref=f1e511]: Clique em uma linha para remover.
+                  - group "Ações do fluxo" [ref=f1e512]:
+                    - button "+ Condicao" [ref=f1e513] [cursor=pointer]
+                    - button "+ Acao" [ref=f1e514] [cursor=pointer]
+                    - button "PNG" [ref=f1e515] [cursor=pointer]
+                    - button "TXT" [ref=f1e520] [cursor=pointer]
+                    - button "Reorganizar" [ref=f1e525] [cursor=pointer]
+                - generic [ref=f1e533]:
+                  - generic [ref=f1e535]:
+                    - generic:
+                      - img:
+                        - generic:
+                          - button "Edge from trigger-1793410380689-28b5617ffb5508 to action-1793410380689-bce326bb2893c"
+                          - button "Edge from action-1793410380689-bce326bb2893c to action-1793410380689-70db765282b59" [ref=f1e536] [cursor=pointer]
+                          - button "Edge from action-1793410380689-70db765282b59 to action-1793410380689-64cba86252e44" [ref=f1e539] [cursor=pointer]
+                      - generic:
+                        - button "Gatilho Lead criado Dispara quando um lead é criado" [ref=f1e542] [cursor=pointer]:
+                          - generic [ref=f1e543]:
+                            - generic [ref=f1e544]: Gatilho
+                            - generic [ref=f1e545]: Lead criado
+                            - generic [ref=f1e546]: Dispara quando um lead é criado
+                        - button "Ação Enviar mensagem Esperar 2 hours" [ref=f1e548] [cursor=pointer]:
+                          - generic [ref=f1e549]:
+                            - generic [ref=f1e550]: Ação
+                            - generic [ref=f1e551]: Enviar mensagem
+                            - generic [ref=f1e552]: Esperar 2 hours
+                        - button "Ação Enviar mensagem Esperar 24 hours" [ref=f1e555] [cursor=pointer]:
+                          - generic [ref=f1e556]:
+                            - generic [ref=f1e557]: Ação
+                            - generic [ref=f1e558]: Enviar mensagem
+                            - generic [ref=f1e559]: Esperar 24 hours
+                        - button "Ação Enviar mensagem Esperar 48 hours" [ref=f1e562] [cursor=pointer]:
+                          - generic [ref=f1e563]:
+                            - generic [ref=f1e564]: Ação
+                            - generic [ref=f1e565]: Enviar mensagem
+                            - generic [ref=f1e566]: Esperar 48 hours
+                  - img "React Flow mini map" [ref=f1e570]
+                  - generic [ref=f1e575]:
+                    - button "zoom in" [ref=f1e576] [cursor=pointer]
+                    - button "zoom out" [ref=f1e579] [cursor=pointer]
+                    - button "fit view" [ref=f1e582] [cursor=pointer]
+                    - button "toggle interactivity" [ref=f1e585] [cursor=pointer]
+                  - link "React Flow attribution" [ref=f1e591] [cursor=pointer]:
+                    - /url: https://reactflow.dev
+                    - text: React Flow
+              - generic [ref=f1e593]:
+                - generic [ref=f1e594]: Inspector
+                - generic [ref=f1e595]: Selecione um no para editar.

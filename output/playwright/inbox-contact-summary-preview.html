@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prévia — Inbox / Informações do contato</title>
+  <link rel="stylesheet" href="http://127.0.0.1:5173/src/design-system/styles.css">
+  <style>
+    html, body { margin: 0; min-height: 100%; }
+    #preview { position: fixed; inset: 0; z-index: 1; display: grid; grid-template-columns: minmax(0,1fr) min(22rem,100vw); background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-sans); }
+    #preview main { min-width: 0; display: flex; flex-direction: column; }
+    #preview .whatsapp-inbox-thread-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border-subtle); }
+    #preview h2 { margin: 0; }
+    #preview .next-reminder { display: block; margin-top: 6px; max-width: 100%; }
+    #preview aside { position: relative; inset: auto; width: auto; max-width: none; display: flex; flex-direction: column; border-left: 1px solid var(--border-subtle); background: var(--bg-surface); }
+    #preview .comm-whatsapp-lead-drawer-header { display: block; }
+    #preview .contact-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+    #preview .drawer-body { padding: 16px; }
+    @media (max-width: 767px) { #preview { grid-template-columns: minmax(0,1fr) min(22rem,100vw); } }
+  </style>
+</head>
+<body>
+  <div id="preview" class="painel-theme kifer-ds theme-dark">
+    <main>
+      <header class="whatsapp-inbox-thread-header">
+        <div class="min-w-0">
+          <h2 class="whatsapp-inbox-heading" style="font-size:18px;font-weight:600">Gisele Goulart (cliente)</h2>
+          <span class="kds-badge kds-badge-neutral next-reminder">Próximo lembrete: retorno sobre proposta e carências · 30/10/2026 às 14:30</span>
+        </div>
+        <div class="whatsapp-inbox-thread-actions">
+          <button class="kds-button kds-button-ghost kds-control-md" aria-label="Pesquisar">⌕</button>
+          <button class="kds-button kds-button-secondary kds-control-md" aria-label="Informações do contato">ⓘ</button>
+        </div>
+      </header>
+      <div style="flex:1;padding:24px;color:var(--text-muted)">Conversa de demonstração</div>
+    </main>
+    <aside class="kds-inbox-lead-context-panel is-open" aria-label="Informações do contato">
+      <header class="comm-whatsapp-lead-drawer-header kds-drawer-header">
+        <small style="font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--brand-primary)">INFORMAÇÕES DO CONTATO</small>
+        <h2 style="margin-top:4px;font-size:16px;font-weight:600">Gisele Goulart (cliente)</h2>
+        <div class="contact-meta">
+          <span>+55 (21) 96632-9152</span>
+          <span class="kds-badge kds-badge-neutral">⌖ RJ · DDD 21</span>
+          <span class="whatsapp-inbox-presence is-typing">digitando…</span>
+        </div>
+        <div class="contact-meta">
+          <button class="kds-button panel-ui-button kds-button-secondary kds-control-sm">✎ Renomear contato</button>
+          <span class="kds-operational-status-badge">IA atendendo</span>
+        </div>
+      </header>
+      <div class="drawer-body kds-drawer-body">
+        <div class="kds-card kds-card-muted" style="padding:16px"><strong>Status e responsável</strong><p style="margin:8px 0 0">Convertido · Luiza</p></div>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>

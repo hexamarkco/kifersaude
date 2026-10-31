@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import {
   Button,
@@ -13,6 +13,7 @@ import {
   homeBenefitIcons,
   type ContractKind,
 } from "../../domain/homeContent";
+import { useHomeProfileMotion } from "../../hooks/useHomeMotion";
 
 export default function HomeAudience({
   onQuote,
@@ -20,6 +21,8 @@ export default function HomeAudience({
   onQuote: (kind: ContractKind) => void;
 }) {
   const [selected, setSelected] = useState<ContractKind>("PF");
+  const slides = useRef<HTMLDivElement>(null);
+  useHomeProfileMotion(slides, selected);
   return (
     <section
       id="para-quem"
@@ -39,7 +42,7 @@ export default function HomeAudience({
           </Text>
         </div>
         <div className="home-audience-layout">
-          <fieldset className="home-audience-selector">
+          <fieldset className="home-audience-selector" data-profile={selected}>
             <legend id="audience-selector-label" className="sr-only">
               Escolha seu perfil
             </legend>
@@ -71,7 +74,7 @@ export default function HomeAudience({
               ))}
             </RadioGroup>
           </fieldset>
-          <div className="home-audience-slides">
+          <div className="home-audience-slides" ref={slides}>
             {homeAudiences.map((profile) => (
               <div
                 key={profile.kind}
@@ -110,6 +113,7 @@ export default function HomeAudience({
                   <Button
                     type="button"
                     size="lg"
+                    tabIndex={profile.kind === selected ? 0 : -1}
                     onClick={() => onQuote(profile.kind)}
                   >
                     {profile.cta}

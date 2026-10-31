@@ -1,0 +1,36 @@
+- generic [ref=f8e2]:
+  - complementary "Navegação CRM" [ref=f8e3]: K
+  - main [ref=f8e4]:
+    - generic [ref=f8e5]:
+      - strong [ref=f8e6]: WhatsApp Inbox
+      - button "＋ Nova conversa" [ref=f8e7] [cursor=pointer]
+    - generic [ref=f8e8]:
+      - complementary "Conversas" [ref=f8e9]:
+        - generic [ref=f8e11]:
+          - strong [ref=f8e12]: Contato de demonstração
+          - text: Última mensagem · 10:20
+        - generic [ref=f8e13]: Contato de demonstração 02
+      - region "Conversa de demonstração" [ref=f8e14]:
+        - generic [ref=f8e15]:
+          - strong [ref=f8e16]: Contato de demonstração
+          - button "Informações do contato" [ref=f8e17] [cursor=pointer]: ⓘ
+        - generic [ref=f8e18]:
+          - generic [ref=f8e19]: Olá! Gostaria de conhecer as opções de planos para minha família. Esta mensagem de demonstração permite conferir se o painel lateral cobre ou corta o histórico em larguras diferentes.
+          - generic [ref=f8e20]: Claro, posso ajudar. Quantas pessoas terão cobertura e em qual cidade vocês moram?
+          - generic [ref=f8e21]: Seremos três pessoas. Quero comparar as opções com calma e ver as informações completas antes de decidir.
+          - generic [ref=f8e22]: Perfeito. Vou preparar uma comparação para você.
+        - textbox "Digite uma mensagem" [ref=f8e24]
+      - complementary "Informações do contato" [ref=f8e25]:
+        - generic [ref=f8e26]:
+          - generic [ref=f8e27]:
+            - strong [ref=f8e28]: INFORMAÇÕES DO CONTATO
+            - generic [ref=f8e29]: Contato de demonstração
+          - button "Fechar painel" [ref=f8e30] [cursor=pointer]: ×
+        - generic [ref=f8e31]:
+          - paragraph [ref=f8e32]: +55 (21) 90000-0000
+          - paragraph [ref=f8e33]:
+            - generic [ref=f8e34]: Convertido
+          - separator [ref=f8e35]
+          - paragraph [ref=f8e36]: ResponsávelOperador de demonstração
+          - separator [ref=f8e37]
+          - paragraph [ref=f8e38]: Próximo lembreteRetorno sobre a proposta

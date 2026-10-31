@@ -1,5 +1,5 @@
 import { BrandWordmark, TextLink } from '../../../design-system';
-import { useEffect, useId, useState, type MouseEvent } from 'react';
+import { useEffect, useId, useRef, useState, type MouseEvent } from 'react';
 import { Menu } from 'lucide-react';
 import { homeNavigation } from '../domain/homeContent';
 
@@ -15,6 +15,15 @@ type PublicHomeHeaderProps = {
 export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicHomeHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
+  const afterMenuClose = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (menuOpen) return;
+    // The drawer restores focus and the scrollbar before measuring the anchor.
+    const action = afterMenuClose.current;
+    afterMenuClose.current = null;
+    action?.();
+  }, [menuOpen]);
 
   useEffect(() => {
     const desktop = window.matchMedia('(min-width: 1024px)');
@@ -25,16 +34,19 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
     return () => desktop.removeEventListener('change', closeOnDesktop);
   }, []);
 
-  const navigate = (event: MouseEvent<HTMLAnchorElement>, section: string) => {
-    event.preventDefault();
-    setMenuOpen(false);
-    onNavigate(section);
+  const closeMenuAndRun = (action: () => void) => {
+    if (menuOpen) {
+      afterMenuClose.current = action;
+      setMenuOpen(false);
+    } else action();
   };
 
-  const requestQuote = () => {
-    setMenuOpen(false);
-    onRequestQuote();
+  const navigate = (event: MouseEvent<HTMLAnchorElement>, section: string) => {
+    event.preventDefault();
+    closeMenuAndRun(() => onNavigate(section));
   };
+
+  const requestQuote = () => closeMenuAndRun(onRequestQuote);
 
   return (
     <>

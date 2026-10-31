@@ -1,0 +1,76 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "client": 320,
+      "scroll": 320,
+      "heroOrder": true,
+      "quoteOrder": true,
+      "quoteCopyClear": true,
+      "footerOrder": true,
+      "primaryTouch": true,
+      "inputFont": "16px",
+      "broken": []
+    },
+    {
+      "width": 360,
+      "client": 360,
+      "scroll": 360,
+      "heroOrder": true,
+      "quoteOrder": true,
+      "quoteCopyClear": true,
+      "footerOrder": true,
+      "primaryTouch": true,
+      "inputFont": "16px",
+      "broken": []
+    },
+    {
+      "width": 375,
+      "client": 375,
+      "scroll": 375,
+      "heroOrder": true,
+      "quoteOrder": true,
+      "quoteCopyClear": true,
+      "footerOrder": true,
+      "primaryTouch": true,
+      "inputFont": "16px",
+      "broken": []
+    },
+    {
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "heroOrder": true,
+      "quoteOrder": true,
+      "quoteCopyClear": true,
+      "footerOrder": true,
+      "primaryTouch": true,
+      "inputFont": "16px",
+      "broken": []
+    },
+    {
+      "width": 414,
+      "client": 414,
+      "scroll": 414,
+      "heroOrder": true,
+      "quoteOrder": true,
+      "quoteCopyClear": true,
+      "footerOrder": true,
+      "primaryTouch": true,
+      "inputFont": "16px",
+      "broken": []
+    },
+    {
+      "width": 430,
+      "client": 430,
+      "scroll": 430,
+      "heroOrder": true,
+      "quoteOrder": true,
+      "quoteCopyClear": true,
+      "footerOrder": true,
+      "primaryTouch": true,
+      "inputFont": "16px",
+      "broken": []
+    }
+  ]
+}

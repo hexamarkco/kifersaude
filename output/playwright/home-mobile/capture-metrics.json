@@ -1,0 +1,1149 @@
+{
+  "pixelTolerance": 0.001,
+  "results": [
+    {
+      "version": "before",
+      "width": 320,
+      "client": 320,
+      "scroll": 320,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 906.71875
+        },
+        {
+          "id": "prova-social",
+          "height": 1614.234375
+        },
+        {
+          "id": "para-quem",
+          "height": 1540.140625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1236.28125
+        },
+        {
+          "id": "depoimentos",
+          "height": 873.4375
+        },
+        {
+          "id": "quem-somos",
+          "height": 1364.015625
+        },
+        {
+          "id": "faq",
+          "height": 880.890625
+        },
+        {
+          "id": "cotacao",
+          "height": 1939.234375
+        },
+        {
+          "id": "fale-agora",
+          "height": 1626.609375
+        },
+        {
+          "id": "footer",
+          "height": 1938.875
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 360,
+      "client": 360,
+      "scroll": 360,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 872.4375
+        },
+        {
+          "id": "prova-social",
+          "height": 1491.46875
+        },
+        {
+          "id": "para-quem",
+          "height": 1361.203125
+        },
+        {
+          "id": "como-funciona",
+          "height": 1086.09375
+        },
+        {
+          "id": "depoimentos",
+          "height": 873.4375
+        },
+        {
+          "id": "quem-somos",
+          "height": 1326.515625
+        },
+        {
+          "id": "faq",
+          "height": 772.421875
+        },
+        {
+          "id": "cotacao",
+          "height": 1803.1875
+        },
+        {
+          "id": "fale-agora",
+          "height": 1554.453125
+        },
+        {
+          "id": "footer",
+          "height": 1817.203125
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 375,
+      "client": 375,
+      "scroll": 375,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 887.03125
+        },
+        {
+          "id": "prova-social",
+          "height": 1474.15625
+        },
+        {
+          "id": "para-quem",
+          "height": 1361.515625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1044.171875
+        },
+        {
+          "id": "depoimentos",
+          "height": 833.4375
+        },
+        {
+          "id": "quem-somos",
+          "height": 1293.515625
+        },
+        {
+          "id": "faq",
+          "height": 764.578125
+        },
+        {
+          "id": "cotacao",
+          "height": 1787.796875
+        },
+        {
+          "id": "fale-agora",
+          "height": 1528.890625
+        },
+        {
+          "id": "footer",
+          "height": 1782.40625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 886.71875
+        },
+        {
+          "id": "prova-social",
+          "height": 1483.4375
+        },
+        {
+          "id": "para-quem",
+          "height": 1361.078125
+        },
+        {
+          "id": "como-funciona",
+          "height": 1031.59375
+        },
+        {
+          "id": "depoimentos",
+          "height": 793.4375
+        },
+        {
+          "id": "quem-somos",
+          "height": 1263.875
+        },
+        {
+          "id": "faq",
+          "height": 741.953125
+        },
+        {
+          "id": "cotacao",
+          "height": 1787.796875
+        },
+        {
+          "id": "fale-agora",
+          "height": 1522.40625
+        },
+        {
+          "id": "footer",
+          "height": 1781.90625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 414,
+      "client": 414,
+      "scroll": 414,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 886.859375
+        },
+        {
+          "id": "prova-social",
+          "height": 1474.703125
+        },
+        {
+          "id": "para-quem",
+          "height": 1314.1875
+        },
+        {
+          "id": "como-funciona",
+          "height": 1025.25
+        },
+        {
+          "id": "depoimentos",
+          "height": 793.4375
+        },
+        {
+          "id": "quem-somos",
+          "height": 1267.71875
+        },
+        {
+          "id": "faq",
+          "height": 744.234375
+        },
+        {
+          "id": "cotacao",
+          "height": 1779.953125
+        },
+        {
+          "id": "fale-agora",
+          "height": 1522.359375
+        },
+        {
+          "id": "footer",
+          "height": 1761.90625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 430,
+      "client": 430,
+      "scroll": 430,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 885.375
+        },
+        {
+          "id": "prova-social",
+          "height": 1436.859375
+        },
+        {
+          "id": "para-quem",
+          "height": 1278.40625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1011.25
+        },
+        {
+          "id": "depoimentos",
+          "height": 793.4375
+        },
+        {
+          "id": "quem-somos",
+          "height": 1261.015625
+        },
+        {
+          "id": "faq",
+          "height": 745.75
+        },
+        {
+          "id": "cotacao",
+          "height": 1751.515625
+        },
+        {
+          "id": "fale-agora",
+          "height": 1533.3125
+        },
+        {
+          "id": "footer",
+          "height": 1737.90625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 768,
+      "client": 768,
+      "scroll": 768,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704
+        },
+        {
+          "id": "prova-social",
+          "height": 930.390625
+        },
+        {
+          "id": "para-quem",
+          "height": 862.953125
+        },
+        {
+          "id": "como-funciona",
+          "height": 887.9375
+        },
+        {
+          "id": "depoimentos",
+          "height": 747.3125
+        },
+        {
+          "id": "quem-somos",
+          "height": 894.1875
+        },
+        {
+          "id": "faq",
+          "height": 675.015625
+        },
+        {
+          "id": "cotacao",
+          "height": 1298.421875
+        },
+        {
+          "id": "fale-agora",
+          "height": 948.859375
+        },
+        {
+          "id": "footer",
+          "height": 1257.140625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 1024,
+      "client": 1024,
+      "scroll": 1024,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704
+        },
+        {
+          "id": "prova-social",
+          "height": 796.890625
+        },
+        {
+          "id": "para-quem",
+          "height": 804.640625
+        },
+        {
+          "id": "como-funciona",
+          "height": 611.9375
+        },
+        {
+          "id": "depoimentos",
+          "height": 627.3125
+        },
+        {
+          "id": "quem-somos",
+          "height": 824.1875
+        },
+        {
+          "id": "faq",
+          "height": 614.671875
+        },
+        {
+          "id": "cotacao",
+          "height": 777
+        },
+        {
+          "id": "fale-agora",
+          "height": 736.0625
+        },
+        {
+          "id": "footer",
+          "height": 761.265625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 1440,
+      "client": 1440,
+      "scroll": 1440,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704
+        },
+        {
+          "id": "prova-social",
+          "height": 817
+        },
+        {
+          "id": "para-quem",
+          "height": 824.28125
+        },
+        {
+          "id": "como-funciona",
+          "height": 666.546875
+        },
+        {
+          "id": "depoimentos",
+          "height": 663.625
+        },
+        {
+          "id": "quem-somos",
+          "height": 778.484375
+        },
+        {
+          "id": "faq",
+          "height": 671.40625
+        },
+        {
+          "id": "cotacao",
+          "height": 804.296875
+        },
+        {
+          "id": "fale-agora",
+          "height": 729.640625
+        },
+        {
+          "id": "footer",
+          "height": 735.359375
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 1536,
+      "client": 1536,
+      "scroll": 1536,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 632
+        },
+        {
+          "id": "prova-social",
+          "height": 838.03125
+        },
+        {
+          "id": "para-quem",
+          "height": 833.65625
+        },
+        {
+          "id": "como-funciona",
+          "height": 682.046875
+        },
+        {
+          "id": "depoimentos",
+          "height": 654.0625
+        },
+        {
+          "id": "quem-somos",
+          "height": 780.59375
+        },
+        {
+          "id": "faq",
+          "height": 677.5625
+        },
+        {
+          "id": "cotacao",
+          "height": 804.84375
+        },
+        {
+          "id": "fale-agora",
+          "height": 734.734375
+        },
+        {
+          "id": "footer",
+          "height": 731.515625
+        }
+      ]
+    },
+    {
+      "version": "before",
+      "width": 1920,
+      "client": 1920,
+      "scroll": 1920,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 717.6875
+        },
+        {
+          "id": "prova-social",
+          "height": 885.75
+        },
+        {
+          "id": "para-quem",
+          "height": 965.15625
+        },
+        {
+          "id": "como-funciona",
+          "height": 772.3125
+        },
+        {
+          "id": "depoimentos",
+          "height": 721.703125
+        },
+        {
+          "id": "quem-somos",
+          "height": 820.15625
+        },
+        {
+          "id": "faq",
+          "height": 742.109375
+        },
+        {
+          "id": "cotacao",
+          "height": 920.84375
+        },
+        {
+          "id": "fale-agora",
+          "height": 807.53125
+        },
+        {
+          "id": "footer",
+          "height": 754.5625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 320,
+      "client": 320,
+      "scroll": 320,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 870.109375
+        },
+        {
+          "id": "prova-social",
+          "height": 1573.8125
+        },
+        {
+          "id": "para-quem",
+          "height": 1376.125
+        },
+        {
+          "id": "como-funciona",
+          "height": 1185.59375
+        },
+        {
+          "id": "depoimentos",
+          "height": 1106.5625
+        },
+        {
+          "id": "quem-somos",
+          "height": 1337.34375
+        },
+        {
+          "id": "faq",
+          "height": 987.859375
+        },
+        {
+          "id": "cotacao",
+          "height": 1848.25
+        },
+        {
+          "id": "fale-agora",
+          "height": 1520.984375
+        },
+        {
+          "id": "footer",
+          "height": 1916.65625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 360,
+      "client": 360,
+      "scroll": 360,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 882.25
+        },
+        {
+          "id": "prova-social",
+          "height": 1488.140625
+        },
+        {
+          "id": "para-quem",
+          "height": 1263.9375
+        },
+        {
+          "id": "como-funciona",
+          "height": 1015.5625
+        },
+        {
+          "id": "depoimentos",
+          "height": 1036.5625
+        },
+        {
+          "id": "quem-somos",
+          "height": 1305.59375
+        },
+        {
+          "id": "faq",
+          "height": 881.25
+        },
+        {
+          "id": "cotacao",
+          "height": 1760.6875
+        },
+        {
+          "id": "fale-agora",
+          "height": 1360.140625
+        },
+        {
+          "id": "footer",
+          "height": 1881.765625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 375,
+      "client": 375,
+      "scroll": 375,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 899.78125
+        },
+        {
+          "id": "prova-social",
+          "height": 1434.4375
+        },
+        {
+          "id": "para-quem",
+          "height": 1246.65625
+        },
+        {
+          "id": "como-funciona",
+          "height": 1001.546875
+        },
+        {
+          "id": "depoimentos",
+          "height": 1038.96875
+        },
+        {
+          "id": "quem-somos",
+          "height": 1294.84375
+        },
+        {
+          "id": "faq",
+          "height": 874.46875
+        },
+        {
+          "id": "cotacao",
+          "height": 1700.65625
+        },
+        {
+          "id": "fale-agora",
+          "height": 1331.171875
+        },
+        {
+          "id": "footer",
+          "height": 1881.765625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 917.21875
+        },
+        {
+          "id": "prova-social",
+          "height": 1443.140625
+        },
+        {
+          "id": "para-quem",
+          "height": 1235.34375
+        },
+        {
+          "id": "como-funciona",
+          "height": 989.28125
+        },
+        {
+          "id": "depoimentos",
+          "height": 1041.5625
+        },
+        {
+          "id": "quem-somos",
+          "height": 1287.984375
+        },
+        {
+          "id": "faq",
+          "height": 852.375
+        },
+        {
+          "id": "cotacao",
+          "height": 1657.640625
+        },
+        {
+          "id": "fale-agora",
+          "height": 1334.078125
+        },
+        {
+          "id": "footer",
+          "height": 1881.765625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 414,
+      "client": 414,
+      "scroll": 414,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 945.25
+        },
+        {
+          "id": "prova-social",
+          "height": 1433.5
+        },
+        {
+          "id": "para-quem",
+          "height": 1249.59375
+        },
+        {
+          "id": "como-funciona",
+          "height": 959
+        },
+        {
+          "id": "depoimentos",
+          "height": 1045.71875
+        },
+        {
+          "id": "quem-somos",
+          "height": 1299.828125
+        },
+        {
+          "id": "faq",
+          "height": 854.65625
+        },
+        {
+          "id": "cotacao",
+          "height": 1670.390625
+        },
+        {
+          "id": "fale-agora",
+          "height": 1338.703125
+        },
+        {
+          "id": "footer",
+          "height": 1839.875
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 430,
+      "client": 430,
+      "scroll": 430,
+      "identicalPixels": null,
+      "identicalGeometryAndStyles": null,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 939.734375
+        },
+        {
+          "id": "prova-social",
+          "height": 1371.296875
+        },
+        {
+          "id": "para-quem",
+          "height": 1263.125
+        },
+        {
+          "id": "como-funciona",
+          "height": 969.859375
+        },
+        {
+          "id": "depoimentos",
+          "height": 1048.46875
+        },
+        {
+          "id": "quem-somos",
+          "height": 1208.109375
+        },
+        {
+          "id": "faq",
+          "height": 856.171875
+        },
+        {
+          "id": "cotacao",
+          "height": 1661.234375
+        },
+        {
+          "id": "fale-agora",
+          "height": 1341.796875
+        },
+        {
+          "id": "footer",
+          "height": 1839.875
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 768,
+      "client": 768,
+      "scroll": 768,
+      "identicalPixels": false,
+      "identicalGeometryAndStyles": true,
+      "pixelDifference": 3650,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704
+        },
+        {
+          "id": "prova-social",
+          "height": 930.390625
+        },
+        {
+          "id": "para-quem",
+          "height": 862.953125
+        },
+        {
+          "id": "como-funciona",
+          "height": 887.9375
+        },
+        {
+          "id": "depoimentos",
+          "height": 747.3125
+        },
+        {
+          "id": "quem-somos",
+          "height": 894.1875
+        },
+        {
+          "id": "faq",
+          "height": 675.015625
+        },
+        {
+          "id": "cotacao",
+          "height": 1298.421875
+        },
+        {
+          "id": "fale-agora",
+          "height": 948.859375
+        },
+        {
+          "id": "footer",
+          "height": 1257.140625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 1024,
+      "client": 1024,
+      "scroll": 1024,
+      "identicalPixels": false,
+      "identicalGeometryAndStyles": true,
+      "pixelDifference": 6110,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704
+        },
+        {
+          "id": "prova-social",
+          "height": 796.890625
+        },
+        {
+          "id": "para-quem",
+          "height": 804.640625
+        },
+        {
+          "id": "como-funciona",
+          "height": 611.9375
+        },
+        {
+          "id": "depoimentos",
+          "height": 627.3125
+        },
+        {
+          "id": "quem-somos",
+          "height": 824.1875
+        },
+        {
+          "id": "faq",
+          "height": 614.671875
+        },
+        {
+          "id": "cotacao",
+          "height": 777
+        },
+        {
+          "id": "fale-agora",
+          "height": 736.0625
+        },
+        {
+          "id": "footer",
+          "height": 761.265625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 1440,
+      "client": 1440,
+      "scroll": 1440,
+      "identicalPixels": true,
+      "identicalGeometryAndStyles": true,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 704
+        },
+        {
+          "id": "prova-social",
+          "height": 817
+        },
+        {
+          "id": "para-quem",
+          "height": 824.28125
+        },
+        {
+          "id": "como-funciona",
+          "height": 666.546875
+        },
+        {
+          "id": "depoimentos",
+          "height": 663.625
+        },
+        {
+          "id": "quem-somos",
+          "height": 778.484375
+        },
+        {
+          "id": "faq",
+          "height": 671.40625
+        },
+        {
+          "id": "cotacao",
+          "height": 804.296875
+        },
+        {
+          "id": "fale-agora",
+          "height": 729.640625
+        },
+        {
+          "id": "footer",
+          "height": 735.359375
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 1536,
+      "client": 1536,
+      "scroll": 1536,
+      "identicalPixels": true,
+      "identicalGeometryAndStyles": true,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 632
+        },
+        {
+          "id": "prova-social",
+          "height": 838.03125
+        },
+        {
+          "id": "para-quem",
+          "height": 833.65625
+        },
+        {
+          "id": "como-funciona",
+          "height": 682.046875
+        },
+        {
+          "id": "depoimentos",
+          "height": 654.0625
+        },
+        {
+          "id": "quem-somos",
+          "height": 780.59375
+        },
+        {
+          "id": "faq",
+          "height": 677.5625
+        },
+        {
+          "id": "cotacao",
+          "height": 804.84375
+        },
+        {
+          "id": "fale-agora",
+          "height": 734.734375
+        },
+        {
+          "id": "footer",
+          "height": 731.515625
+        }
+      ]
+    },
+    {
+      "version": "after",
+      "width": 1920,
+      "client": 1920,
+      "scroll": 1920,
+      "identicalPixels": true,
+      "identicalGeometryAndStyles": true,
+      "pixelDifference": 0,
+      "clipped": [],
+      "sections": [
+        {
+          "id": "topo",
+          "height": 717.6875
+        },
+        {
+          "id": "prova-social",
+          "height": 885.75
+        },
+        {
+          "id": "para-quem",
+          "height": 965.15625
+        },
+        {
+          "id": "como-funciona",
+          "height": 772.3125
+        },
+        {
+          "id": "depoimentos",
+          "height": 721.703125
+        },
+        {
+          "id": "quem-somos",
+          "height": 820.15625
+        },
+        {
+          "id": "faq",
+          "height": 742.109375
+        },
+        {
+          "id": "cotacao",
+          "height": 920.84375
+        },
+        {
+          "id": "fale-agora",
+          "height": 807.53125
+        },
+        {
+          "id": "footer",
+          "height": 754.5625
+        }
+      ]
+    }
+  ]
+}

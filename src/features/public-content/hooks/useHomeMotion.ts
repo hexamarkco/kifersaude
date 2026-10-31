@@ -140,10 +140,10 @@ export function createHomeMotionController(scope: HTMLElement) {
       group(".home-about-benefits > li", rise, 80, 40);
       play(find(".home-about-name"), [{ opacity: 0.3 }, { opacity: 1 }], { delay: 150 });
     } else if (section.classList.contains("home-faq")) {
-      play(find(".home-faq-copy"), [{ opacity: 0.6, transform: "translateX(-8px)" }, { opacity: 1, transform: "translateX(0)" }]);
+      play(find(tokens.compact ? ".home-faq-copy > .home-title" : ".home-faq-copy"), [{ opacity: 0.6, transform: "translateX(-8px)" }, { opacity: 1, transform: "translateX(0)" }]);
       group(".home-faq-item", [{ opacity: 0.65, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }], 0, 35);
     } else if (section.classList.contains("home-quote")) {
-      play(find(".home-quote-copy"), [{ opacity: 0.65, transform: "translateX(-10px)" }, { opacity: 1, transform: "translateX(0)" }]);
+      play(find(tokens.compact ? ".home-quote-copy > .home-title" : ".home-quote-copy"), [{ opacity: 0.65, transform: "translateX(-10px)" }, { opacity: 1, transform: "translateX(0)" }]);
       play(find(".home-quote-form"), [{ opacity: 0.9, transform: "translateY(10px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: tokens.entry - 80 });
     } else if (section.classList.contains("home-whatsapp")) {
       play(find(".home-whatsapp-copy"), rise);

@@ -30,7 +30,7 @@ import { WhatsAppMessageBody } from './WhatsAppMessageContent';
 
 type MessageElementRefs = MutableRefObject<Record<string, HTMLDivElement | null>>;
 type ButtonElementRefs = MutableRefObject<Record<string, HTMLButtonElement | null>>;
-const inboxMediaMetaSpacing = 'whatsapp-inbox-media-meta px-3 py-1';
+const inboxMediaMetaSpacing = 'whatsapp-inbox-media-meta';
 
 export function WhatsAppMessageThread({
   messagesContainerRef,

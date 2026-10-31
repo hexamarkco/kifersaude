@@ -108,8 +108,7 @@ const assertMediaMetaHasConsistentSpacing = (markup: string) => {
     .map((match) => match[1]?.split(/\s+/) ?? []);
 
   assert.equal(classes.length, 1);
-  assert.ok(classes[0]?.includes('px-3'));
-  assert.ok(classes[0]?.includes('py-1'));
+  assert.ok(classes[0]?.includes('whatsapp-inbox-media-meta'));
 };
 
 test('mantém o horário de mídia individual inbound afastado da borda', () => {

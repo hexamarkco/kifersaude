@@ -1773,7 +1773,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-automation-setting-card { container-type: inline-size; }
 .kds-automation-setting-heading { display: flex; min-width: 0; align-items: center; gap: var(--space-3); }
 .kds-automation-setting-icon { flex: 0 0 auto; }
-.kds-automation-setting-heading .kds-automation-setting-title { flex: 0 1 auto; gap: var(--space-1); flex-wrap: nowrap; }
+.kds-automation-setting-heading .kds-automation-setting-title { display: inline-flex; width: fit-content; max-width: 100%; flex: 0 1 auto; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: var(--space-1); }
 .kds-automation-setting-title > .kds-card-title { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kds-automation-setting-title > .kds-tooltip-anchor { flex: 0 0 auto; }
 @container (max-width: 15rem) {

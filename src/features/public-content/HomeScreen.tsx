@@ -12,7 +12,7 @@ import {
   HomeTestimonials,
 } from "./components/home/HomeJourney";
 import HomeQuoteForm from "./components/home/HomeQuoteForm";
-import { homeFaqs, type ContractKind } from "./domain/homeContent";
+import { homeFaqs, homePhotos, type ContractKind } from "./domain/homeContent";
 import { useHomeQuote } from "./hooks/useHomeQuote";
 
 export default function HomeScreen() {
@@ -56,6 +56,8 @@ export default function HomeScreen() {
         title="Plano de saúde no RJ para PF, MEI e empresas"
         description="Compare planos de saúde no Rio de Janeiro para pessoa física, MEI e empresas. Receba uma cotação gratuita da Kifer com orientação sobre rede, carência e custos."
         canonicalPath="/"
+        imagePath={homePhotos.luizaHero}
+        imageAlt="Luíza Kifer no escritório da Kifer Saúde"
         faqItems={homeFaqs}
       />
       <PublicShell width="full" className="kifer-home">

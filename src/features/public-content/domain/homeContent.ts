@@ -49,7 +49,9 @@ export const homeNavigation = [
 ] as const;
 
 export const homePhotos = {
-  luiza: "/luiza-kifer-hero.png",
+  luizaHero: "/images/home/luiza-hero.png",
+  luizaAbout: "/images/home/luiza-about.png",
+  luizaWhatsApp: "/images/home/luiza-whatsapp.png",
   family: "/images/home/family.png",
   work: "/images/home/work.png",
   business: "/images/home/business.png",

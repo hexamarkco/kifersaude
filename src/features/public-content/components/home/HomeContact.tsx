@@ -173,10 +173,10 @@ export function HomeWhatsApp() {
         <div className="home-whatsapp-visual">
           <div className="home-whatsapp-photo">
             <Image
-              src={homePhotos.luiza}
-              alt="Luíza Kifer, da Kifer Saúde"
-              width={1328}
-              height={1757}
+              src={homePhotos.luizaWhatsApp}
+              alt="Luíza Kifer com um celular nas mãos, no escritório da Kifer Saúde"
+              width={1672}
+              height={941}
               loading="lazy"
             />
             <div className="home-portrait-label">

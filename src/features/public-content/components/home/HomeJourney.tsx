@@ -132,10 +132,10 @@ export function HomeAbout() {
       <div className="home-about-photo">
         <span aria-hidden="true" />
         <Image
-          src={homePhotos.luiza}
+          src={homePhotos.luizaAbout}
           alt="Luíza Kifer, corretora independente de planos de saúde"
-          width={1328}
-          height={1757}
+          width={1672}
+          height={941}
           loading="lazy"
         />
       </div>

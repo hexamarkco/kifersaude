@@ -120,10 +120,10 @@ export function HomeHero({ onQuote }: Props) {
         </div>
         <div className="home-hero-portrait">
           <Image
-            src={homePhotos.luiza}
-            alt="Luíza Kifer, especialista em planos de saúde, com um notebook"
-            width={1328}
-            height={1757}
+            src={homePhotos.luizaHero}
+            alt="Luíza Kifer no escritório, com a mão apoiada no queixo"
+            width={1672}
+            height={941}
             loading="eager"
             className="home-luiza-photo"
           />

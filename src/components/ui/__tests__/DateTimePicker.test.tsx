@@ -71,6 +71,7 @@ test('renders a trigger showing the formatted date and commits a new value on da
   const trigger = container.querySelector('.kds-dp-trigger');
   assert.ok(trigger instanceof HTMLButtonElement);
   assert.equal(trigger.textContent, '12/03/2026');
+  assert.equal(trigger.querySelectorAll('svg').length, 1);
 
   click(trigger);
 
@@ -78,6 +79,22 @@ test('renders a trigger showing the formatted date and commits a new value on da
   click(dayEighteen);
 
   assert.equal(getValue(), '2026-03-18');
+
+  unmount();
+});
+
+test('allows hiding the decorative trigger icon while retaining the accessible date button', () => {
+  const { container, unmount } = renderControlledPicker('', 'date', {
+    showIcon: false,
+    placeholder: 'Selecionar data',
+    'aria-label': 'Data de criação',
+  });
+
+  const trigger = container.querySelector<HTMLButtonElement>('.kds-dp-trigger');
+  assert.ok(trigger);
+  assert.equal(trigger.getAttribute('aria-label'), 'Data de criação');
+  assert.equal(trigger.textContent, 'Selecionar data');
+  assert.equal(trigger.querySelector('svg'), null);
 
   unmount();
 });

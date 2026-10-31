@@ -39,6 +39,7 @@ export type DateTimePickerProps = {
   name?: string;
   size?: PanelInputSize;
   className?: string;
+  showIcon?: boolean;
   'aria-label'?: string;
   'aria-describedby'?: string;
   'aria-invalid'?: boolean;
@@ -59,6 +60,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
     name,
     size = 'md',
     className,
+    showIcon = true,
     'aria-label': ariaLabel,
     'aria-describedby': describedBy,
     'aria-invalid': ariaInvalid,
@@ -205,7 +207,7 @@ export const DateTimePicker = forwardRef<HTMLButtonElement, DateTimePickerProps>
             className,
           )}
         >
-          <TriggerIcon className="kds-control-icon shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+          {showIcon && <TriggerIcon className="kds-control-icon shrink-0 text-[var(--text-muted)]" aria-hidden="true" />}
           <span className={cx('min-w-0 flex-1 truncate', !displayLabel && 'text-[var(--text-muted)]')}>
             {displayLabel || placeholder || 'Selecionar'}
           </span>

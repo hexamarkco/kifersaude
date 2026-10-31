@@ -760,6 +760,9 @@ function Forms() {
           <Field label="Data indisponível" disabled>
             <DateTimePicker disabled placeholder="Seleção bloqueada" />
           </Field>
+          <Field label="Sem ícone decorativo">
+            <DateTimePicker type="date" showIcon={false} placeholder="Selecionar uma data" />
+          </Field>
         </Specimen>
         <Specimen
           title="Formulário com validação"
@@ -970,6 +973,7 @@ function Navigation() {
 
 function Data() {
   const [status, setStatus] = useState('');
+  const [responsavelFilter, setResponsavelFilter] = useState('');
   const [compactStatus, setCompactStatus] = useState('active');
   const [contextualStatus, setContextualStatus] = useState('review');
   const [demoOperator, setDemoOperator] = useState('');
@@ -1024,7 +1028,7 @@ function Data() {
         </Specimen>
         <Specimen
           title="Barra de filtros"
-          description="Filtros ativos mostram a seleção. Limpar restaura a visão sem restrições."
+          description="Filtros ativos mostram a seleção. Use um ícone quando ele ajudar a reconhecer o campo; o rótulo permanece claro sem ele."
           source="Toolbar / ToolbarSearch / ToolbarActions / FilterSelect / FilterMultiSelect / DateRangeFilter / DisclosureTrigger"
           wide
         >
@@ -1042,6 +1046,12 @@ function Data() {
                 value={status}
                 onChange={setStatus}
                 options={statusOptions}
+              />
+              <FilterSelect
+                placeholder="Responsável"
+                value={responsavelFilter}
+                onChange={setResponsavelFilter}
+                options={operatorOptions}
               />
               <FilterMultiSelect
                 icon={Users}

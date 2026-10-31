@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 import type { SelectOption } from './Select';
 
 export type FilterSelectProps = {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   options: readonly SelectOption[];
   placeholder: string;
   value: string;

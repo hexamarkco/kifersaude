@@ -5,7 +5,7 @@ import { cx } from '../../lib/cx';
 import { panelInputSizeClasses, type PanelInputSize } from '../tokens';
 
 export type FilterTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'value'> & {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   value: ReactNode;
   active?: boolean;
   open?: boolean;
@@ -42,10 +42,7 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
       aria-expanded={open}
       {...props}
     >
-      <Icon
-        className="kds-filter-trigger-icon kds-control-icon"
-        aria-hidden="true"
-      />
+      {Icon && <Icon className="kds-filter-trigger-icon kds-control-icon" aria-hidden="true" />}
       <span className="block min-w-0 truncate whitespace-nowrap">
         {leadingLabel && <span className="kds-filter-trigger-label">{leadingLabel}: </span>}
         <span className={active ? 'kds-filter-trigger-value-active' : 'kds-filter-trigger-value'}>

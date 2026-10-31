@@ -1,6 +1,6 @@
 # Revisão visual — Leads
 
-**Status: revisão parcial do módulo.** A listagem, o Kanban e a página de criação foram comparados com as referências aprovadas. O restante de Leads e os outros módulos seguem pendentes. Capturas e smoke tests não contam como redesign concluído.
+**Status: revisão parcial do módulo.** A listagem, o Kanban e a página de criação já tiveram comparação com as referências aprovadas. A criação recebeu novo ajuste de layout e controles em 31/10/2026 e aguarda uma captura visual atualizada; os estados restantes de Leads e os outros módulos seguem pendentes. Capturas históricas e smoke tests não contam como redesign concluído.
 
 ## Referências comparadas
 
@@ -15,11 +15,18 @@
 
 - **Listagem:** hierarquia compacta de título, busca, filtros e resultado; filtros avançados junto aos filtros principais; resumo e ordenação abaixo; cartões mobile com identidade, status, origem, próximo follow-up e ações. O menu móvel mantém acessível a documentação de integração e a exportação sem ampliar a barra.
 - **Kanban:** colunas com leitura horizontal em telas estreitas, contagem e limite WIP por etapa, cartão compacto e ações próprias. Os controles mantêm nomes acessíveis e os botões foram separados para evitar controles aninhados.
-- **Criação:** quatro grupos de campos preservados; grade de duas colunas em telas largas e uma coluna em mobile. Informações auxiliares permanecem junto ao campo. A barra de salvar/cancelar fica no fim do formulário e se fixa durante a aproximação ao final, sem cobrir campos nem a navegação inferior.
+- **Criação:** formulário completo em página, quatro grupos em duas colunas no desktop e empilhados em telas menores. Campos de texto e seletores não usam ícones decorativos; dicas contextuais ficam junto ao rótulo no ícone de informação. Salvar e cancelar aparecem uma vez, na barra fixa inferior. A captura antiga mostra o modal anterior e não representa o estado atual.
 - **Padrões compartilhados:** `RecordActions` agrupa a ação imediata e o menu de opções, e está exposto no showcase. `PageActions` deixa ações primárias e secundárias visualmente separadas. Loading inicial usa o skeleton real da listagem.
 - **Temas e responsividade:** sem overflow horizontal nas 62 combinações revisadas (quatro larguras e dois temas). Dados e status demonstrativos vêm de fixtures sintéticas locais; não foram persistidos.
 
 ## Capturas e verificações
+
+### Ajuste da criação/edição (31/10/2026)
+
+- O formulário reutilizado para criar e editar agora mantém a grade aprovada de duas colunas em desktop e os quatro grupos, sem painel lateral de orientações que estreitava o conteúdo. Em telas menores, permanece em uma coluna.
+- Os ícones de prefixo foram removidos dos campos e seletores, mantendo a busca funcional de CEP. Ajuda de cidade, follow-up e limite diário aparece ao lado do respectivo rótulo. O datepicker oferece uma variação sem ícone decorativo.
+- A barra fixa inferior concentra Cancelar e Salvar; o cabeçalho não duplica a ação principal. Testes focados, typecheck, audits e build passaram.
+- Playwright não conseguiu produzir uma captura atual: a rota local permaneceu com `#root` vazio durante a sessão. O estado de criação segue pendente no manifesto até uma nova comparação visual integrada.
 
 A pasta [`screenshots/`](screenshots/) contém **151 screenshots** de viewport e página inteira para listagem, ações, dados de contato, filtros, Kanban, criação, validação e datepicker; além de diálogos, confirmações, loading, vazio, erro, permissão de observador, showcase e rodapé do formulário. A relação completa, as medidas e os resultados das verificações estão em [`coverage.json`](coverage.json).
 

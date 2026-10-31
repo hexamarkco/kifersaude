@@ -1442,7 +1442,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-lead-identity, .painel-theme.kifer-ds .kds-lead-identity:hover { background: transparent; border: 0; box-shadow: none; border-radius: var(--radius-control); }
 .kds-lead-avatar { flex-shrink: 0; border-radius: var(--radius-control); }
 .kds-lead-form-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'contact qualification' 'location followup'; align-items: start; }
-.kds-lead-form-page .kds-lead-form-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'contact' 'location' 'qualification' 'followup'; }
 .kds-lead-form-page .kds-form-section { background: var(--bg-surface); }
 .kds-lead-form-grid > :nth-child(1) { grid-area: contact; }
 .kds-lead-form-grid > :nth-child(2) { grid-area: location; }

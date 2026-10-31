@@ -38,6 +38,7 @@ test('page presentation keeps the production fields and automation opt-out in it
     const form = view.container.querySelector('form');
     assert.ok(form);
     const submit = view.container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    assert.equal(view.container.querySelectorAll('button[type="submit"]').length, 1);
     assert.equal(submit?.getAttribute('form'), form.id);
     await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     assert.equal(mocks.save.mock.calls.length, 1);

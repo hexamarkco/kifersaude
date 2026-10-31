@@ -1300,14 +1300,16 @@
         "previous-approved/leads-create-desktop-viewport.png",
         "previous-approved/leads-create-mobile-completa.png"
       ],
-      "status": "revisado_com_adaptacoes",
+      "status": "pendente",
       "evidence": [
         "validacao/revisao-visual/leads/README.md",
         "validacao/revisao-visual/leads/coverage.json"
       ],
       "notes": [
-        "Comparação visual com previous-approved em desktop e mobile; comportamento verificado também em tablet e 320 px e nos dois temas.",
-        "Mantidos dados, configurações de status, permissões e ações reais; tamanhos de toque e campos seguem os componentes oficiais."
+        "A implementação foi refinada para seguir a referência aprovada: página completa, quatro grupos em duas colunas no desktop, uma coluna em telas menores e ações de salvar/cancelar apenas na barra fixa inferior.",
+        "Campos usam controles sem ícones decorativos; o FilterSelect aceita ícone opcional e as orientações do limite de envios, próximo follow-up e cidade ficam em dicas junto aos rótulos. O datepicker permite ocultar o ícone decorativo sem alterar a seleção.",
+        "Os dados, validações, permissões, automações e persistência foram preservados. Os testes de apresentação e datepicker passaram (9/9), typecheck, audits e build passaram.",
+        "Pendente nova captura visual do formulário integrado: a navegação Playwright local carregou o documento mas manteve #root vazio; não foi possível validar visualmente o layout atualizado nesta rodada."
       ]
     },
     {

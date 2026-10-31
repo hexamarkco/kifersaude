@@ -1,29 +1,15 @@
 import {
-  Alert,
-  Card,
   FieldLabel,
   FormActions,
   FormPage,
   FormSection,
   IconButton,
-  PageActions,
-  SectionHeader,
   Text,
 } from '../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertCircle,
   ArrowLeft,
-  Briefcase,
-  Building2,
-  Calendar,
-  Compass,
-  Mail,
-  MapPin,
-  MapPinned,
-  Phone,
   Search,
-  UserCircle,
 } from 'lucide-react';
 import {
   saveLeadRecord,
@@ -472,7 +458,6 @@ const formFields = (
               placeholder="Nome do contato"
               type="text"
               required
-              leftIcon={UserCircle}
               value={formData.nome_completo}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, nome_completo: e.target.value }))
@@ -485,7 +470,6 @@ const formFields = (
               placeholder="(21) 99999-9999"
               type="tel"
               required
-              leftIcon={Phone}
               autoFormat="phone"
               value={formData.telefone}
               onChange={(e) =>
@@ -498,7 +482,6 @@ const formFields = (
               id="lead-email"
               placeholder="contato@empresa.com"
               type="email"
-              leftIcon={Mail}
               value={formData.email}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, email: e.target.value }))
@@ -511,7 +494,6 @@ const formFields = (
               <Input
                 id="lead-cep"
                 type="text"
-                leftIcon={MapPin}
                 autoFormat="cep"
                 value={formData.cep}
                 onChange={(e) => handleCepChange(e.target.value)}
@@ -536,7 +518,6 @@ const formFields = (
               id="lead-endereco"
               placeholder="Rua, avenida, número e complemento"
               type="text"
-              leftIcon={MapPinned}
               value={formData.endereco}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, endereco: e.target.value }))
@@ -545,7 +526,6 @@ const formFields = (
           </Field>
           <Field label="Estado">
             <FilterSelect
-              icon={MapPin}
               value={formData.estado}
               onChange={handleStateChange}
               placeholder="Selecione o estado"
@@ -564,7 +544,6 @@ const formFields = (
             }
           >
             <FilterSelect
-              icon={MapPinned}
               value={formData.cidade}
               onChange={(value) => setFormData((prev) => ({ ...prev, cidade: value }))}
               placeholder={
@@ -583,7 +562,6 @@ const formFields = (
           <Field label="Origem do lead *">
             {activeOrigins.length > 0 ? (
               <FilterSelect
-                icon={Compass}
                 value={formData.origem}
                 onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
                 placeholder="Origem do lead"
@@ -603,7 +581,6 @@ const formFields = (
               <Input
                 type="text"
                 required
-                leftIcon={Compass}
                 value={formData.origem}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, origem: e.target.value }))
@@ -615,7 +592,6 @@ const formFields = (
           <Field label="Tipo de contratação">
             {tipoContratacaoOptions.length > 0 ? (
               <FilterSelect
-                icon={Briefcase}
                 value={formData.tipo_contratacao}
                 onChange={(value) =>
                   setFormData((prev) => ({
@@ -645,7 +621,6 @@ const formFields = (
             ) : (
               <Input
                 type="text"
-                leftIcon={Briefcase}
                 value={formData.tipo_contratacao}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -661,7 +636,6 @@ const formFields = (
             <Input
               id="lead-operadora"
               type="text"
-              leftIcon={Building2}
               value={formData.operadora_atual}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -674,7 +648,6 @@ const formFields = (
           <Field label="Status *">
             {activeLeadStatuses.length > 0 ? (
               <FilterSelect
-                icon={AlertCircle}
                 value={formData.status}
                 onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
                 placeholder="Status"
@@ -694,7 +667,6 @@ const formFields = (
               <Input
                 type="text"
                 required
-                leftIcon={AlertCircle}
                 value={formData.status}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, status: e.target.value }))
@@ -708,7 +680,6 @@ const formFields = (
           <Field label="Responsável *">
             {responsavelOptions.length > 0 ? (
               <FilterSelect
-                icon={UserCircle}
                 value={formData.responsavel}
                 onChange={(value) =>
                   setFormData((prev) => ({
@@ -734,7 +705,6 @@ const formFields = (
               <Input
                 type="text"
                 required
-                leftIcon={UserCircle}
                 value={formData.responsavel}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -750,16 +720,22 @@ const formFields = (
             <DateTimePicker
               type="date"
               value={formData.data_criacao}
+              showIcon={false}
               onChange={(event) =>
                 setFormData((prev) => ({ ...prev, data_criacao: event.target.value }))
               }
               placeholder="Selecionar data"
             />
           </Field>
-          <Field label="Próximo follow-up">
+          <Field
+            label="Próximo follow-up"
+            description="Ao informar data e horário, o CRM cria um lembrete vinculado a este lead."
+            descriptionPlacement="tooltip"
+          >
             <DateTimePicker
               type="datetime-local"
               value={formData.proximo_retorno}
+              showIcon={false}
               onChange={(event) =>
                 setFormData((prev) => ({
                   ...prev,
@@ -779,7 +755,6 @@ const formFields = (
               id="lead-daily-send-limit"
               type="number"
               min={1}
-              leftIcon={Calendar}
               value={formData.daily_send_limit}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -804,7 +779,7 @@ const formFields = (
               </FieldLabel>
             </Surface>
           )}
-          <Field label="Observações" className="md:col-span-2">
+        <Field label="Observações" className="md:col-span-2">
             <Textarea
               value={formData.observacoes}
               onChange={(e) =>
@@ -848,16 +823,6 @@ const formFields = (
             Gestão de leads
           </Button>
         ),
-        actions: (
-          <PageActions
-            primary={{
-              label: submitLabel,
-              type: 'submit',
-              form: 'lead-form',
-              loading: saving,
-            }}
-          />
-        ),
       }}
       noValidate
       actions={
@@ -868,20 +833,6 @@ const formFields = (
           form="lead-form"
           sticky
         />
-      }
-      aside={
-        <Card className="kds-form-guidance" padding="md">
-          <SectionHeader title="Orientações" as="h2" />
-          <Alert tone="accent" title="Campos obrigatórios">
-            Nome completo, telefone, origem, status e responsável.
-          </Alert>
-          <div>
-            <SectionHeader title="Próximo acompanhamento" as="h3" />
-            <Text size="sm" className="kds-form-guidance-copy">
-              Ao informar data e horário, o CRM cria um lembrete vinculado a este lead.
-            </Text>
-          </div>
-        </Card>
       }
     >
       {formFields}

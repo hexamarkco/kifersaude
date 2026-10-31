@@ -91,13 +91,32 @@ export const getAdvancedFiltersPosition = (
   viewport: InboxOverlayViewport,
 ): InboxOverlayPosition => {
   const viewportPadding = 16;
-  const panelWidth = Math.min(292, viewport.width - viewportPadding * 2);
+  if (viewport.width <= 600) {
+    return {
+      top: 0,
+      left: 0,
+      width: viewport.width,
+      maxHeight: viewport.height,
+    };
+  }
+
+  const panelWidth = Math.min(360, viewport.width - viewportPadding * 2);
+  const maxHeight = Math.min(560, Math.max(0, viewport.height - viewportPadding * 2));
+  const availableBelow = viewport.height - trigger.bottom - viewportPadding;
+  const availableAbove = trigger.top - viewportPadding;
+  const openAbove = availableBelow < maxHeight && availableAbove > availableBelow;
   const left = Math.min(
     Math.max(viewportPadding, trigger.left),
     viewport.width - panelWidth - viewportPadding,
   );
+  const top = openAbove
+    ? Math.max(viewportPadding, trigger.top - maxHeight - 8)
+    : Math.min(
+        trigger.bottom + 8,
+        viewport.height - maxHeight - viewportPadding,
+      );
 
-  return { top: trigger.bottom + 8, left };
+  return { top, left, width: panelWidth, maxHeight };
 };
 
 export const getThreadActionsMenuPosition = (

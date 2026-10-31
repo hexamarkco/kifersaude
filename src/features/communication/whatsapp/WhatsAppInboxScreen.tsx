@@ -34,13 +34,10 @@ import { WhatsAppInboxConversationPane, type WhatsAppInboxConversationView } fro
 import { WhatsAppMessagePopovers } from './components/WhatsAppMessagePopovers';
 import { WhatsAppInboxDialogs } from './components/WhatsAppInboxDialogs';
 import { WhatsAppInboxLazyLoadingFallback } from './components/WhatsAppInboxLazyLoadingFallback';
+import { WhatsAppInboxAdvancedFiltersDialog } from './components/WhatsAppInboxAdvancedFiltersDialog';
 import { formatConnectionStatusLabel } from './domain/inboxPresentation';
 import type { InboxMessageScrollMode } from './domain/inboxMessageScroll';
 import { KeyedActionLock } from './components/keyedActionLock';
-import {
-  InboxFilterGroup,
-  InboxMultiFilterGroup,
-} from './components/WhatsAppInboxList';
 import { ComposerSendLock } from './components/composerSendLock';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
@@ -252,7 +249,6 @@ export default function WhatsAppInboxScreen() {
   } = useInboxStartChatSources({ isOpen: startChatModalOpen, query: startChatQuery });
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
@@ -1060,12 +1056,6 @@ export default function WhatsAppInboxScreen() {
       setLeadSearchQuery,
     },
   });
-
-  useClickOutside(
-    advancedFiltersOpen,
-    () => [advancedFiltersRef.current, advancedFiltersTriggerRef.current],
-    () => setAdvancedFiltersOpen(false),
-  );
 
   useInboxOverlayPositions({
     openReactionPickerMessageId,
@@ -2073,6 +2063,7 @@ export default function WhatsAppInboxScreen() {
           onClearFilters={() => {
             setChatActivityFilter('all');
             setLeadStatusFilters([]);
+            setLeadResponsavelFilters([]);
             setAdvancedFiltersOpen(false);
           }}
           chatRefreshError={chatRefreshError}
@@ -2563,67 +2554,21 @@ export default function WhatsAppInboxScreen() {
           onToggleContactContextPanel={handleToggleContactContextPanel}
         />
 
-        <PanelPopoverShell
-          ref={advancedFiltersRef}
+        <WhatsAppInboxAdvancedFiltersDialog
           isOpen={advancedFiltersOpen}
           position={advancedFiltersPosition}
+          activityFilter={chatActivityFilter}
+          leadStatusFilters={leadStatusFilters}
+          leadResponsavelFilters={leadResponsavelFilters}
+          statusOptions={leadStatuses.map((status) => ({ value: status.nome, label: status.nome }))}
+          responsavelOptions={responsavelOptions.map((option) => ({ value: option.id, label: option.label }))}
           onClose={() => setAdvancedFiltersOpen(false)}
-          ariaLabel="Filtros avançados do inbox"
-          className="w-[292px] border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2.5 shadow-2xl"
-        >
-          <div className="space-y-2.5">
-            <InboxFilterGroup
-              label="Atividade"
-              value={chatActivityFilter}
-              onChange={setChatActivityFilter}
-              compact
-              options={[
-                { value: 'all', label: 'Todas' },
-                { value: 'unread', label: 'Não lidas' },
-              ]}
-            />
-
-            <InboxMultiFilterGroup
-              label="Status do lead"
-              values={leadStatusFilters}
-              onChange={setLeadStatusFilters}
-              compact
-              variant="list"
-              options={leadStatuses.map((status) => ({
-                value: status.nome,
-                label: status.nome,
-              }))}
-            />
-
-            <InboxMultiFilterGroup
-              label="Agente responsável"
-              values={leadResponsavelFilters}
-              onChange={setLeadResponsavelFilters}
-              compact
-              options={responsavelOptions.map((option) => ({
-                value: option.id,
-                label: option.label,
-              }))}
-            />
-
-            {hasActiveChatFilters ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setChatActivityFilter('all');
-                  setLeadStatusFilters([]);
-                  setLeadResponsavelFilters([]);
-                  setAdvancedFiltersOpen(false);
-                }}
-                className="uppercase tracking-[0.12em] hover:bg-transparent hover:text-[var(--brand-primary-hover)]"
-              >
-                Limpar filtros
-              </Button>
-            ) : null}
-          </div>
-        </PanelPopoverShell>
+          onApply={({ activityFilter, leadStatusFilters: nextStatusFilters, leadResponsavelFilters: nextResponsavelFilters }) => {
+            setChatActivityFilter(activityFilter);
+            setLeadStatusFilters(nextStatusFilters);
+            setLeadResponsavelFilters(nextResponsavelFilters);
+          }}
+        />
       </div>
     </div>
     </WhatsAppInboxSelectionProvider>

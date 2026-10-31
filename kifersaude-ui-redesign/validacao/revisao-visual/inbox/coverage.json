@@ -56,6 +56,29 @@
     ],
     "limitation": "Checks the shared responsive CSS using synthetic markup; the authenticated Inbox route still needs integrated review."
   },
+  "advanced_filter_dialog_checks": {
+    "checked_at": "2026-10-30",
+    "fixture": "Local Playwright CLI preview using the production Dialog, filter groups, positioning helper and design-system CSS with synthetic conversation data",
+    "results": [
+      { "viewport": "1920x1080", "dialog": { "x": 88, "y": 217, "width": 360, "height": 560 }, "horizontal_overflow": false, "theme": "light and dark" },
+      { "viewport": "768x1024", "dialog": { "x": 88, "y": 217, "width": 360, "height": 560 }, "horizontal_overflow": false, "theme": "light" },
+      { "viewport": "390x844", "dialog": { "x": 0, "y": 0, "width": 390, "height": 844 }, "horizontal_overflow": false, "theme": "light" },
+      { "viewport": "320x640", "dialog": { "x": 0, "y": 0, "width": 320, "height": 640 }, "horizontal_overflow": false, "theme": "light" }
+    ],
+    "interactions": [
+      "Applied unread activity, Atendimento status and Luiza together; the trigger displayed three active filters.",
+      "Escape closed without applying draft changes; reopening retained the applied filters.",
+      "Clearing and applying removed activity, status and responsible-agent filters together."
+    ],
+    "limitation": "The fixture validates component behavior and responsive positioning; an authenticated visual review of /painel/inbox remains pending."
+  },
+  "media_message_metadata_check": {
+    "checked_at": "2026-10-30",
+    "fixture": "Playwright CLI with production communication CSS and a synthetic inbound media metadata element",
+    "computed_padding": { "inline_start": "12px", "inline_end": "12px", "block_start": "4px", "block_end": "4px" },
+    "horizontal_overflow": false,
+    "limitation": "Computed style was verified against production CSS; the authenticated Inbox route remains unavailable locally."
+  },
   "screenshots": [
     { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "desktop/selected-dark-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
@@ -85,10 +108,16 @@
     { "file": "states/new-conversation-loading-desktop.png", "state": "new conversation, loading saved contacts", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "states/new-conversation-number-desktop.png", "state": "new conversation, manual number tab", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "states/new-conversation-number-filled-desktop.png", "state": "new conversation, synthetic manual number entered", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
-    { "file": "states/new-conversation-number-320.png", "state": "new conversation, manual number tab", "viewport": "320x640", "theme": "light", "capture": "fullPage" }
+    { "file": "states/new-conversation-number-320.png", "state": "new conversation, manual number tab", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
+    { "file": "filters/desktop-light-1920x1080.png", "state": "advanced inbox filters open", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "filters/desktop-dark-1920x1080.png", "state": "advanced inbox filters open", "viewport": "1920x1080", "theme": "dark", "capture": "viewport" },
+    { "file": "filters/tablet-light-768x1024.png", "state": "advanced inbox filters open", "viewport": "768x1024", "theme": "light", "capture": "viewport" },
+    { "file": "filters/mobile-light-390x844.png", "state": "advanced inbox filters full-screen", "viewport": "390x844", "theme": "light", "capture": "viewport" },
+    { "file": "filters/mobile-320-light-320x640.png", "state": "advanced inbox filters full-screen", "viewport": "320x640", "theme": "light", "capture": "viewport" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",
-    "Inbox subcontexts for filters, agenda, scheduled messages, WhatsApp dashboard, message search, attachments, media, formatting, quick replies and other message actions are still pending separate visual review."
+    "Agenda, scheduled messages, WhatsApp dashboard, message search, attachments, media, formatting, quick replies and other message actions remain pending separate visual review.",
+    "The advanced-filter implementation and metadata spacing were verified in local component fixtures; integrated authenticated review of /painel/inbox remains pending."
   ]
 }

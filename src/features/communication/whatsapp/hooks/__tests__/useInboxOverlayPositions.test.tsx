@@ -77,11 +77,11 @@ test('overlay positions update on viewport changes and stop listening after unmo
 
   const positions: Array<InboxOverlayPosition | null> = [];
   const view = render(<PositionHarness trigger={trigger} enabled capture={(position) => positions.push(position)} />);
-  assert.deepEqual(positions[positions.length - 1], { top: 58, left: 100 });
+  assert.deepEqual(positions[positions.length - 1], { top: 58, left: 100, width: 360, maxHeight: 560 });
 
   triggerRect = rect(250, 70, 40, 30);
   act(() => window.dispatchEvent(new Event('resize')));
-  assert.deepEqual(positions[positions.length - 1], { top: 108, left: 250 });
+  assert.deepEqual(positions[positions.length - 1], { top: 108, left: 250, width: 360, maxHeight: 560 });
 
   const readsAtUnmount = reads;
   view.unmount();

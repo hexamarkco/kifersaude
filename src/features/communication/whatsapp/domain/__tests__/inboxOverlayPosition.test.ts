@@ -66,10 +66,18 @@ test('chat menu uses its own minimum height and clamps to a narrow viewport', ()
   }), { top: 126, left: 72, width: 248, maxHeight: 232 });
 });
 
-test('advanced filters and thread actions panels stay aligned and bounded', () => {
+test('advanced filters stay beside their trigger and fit the desktop viewport', () => {
   assert.deepEqual(
     getAdvancedFiltersPosition(rect(900, 20, 40, 32), { width: 1024, height: 768 }),
-    { top: 60, left: 716 },
+    { top: 60, left: 648, width: 360, maxHeight: 560 },
+  );
+  assert.deepEqual(
+    getAdvancedFiltersPosition(rect(120, 700, 40, 32), { width: 1024, height: 768 }),
+    { top: 132, left: 120, width: 360, maxHeight: 560 },
+  );
+  assert.deepEqual(
+    getAdvancedFiltersPosition(rect(140, 500, 100, 32), { width: 390, height: 844 }),
+    { top: 0, left: 0, width: 390, maxHeight: 844 },
   );
   assert.deepEqual(
     getThreadActionsMenuPosition(rect(900, 700, 20, 40), { width: 1024, height: 768 }),

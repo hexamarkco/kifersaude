@@ -139,7 +139,7 @@ export function InboxFilterGroup<T extends string>({
   compact?: boolean;
 }) {
   return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+    <div role="group" aria-label={label} className={compact ? 'space-y-1.5' : 'space-y-2'}>
       <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {options.map((option) => (
@@ -177,7 +177,7 @@ export function InboxMultiFilterGroup({
 
   if (variant === 'list') {
     return (
-      <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+      <div role="group" aria-label={label} className={compact ? 'space-y-1.5' : 'space-y-2'}>
         <div className="flex items-center justify-between">
           <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
           {values.length > 0 ? (
@@ -190,13 +190,13 @@ export function InboxMultiFilterGroup({
             </Button>
           ) : null}
         </div>
-        <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-1">
+        <div className="max-h-40 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-1">
           {options.map((option) => {
             const selected = normalizedValues.includes(option.value.toLowerCase());
             return (
               <FieldLabel
                 key={option.value}
-                className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)]"
+                className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border-b border-[var(--border-subtle)] px-2 py-2 text-xs text-[var(--text-secondary)] transition last:border-b-0 hover:bg-[var(--bg-hover)]"
               >
                 <Checkbox checked={selected} onChange={() => toggleValue(option.value)} />
                 <span className="truncate">{option.label}</span>
@@ -210,7 +210,7 @@ export function InboxMultiFilterGroup({
   }
 
   return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+    <div role="group" aria-label={label} className={compact ? 'space-y-1.5' : 'space-y-2'}>
       <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />

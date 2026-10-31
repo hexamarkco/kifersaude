@@ -1,6 +1,6 @@
 # WhatsApp Inbox — revisão visual
 
-**Estado: página principal e diálogo “Novo chat” revisados com adaptações funcionais.** A comparação usa as referências [desktop](../../../references/desktop/page--inbox.png), [mobile](../../../references/mobile/page--inbox.png), [diálogo desktop](../../../references/desktop/state--inbox-nova-conversa.png) e [diálogo mobile](../../../references/mobile/state--inbox-nova-conversa.png). Os demais contextos de overlays e ferramentas da Inbox continuam separados no manifesto.
+**Estado: página principal e diálogo “Novo chat” revisados; filtros avançados revisados em fixture local.** A comparação usa as referências [desktop](../../../references/desktop/page--inbox.png), [mobile](../../../references/mobile/page--inbox.png), [diálogo desktop](../../../references/desktop/state--inbox-nova-conversa.png) e [diálogo mobile](../../../references/mobile/state--inbox-nova-conversa.png). Os demais contextos de overlays e ferramentas da Inbox continuam separados no manifesto.
 
 ## Adaptações ao CRM real
 
@@ -10,7 +10,7 @@
 - Até 430 px, o campo de mensagem usa uma linha própria e as ações de composição ficam abaixo. Assim o placeholder e o texto digitado não são comprimidos pelos botões, inclusive em 320 px.
 - O texto das mensagens fica alinhado à esquerda; o justificado anterior abria espaços irregulares entre palavras em telas estreitas.
 - Ajuste de 29/10: o histórico conserva 20 px de margem externa à esquerda e à direita (`px-5`); mensagens textuais e a prévia de follow-up mantêm 12 px nas laterais e 8 px na vertical (`px-3 py-2`) para o texto respirar sem alargar demais a bubble. O padding externo do histórico é independente e permanece nos dois lados. Legendas de mídia mantêm o espaçamento próprio do componente.
-- Horários de mídias individuais e agrupadas agora declaram o inset no próprio markup (`px-3 py-1`), mantendo 12 px laterais e 4 px verticais sem depender do escopo do tema. Mensagens textuais continuam usando o padding do balão.
+- Horários de mídias individuais e agrupadas recebem 12 px laterais e 4 px verticais por uma regra explícita do design system para `.whatsapp-inbox-media-meta`. Isso mantém a data e o horário afastados da borda em mensagens recebidas mesmo quando as utilidades de espaçamento não prevalecem na cascata. Mensagens textuais continuam usando o padding do balão.
 - O cartão de agenda do painel contextual mantém o título “Agenda do chat” em uma linha, com a explicação no `InfoTooltip`. As ações **Agendar** e **Atualizar** ocupam uma grade alinhada e fluida; a composição empilha título e ações em qualquer largura porque o painel tem largura própria, independente do breakpoint da janela.
 - O cabeçalho da conversa agora mantém apenas o nome e o próximo lembrete. Telefone, região do número, presença, opção para salvar/renomear o contato e estado da IA ficam na barra **Informações do contato**; status, responsável e favorito continuam na ficha do lead dentro dela. A barra reaproveita os componentes e handlers já existentes, sem duplicar regras comerciais.
 - A indisponibilidade da integração aparece como aviso persistente. A fixture local não conecta ao WhatsApp; o aviso foi mantido para não esconder uma condição operacional relevante.
@@ -32,19 +32,27 @@
 - Playwright também conferiu a geometria do cartão de agenda com o CSS compilado em uma fixture isolada: o painel permaneceu com 352 px em 768 e 390 px, adaptou para 320 px no viewport estreito e manteve título e botões legíveis, sem overflow horizontal. O teste do componente valida a hierarquia e as duas ações; uma captura autenticada deste estado ainda depende de uma sessão de Inbox disponível.
 - Testes dos componentes confirmam que o cabeçalho contém somente nome e lembrete, e que renomear continua acionando o fluxo existente dentro da barra de informações. O teste integrado visual autenticado segue pendente porque a rota local `/painel/inbox` redireciona para login.
 - A lista sem conversa selecionada foi capturada em 390 × 844. O drawer de informações do lead foi capturado no início e após rolagem interna em desktop e mobile.
-- As 29 imagens desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
+- As 34 imagens desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
 
 ## Segurança e limitações da fixture
 
 - Contatos, leads, conversas, mensagens, imagens, contratos e lembretes usados nas capturas são dados sintéticos. O preview usa callbacks sem efeito; nenhuma mensagem foi enviada, nenhum contato ou lembrete foi criado ou alterado e nenhuma ação comercial foi confirmada.
 - A fixture da Inbox bloqueou a tentativa de presença com HTTP 403 e não disponibilizou Realtime (handshake local expirado). O polling de leitura continuou ativo; esses avisos são do ambiente de demonstração.
-- Esta revisão encerra apenas `page--inbox` e `state--inbox-nova-conversa`. Filtros, agenda, mensagens agendadas, painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados da conversa permanecem como contextos independentes pendentes no manifesto.
+- A revisão integrada encerra apenas `page--inbox` e `state--inbox-nova-conversa`. Filtros avançados tiveram componentes, interação e posicionamento revisados em fixture local, mas ainda aguardam validação integrada na rota autenticada. Agenda, mensagens agendadas, painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados da conversa permanecem como contextos independentes pendentes no manifesto.
 
 ## Transição responsiva do painel de contato — 30/10/2026
 
 O breakpoint agora mede a largura útil de `.whatsapp-inbox-shell` com container queries. A partir de 72rem, o painel integra a grade em três colunas; abaixo disso, ele substitui a conversa/lista enquanto estiver aberto. Isso evita o backdrop claro sobre as mensagens e elimina o corte causado pela sobreposição do painel.
 
 Playwright CLI verificou a grade em 1920 × 1080 (shell 1856 px), 1272 × 800 (shell 1208 px, caso de zoom), 1024 × 1024 (shell 960 px), 768 × 1024 (shell 704 px), 390 × 844 e 320 × 640. As duas larguras acima do limite mantiveram as três colunas; nas quatro menores, o painel ocupou a área de trabalho sem backdrop. Nenhuma apresentou overflow horizontal. A medição usou uma fixture local com conteúdo sintético e os estilos reais do design system; ela verifica a regra de posicionamento, mas não substitui uma captura integrada da rota autenticada, que segue pendente.
+
+## Filtros avançados e metadados de mídia — 30/10/2026
+
+O filtro avançado usa o `Dialog` do design system e os grupos reais de atividade, status do lead e agente responsável. No desktop e tablet o painel acompanha o botão; em 390 px e 320 px ocupa a tela inteira. A posição usa `position: fixed`, alinhada à viewport, para não herdar o centramento do contêiner de diálogos. O botão **Limpar filtros** remove atividade, status e responsável em conjunto. As alterações ficam em rascunho até aplicar; fechar com Escape mantém os filtros aplicados anteriores.
+
+Playwright CLI verificou 1920 × 1080, 768 × 1024, 390 × 844 e 320 × 640, sem overflow horizontal; o tema escuro também foi capturado em desktop. Aplicar atividade não lida, status Atendimento e agente Luiza refletiu três filtros no acionador. Escape descartou o rascunho e limpar/aplicar removeu os três critérios. As capturas estão em [filters](filters/) e os resultados detalhados em [coverage.json](coverage.json). A fixture usa conversas sintéticas e callbacks locais; a rota autenticada permanece pendente.
+
+A metadata de mídias inbound recebeu padding explícito do design system (12 px horizontal e 4 px vertical). Playwright confirmou os valores computados com a folha de estilos de produção, para evitar que data e horário encostem na borda do conteúdo.
 
 ## Recuperação de anexos indisponíveis — 29/10/2026
 

@@ -1,0 +1,55 @@
+{
+  "sections": 10,
+  "widths": [
+    {
+      "width": 320,
+      "pairs": 10,
+      "images": "loaded",
+      "scale": "equal widths; original proportions",
+      "links": "passed"
+    },
+    {
+      "width": 360,
+      "pairs": 10,
+      "images": "loaded",
+      "scale": "equal widths; original proportions",
+      "links": "passed"
+    },
+    {
+      "width": 375,
+      "pairs": 10,
+      "images": "loaded",
+      "scale": "equal widths; original proportions",
+      "links": "passed"
+    },
+    {
+      "width": 390,
+      "pairs": 10,
+      "images": "loaded",
+      "scale": "equal widths; original proportions",
+      "links": "passed"
+    },
+    {
+      "width": 414,
+      "pairs": 10,
+      "images": "loaded",
+      "scale": "equal widths; original proportions",
+      "links": "passed"
+    },
+    {
+      "width": 430,
+      "pairs": 10,
+      "images": "loaded",
+      "scale": "equal widths; original proportions",
+      "links": "passed"
+    }
+  ],
+  "mobile": {
+    "client": 390,
+    "scroll": 390,
+    "columns": "358px"
+  },
+  "originalImageLinks": "passed",
+  "sectionNavigation": "passed",
+  "errors": []
+}

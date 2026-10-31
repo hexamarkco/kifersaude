@@ -1,0 +1,592 @@
+{
+  "source": "https://www.kifersaude.com.br/",
+  "capturedAt": "2026-10-31T15:57:36.022Z",
+  "browser": "WebKit",
+  "profile": "iPhone 12 Pro",
+  "reducedMotion": true,
+  "captures": [
+    {
+      "width": 390,
+      "client": 390,
+      "scroll": 390,
+      "documentHeight": 12538,
+      "screen": {
+        "width": 390,
+        "height": 664
+      },
+      "viewport": {
+        "width": 390,
+        "height": 664
+      },
+      "dpr": 3,
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap",
+        "/assets/index-CJT-moT9.css"
+      ],
+      "page": {
+        "width": 390,
+        "height": 12538
+      },
+      "sections": [
+        {
+          "number": "01",
+          "id": "topo",
+          "file": "390/01-topo.png",
+          "width": 390,
+          "height": 983
+        },
+        {
+          "number": "02",
+          "id": "prova-social",
+          "file": "390/02-prova-social.png",
+          "width": 390,
+          "height": 1444
+        },
+        {
+          "number": "03",
+          "id": "para-quem",
+          "file": "390/03-para-quem.png",
+          "width": 390,
+          "height": 1236
+        },
+        {
+          "number": "04",
+          "id": "como-funciona",
+          "file": "390/04-como-funciona.png",
+          "width": 390,
+          "height": 990
+        },
+        {
+          "number": "05",
+          "id": "depoimentos",
+          "file": "390/05-depoimentos.png",
+          "width": 390,
+          "height": 1043
+        },
+        {
+          "number": "06",
+          "id": "quem-somos",
+          "file": "390/06-quem-somos.png",
+          "width": 390,
+          "height": 1289
+        },
+        {
+          "number": "07",
+          "id": "faq",
+          "file": "390/07-faq.png",
+          "width": 390,
+          "height": 853
+        },
+        {
+          "number": "08",
+          "id": "cotacao",
+          "file": "390/08-cotacao.png",
+          "width": 390,
+          "height": 1659
+        },
+        {
+          "number": "09",
+          "id": "fale-agora",
+          "file": "390/09-fale-agora.png",
+          "width": 390,
+          "height": 1169
+        },
+        {
+          "number": "10",
+          "id": "rodape",
+          "file": "390/10-rodape.png",
+          "width": 390,
+          "height": 1881
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "client": 320,
+      "scroll": 320,
+      "documentHeight": 13464,
+      "screen": {
+        "width": 320,
+        "height": 664
+      },
+      "viewport": {
+        "width": 320,
+        "height": 664
+      },
+      "dpr": 3,
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap",
+        "/assets/index-CJT-moT9.css"
+      ],
+      "page": {
+        "width": 320,
+        "height": 13464
+      },
+      "sections": [
+        {
+          "number": "01",
+          "id": "topo",
+          "file": "320/01-topo.png",
+          "width": 320,
+          "height": 936
+        },
+        {
+          "number": "02",
+          "id": "prova-social",
+          "file": "320/02-prova-social.png",
+          "width": 320,
+          "height": 1574
+        },
+        {
+          "number": "03",
+          "id": "para-quem",
+          "file": "320/03-para-quem.png",
+          "width": 320,
+          "height": 1377
+        },
+        {
+          "number": "04",
+          "id": "como-funciona",
+          "file": "320/04-como-funciona.png",
+          "width": 320,
+          "height": 1187
+        },
+        {
+          "number": "05",
+          "id": "depoimentos",
+          "file": "320/05-depoimentos.png",
+          "width": 320,
+          "height": 1108
+        },
+        {
+          "number": "06",
+          "id": "quem-somos",
+          "file": "320/06-quem-somos.png",
+          "width": 320,
+          "height": 1338
+        },
+        {
+          "number": "07",
+          "id": "faq",
+          "file": "320/07-faq.png",
+          "width": 320,
+          "height": 989
+        },
+        {
+          "number": "08",
+          "id": "cotacao",
+          "file": "320/08-cotacao.png",
+          "width": 320,
+          "height": 1849
+        },
+        {
+          "number": "09",
+          "id": "fale-agora",
+          "file": "320/09-fale-agora.png",
+          "width": 320,
+          "height": 1198
+        },
+        {
+          "number": "10",
+          "id": "rodape",
+          "file": "320/10-rodape.png",
+          "width": 320,
+          "height": 1917
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "client": 360,
+      "scroll": 360,
+      "documentHeight": 12703,
+      "screen": {
+        "width": 360,
+        "height": 664
+      },
+      "viewport": {
+        "width": 360,
+        "height": 664
+      },
+      "dpr": 3,
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap",
+        "/assets/index-CJT-moT9.css"
+      ],
+      "page": {
+        "width": 360,
+        "height": 12703
+      },
+      "sections": [
+        {
+          "number": "01",
+          "id": "topo",
+          "file": "360/01-topo.png",
+          "width": 360,
+          "height": 948
+        },
+        {
+          "number": "02",
+          "id": "prova-social",
+          "file": "360/02-prova-social.png",
+          "width": 360,
+          "height": 1489
+        },
+        {
+          "number": "03",
+          "id": "para-quem",
+          "file": "360/03-para-quem.png",
+          "width": 360,
+          "height": 1259
+        },
+        {
+          "number": "04",
+          "id": "como-funciona",
+          "file": "360/04-como-funciona.png",
+          "width": 360,
+          "height": 1016
+        },
+        {
+          "number": "05",
+          "id": "depoimentos",
+          "file": "360/05-depoimentos.png",
+          "width": 360,
+          "height": 1038
+        },
+        {
+          "number": "06",
+          "id": "quem-somos",
+          "file": "360/06-quem-somos.png",
+          "width": 360,
+          "height": 1306
+        },
+        {
+          "number": "07",
+          "id": "faq",
+          "file": "360/07-faq.png",
+          "width": 360,
+          "height": 882
+        },
+        {
+          "number": "08",
+          "id": "cotacao",
+          "file": "360/08-cotacao.png",
+          "width": 360,
+          "height": 1761
+        },
+        {
+          "number": "09",
+          "id": "fale-agora",
+          "file": "360/09-fale-agora.png",
+          "width": 360,
+          "height": 1130
+        },
+        {
+          "number": "10",
+          "id": "rodape",
+          "file": "360/10-rodape.png",
+          "width": 360,
+          "height": 1882
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "client": 375,
+      "scroll": 375,
+      "documentHeight": 12586,
+      "screen": {
+        "width": 375,
+        "height": 664
+      },
+      "viewport": {
+        "width": 375,
+        "height": 664
+      },
+      "dpr": 3,
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap",
+        "/assets/index-CJT-moT9.css"
+      ],
+      "page": {
+        "width": 375,
+        "height": 12586
+      },
+      "sections": [
+        {
+          "number": "01",
+          "id": "topo",
+          "file": "375/01-topo.png",
+          "width": 375,
+          "height": 965
+        },
+        {
+          "number": "02",
+          "id": "prova-social",
+          "file": "375/02-prova-social.png",
+          "width": 375,
+          "height": 1436
+        },
+        {
+          "number": "03",
+          "id": "para-quem",
+          "file": "375/03-para-quem.png",
+          "width": 375,
+          "height": 1247
+        },
+        {
+          "number": "04",
+          "id": "como-funciona",
+          "file": "375/04-como-funciona.png",
+          "width": 375,
+          "height": 1003
+        },
+        {
+          "number": "05",
+          "id": "depoimentos",
+          "file": "375/05-depoimentos.png",
+          "width": 375,
+          "height": 1040
+        },
+        {
+          "number": "06",
+          "id": "quem-somos",
+          "file": "375/06-quem-somos.png",
+          "width": 375,
+          "height": 1296
+        },
+        {
+          "number": "07",
+          "id": "faq",
+          "file": "375/07-faq.png",
+          "width": 375,
+          "height": 875
+        },
+        {
+          "number": "08",
+          "id": "cotacao",
+          "file": "375/08-cotacao.png",
+          "width": 375,
+          "height": 1702
+        },
+        {
+          "number": "09",
+          "id": "fale-agora",
+          "file": "375/09-fale-agora.png",
+          "width": 375,
+          "height": 1149
+        },
+        {
+          "number": "10",
+          "id": "rodape",
+          "file": "375/10-rodape.png",
+          "width": 375,
+          "height": 1882
+        }
+      ]
+    },
+    {
+      "width": 414,
+      "client": 414,
+      "scroll": 414,
+      "documentHeight": 12561,
+      "screen": {
+        "width": 414,
+        "height": 664
+      },
+      "viewport": {
+        "width": 414,
+        "height": 664
+      },
+      "dpr": 3,
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap",
+        "/assets/index-CJT-moT9.css"
+      ],
+      "page": {
+        "width": 414,
+        "height": 12561
+      },
+      "sections": [
+        {
+          "number": "01",
+          "id": "topo",
+          "file": "414/01-topo.png",
+          "width": 414,
+          "height": 1011
+        },
+        {
+          "number": "02",
+          "id": "prova-social",
+          "file": "414/02-prova-social.png",
+          "width": 414,
+          "height": 1434
+        },
+        {
+          "number": "03",
+          "id": "para-quem",
+          "file": "414/03-para-quem.png",
+          "width": 414,
+          "height": 1251
+        },
+        {
+          "number": "04",
+          "id": "como-funciona",
+          "file": "414/04-como-funciona.png",
+          "width": 414,
+          "height": 960
+        },
+        {
+          "number": "05",
+          "id": "depoimentos",
+          "file": "414/05-depoimentos.png",
+          "width": 414,
+          "height": 1046
+        },
+        {
+          "number": "06",
+          "id": "quem-somos",
+          "file": "414/06-quem-somos.png",
+          "width": 414,
+          "height": 1301
+        },
+        {
+          "number": "07",
+          "id": "faq",
+          "file": "414/07-faq.png",
+          "width": 414,
+          "height": 856
+        },
+        {
+          "number": "08",
+          "id": "cotacao",
+          "file": "414/08-cotacao.png",
+          "width": 414,
+          "height": 1671
+        },
+        {
+          "number": "09",
+          "id": "fale-agora",
+          "file": "414/09-fale-agora.png",
+          "width": 414,
+          "height": 1200
+        },
+        {
+          "number": "10",
+          "id": "rodape",
+          "file": "414/10-rodape.png",
+          "width": 414,
+          "height": 1840
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "client": 430,
+      "scroll": 430,
+      "documentHeight": 12442,
+      "screen": {
+        "width": 430,
+        "height": 664
+      },
+      "viewport": {
+        "width": 430,
+        "height": 664
+      },
+      "dpr": 3,
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "stylesheets": [
+        "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap",
+        "/assets/index-CJT-moT9.css"
+      ],
+      "page": {
+        "width": 430,
+        "height": 12442
+      },
+      "sections": [
+        {
+          "number": "01",
+          "id": "topo",
+          "file": "430/01-topo.png",
+          "width": 430,
+          "height": 1005
+        },
+        {
+          "number": "02",
+          "id": "prova-social",
+          "file": "430/02-prova-social.png",
+          "width": 430,
+          "height": 1373
+        },
+        {
+          "number": "03",
+          "id": "para-quem",
+          "file": "430/03-para-quem.png",
+          "width": 430,
+          "height": 1264
+        },
+        {
+          "number": "04",
+          "id": "como-funciona",
+          "file": "430/04-como-funciona.png",
+          "width": 430,
+          "height": 970
+        },
+        {
+          "number": "05",
+          "id": "depoimentos",
+          "file": "430/05-depoimentos.png",
+          "width": 430,
+          "height": 1050
+        },
+        {
+          "number": "06",
+          "id": "quem-somos",
+          "file": "430/06-quem-somos.png",
+          "width": 430,
+          "height": 1209
+        },
+        {
+          "number": "07",
+          "id": "faq",
+          "file": "430/07-faq.png",
+          "width": 430,
+          "height": 857
+        },
+        {
+          "number": "08",
+          "id": "cotacao",
+          "file": "430/08-cotacao.png",
+          "width": 430,
+          "height": 1662
+        },
+        {
+          "number": "09",
+          "id": "fale-agora",
+          "file": "430/09-fale-agora.png",
+          "width": 430,
+          "height": 1221
+        },
+        {
+          "number": "10",
+          "id": "rodape",
+          "file": "430/10-rodape.png",
+          "width": 430,
+          "height": 1840
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

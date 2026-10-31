@@ -1,0 +1,72 @@
+[
+  {
+    "number": "01",
+    "file": "references/01_HERO_ABERTURA_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "fc19233f8fe72e4d89747548d50c4899f766e726700b4f47107eefdd9065dc83"
+  },
+  {
+    "number": "02",
+    "file": "references/02_CONFIANCA_OPERADORAS_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "2e63b1c83911dd25111aa1432599527c9597d7f57695b3704218b556d5d285ef"
+  },
+  {
+    "number": "03",
+    "file": "references/03_PARA_QUEM_E_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "190a69e8481aa197008412b40bb57337b7b6f040930ad117abc79e018d3b5f71"
+  },
+  {
+    "number": "04",
+    "file": "references/04_COMO_FUNCIONA_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "a7f2c0689c9a8dbee8e6687e565a6286960a51359d18baae6c35e582ea3622cf"
+  },
+  {
+    "number": "05",
+    "file": "references/05_DEPOIMENTOS_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "88b85e3583a94c8869b20aabc706e93b938ba4f8335c983615731f346975a08f"
+  },
+  {
+    "number": "06",
+    "file": "references/06_SOBRE_LUIZA_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "82c32312a27e0459cda7b73dda30710d53af1cf26e41c3cf2082325039ff700f"
+  },
+  {
+    "number": "07",
+    "file": "references/07_DUVIDAS_FREQUENTES_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "bfda0e8e1c7c7f57196f3f75188080c18708d5bb070e9fc07fed615eff3e73e7"
+  },
+  {
+    "number": "08",
+    "file": "references/08_COTACAO_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "189e1098033425176bf46a4c739ef02559af773b2499ad55224748fab4d990ff"
+  },
+  {
+    "number": "09",
+    "file": "references/09_WHATSAPP_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "190384a2c27f91000b528a1a6003d4ca01cb7b67c821864b7339f4e3b83722b4"
+  },
+  {
+    "number": "10",
+    "file": "references/10_RODAPE_MOBILE.png",
+    "width": 853,
+    "height": 1844,
+    "sha256": "4549c8bb6fdc44d0ffb83acba4f0af5a9a0905325851eb2726681c01d396a44a"
+  }
+]

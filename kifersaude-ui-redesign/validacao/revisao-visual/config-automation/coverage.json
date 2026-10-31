@@ -47,13 +47,15 @@
     { "path": "flow-detail/state-test-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Simular e testar sem executar teste externo" },
     { "path": "flow-detail/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" },
     { "path": "flow-detail/state-info-title-inline-mobile-390.png", "viewport": "390x844", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" },
+    { "path": "flow-detail/state-delete-flow-confirmation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Confirmação para remover fluxo e variação vinculada" },
     { "path": "template-dialog/desktop-multimessage.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Criação de template com mensagens de texto e imagem" },
     { "path": "template-dialog/desktop-multimessage-bottom.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Criação de template rolada até a última mensagem com rodapé visível" },
     { "path": "template-dialog/desktop-edit-dark.png", "viewport": "1920x1080", "capture": "state", "theme": "dark", "state": "Edição de template com título e ícone alinhados; tooltip fechado ao abrir" },
     { "path": "template-dialog/desktop-edit-info-tooltip.png", "viewport": "1920x1080", "capture": "state", "theme": "dark", "state": "Tooltip de orientação aberto pelo ícone ao lado do título" },
     { "path": "template-dialog/tablet-768.png", "viewport": "768x1024", "capture": "state", "theme": "light", "state": "Modal de template com mensagem de imagem" },
     { "path": "template-dialog/mobile-390.png", "viewport": "390x844", "capture": "state", "theme": "light", "state": "Modal de template responsivo com ações fixas" },
-    { "path": "template-dialog/mobile-320.png", "viewport": "320x844", "capture": "state", "theme": "light", "state": "Modal de template responsivo em largura compacta" }
+    { "path": "template-dialog/mobile-320.png", "viewport": "320x844", "capture": "state", "theme": "light", "state": "Modal de template responsivo em largura compacta" },
+    { "path": "template-dialog/state-delete-template-confirmation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Confirmação de remoção de template com impacto informado" }
   ],
   "checks": {
     "font_status": "document.fonts.ready",
@@ -85,10 +87,11 @@
       "Busca por sem resposta com resultado único.",
       "Tooltip de informação aberto e conteúdo conferido.",
       "Abas Templates e Operação abertas; switches e campos de Operação permaneceram sem alteração.",
-      "Editor do fluxo em rota própria; abas Regras e agenda e Simular e testar revisadas sem salvar, remover, executar teste ou enviar mensagem.",
-      "Modais de criação e edição de templates abertos como rascunho local; texto, mídia, tooltip, foco, rolagem e rodapé revisados em desktop, tablet e mobile."
+      "Editor do fluxo em rota própria; abas Regras e agenda e Simular e testar revisadas sem executar teste ou enviar mensagem.",
+      "Modais de criação e edição de templates abertos como rascunho local; texto, mídia, tooltip, foco, rolagem e rodapé revisados em desktop, tablet e mobile.",
+      "Confirmações de remoção de fluxo e template abertas. A fixture sintética rejeitou ambas as gravações e os itens permaneceram na tela."
     ],
-    "destructive_or_external_actions": "Nenhum template foi salvo ou removido, nenhuma automação foi publicada ou executada e nenhuma mensagem foi enviada.",
+    "destructive_or_external_actions": "Nenhum fluxo ou template foi removido: a fixture local rejeitou as duas gravações. Nenhuma automação foi publicada ou executada e nenhuma mensagem foi enviada.",
     "authenticated_route": "Sessão autenticada não disponível; revisão executada no shell real com fixture local sintética.",
     "pending_contexts": [
       "Persistência do editor de fluxo em sessão autenticada",
@@ -98,9 +101,10 @@
   },
   "validation": {
     "focused_tests": "ConfigPageScreen e designSystemContract: 13/13 nesta entrega.",
+    "focused_tests_current": "AutomationFlowsWorkspace e MessageListEditor: 10/10 em 4 arquivos (incluindo fixtures isoladas da prévia).",
     "full_test_suite": "Execução anterior: 1.865 testes aprovados e 2 falhas; HomePage.test.tsx permanece fora do escopo institucional e o timeout de designSystemContract foi corrigido e passou isolado. A suíte completa não foi repetida após os últimos ajustes.",
-    "typecheck": "bloqueado por erros preexistentes em src/features/public-content/hooks/__tests__/useHomeMotion.test.tsx (imports da API Vitest); arquivo fora desta alteração e não modificado.",
-    "lint": "passou sem erros; 8 avisos em previews Playwright e PainelWrapper.",
+    "typecheck": "passou (npm run typecheck).",
+    "lint": "ESLint passou sem erros em AutoContactFlowSettingsScreen.tsx.",
     "architecture": "passou",
     "build": "passou, incluindo secrets:check, auditorias do Design System/visual e verificação do bundle do editor; permanece o aviso conhecido de chunk vendor acima de 500 kB.",
     "playwright_console": "0 erros de aplicação; a fixture local registra 404 de favicon ausente e mensagem informativa do React DevTools; fontes carregadas."

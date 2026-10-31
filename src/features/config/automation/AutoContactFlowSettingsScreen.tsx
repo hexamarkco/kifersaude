@@ -70,6 +70,7 @@ import { MessageListEditor } from "./components/MessageListEditor";
 import { VariableAutocompleteTextarea } from '../../../design-system';
 import { AutomationFlowsSkeleton } from '../../../design-system';
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
+import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   countDailyAutomationInteractions,
@@ -102,6 +103,7 @@ type TemplateDraft = {
 
 export default function AutoContactFlowSettingsScreen() {
   const { leadOrigins, options } = useConfig();
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const [searchParams, setSearchParams] = useSearchParams();
   const [autoContactIntegration, setAutoContactIntegration] =
     useState<IntegrationSetting | null>(null);
@@ -130,6 +132,7 @@ export default function AutoContactFlowSettingsScreen() {
   const loadingUi = useAdaptiveLoading(loadingFlow);
   const [savingFlow, setSavingFlow] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [savingTemplateId, setSavingTemplateId] = useState<string | null>(null);
   const [autoSaveState, setAutoSaveState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -406,6 +409,57 @@ export default function AutoContactFlowSettingsScreen() {
     );
   };
 
+  const persistMessageTemplates = async (
+    templates: AutoContactTemplate[],
+    successMessage: string,
+    errorMessage: string,
+  ): Promise<boolean> => {
+    if (!autoContactIntegration) {
+      toast.error("Integração de automação não configurada.");
+      return false;
+    }
+
+    setSavingTemplate(true);
+
+    try {
+      const currentSettings =
+        autoContactSettings || normalizeAutoContactSettings(null);
+      const newSettings = buildAutomationSettingsPayload(currentSettings, {
+        messageTemplates: templates,
+      });
+      const { data, error } = await configService.updateIntegrationSetting(
+        autoContactIntegration.id,
+        { settings: newSettings },
+      );
+
+      if (error) {
+        toast.error(errorMessage);
+        return false;
+      }
+
+      const updatedIntegration = data ?? {
+        ...autoContactIntegration,
+        settings: newSettings,
+      };
+      const normalized = normalizeAutoContactSettings(
+        updatedIntegration.settings,
+      );
+
+      setAutoContactIntegration(updatedIntegration);
+      setAutoContactSettings(normalized);
+      autoSaveSkipRef.current = true;
+      setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
+      setMessageTemplatesDraft(normalized.messageTemplates ?? []);
+      toast.success(successMessage);
+      return true;
+    } catch {
+      toast.error(errorMessage);
+      return false;
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
   const handleSaveTemplateDraft = async () => {
     if (!templateDraft) return;
     const normalizedMessages = templateDraft.messages.map((message, index) => ({
@@ -435,44 +489,11 @@ export default function AutoContactFlowSettingsScreen() {
     setMessageTemplatesDraft(normalizedTemplates);
     setIsTemplateModalOpen(false);
     setTemplateDraft(null);
-
-    if (!autoContactIntegration) {
-      toast.error("Integração de automação não configurada.");
-      return;
-    }
-
-    setSavingTemplate(true);
-
-    const currentSettings =
-      autoContactSettings || normalizeAutoContactSettings(null);
-    const newSettings = buildAutomationSettingsPayload(currentSettings, {
-      messageTemplates: normalizedTemplates,
-    });
-
-    const { data, error } = await configService.updateIntegrationSetting(
-      autoContactIntegration.id,
-      {
-        settings: newSettings,
-      },
+    await persistMessageTemplates(
+      normalizedTemplates,
+      "Template salvo no banco de dados.",
+      "Erro ao salvar o template. Tente novamente.",
     );
-
-    if (error) {
-      toast.error("Erro ao salvar o template. Tente novamente.");
-    } else {
-      const updatedIntegration = data ?? autoContactIntegration;
-      const normalized = normalizeAutoContactSettings(
-        updatedIntegration.settings,
-      );
-
-      setAutoContactIntegration(updatedIntegration);
-      setAutoContactSettings(normalized);
-      autoSaveSkipRef.current = true;
-      setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
-      setMessageTemplatesDraft(normalized.messageTemplates ?? []);
-      toast.success("Template salvo no banco de dados.");
-    }
-
-    setSavingTemplate(false);
   };
 
   const handleCloseTemplateModal = () => {
@@ -480,10 +501,34 @@ export default function AutoContactFlowSettingsScreen() {
     setTemplateDraft(null);
   };
 
-  const handleRemoveTemplate = (templateId: string) => {
-    setMessageTemplatesDraft((previous) => {
-      return previous.filter((template) => template.id !== templateId);
+  const handleRemoveTemplate = async (templateId: string) => {
+    const template = messageTemplatesDraft.find(
+      (item) => item.id === templateId,
+    );
+    if (!template) return;
+
+    const confirmed = await requestConfirmation({
+      title: "Remover template?",
+      description: `O modelo "${template.name || "sem nome"}" será removido da biblioteca e salvo imediatamente. Etapas que usam esse modelo poderão usar o primeiro modelo disponível.`,
+      confirmLabel: "Remover template",
+      cancelLabel: "Cancelar",
+      tone: "danger",
     });
+    if (!confirmed) return;
+
+    const nextTemplates = messageTemplatesDraft.filter(
+      (item) => item.id !== templateId,
+    );
+    setSavingTemplateId(templateId);
+    try {
+      await persistMessageTemplates(
+        nextTemplates,
+        "Template removido da automação.",
+        "Erro ao remover o template. Tente novamente.",
+      );
+    } finally {
+      setSavingTemplateId(null);
+    }
   };
 
   const filterDerivedFlows = useCallback((flows: AutoContactFlow[]) => {
@@ -501,13 +546,16 @@ export default function AutoContactFlowSettingsScreen() {
     });
   }, []);
 
-  const handleSaveFlow = async () => {
+  const handleSaveFlow = async (
+    flowsToSave: AutoContactFlow[] = flowDrafts,
+    successMessage = "Fluxos e templates de automação salvos com sucesso.",
+  ): Promise<boolean> => {
     if (!autoContactIntegration) {
       toast.error("Integração de automação não configurada.");
-      return;
+      return false;
     }
 
-    const emptyAiInstruction = flowDrafts.some((flow) =>
+    const emptyAiInstruction = flowsToSave.some((flow) =>
       flow.steps.some((step) =>
         step.actionType === "send_message" &&
         (step.messages ?? []).some((item) => "ai" in item && !item.ai.instruction.trim()),
@@ -515,7 +563,7 @@ export default function AutoContactFlowSettingsScreen() {
     );
     if (emptyAiInstruction) {
       toast.error("Preencha a instrução de todas as mensagens IA antes de salvar.");
-      return;
+      return false;
     }
 
     setSavingFlow(true);
@@ -525,7 +573,7 @@ export default function AutoContactFlowSettingsScreen() {
       true,
     );
     const fallbackTemplateId = sanitizedTemplates[0]?.id ?? "";
-    const sanitizedFlows: AutoContactFlow[] = flowDrafts
+    const sanitizedFlows: AutoContactFlow[] = flowsToSave
       .flatMap((flow, flowIndex) => {
         const expandedFlows = flow.flowGraph
           ? expandFlowGraphToFlows(flow)
@@ -732,17 +780,27 @@ export default function AutoContactFlowSettingsScreen() {
       logging: loggingDraft,
     });
 
-    const { data, error } = await configService.updateIntegrationSetting(
-      autoContactIntegration.id,
-      {
-        settings: newSettings,
-      },
-    );
-
-    if (error) {
+    let result: { data: IntegrationSetting | null; error: unknown };
+    try {
+      result = await configService.updateIntegrationSetting(
+        autoContactIntegration.id,
+        { settings: newSettings },
+      );
+    } catch {
       toast.error("Erro ao salvar a configuração. Tente novamente.");
+      setSavingFlow(false);
+      return false;
+    }
+
+    if (result.error) {
+      toast.error("Erro ao salvar a configuração. Tente novamente.");
+      setSavingFlow(false);
+      return false;
     } else {
-      const updatedIntegration = data ?? autoContactIntegration;
+      const updatedIntegration = result.data ?? {
+        ...autoContactIntegration,
+        settings: newSettings,
+      };
       const normalized = normalizeAutoContactSettings(
         updatedIntegration.settings,
       );
@@ -756,10 +814,11 @@ export default function AutoContactFlowSettingsScreen() {
       setSchedulingDraft(normalized.scheduling);
       setMonitoringDraft(normalized.monitoring);
       setLoggingDraft(normalized.logging);
-      toast.success("Fluxos e templates de automação salvos com sucesso.");
+      toast.success(successMessage);
     }
 
     setSavingFlow(false);
+    return true;
   };
 
   const conditionFieldLabels: Record<
@@ -1058,16 +1117,29 @@ export default function AutoContactFlowSettingsScreen() {
       }),
     );
   };
-  const handleRemoveFlow = (flowId: string) => {
+  const handleRemoveFlow = async (flowId: string) => {
     const baseId = flowId.endsWith("-nao")
       ? flowId.replace(/-nao$/, "")
       : flowId;
-    setFlowDrafts((previous) =>
-      previous.filter(
-        (flow) => flow.id !== baseId && flow.id !== `${baseId}-nao`,
-      ),
+    const flow = flowDrafts.find(
+      (item) => item.id === flowId || item.id === baseId,
     );
-    if (activeFlowId === flowId) {
+    if (!flow) return;
+
+    const confirmed = await requestConfirmation({
+      title: "Remover fluxo?",
+      description: `"${flow.name || "Fluxo sem nome"}" e sua variação vinculada, se houver, serão removidos da automação. A alteração será salva imediatamente.`,
+      confirmLabel: "Remover fluxo",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+
+    const nextFlows = flowDrafts.filter(
+      (item) => item.id !== baseId && item.id !== `${baseId}-nao`,
+    );
+    const saved = await handleSaveFlow(nextFlows, "Fluxo removido da automação.");
+    if (saved && activeFlowId === flowId) {
       closeFlowEditor();
     }
   };
@@ -1808,8 +1880,8 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row min-w-0 flex-1">
-                        <Heading level={4} className="kds-card-title">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <Heading level={4} className="kds-card-title min-w-0">
                           Envio automático
                         </Heading>
                         <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
@@ -2021,6 +2093,7 @@ export default function AutoContactFlowSettingsScreen() {
                         onClick={() => handleRemoveFlow(activeFlow.id)}
                         variant="danger"
                         size="md"
+                        disabled={savingFlow}
                       >
                         <Trash2 className="kds-control-icon" aria-hidden="true" />
                         Remover fluxo
@@ -2040,7 +2113,7 @@ export default function AutoContactFlowSettingsScreen() {
                         Testar fluxo
                       </Button>
                       <Button
-                        onClick={handleSaveFlow}
+                        onClick={() => handleSaveFlow()}
                         loading={savingFlow}
                         size="md"
                       >
@@ -3438,6 +3511,7 @@ Os horários já consideram a janela do fluxo,
                   onClick={handleAddTemplate}
                   variant="secondary"
                   size="sm"
+                  disabled={savingTemplate}
                 >
                   <Plus className="kds-control-icon" />
                   Novo modelo
@@ -3479,6 +3553,7 @@ Os horários já consideram a janela do fluxo,
                               onClick={() => handleEditTemplate(template.id)}
                               variant="secondary"
                               size="sm"
+                              disabled={savingTemplate}
                             >
                               <Edit3 className="kds-control-icon" />
                               Editar
@@ -3486,9 +3561,12 @@ Os horários já consideram a janela do fluxo,
                             <IconButton
                               onClick={() => handleRemoveTemplate(template.id)}
                               variant="danger"
-                              
+                              loading={savingTemplateId === template.id}
+                              disabled={savingTemplate}
                               title="Remover modelo"
-                             size="sm" aria-label="Remover modelo">
+                              size="sm"
+                              aria-label="Remover modelo"
+                            >
                               <Trash2 aria-hidden="true" />
                             </IconButton>
                           </ButtonGroup>
@@ -3537,6 +3615,7 @@ Os horários já consideram a janela do fluxo,
               )}
             </div>}
           </div>
+          {ConfirmationDialog}
           {isTemplateModalOpen && templateDraft && (
             <DialogShell
               isOpen

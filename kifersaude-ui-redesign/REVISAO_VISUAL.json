@@ -1863,15 +1863,24 @@
       "route": "/painel/inbox",
       "kind": "states",
       "components": [
-        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx"
+        "src/features/communication/whatsapp/WhatsAppInboxScreen.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppInboxAdvancedFiltersDialog.tsx",
+        "src/features/communication/whatsapp/domain/chatFilters.ts"
       ],
       "references": [
         "references/desktop/state--inbox-filtros.png",
         "references/mobile/state--inbox-filtros.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/inbox/README.md",
+        "validacao/revisao-visual/inbox/coverage.json"
+      ],
+      "notes": [
+        "Comparada com as referências em 1920×1080, 768×1024, 390×844 e 320×640; Playwright confirmou foco inicial dentro do diálogo, aplicar, Escape sem aplicar rascunhos e ausência de overflow horizontal.",
+        "A referência oferece filtros de origem. O modelo CommWhatsAppChat não expõe origem; a interface mantém os filtros reais de atividade, status do lead e agente responsável, sem inventar valores ou regras. No desktop/tablet, o diálogo é ancorado ao botão; no mobile, ocupa a viewport.",
+        "A validação visual usa componentes de produção em fixture sintética. A revisão integrada na rota autenticada permanece pendente."
+      ]
     },
     {
       "id": "state--campanhas-criar",
@@ -2909,8 +2918,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 70,
-    "remaining_manifest_contexts": 90,
+    "reviewed_contexts": 71,
+    "remaining_manifest_contexts": 89,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

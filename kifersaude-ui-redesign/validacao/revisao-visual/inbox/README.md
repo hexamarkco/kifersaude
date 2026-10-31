@@ -1,6 +1,6 @@
 # WhatsApp Inbox — revisão visual
 
-**Estado: página principal e diálogo “Novo chat” revisados; filtros avançados revisados em fixture local.** A comparação usa as referências [desktop](../../../references/desktop/page--inbox.png), [mobile](../../../references/mobile/page--inbox.png), [diálogo desktop](../../../references/desktop/state--inbox-nova-conversa.png) e [diálogo mobile](../../../references/mobile/state--inbox-nova-conversa.png). Os demais contextos de overlays e ferramentas da Inbox continuam separados no manifesto.
+**Estado: página principal e diálogo “Novo chat” revisados; `state--inbox-filtros` comparado com adaptação em fixture de componentes.** A comparação usa as referências [desktop](../../../references/desktop/page--inbox.png), [mobile](../../../references/mobile/page--inbox.png), [diálogo desktop](../../../references/desktop/state--inbox-nova-conversa.png), [diálogo mobile](../../../references/mobile/state--inbox-nova-conversa.png) e [filtros desktop e mobile](../../../references/desktop/state--inbox-filtros.png). A revisão integrada da rota autenticada e os demais contextos de overlays e ferramentas continuam pendentes no manifesto.
 
 ## Adaptações ao CRM real
 
@@ -32,14 +32,14 @@
 - Playwright também conferiu a geometria do cartão de agenda com o CSS compilado em uma fixture isolada: o painel permaneceu com 352 px em 768 e 390 px, adaptou para 320 px no viewport estreito e manteve título e botões legíveis, sem overflow horizontal. O teste do componente valida a hierarquia e as duas ações; uma captura autenticada deste estado ainda depende de uma sessão de Inbox disponível.
 - Testes dos componentes confirmam que o cabeçalho contém somente nome e lembrete, e que renomear continua acionando o fluxo existente dentro da barra de informações. A sessão sintética também abriu o agendamento dentro de `/painel/inbox`; a listagem e os demais estados seguem separados no manifesto.
 - A lista sem conversa selecionada foi capturada em 390 × 844. O drawer de informações do lead foi capturado no início e após rolagem interna em desktop e mobile.
-- As 76 capturas listadas desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
+- As 77 capturas listadas desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
 
 ## Segurança e limitações da fixture
 
 - Contatos, leads, conversas, mensagens, imagens, contratos e lembretes usados nas capturas são dados sintéticos. O preview usa callbacks sem efeito; nenhuma mensagem foi enviada, nenhum contato ou lembrete foi criado ou alterado e nenhuma ação comercial foi confirmada.
 - A revisão do painel de contato usa o `WhatsAppLeadDrawer` real e os estilos de produção; a moldura da lista, conversa e compositor é estática, os callbacks não executam ações e todas as requisições Supabase foram interceptadas com dados vazios.
 - A fixture da Inbox bloqueou a tentativa de presença com HTTP 403 e não disponibilizou Realtime (handshake local expirado). O polling de leitura continuou ativo; esses avisos são do ambiente de demonstração.
-- A revisão integrada cobre `page--inbox`, `state--inbox-nova-conversa` e o formulário `state--inbox-agenda`. Filtros avançados e painel de contato foram verificados em fixtures de componentes; ainda aguardam uma revisão integrada própria. A lista de mensagens agendadas foi revisada em fixture local, mas segue pendente de aderência à referência: o CRM atual abre um diálogo com cartões e abas; a referência descreve uma página com tabela, filtro de responsável e exportação. Painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados permanecem como contextos independentes no manifesto.
+- A revisão integrada cobre `page--inbox`, `state--inbox-nova-conversa` e o formulário `state--inbox-agenda`. `state--inbox-filtros` e painel de contato foram verificados em fixtures de componentes; a validação integrada autenticada ainda está pendente. A lista de mensagens agendadas foi revisada em fixture local, mas segue pendente de aderência à referência: o CRM atual abre um diálogo com cartões e abas; a referência descreve uma página com tabela, filtro de responsável e exportação. Painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados permanecem como contextos independentes no manifesto.
 
 ## Transição responsiva do painel de contato — 30/10/2026
 
@@ -55,11 +55,13 @@ Em 320 px, encurtei o placeholder visual da busca para **Nome ou telefone**, pre
 
 Esta evidência cobre o componente real e sua composição responsiva, mas não substitui a revisão integrada da rota autenticada `/painel/inbox`: a moldura da conversa/lista/compositor é estática e não foram exercitadas ações reais. A rota autenticada e os demais contextos da Inbox permanecem pendentes.
 
-## Filtros avançados e metadados de mídia — 30/10/2026
+## Filtros avançados e metadados de mídia — 31/10/2026
 
 O filtro avançado usa o `Dialog` do design system e os grupos reais de atividade, status do lead e agente responsável. No desktop e tablet o painel acompanha o botão; em 390 px e 320 px ocupa a tela inteira. A posição usa `position: fixed`, alinhada à viewport, para não herdar o centramento do contêiner de diálogos. O botão **Limpar filtros** remove atividade, status e responsável em conjunto. As alterações ficam em rascunho até aplicar; fechar com Escape mantém os filtros aplicados anteriores.
 
 Playwright CLI verificou 1920 × 1080, 768 × 1024, 390 × 844 e 320 × 640, sem overflow horizontal; o tema escuro também foi capturado em desktop. Aplicar atividade não lida, status Atendimento e agente Luiza refletiu três filtros no acionador. Escape descartou o rascunho e limpar/aplicar removeu os três critérios. As capturas estão em [filters](filters/) e os resultados detalhados em [coverage.json](coverage.json). A fixture usa conversas sintéticas e callbacks locais; a rota autenticada permanece pendente.
+
+A referência dessa seção mostra cinco origens (Site, Indicação, Meta Ads, WhatsApp e Outros). O tipo real `CommWhatsAppChat` não expõe origem, então o filtro continua cobrindo somente atividade não lida, status do lead e agente responsável. Não inventei categorias nem uma regra de associação. No desktop/tablet o diálogo permanece junto ao acionador real; em 390 e 320 px ele ocupa a viewport. Essa diferença funcional foi comparada e registrada em `state--inbox-filtros` como adaptação; a rota integrada autenticada continua pendente.
 
 A metadata de mídias inbound mantém o padding no contêiner compartilhado (12 px horizontal e 4 px vertical). Playwright confirmou os valores computados em mensagens reais da fixture; o estado específico de mídia sem legenda permanece coberto pelo teste do componente.
 

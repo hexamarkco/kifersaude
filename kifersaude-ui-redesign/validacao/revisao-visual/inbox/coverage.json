@@ -57,7 +57,7 @@
     "limitation": "Checks the shared responsive CSS using synthetic markup; the authenticated Inbox route still needs integrated review."
   },
   "advanced_filter_dialog_checks": {
-    "checked_at": "2026-10-30",
+    "checked_at": "2026-10-31",
     "fixture": "Local Playwright CLI preview using the production Dialog, filter groups, positioning helper and design-system CSS with synthetic conversation data",
     "results": [
       { "viewport": "1920x1080", "dialog": { "x": 88, "y": 217, "width": 360, "height": 560 }, "horizontal_overflow": false, "theme": "light and dark" },
@@ -70,7 +70,13 @@
       "Escape closed without applying draft changes; reopening retained the applied filters.",
       "Clearing and applying removed activity, status and responsible-agent filters together."
     ],
-    "limitation": "The fixture validates component behavior and responsive positioning; an authenticated visual review of /painel/inbox remains pending."
+    "reference_adaptation": {
+      "reference": "The desktop reference shows a compact source checklist (Site, Indicação, Meta Ads, WhatsApp and Outros), while the mobile reference expands that panel to the viewport.",
+      "current_data": "CommWhatsAppChat exposes unread activity, lead status and responsible agent, but does not expose lead origin.",
+      "decision": "Keep the real activity/status/responsible-agent filters and do not invent source values or query rules. The desktop/tablet dialog stays anchored to its trigger; at 390 px and 320 px it fills the viewport."
+    },
+    "applied_filters_state": "After selecting unread activity, Atendimento and Luiza, the closed trigger displays Filtros (3).",
+    "limitation": "Visual and interaction checks use the production dialog and filter components in a local synthetic fixture. Integrated review of the authenticated /painel/inbox shell remains pending."
   },
   "media_message_metadata_check": {
     "checked_at": "2026-10-31",
@@ -177,6 +183,7 @@
     { "file": "filters/tablet-light-768x1024.png", "state": "advanced inbox filters open", "viewport": "768x1024", "theme": "light", "capture": "viewport" },
     { "file": "filters/mobile-light-390x844.png", "state": "advanced inbox filters full-screen", "viewport": "390x844", "theme": "light", "capture": "viewport" },
     { "file": "filters/mobile-320-light-320x640.png", "state": "advanced inbox filters full-screen", "viewport": "320x640", "theme": "light", "capture": "viewport" },
+    { "file": "filters/desktop-applied-light-1920x1080.png", "state": "three applied filters shown on trigger", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
     { "file": "contact-panel/light-desktop-1920x1080.png", "state": "production contact drawer in synthetic three-column Inbox shell", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "contact-panel/dark-desktop-1920x1080.png", "state": "production contact drawer in synthetic three-column Inbox shell", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
     { "file": "contact-panel/light-desktop-zoom-1272x800.png", "state": "production contact drawer at reduced desktop width", "viewport": "1272x800", "theme": "light", "capture": "fullPage" },

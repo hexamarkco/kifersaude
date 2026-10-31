@@ -2,6 +2,8 @@
 
 **Status parcial do módulo.** A listagem, o drawer de detalhes, os importadores JSON em lote e individual, o cadastro, a edição em página completa e a confirmação de exclusão foram comparados com as referências e revisados com adaptações. A rota de Gestão de contratos agora abre os detalhes no drawer e mantém a lista montada ao fundo; o teste de apresentação integrado usa dados sintéticos. Um teste adicional monta o `ContractForm` real, abre o importador individual, aplica o JSON ao formulário sem salvar e confirma o fechamento do diálogo. Permanecem pendentes as conferências visuais autenticadas, outros estados e interfaces adicionais; o redesign integral do CRM segue em andamento.
 
+A revisão integrada mais recente usa o `Layout`, a listagem, os filtros, `ContractDetails` e o importador em massa reais, com repositories sintéticos. As **25 capturas** documentam a listagem e seus estados em desktop, tablet e mobile, o drawer rolado, menus, filtros e a importação responsiva. Veja o [índice das capturas integradas](integrated/README.md); a autenticação e permissões reais seguem pendentes.
+
 ## Referências
 
 - [Listagem desktop](../../../references/desktop/page--contratos-listagem.png) · [Listagem mobile](../../../references/mobile/page--contratos-listagem.png)
@@ -110,6 +112,7 @@ Medições, verificações e lista de caminhos também estão em [`coverage.json
 
 - Conferir a importação individual, os demais estados de interface e as permissões reais no shell autenticado, conforme [`REVISAO_VISUAL.json`](../../../REVISAO_VISUAL.json). A prévia local cobriu o formulário e os diálogos com dados sintéticos.
 - A lista abre `ContractDetails` como drawer sobre a listagem; carregamento e erro ficam no mesmo contexto, e editar abre o formulário em página completa. Playwright confirmou a abertura do drawer com a lista mantida ao fundo. A comparação visual autenticada continua pendente porque a rota local não oferece sessão.
+- A prévia integrada local agora cobre listagem, status, filtros, menu contextual, seção completa do drawer e importação em massa com componentes reais e registros sintéticos. Nenhum status foi alterado, arquivo importado ou registro excluído. Capturas e posições de rolagem estão em [`integrated/README.md`](integrated/README.md); detalhes de medições e cobertura em [`coverage.json`](coverage.json).
 - Não marcar o módulo nem o redesign global como concluídos enquanto esses itens estiverem pendentes.
 
 ## Alinhamento com Leads — em andamento

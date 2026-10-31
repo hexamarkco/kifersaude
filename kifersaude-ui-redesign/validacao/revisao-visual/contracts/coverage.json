@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-30",
+  "generated_at": "2026-10-31",
   "module": "Contratos",
   "route": "/painel/contratos",
   "status": "partial",
@@ -27,12 +27,15 @@
     "state--contratos-excluir-confirmacao",
     "state--contratos-status-menu",
     "state--contratos-operadoras-menu",
-    "state--contratos-datas-menu"
+    "state--contratos-datas-menu",
+    "extra--contratos-ficha",
+    "extra--contratos-beneficiarios",
+    "extra--contratos-importar"
   ],
   "pending_contexts": [
     "comparação visual autenticada de state--contratos-importacao-individual",
-    "outros menus e estados encontrados na aplicação",
-    "conferência visual da abertura do drawer na rota autenticada"
+    "outros menus e estados encontrados fora da fixture local",
+    "conferência de permissões e persistência no shell autenticado"
   ],
   "integrated_detail_drawer": {
     "route_selection_keeps_list_mounted": true,
@@ -42,9 +45,10 @@
     "test_file": "src/features/contracts/__tests__/ContractsManagerScreen.presentation.test.tsx",
     "focused_tests": "2/2 passed",
     "typecheck": "passed",
-    "lint": "passed with 7 warnings",
+    "lint": "passed with 10 existing warnings",
     "build": "passed",
-    "full_test_suite": "1860 passed, 1 failed in HomePage.test.tsx outside this module",
+    "full_test_suite": "1879 passed across 358 files",
+    "local_integrated_playwright_visual_review": "passed with synthetic data",
     "authenticated_playwright_visual_review": "pending"
   },
   "integrated_individual_import": {
@@ -67,7 +71,52 @@
       "320": 320
     },
     "dark_theme_desktop_review": "passed",
+    "local_integrated_shell_review": "passed with synthetic data at desktop, tablet, mobile 390 px and mobile 320 px",
     "authenticated_route_visual_review": "pending"
+  },
+  "integrated_shell_evidence": {
+    "fixture": "Layout, ContractsManagerScreen, ContractDetails e ContractBulkJsonImportDialog reais com repositories e dados sintéticos",
+    "screenshot_count": 25,
+    "index": "integrated/README.md",
+    "screenshots": [
+      "integrated/desktop/listagem-1920-light-viewport.png",
+      "integrated/desktop/listagem-1920-dark-viewport.png",
+      "integrated/desktop/listagem-1920-light-document.png",
+      "integrated/desktop/listagem-1920-dark-document.png",
+      "integrated/tablet/listagem-768-light.png",
+      "integrated/mobile/listagem-390-light.png",
+      "integrated/mobile-320/listagem-320-light.png",
+      "integrated/desktop/detalhes-drawer-1920-light.png",
+      "integrated/desktop/detalhes-drawer-1920-dark.png",
+      "integrated/tablet/detalhes-drawer-768-light.png",
+      "integrated/mobile/detalhes-drawer-390-light.png",
+      "integrated/mobile-320/detalhes-drawer-320-light.png",
+      "integrated/desktop/detalhes-drawer-informacoes-1920-light.png",
+      "integrated/desktop/detalhes-drawer-informacoes-1920-light-meio.png",
+      "integrated/desktop/detalhes-drawer-informacoes-1920-light-fim.png",
+      "integrated/desktop/detalhes-menu-acoes-1920-dark.png",
+      "integrated/desktop/filtros-avancados-1920-light.png",
+      "integrated/desktop/filtro-operadora-menu-1920-light.png",
+      "integrated/desktop/status-dropdown-1920-light.png",
+      "integrated/desktop/importacao-em-massa-1920-light.png",
+      "integrated/desktop/importacao-em-massa-1920-dark.png",
+      "integrated/tablet/importacao-em-massa-768-light.png",
+      "integrated/mobile/importacao-em-massa-390-light.png",
+      "integrated/mobile-320/importacao-em-massa-320-light.png",
+      "integrated/mobile-320/importacao-em-massa-320-light-conteudo-inferior.png"
+    ],
+    "state_changes": "none; status menu, destructive action, filters and batch import were only opened or cancelled",
+    "authenticated_route_review": "pending"
+  },
+  "bulk_import_copy_wrap": {
+    "file": "src/features/contracts/components/ContractBulkJsonImportDialog.tsx",
+    "default_instruction_wraps_between_words": true,
+    "long_file_names_may_break_anywhere": true,
+    "screenshots": [
+      "integrated/mobile-320/importacao-em-massa-320-light.png",
+      "integrated/mobile-320/importacao-em-massa-320-light-conteudo-inferior.png"
+    ],
+    "business_logic_changed": false
   },
   "results_panel_spacing": {
     "fixture": "ContractsManagerScreen real com contratos sintéticos e dependências simuladas",

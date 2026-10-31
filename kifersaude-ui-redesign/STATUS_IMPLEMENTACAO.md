@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 30/10/2026, **67 contextos foram comparados** e **93 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 31/10/2026, **70 contextos foram comparados** e **90 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ## Revisão comparativa em andamento — 29/10/2026
 
@@ -13,8 +13,17 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ### Configurações — alinhamento das informações nos títulos (30 e 31/10/2026)
 
-- O ícone de informação de **Envio automático** agora usa a mesma linha de título do design system que **Agendamento avançado**. O gatilho fica ao lado do nome mesmo quando o espaço do cartão diminui.
+- O ícone de informação de **Envio automático** e **Agendamento avançado** agora faz parte do próprio cabeçalho, com um arranjo horizontal que mantém o gatilho ao lado do título mesmo quando o texto quebra em telas estreitas.
+- Testes focados (3/3), typecheck e build passaram; lint terminou sem erros e com os dez avisos preexistentes em previews locais e `PainelWrapper`.
 - Nenhuma configuração, automação ou regra de negócio foi alterada.
+
+### Contratos — revisão integrada da listagem, drawer e importação (31/10/2026)
+
+- A listagem, filtros, menu de status, ações e `ContractDetails` foram conferidos juntos dentro do `Layout` real, usando registros sintéticos. O drawer mantém a lista visível ao fundo; início, meio e fim da seção de informações foram capturados.
+- O diálogo real de importação em massa foi conferido em desktop, tablet, 390 px e 320 px; tema escuro foi verificado em desktop. A instrução do seletor de arquivo agora quebra entre palavras; nomes de arquivos longos continuam podendo quebrar livremente.
+- Foram guardadas 25 capturas em `validacao/revisao-visual/contracts/integrated/`. Nenhum status foi alterado, arquivo importado, contrato excluído, permissão consultada em produção ou integração chamada. A rota autenticada ainda precisa de revisão.
+- A fixture usa somente shell e componentes reais com dependências e dados simulados. A comparação confirma a composição visual e responsividade; permissões e persistência da sessão real continuam pendentes. [Índice das capturas](validacao/revisao-visual/contracts/integrated/README.md) · [Cobertura](validacao/revisao-visual/contracts/coverage.json).
+- Validação atual: **1.879/1.879 testes em 358 arquivos**, typecheck, lint e build passaram. ESLint reporta dez avisos em previews Playwright e `PainelWrapper`; build mantém o aviso conhecido do chunk vendor acima de 500 kB.
 
 ### Contratos — cadastro de dependentes (30/10/2026)
 

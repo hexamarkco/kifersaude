@@ -123,7 +123,7 @@ export function ContractBulkJsonImportDialog({
 
         <div className="rounded-[var(--kds-radius-sm)] border border-dashed border-[var(--border-default)] bg-[var(--surface-primary)] p-5 text-center">
           <FileUp className="mx-auto h-7 w-7 text-[var(--brand-primary)]" />
-          <Text className="mt-2 break-all font-medium text-[var(--text-primary)]">
+          <Text className={`mt-2 ${file ? 'break-all' : 'break-words'} font-medium text-[var(--text-primary)]`}>
             {file ? file.name : 'Escolha o arquivo JSON com os contratos'}
           </Text>
           <Text className="mt-1 text-sm text-[var(--text-secondary)]">

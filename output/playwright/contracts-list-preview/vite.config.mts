@@ -17,14 +17,21 @@ export default defineConfig({
       const fromManager = normalizedImporter.endsWith('/features/contracts/ContractsManagerScreen.tsx');
       const fromDetails = normalizedImporter.endsWith('/components/ContractDetails.tsx');
       const fromContractsApi = normalizedImporter.endsWith('/features/contracts/index.ts');
+      const fromLayout = normalizedImporter.endsWith('/components/Layout.tsx');
 
-      if ((fromManager || fromDetails) && (source.includes('AuthContext') || source.includes('ConfigContext'))) {
+      if ((fromManager || fromDetails || fromLayout) && (source.includes('AuthContext') || source.includes('ConfigContext'))) {
         return mock;
       }
       if (fromManager && (source.endsWith('contractsRepository') || source === '../production' || source.endsWith('useContractStatus'))) {
         return mock;
       }
       if (fromContractsApi && (source === './data/contractsRepository' || source === './data/contractDetailsRepository')) {
+        return mock;
+      }
+      if (fromLayout && source === '../features/reminders') {
+        return mock;
+      }
+      if ((fromManager || fromLayout) && source.endsWith('usePanelMotion')) {
         return mock;
       }
       return null;

@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-30",
+  "updated_at": "2026-10-31",
   "scope": "Todas as interfaces reais, inclusive as que ainda forem encontradas fora do manifesto. A revisão permanece em andamento.",
   "historical_mapping": "MAPEAMENTO.json",
   "additional_interfaces_discovery": "pendente",
@@ -1009,15 +1009,17 @@
         "references/desktop/extra--contratos-ficha.png",
         "references/mobile/extra--contratos-ficha.png"
       ],
-      "status": "pendente",
+      "status": "revisado_com_adaptacoes",
       "evidence": [
         "validacao/revisao-visual/contracts/ficha/README.md",
-        "validacao/revisao-visual/contracts/ficha/coverage.json"
+        "validacao/revisao-visual/contracts/ficha/coverage.json",
+        "validacao/revisao-visual/contracts/integrated/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
       ],
       "notes": [
         "O título da seção recolhível foi encurtado nas apresentações page e drawer; Playwright confirmou o texto completo em 320 px e ausência de overflow em quatro larguras, nos temas claro e escuro.",
         "Foram arquivadas 12 capturas da prévia local do componente real com dados sintéticos, incluindo seção expandida em desktop e mobile.",
-        "A comparação integrada segue pendente porque a rota /painel/contratos redirecionou para autenticação sem sessão local."
+        "A composição integrada do drawer sobre a lista foi comparada com a referência usando Layout, ContractsManagerScreen e ContractDetails reais com dados sintéticos em desktop, tablet e mobile; 25 capturas cobrem o módulo. A conferência de autenticação e permissões reais ainda está pendente."
       ]
     },
     {
@@ -1031,10 +1033,13 @@
         "references/desktop/extra--contratos-beneficiarios.png",
         "references/mobile/extra--contratos-beneficiarios.png"
       ],
-      "status": "pendente",
-      "evidence": [],
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/integrated/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
       "notes": [
-        "A ficha sintética compara os dados e beneficiários com a referência, mas a revisão autenticada da rota integrada segue pendente. O CRM não persiste status individual de beneficiário, portanto os badges de status do mockup não podem ser reproduzidos sem criar dados fictícios."
+        "A ficha integrada com titular e dependente sintéticos foi comparada visualmente em drawer. O CRM não persiste status individual de beneficiário, portanto os badges de status do mockup não foram inventados. A revisão de permissões na sessão autenticada segue pendente."
       ]
     },
     {
@@ -1048,9 +1053,14 @@
         "references/desktop/extra--contratos-importar.png",
         "references/mobile/extra--contratos-importar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/contracts/integrated/README.md",
+        "validacao/revisao-visual/contracts/coverage.json"
+      ],
+      "notes": [
+        "O diálogo de importação em massa foi aberto a partir da listagem real com dados sintéticos e capturado em desktop, tablet, 390 px e 320 px; tema escuro conferido em desktop. Nenhum arquivo foi importado. O texto padrão agora quebra entre palavras, mantendo quebra livre apenas para nomes de arquivos extensos."
+      ]
     },
     {
       "id": "extra--inbox-conversa",
@@ -2885,8 +2895,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 66,
-    "remaining_manifest_contexts": 94,
+    "reviewed_contexts": 70,
+    "remaining_manifest_contexts": 90,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

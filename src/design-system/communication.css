@@ -124,9 +124,9 @@
   color: var(--text-muted);
 }
 
-/* Mídias inbound podem renderizar o horário fora do balão. Os fallbacks mantêm
-   o recuo quando a conversa ainda usa um tema sem os tokens do design system. */
-.whatsapp-inbox-thread .whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
+/* Metadados de mídia podem ficar fora da bolha e precisam manter o recuo
+   mesmo quando o thread está dentro de um painel ou wrapper alternativo. */
+.whatsapp-inbox-media-meta {
   box-sizing: border-box;
   padding-block: var(--space-1, 0.25rem);
   padding-inline: var(--space-3, 0.75rem);

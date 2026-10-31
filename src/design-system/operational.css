@@ -1565,7 +1565,11 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .whatsapp-inbox-page-header .kds-page-title { margin-top: 0; font: var(--type-ui-title); }
 .whatsapp-inbox-page-header .kds-page-description { margin-top: var(--space-1); font: var(--type-caption); }
 .whatsapp-inbox-page-header .kds-page-actions { display: flex; align-items: center; }
-.whatsapp-inbox-shell { container-type: inline-size; container-name: inbox-shell; }
+.whatsapp-inbox-shell {
+  --inbox-context-panel-width: clamp(22rem, 26.5vw, 32rem);
+  container-type: inline-size;
+  container-name: inbox-shell;
+}
 .kds-inbox-workspace-grid { grid-template-columns: minmax(0,1fr); position: relative; }
 .kds-inbox-workspace-grid > * { min-width: 0; }
 .painel-theme .whatsapp-inbox-thread { min-width: 0; }
@@ -1576,7 +1580,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   z-index: 30;
   inset: 0 0 0 auto;
   display: flex;
-  width: min(22rem, 100vw);
+  width: min(var(--inbox-context-panel-width), 100vw);
   max-width: 100%;
   box-shadow: 0 12px 32px color-mix(in srgb, var(--text-primary) 18%, transparent);
 }
@@ -1603,7 +1607,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 }
 @media(min-width: 1024px) {
   .kds-inbox-workspace-grid { grid-template-columns: 20rem minmax(0,1fr); }
-  .kds-inbox-lead-context-panel.is-open { width: 22rem; }
+  .kds-inbox-lead-context-panel.is-open { width: var(--inbox-context-panel-width); }
 }
 @container inbox-shell (max-width: 71.99rem) {
   .kds-inbox-workspace-grid.is-contact-panel-open { grid-template-columns: minmax(0,1fr); }
@@ -1619,7 +1623,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   }
 }
 @container inbox-shell (min-width: 72rem) {
-  .kds-inbox-workspace-grid.is-contact-panel-open { grid-template-columns: 20rem minmax(0,1fr) 22rem; }
+  .kds-inbox-workspace-grid.is-contact-panel-open { grid-template-columns: 20rem minmax(0,1fr) var(--inbox-context-panel-width); }
   .kds-inbox-lead-context-panel.is-open {
     position: relative;
     z-index: auto;

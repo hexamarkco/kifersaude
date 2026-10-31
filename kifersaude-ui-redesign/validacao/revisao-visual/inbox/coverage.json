@@ -1,6 +1,6 @@
 {
   "route": "/painel/inbox",
-  "reviewed_at": "2026-10-29",
+  "reviewed_at": "2026-10-31",
   "fixture": "Local Playwright audit fixture with synthetic conversations and records",
   "comparison": [
     "references/desktop/page--inbox.png",
@@ -73,11 +73,36 @@
     "limitation": "The fixture validates component behavior and responsive positioning; an authenticated visual review of /painel/inbox remains pending."
   },
   "media_message_metadata_check": {
-    "checked_at": "2026-10-30",
-    "fixture": "Playwright CLI with production communication CSS and a synthetic inbound media metadata element",
+    "checked_at": "2026-10-31",
+    "fixture": "Playwright CLI on the local Inbox route with synthetic inbound conversations and production communication CSS",
     "computed_padding": { "inline_start": "12px", "inline_end": "12px", "block_start": "4px", "block_end": "4px" },
+    "viewports": [
+      { "viewport": "1920x1080", "document_width": 1920, "metadata_inset": "12px" },
+      { "viewport": "768x1024", "document_width": 768, "metadata_inset": "12px" },
+      { "viewport": "390x844", "document_width": 390, "metadata_inset": "12px" },
+      { "viewport": "320x640", "document_width": 320, "metadata_inset": "12px" }
+    ],
+    "themes": ["light", "dark"],
     "horizontal_overflow": false,
-    "limitation": "Computed style was verified against production CSS; the authenticated Inbox route remains unavailable locally."
+    "limitation": "This check covers message metadata spacing with synthetic conversations; it does not certify the entire mobile Inbox shell."
+  },
+  "scheduled_message_modal_checks": {
+    "checked_at": "2026-10-31",
+    "route": "/painel/inbox",
+    "components": [
+      "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx"
+    ],
+    "fixture": "Local Playwright route with a synthetic conversation; no real records, communications, uploads or writes.",
+    "results": [
+      { "viewport": "1920x1080", "dialog_width": 592, "document_width": 1920, "empty_message_disables_action": true, "message_enables_action_without_submission": true },
+      { "viewport": "768x1024", "dialog_width": 592, "document_width": 768 },
+      { "viewport": "390x844", "dialog_width": 390, "document_width": 390, "date_picker": { "x": 17, "width": 312, "inside_viewport": true } },
+      { "viewport": "320x640", "dialog_width": 320, "document_width": 320, "options_scroll_height": 963, "options_client_height": 395, "options_bottom_reached": true }
+    ],
+    "interactions": ["open from conversation", "required-message validation", "date, hour and minute picker stages", "additional options and recurrence", "sequence mode", "internal scroll at 320px"],
+    "adaptation": "The CRM uses a combined date-time control, the active conversation contact, one-time messages and sequences; the simpler reference fields were not substituted for existing behavior.",
+    "submission_performed": false
   },
   "contact_panel_component_review": {
     "checked_at": "2026-10-31",
@@ -141,11 +166,23 @@
     { "file": "contact-panel/light-mobile-320x640.png", "state": "contact drawer and compact lead search", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
     { "file": "contact-panel/dark-mobile-320x640.png", "state": "contact drawer and compact lead search", "viewport": "320x640", "theme": "dark", "capture": "fullPage" },
     { "file": "contact-panel/dark-mobile-320x640-panel-scrolled.png", "state": "lower contact drawer content after internal scroll", "viewport": "320x640", "theme": "dark", "capture": "fullPage" },
-    { "file": "contact-panel/dark-mobile-320x640-panel-actions-scrolled.png", "state": "middle contact drawer controls after internal scroll", "viewport": "320x640", "theme": "dark", "capture": "fullPage" }
+    { "file": "contact-panel/dark-mobile-320x640-panel-actions-scrolled.png", "state": "middle contact drawer controls after internal scroll", "viewport": "320x640", "theme": "dark", "capture": "fullPage" },
+    { "file": "schedule-message/integrated-empty-validation-desktop-1920.png", "state": "integrated schedule form with required message empty", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-filled-desktop-1920.png", "state": "integrated single-message schedule form filled without submission", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-filled-tablet-768.png", "state": "integrated schedule form", "viewport": "768x1024", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-filled-mobile-390.png", "state": "integrated schedule form", "viewport": "390x844", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-filled-mobile-320.png", "state": "integrated schedule form at minimum width", "viewport": "320x640", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-date-picker-desktop-1920.png", "state": "integrated date picker", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-date-picker-hour-desktop-1920.png", "state": "integrated hour picker", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-date-picker-minute-desktop-1920.png", "state": "integrated minute picker", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-date-picker-mobile-390.png", "state": "integrated date picker", "viewport": "390x844", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-sequence-desktop-1920.png", "state": "integrated sequence form", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-options-mobile-320.png", "state": "integrated additional options at top", "viewport": "320x640", "theme": "light", "capture": "viewport" },
+    { "file": "schedule-message/integrated-options-mobile-320-scrolled.png", "state": "integrated additional options after internal scroll", "viewport": "320x640", "theme": "light", "capture": "viewport" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",
-    "Agenda, scheduled messages, WhatsApp dashboard, message search, attachments, media, formatting, quick replies and other message actions remain pending separate visual review.",
-    "The advanced-filter implementation, metadata spacing and production contact drawer were verified in local component fixtures; integrated authenticated review of /painel/inbox remains pending."
+    "The integrated schedule form is reviewed, while the full scheduled-message list and its tabs remain pending; WhatsApp dashboard, message search, attachments, media, formatting, quick replies and other message actions also remain pending separate review.",
+    "The advanced-filter and contact-drawer reviews still use component fixtures. The Inbox route was used with synthetic session data for the schedule form and message spacing; the full page shell was not reviewed in that pass."
   ]
 }

@@ -1782,15 +1782,22 @@
       "route": "/painel/inbox",
       "kind": "states",
       "components": [
-        "src/features/communication/whatsapp/components/WhatsAppAgendaModal.tsx"
+        "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+        "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx"
       ],
       "references": [
         "references/desktop/state--inbox-agenda.png",
         "references/mobile/state--inbox-agenda.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/inbox/schedule-message/README.md",
+        "validacao/revisao-visual/inbox/coverage.json"
+      ],
+      "notes": [
+        "A modal foi aberta pelo fluxo real de Agendamentos do Contato na rota /painel/inbox, com uma conversa sintética; não houve gravação, envio ou chamada de serviço.",
+        "A referência simplifica o formulário em dia, horário, contato e mensagem. O CRM real oferece data/hora combinadas, contato atual, mensagens únicas, sequências, recorrência e anexos; a adaptação preserva as operações existentes."
+      ]
     },
     {
       "id": "state--inbox-agendadas",

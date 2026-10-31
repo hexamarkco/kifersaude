@@ -8768,9 +8768,9 @@
         "references/desktop/state--inbox-agenda.png",
         "references/mobile/state--inbox-agenda.png"
       ],
-      "status": "parcial",
+      "status": "validado",
       "exceptions": [
-        "Validação visual feita com a modal real e dados sintéticos. A composição integrada na rota autenticada permanece pendente; as capturas antigas da consolidação não mostravam este estado."
+        "A referência mostra campos separados de dia e horário e uma ação Salvar; o CRM real combina data e hora, parte do contato selecionado e mantém mensagens únicas, sequências, recorrência e mídia. Diferença funcional registrada, sem alterar regras ou acionar o agendamento. A validação integrada usa somente fixture sintética."
       ],
       "validation": [
         {
@@ -8780,7 +8780,7 @@
             "height": 1080
           },
           "state": "inbox-agenda",
-          "status": "parcial",
+          "status": "validado",
           "screenshots": [
             "validacao/revisao-visual/inbox/schedule-message/desktop-light-1920.png",
             "validacao/revisao-visual/inbox/schedule-message/desktop-dark-1920.png",
@@ -8788,7 +8788,13 @@
             "validacao/revisao-visual/inbox/schedule-message/desktop-date-picker-hour.png",
             "validacao/revisao-visual/inbox/schedule-message/desktop-date-picker-minute-step.png",
             "validacao/revisao-visual/inbox/schedule-message/desktop-options-weekly-validation.png",
-            "validacao/revisao-visual/inbox/schedule-message/desktop-sequence-mode.png"
+            "validacao/revisao-visual/inbox/schedule-message/desktop-sequence-mode.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-empty-validation-desktop-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-filled-desktop-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-date-picker-desktop-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-date-picker-hour-desktop-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-date-picker-minute-desktop-1920.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-sequence-desktop-1920.png"
           ],
           "document_scroll_width": 1920
         },
@@ -8799,10 +8805,11 @@
             "height": 1024
           },
           "state": "inbox-agenda",
-          "status": "parcial",
+          "status": "validado",
           "screenshots": [
             "validacao/revisao-visual/inbox/schedule-message/tablet-light-768.png",
-            "validacao/revisao-visual/inbox/schedule-message/tablet-date-picker-open.png"
+            "validacao/revisao-visual/inbox/schedule-message/tablet-date-picker-open.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-filled-tablet-768.png"
           ],
           "document_scroll_width": 768
         },
@@ -8813,10 +8820,12 @@
             "height": 844
           },
           "state": "inbox-agenda",
-          "status": "parcial",
+          "status": "validado",
           "screenshots": [
             "validacao/revisao-visual/inbox/schedule-message/mobile-light-390.png",
-            "validacao/revisao-visual/inbox/schedule-message/mobile-date-picker-open-390.png"
+            "validacao/revisao-visual/inbox/schedule-message/mobile-date-picker-open-390.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-filled-mobile-390.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-date-picker-mobile-390.png"
           ],
           "document_scroll_width": 390
         },
@@ -8827,10 +8836,13 @@
             "height": 640
           },
           "state": "inbox-agenda",
-          "status": "parcial",
+          "status": "validado",
           "screenshots": [
             "validacao/revisao-visual/inbox/schedule-message/mobile-320-light.png",
-            "validacao/revisao-visual/inbox/schedule-message/mobile-date-picker-open-320.png"
+            "validacao/revisao-visual/inbox/schedule-message/mobile-date-picker-open-320.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-filled-mobile-320.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-options-mobile-320.png",
+            "validacao/revisao-visual/inbox/schedule-message/integrated-options-mobile-320-scrolled.png"
           ],
           "document_scroll_width": 320
         }

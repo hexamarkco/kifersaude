@@ -6,6 +6,11 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
+### Configurações — alinhamento das informações nos títulos (30/10/2026)
+
+- Os ícones de informação dos cards **Envio automático** e **Agendamento avançado** agora ficam no mesmo agrupamento flexível do título. Em larguras menores, o texto pode quebrar de linha sem empurrar o ícone para baixo.
+- Usei o padrão `kds-card-title-row` existente; nenhuma configuração ou regra de automação foi alterada.
+
 ### Contratos — cadastro de dependentes (30/10/2026)
 
 - O formulário real foi comparado às referências desktop/mobile. Corrigi os ícones de CPF, valor, carência e elegibilidade, e normalizei a acentuação dos rótulos sem alterar os valores persistidos das opções.

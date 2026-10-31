@@ -1387,25 +1387,6 @@
   align-self: center;
 }
 
-.kds-heading-with-info {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.kds-heading-with-info-title {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.kds-heading-with-info > .kds-tooltip-anchor {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-self: center;
-}
-
 /* Indicator rows share their height, including wrapped titles and monetary values. */
 .kds-kpi-grid {
   display: grid;

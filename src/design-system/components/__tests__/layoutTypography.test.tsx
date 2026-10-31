@@ -32,18 +32,19 @@ test('TextLink preserves external link security defaults and supports explicit s
   unmount();
 });
 
-test('InfoTooltip can stay structurally attached to a heading title', () => {
+test('InfoTooltip aligns beside card headings in the shared title row', () => {
   const { container, unmount } = render(
-    <Heading level={4} className="kds-card-title kds-heading-with-info">
-      <span className="kds-heading-with-info-title">Envio automático</span>
+    <div className="kds-card-title-row">
+      <Heading level={4} className="kds-card-title">Envio automático</Heading>
       <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
-    </Heading>,
+    </div>,
   );
-  const heading = container.querySelector('h4.kds-heading-with-info');
-  const title = heading?.querySelector('.kds-heading-with-info-title');
-  const info = heading?.querySelector('button.kds-info-trigger');
-  assert.equal(title?.textContent, 'Envio automático');
+  const row = container.querySelector('.kds-card-title-row');
+  const heading = row?.querySelector('h4.kds-card-title');
+  const info = row?.querySelector('button.kds-info-trigger');
+  assert.equal(heading?.textContent, 'Envio automático');
   assert.equal(info?.getAttribute('aria-label'), 'Informações sobre o processamento dos fluxos');
-  assert.equal(info?.closest('h4'), heading);
+  assert.equal(heading?.parentElement, row);
+  assert.equal(info?.parentElement?.parentElement, row);
   unmount();
 });

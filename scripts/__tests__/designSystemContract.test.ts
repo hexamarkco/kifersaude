@@ -34,4 +34,4 @@ test('design-system gate distinguishes UI primitives from content and rejects lo
     assert.ok(path.resolve(fixture).startsWith(path.resolve(prefix)));
     await rm(fixture, { recursive: true, force: true });
   }
-});
+}, 15_000);

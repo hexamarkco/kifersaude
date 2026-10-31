@@ -59,6 +59,15 @@ test('abre a nova área apenas com as abas permitidas', () => {
   } finally { view.unmount(); }
 });
 
+test('oculta a navegação geral ao abrir um fluxo em página própria', () => {
+  const view = renderAt('/painel/automacoes?tab=automation&flowId=flow-1', ['config-automation']);
+  try {
+    assert.equal(view.container.querySelector('h1'), null);
+    assert.equal(view.container.querySelectorAll('[role="tab"]').length, 0);
+    assert.ok(view.container.textContent?.includes('Área de automações'));
+  } finally { view.unmount(); }
+});
+
 test('link anterior de IA mantém a seleção e os parâmetros para perfil com acesso somente à IA', () => {
   const view = renderAt('/painel/config?tab=ai&feature=lead-summary', ['config-ai']);
   try {

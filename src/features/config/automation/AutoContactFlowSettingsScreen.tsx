@@ -1,6 +1,8 @@
 import { ButtonGroup, Text, Heading, FieldLabel, InfoTooltip } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
+  ArrowLeft,
   Activity,
   AlarmClock,
   AlertCircle,
@@ -88,6 +90,7 @@ import {
   FilterSelect,
   IconButton,
   DialogShell,
+  PageHeader,
   SegmentedControl,
 } from "../../../design-system";
 
@@ -99,6 +102,7 @@ type TemplateDraft = {
 
 export default function AutoContactFlowSettingsScreen() {
   const { leadOrigins, options } = useConfig();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [autoContactIntegration, setAutoContactIntegration] =
     useState<IntegrationSetting | null>(null);
   const [autoContactSettings, setAutoContactSettings] =
@@ -109,7 +113,7 @@ export default function AutoContactFlowSettingsScreen() {
   const [flowDrafts, setFlowDrafts] = useState<AutoContactFlow[]>(
     DEFAULT_AUTO_CONTACT_FLOWS,
   );
-  const [activeFlowId, setActiveFlowId] = useState<string | null>(null);
+  const activeFlowId = searchParams.get("flowId");
   const defaultSettings = useMemo(() => normalizeAutoContactSettings(null), []);
   const [autoSendEnabled, setAutoSendEnabled] = useState(
     isAutoContactRuntimeEnabled(defaultSettings),
@@ -170,6 +174,22 @@ export default function AutoContactFlowSettingsScreen() {
   const autoSaveDraftVersionRef = useRef(0);
   const settingsLoadRequestIdRef = useRef(0);
   const dailyAutomationRequestIdRef = useRef(0);
+  const openFlowEditor = (flowId: string) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set("tab", "automation");
+      next.set("flowId", flowId);
+      return next;
+    });
+  };
+  const closeFlowEditor = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set("tab", "automation");
+      next.delete("flowId");
+      return next;
+    }, { replace: true });
+  };
   const timezoneOptions = useMemo(
     () => [
       { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
@@ -997,7 +1017,7 @@ export default function AutoContactFlowSettingsScreen() {
   const handleAddFlow = () => {
     const newFlow = createFlowDraft();
     setFlowDrafts((previous) => [...previous, newFlow]);
-    setActiveFlowId(newFlow.id);
+    openFlowEditor(newFlow.id);
   };
   const handleUpdateFlow = (
     flowId: string,
@@ -1048,7 +1068,7 @@ export default function AutoContactFlowSettingsScreen() {
       ),
     );
     if (activeFlowId === flowId) {
-      setActiveFlowId(null);
+      closeFlowEditor();
     }
   };
   const handleAddFlowStep = (flowId: string) => {
@@ -1700,7 +1720,8 @@ export default function AutoContactFlowSettingsScreen() {
     >
       <div className="space-y-6">
         <div className="space-y-6">
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {!activeFlowId && (
+            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <SegmentedControl
               items={[
                 { id: "flows", label: "Fluxos" },
@@ -1724,7 +1745,8 @@ export default function AutoContactFlowSettingsScreen() {
                 </Button>
               )}
             </div>
-          </div>
+            </div>
+          )}
 
           {activeWorkspace === "operation" && (
             <section className="space-y-6" aria-labelledby="automation-operation-heading">
@@ -1786,10 +1808,12 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <Heading level={4} className="kds-card-title kds-heading-with-info min-w-0 flex-1">
-                        Envio automático
+                      <div className="kds-card-title-row min-w-0 flex-1">
+                        <Heading level={4} className="kds-card-title">
+                          Envio automático
+                        </Heading>
                         <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
-                      </Heading>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
                       <div className="min-w-0">
@@ -1939,49 +1963,68 @@ export default function AutoContactFlowSettingsScreen() {
                 </span>
               </Alert>
             )}
-            <AutomationFlowsWorkspace
-              flows={filteredFlows}
-              totalFlows={metrics.totalFlows}
-              activeFlows={activeFlowCount}
-              totalSteps={metrics.totalSteps}
-              totalTemplates={metrics.totalTemplates}
-              dailyAutomationCount={dailyAutomationCount}
-              dailyAutomationLoading={dailyAutomationLoading}
-              dailyAutomationError={dailyAutomationError}
-              search={flowSearch}
-              onSearchChange={setFlowSearch}
-              tagFilter={flowTagFilter}
-              onTagFilterChange={setFlowTagFilter}
-              availableTags={availableTags}
-              getConditionPreview={getFlowConditionPreview}
-              onEditFlow={setActiveFlowId}
-            />
+            {!activeFlowId && (
+              <AutomationFlowsWorkspace
+                flows={filteredFlows}
+                totalFlows={metrics.totalFlows}
+                activeFlows={activeFlowCount}
+                totalSteps={metrics.totalSteps}
+                totalTemplates={metrics.totalTemplates}
+                dailyAutomationCount={dailyAutomationCount}
+                dailyAutomationLoading={dailyAutomationLoading}
+                dailyAutomationError={dailyAutomationError}
+                search={flowSearch}
+                onSearchChange={setFlowSearch}
+                tagFilter={flowTagFilter}
+                onTagFilterChange={setFlowTagFilter}
+                availableTags={availableTags}
+                getConditionPreview={getFlowConditionPreview}
+                onEditFlow={openFlowEditor}
+              />
+            )}
+            {activeFlowId && !activeFlow && !loadingFlow && (
+                <section className="space-y-4" aria-label="Fluxo não encontrado">
+                <PageHeader
+                  title="Fluxo não encontrado"
+                  description="Este fluxo não está mais disponível na configuração."
+                  descriptionPlacement="visible"
+                  breadcrumbs={(
+                    <Button type="button" variant="ghost" size="sm" onClick={closeFlowEditor}>
+                      <ArrowLeft className="kds-control-icon" aria-hidden="true" />
+                      Voltar aos fluxos
+                    </Button>
+                  )}
+                />
+                <Alert tone="warning" title="Não encontramos este fluxo">
+                  Volte à lista para selecionar outro fluxo disponível.
+                </Alert>
+              </section>
+            )}
               {activeFlow && (
-                <DialogShell
-                  isOpen
-                  onClose={() => setActiveFlowId(null)}
-                  size="full"
-                  showCloseButton={false}
-                >
-                  <div className="sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-4 sm:px-6">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
-                        Fluxo {activeFlowIndex + 1}
-                      </div>
-                      <Heading level={4} className="mt-1 font-[var(--font-display)] text-2xl font-semibold text-[var(--text-primary)]">
-                        {activeFlow.name || "Novo fluxo"}
-                      </Heading>
-                      {activeFlow.ativo === false && (
-                        <span className="mt-1 inline-flex items-center rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--danger-text)]">
-                          Desativado
-                        </span>
-                      )}
-                      <Text className="mt-1 text-sm text-[var(--text-muted)]">
-                        Organize a jornada, as regras operacionais e os testes em um só lugar.
-                      </Text>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                <section className="min-w-0 space-y-5" aria-label="Editor do fluxo automático">
+                  <PageHeader
+                    className="kds-flow-editor-header sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-6"
+                    eyebrow={`Fluxo ${activeFlowIndex + 1}`}
+                    title={activeFlow.name || "Novo fluxo"}
+                    description="Organize a jornada, as regras operacionais e os testes em um só lugar."
+                    descriptionPlacement="visible"
+                    status={activeFlow.ativo === false ? <Badge tone="danger" size="sm">Desativado</Badge> : undefined}
+                    breadcrumbs={(
+                      <Button type="button" variant="ghost" size="sm" onClick={closeFlowEditor}>
+                        <ArrowLeft className="kds-control-icon" aria-hidden="true" />
+                        Voltar aos fluxos
+                      </Button>
+                    )}
+                    actions={(
+                      <>
+                      <Button
+                        onClick={() => handleRemoveFlow(activeFlow.id)}
+                        variant="danger"
+                        size="md"
+                      >
+                        <Trash2 className="kds-control-icon" aria-hidden="true" />
+                        Remover fluxo
+                      </Button>
                       <Button
                         onClick={() => {
                           setFlowDetailTab("test");
@@ -1991,39 +2034,24 @@ export default function AutoContactFlowSettingsScreen() {
                           }
                         }}
                         variant="ghost"
-                        size="sm"
+                        size="md"
                       >
-                        <Timer className="kds-control-icon" />
+                        <Timer className="kds-control-icon" aria-hidden="true" />
                         Testar fluxo
                       </Button>
                       <Button
                         onClick={handleSaveFlow}
                         loading={savingFlow}
-                        size="sm"
+                        size="md"
                       >
-                        {!savingFlow && <Save className="kds-control-icon" />}
+                        {!savingFlow && <Save className="kds-control-icon" aria-hidden="true" />}
                         {savingFlow ? "Salvando..." : "Salvar fluxo"}
                       </Button>
-                      <Button
-                        onClick={() => handleRemoveFlow(activeFlow.id)}
-                        variant="danger"
-                        size="sm"
-                      >
-                        <Trash2 className="kds-control-icon" />
-                        Remover fluxo
-                      </Button>
-                      <Button
-                        onClick={() => setActiveFlowId(null)}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Fechar
-                      </Button>
-                    </div>
-                    </div>
-
+                      </>
+                    )}
+                  >
                     <SegmentedControl
-                      className="mt-5"
+                      className="kds-flow-detail-tabs mt-5"
                       value={flowDetailTab}
                       onChange={(next) => {
                         setFlowDetailTab(next);
@@ -2038,9 +2066,9 @@ export default function AutoContactFlowSettingsScreen() {
                         { id: "test", label: "Simular e testar", icon: Timer },
                       ]}
                     />
-                  </div>
+                  </PageHeader>
 
-                  <div className="space-y-5 p-5 sm:p-6">
+                  <div className="space-y-5">
                     {flowDetailTab === "settings" && (
                       <>
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -3390,7 +3418,7 @@ Os horários já consideram a janela do fluxo,
                       </div>
                     )}
                   </div>
-                </DialogShell>
+                </section>
               )}
 
           </>}

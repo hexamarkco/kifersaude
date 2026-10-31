@@ -2245,3 +2245,48 @@ html,
     transform: none !important;
   }
 }
+
+/* Keep every flow editor action and tab visible in compact configuration screens. */
+@media (max-width: 639px) {
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-editor-header .kds-page-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-editor-header .kds-page-actions > .kds-button {
+    min-width: 0;
+    width: auto;
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-detail-tabs .kds-tabs-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-detail-tabs .kds-tabs-list > .kds-tab {
+    min-width: 0;
+    width: 100%;
+    flex: initial;
+    white-space: normal;
+  }
+
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-detail-tabs .kds-tabs-list > .kds-tab:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-detail-tabs .kds-tabs-list > .kds-tab > span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 379px) {
+  .painel-theme.kifer-ds .kds-config-screen .kds-flow-detail-tabs .kds-tabs-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

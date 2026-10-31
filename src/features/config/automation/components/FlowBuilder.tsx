@@ -1037,10 +1037,10 @@ export default function FlowBuilder({
         ref={reactFlowWrapperRef}
         className="flex h-[520px] flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:h-[560px] lg:h-[680px]"
       >
-        <div className="flex items-center justify-between rounded-t-[var(--radius-2xl)] border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
-          <div>
+        <div className="flex flex-col items-start gap-3 rounded-t-[var(--radius-2xl)] border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
             <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-              Builder avancado
+              Construtor avançado
             </div>
             <div className="text-sm text-[var(--text-secondary)]">
               Arraste e conecte as etapas do seu fluxo.
@@ -1049,12 +1049,12 @@ export default function FlowBuilder({
               Clique em uma linha para remover.
             </div>
           </div>
-          <ButtonGroup size="sm" aria-label="Ações do fluxo" className="overflow-x-auto">
+          <ButtonGroup size="sm" aria-label="Ações do fluxo" className="max-w-full overflow-x-auto">
             <Button onClick={addConditionNode} variant="secondary" size="sm">
-              + Condicao
+              + Condição
             </Button>
             <Button onClick={addActionNode} size="sm">
-              + Acao
+              + Ação
             </Button>
             <Button
               onClick={exportFlowAsImage}
@@ -1089,7 +1089,7 @@ export default function FlowBuilder({
         </div>
         {totalIssueCount > 0 && (
           <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]">
-            Existem {totalIssueCount} alerta(s) de conexao no fluxo.
+            Existem {totalIssueCount} alerta(s) de conexão no fluxo.
           </div>
         )}
         <div className="min-h-0 flex-1">
@@ -1116,9 +1116,12 @@ export default function FlowBuilder({
             onPaneClick={() => setContextMenu(null)}
             nodeTypes={nodeTypes}
             fitView
+            fitViewOptions={{ padding: 0.18 }}
+            minZoom={0.25}
             className="h-full bg-[var(--bg-surface-muted)]"
           >
             <MiniMap
+              position="top-right"
               nodeColor={flowThemeColors.minimapNode}
               maskColor={flowThemeColors.minimapMask}
             />
@@ -1148,7 +1151,7 @@ export default function FlowBuilder({
         )}
       </div>
 
-      <div className="h-[520px] overflow-y-auto rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:h-[560px] lg:h-[680px]">
+      <div className="min-h-[140px] overflow-y-auto rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 lg:h-[680px]">
         <div className="text-xs font-semibold uppercase text-[var(--text-subtle)]">
           Inspector
         </div>

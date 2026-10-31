@@ -57,6 +57,9 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const activeAllowedTab = allowedTabs.some((tab) => tab.id === activeTab)
     ? activeTab
     : allowedTabs[0].id;
+  const isAutomationFlowDetail = area === "automation"
+    && activeAllowedTab === "automation"
+    && Boolean(new URLSearchParams(location.search).get("flowId"));
   const query = new URLSearchParams(location.search);
   const section = query.get('section');
   const leadTab = query.get('leadTab');
@@ -113,23 +116,25 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   };
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
-      <PageHeader
-        eyebrow="Administração"
-        title={title}
-        description={description}
-        actions={headerActions}
-      >
-        <Tabs
-          items={allowedTabs}
-          value={activeAllowedTab}
-          onChange={handleTabChange}
-          variant="underline"
-          size={area === "automation" ? "sm" : "md"}
-          ariaLabel={area === "automation" ? "Áreas de automações e IA" : "Áreas de configurações"}
-          listClassName="kds-config-tabs-scrollable flex-nowrap overflow-x-auto"
-          triggerClassName="shrink-0 whitespace-nowrap"
-        />
-      </PageHeader>
+      {!isAutomationFlowDetail && (
+        <PageHeader
+          eyebrow="Administração"
+          title={title}
+          description={description}
+          actions={headerActions}
+        >
+          <Tabs
+            items={allowedTabs}
+            value={activeAllowedTab}
+            onChange={handleTabChange}
+            variant="underline"
+            size={area === "automation" ? "sm" : "md"}
+            ariaLabel={area === "automation" ? "Áreas de automações e IA" : "Áreas de configurações"}
+            listClassName="kds-config-tabs-scrollable flex-nowrap overflow-x-auto"
+            triggerClassName="shrink-0 whitespace-nowrap"
+          />
+        </PageHeader>
+      )}
 
       <main className="min-w-0">
           {activeAllowedTab === "system" && <SystemSettingsScreen />}

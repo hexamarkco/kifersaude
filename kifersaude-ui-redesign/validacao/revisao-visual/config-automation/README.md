@@ -18,12 +18,13 @@ Comparação da rota `/painel/automacoes?tab=automation` com [`references/deskto
 - Busca por `sem resposta`, confirmando o resultado único.
 - Conteúdo do tooltip informativo, inclusive as variáveis usadas nas mensagens.
 - Abas `Templates` e `Operação`; a captura de Operação registra os switches e campos sem alterná-los.
+- Editor de fluxo aberto em página própria com as abas `Jornada`, `Regras e agenda` e `Simular e testar`; a captura não acionou salvar, remover ou executar um teste.
 
 Não foram acionados criação, edição, remoção, publicação ou envio de mensagens. Os estados dessas ações permanecem em contextos próprios do manifesto.
 
 ## Responsividade e arquivos
 
-Playwright CLI capturou página completa e viewport em 1920×1080, 768×1024, 390×844 e 320×844. As quatro larguras foram verificadas sem overflow horizontal. O viewport conserva a navegação inferior; durante a captura `fullPage` em mobile, a navegação fixa foi ocultada temporariamente para evitar que cobrisse o conteúdo já capturado.
+Playwright CLI capturou página completa e viewport da listagem em 1920×1080, 768×1024, 390×844 e 320×844. O editor também foi capturado nas quatro larguras; as ações e abas permanecem visíveis em mobile, os nós ficam dentro da área local do canvas e não houve overflow horizontal. O viewport conserva a navegação inferior; durante `fullPage` em mobile, a navegação fixa foi ocultada temporariamente para evitar que cobrisse o conteúdo.
 
 Os registros detalhados, métricas verificadas e limitações estão em [`coverage.json`](coverage.json). As imagens estão em [`current-shell/`](current-shell/):
 
@@ -38,9 +39,17 @@ Os registros detalhados, métricas verificadas e limitações estão em [`covera
 - `state-templates-desktop.png`, `state-operation-desktop.png`
 - `state-info-title-inline-desktop-1920.png`, `state-info-title-inline-mobile-320.png`, `state-info-title-inline-mobile-320-dark.png` — ícone de informação integrado ao título **Envio automático**, também conferido em viewport compacto e tema escuro.
 
+O editor de fluxo está em [`flow-detail/`](flow-detail/), com capturas desktop, tablet, mobile, abas e alinhamento do ícone:
+
+- `desktop-1920-full.png`, `desktop-1920-viewport.png`
+- `tablet-768-full.png`, `tablet-768-viewport.png`
+- `mobile-390-full.png`, `mobile-390-viewport.png`, `mobile-320-full.png`, `mobile-320-viewport.png`
+- `state-rules-agenda-desktop.png`, `state-test-desktop.png`
+- `state-info-title-inline-desktop-1920.png`, `state-info-title-inline-mobile-390.png`
+
 ## Adaptações e limites
 
 - O shell foi executado com dados sintéticos locais porque não havia sessão autenticada disponível. Os valores demonstram os componentes reais e não devem ser lidos como indicadores de produção.
 - A referência apresenta métricas de leads impactados e execução; esses dados não estão disponíveis nesta listagem real e não foram inventados.
-- O painel de lista e as abas foram revisados; editor de fluxo, criação/edição de template, persistência, permissões e respostas reais da API continuam pendentes em seus contextos do manifesto.
+- O editor usa uma página própria com URL preservando o fluxo selecionado; no canvas, controles quebram de forma legível em telas pequenas, o mapa em miniatura não cobre as etapas e o inspetor vazio não reserva uma coluna alta no mobile. A persistência autenticada, criação/edição de templates, permissões e respostas reais da API continuam pendentes em seus contextos do manifesto.
 - A busca e filtro são estado local da fixture. Nenhuma gravação, automação ou comunicação real foi executada.

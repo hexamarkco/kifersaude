@@ -1,6 +1,7 @@
 {
   "context_id": "page--config-automation",
   "route": "/painel/automacoes?tab=automation",
+  "related_route": "/painel/automacoes?tab=automation&flowId=<id>",
   "status": "revisado_com_adaptacoes",
   "references": [
     "../../../references/desktop/page--config-automation.png",
@@ -33,7 +34,19 @@
     { "path": "current-shell/state-operation-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Operação sem alterar os controles" },
     { "path": "current-shell/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático" },
     { "path": "current-shell/state-info-title-inline-mobile-320.png", "viewport": "320x640", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático em tela compacta" },
-    { "path": "current-shell/state-info-title-inline-mobile-320-dark.png", "viewport": "320x640", "capture": "state", "theme": "dark", "state": "Ícone de informação integrado ao título Envio automático em viewport compacto" }
+    { "path": "current-shell/state-info-title-inline-mobile-320-dark.png", "viewport": "320x640", "capture": "state", "theme": "dark", "state": "Ícone de informação integrado ao título Envio automático em viewport compacto" },
+    { "path": "flow-detail/desktop-1920-full.png", "viewport": "1920x1080", "capture": "fullPage", "theme": "light", "state": "Editor do fluxo em página própria" },
+    { "path": "flow-detail/desktop-1920-viewport.png", "viewport": "1920x1080", "capture": "viewport", "theme": "light", "state": "Editor do fluxo em página própria" },
+    { "path": "flow-detail/tablet-768-full.png", "viewport": "768x1024", "capture": "fullPage", "theme": "light", "state": "Editor do fluxo com nós contidos no canvas e inspetor vazio compacto" },
+    { "path": "flow-detail/tablet-768-viewport.png", "viewport": "768x1024", "capture": "viewport", "theme": "light", "state": "Editor do fluxo em tablet" },
+    { "path": "flow-detail/mobile-390-full.png", "viewport": "390x844", "capture": "fullPage", "theme": "light", "state": "Editor do fluxo; navegação fixa ocultada apenas na captura integral" },
+    { "path": "flow-detail/mobile-390-viewport.png", "viewport": "390x844", "capture": "viewport", "theme": "light", "state": "Editor do fluxo com navegação inferior visível" },
+    { "path": "flow-detail/mobile-320-full.png", "viewport": "320x844", "capture": "fullPage", "theme": "light", "state": "Editor do fluxo; navegação fixa ocultada apenas na captura integral" },
+    { "path": "flow-detail/mobile-320-viewport.png", "viewport": "320x844", "capture": "viewport", "theme": "light", "state": "Editor do fluxo com navegação inferior visível" },
+    { "path": "flow-detail/state-rules-agenda-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Regras e agenda do fluxo" },
+    { "path": "flow-detail/state-test-desktop.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Aba Simular e testar sem executar teste externo" },
+    { "path": "flow-detail/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" },
+    { "path": "flow-detail/state-info-title-inline-mobile-390.png", "viewport": "390x844", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título Envio automático" }
   ],
   "checks": {
     "font_status": "document.fonts.ready",
@@ -44,29 +57,36 @@
       "390x844": false,
       "320x844": false
     },
+    "flow_editor": {
+      "horizontal_overflow": { "1920x1080": false, "768x1024": false, "390x844": false, "320x844": false },
+      "action_and_tab_content_fully_visible": { "390x844": true, "320x844": true },
+      "nodes_within_canvas": { "768x1024": true, "390x844": true, "320x844": true },
+      "empty_inspector_height": "140 px abaixo de lg; alinhado à altura do canvas em desktop"
+    },
     "mobile_list_representation": "Cartões do Design System abaixo de lg; tabela no desktop.",
     "desktop_theme": ["light", "dark"],
     "interactions": [
       "Filtro de tags aberto e filtro follow-up aplicado.",
       "Busca por sem resposta com resultado único.",
       "Tooltip de informação aberto e conteúdo conferido.",
-      "Abas Templates e Operação abertas; switches e campos de Operação permaneceram sem alteração."
+      "Abas Templates e Operação abertas; switches e campos de Operação permaneceram sem alteração.",
+      "Editor do fluxo em rota própria; abas Regras e agenda e Simular e testar revisadas sem salvar, remover, executar teste ou enviar mensagem."
     ],
     "destructive_or_external_actions": "Nenhuma criação, edição, remoção, publicação, envio ou gravação foi executada.",
     "authenticated_route": "Sessão autenticada não disponível; revisão executada no shell real com fixture local sintética.",
     "pending_contexts": [
-      "Editor e persistência de fluxo",
+      "Persistência do editor de fluxo em sessão autenticada",
       "Criação e edição de templates",
       "Permissões e respostas da API em sessão autenticada"
     ]
   },
   "validation": {
-    "focused_tests": "AutomationFlowsWorkspace e configTabs: 8/8; primitivas Table: 12/12.",
-    "full_test_suite": "1862 testes aprovados; 1 falha em src/pages/public/HomePage.test.tsx fora do CRM e do escopo desta entrega.",
+    "focused_tests": "ConfigPageScreen e designSystemContract: 13/13 nesta entrega.",
+    "full_test_suite": "Execução anterior: 1.865 testes aprovados e 2 falhas; HomePage.test.tsx permanece fora do escopo institucional e o timeout de designSystemContract foi corrigido e passou isolado. A suíte completa não foi repetida após os últimos ajustes.",
     "typecheck": "passou",
-    "lint": "passou sem erros; 7 avisos preexistentes em previews Playwright e PainelWrapper.",
+    "lint": "passou sem erros; 8 avisos em previews Playwright e PainelWrapper.",
     "architecture": "passou",
     "build": "passou, incluindo secrets:check, auditorias do Design System/visual e verificação do bundle do editor; permanece o aviso conhecido de chunk vendor acima de 500 kB.",
-    "playwright_console": "0 erros e 0 warnings da aplicação; fontes carregadas."
+    "playwright_console": "0 erros de aplicação; a fixture local registra 404 de favicon ausente e mensagem informativa do React DevTools; fontes carregadas."
   }
 }

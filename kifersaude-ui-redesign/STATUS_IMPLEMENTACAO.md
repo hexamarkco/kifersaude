@@ -142,6 +142,11 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 - A regra de três colunas agora considera a largura disponível dentro do Inbox, usando container queries em vez da largura total da janela. Com 72rem (1152 px CSS) ou mais, lista, conversa e Informações do contato permanecem lado a lado. Abaixo disso, o painel ocupa a área de trabalho enquanto está aberto; a lista, a conversa e o backdrop deixam de ficar parcialmente cobertos. Ao fechar o painel, a conversa retorna. Playwright CLI conferiu 1920, 1272 (zoom), 1024, 768, 390 e 320 px, sem overflow horizontal. A validação usou uma fixture sintética para a regra CSS; a conferência integrada autenticada continua pendente. [Evidências e limitações](validacao/revisao-visual/inbox/README.md).
 
+### Inbox — metadados de mídias recebidas (30/10/2026)
+
+- Horários de mídias individuais e agrupadas declaram `px-3 py-1` diretamente na composição, mantendo 12 px nas laterais e 4 px na vertical em mensagens inbound. Isso remove a dependência do escopo de tema para o afastamento; mensagens textuais continuam usando o padding do balão.
+- Dois testes focados cobrem os caminhos reais de renderização de mídia individual e agrupada. Playwright confirmou padding calculado de 4 px × 12 px em 1920, 768, 390 e 320 px, também no tema escuro desktop, sem overflow na prévia sintética. A sessão autenticada não foi usada e nenhuma conversa foi alterada.
+
 ### Inbox — recuperação e arquivamento de anexos (29/10/2026)
 
 - Anexos recebidos agora são copiados para o bucket privado `comm-whatsapp-media` em tarefa de fundo logo após a persistência da mensagem. Isso preserva a resposta rápida do webhook e reduz o risco de a primeira abertura ocorrer depois que a origem temporária expirar. Falhas temporárias de arquivamento recebem até três tentativas.

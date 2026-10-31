@@ -717,8 +717,15 @@ export default function WhatsAppScheduleMessageModal({
                 <Text className="text-sm font-semibold text-[var(--text-primary)]">Etapas da sequência</Text>
                 <Text className="text-xs text-[var(--text-muted)]">Cada etapa pode enviar uma mensagem, executar ações ou fazer os dois.</Text>
               </div>
-              <Button type="button" variant="secondary" size="sm" onClick={addSequenceStep}>
-                <Plus className="kds-control-icon" /> Adicionar etapa
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-label="Adicionar etapa"
+                className="shrink-0 whitespace-nowrap"
+                onClick={addSequenceStep}
+              >
+                <Plus className="kds-control-icon" /> Adicionar<span className="hidden sm:inline"> etapa</span>
               </Button>
             </div>
 

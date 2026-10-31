@@ -125,6 +125,17 @@ test('mantém o horário de mídia inbound recuado e antes das reações', () =>
   assert.ok(markup.indexOf('whatsapp-inbox-media-meta') < markup.indexOf('💗'));
 });
 
+test('mantém o horário recuado quando a mídia inbound também tem legenda', () => {
+  const message = {
+    ...createMessage('image-caption-1', 'image'),
+    media_caption: 'Legenda de demonstração',
+  };
+  const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
+
+  assertMediaMetaHasConsistentSpacing(markup);
+  assert.ok(markup.includes('whatsapp-inbox-media-caption-bubble'));
+});
+
 test('mantém o horário do último item de grupo inbound afastado da borda', () => {
   const firstMessage = createMessage('image-1', 'image');
   const lastMessage = createMessage('image-2', 'image');

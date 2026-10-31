@@ -2409,6 +2409,7 @@ export default function WhatsAppInboxScreen() {
           <WhatsAppScheduledMessagesPanel
             isOpen
             onClose={() => setAllScheduledMessagesPanelOpen(false)}
+            onScheduleNew={selectedChat ? () => setScheduleMessageModalOpen(true) : undefined}
           />
         ) : null}
 

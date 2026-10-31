@@ -10,7 +10,7 @@
 - Até 430 px, o campo de mensagem usa uma linha própria e as ações de composição ficam abaixo. Assim o placeholder e o texto digitado não são comprimidos pelos botões, inclusive em 320 px.
 - O texto das mensagens fica alinhado à esquerda; o justificado anterior abria espaços irregulares entre palavras em telas estreitas.
 - Ajuste de 29/10: o histórico conserva 20 px de margem externa à esquerda e à direita (`px-5`); mensagens textuais e a prévia de follow-up mantêm 12 px nas laterais e 8 px na vertical (`px-3 py-2`) para o texto respirar sem alargar demais a bubble. O padding externo do histórico é independente e permanece nos dois lados. Legendas de mídia mantêm o espaçamento próprio do componente.
-- Horários de mídias individuais e agrupadas recebem 12 px laterais e 4 px verticais no contêiner `.whatsapp-inbox-media-meta`. Data, hora e ações compartilham o mesmo recuo; mensagens textuais continuam usando o padding do próprio balão. A regra foi conferida no Inbox sintético em 1920, 768, 390 e 320 px, nos temas claro e escuro.
+- Horários de mídias individuais e agrupadas recebem 12 px laterais e 4 px verticais no contêiner `.whatsapp-inbox-media-meta`. Data, hora e ações compartilham o mesmo recuo; mensagens textuais continuam usando o padding do próprio balão. O seletor não depende mais do ancestral `.whatsapp-inbox-thread`, preservando o recuo quando o mesmo componente é renderizado dentro de outros wrappers. A regra foi conferida no Inbox sintético em 1920, 768, 390 e 320 px, nos temas claro e escuro.
 - O cartão de agenda do painel contextual mantém o título “Agenda do chat” em uma linha, com a explicação no `InfoTooltip`. As ações **Agendar** e **Atualizar** ocupam uma grade alinhada e fluida; a composição empilha título e ações em qualquer largura porque o painel tem largura própria, independente do breakpoint da janela.
 - O cabeçalho da conversa agora mantém apenas o nome e o próximo lembrete. Telefone, região do número, presença, opção para salvar/renomear o contato e estado da IA ficam na barra **Informações do contato**; status, responsável e favorito continuam na ficha do lead dentro dela. A barra reaproveita os componentes e handlers já existentes, sem duplicar regras comerciais.
 - A indisponibilidade da integração aparece como aviso persistente. A fixture local não conecta ao WhatsApp; o aviso foi mantido para não esconder uma condição operacional relevante.
@@ -32,14 +32,14 @@
 - Playwright também conferiu a geometria do cartão de agenda com o CSS compilado em uma fixture isolada: o painel permaneceu com 352 px em 768 e 390 px, adaptou para 320 px no viewport estreito e manteve título e botões legíveis, sem overflow horizontal. O teste do componente valida a hierarquia e as duas ações; uma captura autenticada deste estado ainda depende de uma sessão de Inbox disponível.
 - Testes dos componentes confirmam que o cabeçalho contém somente nome e lembrete, e que renomear continua acionando o fluxo existente dentro da barra de informações. A sessão sintética também abriu o agendamento dentro de `/painel/inbox`; a listagem e os demais estados seguem separados no manifesto.
 - A lista sem conversa selecionada foi capturada em 390 × 844. O drawer de informações do lead foi capturado no início e após rolagem interna em desktop e mobile.
-- As 58 capturas listadas desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
+- As 76 capturas listadas desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
 
 ## Segurança e limitações da fixture
 
 - Contatos, leads, conversas, mensagens, imagens, contratos e lembretes usados nas capturas são dados sintéticos. O preview usa callbacks sem efeito; nenhuma mensagem foi enviada, nenhum contato ou lembrete foi criado ou alterado e nenhuma ação comercial foi confirmada.
 - A revisão do painel de contato usa o `WhatsAppLeadDrawer` real e os estilos de produção; a moldura da lista, conversa e compositor é estática, os callbacks não executam ações e todas as requisições Supabase foram interceptadas com dados vazios.
 - A fixture da Inbox bloqueou a tentativa de presença com HTTP 403 e não disponibilizou Realtime (handshake local expirado). O polling de leitura continuou ativo; esses avisos são do ambiente de demonstração.
-- A revisão integrada cobre `page--inbox`, `state--inbox-nova-conversa` e o formulário `state--inbox-agenda`. Filtros avançados e painel de contato foram verificados em fixtures de componentes; ainda aguardam uma revisão integrada própria. A lista de mensagens agendadas, painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados permanecem como contextos independentes no manifesto.
+- A revisão integrada cobre `page--inbox`, `state--inbox-nova-conversa` e o formulário `state--inbox-agenda`. Filtros avançados e painel de contato foram verificados em fixtures de componentes; ainda aguardam uma revisão integrada própria. A lista de mensagens agendadas foi revisada em fixture local, mas segue pendente de aderência à referência: o CRM atual abre um diálogo com cartões e abas; a referência descreve uma página com tabela, filtro de responsável e exportação. Painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados permanecem como contextos independentes no manifesto.
 
 ## Transição responsiva do painel de contato — 30/10/2026
 
@@ -65,7 +65,11 @@ A metadata de mídias inbound mantém o padding no contêiner compartilhado (12 
 
 ## Agendamento de mensagens — revisão integrada — 31/10/2026
 
-O fluxo **Agendamentos do Contato → Agendar nova mensagem** foi aberto dentro da rota local `/painel/inbox` usando conversa sintética. A modal, a validação de mensagem obrigatória, o datepicker nas etapas Data/Hora/Minutos, as opções adicionais e a sequência foram conferidos sem salvar ou enviar. As capturas integradas e a diferença em relação à referência estão em [schedule-message](schedule-message/README.md); a lista de mensagens agendadas e seus filtros continuam pendentes de revisão própria.
+O fluxo **Agendamentos do Contato → Agendar nova mensagem** foi aberto dentro da rota local `/painel/inbox` usando conversa sintética. A modal, a validação de mensagem obrigatória, o datepicker nas etapas Data/Hora/Minutos, as opções adicionais e a sequência foram conferidos sem salvar ou enviar. As capturas integradas e a diferença em relação à referência estão em [schedule-message](schedule-message/README.md); a lista de mensagens agendadas é tratada na seção própria abaixo.
+
+## Lista de mensagens agendadas — revisão do componente — 31/10/2026
+
+O `WhatsAppScheduledMessagesPanel` e os fluxos reais de criação e edição foram conferidos em fixture local com dados sintéticos. O diálogo reutiliza `Card`, `Badge`, `EmptyState` e `LoadingState`; corrigi a altura do workspace no mobile, o rótulo do botão de adicionar etapa e a ação de agendar quando não há conversa selecionada. Foram capturados conteúdo, abas, busca, datas, edição, criação, sequência, tema escuro e estados vazio, carregando e erro. As evidências e as limitações estão em [scheduled-list](scheduled-list/README.md); a página/tabela da referência e a revisão autenticada permanecem pendentes.
 
 ## Recuperação de anexos indisponíveis — 29/10/2026
 

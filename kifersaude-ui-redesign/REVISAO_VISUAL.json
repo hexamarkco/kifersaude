@@ -1089,8 +1089,13 @@
         "references/mobile/extra--inbox-agendamentos.png"
       ],
       "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "evidence": [
+        "validacao/revisao-visual/inbox/scheduled-list/README.md",
+        "validacao/revisao-visual/inbox/coverage.json"
+      ],
+      "notes": [
+        "O componente atual foi revisado em fixture, mas permanece como diálogo com cartões; a referência descreve uma página com tabela, filtro de responsável e exportação. Manter pendente até completar a comparação visual e a revisão integrada autenticada."
+      ]
     },
     {
       "id": "extra--agenda-tarefas",

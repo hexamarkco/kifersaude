@@ -126,7 +126,7 @@
 
 /* Metadados de mídia podem ficar fora da bolha e precisam manter o mesmo recuo
    dos balões de texto, mesmo dentro de wrappers com utilitários de reset. */
-.whatsapp-inbox-thread .whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
+.whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
   box-sizing: border-box;
   padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
 }

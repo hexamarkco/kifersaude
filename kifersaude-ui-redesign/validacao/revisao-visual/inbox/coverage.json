@@ -84,6 +84,8 @@
     ],
     "themes": ["light", "dark"],
     "horizontal_overflow": false,
+    "selector_requires_thread_ancestor": false,
+    "classless_wrapper_check": { "padding_inline_start": "12px", "padding_inline_end": "12px", "padding_block_start": "4px", "padding_block_end": "4px" },
     "limitation": "This check covers message metadata spacing with synthetic conversations; it does not certify the entire mobile Inbox shell."
   },
   "scheduled_message_modal_checks": {
@@ -103,6 +105,26 @@
     "interactions": ["open from conversation", "required-message validation", "date, hour and minute picker stages", "additional options and recurrence", "sequence mode", "internal scroll at 320px"],
     "adaptation": "The CRM uses a combined date-time control, the active conversation contact, one-time messages and sequences; the simpler reference fields were not substituted for existing behavior.",
     "submission_performed": false
+  },
+  "scheduled_messages_panel_review": {
+    "checked_at": "2026-10-31",
+    "route": "/painel/inbox",
+    "components": [
+      "src/features/communication/whatsapp/components/WhatsAppScheduledMessagesPanel.tsx",
+      "src/features/communication/whatsapp/components/WhatsAppScheduleMessageModal.tsx",
+      "src/design-system/components.css"
+    ],
+    "fixture": "Playwright preview of production components and styles with synthetic contacts/messages; no Supabase writes, cancellations, uploads or outbound messages.",
+    "results": [
+      { "viewport": "1920x1080", "dialog": { "x": 240, "y": 92, "width": 1440, "height": 896 }, "document_width": 1920, "body_scroll_width": 1920 },
+      { "viewport": "768x1024", "dialog": { "x": 23, "y": 64, "width": 721, "height": 896 }, "document_width": 768, "body_scroll_width": 768, "body_scroll_height": 1268 },
+      { "viewport": "390x844", "dialog": { "x": 0, "y": 0, "width": 390, "height": 844 }, "document_width": 390, "body_scroll_width": 390, "body_scroll_height": 1764 },
+      { "viewport": "320x640", "dialog": { "x": 0, "y": 0, "width": 320, "height": 640 }, "document_width": 320, "body_scroll_width": 320, "body_scroll_height": 1988 }
+    ],
+    "components_reused": ["Dialog", "Card", "Badge", "EmptyState", "LoadingState", "Tabs", "Input", "DateTimePicker", "Button", "IconButton"],
+    "interactions": ["upcoming/attention/history/all tabs", "search and date filter", "collapse and independent section pagination", "edit form", "single-message creation form", "sequence creation form", "empty/loading/error states", "light and dark theme"],
+    "mutations_performed": false,
+    "reference_gap": "The reference is a standalone table page with responsible-agent filter and export. The CRM currently exposes a card-based dialog and lacks all referenced fields/actions; full reference parity and authenticated route review remain pending."
   },
   "contact_panel_component_review": {
     "checked_at": "2026-10-31",
@@ -178,7 +200,25 @@
     { "file": "schedule-message/integrated-date-picker-mobile-390.png", "state": "integrated date picker", "viewport": "390x844", "theme": "light", "capture": "viewport" },
     { "file": "schedule-message/integrated-sequence-desktop-1920.png", "state": "integrated sequence form", "viewport": "1920x1080", "theme": "light", "capture": "viewport" },
     { "file": "schedule-message/integrated-options-mobile-320.png", "state": "integrated additional options at top", "viewport": "320x640", "theme": "light", "capture": "viewport" },
-    { "file": "schedule-message/integrated-options-mobile-320-scrolled.png", "state": "integrated additional options after internal scroll", "viewport": "320x640", "theme": "light", "capture": "viewport" }
+    { "file": "schedule-message/integrated-options-mobile-320-scrolled.png", "state": "integrated additional options after internal scroll", "viewport": "320x640", "theme": "light", "capture": "viewport" },
+    { "file": "inbound-timestamp/desktop-light-1920-after.png", "state": "inbound media timestamp after removing thread-ancestor CSS dependency", "viewport": "1920x1080", "theme": "light", "capture": "component" },
+    { "file": "scheduled-list/desktop/upcoming-top.png", "state": "scheduled message list, top of internal scroll", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/upcoming-bottom.png", "state": "scheduled message list, lower items after internal scroll", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/attention.png", "state": "paused sequence and failed message", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/history.png", "state": "scheduled message history", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/empty.png", "state": "empty scheduled list", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/loading.png", "state": "scheduled list loading", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/load-error.png", "state": "scheduled list load error", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/date-filter-open.png", "state": "scheduled list date filter open", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/edit-message.png", "state": "edit scheduled message modal", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/create-message.png", "state": "create one-time message modal", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/create-sequence.png", "state": "create sequence modal", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/desktop/upcoming-dark.png", "state": "scheduled message list", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
+    { "file": "scheduled-list/tablet/upcoming.png", "state": "scheduled message list", "viewport": "768x1024", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/mobile/upcoming.png", "state": "scheduled message list", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
+    { "file": "scheduled-list/mobile/create-sequence-top.png", "state": "create sequence modal at top of internal scroll", "viewport": "390x844", "theme": "light", "capture": "viewport" },
+    { "file": "scheduled-list/mobile/create-sequence-bottom.png", "state": "create sequence modal bottom and fixed actions", "viewport": "390x844", "theme": "light", "capture": "viewport" },
+    { "file": "scheduled-list/mobile-320/upcoming.png", "state": "scheduled message list at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",

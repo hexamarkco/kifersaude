@@ -1,8 +1,26 @@
-import { ButtonGroup, Heading, Text, FieldLabel } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
-import { Alert, Button, DateTimePicker, Dialog, DialogBody, IconButton, Input, Tabs, type TabItem } from '../../../../design-system';
+import {
+  Alert,
+  Badge,
+  Button,
+  ButtonGroup,
+  Card,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  EmptyState,
+  FieldLabel,
+  Heading,
+  IconButton,
+  Input,
+  LoadingState,
+  Tabs,
+  Text,
+  type BadgeTone,
+  type TabItem,
+} from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../data';
@@ -37,13 +55,13 @@ const STATUS_LABELS: Record<string, string> = {
   expired: 'Expirada',
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'bg-[var(--info-soft)] text-[var(--info-text)]',
-  sending: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
-  sent: 'bg-[var(--success-soft)] text-[var(--success-text)]',
-  failed: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
-  cancelled: 'bg-[var(--bg-inset)] text-[var(--text-muted)]',
-  expired: 'bg-[var(--bg-inset)] text-[var(--text-muted)]',
+const STATUS_BADGE_TONES: Record<CommWhatsAppScheduledMessageStatus, BadgeTone> = {
+  scheduled: 'info',
+  sending: 'warning',
+  sent: 'success',
+  failed: 'danger',
+  cancelled: 'neutral',
+  expired: 'neutral',
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -85,12 +103,12 @@ const SEQUENCE_STATUS_LABELS: Record<CommWhatsAppScheduledSequenceStatus, string
   cancelled: 'Cancelada',
 };
 
-const SEQUENCE_STATUS_COLORS: Record<CommWhatsAppScheduledSequenceStatus, string> = {
-  scheduled: 'bg-[var(--info-soft)] text-[var(--info-text)]',
-  running: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
-  paused: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
-  completed: 'bg-[var(--success-soft)] text-[var(--success-text)]',
-  cancelled: 'bg-[var(--bg-inset)] text-[var(--text-muted)]',
+const SEQUENCE_STATUS_BADGE_TONES: Record<CommWhatsAppScheduledSequenceStatus, BadgeTone> = {
+  scheduled: 'info',
+  running: 'warning',
+  paused: 'danger',
+  completed: 'success',
+  cancelled: 'neutral',
 };
 
 const VIEW_SEQUENCE_STATUSES: Record<ScheduledMessagesView, readonly CommWhatsAppScheduledSequenceStatus[]> = {
@@ -616,8 +634,9 @@ export default function WhatsAppScheduledMessagesPanel({
         onOpenChange={(nextOpen) => {
           if (!nextOpen) onClose();
         }}
-        size="wide"
-        className="kds-dialog-fixed-height"
+        size="full"
+        presentation="workspace"
+        className="kds-dialog-workspace-tall"
       >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -642,24 +661,26 @@ export default function WhatsAppScheduledMessagesPanel({
           </ButtonGroup>
         </div>
 
-      <DialogBody className="space-y-4 px-6 py-4">
+      <DialogBody className="flex flex-col space-y-4 px-6 py-4">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="kds-control-icon animate-spin text-[var(--brand-primary)]" />
+            <div className="flex flex-1 items-center justify-center">
+              <LoadingState label="Carregando agendamentos" compact />
             </div>
           ) : loadError === 'all' ? (
-            <Alert
-              tone="danger"
-              title="Não foi possível carregar os agendamentos."
-              action={
-                <Button variant="secondary" size="sm" onClick={() => void refreshScheduledData()}>
-                  <RotateCcw className="kds-control-icon" />
-                  <span>Tentar novamente</span>
-                </Button>
-              }
-            >
-              Verifique sua conexão ou sessão. Nenhum agendamento foi apagado.
-            </Alert>
+            <div className="flex flex-1 items-center">
+              <Alert
+                tone="danger"
+                title="Não foi possível carregar os agendamentos."
+                action={
+                  <Button variant="secondary" size="sm" onClick={() => void refreshScheduledData()}>
+                    <RotateCcw className="kds-control-icon" />
+                    <span>Tentar novamente</span>
+                  </Button>
+                }
+              >
+                Verifique sua conexão ou sessão. Nenhum agendamento foi apagado.
+              </Alert>
+            </div>
           ) : (
             <>
               {loadError === 'partial' ? (
@@ -694,19 +715,18 @@ export default function WhatsAppScheduledMessagesPanel({
               />
 
               {messages.length === 0 && sequences.length === 0 ? (
-                <div className="text-center py-12">
-                  <CalendarClock className="kds-control-icon text-[var(--text-muted)] mx-auto mb-3" />
-                  <Text className="text-[var(--text-muted)]">Nenhum agendamento nesta aba</Text>
-                  <Text className="text-sm text-[var(--text-subtle)] mt-1 mb-4">
-                    Consulte outra aba para ver agendamentos em outras situações, incluindo o histórico.
-                  </Text>
-                  {onScheduleNew && (
+                <EmptyState
+                  className="flex-1"
+                  icon={<CalendarClock aria-hidden="true" className="h-8 w-8" />}
+                  title="Nenhum agendamento nesta aba"
+                  description="Consulte outra aba para ver agendamentos em outras situações, incluindo o histórico."
+                  action={onScheduleNew ? (
                     <Button onClick={onScheduleNew} size="sm">
                       <Plus className="kds-control-icon" />
                       Agendar nova mensagem
                     </Button>
-                  )}
-                </div>
+                  ) : undefined}
+                />
               ) : (
                 <>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
@@ -880,17 +900,17 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
   const contactDisplayName = getScheduledContactDisplayName(message, currentContactName);
 
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] p-3 hover:border-[var(--border-default)] transition-colors">
+    <Card padding="sm" className="transition-colors hover:border-[var(--border-default)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[message.status] ?? 'bg-[var(--bg-inset)] text-[var(--text-muted)]'}`}>
+            <Badge tone={STATUS_BADGE_TONES[message.status]} size="sm">
               {STATUS_LABELS[message.status] ?? message.status}
-            </span>
+            </Badge>
             {message.recurrence !== 'none' && (
-              <span className="inline-flex items-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] px-2 py-0.5 text-xs font-medium">
+              <Badge tone="neutral" size="sm">
                 {RECURRENCE_LABELS[message.recurrence]}
-              </span>
+              </Badge>
             )}
           </div>
 
@@ -952,7 +972,7 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
           </ButtonGroup>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -976,16 +996,16 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
   const contactDisplayName = getScheduledContactDisplayName(sequence, currentContactName);
 
   return (
-    <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-3">
+    <Card padding="sm" className="transition-colors hover:border-[var(--border-default)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${SEQUENCE_STATUS_COLORS[sequence.status]}`}>
+            <Badge tone={SEQUENCE_STATUS_BADGE_TONES[sequence.status]} size="sm">
               {SEQUENCE_STATUS_LABELS[sequence.status]}
-            </span>
-            <span className="inline-flex items-center rounded-full bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-medium text-[var(--text-secondary)]">
+            </Badge>
+            <Badge tone="neutral" size="sm">
               Etapa {sequence.current_step_index + 1}{stepCount ? ` de ${stepCount}` : ''}
-            </span>
+            </Badge>
           </div>
           <Text className="truncate text-sm font-medium text-[var(--text-primary)]">
             {sequence.label || 'Sequência de mensagens'}
@@ -1026,6 +1046,6 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
           </ButtonGroup>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

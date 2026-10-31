@@ -97,6 +97,10 @@ test('seções recolhem e paginam independentemente, com busca em todas as pági
   };
   const sequences = getSection('Sequências');
   const messages = getSection('Mensagens normais');
+  assert.ok(sequences.querySelector('.kds-card'), 'sequências devem usar o cartão do design system');
+  assert.ok(sequences.querySelector('.kds-badge'), 'status das sequências deve usar o badge do design system');
+  assert.ok(messages.querySelector('.kds-card'), 'mensagens devem usar o cartão do design system');
+  assert.ok(messages.querySelector('.kds-badge'), 'status das mensagens deve usar o badge do design system');
   const click = (element: HTMLElement | null) => {
     assert.ok(element);
     act(() => element.click());
@@ -143,6 +147,7 @@ test('permite abrir o histórico quando não há próximos agendamentos e sair d
     await Promise.resolve();
   });
   assert.match(document.body.textContent ?? '', /Nenhum agendamento nesta aba/);
+  assert.ok(document.querySelector('.kds-empty'), 'estado vazio deve usar o componente do design system');
   const selectTab = async (label: string) => {
     const tab = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((element) => element.textContent?.includes(label));
     assert.ok(tab);
@@ -226,6 +231,8 @@ test('não apresenta falha de carregamento como se não houvesse agendamentos', 
       onClose={() => undefined}
     />,
   );
+
+  assert.match(document.querySelector('[role="status"]')?.textContent ?? '', /Carregando agendamentos/);
 
   await act(async () => {
     await Promise.resolve();

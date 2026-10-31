@@ -619,8 +619,8 @@ export default function WhatsAppScheduledMessagesPanel({
         size="wide"
         className="kds-dialog-fixed-height"
       >
-      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-          <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border-subtle)] px-6 py-4">
+          <div className="flex min-w-0 items-center gap-3">
             <CalendarClock className="kds-control-icon text-[var(--brand-primary)]" />
             <div>
               <Heading level={2} className="text-lg font-semibold text-[var(--text-primary)]">
@@ -629,7 +629,7 @@ export default function WhatsAppScheduledMessagesPanel({
               <Text className="text-sm text-[var(--text-muted)]">{headerSummary}</Text>
             </div>
           </div>
-          <ButtonGroup size="md" aria-label="Ações dos agendamentos">
+          <ButtonGroup size="md" className="ml-auto" aria-label="Ações dos agendamentos">
             {onScheduleNew && (
               <Button onClick={onScheduleNew} size="sm">
                 <Plus className="kds-control-icon" />

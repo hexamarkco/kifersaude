@@ -81,7 +81,7 @@
 .kifer-home .home-trust-photo-row { display: flex; align-items: center; gap: 4%; margin-top: var(--space-8); }
 .kifer-home .home-trust-photo { position: relative; width: 74%; flex-shrink: 0; }
 .kifer-home .home-trust-photo::before { content: ''; position: absolute; width: 40%; height: 85%; left: -7%; top: -5%; background: var(--home-soft); border-radius: 50%; z-index: 0; }
-.kifer-home .home-trust-photo img { position: relative; width: 100%; height: clamp(12rem, 16vw, 18rem); object-fit: cover; border-radius: 35% 35% var(--radius-xl) 0; }
+.kifer-home .home-trust-photo img { position: relative; width: 100%; height: auto; border-radius: 35% 35% var(--radius-xl) 0; }
 .kifer-home .home-trust-note { font: italic 400 clamp(1rem, 1.4vw, 1.5rem) / 1.3 var(--font-display); color: var(--accent-copper-active); }
 .kifer-home .home-trust-note span { display: block; height: 1px; width: 3rem; margin-top: var(--space-5); background: var(--accent-copper); }
 .kifer-home .home-trust-list { display: grid; gap: var(--space-8); padding-top: var(--space-3); }
@@ -497,7 +497,6 @@
   .kifer-home .home-trust .home-title br { display: none; }
   .kifer-home .home-trust-photo-row { display: flex; gap: var(--space-4); margin-top: var(--space-6); }
   .kifer-home .home-trust-photo { width: 76%; }
-  .kifer-home .home-trust-photo img { height: 12rem; }
   .kifer-home .home-trust-note { display: block; font-size: 0.9375rem; }
   .kifer-home .home-trust-list { gap: var(--space-8); }
   .kifer-home .home-trust-list li { grid-template-columns: 3.5rem 1fr; gap: var(--space-5); }

@@ -2,7 +2,7 @@
 
 **Meta ativa: redesign integral conforme as referências originais.** Em 27/10/2026, o usuário determinou a revisão de todas as páginas e modais. A aderência visual final está **pendente de nova revisão por interface**, incluindo telas adicionais encontradas no código. Critérios e precedência estão em [META_REDESIGN.md](META_REDESIGN.md).
 
-O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 31/10/2026, **71 contextos foram comparados** e **89 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
+O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e 94 estados**. Até 31/10/2026, **72 contextos foram comparados** e **88 permanecem pendentes**; a descoberta de telas além do manifesto também continua em andamento. As evidências históricas documentam capturas anteriores; a comparação atual é feita contra `references/`, que define o resultado visual esperado. O código real prevalece para campos, permissões, cálculos e ações; diferenças funcionais em relação aos mockups permanecem registradas no mapeamento.
 
 ### Leads — formulário de criação e edição (31/10/2026)
 
@@ -448,3 +448,10 @@ O único ajuste no diretório de migrations foi o baseline documental de um slug
 | state--inbox-resposta | `/painel/inbox` | pendente | [desktop](validacao/consolidacao/desktop/inbox-resposta-completa.png) · [tablet](validacao/consolidacao/tablet/inbox-resposta-completa.png) · [mobile](validacao/consolidacao/mobile/inbox-resposta-completa.png) · [mobile-320](validacao/consolidacao/mobile-320/inbox-resposta-completa.png) |
 | state--inbox-visualizador-imagem | `/painel/inbox` | pendente | [desktop](validacao/consolidacao/desktop/inbox-visualizador-imagem-completa.png) · [tablet](validacao/consolidacao/tablet/inbox-visualizador-imagem-completa.png) · [mobile](validacao/consolidacao/mobile/inbox-visualizador-imagem-completa.png) · [mobile-320](validacao/consolidacao/mobile-320/inbox-visualizador-imagem-completa.png) |
 | state--contratos-importacao-individual | `/painel/contratos` | validado | [desktop](validacao/consolidacao/desktop/contratos-importacao-individual-completa.png) · [tablet](validacao/consolidacao/tablet/contratos-importacao-individual-completa.png) · [mobile](validacao/consolidacao/mobile/contratos-importacao-individual-completa.png) · [mobile-320](validacao/consolidacao/mobile-320/contratos-importacao-individual-completa.png) |
+
+### Inbox — gerenciamento de mensagens rápidas (31/10/2026)
+
+- O modal usa o `DialogShell` de formulário e componentes existentes do Design System. Permite escolher uma resposta, criar e remover rascunhos, editar Atalho/Título/Mensagem, conferir erros de validação e salvar pelo fluxo já existente. A referência inclui Categoria, mas o modelo real não tem esse campo; nenhum dado novo foi criado.
+- Corrigi o foco inicial para alcançar o botão visível do seletor, excluindo controles nativos ocultos do `Dialog` compartilhado. Testes cobrem navegação por teclado, forma persistida, erros e bloqueio enquanto salva.
+- Playwright cobriu claro/escuro em desktop, tablet, 390 e 320 px; estados vazio, dropdown, ajuda contextual, validação e rolagem do modal. A gravação foi testada somente com callback sintético sem escrita no CRM.
+- A validação integrada autenticada e a inserção de atalhos no compositor continuam pendentes. Isto revisa apenas este contexto do Inbox, não a página ou os outros diálogos da Inbox. [Evidências e capturas](validacao/revisao-visual/inbox/README.md) · [Cobertura](validacao/revisao-visual/inbox/coverage.json).

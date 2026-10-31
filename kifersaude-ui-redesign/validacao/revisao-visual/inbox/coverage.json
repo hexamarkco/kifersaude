@@ -153,16 +153,24 @@
     "component": "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx",
     "fixture": "Local Playwright preview with the production modal, design-system CSS, synthetic quick replies and no-op callbacks.",
     "viewports": ["1920x1080", "768x1024", "390x844", "320x640"],
-    "themes": ["light"],
-    "states": ["existing reply editor", "mobile editor after internal scroll with footer", "required-field validation error"],
+    "themes": ["light", "dark"],
+    "states": ["saved reply editor", "keyboard selection of another saved reply", "open reply selector", "new draft", "empty after local removal", "required-field validation error", "dialog information tooltip", "field help tooltip", "mobile editor after internal scroll with footer", "saving lock verified by component test"],
     "checks": {
       "document_horizontal_overflow": false,
+      "checked_widths_css_px": [1920, 768, 390, 320],
       "footer_visible_during_mobile_internal_scroll": true,
       "field_errors_associated_with_required_fields": true,
-      "no_persistent_save_performed": true
+      "visible_select_trigger_receives_initial_focus": true,
+      "keyboard_arrow_down_enter_selects_saved_reply": true,
+      "save_closes_preview_without_persisting_to_crm": true,
+      "saving_disables_fields_and_actions_and_blocks_escape": true,
+      "category_field_added": false
     },
     "focused_test_file": "src/features/communication/whatsapp/components/__tests__/WhatsAppQuickRepliesModal.test.tsx",
-    "limitation": "The authenticated Inbox route and insertion of saved replies into its composer remain pending. The fixture callbacks did not save or send communications."
+    "design_system_regression_test_file": "src/design-system/components/__tests__/primitives.test.tsx",
+    "screenshots": ["states/quick-replies-desktop-1920-light.png", "states/quick-replies-desktop-1920-dark.png", "states/quick-replies-desktop-selector-open.png", "states/quick-replies-desktop-info-tooltip.png", "states/quick-replies-desktop-field-tooltip.png", "states/quick-replies-desktop-empty.png", "states/quick-replies-desktop-validation-error.png", "states/quick-replies-tablet-768-light.png", "states/quick-replies-mobile-390-light-top.png", "states/quick-replies-mobile-390-light-editor.png", "states/quick-replies-mobile-320-light.png", "states/quick-replies-mobile-320-light-bottom.png"],
+    "reference_adaptation": "DialogShell de formulário compacto; a categoria da referência não existe no modelo WhatsAppQuickReply e não foi inventada.",
+    "limitation": "The authenticated Inbox route and insertion of saved replies into its composer remain pending. The fixture uses local callbacks and did not persist or send communications."
   },
   "screenshots": [
     { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
@@ -247,7 +255,13 @@
     { "file": "states/quick-replies-mobile-390-light-top.png", "state": "quick replies modal at top on mobile", "viewport": "390x844", "theme": "light", "capture": "state" },
     { "file": "states/quick-replies-mobile-390-light-editor.png", "state": "quick replies editor and sticky footer after internal scroll", "viewport": "390x844", "theme": "light", "capture": "state" },
     { "file": "states/quick-replies-mobile-320-light.png", "state": "quick replies modal at minimum width", "viewport": "320x640", "theme": "light", "capture": "state" },
-    { "file": "states/quick-replies-desktop-validation-error.png", "state": "required message validation error", "viewport": "1920x1080", "theme": "light", "capture": "state" }
+    { "file": "states/quick-replies-desktop-validation-error.png", "state": "required message validation error", "viewport": "1920x1080", "theme": "light", "capture": "state" },
+    { "file": "states/quick-replies-desktop-1920-dark.png", "state": "quick replies modal editor in dark theme", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
+    { "file": "states/quick-replies-desktop-selector-open.png", "state": "quick reply selector open with keyboard navigation available", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/quick-replies-desktop-empty.png", "state": "empty quick replies after removing the local draft", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/quick-replies-desktop-info-tooltip.png", "state": "dialog information tooltip open", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/quick-replies-desktop-field-tooltip.png", "state": "shortcut field help tooltip open", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
+    { "file": "states/quick-replies-mobile-320-light-bottom.png", "state": "quick reply modal after internal scroll with sticky footer at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",

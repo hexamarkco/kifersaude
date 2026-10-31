@@ -33,12 +33,12 @@ let scrollLockCount = 0;
 let originalOverflow = '';
 const DialogTitleIdContext = createContext<string | undefined>(undefined);
 const focusableSelector = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
+  'a[href]:not([tabindex="-1"]):not([aria-hidden="true"])',
+  'button:not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
+  'input:not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
+  'select:not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
+  'textarea:not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
+  '[tabindex]:not([tabindex="-1"]):not([aria-hidden="true"])',
 ].join(',');
 
 export function Dialog({

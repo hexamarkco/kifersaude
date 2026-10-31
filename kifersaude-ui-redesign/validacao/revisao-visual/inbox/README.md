@@ -32,7 +32,7 @@
 - Playwright também conferiu a geometria do cartão de agenda com o CSS compilado em uma fixture isolada: o painel permaneceu com 352 px em 768 e 390 px, adaptou para 320 px no viewport estreito e manteve título e botões legíveis, sem overflow horizontal. O teste do componente valida a hierarquia e as duas ações; uma captura autenticada deste estado ainda depende de uma sessão de Inbox disponível.
 - Testes dos componentes confirmam que o cabeçalho contém somente nome e lembrete, e que renomear continua acionando o fluxo existente dentro da barra de informações. A sessão sintética também abriu o agendamento dentro de `/painel/inbox`; a listagem e os demais estados seguem separados no manifesto.
 - A lista sem conversa selecionada foi capturada em 390 × 844. O drawer de informações do lead foi capturado no início e após rolagem interna em desktop e mobile.
-- As 83 capturas listadas desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
+- As 89 capturas listadas desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
 
 ## Segurança e limitações da fixture
 
@@ -73,11 +73,14 @@ O fluxo **Agendamentos do Contato → Agendar nova mensagem** foi aberto dentro 
 
 O `WhatsAppScheduledMessagesPanel` e os fluxos reais de criação e edição foram conferidos em fixture local com dados sintéticos. O diálogo reutiliza `Card`, `Badge`, `EmptyState` e `LoadingState`; corrigi a altura do workspace no mobile, o rótulo do botão de adicionar etapa e a ação de agendar quando não há conversa selecionada. Foram capturados conteúdo, abas, busca, datas, edição, criação, sequência, tema escuro e estados vazio, carregando e erro. As evidências e as limitações estão em [scheduled-list](scheduled-list/README.md); a página/tabela da referência e a revisão autenticada permanecem pendentes.
 
-## Mensagens rápidas — revisão do modal do componente — 31/10/2026
+## Mensagens rápidas — gerenciamento — 31/10/2026
 
-O `WhatsAppQuickRepliesModal` real usa `DialogShell`, campos e ações do Design System. Playwright conferiu a composição em 1920 × 1080, 768 × 1024, 390 × 844 e 320 × 640; o rodapé permaneceu acessível durante a rolagem interna no mobile. A captura de validação mostra o título e a mensagem obrigatórios com erros associados aos campos. O teste focado valida a edição, a mensagem de erro e o formato do payload. Os callbacks foram locais e sem efeito: nenhuma mensagem rápida foi salva nem inserida numa conversa real.
-
-As capturas ficam em `states/quick-replies-*`: desktop 1920, tablet 768, mobile 390 (topo e rolagem interna), mobile 320 e validação no desktop. Essa revisão de componente não substitui a integração autenticada da gestão de respostas rápidas com o compositor do Inbox, que continua pendente.
+- O modal usa o `DialogShell` de formulário e componentes existentes do Design System. Permite escolher uma resposta, criar e remover rascunhos, editar Atalho/Título/Mensagem, conferir erros de validação e salvar pelo fluxo já existente. Não houve alteração no tipo persistido nem nas regras de negócio.
+- A referência mostra uma categoria, mas `WhatsAppQuickReply` não possui esse campo; não foi inventado dado nem persistência. A adaptação mantém Atalho, Título e Mensagem, que existem no modelo real.
+- Playwright conferiu a prévia com os componentes reais em 1920×1080 (claro/escuro), 768×1024, 390×844 e 320×640. O seletor aceita navegação por setas/Enter, os tooltips de contexto e de campo abrem sob demanda, o estado vazio e a validação são legíveis e o rodapé continua acessível durante rolagem interna. Não houve overflow horizontal.
+- O foco inicial agora vai ao botão visível do `Select`; o `<select>` nativo oculto foi removido do conjunto de focáveis do `Dialog`, preservando a navegação por teclado e o ciclo de foco. Teste de regressão cobre essa combinação. O teste de saving confirma campos e ações bloqueados e o Escape sem fechar enquanto a gravação está em andamento.
+- O botão Salvar foi exercitado apenas na fixture sintética, onde fecha o diálogo sem escrita no CRM. As 12 capturas deste componente estão registradas no `coverage.json`, incluindo dropdown aberto, tooltips, vazio, erro, tema escuro e estados mobile de 320 px.
+- A rota autenticada, persistência real e inserção de respostas no compositor não foram certificadas nesta rodada; esses pontos permanecem pendentes e não encerram a revisão dos demais estados da Inbox.
 
 ## Recuperação de anexos indisponíveis — 29/10/2026
 

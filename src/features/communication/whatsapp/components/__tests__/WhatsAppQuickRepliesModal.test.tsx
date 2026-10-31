@@ -67,7 +67,7 @@ test('locks the quick reply editor while a save is in flight', () => {
   view.unmount();
 });
 
-test('uses a compact dialog with accessible title, shortcut, and message fields', () => {
+test('matches the standard form dialog and labels its editor fields accessibly', () => {
   const view = render(
     <WhatsAppQuickRepliesModal
       isOpen
@@ -80,7 +80,7 @@ test('uses a compact dialog with accessible title, shortcut, and message fields'
 
   const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
   assert.ok(dialog);
-  assert.equal(dialog.dataset.size, 'lg');
+  assert.equal(dialog.dataset.size, 'form');
   assert.equal(dialog.querySelector('h2')?.textContent, 'Mensagens rápidas');
 
   const shortcut = dialog.querySelector<HTMLInputElement>('input[placeholder="contato-inicial"]');
@@ -94,6 +94,43 @@ test('uses a compact dialog with accessible title, shortcut, and message fields'
   assert.match(dialog.querySelector(`label[for="${message?.id}"]`)?.textContent ?? '', /Mensagem\s*\*/);
   assert.equal(title?.required, true);
   assert.equal(message?.required, true);
+  assert.match(dialog.textContent ?? '', /1 atalho cadastrado/);
+
+  view.unmount();
+});
+
+test('switches between saved replies and starts a new local draft', () => {
+  const view = render(
+    <WhatsAppQuickRepliesModal
+      isOpen
+      quickReplies={[
+        quickReply(),
+        quickReply({ id: 'quick-reply-2', name: 'Retorno', shortcut: 'retorno', text: 'Passando para saber se conseguiu avaliar.' }),
+      ]}
+      saving={false}
+      onClose={() => undefined}
+      onSave={() => undefined}
+    />,
+  );
+
+  const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+  assert.ok(dialog);
+  const selector = dialog.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]');
+  assert.ok(selector);
+
+  act(() => dispatchClick(selector));
+  const returnOption = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="option"]'))
+    .find((option) => option.textContent?.includes('Retorno'));
+  assert.ok(returnOption);
+  act(() => dispatchClick(returnOption));
+  assert.equal(dialog.querySelector<HTMLInputElement>('input[placeholder="Ex.: Contato inicial"]')?.value, 'Retorno');
+
+  const addButton = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => button.textContent?.trim() === 'Nova');
+  assert.ok(addButton);
+  act(() => dispatchClick(addButton));
+  assert.equal(dialog.querySelector<HTMLInputElement>('input[placeholder="Ex.: Contato inicial"]')?.value, '');
+  assert.match(dialog.textContent ?? '', /3 atalhos cadastrados/);
 
   view.unmount();
 });
@@ -112,7 +149,7 @@ test('identifies required title and message before saving a partially filled sho
 
   const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
   assert.ok(dialog);
-  const saveButton = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Salvar mensagens rápidas'));
+  const saveButton = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Salvar');
   assert.ok(saveButton);
 
   await act(async () => {
@@ -144,7 +181,7 @@ test('saves edits from the selected shortcut without changing its persisted shap
   assert.ok(dialog);
   const title = dialog.querySelector<HTMLInputElement>('input[placeholder="Ex.: Contato inicial"]');
   const message = dialog.querySelector<HTMLTextAreaElement>('textarea');
-  const saveButton = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Salvar mensagens rápidas'));
+  const saveButton = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'Salvar');
   assert.ok(title);
   assert.ok(message);
   assert.ok(saveButton);

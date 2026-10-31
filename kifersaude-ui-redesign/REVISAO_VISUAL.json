@@ -2811,9 +2811,15 @@
         "references/desktop/state--inbox-mensagens-rapidas-gerenciar.png",
         "references/mobile/state--inbox-mensagens-rapidas-gerenciar.png"
       ],
-      "status": "pendente",
-      "evidence": [],
-      "notes": []
+      "status": "revisado_com_adaptacoes",
+      "evidence": [
+        "validacao/revisao-visual/inbox/README.md",
+        "validacao/revisao-visual/inbox/coverage.json"
+      ],
+      "notes": [
+        "DialogShell de formulário comparado às referências desktop e mobile, com editor por seletor, estado vazio, validação, tooltips, estados interativos e layout responsivo; callbacks da prévia não persistem dados nem enviam mensagens.",
+        "Categoria foi omitida porque WhatsAppQuickReply não possui esse dado. A página Inbox autenticada e a integração com o compositor continuam pendentes."
+      ]
     },
     {
       "id": "state--inbox-dados-mensagem",
@@ -2918,8 +2924,8 @@
   ],
   "review_summary": {
     "manifest_contexts": 160,
-    "reviewed_contexts": 71,
-    "remaining_manifest_contexts": 89,
+    "reviewed_contexts": 72,
+    "remaining_manifest_contexts": 88,
     "evidence": "validacao/revisao-visual/README.md",
     "additional_interfaces_discovery": "pendente"
   }

@@ -340,6 +340,37 @@ test('first-content dialog focus selects its first available control', async () 
   view.unmount();
 });
 
+test('first-content dialog focus skips the hidden native select and focuses its visible trigger', async () => {
+  const view = render(
+    <Dialog open onOpenChange={() => undefined} initialFocus="first-content">
+      <DialogHeader><DialogTitle>Editar mensagem rápida</DialogTitle></DialogHeader>
+      <DialogBody>
+        <Select
+          aria-label="Resposta rápida"
+          value="welcome"
+          onChange={() => undefined}
+          options={[{ value: 'welcome', label: 'Boas-vindas' }]}
+        />
+        <Button>Cancelar</Button>
+      </DialogBody>
+    </Dialog>,
+  );
+  const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+  const hiddenSelect = dialog?.querySelector<HTMLSelectElement>('select[aria-hidden="true"]');
+  const visibleTrigger = dialog?.querySelector<HTMLButtonElement>('.kds-select-trigger');
+  assert.ok(dialog);
+  assert.ok(hiddenSelect);
+  assert.ok(visibleTrigger);
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 30));
+  });
+
+  assert.equal(hiddenSelect.tabIndex, -1);
+  assert.equal(document.activeElement, visibleTrigger);
+  view.unmount();
+});
+
 test('dialog helper text is available from the info icon while essential copy can stay visible', () => {
   const view = render(
     <>

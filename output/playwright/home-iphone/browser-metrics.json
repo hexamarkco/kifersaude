@@ -1,0 +1,997 @@
+{
+  "results": [
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 320,
+      "height": 700,
+      "dpr": 3,
+      "phone": {
+        "width": 169.59375,
+        "height": 356.15625,
+        "ratio": 2.100055279159757
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 202.984375,
+      "latestMessages": [
+        {
+          "top": 24.984375,
+          "bottom": 88.984375,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 92.984375,
+          "bottom": 126.984375,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 130.984375,
+          "bottom": 194.984375,
+          "height": 64,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 24.984375,
+          "bottom": 88.984375
+        },
+        {
+          "top": 92.984375,
+          "bottom": 126.984375
+        },
+        {
+          "top": 130.984375,
+          "bottom": 194.984375
+        }
+      ],
+      "scroll": 320,
+      "client": 320,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 360,
+      "height": 740,
+      "dpr": 3,
+      "phone": {
+        "width": 190.796875,
+        "height": 400.671875,
+        "ratio": 2.0999918106625173
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 247.5,
+      "latestMessages": [
+        {
+          "top": 83.5,
+          "bottom": 147.5,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 151.5,
+          "bottom": 185.5,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 189.5,
+          "bottom": 239.5,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 83.5,
+          "bottom": 147.5
+        },
+        {
+          "top": 151.5,
+          "bottom": 185.5
+        },
+        {
+          "top": 189.5,
+          "bottom": 239.5
+        }
+      ],
+      "scroll": 360,
+      "client": 360,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 375,
+      "height": 700,
+      "dpr": 3,
+      "phone": {
+        "width": 198.75,
+        "height": 417.375,
+        "ratio": 2.1
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 264.203125,
+      "latestMessages": [
+        {
+          "top": 100.203125,
+          "bottom": 164.203125,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 168.203125,
+          "bottom": 202.203125,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 206.203125,
+          "bottom": 256.203125,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 32.203125,
+          "bottom": 96.203125
+        },
+        {
+          "top": 100.203125,
+          "bottom": 164.203125
+        },
+        {
+          "top": 168.203125,
+          "bottom": 202.203125
+        },
+        {
+          "top": 206.203125,
+          "bottom": 256.203125
+        }
+      ],
+      "scroll": 375,
+      "client": 375,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 390,
+      "height": 664,
+      "dpr": 3,
+      "phone": {
+        "width": 206.6875,
+        "height": 434.0625,
+        "ratio": 2.1000907166616267
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 280.890625,
+      "latestMessages": [
+        {
+          "top": 116.890625,
+          "bottom": 180.890625,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 48.890625,
+          "bottom": 112.890625
+        },
+        {
+          "top": 116.890625,
+          "bottom": 180.890625
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625
+        }
+      ],
+      "scroll": 390,
+      "client": 390,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 414,
+      "height": 736,
+      "dpr": 3,
+      "phone": {
+        "width": 219.40625,
+        "height": 460.78125,
+        "ratio": 2.1001281868679675
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 307.609375,
+      "latestMessages": [
+        {
+          "top": 143.609375,
+          "bottom": 207.609375,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 211.609375,
+          "bottom": 245.609375,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 249.609375,
+          "bottom": 299.609375,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 89.609375,
+          "bottom": 139.609375
+        },
+        {
+          "top": 143.609375,
+          "bottom": 207.609375
+        },
+        {
+          "top": 211.609375,
+          "bottom": 245.609375
+        },
+        {
+          "top": 249.609375,
+          "bottom": 299.609375
+        }
+      ],
+      "scroll": 414,
+      "client": 414,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 430,
+      "height": 740,
+      "dpr": 3,
+      "phone": {
+        "width": 227.890625,
+        "height": 478.578125,
+        "ratio": 2.100034281796366
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 325.40625,
+      "latestMessages": [
+        {
+          "top": 175.40625,
+          "bottom": 225.40625,
+          "height": 50,
+          "overflow": false
+        },
+        {
+          "top": 229.40625,
+          "bottom": 263.40625,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 267.40625,
+          "bottom": 317.40625,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 121.40625,
+          "bottom": 171.40625
+        },
+        {
+          "top": 175.40625,
+          "bottom": 225.40625
+        },
+        {
+          "top": 229.40625,
+          "bottom": 263.40625
+        },
+        {
+          "top": 267.40625,
+          "bottom": 317.40625
+        }
+      ],
+      "scroll": 430,
+      "client": 430,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": false,
+      "width": 844,
+      "height": 390,
+      "dpr": 3,
+      "phone": {
+        "width": 240,
+        "height": 504,
+        "ratio": 2.1
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 344.421875,
+      "latestMessages": [
+        {
+          "top": 194.421875,
+          "bottom": 244.421875,
+          "height": 50,
+          "overflow": false
+        },
+        {
+          "top": 248.421875,
+          "bottom": 282.421875,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 286.421875,
+          "bottom": 336.421875,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 140.421875,
+          "bottom": 190.421875
+        },
+        {
+          "top": 194.421875,
+          "bottom": 244.421875
+        },
+        {
+          "top": 248.421875,
+          "bottom": 282.421875
+        },
+        {
+          "top": 286.421875,
+          "bottom": 336.421875
+        }
+      ],
+      "scroll": 844,
+      "client": 844,
+      "clipped": [],
+      "inputFont": "14px",
+      "heroPhotoBelowActions": false,
+      "quoteCopyBelowPhoto": false,
+      "quoteBenefitsBelowForm": false,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "rotatedBack": true,
+      "width": 390,
+      "height": 664,
+      "dpr": 3,
+      "phone": {
+        "width": 206.6875,
+        "height": 434.0625,
+        "ratio": 2.1000907166616267
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 280.890625,
+      "latestMessages": [
+        {
+          "top": 116.890625,
+          "bottom": 180.890625,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 48.890625,
+          "bottom": 112.890625
+        },
+        {
+          "top": 116.890625,
+          "bottom": 180.890625
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625
+        }
+      ],
+      "scroll": 390,
+      "client": 390,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 320,
+      "height": 700,
+      "dpr": 3,
+      "phone": {
+        "width": 169.59375,
+        "height": 356.15625,
+        "ratio": 2.100055279159757
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 202.984375,
+      "latestMessages": [
+        {
+          "top": 24.984375,
+          "bottom": 88.984375,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 92.984375,
+          "bottom": 126.984375,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 130.984375,
+          "bottom": 194.984375,
+          "height": 64,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 24.984375,
+          "bottom": 88.984375
+        },
+        {
+          "top": 92.984375,
+          "bottom": 126.984375
+        },
+        {
+          "top": 130.984375,
+          "bottom": 194.984375
+        }
+      ],
+      "scroll": 320,
+      "client": 320,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 360,
+      "height": 740,
+      "dpr": 3,
+      "phone": {
+        "width": 190.796875,
+        "height": 400.671875,
+        "ratio": 2.0999918106625173
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 247.5,
+      "latestMessages": [
+        {
+          "top": 83.5,
+          "bottom": 147.5,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 151.5,
+          "bottom": 185.5,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 189.5,
+          "bottom": 239.5,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 83.5,
+          "bottom": 147.5
+        },
+        {
+          "top": 151.5,
+          "bottom": 185.5
+        },
+        {
+          "top": 189.5,
+          "bottom": 239.5
+        }
+      ],
+      "scroll": 360,
+      "client": 360,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 375,
+      "height": 700,
+      "dpr": 3,
+      "phone": {
+        "width": 198.75,
+        "height": 417.375,
+        "ratio": 2.1
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 264.203125,
+      "latestMessages": [
+        {
+          "top": 100.203125,
+          "bottom": 164.203125,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 168.203125,
+          "bottom": 202.203125,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 206.203125,
+          "bottom": 256.203125,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 32.203125,
+          "bottom": 96.203125
+        },
+        {
+          "top": 100.203125,
+          "bottom": 164.203125
+        },
+        {
+          "top": 168.203125,
+          "bottom": 202.203125
+        },
+        {
+          "top": 206.203125,
+          "bottom": 256.203125
+        }
+      ],
+      "scroll": 375,
+      "client": 375,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 390,
+      "height": 664,
+      "dpr": 3,
+      "phone": {
+        "width": 206.6875,
+        "height": 434.0625,
+        "ratio": 2.1000907166616267
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 280.890625,
+      "latestMessages": [
+        {
+          "top": 116.890625,
+          "bottom": 180.890625,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 48.890625,
+          "bottom": 112.890625
+        },
+        {
+          "top": 116.890625,
+          "bottom": 180.890625
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625
+        }
+      ],
+      "scroll": 390,
+      "client": 390,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 414,
+      "height": 736,
+      "dpr": 3,
+      "phone": {
+        "width": 219.40625,
+        "height": 460.78125,
+        "ratio": 2.1001281868679675
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 307.609375,
+      "latestMessages": [
+        {
+          "top": 143.609375,
+          "bottom": 207.609375,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 211.609375,
+          "bottom": 245.609375,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 249.609375,
+          "bottom": 299.609375,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 89.609375,
+          "bottom": 139.609375
+        },
+        {
+          "top": 143.609375,
+          "bottom": 207.609375
+        },
+        {
+          "top": 211.609375,
+          "bottom": 245.609375
+        },
+        {
+          "top": 249.609375,
+          "bottom": 299.609375
+        }
+      ],
+      "scroll": 414,
+      "client": 414,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 430,
+      "height": 740,
+      "dpr": 3,
+      "phone": {
+        "width": 227.890625,
+        "height": 478.578125,
+        "ratio": 2.100034281796366
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 325.40625,
+      "latestMessages": [
+        {
+          "top": 175.40625,
+          "bottom": 225.40625,
+          "height": 50,
+          "overflow": false
+        },
+        {
+          "top": 229.40625,
+          "bottom": 263.40625,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 267.40625,
+          "bottom": 317.40625,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 121.40625,
+          "bottom": 171.40625
+        },
+        {
+          "top": 175.40625,
+          "bottom": 225.40625
+        },
+        {
+          "top": 229.40625,
+          "bottom": 263.40625
+        },
+        {
+          "top": 267.40625,
+          "bottom": 317.40625
+        }
+      ],
+      "scroll": 430,
+      "client": 430,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": false,
+      "width": 844,
+      "height": 390,
+      "dpr": 3,
+      "phone": {
+        "width": 240,
+        "height": 504,
+        "ratio": 2.1
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 344.421875,
+      "latestMessages": [
+        {
+          "top": 194.421875,
+          "bottom": 244.421875,
+          "height": 50,
+          "overflow": false
+        },
+        {
+          "top": 248.421875,
+          "bottom": 282.421875,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 286.421875,
+          "bottom": 336.421875,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 140.421875,
+          "bottom": 190.421875
+        },
+        {
+          "top": 194.421875,
+          "bottom": 244.421875
+        },
+        {
+          "top": 248.421875,
+          "bottom": 282.421875
+        },
+        {
+          "top": 286.421875,
+          "bottom": 336.421875
+        }
+      ],
+      "scroll": 844,
+      "client": 844,
+      "clipped": [],
+      "inputFont": "14px",
+      "heroPhotoBelowActions": false,
+      "quoteCopyBelowPhoto": false,
+      "quoteBenefitsBelowForm": false,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    },
+    {
+      "reducedMotion": "reduce",
+      "rotatedBack": true,
+      "width": 390,
+      "height": 664,
+      "dpr": 3,
+      "phone": {
+        "width": 206.6875,
+        "height": 434.0625,
+        "ratio": 2.1000907166616267
+      },
+      "screenInside": true,
+      "inputInside": true,
+      "conversationHeight": 280.890625,
+      "latestMessages": [
+        {
+          "top": 116.890625,
+          "bottom": 180.890625,
+          "height": 64,
+          "overflow": false
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625,
+          "height": 34,
+          "overflow": false
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625,
+          "height": 50,
+          "overflow": false
+        }
+      ],
+      "visibleMessages": [
+        {
+          "top": 48.890625,
+          "bottom": 112.890625
+        },
+        {
+          "top": 116.890625,
+          "bottom": 180.890625
+        },
+        {
+          "top": 184.890625,
+          "bottom": 218.890625
+        },
+        {
+          "top": 222.890625,
+          "bottom": 272.890625
+        }
+      ],
+      "scroll": 390,
+      "client": 390,
+      "clipped": [],
+      "inputFont": "16px",
+      "heroPhotoBelowActions": true,
+      "quoteCopyBelowPhoto": true,
+      "quoteBenefitsBelowForm": true,
+      "profiles": "stable",
+      "touchMenu": "passed",
+      "touchFaq": "passed"
+    }
+  ],
+  "errors": []
+}

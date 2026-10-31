@@ -1,0 +1,46 @@
+{
+  "results": [
+    {
+      "width": 640,
+      "geometryAndStyles": "identical",
+      "changed": 5647,
+      "total": 6198400
+    },
+    {
+      "width": 768,
+      "geometryAndStyles": "identical",
+      "changed": 0,
+      "total": 7126272
+    },
+    {
+      "width": 1024,
+      "geometryAndStyles": "identical",
+      "changed": 4589,
+      "total": 7506944
+    },
+    {
+      "width": 1200,
+      "geometryAndStyles": "identical",
+      "changed": 0,
+      "total": 8690400
+    },
+    {
+      "width": 1440,
+      "geometryAndStyles": "identical",
+      "changed": 0,
+      "total": 10753920
+    },
+    {
+      "width": 1536,
+      "geometryAndStyles": "identical",
+      "changed": 324,
+      "total": 11421696
+    },
+    {
+      "width": 1920,
+      "geometryAndStyles": "identical",
+      "changed": 321,
+      "total": 15707520
+    }
+  ]
+}

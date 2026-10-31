@@ -15,7 +15,7 @@ function motionTokens(scope: HTMLElement) {
     stagger: number("--home-motion-stagger", 60),
     distance: number("--home-motion-distance", 18),
     ease: style.getPropertyValue("--home-motion-ease").trim() || "ease-out",
-    compact: window.matchMedia("(width < 640px)").matches,
+    compact: window.matchMedia("(max-width: 639.98px)").matches,
   };
 }
 

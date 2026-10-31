@@ -124,9 +124,12 @@
   color: var(--text-muted);
 }
 
-.comm-terracotta .whatsapp-inbox-thread .whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
+/* Mídias inbound podem renderizar o horário fora do balão. Preserve o recuo
+   sem depender do tema aplicado ao contêiner da conversa. */
+.whatsapp-inbox-thread .whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
   box-sizing: border-box;
-  padding: var(--space-1) var(--space-3);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
 }
 
 .comm-terracotta .whatsapp-inbox-image-card,

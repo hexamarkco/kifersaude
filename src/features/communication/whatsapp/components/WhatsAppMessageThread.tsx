@@ -184,7 +184,7 @@ export function WhatsAppMessageThread({
                       );
                       const mediaGroupMeta = (
                         <div className={`whatsapp-inbox-message-meta whatsapp-inbox-message-meta-external ${inboxMediaMetaSpacing} mt-1 flex flex-wrap items-center gap-2 text-[11px] font-medium ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-                          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                          <span className="whatsapp-inbox-media-meta-time inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
                             <span>{formatMessageTime(lastMessage.message_at)}</span>
                             {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
                           </span>
@@ -257,6 +257,7 @@ export function WhatsAppMessageThread({
                       )}>
                         <span className={cx(
                           `${messageMetaTimeOrder} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`,
+                          isBubblelessMediaMessage(message) ? 'whatsapp-inbox-media-meta-time' : null,
                         )}>
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}

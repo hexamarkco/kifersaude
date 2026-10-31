@@ -110,6 +110,7 @@ const assertMediaMetaHasConsistentSpacing = (markup: string) => {
 
   assert.equal(classes.length, 1);
   assert.ok(classes[0]?.includes('whatsapp-inbox-media-meta'));
+  assert.ok(classLists.some((classList) => classList.includes('whatsapp-inbox-media-meta-time')));
 };
 
 const assertExternalMediaMetaHasInset = (markup: string) => {
@@ -144,6 +145,13 @@ test('mantém o horário recuado quando a mídia inbound também tem legenda', (
 
 test('mantém o horário inbound com recuo em mensagens de áudio sem bubble', () => {
   const message = createMessage('voice-1', 'voice');
+  const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
+
+  assertExternalMediaMetaHasInset(markup);
+});
+
+test('mantém o horário inbound recuado em stickers sem bubble', () => {
+  const message = createMessage('sticker-1', 'sticker');
   const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
 
   assertExternalMediaMetaHasInset(markup);

@@ -1,4 +1,3 @@
-import { Text, Heading } from '../../../../design-system';
 import { AlertTriangle, ArrowUpRight, Bell, Bot, CalendarPlus, Check, Clock3, Loader2, MapPin, Pencil, RefreshCw, Sparkles, Unlink, Info, Link2, Plus, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
@@ -6,6 +5,7 @@ import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import {
+  Avatar,
   Badge,
   Button,
   DateTimePicker,
@@ -14,11 +14,13 @@ import {
   DrawerBody,
   DrawerHeader,
   EmptyState,
+  Heading,
   InfoTooltip,
   OperationalStatusBadge,
   SearchInput,
   Surface,
   Tabs,
+  Text,
   type TabItem,
 } from '../../../../design-system';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
@@ -106,16 +108,6 @@ const getDayKey = (value: string | Date) => {
 
   return DAY_KEY_FORMATTER.format(date);
 };
-
-const getInitial = (value: string) => value.trim().charAt(0).toUpperCase() || '#';
-
-function LeadAvatar({ label }: { label: string }) {
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent-gold-soft)] text-sm font-semibold text-[var(--accent-gold-hover)]">
-      {getInitial(label)}
-    </div>
-  );
-}
 
 export default function WhatsAppLeadDrawer({
   isOpen,
@@ -471,13 +463,25 @@ export default function WhatsAppLeadDrawer({
   const drawerContent = (
     <>
         <DrawerHeader onClose={onClose} className="comm-whatsapp-lead-drawer-header">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]">{presentation === 'sidebar' ? 'Informações do contato' : 'Info do chat'}</Text>
           {presentation === 'sidebar' ? (
-            <Heading level={2} className="mt-1 text-base font-semibold text-[var(--text-primary)]">{chatDisplayName}</Heading>
+            <>
+              <Heading level={2} family="interface" weight="semibold">Informações do contato</Heading>
+              <Text size="xs" tone="muted" className="mt-1">Dados do contato, lead e próximos acompanhamentos</Text>
+              <div className="mt-3 flex min-w-0 items-center gap-3">
+                <div className="shrink-0" aria-hidden="true"><Avatar name={chatDisplayName} size="md" tone="brand" /></div>
+                <div className="min-w-0">
+                  <Text as="div" size="sm" tone="primary" weight="semibold" className="truncate">{chatDisplayName}</Text>
+                  <Text as="div" size="xs" tone="muted" className="mt-0.5 truncate">{linkedLead?.status_nome || 'Contato do WhatsApp'}</Text>
+                </div>
+              </div>
+            </>
           ) : (
-            <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
+            <>
+              <Text size="xs" tone="brand" weight="semibold" className="uppercase tracking-[0.14em]">Info do chat</Text>
+              <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
+              <Text size="sm" tone="muted" className="mt-1">Lead, contratos e próximos acompanhamentos</Text>
+            </>
           )}
-          {presentation === 'drawer' ? <Text className="mt-1 text-sm text-[var(--text-muted)]">Lead, contratos e próximos acompanhamentos</Text> : null}
           <div className="mt-3 min-w-0 space-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-sm text-[var(--text-secondary)]">
               <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</span>
@@ -709,7 +713,7 @@ export default function WhatsAppLeadDrawer({
                 {suggestedLead && (
                   <Surface padding="sm" className="border-[var(--brand-primary-border)]">
                     <div className="flex items-start gap-3">
-                      <LeadAvatar label={suggestedLead.nome_completo || suggestedLead.telefone || '?'} />
+                      <div className="shrink-0" aria-hidden="true"><Avatar name={suggestedLead.nome_completo || suggestedLead.telefone || '?'} size="sm" tone="brand" /></div>
                       <div className="min-w-0 flex-1">
                         <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
                           Sugestão para esta conversa
@@ -768,7 +772,7 @@ export default function WhatsAppLeadDrawer({
                       .filter((lead) => lead.id !== suggestedLead?.id)
                       .map((lead) => (
                       <Surface key={lead.id} variant="muted" padding="sm" className="flex items-center gap-3">
-                        <LeadAvatar label={lead.nome_completo || lead.telefone || '?'} />
+                        <div className="shrink-0" aria-hidden="true"><Avatar name={lead.nome_completo || lead.telefone || '?'} size="sm" tone="brand" /></div>
                         <div className="min-w-0 flex-1">
                           <Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                             <LeadFavoriteBadge favorito={lead.favorito} />

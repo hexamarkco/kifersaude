@@ -80,8 +80,8 @@
   },
   "media_message_metadata_check": {
     "checked_at": "2026-10-31",
-    "fixture": "Playwright CLI on the local Inbox route with synthetic inbound conversations and production communication CSS",
-    "computed_padding": { "inline_start": "12px", "inline_end": "12px", "block_start": "4px", "block_end": "4px" },
+    "fixture": "Isolated Vite production preview rendering the real WhatsAppMessageThread with a synthetic inbound image and reaction",
+    "computed_padding": { "timestamp_inline_start": "12px", "timestamp_inline_end": "12px", "media_container_block_start": "4px", "media_container_block_end": "4px" },
     "viewports": [
       { "viewport": "1920x1080", "document_width": 1920, "metadata_inset": "12px" },
       { "viewport": "768x1024", "document_width": 768, "metadata_inset": "12px" },
@@ -91,7 +91,7 @@
     "themes": ["light", "dark"],
     "horizontal_overflow": false,
     "selector_requires_thread_ancestor": false,
-    "classless_wrapper_check": { "padding_inline_start": "12px", "padding_inline_end": "12px", "padding_block_start": "4px", "padding_block_end": "4px" },
+    "classless_wrapper_check": { "timestamp_padding_inline_start": "12px", "timestamp_padding_inline_end": "12px", "metadata_padding_inline_start": "0px", "metadata_padding_inline_end": "0px", "metadata_padding_block_start": "8px", "metadata_padding_block_end": "8px" },
     "limitation": "This check covers message metadata spacing with synthetic conversations; it does not certify the entire mobile Inbox shell."
   },
   "scheduled_message_modal_checks": {
@@ -135,17 +135,17 @@
   "contact_panel_component_review": {
     "checked_at": "2026-10-31",
     "component": "src/features/communication/whatsapp/components/WhatsAppLeadDrawer.tsx",
-    "fixture": "Playwright CLI rendered the production contact drawer and CRM styles in a synthetic Inbox shell; list, thread and composer shell content is static.",
-    "supabase_requests": "Intercepted and answered with empty data; no real records or writes.",
+    "fixture": "Isolated Vite production build rendered the production contact drawer and CRM styles in a synthetic Inbox shell; list, thread and composer shell content is static.",
+    "supabase_requests": "No real credentials were used; a local placeholder URL was configured and callbacks were no-ops.",
     "themes": ["light", "dark"],
     "viewports": [
-      { "viewport": "1920x1080", "document_width": 1920, "panel_width": 352, "header_content_width": 255, "three_columns_visible": true, "composer_anchored_to_thread_bottom": true },
+      { "viewport": "1920x1080", "document_width": 1920, "panel_width": 508.8, "header_content_width": 411.8, "three_columns_visible": true, "composer_anchored_to_thread_bottom": true },
       { "viewport": "1272x800", "document_width": 1272, "panel_width": 352, "header_content_width": 255, "three_columns_visible": true, "composer_anchored_to_thread_bottom": true },
       { "viewport": "768x1024", "document_width": 768, "panel_width": 768, "header_content_width": 671, "conversation_and_list_hidden": true },
       { "viewport": "390x844", "document_width": 390, "panel_width": 390, "header_content_width": 297, "conversation_and_list_hidden": true },
       { "viewport": "320x640", "document_width": 320, "panel_width": 320, "header_content_width": 227, "conversation_and_list_hidden": true, "search_placeholder_fits": true }
     ],
-    "mobile_internal_scroll": { "viewport": "320x640", "client_height": 416, "scroll_height": 692, "captures": ["contact-panel/dark-mobile-320x640-panel-scrolled.png", "contact-panel/dark-mobile-320x640-panel-actions-scrolled.png"] },
+    "mobile_internal_scroll": { "viewport": "320x640", "client_height": 371, "scroll_height": 692, "captures": ["contact-panel/dark-mobile-320x640-panel-scrolled.png", "contact-panel/dark-mobile-320x640-panel-actions-scrolled.png"] },
     "limitation": "The integrated authenticated /painel/inbox route is unavailable locally. The real contact drawer was checked, but list, conversation and composer behavior remain to be reviewed in the authenticated route."
   },
   "screenshots": [

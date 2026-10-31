@@ -128,12 +128,19 @@
    dos balões de texto, mesmo dentro de wrappers com utilitários de reset. */
 .whatsapp-inbox-message-meta.whatsapp-inbox-media-meta {
   box-sizing: border-box;
-  padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+  padding-block: var(--space-1, 0.25rem);
 }
 
-.whatsapp-inbox-thread .whatsapp-inbox-message-meta-external {
+/* A data e a hora ficam fora da bolha em alguns tipos de mensagem. Mantenha o
+   recuo mesmo quando a thread for exibida em um contexto compacto ou portal. */
+.whatsapp-inbox-message-meta.whatsapp-inbox-message-meta-external {
   box-sizing: border-box;
-  padding: var(--space-2) var(--space-3);
+  padding-block: var(--space-2);
+}
+
+.whatsapp-inbox-media-meta-time {
+  box-sizing: border-box;
+  padding-inline: var(--space-3, 0.75rem);
 }
 
 .comm-terracotta .whatsapp-inbox-image-card,

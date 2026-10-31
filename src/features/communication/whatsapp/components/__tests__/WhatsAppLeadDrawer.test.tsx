@@ -71,6 +71,11 @@ test('renderiza informações do contato em uma lateral inline fechável, sem ab
   try {
     const panel = document.querySelector('aside[aria-label="Informações do contato"]');
     assert.ok(panel);
+    const panelHeader = panel.querySelector('.comm-whatsapp-lead-drawer-header');
+    assert.equal(panelHeader?.querySelector('h2')?.textContent, 'Informações do contato');
+    assert.match(panelHeader?.textContent ?? '', /Dados do contato, lead e próximos acompanhamentos/);
+    assert.match(panelHeader?.textContent ?? '', /Contato do WhatsApp/);
+    assert.ok(panelHeader?.querySelector('.kds-avatar.kds-avatar-md.kds-avatar-brand'));
     assert.match(panel.textContent ?? '', /Contato de demonstração/);
     assert.match(panel.textContent ?? '', /\+55 \(11\) 99999-9999/);
     assert.ok(panel.querySelector('button[aria-label="Fechar"]'));
@@ -126,6 +131,7 @@ test('mantém a agenda legível na lateral estreita e coloca a explicação no �
     id: 'lead-1',
     nome_completo: 'Contato de demonstração',
     telefone: '5511999999999',
+    status_nome: 'Atendimento',
   };
   props.canViewAgenda = true;
   props.canEditAgenda = true;
@@ -139,6 +145,7 @@ test('mantém a agenda legível na lateral estreita e coloca a explicação no �
 
     const agendaHeading = Array.from(document.querySelectorAll('h3')).find((heading) => heading.textContent === 'Agenda do chat');
     assert.ok(agendaHeading);
+    assert.match(document.querySelector('.comm-whatsapp-lead-drawer-header')?.textContent ?? '', /Atendimento/);
     const agendaHeader = agendaHeading.closest('.comm-whatsapp-chat-agenda-header');
     assert.ok(agendaHeader);
     assert.equal(agendaHeader.classList.contains('sm:flex-row'), false);

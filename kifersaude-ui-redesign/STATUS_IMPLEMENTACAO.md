@@ -190,6 +190,8 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 - A regra de três colunas considera a largura disponível dentro do Inbox. Com 72rem (1152 px CSS) ou mais, lista, conversa e Informações do contato ficam lado a lado. Abaixo disso, o painel ocupa a área de trabalho enquanto está aberto. Playwright CLI verificou a regra em 1920, 1272 (zoom), 1024, 768, 390 e 320 px, sem overflow.
 - Em 31/10, a revisão passou a renderizar o `WhatsAppLeadDrawer` real em cinco larguras, nos temas claro e escuro. O campo de busca usa o placeholder curto **Nome ou telefone** e mantém seu rótulo acessível completo; as capturas em 320 px também registram a rolagem interna. A shell da conversa continua estática e a rota autenticada ainda precisa de conferência integrada. [Evidências e limitações](validacao/revisao-visual/inbox/README.md).
+- O cabeçalho de **Informações do contato** foi reorganizado conforme a referência: título e descrição próprios, identidade com nome e status real do lead e Avatar reutilizável do design system. As sugestões de leads também passaram a usar esse Avatar; telefone, DDD, presença, renomeação, estado da IA e ações existentes foram preservados. As capturas Playwright foram renovadas em desktop, tablet e mobile, nos temas claro e escuro, incluindo rolagem do painel em 320 px.
+- O horário inbound de mídias agora recebe 12 px de recuo no próprio trecho de data/hora, enquanto o metadado preserva seu espaçamento vertical. Playwright confirmou o estilo em 1920, 768, 390 e 320 px sem overflow e mesmo sem o ancestral `.whatsapp-inbox-thread`; os testes cobrem imagem, legenda, áudio, sticker e agrupamento.
 
 ### Configurações — alinhamento do ícone de informação (31/10/2026)
 

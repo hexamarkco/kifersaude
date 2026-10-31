@@ -1786,10 +1786,10 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row min-w-0 flex-1">
-                        <Heading level={4} className="kds-card-title">Envio automático</Heading>
+                      <Heading level={4} className="kds-card-title kds-heading-with-info min-w-0 flex-1">
+                        Envio automático
                         <InfoTooltip content="Pausa ou libera o processamento dos fluxos ativos." label="Informações sobre o processamento dos fluxos" />
-                      </div>
+                      </Heading>
                     </div>
                     <div className="flex items-center justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
                       <div className="min-w-0">

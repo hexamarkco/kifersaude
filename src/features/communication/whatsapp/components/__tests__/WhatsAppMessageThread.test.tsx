@@ -112,6 +112,11 @@ const assertMediaMetaHasConsistentSpacing = (markup: string) => {
   assert.ok(classes[0]?.includes('whatsapp-inbox-media-meta'));
 };
 
+const assertExternalMediaMetaHasInset = (markup: string) => {
+  assert.ok(markup.includes('whatsapp-inbox-message-meta-external'));
+  assertMediaMetaHasConsistentSpacing(markup);
+};
+
 test('mantém o horário de mídia inbound recuado e antes das reações', () => {
   const message = {
     ...createMessage('image-1', 'image'),
@@ -121,7 +126,7 @@ test('mantém o horário de mídia inbound recuado e antes das reações', () =>
   };
   const markup = renderThread([{ type: 'message', key: 'message:image-1', message }], [message]);
 
-  assertMediaMetaHasConsistentSpacing(markup);
+  assertExternalMediaMetaHasInset(markup);
   assert.ok(markup.indexOf('whatsapp-inbox-media-meta') < markup.indexOf('💗'));
 });
 
@@ -133,7 +138,15 @@ test('mantém o horário recuado quando a mídia inbound também tem legenda', (
   const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
 
   assertMediaMetaHasConsistentSpacing(markup);
+  assert.ok(!markup.includes('whatsapp-inbox-message-meta-external'));
   assert.ok(markup.includes('whatsapp-inbox-media-caption-bubble'));
+});
+
+test('mantém o horário inbound com recuo em mensagens de áudio sem bubble', () => {
+  const message = createMessage('voice-1', 'voice');
+  const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
+
+  assertExternalMediaMetaHasInset(markup);
 });
 
 test('mantém o horário do último item de grupo inbound afastado da borda', () => {
@@ -143,5 +156,5 @@ test('mantém o horário do último item de grupo inbound afastado da borda', ()
     { type: 'media-group', key: 'media-group:image-1:image-2', messages: [firstMessage, lastMessage] },
   ], [firstMessage, lastMessage]);
 
-  assertMediaMetaHasConsistentSpacing(markup);
+  assertExternalMediaMetaHasInset(markup);
 });

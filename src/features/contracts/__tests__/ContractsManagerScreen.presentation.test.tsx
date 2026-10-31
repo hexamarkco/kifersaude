@@ -49,7 +49,13 @@ vi.mock('../../../features/contracts', async () => {
   return { ...actual, getContractDetailsSnapshot: mocks.loadContractDetails };
 });
 vi.mock('../components/HolderImportPreparation', () => ({ default: () => null }));
-vi.mock('../components/ContractBulkJsonImportDialog', () => ({ ContractBulkJsonImportDialog: () => null }));
+vi.mock('../components/ContractBulkJsonImportDialog', () => ({
+  ContractBulkJsonImportDialog: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="Importação de contratos">
+      <button type="button" onClick={onClose}>Fechar importação</button>
+    </div>
+  ),
+}));
 vi.mock('../components/ContractStatusDropdown', () => ({
   default: ({ status }: { status: string }) => <span>{status}</span>,
 }));
@@ -72,6 +78,40 @@ vi.mock('../../../hooks/useConfirmationModal', () => ({
 }));
 
 import ContractsManagerScreen from '../ContractsManagerScreen';
+
+test('opens the bulk import dialog from the labeled secondary header action', async () => {
+  loadContractsMock.mockResolvedValue({
+    contracts: [],
+    holdersByContractId: {},
+    dependentsByContractId: {},
+    failedSources: [],
+  });
+
+  const view = render(<ContractsManagerScreen />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await screen.findByText('Gestão de contratos');
+    const importButton = Array.from(view.container.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('Importar em massa'));
+    assert.ok(importButton);
+    assert.equal(importButton.classList.contains('kds-button-secondary'), true);
+
+    await act(async () => { importButton.click(); });
+    assert.ok(document.body.querySelector('[role="dialog"][aria-label="Importação de contratos"]'));
+
+    await act(async () => {
+      document.body.querySelector<HTMLButtonElement>('[role="dialog"][aria-label="Importação de contratos"] button')?.click();
+    });
+    assert.equal(document.body.querySelector('[role="dialog"][aria-label="Importação de contratos"]'), null);
+  } finally {
+    view.unmount();
+    loadContractsMock.mockReset();
+  }
+});
 
 const contract = {
   id: 'contract-demo',

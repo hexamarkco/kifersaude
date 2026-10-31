@@ -6,6 +6,11 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
+### Contratos — ação de importação no cabeçalho (31/10/2026)
+
+- **Importar em massa** agora é uma ação secundária nomeada ao lado de **Novo contrato**, alinhada pelo mesmo componente de botão e altura. Isso remove o ícone isolado e melhora a descoberta sem alterar o diálogo, o formato JSON ou as permissões.
+- Playwright conferiu a listagem com oito contratos sintéticos em 1920×1080 e 390×844; no mobile, as ações empilham sem disputa de espaço. O teste de apresentação verifica a abertura e o fechamento do diálogo pelo novo botão.
+
 ### Configurações — alinhamento das informações nos títulos (30 e 31/10/2026)
 
 - O ícone de informação de **Envio automático** agora usa a mesma linha de título do design system que **Agendamento avançado**. O gatilho fica ao lado do nome mesmo quando o espaço do cartão diminui.

@@ -699,11 +699,10 @@ export default function ContractsManager({
           description="Gerencie clientes, vigências, titulares e dependentes em um só lugar."
           actions={canEditContracts ? (
             <div className="kds-contracts-header-actions">
-              <RecordActions
-                actions={[{ label: 'Importar contratos em massa', icon: FileUp, onClick: () => setShowBulkImport(true) }]}
-                visibleCount={1}
-                label="Ações dos contratos"
-              />
+              <Button variant="secondary" onClick={() => setShowBulkImport(true)}>
+                <FileUp className="kds-control-icon" />
+                <span>Importar em massa</span>
+              </Button>
               <Button
                 onClick={() => {
                   setEditingContract(null);

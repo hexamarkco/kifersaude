@@ -1880,7 +1880,7 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon>
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row flex min-w-0 flex-nowrap items-center gap-2">
+                      <div className="kds-card-title-row min-w-0">
                         <Heading level={4} className="kds-card-title whitespace-nowrap">Envio automático</Heading>
                         <InfoTooltip
                           className="shrink-0"
@@ -1907,7 +1907,7 @@ export default function AutoContactFlowSettingsScreen() {
                       <CardIcon tone="gold">
                         <AlarmClock className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row flex min-w-0 flex-nowrap items-center gap-2">
+                      <div className="kds-card-title-row min-w-0">
                         <Heading level={4} className="kds-card-title whitespace-nowrap">Agendamento avançado</Heading>
                         <InfoTooltip
                           className="shrink-0"

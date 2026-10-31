@@ -1769,6 +1769,22 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-ai-global-field-footer { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); }
 .kds-ai-global-updated { margin: 0; color: var(--text-muted); font: var(--type-caption); }
 .kds-ai-global-loading { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.kds-automation-setting-card { container-type: inline-size; }
+.kds-automation-setting-heading { display: flex; min-width: 0; align-items: center; gap: var(--space-3); }
+.kds-automation-setting-icon { flex: 0 0 auto; }
+.kds-automation-setting-heading .kds-card-title-row { flex: 0 1 auto; }
+@container (max-width: 15rem) {
+  .kds-automation-setting-icon { display: none; }
+  .kds-automation-setting-heading { gap: 0; }
+  .kds-automation-setting-heading .kds-card-title-row { gap: var(--space-1); }
+  .painel-theme.kifer-ds .kds-automation-setting-heading .kds-card-title {
+    font-size: 0.875rem;
+    line-height: 1.25;
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+  }
+}
 .kds-ai-version-row { display: flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-control); background: var(--bg-surface-muted); padding: var(--space-2) var(--space-3); color: var(--text-muted); font: var(--type-caption); }
 .kds-ai-editor-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .kds-ai-editor-footer .kds-page-action-bar { padding: 0; border: 0; margin-left: auto; }

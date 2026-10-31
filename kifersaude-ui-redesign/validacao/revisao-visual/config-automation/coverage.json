@@ -12,7 +12,8 @@
     "src/features/config/automation/components/AutomationFlowsWorkspace.tsx",
     "src/features/config/shared/configTabs.ts",
     "src/design-system/components.css",
-    "src/design-system/application.css"
+    "src/design-system/application.css",
+    "src/design-system/operational.css"
   ],
   "fixture": "Composição real do shell e componentes com dados sintéticos locais; chamadas externas e gravações bloqueadas.",
   "screenshots": [
@@ -35,6 +36,7 @@
     { "path": "current-shell/state-info-title-inline-desktop-1920.png", "viewport": "1920x1080", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático" },
     { "path": "current-shell/state-info-title-inline-mobile-320.png", "viewport": "320x640", "capture": "state", "theme": "light", "state": "Ícone de informação ao lado do título do card Envio automático em tela compacta" },
     { "path": "current-shell/state-info-title-inline-mobile-320-dark.png", "viewport": "320x640", "capture": "state", "theme": "dark", "state": "Ícone de informação integrado ao título Envio automático em viewport compacto" },
+    { "path": "current-shell/state-info-title-inline-narrow-card-dark.png", "viewport": "1280x720", "capture": "state", "theme": "dark", "state": "Título e ícone de informação alinhados em um card de 184 px; ícone decorativo recolhido" },
     { "path": "flow-detail/desktop-1920-full.png", "viewport": "1920x1080", "capture": "fullPage", "theme": "light", "state": "Editor do fluxo em página própria" },
     { "path": "flow-detail/desktop-1920-viewport.png", "viewport": "1920x1080", "capture": "viewport", "theme": "light", "state": "Editor do fluxo em página própria" },
     { "path": "flow-detail/tablet-768-full.png", "viewport": "768x1024", "capture": "fullPage", "theme": "light", "state": "Editor do fluxo com nós contidos no canvas e inspetor vazio compacto" },
@@ -79,6 +81,12 @@
       "mobile_actions_full_width": true,
       "initial_focus": "Primeiro campo; o tooltip de orientação não abre automaticamente",
       "dark_theme": "Edição aberta e conferida sem conflito visual"
+    },
+    "narrow_title_tooltip": {
+      "card_width": "184px",
+      "title_and_info_icon_same_line": true,
+      "horizontal_overlap": false,
+      "decorative_card_icon_hidden_at_narrow_width": true
     },
     "mobile_list_representation": "Cartões do Design System abaixo de lg; tabela no desktop.",
     "desktop_theme": ["light", "dark"],

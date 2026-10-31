@@ -1875,13 +1875,13 @@ export default function AutoContactFlowSettingsScreen() {
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-2">
-                  <Card padding="md" className="space-y-5">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <CardIcon>
+                  <Card padding="md" className="kds-automation-setting-card space-y-5">
+                    <div className="kds-automation-setting-heading">
+                      <CardIcon className="kds-automation-setting-icon">
                         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
-                      <div className="kds-card-title-row min-w-0">
-                        <Heading level={4} className="kds-card-title whitespace-nowrap">Envio automático</Heading>
+                      <div className="kds-card-title-row min-w-0 flex-nowrap">
+                        <Heading level={4} className="kds-card-title min-w-0">Envio automático</Heading>
                         <InfoTooltip
                           className="shrink-0"
                           content="Pausa ou libera o processamento dos fluxos ativos."
@@ -1902,9 +1902,9 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
                   </Card>
 
-                  <Card padding="md" className="space-y-5">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <CardIcon tone="gold">
+                  <Card padding="md" className="kds-automation-setting-card space-y-5">
+                    <div className="kds-automation-setting-heading">
+                      <CardIcon tone="gold" className="kds-automation-setting-icon">
                         <AlarmClock className="h-5 w-5" aria-hidden="true" />
                       </CardIcon>
                       <div className="kds-card-title-row min-w-0">

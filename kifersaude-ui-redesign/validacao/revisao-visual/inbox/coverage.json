@@ -148,6 +148,22 @@
     "mobile_internal_scroll": { "viewport": "320x640", "client_height": 371, "scroll_height": 692, "captures": ["contact-panel/dark-mobile-320x640-panel-scrolled.png", "contact-panel/dark-mobile-320x640-panel-actions-scrolled.png"] },
     "limitation": "The integrated authenticated /painel/inbox route is unavailable locally. The real contact drawer was checked, but list, conversation and composer behavior remain to be reviewed in the authenticated route."
   },
+  "quick_replies_component_review": {
+    "checked_at": "2026-10-31",
+    "component": "src/features/communication/whatsapp/components/WhatsAppQuickRepliesModal.tsx",
+    "fixture": "Local Playwright preview with the production modal, design-system CSS, synthetic quick replies and no-op callbacks.",
+    "viewports": ["1920x1080", "768x1024", "390x844", "320x640"],
+    "themes": ["light"],
+    "states": ["existing reply editor", "mobile editor after internal scroll with footer", "required-field validation error"],
+    "checks": {
+      "document_horizontal_overflow": false,
+      "footer_visible_during_mobile_internal_scroll": true,
+      "field_errors_associated_with_required_fields": true,
+      "no_persistent_save_performed": true
+    },
+    "focused_test_file": "src/features/communication/whatsapp/components/__tests__/WhatsAppQuickRepliesModal.test.tsx",
+    "limitation": "The authenticated Inbox route and insertion of saved replies into its composer remain pending. The fixture callbacks did not save or send communications."
+  },
   "screenshots": [
     { "file": "desktop/selected-light-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "light", "capture": "fullPage" },
     { "file": "desktop/selected-dark-full.png", "state": "selected conversation", "viewport": "1920x1080", "theme": "dark", "capture": "fullPage" },
@@ -225,11 +241,17 @@
     { "file": "scheduled-list/mobile/upcoming.png", "state": "scheduled message list", "viewport": "390x844", "theme": "light", "capture": "fullPage" },
     { "file": "scheduled-list/mobile/create-sequence-top.png", "state": "create sequence modal at top of internal scroll", "viewport": "390x844", "theme": "light", "capture": "viewport" },
     { "file": "scheduled-list/mobile/create-sequence-bottom.png", "state": "create sequence modal bottom and fixed actions", "viewport": "390x844", "theme": "light", "capture": "viewport" },
-    { "file": "scheduled-list/mobile-320/upcoming.png", "state": "scheduled message list at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" }
+    { "file": "scheduled-list/mobile-320/upcoming.png", "state": "scheduled message list at minimum width", "viewport": "320x640", "theme": "light", "capture": "fullPage" },
+    { "file": "states/quick-replies-desktop-1920-light.png", "state": "quick replies modal editor", "viewport": "1920x1080", "theme": "light", "capture": "state" },
+    { "file": "states/quick-replies-tablet-768-light.png", "state": "quick replies modal editor", "viewport": "768x1024", "theme": "light", "capture": "state" },
+    { "file": "states/quick-replies-mobile-390-light-top.png", "state": "quick replies modal at top on mobile", "viewport": "390x844", "theme": "light", "capture": "state" },
+    { "file": "states/quick-replies-mobile-390-light-editor.png", "state": "quick replies editor and sticky footer after internal scroll", "viewport": "390x844", "theme": "light", "capture": "state" },
+    { "file": "states/quick-replies-mobile-320-light.png", "state": "quick replies modal at minimum width", "viewport": "320x640", "theme": "light", "capture": "state" },
+    { "file": "states/quick-replies-desktop-validation-error.png", "state": "required message validation error", "viewport": "1920x1080", "theme": "light", "capture": "state" }
   ],
   "limitations": [
     "The local fixture disables the WhatsApp transport and rejects presence with HTTP 403; Realtime handshake attempts time out. No real communications or CRM writes were performed.",
-    "The integrated schedule form is reviewed, while the full scheduled-message list and its tabs remain pending; WhatsApp dashboard, message search, attachments, media, formatting, quick replies and other message actions also remain pending separate review.",
+    "The integrated schedule form is reviewed, while the full scheduled-message list and its tabs remain pending; WhatsApp dashboard, message search, attachments, media, formatting, integration of quick replies with the composer and other message actions also remain pending separate review. The quick replies component itself has been reviewed in a local fixture.",
     "The advanced-filter and contact-drawer reviews still use component fixtures. The Inbox route was used with synthetic session data for the schedule form and message spacing; the full page shell was not reviewed in that pass."
   ]
 }

@@ -41,6 +41,9 @@ Os registros detalhados, métricas verificadas e limitações estão em [`covera
 - `state-search-single-result-desktop.png`
 - `state-templates-desktop.png`, `state-operation-desktop.png`
 - `state-info-title-inline-desktop-1920.png`, `state-info-title-inline-mobile-320.png`, `state-info-title-inline-mobile-320-dark.png` — ícone de informação integrado ao título **Envio automático**, também conferido em viewport compacto e tema escuro.
+- `state-info-title-inline-narrow-card-dark.png` — estado de um card estreito (184 px) no tema escuro; o ícone permanece ao lado do título e o ícone decorativo do card é recolhido para liberar espaço.
+
+O caso do card de 184 px foi reproduzido com o componente real em uma fixture local do Playwright. A regra usa a largura do próprio card, em vez de depender apenas da largura do viewport. O texto do título e o “i” ficam na mesma linha, sem corte ou sobreposição.
 
 O editor de fluxo está em [`flow-detail/`](flow-detail/), com capturas desktop, tablet, mobile, abas e alinhamento do ícone:
 

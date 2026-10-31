@@ -702,7 +702,8 @@ export default function WhatsAppLeadDrawer({
                 <SearchInput
                   value={searchQuery}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => onSearchQueryChange(event.target.value)}
-                  placeholder="Buscar lead por nome ou telefone"
+                  placeholder="Nome ou telefone"
+                  aria-label="Buscar lead por nome ou telefone"
                 />
 
                 {suggestedLead && (

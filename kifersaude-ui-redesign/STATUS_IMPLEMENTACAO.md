@@ -6,10 +6,10 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 
 ## Revisão comparativa em andamento — 29/10/2026
 
-### Configurações — alinhamento das informações nos títulos (30/10/2026)
+### Configurações — alinhamento das informações nos títulos (30 e 31/10/2026)
 
-- Os ícones de informação dos cards **Envio automático** e **Agendamento avançado** agora ficam no mesmo agrupamento flexível do título. Em larguras menores, o texto pode quebrar de linha sem empurrar o ícone para baixo.
-- Usei o padrão `kds-card-title-row` existente; nenhuma configuração ou regra de automação foi alterada.
+- O ícone de informação de **Envio automático** agora usa a mesma linha de título do design system que **Agendamento avançado**. O gatilho fica ao lado do nome mesmo quando o espaço do cartão diminui.
+- Nenhuma configuração, automação ou regra de negócio foi alterada.
 
 ### Contratos — cadastro de dependentes (30/10/2026)
 
@@ -149,9 +149,16 @@ O manifesto registra **160 contextos**: **47 páginas, 19 contextos adicionais e
 - A aba integrada agora usa somente o `PageHeader` compartilhado de `ConfigPageScreen`; título, descrição, abas e ação **Novo link** ficam alinhados no mesmo padrão das outras configurações. O botão do cabeçalho abre o diálogo existente, e sair da aba fecha esse diálogo. `LinksScreen` ainda mantém seu cabeçalho próprio quando usado isoladamente.
 - Testes focados: **13/13** entre `ConfigPageScreen`, `LinksScreen` e `SettingsCatalogLink`. Playwright capturou o shell com a tela integrada em 1920, 768, 390 e 320 px, além do tema escuro desktop e do diálogo aberto; sem overflow horizontal e com título único. A fixture usa registros sintéticos e bloqueia gravações e tráfego externo; a sessão autenticada não foi usada. [Evidências e limitações](validacao/revisao-visual/config-links/README.md).
 
-### Inbox — painel contextual responsivo (30/10/2026)
+### Inbox — painel contextual responsivo (30 e 31/10/2026)
 
-- A regra de três colunas agora considera a largura disponível dentro do Inbox, usando container queries em vez da largura total da janela. Com 72rem (1152 px CSS) ou mais, lista, conversa e Informações do contato permanecem lado a lado. Abaixo disso, o painel ocupa a área de trabalho enquanto está aberto; a lista, a conversa e o backdrop deixam de ficar parcialmente cobertos. Ao fechar o painel, a conversa retorna. Playwright CLI conferiu 1920, 1272 (zoom), 1024, 768, 390 e 320 px, sem overflow horizontal. A validação usou uma fixture sintética para a regra CSS; a conferência integrada autenticada continua pendente. [Evidências e limitações](validacao/revisao-visual/inbox/README.md).
+- A regra de três colunas considera a largura disponível dentro do Inbox. Com 72rem (1152 px CSS) ou mais, lista, conversa e Informações do contato ficam lado a lado. Abaixo disso, o painel ocupa a área de trabalho enquanto está aberto. Playwright CLI verificou a regra em 1920, 1272 (zoom), 1024, 768, 390 e 320 px, sem overflow.
+- Em 31/10, a revisão passou a renderizar o `WhatsAppLeadDrawer` real em cinco larguras, nos temas claro e escuro. O campo de busca usa o placeholder curto **Nome ou telefone** e mantém seu rótulo acessível completo; as capturas em 320 px também registram a rolagem interna. A shell da conversa continua estática e a rota autenticada ainda precisa de conferência integrada. [Evidências e limitações](validacao/revisao-visual/inbox/README.md).
+
+### Configurações — alinhamento do ícone de informação (31/10/2026)
+
+- O cartão **Envio automático** agora usa `kds-card-title-row`, mantendo o ícone informativo junto ao título conforme o padrão dos cartões vizinhos. O tooltip e o comportamento da automação permanecem inalterados.
+- Uma prévia Playwright em 390 px confirmou o alinhamento horizontal sem overflow. A rota de configurações no ambiente local permaneceu no estado de carregamento, então a captura integrada autenticada continua pendente.
+- Os testes focados passaram (**15/15**), assim como typecheck, lint e `npx vite build`. `npm run build` segue bloqueado no `audit:visual` por três gradientes em `src/design-system/home.css`, alteração preexistente da landing page que foi mantida intocada.
 
 ### Inbox — metadados de mídias recebidas (30/10/2026)
 

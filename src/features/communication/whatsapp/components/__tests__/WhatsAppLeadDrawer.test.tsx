@@ -75,6 +75,8 @@ test('renderiza informações do contato em uma lateral inline fechável, sem ab
     assert.match(panel.textContent ?? '', /\+55 \(11\) 99999-9999/);
     assert.ok(panel.querySelector('button[aria-label="Fechar"]'));
     assert.match(panel.textContent ?? '', /Renomear contato/);
+    const leadSearch = panel.querySelector<HTMLInputElement>('input[aria-label="Buscar lead por nome ou telefone"]');
+    assert.equal(leadSearch?.placeholder, 'Nome ou telefone');
     assert.equal(document.querySelector('[role="dialog"]'), null);
 
     const closeButton = panel.querySelector<HTMLButtonElement>('button[aria-label="Fechar"]');

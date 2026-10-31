@@ -32,11 +32,12 @@
 - Playwright também conferiu a geometria do cartão de agenda com o CSS compilado em uma fixture isolada: o painel permaneceu com 352 px em 768 e 390 px, adaptou para 320 px no viewport estreito e manteve título e botões legíveis, sem overflow horizontal. O teste do componente valida a hierarquia e as duas ações; uma captura autenticada deste estado ainda depende de uma sessão de Inbox disponível.
 - Testes dos componentes confirmam que o cabeçalho contém somente nome e lembrete, e que renomear continua acionando o fluxo existente dentro da barra de informações. O teste integrado visual autenticado segue pendente porque a rota local `/painel/inbox` redireciona para login.
 - A lista sem conversa selecionada foi capturada em 390 × 844. O drawer de informações do lead foi capturado no início e após rolagem interna em desktop e mobile.
-- As 34 imagens desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
+- As 46 imagens desta revisão de Inbox e as medidas por viewport estão em [coverage.json](coverage.json).
 
 ## Segurança e limitações da fixture
 
 - Contatos, leads, conversas, mensagens, imagens, contratos e lembretes usados nas capturas são dados sintéticos. O preview usa callbacks sem efeito; nenhuma mensagem foi enviada, nenhum contato ou lembrete foi criado ou alterado e nenhuma ação comercial foi confirmada.
+- A revisão do painel de contato usa o `WhatsAppLeadDrawer` real e os estilos de produção; a moldura da lista, conversa e compositor é estática, os callbacks não executam ações e todas as requisições Supabase foram interceptadas com dados vazios.
 - A fixture da Inbox bloqueou a tentativa de presença com HTTP 403 e não disponibilizou Realtime (handshake local expirado). O polling de leitura continuou ativo; esses avisos são do ambiente de demonstração.
 - A revisão integrada encerra apenas `page--inbox` e `state--inbox-nova-conversa`. Filtros avançados tiveram componentes, interação e posicionamento revisados em fixture local, mas ainda aguardam validação integrada na rota autenticada. Agenda, mensagens agendadas, painel WhatsApp, pesquisa, anexos, mídia, formatação, respostas rápidas e outros estados da conversa permanecem como contextos independentes pendentes no manifesto.
 
@@ -45,6 +46,14 @@
 O breakpoint agora mede a largura útil de `.whatsapp-inbox-shell` com container queries. A partir de 72rem, o painel integra a grade em três colunas; abaixo disso, ele substitui a conversa/lista enquanto estiver aberto. Isso evita o backdrop claro sobre as mensagens e elimina o corte causado pela sobreposição do painel.
 
 Playwright CLI verificou a grade em 1920 × 1080 (shell 1856 px), 1272 × 800 (shell 1208 px, caso de zoom), 1024 × 1024 (shell 960 px), 768 × 1024 (shell 704 px), 390 × 844 e 320 × 640. As duas larguras acima do limite mantiveram as três colunas; nas quatro menores, o painel ocupou a área de trabalho sem backdrop. Nenhuma apresentou overflow horizontal. A medição usou uma fixture local com conteúdo sintético e os estilos reais do design system; ela verifica a regra de posicionamento, mas não substitui uma captura integrada da rota autenticada, que segue pendente.
+
+## Painel de contato real — validação visual responsiva (31/10/2026)
+
+O `WhatsAppLeadDrawer` de produção foi renderizado no shell local da Inbox e verificado com Playwright em 1920 × 1080, 1272 × 800, 768 × 1024, 390 × 844 e 320 × 640, nos temas claro e escuro. No desktop, a ficha manteve 352 px e o compositor continuou alinhado ao rodapé da conversa; em tablet e mobile, a ficha ocupou toda a área de trabalho enquanto a conversa e a lista ficaram ocultas. A largura do documento permaneceu igual à viewport em todos os casos.
+
+Em 320 px, encurtei o placeholder visual da busca para **Nome ou telefone**, preservando o nome acessível completo **Buscar lead por nome ou telefone**. Playwright confirmou que o texto cabe no campo e que a ficha rola internamente. Duas capturas adicionais registram a parte inferior e os controles intermediários do painel. As 12 imagens estão em [contact-panel](contact-panel/) e as medidas em [coverage.json](coverage.json).
+
+Esta evidência cobre o componente real e sua composição responsiva, mas não substitui a revisão integrada da rota autenticada `/painel/inbox`: a moldura da conversa/lista/compositor é estática e não foram exercitadas ações reais. A rota autenticada e os demais contextos da Inbox permanecem pendentes.
 
 ## Filtros avançados e metadados de mídia — 30/10/2026
 

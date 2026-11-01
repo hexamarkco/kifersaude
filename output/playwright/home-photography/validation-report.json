@@ -1,0 +1,39 @@
+[
+  {
+    "width": "390",
+    "images": 44,
+    "broken": 0,
+    "pairs": 10,
+    "overflow": false,
+    "ratios": true
+  },
+  {
+    "width": "768",
+    "images": 44,
+    "broken": 0,
+    "pairs": 10,
+    "overflow": false,
+    "ratios": true
+  },
+  {
+    "width": "1440",
+    "images": 44,
+    "broken": 0,
+    "pairs": 10,
+    "overflow": false,
+    "ratios": true
+  },
+  {
+    "width": "1920",
+    "images": 44,
+    "broken": 0,
+    "pairs": 10,
+    "overflow": false,
+    "ratios": true
+  },
+  {
+    "reportViewport": 390,
+    "overflow": false,
+    "columns": "350px"
+  }
+]

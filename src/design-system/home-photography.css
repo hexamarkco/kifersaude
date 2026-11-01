@@ -22,7 +22,7 @@
 .kifer-home .home-hero-art span + span { top: -55%; right: -10%; background: var(--brand-primary-muted); }
 
 /* 02 — The flat baseline and unequal upper arcs belong to this photo only. */
-.kifer-home .home-trust-photo { --trust-focus: 44% 36%; position: relative; isolation: isolate; width: 74%; flex-shrink: 0; aspect-ratio: 1.85; }
+.kifer-home .home-trust-photo { --trust-focus: 44% 0%; position: relative; isolation: isolate; width: 74%; flex-shrink: 0; aspect-ratio: 1.85; }
 .kifer-home .home-trust-photo::before { content: ''; position: absolute; width: 44%; height: 85%; left: -7%; top: -7%; background: var(--home-soft); border-radius: 50%; z-index: -1; }
 .kifer-home .home-trust-photo::after { content: ''; position: absolute; inset: 29% -2% 0 -16%; background: var(--brand-primary-soft); clip-path: polygon(0 42%, 44% 0, 100% 100%, 0 100%); z-index: -1; }
 .kifer-home .home-trust-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--trust-focus); clip-path: url(#home-photo-trust); }
@@ -72,7 +72,7 @@
   .kifer-home .home-hero-portrait .home-portrait-label span { display: none; }
 }
 @media (min-width: 640px) and (max-width: 1023.98px) {
-  .kifer-home .home-trust-photo { width: 100%; aspect-ratio: 1.5; --trust-focus: 43% 30%; }
+  .kifer-home .home-trust-photo { width: 100%; aspect-ratio: 1.5; --trust-focus: 43% 0%; }
   .kifer-home .home-hero-portrait { width: 48%; --hero-focus: 52% 50%; --hero-scale: 1; }
   .kifer-home .home-about { grid-template-columns: 1fr; }
   .kifer-home .home-about-photo { width: 100%; aspect-ratio: 1.65; --about-focus: 36% 34%; }
@@ -105,7 +105,7 @@
   .kifer-home .home-hero-photo-wave path:first-child { fill: var(--home-paper); }
   .kifer-home .home-hero-photo-wave path:last-child { fill: none; stroke: var(--home-soft); stroke-width: 12; }
   .kifer-home .home-hero-benefits { margin-top: var(--space-2); position: relative; }
-  .kifer-home .home-trust-photo { --trust-focus: 42% 30%; width: 72%; aspect-ratio: 1.7; }
+  .kifer-home .home-trust-photo { --trust-focus: 42% 0%; width: 72%; aspect-ratio: 1.7; }
   .kifer-home .home-trust-photo-row { margin-inline: calc(-0.25 * var(--home-gutter)); }
   .kifer-home #audience-panel-PF { --audience-focus: 54% 30%; }
   .kifer-home #audience-panel-MEI { --audience-focus: 53% 32%; }

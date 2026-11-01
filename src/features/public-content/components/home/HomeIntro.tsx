@@ -119,14 +119,14 @@ export function HomeHero({ onQuote }: Props) {
         </div>
         <div className="home-hero-portrait">
           <div className="home-hero-photo-mask">
-          <Image
-            src={homePhotos.luizaHero}
-            alt="Luíza Kifer no escritório, com a mão apoiada no queixo"
-            width={1448}
-            height={1086}
-            loading="eager"
-            className="home-luiza-photo"
-          />
+            <Image
+              src={homePhotos.luizaHero}
+              alt="Luíza Kifer no escritório, com a mão apoiada no queixo"
+              width={1448}
+              height={1086}
+              loading="eager"
+              className="home-luiza-photo"
+            />
           </div>
           <svg className="home-hero-photo-wave" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 65C140 30 225 170 420 125S690 50 840 112S970 150 1000 150V160H0Z" />

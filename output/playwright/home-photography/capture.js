@@ -8,6 +8,7 @@ async (page) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.context().route('**/functions/v1/public-lead-submit', route => route.abort());
+  await page.context().route('**/_vercel/**', route => route.fulfill({contentType:'application/javascript',body:''}));
   await page.context().route('**/servicodados.ibge.gov.br/**', route => route.fulfill({contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:'[{"nome":"Rio de Janeiro"}]'}));
   await page.emulateMedia({reducedMotion:'reduce'});
   const results = [];

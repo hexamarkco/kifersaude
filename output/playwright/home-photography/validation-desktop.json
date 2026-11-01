@@ -1,0 +1,462 @@
+{
+  "results": [
+    {
+      "reducedMotion": "no-preference",
+      "width": 1024,
+      "scroll": 1024,
+      "photos": [
+        {
+          "selector": ".home-luiza-photo",
+          "src": "/images/home/luiza-opening.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "66% 42%",
+          "transform": "matrix(1.22, 0, 0, 1.22, 0, 0)"
+        },
+        {
+          "selector": ".home-trust-photo img",
+          "src": "/images/home/trust-coffee.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "44% 0%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-audience-panel[aria-hidden=\"false\"] img",
+          "src": "/images/home/family-profile.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "67% 43%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-about-photo img",
+          "src": "/images/home/luiza-about-editorial.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 50%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-quote-background img",
+          "src": "/images/home/family-quote.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 34%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-whatsapp-photo img",
+          "src": "/images/home/luiza-portrait.webp",
+          "width": 1122,
+          "height": 1402,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "61% 29%",
+          "transform": "none"
+        }
+      ],
+      "clipped": [],
+      "phoneRatio": 2.66473388671875,
+      "chatFits": true,
+      "heroClear": true,
+      "benefitsClear": true,
+      "quoteInputFont": "14px",
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "desktop"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "width": 1440,
+      "scroll": 1440,
+      "photos": [
+        {
+          "selector": ".home-luiza-photo",
+          "src": "/images/home/luiza-opening.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "69% 47%",
+          "transform": "matrix(1.22, 0, 0, 1.22, 0, 0)"
+        },
+        {
+          "selector": ".home-trust-photo img",
+          "src": "/images/home/trust-coffee.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "44% 0%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-audience-panel[aria-hidden=\"false\"] img",
+          "src": "/images/home/family-profile.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "67% 43%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-about-photo img",
+          "src": "/images/home/luiza-about-editorial.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 50%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-quote-background img",
+          "src": "/images/home/family-quote.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 34%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-whatsapp-photo img",
+          "src": "/images/home/luiza-portrait.webp",
+          "width": 1122,
+          "height": 1402,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "61% 29%",
+          "transform": "none"
+        }
+      ],
+      "clipped": [],
+      "phoneRatio": 2.1415473090277777,
+      "chatFits": true,
+      "heroClear": true,
+      "benefitsClear": true,
+      "quoteInputFont": "14px",
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "desktop"
+    },
+    {
+      "reducedMotion": "no-preference",
+      "width": 1920,
+      "scroll": 1920,
+      "photos": [
+        {
+          "selector": ".home-luiza-photo",
+          "src": "/images/home/luiza-opening.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "69% 47%",
+          "transform": "matrix(1.22, 0, 0, 1.22, 0, 0)"
+        },
+        {
+          "selector": ".home-trust-photo img",
+          "src": "/images/home/trust-coffee.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "44% 0%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-audience-panel[aria-hidden=\"false\"] img",
+          "src": "/images/home/family-profile.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "67% 43%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-about-photo img",
+          "src": "/images/home/luiza-about-editorial.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 50%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-quote-background img",
+          "src": "/images/home/family-quote.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 34%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-whatsapp-photo img",
+          "src": "/images/home/luiza-portrait.webp",
+          "width": 1122,
+          "height": 1402,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "61% 29%",
+          "transform": "none"
+        }
+      ],
+      "clipped": [],
+      "phoneRatio": 1.871142578125,
+      "chatFits": true,
+      "heroClear": true,
+      "benefitsClear": true,
+      "quoteInputFont": "14px",
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "desktop"
+    },
+    {
+      "reducedMotion": "reduce",
+      "width": 1024,
+      "scroll": 1024,
+      "photos": [
+        {
+          "selector": ".home-luiza-photo",
+          "src": "/images/home/luiza-opening.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "66% 42%",
+          "transform": "matrix(1.22, 0, 0, 1.22, 0, 0)"
+        },
+        {
+          "selector": ".home-trust-photo img",
+          "src": "/images/home/trust-coffee.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "44% 0%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-audience-panel[aria-hidden=\"false\"] img",
+          "src": "/images/home/family-profile.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "67% 43%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-about-photo img",
+          "src": "/images/home/luiza-about-editorial.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 50%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-quote-background img",
+          "src": "/images/home/family-quote.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 34%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-whatsapp-photo img",
+          "src": "/images/home/luiza-portrait.webp",
+          "width": 1122,
+          "height": 1402,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "61% 29%",
+          "transform": "none"
+        }
+      ],
+      "clipped": [],
+      "phoneRatio": 2.66473388671875,
+      "chatFits": true,
+      "heroClear": true,
+      "benefitsClear": true,
+      "quoteInputFont": "14px",
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "desktop"
+    },
+    {
+      "reducedMotion": "reduce",
+      "width": 1440,
+      "scroll": 1440,
+      "photos": [
+        {
+          "selector": ".home-luiza-photo",
+          "src": "/images/home/luiza-opening.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "69% 47%",
+          "transform": "matrix(1.22, 0, 0, 1.22, 0, 0)"
+        },
+        {
+          "selector": ".home-trust-photo img",
+          "src": "/images/home/trust-coffee.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "44% 0%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-audience-panel[aria-hidden=\"false\"] img",
+          "src": "/images/home/family-profile.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "67% 43%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-about-photo img",
+          "src": "/images/home/luiza-about-editorial.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 50%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-quote-background img",
+          "src": "/images/home/family-quote.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 34%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-whatsapp-photo img",
+          "src": "/images/home/luiza-portrait.webp",
+          "width": 1122,
+          "height": 1402,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "61% 29%",
+          "transform": "none"
+        }
+      ],
+      "clipped": [],
+      "phoneRatio": 2.1415473090277777,
+      "chatFits": true,
+      "heroClear": true,
+      "benefitsClear": true,
+      "quoteInputFont": "14px",
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "desktop"
+    },
+    {
+      "reducedMotion": "reduce",
+      "width": 1920,
+      "scroll": 1920,
+      "photos": [
+        {
+          "selector": ".home-luiza-photo",
+          "src": "/images/home/luiza-opening.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "69% 47%",
+          "transform": "matrix(1.22, 0, 0, 1.22, 0, 0)"
+        },
+        {
+          "selector": ".home-trust-photo img",
+          "src": "/images/home/trust-coffee.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "44% 0%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-audience-panel[aria-hidden=\"false\"] img",
+          "src": "/images/home/family-profile.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "67% 43%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-about-photo img",
+          "src": "/images/home/luiza-about-editorial.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 50%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-quote-background img",
+          "src": "/images/home/family-quote.webp",
+          "width": 1448,
+          "height": 1086,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "35% 34%",
+          "transform": "none"
+        },
+        {
+          "selector": ".home-whatsapp-photo img",
+          "src": "/images/home/luiza-portrait.webp",
+          "width": 1122,
+          "height": 1402,
+          "attributesMatch": true,
+          "fit": "cover",
+          "position": "61% 29%",
+          "transform": "none"
+        }
+      ],
+      "clipped": [],
+      "phoneRatio": 1.871142578125,
+      "chatFits": true,
+      "heroClear": true,
+      "benefitsClear": true,
+      "quoteInputFont": "14px",
+      "profiles": "stable",
+      "faq": "passed",
+      "menu": "desktop"
+    }
+  ],
+  "form": "mocked success; age ranges rendered; no real endpoint or WhatsApp opened",
+  "errors": []
+}

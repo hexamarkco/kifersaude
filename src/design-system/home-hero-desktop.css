@@ -1,0 +1,122 @@
+/* Desktop artboard: approved 1672 × 941 reference, including its 85 px header.
+   All measurements below belong to the hero; mobile/tablet retain their layout.
+   The source photograph is unchanged. Its crop and the mask are independent. */
+.kifer-home .home-hero-desktop-art { display: none; }
+
+@media (min-width: 1024px) {
+  .kifer-home .home-hero { background: color-mix(in srgb, var(--accent-copper) 3%, var(--home-paper)); }
+  .kifer-home .kds-public-header-inner {
+    max-width: none;
+    min-height: 5.08vw;
+  }
+  .kifer-home .kds-public-header-brand .kds-workspace-brand > span { font-size: clamp(2.2rem, 2.68vw, 3.25rem); }
+  .kifer-home .kds-public-header-brand .kds-workspace-brand > span > span { font-size: clamp(1.8rem, 2.21vw, 2.75rem); }
+  .kifer-home .kds-public-header-navigation a { font-size: clamp(.8125rem, 1.08vw, 1.25rem); }
+  .kifer-home .kds-public-header-actions > .kds-button {
+    --control-height-lg: max(2.75rem, 3.4vw);
+    --control-font-lg: clamp(.875rem, 1.2vw, 1.4375rem);
+    min-width: 12.1vw;
+  }
+  .kifer-home .home-hero-grid {
+    max-width: none;
+    min-height: 51.2vw;
+    grid-template-columns: 51% 49%;
+    align-items: start;
+  }
+  .kifer-home .home-hero-copy { padding-block: 3.6vw 4vw; }
+  .kifer-home .home-hero-copy > .home-eyebrow {
+    font-size: clamp(0.625rem, .86vw, 1rem);
+    gap: 1.1vw;
+    letter-spacing: .27em;
+  }
+  .kifer-home .home-hero-copy > .home-eyebrow::before { width: 2.5vw; }
+  .kifer-home .home-hero-title {
+    font-size: 5.62vw;
+    font-weight: 400;
+    line-height: .94;
+    letter-spacing: -.045em;
+    margin-block: 1.45vw 1.15vw;
+  }
+  .kifer-home .home-hero-title em { font-weight: 600; }
+  .kifer-home .home-hero-description {
+    max-width: 36.5vw;
+    font-size: clamp(1rem, 1.39vw, 1.75rem);
+    line-height: 1.44;
+  }
+  .kifer-home .home-hero-actions {
+    display: grid;
+    grid-template-columns: 1.37fr 1fr;
+    width: 43vw;
+    gap: 1.3vw;
+    margin-top: 2vw;
+    --control-height-lg: max(3rem, 4vw);
+    --control-font-lg: clamp(.8125rem, 1.2vw, 1.4375rem);
+    --control-padding-lg: 1vw;
+  }
+  .kifer-home .home-hero-actions .kds-button { font-size: clamp(.8125rem, 1.2vw, 1.4375rem); }
+  .kifer-home .home-hero-actions .kds-control-icon { width: 1.3vw; height: 1.3vw; }
+  .kifer-home .home-hero-benefits {
+    width: 39.5vw;
+    max-width: none;
+    grid-template-columns: 26.5% 34.8% 38.7%;
+    margin-top: 1.55vw;
+  }
+  .kifer-home .home-hero-benefits li {
+    position: relative;
+    gap: .55vw;
+    padding-inline: 3.3vw 1vw;
+    font-size: clamp(.75rem, 1.08vw, 1.25rem);
+  }
+  .kifer-home .home-hero-benefits li:first-child { padding-left: 1.1vw; }
+  .kifer-home .home-hero-benefits li + li { border: 0; }
+  .kifer-home .home-hero-benefits li + li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: .8vw; bottom: 0;
+    width: 1px;
+    background: var(--brand-primary-border);
+  }
+  .kifer-home .home-hero-benefits .home-icon { width: 3.6vw; height: 3.6vw; }
+  .kifer-home .home-hero-benefits .home-icon svg { width: 1.85vw; height: 1.85vw; }
+  .kifer-home .home-support-link { margin-top: 1.1vw; }
+
+  .kifer-home .home-hero-portrait {
+    left: calc((100% - 100vw) / 2);
+    right: auto;
+    width: 100vw;
+    z-index: 1;
+  }
+  .kifer-home .home-hero-portrait::before { display: none; }
+  .kifer-home .home-hero-photo-mask {
+    clip-path: none;
+    mask: url('/images/home/hero-desktop-mask.svg') 0 0 / 100% 100% no-repeat;
+  }
+  .kifer-home .home-luiza-photo {
+    width: 78%;
+    left: auto; right: 0;
+    object-position: 100% 30%;
+    transform: none;
+  }
+  /* The approved artwork has no plaque over the laptop. Keep the identification
+     available to assistive technology, without an extra card in the photograph. */
+  .kifer-home .home-hero-portrait .home-portrait-label {
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .kifer-home .home-hero-art, .kifer-home .home-hero-wave { display: none; }
+  .kifer-home .home-hero-desktop-art {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .kifer-home .home-hero-desktop-halo { fill: var(--accent-copper); opacity: .1; }
+  .kifer-home .home-hero-desktop-sweep { fill: var(--accent-copper); opacity: .18; }
+  .kifer-home .home-hero-desktop-sand { fill: var(--accent-copper); opacity: .12; }
+  .kifer-home .home-hero-desktop-line { fill: none; stroke: var(--brand-primary-border); stroke-width: 2; }
+}

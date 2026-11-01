@@ -29,6 +29,12 @@ export function HomeHero({ onQuote }: Props) {
         <span />
         <span />
       </div>
+      <svg className="home-hero-desktop-art" viewBox="0 0 1672 856" preserveAspectRatio="none" aria-hidden="true">
+        <path className="home-hero-desktop-halo" d="M957 0C866 108 827 221 844 397C854 542 737 666 674 856H1672V0Z" />
+        <path className="home-hero-desktop-sweep" d="M1015 240C878 269 743 396 668 547C604 676 626 778 587 856H1139V240Z" />
+        <path className="home-hero-desktop-sand" d="M0 739C85 744 138 799 232 799C342 799 395 750 507 768C597 782 625 825 699 856H0Z" />
+        <path className="home-hero-desktop-line" d="M0 677C110 719 128 821 251 833C335 841 403 805 490 856" />
+      </svg>
       <div className="home-container home-hero-grid">
         <div className="home-hero-copy">
           <Text className="home-eyebrow home-eyebrow-line">

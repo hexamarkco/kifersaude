@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kifer Saúde — fidelidade do hero desktop</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#f8f5f0;color:#33251e;font:16px/1.55 system-ui,sans-serif}
+  header,main{max-width:1800px;margin:auto;padding:24px}h1{font-size:28px;margin:0 0 8px}p{max-width:1000px;margin:8px 0}
+  .controls{display:flex;flex-wrap:wrap;gap:20px;align-items:center;margin-top:20px}select{font:inherit;padding:8px;border:1px solid #d7c7bc;border-radius:8px;background:white}
+  .columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}figure{margin:0;border:1px solid #e0d5cc;border-radius:12px;overflow:hidden;background:white}
+  figcaption{padding:12px 16px;font-weight:650;border-bottom:1px solid #e0d5cc}figure img{display:block;width:100%;height:auto}a{color:#a33f1e}
+  .overlay{position:relative;max-width:1672px;margin:20px auto 0;border:1px solid #d7c7bc}.overlay>img{display:block;width:100%}.overlay .reference{position:absolute;inset:0;width:100%;opacity:.5}
+  details{margin-top:24px}summary{cursor:pointer;font-weight:650}input[type=range]{width:240px;accent-color:#a33f1e;vertical-align:middle}small{display:block;margin-top:12px;color:#6b5c52}
+  @media(max-width:850px){.columns{grid-template-columns:1fr}header,main{padding:16px}}
+</style>
+<header>
+  <h1>Hero desktop · referência, antes e depois</h1>
+  <p>Mesma fotografia fornecida, com enquadramento independente da máscara SVG, duas curvas orgânicas, título e espaçamentos ajustados à arte aprovada.</p>
+  <p><a href="RELATORIO.md">Relatório de implementação e verificações</a> · <a href="validation.json">Resultados das oito larguras</a></p>
+  <div class="controls">
+    <label>Largura da captura <select id="width"><option>1024</option><option>1280</option><option>1440</option><option>1536</option><option selected>1672</option><option>1920</option></select> px</label>
+    <span>Abra uma imagem para inspecionar em tamanho real.</span>
+  </div>
+</header>
+<main>
+  <div class="columns">
+    <figure><figcaption>Referência aprovada · 1672 × 941</figcaption><a href="../home-redesign/references/01_HERO_ABERTURA.png" target="_blank"><img src="../home-redesign/references/01_HERO_ABERTURA.png" alt="Arte aprovada do hero desktop"></a></figure>
+    <figure><figcaption>Antes · código anterior a este ajuste</figcaption><a id="before-link" href="before/1672.png" target="_blank"><img id="before" src="before/1672.png" alt="Hero antes dos ajustes de fidelidade"></a></figure>
+    <figure><figcaption>Depois · implementação real</figcaption><a id="final-link" href="final/1672.png" target="_blank"><img id="final" src="final/1672.png" alt="Hero desktop implementado após os ajustes"></a></figure>
+  </div>
+  <details>
+    <summary>Sobrepor a referência à implementação</summary>
+    <p><label>Opacidade da referência <input id="opacity" type="range" min="0" max="100" value="50"> <output id="opacity-value">50%</output></label></p>
+    <div class="overlay"><img id="overlay-final" src="final/1672.png" alt="Implementação real"><img id="overlay-reference" class="reference" src="../home-redesign/references/01_HERO_ABERTURA.png" alt="Referência sobreposta"></div>
+    <small>As imagens são alinhadas pela largura. A arte aprovada e a fotografia individual fornecida têm diferenças de pose e cenário; o arquivo fotográfico foi preservado, sem retoques ou geração de imagem.</small>
+  </details>
+  <details>
+    <summary>Conferência de mobile e tablet preservados</summary>
+    <p>Os arquivos do hero antes/depois têm o mesmo SHA-256 em 390 e 768 px. Os textos e alturas das demais seções também permaneceram iguais nas oito larguras verificadas.</p>
+    <p><a href="before/390.png">390 px antes</a> · <a href="final/390.png">390 px depois</a> · <a href="before/768.png">768 px antes</a> · <a href="final/768.png">768 px depois</a></p>
+  </details>
+</main>
+<script>
+  document.getElementById('width').addEventListener('change', event => {
+    const width = event.target.value;
+    for (const phase of ['before','final']) {
+      document.getElementById(phase).src = `${phase}/${width}.png`;
+      document.getElementById(`${phase}-link`).href = `${phase}/${width}.png`;
+    }
+    document.getElementById('overlay-final').src = `final/${width}.png`;
+  });
+  document.getElementById('opacity').addEventListener('input', event => {
+    document.getElementById('overlay-reference').style.opacity = event.target.value / 100;
+    document.getElementById('opacity-value').textContent = `${event.target.value}%`;
+  });
+</script>
+</html>

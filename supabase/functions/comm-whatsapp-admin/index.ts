@@ -1,3 +1,5 @@
+import { getZapiCredentials, readWhatsAppTransport, WhatsAppTransportError, type WhatsAppProvider } from '../_shared/comm-whatsapp/transport.ts';
+import { switchWhatsAppProvider, verifyWhatsAppProvider } from './providers.ts';
 // @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
@@ -26,7 +28,10 @@ declare const Deno: {
 };
 
 type AdminRequestBody = {
-  action?: 'getConfig' | 'saveConfig' | 'refreshHealth';
+  action?: 'getConfig' | 'saveConfig' | 'refreshHealth' | 'switchProvider';
+  provider?: WhatsAppProvider;
+  revision?: number;
+  transferPending?: boolean;
   enabled?: boolean;
 };
 
@@ -48,12 +53,24 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
   const webhookSecret = getCommWhatsAppWebhookSecret();
+  const transport = await readWhatsAppTransport(supabaseAdmin);
+  const { data: providerDiagnostics, error: diagnosticsError } = await supabaseAdmin
+    .from('whatsapp_transport_diagnostics').select('provider,last_webhook_at,last_inbound_at,checked_at,phone,connected,error');
+  if (diagnosticsError) throw new Error('Não foi possível carregar os diagnósticos dos provedores.');
+  const zapi = providerDiagnostics?.find((row) => row.provider === 'zapi');
+  const whapi = providerDiagnostics?.find((row) => row.provider === 'whapi');
+  const zapiConfigured = Boolean(getZapiCredentials(transport));
+  const { count: uncertainAttempts, error: attemptsError } = await supabaseAdmin
+    .from('whatsapp_transport_attempts').select('id', { count: 'exact', head: true })
+    .is('finished_at', null).eq('uncertain', true);
+  if (attemptsError) throw new Error('Não foi possível conferir os envios sem confirmação.');
   const [messageReceiptResult, inboundMessageResult] = await Promise.all([
     supabaseAdmin
       .from('comm_whatsapp_event_receipts')
       .select('received_at')
       .eq('channel_id', channel.id)
       .eq('event_type', 'message')
+      .not('event_key', 'like', 'message:zapi:%')
       .order('received_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -62,6 +79,7 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
       .select('message_at')
       .eq('channel_id', channel.id)
       .eq('direction', 'inbound')
+      .or('external_message_id.is.null,external_message_id.not.like.zapi:%')
       .order('message_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -85,19 +103,47 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
         ? 'receiving_messages'
         : 'waiting_first_event';
 
-  // A tela de webhook da Whapi (Body/Path/Method + eventos) nao expoe um
-  // campo de header customizado em todo plano — por isso a URL ja sai com o
-  // segredo embutido, pronta pra colar. O endpoint aceita esse mesmo segredo
-  // via header X-Kifer-Webhook-Secret tambem, para quem conseguir configura-lo.
+  const zapiDiagnostics = {
+    status: zapi?.error ? 'error' : zapi?.last_inbound_at ? 'receiving_messages'
+      : zapi?.last_webhook_at ? 'message_event_missing' : 'waiting_first_event',
+    lastWebhookAt: zapi?.last_webhook_at ?? null,
+    lastMessageWebhookAt: zapi?.last_inbound_at ?? null,
+    lastInboundMessageAt: zapi?.last_inbound_at ?? null,
+    lastError: zapi?.error ?? null,
+  };
+  const safeChannel = sanitizeChannelForClient(channel);
+  const zapiActive = transport.provider === 'zapi';
   return {
-    channel: sanitizeChannelForClient(channel),
+    channel: zapiActive ? {
+      ...safeChannel,
+      connection_status: zapi?.connected === true ? 'AUTH' : zapi?.connected === false ? 'DISCONNECTED' : 'unknown',
+      health_status: zapi?.connected === true ? 'AUTH' : zapi?.connected === false ? 'DISCONNECTED' : 'unknown',
+      phone_number: zapi?.phone ?? null,
+      last_health_check_at: zapi?.checked_at ?? null,
+      health_snapshot: {},
+      limits_snapshot: {},
+    } : safeChannel,
+    transport: {
+      activeProvider: transport.provider,
+      revision: transport.revision,
+      uncertainAttempts: uncertainAttempts ?? 0,
+      providers: {
+        whapi: { configured: Boolean(settings.token), webhookConfigured: Boolean(webhookSecret),
+          checkedAt: whapi?.checked_at ?? channel.last_health_check_at, phone: whapi?.phone ?? channel.phone_number,
+          connected: whapi?.connected ?? null, error: whapi?.error ?? null },
+        zapi: { configured: zapiConfigured, webhookConfigured: (Deno.env.get('ZAPI_WEBHOOK_SECRET')?.trim().length ?? 0) >= 32,
+          checkedAt: zapi?.checked_at ?? null, phone: zapi?.phone ?? null, connected: zapi?.connected ?? null,
+          error: zapi?.error ?? null, lastWebhookAt: zapi?.last_webhook_at ?? null, lastInboundAt: zapi?.last_inbound_at ?? null,
+          webhookUrl: buildWebhookUrl(supabaseUrl) + '&provider=zapi' },
+      },
+    },
     config: {
       enabled: settings.enabled,
-      tokenConfigured: Boolean(settings.token),
-      webhookUrl: buildWebhookUrl(supabaseUrl, webhookSecret),
+      tokenConfigured: zapiActive ? zapiConfigured : Boolean(settings.token),
+      webhookUrl: buildWebhookUrl(supabaseUrl) + (zapiActive ? '&provider=zapi' : ''),
       webhookAuthentication: 'legacy_query',
       webhookHeaderName: webhookSecret ? COMM_WHATSAPP_WEBHOOK_SECRET_HEADER : null,
-      webhookDiagnostics: {
+      webhookDiagnostics: zapiActive ? zapiDiagnostics : {
         status: webhookMessageStatus,
         lastWebhookAt: channel.last_webhook_received_at,
         lastMessageWebhookAt,
@@ -214,6 +260,8 @@ Deno.serve(async (req: Request) => {
     const supabaseAdmin = createAdminClient();
 
     const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
+    let actorId = serviceActor.actorId;
+    let isAdmin = serviceActor.isServiceRole && serviceActor.authorized;
     if (serviceActor.isServiceRole) {
       if (!serviceActor.actorId || !serviceActor.authorized) {
         return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
@@ -234,6 +282,8 @@ Deno.serve(async (req: Request) => {
           headers: jsonHeaders,
         });
       }
+      actorId = authResult.user.profileId;
+      isAdmin = authResult.user.role === 'admin';
     }
 
     const body = (await req.json().catch(() => ({}))) as AdminRequestBody;
@@ -250,7 +300,22 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'refreshHealth') {
-      await refreshHealth(supabaseAdmin);
+      const provider = body.provider ?? (await readWhatsAppTransport(supabaseAdmin)).provider;
+      if (provider !== 'whapi' && provider !== 'zapi') {
+        throw new WhatsAppTransportError('Selecione um provedor válido.', false, 400);
+      }
+      if (provider === 'whapi' && !body.provider) await refreshHealth(supabaseAdmin);
+      else await verifyWhatsAppProvider(supabaseAdmin, provider);
+    }
+
+    if (action === 'switchProvider') {
+      if (!isAdmin || !actorId) throw new WhatsAppTransportError('Somente administradores podem trocar o provedor.', false, 403);
+      if ((body.provider !== 'whapi' && body.provider !== 'zapi') || typeof body.revision !== 'number' || !Number.isInteger(body.revision)) {
+        throw new WhatsAppTransportError('Selecione um provedor e atualize a tela antes da troca.', false, 400);
+      }
+      await switchWhatsAppProvider(supabaseAdmin, {
+        provider: body.provider, revision: body.revision, actorId, transferPending: body.transferPending === true,
+      });
     }
 
     const state = await buildAdminState(supabaseAdmin);
@@ -263,7 +328,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno no admin do WhatsApp.' }),
       {
-        status: 500,
+        status: error instanceof WhatsAppTransportError ? error.status : 500,
         headers: jsonHeaders,
       },
     );

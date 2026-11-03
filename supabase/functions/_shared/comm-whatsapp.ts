@@ -1,4 +1,5 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { isZapiMediaId, isZapiMessageId } from './comm-whatsapp/zapi.ts';
 import {
   buildWhapiDirectChatId,
   extractWhapiParticipantDigits,
@@ -197,7 +198,8 @@ async function whapiRetryFetchImpl(
 
   let response = await fetchAttempt();
 
-  for (let attempt = 0; attempt < retries && response.status >= 429; attempt++) {
+  const readOnly = !init.method || init.method === 'GET';
+  for (let attempt = 0; attempt < retries && (response.status === 429 || (readOnly && response.status >= 500)); attempt++) {
     await new Promise((resolve) => setTimeout(resolve, DEFAULT_WHAPI_RETRY_DELAY_MS * (attempt + 1)));
     response = await fetchAttempt();
   }
@@ -3683,10 +3685,10 @@ export const isTrustedWhapiMediaUrl = (value: unknown): boolean => {
   }
 };
 
-const readWhapiMediaBlob = async (response: Response): Promise<Blob> => {
+export const readCommWhatsAppMediaBlob = async (response: Response): Promise<Blob> => {
   const contentLength = Number(response.headers.get('content-length'));
   if (Number.isSafeInteger(contentLength) && contentLength > MAX_WHAPI_MEDIA_RESPONSE_BYTES) {
-    throw new Error('A midia da Whapi excede o limite de 32 MiB.');
+    throw new Error('O arquivo do WhatsApp excede o limite de 32 MiB.');
   }
 
   if (!response.body) {
@@ -3705,7 +3707,7 @@ const readWhapiMediaBlob = async (response: Response): Promise<Blob> => {
       totalBytes += value.byteLength;
       if (totalBytes > MAX_WHAPI_MEDIA_RESPONSE_BYTES) {
         await reader.cancel();
-        throw new Error('A midia da Whapi excede o limite de 32 MiB.');
+        throw new Error('O arquivo do WhatsApp excede o limite de 32 MiB.');
       }
 
       chunks.push(value);
@@ -3737,7 +3739,7 @@ async function fetchWhapiMediaBlob(params: {
 
     const stripMimeParameters = (value: string): string => value.split(';')[0]?.trim() || value.trim();
 
-    const blob = await readWhapiMediaBlob(response);
+    const blob = await readCommWhatsAppMediaBlob(response);
     const cleanFallbackMime = params.fallbackMimeType?.trim() ? stripMimeParameters(params.fallbackMimeType.trim()) : '';
     const rawMimeType = stripMimeParameters(response.headers.get('content-type') || '') || cleanFallbackMime || blob.type || 'audio/ogg';
     const contentDisposition = response.headers.get('content-disposition')?.trim() || '';
@@ -3866,13 +3868,16 @@ export async function archiveCommWhatsAppMediaFromWhapi(supabaseAdmin: SupabaseC
       const rawFallbackMime = params.fallbackMimeType?.trim();
       return {
         blob: cachedBlob,
-        mimeType: rawFallbackMime ? stripMimeParameters(rawFallbackMime) : cachedBlob.type || 'application/octet-stream',
+        mimeType: rawFallbackMime && !isZapiMediaId(mediaId)
+          ? stripMimeParameters(rawFallbackMime) : cachedBlob.type || 'application/octet-stream',
         fileName: params.fallbackFileName?.trim() || mediaId,
         cached: true,
       };
     }
   }
 
+  if (isZapiMediaId(mediaId)) throw new Error('O arquivo da Z-API ainda não está disponível no histórico.');
+  if (!params.token) throw new Error('O arquivo não está no histórico e o provedor de origem não está configurado.');
   const result = await fetchWhapiMediaBlob(params);
   if (mediaId) {
     try {
@@ -4269,7 +4274,9 @@ export async function persistCommWhatsAppMessage(
     p_sender_phone: input.senderPhone,
     p_status_updated_at: input.statusUpdatedAt,
     p_error_message: input.errorMessage,
-    p_metadata: input.metadata,
+    p_metadata: input.externalMessageId && isZapiMessageId(input.externalMessageId)
+      ? { ...input.metadata, provider: 'zapi' }
+      : input.metadata,
     p_media_id: input.mediaId,
     p_media_url: input.mediaUrl,
     p_media_mime_type: input.mediaMimeType,

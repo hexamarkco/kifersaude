@@ -1,6 +1,7 @@
+import { createWhatsAppDispatch, getZapiContactStatus, hasWhatsAppDispatchCredentials, readWhatsAppTransport, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { persistRequestedLeadFollowUp } from './lead-follow-up.ts';
 import {
   assertContactPermissionForSend,
@@ -10,7 +11,6 @@ import {
 import {
   ensurePrimaryChannel,
   extractWhapiMessageId,
-  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
   getWhapiToken,
@@ -1111,10 +1111,18 @@ const getJobRuntimeContext = (payload: unknown): Record<string, string> => {
   return result;
 };
 
-const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiContactCheckResult> => {
+const checkWhatsAppExistence = async (supabase: SupabaseClient, telefone?: string | null): Promise<WhapiContactCheckResult> => {
   const digits = toWhapiPhoneNumber(telefone);
   if (!digits || !isValidWhatsappNumber(telefone)) {
     return { exists: false, chatId: null };
+  }
+
+  const state = await readWhatsAppTransport(supabase);
+  if (state.provider === 'zapi') {
+    const outcome = await getZapiContactStatus(digits, state);
+    if (outcome === 'invalid') return { exists: false, chatId: null };
+    if (outcome !== 'valid') throw new TemporaryWhapiError('A Z-API não confirmou o telefone consultado.');
+    return { exists: true, chatId: `${digits}@s.whatsapp.net` };
   }
 
   const token = getWhapiToken();
@@ -1186,17 +1194,17 @@ const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiCo
   return { exists: false, chatId: null };
 };
 
-const resolveWhatsappValid = async (lead: any): Promise<string> => {
+const resolveWhatsappValid = async (supabase: SupabaseClient, lead: any): Promise<string> => {
   const fallbackValue = normalizeBooleanConditionValue(lead?.whatsapp_valid);
 
-  if (!getWhapiToken()) {
+  if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
     console.warn('Validação de WhatsApp desativada: WHAPI_TOKEN não configurado.', { leadId: lead?.id ?? null });
     return fallbackValue ?? 'false';
   }
 
   for (let attempt = 0; attempt <= WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS.length; attempt += 1) {
     try {
-      const result = await checkWhatsAppExistence(lead?.telefone);
+      const result = await checkWhatsAppExistence(supabase, lead?.telefone);
       return result.exists ? 'true' : 'false';
     } catch (error) {
       if (isTemporaryWhapiError(error) && attempt < WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS.length) {
@@ -1309,20 +1317,30 @@ async function sendWhatsappMessages({
   phoneNumber,
   messages,
 }: {
-  supabase: ReturnType<typeof createClient>;
+  supabase: SupabaseClient;
   endpoint: string;
   chatId: string;
   phoneNumber: string;
   messages: string[];
 }): Promise<void> {
   const token = getWhapiToken();
-  if (!token) {
+  const transport = await readWhatsAppTransport(supabase);
+  if (transport.provider === 'whapi' && !token) {
     throw new Error('Canal do WhatsApp não configurado para envio.');
   }
 
-  for (const content of messages) {
+  const executionId = crypto.randomUUID();
+  for (const [index, content] of messages.entries()) {
+    if (transport.provider === 'zapi') {
+      await sendAutoContactMessage({
+        supabase, lead: { telefone: phoneNumber }, contentType: 'text', content,
+        operationKey: `manual-automation:${executionId}:${index}`, transport,
+      });
+      continue;
+    }
     await assertContactPermissionForSend(supabase, phoneNumber, 'commercial');
-    const response = await fetch(endpoint, {
+    const dispatch = await createWhatsAppDispatch(supabase, { state: transport, legacy: fetch });
+    const response = await dispatch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2911,7 +2929,7 @@ async function processFlowJobs({
       if (jobRuntimeContext.whatsapp_valid) {
         leadWithRelations.whatsapp_valid = jobRuntimeContext.whatsapp_valid;
       } else if (usesWhatsappValidCondition(flow)) {
-        leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations);
+        leadWithRelations.whatsapp_valid = await resolveWhatsappValid(supabase, leadWithRelations);
       }
 
       const canContinueAdministrativeStep = canContinueLeadCreatedAdministrativeStep(flow, job);
@@ -2993,7 +3011,7 @@ async function processFlowJobs({
     try {
       let flowDailyUsageCacheKey: string | null = null;
       if (job.action_type === 'send_message') {
-        if (!getWhapiToken()) {
+        if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
           const reason = 'Canal do WhatsApp não configurado.';
           logWithContext(reason, { jobId: job.id, leadId: lead.id, flowId: flow.id });
           await supabase
@@ -3062,13 +3080,14 @@ async function processFlowJobs({
           const storedMessageIndex = Number(job.action_payload?.message_index ?? 0);
           const messageStartIndex =
             Number.isInteger(storedMessageIndex) && storedMessageIndex >= 0 ? storedMessageIndex : 0;
-          for (const messagePayload of messagePayloads.slice(messageStartIndex)) {
+          for (const [offset, messagePayload] of messagePayloads.slice(messageStartIndex).entries()) {
             await sendAutoContactMessage({
               supabase,
               lead: leadWithRelations,
               contentType: messagePayload.contentType,
               content: messagePayload.content,
               automationFlowId: flow.id,
+              operationKey: `lead-job:${(job as { id: string }).id}:${messageStartIndex + offset}`,
             });
           }
         } else {
@@ -3115,6 +3134,7 @@ async function processFlowJobs({
             contentType: messagePayload.contentType,
             content: messagePayload.content,
             automationFlowId: flow.id,
+            operationKey: `lead-job:${(job as { id: string }).id}:${messageIndex}`,
           });
 
           if (messageIndex < messagePayloads.length - 1) {
@@ -3542,7 +3562,7 @@ async function activateAutonomousServiceForLead({
     throw new Error('Telefone inválido para ativar o atendimento autônomo.');
   }
 
-  const whatsappCheck = await checkWhatsAppExistence(lead?.telefone);
+  const whatsappCheck = await checkWhatsAppExistence(supabase, lead?.telefone);
   if (!whatsappCheck.exists) {
     throw new Error('Número não possui WhatsApp.');
   }
@@ -3624,12 +3644,16 @@ async function sendAutoContactMessage({
   contentType,
   content,
   automationFlowId,
+  operationKey,
+  transport = undefined,
 }: {
-  supabase: ReturnType<typeof createClient>;
+  supabase: SupabaseClient;
   lead: any;
   contentType: FlowMessageType;
   content: string | { url: string; caption?: string; filename?: string };
   automationFlowId?: string;
+  operationKey?: string;
+  transport?: Awaited<ReturnType<typeof readWhatsAppTransport>>;
 }): Promise<void> {
   const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
   if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
@@ -3637,11 +3661,12 @@ async function sendAutoContactMessage({
   }
 
   const token = getWhapiToken();
-  if (!token) {
+  transport ??= await readWhatsAppTransport(supabase);
+  if (transport.provider === 'whapi' && !token) {
     throw new Error('Canal do WhatsApp não configurado para envio automático.');
   }
 
-  const whatsappCheck = await checkWhatsAppExistence(lead?.telefone);
+  const whatsappCheck = await checkWhatsAppExistence(supabase, lead?.telefone);
   if (!whatsappCheck.exists) {
     throw new Error('Número não possui WhatsApp.');
   }
@@ -3701,12 +3726,17 @@ async function sendAutoContactMessage({
     'commercial',
   );
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), WHAPI_REQUEST_TIMEOUT_MS);
+  const dispatch = await createWhatsAppDispatch(supabase, {
+    state: transport,
+    key: operationKey ?? `lead-manual:${crypto.randomUUID()}`,
+    phone: dispatchRoute.phoneNumber || whapiPhone,
+    channelPhone: channel.phone_number,
+    beforeAttempt: () => assertContactPermissionForSend(supabase, dispatchRoute.phoneNumber || whapiPhone, 'commercial'),
+  });
 
   let response: Response;
   try {
-    response = await fetch(`${WHAPI_BASE_URL}${endpoint}`, {
+    response = await dispatch(`${WHAPI_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3714,15 +3744,13 @@ async function sendAutoContactMessage({
         Accept: 'application/json',
       },
       body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    }, WHAPI_REQUEST_TIMEOUT_MS);
   } catch (error) {
+    if (error instanceof WhatsAppTransportError || transport.provider === 'zapi') throw error;
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new TemporaryWhapiError('Tempo esgotado ao enviar mensagem no WhatsApp.');
     }
     throw new TemporaryWhapiError('Falha de conexão ao enviar mensagem no WhatsApp.');
-  } finally {
-    clearTimeout(timeoutId);
   }
 
   const responsePayload = await readResponsePayload(response);
@@ -4029,6 +4057,7 @@ async function triggerAutoContactForLead({
       lead,
       contentType: 'text',
       content: message,
+      operationKey: `lead-initial:${lead.id}`,
     });
 
     logWithContext('Mensagem automática enviada', { leadId: lead.id });
@@ -4104,7 +4133,7 @@ async function runAutoContactFlowEngine({
       return;
     }
 
-    if (!getWhapiToken()) {
+    if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
       logWithContext('Fluxo automático de WhatsApp desativado: WHAPI_TOKEN não configurado');
       return;
     }
@@ -4121,7 +4150,7 @@ async function runAutoContactFlowEngine({
     leadWithRelations.status = leadWithRelations.status || 'Novo';
 
     if (settings.flows.some(usesWhatsappValidCondition)) {
-      leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations);
+      leadWithRelations.whatsapp_valid = await resolveWhatsappValid(supabase, leadWithRelations);
     }
 
     const matchingFlow =
@@ -4329,7 +4358,7 @@ Deno.serve(async (req: Request) => {
           return false;
         }
 
-        if (!getWhapiToken()) {
+        if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
           logWithContext('Fallback legado de WhatsApp desativado: WHAPI_TOKEN não configurado', {
             leadId: record.id,
           });
@@ -4367,7 +4396,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      if (!getWhapiToken()) {
+      if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
         logWithContext('Fluxo automático de WhatsApp desativado: WHAPI_TOKEN não configurado', { leadId: record.id });
         return new Response(JSON.stringify({ success: true, skipped: true, reason: 'whapi_token_missing' }), {
           status: 200,
@@ -4378,9 +4407,9 @@ Deno.serve(async (req: Request) => {
       const mappedLead = mapLeadForMatch(record);
       const mappedOldLead = oldRecord && typeof oldRecord === 'object' ? mapLeadForMatch(oldRecord) : null;
       if (settings.flows.some(usesWhatsappValidCondition)) {
-        mappedLead.whatsapp_valid = await resolveWhatsappValid(mappedLead);
+        mappedLead.whatsapp_valid = await resolveWhatsappValid(supabase, mappedLead);
         if (mappedOldLead) {
-          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(mappedOldLead);
+          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(supabase, mappedOldLead);
         }
       }
 
@@ -5005,7 +5034,7 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: false, error: 'Informe fluxo, etapa e número de teste.' }, 400);
       }
 
-      if (!getWhapiToken()) {
+      if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
         return jsonResponse({ success: false, error: 'Canal do WhatsApp não configurado para envio de teste.' }, 503);
       }
 
@@ -5104,7 +5133,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      if (!getWhapiToken()) {
+      if (!hasWhatsAppDispatchCredentials((await readWhatsAppTransport(supabase)).provider)) {
         logWithContext('Envio manual de WhatsApp bloqueado: WHAPI_TOKEN não configurado');
         return new Response(JSON.stringify({ success: false, error: 'Canal do WhatsApp não configurado para envio de mensagens' }), {
           status: 503,

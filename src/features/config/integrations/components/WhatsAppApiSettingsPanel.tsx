@@ -26,11 +26,15 @@ import {
   IconButton,
   Input,
   Switch,
+  Select,
 } from "../../../../design-system";
 import {
   loadWhatsAppChannelState,
   type ChannelAdminState,
+  type WhatsAppProvider,
 } from "../data/integrationsApi";
+
+const providerNames = { whapi: "WHAPI Cloud", zapi: "Z-API" } as const;
 
 type MessageState = { type: "success" | "error"; text: string } | null;
 const formatDiagnosticDate = (value: string) => new Intl.DateTimeFormat("pt-BR", {
@@ -46,6 +50,12 @@ export default function WhatsAppApiSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshingHealth, setRefreshingHealth] = useState(false);
+  const [changingProvider, setChangingProvider] = useState(false);
+  const [transferPending, setTransferPending] = useState(false);
+  const [transport, setTransport] = useState<ChannelAdminState["transport"]>();
+  const [selection, setSelection] = useState<WhatsAppProvider>();
+  const selectedProvider = selection ?? transport?.activeProvider;
+  const provider = selectedProvider ? transport?.providers[selectedProvider] : undefined;
   const loadingUi = useAdaptiveLoading(loading);
 
   const setStatusMessage = (message: MessageState) => {
@@ -68,11 +78,15 @@ export default function WhatsAppApiSettingsPanel() {
   const settingsLoadRequestIdRef = useRef(0);
   const channelStateRequestIdRef = useRef(0);
 
-  const loadChannelState = useCallback(async (action: "getConfig" | "refreshHealth") => {
+  const loadChannelState = useCallback(async (
+    action: "getConfig" | "refreshHealth" | "switchProvider",
+    options?: { provider?: WhatsAppProvider; revision?: number; transferPending?: boolean },
+  ) => {
     const requestId = ++channelStateRequestIdRef.current;
-    const payload = await loadWhatsAppChannelState(action);
+    const payload = await loadWhatsAppChannelState(action, options);
     if (requestId !== channelStateRequestIdRef.current) return false;
 
+    setTransport(payload.transport);
     setTokenConfigured(payload.config?.tokenConfigured === true);
     setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
     setWebhookAuthentication(
@@ -200,13 +214,39 @@ export default function WhatsAppApiSettingsPanel() {
     try {
       const applied = await loadChannelState("refreshHealth");
       if (applied) {
-        toast.success("Situação da conexão atualizada.");
+        toast.info("Verificação concluída. Confira o estado da conexão.");
       }
     } catch (error) {
       console.error("[WhatsAppApiSettings] Error refreshing health:", error);
       toast.error("Não foi possível atualizar a saúde do canal.");
     } finally {
       setRefreshingHealth(false);
+    }
+  };
+
+  const handleVerifyProvider = async () => {
+    if (!selectedProvider) return;
+    setRefreshingHealth(true);
+    try {
+      await loadChannelState("refreshHealth", { provider: selectedProvider });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível verificar a conexão.");
+    } finally {
+      setRefreshingHealth(false);
+    }
+  };
+
+  const handleSwitchProvider = async () => {
+    if (!transport || !selectedProvider) return;
+    setChangingProvider(true);
+    try {
+      await loadChannelState("switchProvider", { provider: selectedProvider, revision: transport.revision, transferPending });
+      setTransferPending(false);
+      toast.success(`${providerNames[selectedProvider]} é o provedor ativo.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível trocar o provedor.");
+    } finally {
+      setChangingProvider(false);
     }
   };
 
@@ -273,6 +313,82 @@ export default function WhatsAppApiSettingsPanel() {
       stageClassName="min-h-[340px]"
     >
       <div className="space-y-6">
+        <Card variant="muted" padding="sm">
+          <div className="space-y-3">
+            <Heading level={3}>Provedor de WhatsApp</Heading>
+            <Text className="text-sm text-[var(--text-secondary)]">
+              {transport ? `Ativo no canal principal · ${providerNames[transport.activeProvider]}` : "Provedor ativo ainda não confirmado."}
+            </Text>
+            {(transport?.uncertainAttempts ?? 0) > 0 && (
+              <Alert tone="warning">Há {transport?.uncertainAttempts} envio(s) sem confirmação. Confira as conversas com o suporte antes de tentar de novo.</Alert>
+            )}
+            <Select
+              aria-label="Provedor de WhatsApp"
+              value={selectedProvider ?? ""}
+              onChange={(event) => {
+                setSelection(event.target.value === "zapi" ? "zapi" : "whapi");
+                setTransferPending(false);
+              }}
+              disabled={!transport || refreshingHealth || changingProvider}
+              options={[
+                { value: "whapi", label: providerNames.whapi },
+                { value: "zapi", label: providerNames.zapi },
+              ]}
+            />
+            {provider && (
+              <div className="space-y-1 text-sm">
+                <Text>{provider.configured ? "Credenciais cadastradas no servidor." : "Peça ao suporte para cadastrar as credenciais no servidor."}</Text>
+                <Text>
+                  {provider.connected === true ? "Conexão confirmada" : provider.connected === false ? "Conexão indisponível" : "Conexão ainda não verificada"}
+                  {provider.phone ? ` · ${provider.phone}` : ""}
+                </Text>
+                {provider.checkedAt && <Text>Última verificação em {formatDiagnosticDate(provider.checkedAt)}.</Text>}
+                {provider.error && <Alert tone="warning">{provider.error}</Alert>}
+                {selectedProvider === "zapi" && (
+                  <>
+                    <Text>
+                      {provider.lastWebhookAt
+                        ? `Última atualização recebida em ${formatDiagnosticDate(provider.lastWebhookAt)}.`
+                        : "O recebimento ainda não foi confirmado. Configure os webhooks no painel da Z-API."}
+                    </Text>
+                    {provider.lastInboundAt && <Text>Última mensagem recebida em {formatDiagnosticDate(provider.lastInboundAt)}.</Text>}
+                    <details>
+                      <summary className="cursor-pointer">Configuração avançada para o suporte</summary>
+                      <Text className="mt-2">
+                        Use o endereço abaixo para os eventos de recebimento, envio, status e conexão. Acrescente o parâmetro <code>secret</code> com a chave cadastrada no servidor.
+                      </Text>
+                      <Input readOnly value={provider.webhookUrl ?? ""} aria-label="Endereço base do webhook da Z-API" />
+                      {!provider.webhookConfigured && <Text>Chave de recebimento ausente no servidor.</Text>}
+                    </details>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={handleVerifyProvider} loading={refreshingHealth} disabled={!selectedProvider || changingProvider}>
+                Testar conexão
+              </Button>
+              {transport && selectedProvider && selectedProvider !== transport.activeProvider && (
+                <Button onClick={handleSwitchProvider} loading={changingProvider} disabled={refreshingHealth || !provider?.configured}>
+                  Ativar {providerNames[selectedProvider]}
+                </Button>
+              )}
+            </div>
+            {transport && selectedProvider !== transport.activeProvider && (
+              <div className="space-y-2">
+                <Text className="text-sm text-[var(--text-muted)]">
+                  A troca exige o mesmo número do canal principal e aguarda as tentativas em andamento.
+                </Text>
+                <Switch
+                  checked={transferPending}
+                  disabled={changingProvider}
+                  onChange={(event) => setTransferPending(event.target.checked)}
+                  label="Na contingência, autorizar a continuidade dos trabalhos pendentes. Os envios sem confirmação ficam retidos para revisão."
+                />
+              </div>
+            )}
+          </div>
+        </Card>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="lg:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] p-4">
             <div className="space-y-1">
@@ -318,7 +434,7 @@ export default function WhatsAppApiSettingsPanel() {
               </Text>
             </div>
           </Alert>
-          <details className="lg:col-span-2 space-y-3">
+          {transport?.activeProvider !== "zapi" && <details className="lg:col-span-2 space-y-3">
             <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">Configuração avançada para o suporte</summary>
             <details className="group">
               <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">
@@ -362,7 +478,7 @@ export default function WhatsAppApiSettingsPanel() {
                   <Text className="text-xs text-[var(--text-muted)]">
                     {webhookAuthentication === "header"
                       ? `Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header ${webhookHeaderName || "X-Kifer-Webhook-Secret"}.`
-                      : "Cole esta URL exatamente como está no campo URL da Whapi (modo Body, eventos messages, statuses e channel). O segredo já vem embutido nela — não precisa configurar header."}
+                      : "Use este endereço na WHAPI Cloud no modo Body com os eventos de mensagens, status e canal. O suporte deve acrescentar a chave pelo parâmetro secret ou pelo cabeçalho X-Kifer-Webhook-Secret."}
                   </Text>
                   <Text className="text-xs text-[var(--text-muted)]">
                     Status atual: <span className="font-semibold text-[var(--text-secondary)]">{formatConnectionStatusLabel(channelStatus)}</span>
@@ -451,7 +567,7 @@ export default function WhatsAppApiSettingsPanel() {
               </div>
             </Card>
 
-          </details>
+          </details>}
         </div>
 
         <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">

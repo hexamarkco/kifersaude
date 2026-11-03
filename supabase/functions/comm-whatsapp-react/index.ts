@@ -1,3 +1,5 @@
+import { readWhatsAppTransport, resolveMessageProvider, runZapiMutation, withWhatsAppOperation, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
+import { zapiDestination, zapiNativeId, zapiRecord } from '../_shared/comm-whatsapp/zapi.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
@@ -112,7 +114,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!settings.token) {
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    const provider = resolveMessageProvider(transport, messageId);
+    if (provider === 'whapi' && !settings.token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi não configurado.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -143,7 +147,19 @@ Deno.serve(async (req: Request) => {
     }
 
     const whapi = createWhapiClient(settings.token);
-    const response = await whapi.sendReaction(messageId, chatRoute.externalChatId, emoji || null);
+    if (chatRoute.identityConflict) throw new WhatsAppTransportError('Revise a identidade da conversa antes de reagir.');
+    const response = provider === 'whapi'
+      ? await withWhatsAppOperation(supabaseAdmin, transport, () => whapi.sendReaction(messageId, chatRoute.externalChatId, emoji || null))
+      : await runZapiMutation(supabaseAdmin, transport, channel.phone_number, async (adapter, instanceId) => {
+          const phone = zapiDestination(chatRoute.externalChatId, chatRoute.phoneNumber);
+          const nativeId = zapiNativeId(instanceId, messageId);
+          if (!phone || !nativeId) throw new WhatsAppTransportError('A Z-API não confirmou a origem da mensagem.');
+          const result = zapiRecord(await adapter.request(emoji ? 'send-reaction' : 'send-remove-reaction', {
+            body: { phone, messageId: nativeId, ...(emoji ? { reaction: emoji } : {}) }, dispatch: true,
+          }));
+          if (!result.messageId && result.value !== true) throw new WhatsAppTransportError('A Z-API não confirmou a reação.', true);
+          return Response.json(result);
+        });
 
     const payload = await readResponsePayload(response);
     if (!response.ok) {
@@ -151,6 +167,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const reactedAt = getNowIso();
+    if (provider === 'zapi') {
+      return new Response(JSON.stringify({ success: true, pending: true }), { status: 202, headers: jsonHeaders });
+    }
     await applyCommWhatsAppMessageMutation(supabaseAdmin, {
       channelId: channel.id,
       targetExternalMessageId: messageId,
@@ -171,7 +190,7 @@ Deno.serve(async (req: Request) => {
     console.error('[comm-whatsapp-react] erro inesperado', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao reagir à mensagem.' }),
-      { status: 500, headers: jsonHeaders },
+      { status: error instanceof WhatsAppTransportError ? error.status : 500, headers: jsonHeaders },
     );
   }
 });

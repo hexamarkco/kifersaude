@@ -86,7 +86,8 @@ export const useInboxMessageReactionActions = ({
     const nextEmoji = currentOwnReaction === emoji ? null : emoji;
 
     setOpenReactionPickerMessageId(null);
-    patchMessageReactionLocally(message, nextEmoji);
+    const waitsForConfirmation = message.external_message_id.startsWith('zapi:');
+    if (!waitsForConfirmation) patchMessageReactionLocally(message, nextEmoji);
 
     try {
       await whatsappMessagesRepository.react({
@@ -94,8 +95,9 @@ export const useInboxMessageReactionActions = ({
         messageId: message.external_message_id,
         emoji: nextEmoji,
       });
+      if (waitsForConfirmation) toast.info('Reação solicitada. Aguardando confirmação do WhatsApp.');
     } catch (error) {
-      patchMessageReactionLocally(message, currentOwnReaction);
+      if (!waitsForConfirmation) patchMessageReactionLocally(message, currentOwnReaction);
       console.error('[WhatsAppInbox] erro ao reagir à mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível reagir à mensagem.');
     } finally {

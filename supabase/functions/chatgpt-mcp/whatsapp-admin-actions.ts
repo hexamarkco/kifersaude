@@ -12,7 +12,7 @@ const confirmation = { type: 'boolean', const: true, description: 'Confirma expl
 export const MCP_WHATSAPP_ADMIN_TOOLS: readonly McpToolDescriptor[] = [
   { name: 'kifer_get_whatsapp_integration_status', description: 'Consulta estado seguro do canal WhatsApp, diagnóstico do webhook e se a credencial de servidor está configurada. Nunca retorna tokens, segredos ou URL de webhook.', inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true } },
   { name: 'kifer_set_whatsapp_integration_enabled', description: 'Ativa ou desativa o canal principal do WhatsApp. A alteração afeta envios e automações reais. Leia o estado primeiro e envie os dois updated_at atuais com confirm_change=true.', inputSchema: { type: 'object', required: ['enabled', 'expected_channel_updated_at', 'expected_settings_updated_at', 'confirm_change'], additionalProperties: false, properties: { enabled: { type: 'boolean' }, expected_channel_updated_at: { type: 'string', format: 'date-time' }, expected_settings_updated_at: { type: 'string', format: 'date-time' }, confirm_change: confirmation } }, annotations: { readOnlyHint: false } },
-  { name: 'kifer_refresh_whatsapp_connection_health', description: 'Consulta saúde e limites atuais do provedor Whapi e atualiza o snapshot do canal. Faz chamadas externas ao provedor; requer confirm_refresh=true. Não envia mensagens.', inputSchema: { type: 'object', required: ['confirm_refresh'], additionalProperties: false, properties: { confirm_refresh: confirmation } }, annotations: { readOnlyHint: false, openWorldHint: true } },
+  { name: 'kifer_refresh_whatsapp_connection_health', description: 'Consulta a conexão do provedor ativo e atualiza o diagnóstico do canal. Faz chamadas externas ao provedor; requer confirm_refresh=true. Não envia mensagens.', inputSchema: { type: 'object', required: ['confirm_refresh'], additionalProperties: false, properties: { confirm_refresh: confirmation } }, annotations: { readOnlyHint: false, openWorldHint: true } },
 ] as const;
 
 export const MCP_WHATSAPP_ADMIN_READ_TOOL_NAMES = READ_NAMES;
@@ -46,7 +46,9 @@ export async function executeMcpWhatsAppAdminReadAction(params: { supabase: Supa
   const channel = isRecord(data.channel) ? data.channel : {};
   const config = isRecord(data.config) ? data.config : {};
   const diagnostics = isRecord(config.webhookDiagnostics) ? config.webhookDiagnostics : {};
+  const transport = isRecord(data.transport) ? data.transport : {};
   const state = {
+    active_provider: text(transport.activeProvider) || null,
     enabled: config.enabled === true,
     token_configured: config.tokenConfigured === true,
     connection_status: text(channel.connection_status) || null,
@@ -106,9 +108,11 @@ export async function executeMcpWhatsAppAdminWriteAction(params: { supabase: Sup
       const channel = isRecord(data.channel) ? data.channel : {};
       const config = isRecord(data.config) ? data.config : {};
       const diagnostics = isRecord(config.webhookDiagnostics) ? config.webhookDiagnostics : {};
+      const transport = isRecord(data.transport) ? data.transport : {};
       result = {
         success: true,
         status: {
+          active_provider: text(transport.activeProvider) || null,
           connection_status: text(channel.connection_status) || null,
           health_status: text(channel.health_status) || null,
           phone_number: text(channel.phone_number) || null,

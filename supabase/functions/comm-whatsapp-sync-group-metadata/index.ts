@@ -1,3 +1,6 @@
+import { createZapiAdapter, zapiDestination } from '../_shared/comm-whatsapp/zapi.ts';
+import { normalizeZapiGroup } from '../_shared/comm-whatsapp/zapi-groups.ts';
+import { getZapiCredentials, readWhatsAppTransport, verifyZapiNumber, withWhatsAppOperation } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -45,16 +48,18 @@ const syncGroup = async (
   channelId: string,
   token: string,
   externalGroupId: string,
+  zapi?: ReturnType<typeof createZapiAdapter>,
 ): Promise<GroupSyncResult> => {
   try {
-    const remoteGroup = await fetchWhapiGroup({ token, groupId: externalGroupId });
-    const snapshot = normalizeWhapiGroupSnapshot(remoteGroup);
+    const snapshot = zapi
+      ? normalizeZapiGroup(await zapi.request(`light-group-metadata/${encodeURIComponent(zapiDestination(externalGroupId))}`), externalGroupId)
+      : normalizeWhapiGroupSnapshot(await fetchWhapiGroup({ token, groupId: externalGroupId }));
     if (!snapshot) {
       return {
         externalGroupId,
         name: null,
         synced: false,
-        error: 'A Whapi nao retornou metadados validos para este grupo.',
+        error: 'O provedor não retornou dados válidos para este grupo.',
       };
     }
 
@@ -114,6 +119,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const transport = await readWhatsAppTransport(supabaseAdmin);
     const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
     if (!settings.enabled) {
       return new Response(JSON.stringify({ error: 'Integracao WhatsApp desabilitada.' }), {
@@ -122,7 +128,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!settings.token) {
+    const credentials = transport.provider === 'zapi' ? getZapiCredentials(transport) : null;
+    const zapi = credentials ? createZapiAdapter(credentials) : undefined;
+    if (transport.provider === 'zapi' && !zapi) {
+      return new Response(JSON.stringify({ error: 'Configure as credenciais da Z-API.' }), { status: 422, headers: jsonHeaders });
+    }
+    if (!zapi && !settings.token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -130,11 +141,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
+    if (zapi) await verifyZapiNumber(zapi, channel.phone_number);
     const { data: groups, error: groupsError } = await supabaseAdmin
-      .from('comm_whatsapp_groups')
-      .select('external_group_id')
+      .from('comm_whatsapp_chats')
+      .select('external_chat_id')
+      .eq('is_group', true)
+      .is('deleted_at', null)
       .eq('channel_id', channel.id)
-      .order('external_group_id', { ascending: true });
+      .order('external_chat_id', { ascending: true });
 
     if (groupsError) {
       throw new Error(`Erro ao listar grupos locais: ${groupsError.message}`);
@@ -142,8 +156,8 @@ Deno.serve(async (req: Request) => {
 
     const groupIds = Array.from(new Set(
       (groups || [])
-        .map((group: { external_group_id?: unknown }) => (
-          typeof group.external_group_id === 'string' ? group.external_group_id.trim() : ''
+        .map((group: { external_chat_id?: unknown }) => (
+          typeof group.external_chat_id === 'string' ? group.external_chat_id.trim() : ''
         ))
         .filter(Boolean),
     ));
@@ -153,7 +167,8 @@ Deno.serve(async (req: Request) => {
     for (let offset = 0; offset < groupIds.length; offset += batchSize) {
       const batch = groupIds.slice(offset, offset + batchSize);
       results.push(...await Promise.all(
-        batch.map((groupId) => syncGroup(supabaseAdmin, channel.id, settings.token, groupId)),
+        batch.map((groupId) => withWhatsAppOperation(supabaseAdmin, transport, () =>
+          syncGroup(supabaseAdmin, channel.id, settings.token, groupId, zapi))),
       ));
     }
 

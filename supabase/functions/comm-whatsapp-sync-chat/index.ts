@@ -1,3 +1,4 @@
+import { readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -93,6 +94,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if ((await readWhatsAppTransport(supabaseAdmin)).provider === 'zapi') {
+      return new Response(JSON.stringify({ error: 'A Z-API não disponibiliza histórico remoto de mensagens. O histórico registrado no CRM continua na conversa.' }), { status: 422, headers: jsonHeaders });
+    }
     const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
     if (!settings.enabled) {
       return new Response(JSON.stringify({ error: 'Integração WhatsApp desabilitada.' }), {

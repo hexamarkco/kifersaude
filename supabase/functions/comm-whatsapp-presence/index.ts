@@ -1,3 +1,4 @@
+import { readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -95,7 +96,8 @@ Deno.serve(async (req: Request) => {
 
     const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
     if (!settings.enabled) return response({ error: 'Integração WhatsApp desabilitada.' }, 403);
-    if (!settings.token) return response({ error: 'Token da Whapi nao configurado.' }, 400);
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    if (transport.provider === 'whapi' && !settings.token) return response({ error: 'Token da Whapi nao configurado.' }, 400);
 
     const presenceEntryIds = Array.from(new Set([
       entryId,
@@ -110,6 +112,17 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
     if (previousError) throw new Error(`Nao foi possivel carregar estado de presenca: ${previousError.message}`);
+
+    if (transport.provider === 'zapi') {
+      const presence = previous && previous.observed_at >= transport.changedAt &&
+        isWhapiTransientPresenceStatus(previous.status) &&
+        !isWhapiPresenceSnapshotStale(previous.status, previous.observed_at)
+        ? { status: previous.status, last_seen_at: previous.last_seen_at, observed_at: previous.observed_at }
+        : null;
+      return response({ success: true, chat_id: chat.id, entry_id: entryId, is_group: chat.is_group,
+        presence, subscription: { status: 'webhook', error: null },
+      });
+    }
 
     const attemptedAt = previous?.subscription_attempted_at ? Date.parse(previous.subscription_attempted_at) : 0;
     const subscriptionIsFresh = attemptedAt > 0 && Date.now() - attemptedAt < SUBSCRIPTION_RETRY_COOLDOWN_MS;

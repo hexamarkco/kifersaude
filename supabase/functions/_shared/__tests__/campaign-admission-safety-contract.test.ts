@@ -110,7 +110,8 @@ test('campaign media is restricted to the campaign bucket, MIME allowlist and on
   assert.match(migration, /20971520/);
   assert.match(worker, /resolveCampaignMediaPublicUrl\(step\.media_url\)/);
   assert.match(worker, /form\.append\('caption', caption\)/);
-  assert.match(worker, /await sendCampaignMedia\(params\.token, chatId, step, text, assertSendPermission\)/);
+  assert.match(worker, /await dispatchCampaignMessage\(\{[\s\S]*?beforeAttempt: assertSendPermission/);
+  assert.match(worker, /sendCampaignMedia\(token, chatId, step, text, beforeAttempt, dispatch\)/);
   assert.match(worker, /step\.media_url \? \(step\.media_type \|\| 'document'\) : 'text'/);
 });
 

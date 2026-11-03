@@ -1,3 +1,6 @@
+import { assertContactPermissionForSend } from '../_shared/contact-permissions.ts';
+import { readWhatsAppTransport, resolveMessageProvider, runZapiMutation, withWhatsAppOperation, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
+import { zapiDestination, zapiExternalId, zapiNativeId, zapiRecord } from '../_shared/comm-whatsapp/zapi.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
@@ -147,7 +150,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!token) {
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    if (transport.provider === 'whapi' && !token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -209,6 +213,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (sourceChatRoute?.identityConflict) throw new WhatsAppTransportError('Revise a identidade da conversa antes de alterar a mensagem.');
+    const provider = resolveMessageProvider(transport, externalMessageId);
+    if (provider === 'zapi' && (action === 'edit' || action === 'star')) {
+      throw new WhatsAppTransportError('Esta ação não está disponível para mensagens da Z-API.', false, 422);
+    }
+
     if (action === 'edit') {
       const messageType = toTrimmedString(message.message_type).toLowerCase();
       if (!EDITABLE_MESSAGE_TYPES.has(messageType)) {
@@ -256,7 +266,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const whapi = createWhapiClient(token);
-      const response = await whapi.editMessage(externalMessageId, JSON.stringify(editPayload), isMediaEdit ? messageType : 'text');
+      const response = await withWhatsAppOperation(supabaseAdmin, transport, () => whapi.editMessage(externalMessageId, JSON.stringify(editPayload), isMediaEdit ? messageType : 'text'));
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
@@ -341,14 +351,33 @@ Deno.serve(async (req: Request) => {
 
       for (const targetRoute of uniqueTargetRoutes) {
         const targetChatId = targetRoute.externalChatId;
-        if (isWhapiGroupChatId(targetChatId)) {
+        if (provider === 'whapi' && isWhapiGroupChatId(targetChatId)) {
           await ensureWhapiGroupChatMetadata(supabaseAdmin, {
             channelId: channel.id,
             groupId: targetChatId,
             name: targetRoute.displayName,
           });
         }
-        const response = await whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {});
+        if (targetRoute.identityConflict) throw new WhatsAppTransportError('Revise a identidade da conversa de destino.');
+        if (!isWhapiGroupChatId(targetChatId)) {
+          await assertContactPermissionForSend(supabaseAdmin, targetRoute.phoneNumber || extractPhoneFromChatId(targetChatId), 'commercial');
+        }
+        const response = provider === 'whapi'
+          ? await withWhatsAppOperation(supabaseAdmin, transport, () =>
+              whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {}))
+          : await runZapiMutation(supabaseAdmin, transport, channel.phone_number, async (adapter, instanceId) => {
+              const phone = zapiDestination(targetChatId, targetRoute.phoneNumber);
+              const messagePhone = zapiDestination(externalChatId, sourceChatRoute?.phoneNumber);
+              const nativeId = zapiNativeId(instanceId, externalMessageId);
+              if (!phone || !messagePhone || !nativeId) throw new WhatsAppTransportError('A origem ou o destino do encaminhamento não pôde ser confirmado.');
+              if (!isWhapiGroupChatId(targetChatId)) await assertContactPermissionForSend(supabaseAdmin, phone, 'commercial');
+              const result = zapiRecord(await adapter.request('forward-message', {
+                body: { phone, messagePhone, messageId: nativeId }, dispatch: true,
+              }));
+              const id = zapiExternalId(instanceId, result.messageId);
+              if (!id) throw new WhatsAppTransportError('O encaminhamento ainda está sem confirmação. Confira a conversa antes de tentar de novo.', true);
+              return Response.json({ id, status: 'queued' });
+            }, `forward:${externalMessageId}:${targetChatId}`);
         const payload = await readResponsePayload(response);
 
         if (!response.ok) {
@@ -423,7 +452,7 @@ Deno.serve(async (req: Request) => {
       const starred = body.starred === true;
 
       const whapi = createWhapiClient(token);
-      const response = await whapi.starMessage(externalMessageId, starred);
+      const response = await withWhatsAppOperation(supabaseAdmin, transport, () => whapi.starMessage(externalMessageId, starred));
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
@@ -458,7 +487,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const whapi = createWhapiClient(token);
-    const response = await whapi.deleteMessage(externalMessageId);
+    const response = provider === 'whapi'
+      ? await withWhatsAppOperation(supabaseAdmin, transport, () => whapi.deleteMessage(externalMessageId))
+      : await runZapiMutation(supabaseAdmin, transport, channel.phone_number, async (adapter, instanceId) => {
+          const phone = zapiDestination(externalChatId, sourceChatRoute?.phoneNumber);
+          const nativeId = zapiNativeId(instanceId, externalMessageId);
+          if (!phone || !nativeId) throw new WhatsAppTransportError('A Z-API não confirmou a origem da mensagem.');
+          const query = new URLSearchParams({ messageId: nativeId, phone, owner: 'true' });
+          const result = zapiRecord(await adapter.request(`messages?${query}`, { method: 'DELETE', dispatch: true }));
+          if (result.value !== true) throw new WhatsAppTransportError('A Z-API não confirmou a exclusão.', true);
+          return Response.json(result);
+        });
     const payload = await readResponsePayload(response);
 
     if (!response.ok) {
@@ -495,7 +534,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao gerenciar mensagem.' }),
       {
-        status: 500,
+        status: error instanceof WhatsAppTransportError ? error.status : 500,
         headers: jsonHeaders,
       },
     );

@@ -1,3 +1,4 @@
+import { createWhatsAppDispatch, getZapiContactStatus, readWhatsAppTransport, type DispatchRequest, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
@@ -5,11 +6,11 @@ import {
   buildWhapiDirectChatId,
   checkWhapiContactStatus,
   corsHeaders,
-  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
   extractWhapiMediaMeta,
+  extractWhapiMediaId,
   fetchWhapiChatMessages,
   formatPhoneLabel,
   getCommWhatsAppPhoneLookupKeys,
@@ -1209,7 +1210,9 @@ async function sendCampaignTestMessage(
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const token = sanitizeWhapiToken(settings.token);
   if (!settings.enabled) throw new Error('Integracao WhatsApp desabilitada.');
-  if (!token) throw new Error('Token da Whapi nao configurado.');
+  if (!token && (await readWhatsAppTransport(supabaseAdmin)).provider === 'whapi') {
+    throw new Error('Token do WhatsApp não configurado.');
+  }
 
   const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
     channelId: channel.id,
@@ -1227,10 +1230,10 @@ async function sendCampaignTestMessage(
     'commercial',
   );
   await assertSendPermission();
-  const whapi = createWhapiClient(token);
-  const response = step.media_url
-    ? await sendCampaignMedia(token, dispatchChatId, step, text, assertSendPermission)
-    : await whapi.sendText(dispatchChatId, text, undefined, assertSendPermission);
+  const response = await dispatchCampaignMessage({
+    admin: supabaseAdmin, token, chatId: dispatchChatId, phone: sendPhoneNumber, step, text,
+    beforeAttempt: assertSendPermission, key: `campaign-test:${crypto.randomUUID()}`,
+  });
   const payload = await readResponsePayload(response);
 
   if (!response.ok || (payload && typeof payload === 'object' && !Array.isArray(payload) && (payload as Record<string, unknown>).sent === false)) {
@@ -2050,7 +2053,6 @@ async function executeStageBurst(params: {
     return lastCompanionIndex >= 0 ? allSteps[lastCompanionIndex + 1] ?? null : null;
   })();
 
-  const whapi = createWhapiClient(params.token);
   let persistedChatId = chatRoute?.chatId || target.chat_id;
 
   for (let i = 0; i < companions.length; i++) {
@@ -2368,9 +2370,10 @@ async function executeStageBurst(params: {
         await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
       };
       await assertSendPermission();
-      response = step.media_url
-        ? await sendCampaignMedia(params.token, chatId, step, text, assertSendPermission)
-        : await whapi.sendText(chatId, text, undefined, assertSendPermission);
+      response = await dispatchCampaignMessage({
+        admin: supabaseAdmin, token: params.token, chatId, phone: phoneDigits, step, text,
+        beforeAttempt: assertSendPermission, key: `campaign:${dispatchKey}`,
+      });
       payload = await readResponsePayload(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
@@ -2428,12 +2431,14 @@ async function executeStageBurst(params: {
         });
         return { status: 'stopped', nextStepIndex: step.step_index, error: errorMessage };
       }
+      const uncertain = error instanceof WhatsAppTransportError && error.uncertain;
       await advanceStepDispatch(supabaseAdmin, {
         dispatchKey,
-        newStatus: 'failed',
+        newStatus: uncertain ? 'uncertain' : 'failed',
         errorMessage,
       });
-      return { status: 'failed', nextStepIndex: step.step_index, error: errorMessage };
+      if (uncertain) await cancelFuturePendingDispatches(supabaseAdmin, target.id, step.step_index);
+      return { status: uncertain ? 'uncertain' : 'failed', nextStepIndex: step.step_index, error: errorMessage };
     }
 
     if (!response.ok) {
@@ -2537,7 +2542,7 @@ async function executeStageBurst(params: {
         senderName: params.senderName,
         statusUpdatedAt: nowIso,
         errorMessage: null,
-        mediaId: null,
+        mediaId: externalMessageId.startsWith('zapi:') ? extractWhapiMediaId(payload) || null : null,
         mediaUrl: step.media_url,
         mediaMimeType: null,
         mediaFileName: step.media_filename,
@@ -2725,7 +2730,7 @@ async function reconcileOrphanedStepDispatches(params: {
         ? (await supabaseAdmin.from('comm_whatsapp_chats').select('external_chat_id').eq('id', target.chat_id).maybeSingle())?.data?.external_chat_id
         : null;
 
-      if (chatId) {
+      if (chatId && (await readWhatsAppTransport(supabaseAdmin)).provider === 'whapi') {
         try {
           const chatMessages = await fetchWhapiChatMessages({ token, chatId });
 
@@ -3046,12 +3051,33 @@ function resolveCampaignMediaPublicUrl(mediaUrl: string): URL {
   return new URL(`${prefix}${encodedPath}`, base.origin);
 }
 
+async function dispatchCampaignMessage(params: {
+  admin: ReturnType<typeof createAdminClient>;
+  token: string;
+  chatId: string;
+  phone: string;
+  step: Pick<CampaignStepRow, 'media_url' | 'media_type' | 'media_filename'>;
+  text: string;
+  beforeAttempt: () => Promise<void>;
+  key: string;
+}): Promise<Response> {
+  const { admin, token, chatId, phone, step, text, beforeAttempt, key } = params;
+  const dispatch = await createWhatsAppDispatch(admin, { phone, key, beforeAttempt });
+  if (step.media_url) return sendCampaignMedia(token, chatId, step, text, beforeAttempt, dispatch);
+  return dispatch(`${WHAPI_BASE_URL}/messages/text`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ to: chatId, body: text }),
+  });
+}
+
 async function sendCampaignMedia(
   token: string,
   chatId: string,
   step: Pick<CampaignStepRow, 'media_url' | 'media_type' | 'media_filename'>,
   caption: string,
   beforeAttempt: () => Promise<void>,
+  dispatch: DispatchRequest,
 ): Promise<Response> {
   if (!step.media_url || !step.media_type) {
     throw new Error('Etapa sem midia valida configurada.');
@@ -3098,7 +3124,7 @@ async function sendCampaignMedia(
   if (caption) form.append('caption', caption);
 
   await beforeAttempt();
-  return fetch(`${WHAPI_BASE_URL}/messages/${step.media_type}`, {
+  return dispatch(`${WHAPI_BASE_URL}/messages/${step.media_type}`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -3744,10 +3770,10 @@ async function sendTarget(params: {
       await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'commercial');
     };
     await assertSendPermission();
-    const whapi = createWhapiClient(params.token);
-    response = step.media_url
-      ? await sendCampaignMedia(params.token, chatId, step, text, assertSendPermission)
-      : await whapi.sendText(chatId, text, undefined, assertSendPermission);
+    response = await dispatchCampaignMessage({
+      admin: supabaseAdmin, token: params.token, chatId, phone: phoneDigits, step, text,
+      beforeAttempt: assertSendPermission, key: `campaign-legacy:${target.id}:${step.step_index}`,
+    });
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
@@ -3955,7 +3981,7 @@ async function sendTarget(params: {
       senderName: params.senderName,
       statusUpdatedAt: nowIso,
       errorMessage: null,
-      mediaId: null,
+      mediaId: externalMessageId.startsWith('zapi:') ? extractWhapiMediaId(payload) || null : null,
       mediaUrl: step.media_url,
       mediaMimeType: null,
       mediaFileName: step.media_filename,
@@ -4136,6 +4162,7 @@ async function validatePendingWhatsAppTargets(
     return true;
   };
 
+  const transport = await readWhatsAppTransport(supabaseAdmin);
   await mapWithConcurrency(targets, WHATSAPP_VALIDATION_CONCURRENCY, async (target) => {
     if (Date.now() > deadline) {
       skippedByBudget += 1;
@@ -4155,16 +4182,17 @@ async function validatePendingWhatsAppTargets(
       return;
     }
 
-    const result = await checkWhapiContactStatus({ token, contactId: phoneDigits });
+    const outcome = transport.provider === 'zapi' ? await getZapiContactStatus(phoneDigits, transport)
+      : (await checkWhapiContactStatus({ token, contactId: phoneDigits })).outcome;
     checkedCount += 1;
 
-    if (result.outcome === 'unknown') {
+    if (outcome === 'unknown') {
       // Falha de rede/Whapi ou resposta ambigua: deixa 'pending' pra tentar
       // de novo no proximo tick, nao marca como invalido sem confirmar.
       return;
     }
 
-    if (result.outcome === 'valid') {
+    if (outcome === 'valid') {
       if (await persistWhatsAppCheck(target, { whatsapp_check_status: 'valid', whatsapp_checked_at: nowIso })) {
         validCount += 1;
       }
@@ -4227,7 +4255,9 @@ async function processCampaigns(
   const token = sanitizeWhapiToken(settings.token);
 
   if (!settings.enabled) throw new Error('Integracao WhatsApp desabilitada.');
-  if (!token) throw new Error('Token da Whapi nao configurado.');
+  if (!token && (await readWhatsAppTransport(supabaseAdmin)).provider === 'whapi') {
+    throw new Error('Token do WhatsApp não configurado.');
+  }
 
   // Roda independente do status da campanha (inclusive rascunho) - a
   // validacao comeca assim que o CSV e importado, nao so quando a campanha e

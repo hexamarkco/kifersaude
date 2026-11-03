@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import {
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -149,6 +150,7 @@ async function loadRefreshableMessages(
     .eq('channel_id', params.channelId)
     .eq('direction', 'outbound')
     .not('external_message_id', 'is', null)
+    .not('external_message_id', 'like', 'zapi:%')
     .order(params.staleBefore ? 'delivery_status_checked_at' : 'message_at', {
       ascending: Boolean(params.staleBefore),
       nullsFirst: Boolean(params.staleBefore),
@@ -319,6 +321,13 @@ Deno.serve(async (req: Request) => {
     if (!settings.enabled) {
       return new Response(JSON.stringify({ error: 'Integração WhatsApp desabilitada.' }), {
         status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
+    if ((await readWhatsAppTransport(supabaseAdmin)).provider === 'zapi') {
+      return new Response(JSON.stringify({ refreshed: [], checked: 0, updated: 0, source: 'webhook' }), {
+        status: 200,
         headers: jsonHeaders,
       });
     }

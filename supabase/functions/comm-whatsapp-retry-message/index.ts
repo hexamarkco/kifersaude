@@ -1,3 +1,4 @@
+import { createWhatsAppDispatch, readWhatsAppTransport, resolveMessageProvider, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
@@ -13,6 +14,8 @@ import {
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
   createWhapiClient,
+  extractWhapiMediaId,
+  getCachedCommWhatsAppMedia,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
@@ -302,6 +305,8 @@ Deno.serve(async (req: Request) => {
           id,
           chat_id,
           message_type,
+          external_message_id,
+          delivery_status,
           media_id,
           media_caption,
           text_content,
@@ -382,7 +387,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!token) {
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    const provider = resolveMessageProvider(transport, toTrimmedString(target.external_message_id));
+    if (provider === 'zapi' && target.delivery_status !== 'failed') {
+      throw new WhatsAppTransportError('O reenvio exige uma falha confirmada pela Z-API.');
+    }
+    if (provider === 'whapi' && !token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -396,6 +406,7 @@ Deno.serve(async (req: Request) => {
         headers: jsonHeaders,
       });
     }
+    if (chatRoute.identityConflict) throw new WhatsAppTransportError('Revise a identidade da conversa antes de reenviar.');
     retryTarget.external_chat_id = chatRoute.externalChatId;
     retryTarget.phone_number = chatRoute.phoneNumber || retryTarget.phone_number;
     retryTarget.display_name = chatRoute.displayName || retryTarget.display_name;
@@ -424,18 +435,28 @@ Deno.serve(async (req: Request) => {
 
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
     const whapi = createWhapiClient(token);
+    const url = `${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`;
+    const legacyBody = JSON.stringify({
+      to: retryTarget.external_chat_id, media: retryTarget.media_id,
+      caption: retryTarget.message_type === 'voice' ? undefined : caption || undefined,
+    });
+    const dispatch = await createWhatsAppDispatch(supabaseAdmin, {
+      state: transport, key: `retry:${retryTarget.id}`, phone: retryTarget.phone_number,
+      channelPhone: channel.phone_number, beforeAttempt: assertSendPermission,
+      legacy: () => whapi.post(url, legacyBody, { 'Content-Type': 'application/json' }, 30_000, assertSendPermission),
+    });
+    let requestBody: BodyInit = legacyBody;
+    if (provider === 'zapi') {
+      const blob = await getCachedCommWhatsAppMedia(supabaseAdmin, retryTarget.media_id!);
+      if (!blob) throw new WhatsAppTransportError('O anexo precisa estar no histórico para ser reenviado.');
+      const form = new FormData();
+      form.set('to', retryTarget.external_chat_id);
+      form.set('media', blob, retryTarget.media_file_name || 'anexo');
+      form.set('caption', caption);
+      requestBody = form;
+    }
     retryDispatched = true;
-    const response = await whapi.post(
-      `${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`,
-      JSON.stringify({
-        to: retryTarget.external_chat_id,
-        media: retryTarget.media_id,
-        caption: retryTarget.message_type === 'voice' ? undefined : caption || undefined,
-      }),
-      { 'Content-Type': 'application/json' },
-      30_000,
-      assertSendPermission,
-    );
+    const response = await dispatch(url, { method: 'POST', body: requestBody }, 30_000);
 
     const whapiPayload = await readResponsePayload(response);
 
@@ -477,7 +498,7 @@ Deno.serve(async (req: Request) => {
       senderPhone: channel.phone_number,
       statusUpdatedAt: nowIso,
       errorMessage: null,
-      mediaId: retryTarget.media_id,
+      mediaId: extractWhapiMediaId(whapiPayload) || retryTarget.media_id,
       mediaUrl: null,
       mediaMimeType: retryTarget.media_mime_type,
       mediaFileName: retryTarget.media_file_name,

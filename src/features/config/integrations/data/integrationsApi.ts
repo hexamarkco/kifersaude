@@ -7,7 +7,27 @@ export type WebhookDiagnosticStatus =
   | 'receiving_messages'
   | 'waiting_first_event';
 
+export type WhatsAppProvider = 'whapi' | 'zapi';
+
+type ProviderDiagnostics = {
+  configured: boolean;
+  webhookConfigured: boolean;
+  connected: boolean | null;
+  phone: string | null;
+  checkedAt: string | null;
+  error: string | null;
+  lastWebhookAt?: string | null;
+  lastInboundAt?: string | null;
+  webhookUrl?: string;
+};
+
 export type ChannelAdminState = {
+  transport?: {
+    activeProvider: WhatsAppProvider;
+    revision: number;
+    uncertainAttempts?: number;
+    providers: Record<WhatsAppProvider, ProviderDiagnostics>;
+  };
   channel: {
     connection_status?: string | null;
     phone_number?: string | null;
@@ -37,11 +57,19 @@ export async function loadAiProviderModels(provider: AiProvider): Promise<unknow
 }
 
 export async function loadWhatsAppChannelState(
-  action: 'getConfig' | 'refreshHealth',
+  action: 'getConfig' | 'refreshHealth' | 'switchProvider',
+  options: { provider?: WhatsAppProvider; revision?: number; transferPending?: boolean } = {},
 ): Promise<ChannelAdminState> {
   const { data, error } = await databaseClient.functions.invoke('comm-whatsapp-admin', {
-    body: { action },
+    body: { action, ...options },
   });
-  if (error) throw error;
+  if (error) {
+    const context = 'context' in error ? error.context : undefined;
+    const detail: unknown = context instanceof Response ? await context.json().catch(() => null) : null;
+    if (detail && typeof detail === 'object' && 'error' in detail && typeof detail.error === 'string') {
+      throw new Error(detail.error);
+    }
+    throw error;
+  }
   return (data ?? {}) as ChannelAdminState;
 }

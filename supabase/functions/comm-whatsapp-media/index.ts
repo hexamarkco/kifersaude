@@ -87,13 +87,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!settings.token) {
-      return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { data: messageRows } = await supabaseAdmin
       .from('comm_whatsapp_messages')
       .select('media_url, media_mime_type, media_file_name')

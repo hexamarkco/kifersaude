@@ -1,3 +1,6 @@
+import { archiveZapiMedia } from '../_shared/comm-whatsapp/zapi-media.ts';
+import { isZapiMediaId } from '../_shared/comm-whatsapp/zapi.ts';
+import { readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -83,6 +86,7 @@ async function completeJob(supabaseAdmin: ReturnType<typeof createAdminClient>, 
       locked_at: null,
       lock_token: null,
       last_error: null,
+      ...(job.payload?.provider === 'zapi' ? { payload: {} } : {}),
     })
     .eq('id', job.id)
     .eq('status', 'processing')
@@ -110,6 +114,7 @@ async function failJob(
       locked_at: null,
       lock_token: null,
       last_error: errorMessage.slice(0, 2000),
+      ...(!retry && job.payload?.provider === 'zapi' ? { payload: {} } : {}),
     })
     .eq('id', job.id)
     .eq('status', 'processing')
@@ -268,6 +273,19 @@ async function processMediaJob(params: {
   const payload = toRecord(params.job.payload);
   const mediaId = toTrimmedString(payload.media_id);
   if (!mediaId) return;
+  if (isZapiMediaId(mediaId)) {
+    if (payload.provider !== 'zapi') return;
+    try {
+      await archiveZapiMedia(params.supabaseAdmin, mediaId, {
+        url: toTrimmedString(payload.media_url),
+        mimeType: toTrimmedString(payload.media_mime_type),
+        type: toTrimmedString(payload.media_type),
+      });
+    } catch {
+      throw new Error('O anexo da Z-API ainda não pôde ser arquivado.');
+    }
+    return;
+  }
 
   await archiveCommWhatsAppMediaFromWhapi(params.supabaseAdmin, {
     token: params.token,
@@ -279,8 +297,11 @@ async function processMediaJob(params: {
 }
 
 async function processJobs(supabaseAdmin: ReturnType<typeof createAdminClient>, limit: number) {
+  const state = await readWhatsAppTransport(supabaseAdmin);
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
-  if (!settings.enabled || !settings.token) return { processed: 0, completed: 0, failed: 0, skipped: true };
+  if (!settings.enabled || (state.provider === 'whapi' && !settings.token)) {
+    return { processed: 0, completed: 0, failed: 0, skipped: true };
+  }
 
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const jobs = await claimJobs(supabaseAdmin, limit);
@@ -290,7 +311,7 @@ async function processJobs(supabaseAdmin: ReturnType<typeof createAdminClient>, 
   for (const job of jobs) {
     try {
       if (job.kind === 'chat_identity') {
-        await processIdentityJob({
+        if (state.provider === 'whapi') await processIdentityJob({
           supabaseAdmin,
           job,
           token: settings.token,

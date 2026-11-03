@@ -1,3 +1,4 @@
+import { createWhatsAppDispatch, readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_shared/ai-autonomous-reply-failure.ts';
 import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
 import { deriveAutonomousConversationMemory } from '../_shared/ai-autonomous-memory.ts';
@@ -14,7 +15,6 @@ import {
   extractPhoneFromChatId,
   extractWhapiMessageId,
   ensurePrimaryChannel,
-  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   getWhapiToken,
@@ -243,9 +243,6 @@ async function ensureAudioTranscriptionForAutonomousReply(params: {
   }
 
   const token = getWhapiToken();
-  if (!token) {
-    throw new Error('WHAPI_TOKEN nao configurado para transcrever audio do atendimento autonomo.');
-  }
 
   console.log('[ai-autonomous-reply-worker] transcricao automatica de audio iniciada', {
     jobId,
@@ -347,13 +344,25 @@ async function sendAutonomousWhatsAppText(params: {
   const { supabaseAdmin, chatRoute, text, channelId, channelPhone, channelName } = params;
 
   const token = getWhapiToken();
-  if (!token) throw new Error('WHAPI_TOKEN nao configurado.');
+  const transport = await readWhatsAppTransport(supabaseAdmin);
+  if (transport.provider === 'whapi' && !token) throw new Error('Token do WhatsApp não configurado.');
 
   const chatId = chatRoute.externalChatId;
   const phoneDigits = chatRoute.phoneNumber || extractPhoneFromChatId(chatId);
   await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'service_reply');
   if (!await params.beforeSend()) return '';
-  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
+  const turnChanged = new Error('O turno de atendimento mudou antes do envio.');
+  const dispatch = await createWhatsAppDispatch(supabaseAdmin, {
+    state: transport,
+    key: `ai:${params.idempotencyKey}`,
+    phone: phoneDigits,
+    channelPhone,
+    beforeAttempt: async () => {
+      await assertContactPermissionForSend(supabaseAdmin, phoneDigits, 'service_reply');
+      if (!await params.beforeSend()) throw turnChanged;
+    },
+  });
+  const response = await dispatch(`${WHAPI_BASE_URL}/messages/text`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -361,7 +370,11 @@ async function sendAutonomousWhatsAppText(params: {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ to: chatId, body: text }),
-  }, AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS);
+  }, AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS).catch((error: unknown) => {
+    if (error === turnChanged) return null;
+    throw error;
+  });
+  if (!response) return '';
 
   const payload = await readResponsePayload(response);
   if (!response.ok) {

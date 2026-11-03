@@ -2999,7 +2999,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível reagir à mensagem no WhatsApp.'));
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Não foi possível reagir à mensagem no WhatsApp.'));
     }
   },
 

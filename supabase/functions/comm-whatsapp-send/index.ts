@@ -1,3 +1,4 @@
+import { createWhatsAppDispatch, readWhatsAppTransport, resolveMessageProvider, type DispatchRequest, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, type AuthorizedDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
@@ -20,7 +21,6 @@ import {
   extractWhapiMediaId,
   extractWhapiMessageId,
   extractWhapiUploadMediaId,
-  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   isInboxWhapiChatId,
@@ -404,6 +404,7 @@ async function sendAudioLikeWhapi(params: {
   file: File;
   quotedMessageId?: string;
   assertSendAllowed: () => Promise<void>;
+  dispatch: DispatchRequest;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
   const cleanMimeType = stripMimeParameters(params.file.type || 'audio/webm');
   const normalizedFileName =
@@ -433,14 +434,14 @@ async function sendAudioLikeWhapi(params: {
   formData.append('media', freshFile, freshFile.name);
 
   await params.assertSendAllowed();
-  let response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+  let response = await params.dispatch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
     method: 'POST',
     headers: { Accept: 'application/json', Authorization: `Bearer ${params.token}` },
     body: formData,
   }, AUDIO_KIND_TIMEOUT_MS);
   let payload = await readResponsePayload(response);
 
-  if (response.ok) {
+  if (response.ok || ![400, 415, 422].includes(response.status)) {
     return { response, payload, mediaId: extractWhapiMediaId(payload) };
   }
 
@@ -448,7 +449,7 @@ async function sendAudioLikeWhapi(params: {
   const uploadForm = new FormData();
   uploadForm.append('media', freshFile, freshFile.name);
 
-  const uploadResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media`, {
+  const uploadResponse = await params.dispatch(`${WHAPI_BASE_URL}/media`, {
     method: 'POST',
     headers: { Accept: 'application/json', Authorization: `Bearer ${params.token}` },
     body: uploadForm,
@@ -465,7 +466,7 @@ async function sendAudioLikeWhapi(params: {
       if (params.quotedMessageId) mediaIdPayload.quoted = params.quotedMessageId;
 
       await params.assertSendAllowed();
-      response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+      response = await params.dispatch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${params.token}` },
         body: JSON.stringify(mediaIdPayload),
@@ -488,7 +489,7 @@ async function sendAudioLikeWhapi(params: {
   if (params.quotedMessageId) jsonPayload.quoted = params.quotedMessageId;
 
   await params.assertSendAllowed();
-  response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+  response = await params.dispatch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${params.token}` },
     body: JSON.stringify(jsonPayload),
@@ -505,6 +506,7 @@ async function sendDocumentWhapi(params: {
   file: File;
   quotedMessageId?: string;
   assertSendAllowed: () => Promise<void>;
+  dispatch: DispatchRequest;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
   const form = new FormData();
   form.append('to', params.chatId);
@@ -518,7 +520,7 @@ async function sendDocumentWhapi(params: {
   }
 
   await params.assertSendAllowed();
-  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/document`, {
+  const response = await params.dispatch(`${WHAPI_BASE_URL}/messages/document`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -724,13 +726,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!token) {
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    if (transport.provider === 'whapi' && !token) {
       return new Response(JSON.stringify({ error: 'Token do WhatsApp não configurado.' }), {
         status: 400,
         headers: jsonHeaders,
       });
     }
 
+    if (quotedMessageId) resolveMessageProvider(transport, quotedMessageId);
     const requestedChatId = chatId;
     let chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
       channelId: channel.id,
@@ -786,7 +790,7 @@ Deno.serve(async (req: Request) => {
     // an explicit, auditable service-reply classification, all manual sends
     // follow the commercial policy so opt-outs cannot be bypassed silently.
     const isGroup = isWhapiGroupChatId(chatId);
-    if (isGroup) {
+    if (isGroup && transport.provider === 'whapi') {
       await ensureWhapiGroupChatMetadata(supabaseAdmin, {
         channelId: channel.id,
         groupId: chatId,
@@ -802,6 +806,13 @@ Deno.serve(async (req: Request) => {
           sendPurposeScope,
         );
 
+    const dispatch = await createWhatsAppDispatch(supabaseAdmin, {
+      state: transport,
+      key: clientRequestId ? `inbox:${channel.id}:${clientRequestId}` : null,
+      phone: dispatchRoute.phoneNumber,
+      channelPhone: channel.phone_number,
+      beforeAttempt: assertSendAllowed,
+    });
     let whapiResponse: Response;
     let uploadedMediaId = '';
     let preparedWhapiPayload: unknown | undefined;
@@ -823,6 +834,7 @@ Deno.serve(async (req: Request) => {
           file: mediaFile,
           quotedMessageId,
           assertSendAllowed,
+          dispatch,
         });
 
         whapiResponse = audioLikeResult.response;
@@ -927,6 +939,7 @@ Deno.serve(async (req: Request) => {
           file: mediaFile,
           quotedMessageId,
           assertSendAllowed,
+          dispatch,
         });
         whapiResponse = documentResult.response;
         uploadedMediaId = documentResult.mediaId;
@@ -943,7 +956,7 @@ Deno.serve(async (req: Request) => {
         messageForm.append('media', mediaFile, mediaFile.name);
 
         await assertSendAllowed();
-        whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
+        whapiResponse = await dispatch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
@@ -962,7 +975,7 @@ Deno.serve(async (req: Request) => {
       }
 
       await assertSendAllowed();
-      whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
+      whapiResponse = await dispatch(`${WHAPI_BASE_URL}/messages/text`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -972,21 +985,6 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify(textPayload),
       });
 
-      const TEXT_SEND_RETRY_DELAY_MS = 900;
-
-      if (whapiResponse.status >= 500) {
-        await new Promise((resolve) => setTimeout(resolve, TEXT_SEND_RETRY_DELAY_MS));
-        await assertSendAllowed();
-        whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(textPayload),
-        }, 15_000);
-      }
     }
 
     const whapiPayload = preparedWhapiPayload ?? await readResponsePayload(whapiResponse);
@@ -1130,6 +1128,12 @@ Deno.serve(async (req: Request) => {
       } catch (cleanupError) {
         console.error('[comm-whatsapp-send] erro ao encerrar tentativa falha', cleanupError);
       }
+    }
+    if (error instanceof WhatsAppTransportError) {
+      return new Response(JSON.stringify({ error: error.message, ambiguous: error.uncertain }), {
+        status: error.status,
+        headers: jsonHeaders,
+      });
     }
     if (error instanceof ContactPermissionBlockedError || error instanceof ContactPermissionCheckError) {
       return new Response(JSON.stringify({

@@ -1,3 +1,4 @@
+import { readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -85,6 +86,9 @@ Deno.serve(async (req: Request) => {
   const limit = Math.min(Math.max(Math.floor(Number(body.limit) || 50), 1), 200);
   const cursor = String(body.cursor || '').trim();
   const supabase = createClient(supabaseUrl, serviceRoleKey);
+  if ((await readWhatsAppTransport(supabase)).provider === 'zapi') {
+    return new Response(JSON.stringify({ success: false, error: 'A verificação de LIDs da WHAPI está indisponível com a Z-API ativa.' }), { status: 422, headers: jsonHeaders });
+  }
 
   const { data: channel, error: channelError } = await supabase
     .from('comm_whatsapp_channels')

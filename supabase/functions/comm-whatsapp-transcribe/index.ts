@@ -153,13 +153,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!settings.token) {
-      return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
-        status: 400,
-        headers: jsonHeaders,
-      });
-    }
-
     await updateTranscriptionState(supabaseAdmin, messageId, {
       transcription_status: 'processing',
       transcription_error: null,

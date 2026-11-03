@@ -1,3 +1,5 @@
+import { getZapiContactStatus, getZapiCredentials, readWhatsAppTransport, runZapiMutation, withWhatsAppOperation, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
+import { createZapiAdapter, zapiPhone, zapiRecord, zapiString } from '../_shared/comm-whatsapp/zapi.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
@@ -150,10 +152,29 @@ async function refreshChatIdentitiesForPhones(params: {
   }
 }
 
+async function fetchZapiSavedContacts(adapter: ReturnType<typeof createZapiAdapter>) {
+  const contacts = new Map<string, Record<string, unknown>>();
+  for (let page = 1; page <= 25; page += 1) {
+    const rows = await adapter.request(`contacts?page=${page}&pageSize=100`);
+    if (!Array.isArray(rows)) throw new WhatsAppTransportError('A lista de contatos da Z-API não pôde ser confirmada.');
+    for (const row of rows) {
+      const entry = zapiRecord(row);
+      const phone = zapiPhone(entry.phone);
+      const name = zapiString(entry.name);
+      if (phone && name) contacts.set(phone, {
+        id: `zapi-contact:${phone}`, phone, name, short_name: entry.short, pushname: entry.notify, phonebook: true,
+      });
+    }
+    if (rows.length < 100) break;
+  }
+  return [...contacts.values()];
+}
+
 async function syncContactsToCache(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   channelId: string;
   token: string;
+  zapi?: ReturnType<typeof createZapiAdapter>;
 }) {
   const { count: previousRemoteSavedCount, error: previousCountError } = await params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
@@ -162,13 +183,16 @@ async function syncContactsToCache(params: {
     .eq('saved', true)
     .eq('manual_override', false)
     .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
-    .not('contact_id', 'like', 'chat:%');
+    .not('contact_id', 'like', 'chat:%')
+    .not('contact_id', 'like', 'zapi-contact:%');
 
   if (previousCountError) {
     throw new Error(`Erro ao contar cache de contatos do WhatsApp: ${previousCountError.message}`);
   }
 
-  const fetchedContacts = await fetchWhapiContacts({ token: params.token });
+  const fetchedContacts = params.zapi
+    ? await fetchZapiSavedContacts(params.zapi)
+    : await fetchWhapiContacts({ token: params.token });
   const nowIso = getNowIso();
 
   const { data: manualOverrides, error: manualOverridesError } = await params.supabaseAdmin
@@ -244,7 +268,7 @@ async function syncContactsToCache(params: {
       nextCount: rows.length,
       fetchedCount: fetchedContacts.length,
     });
-  } else {
+  } else if (!params.zapi) {
     const syncedContactIds = new Set(rows.map((row) => row.contact_id));
 
     const { data: existingIds, error: listError } = await params.supabaseAdmin
@@ -253,7 +277,8 @@ async function syncContactsToCache(params: {
       .eq('channel_id', params.channelId)
       .eq('manual_override', false)
       .not('contact_id', 'like', `${MANUAL_CONTACT_ID_PREFIX}%`)
-      .not('contact_id', 'like', 'chat:%');
+      .not('contact_id', 'like', 'chat:%')
+      .not('contact_id', 'like', 'zapi-contact:%');
 
     if (listError) {
       throw new Error(`Erro ao listar cache de contatos do WhatsApp: ${listError.message}`);
@@ -516,7 +541,11 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!settings.token) {
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    const zapiCredentials = transport.provider === 'zapi' ? getZapiCredentials(transport) : null;
+    const zapi = zapiCredentials ? createZapiAdapter(zapiCredentials) : undefined;
+    if (transport.provider === 'zapi' && !zapi) throw new WhatsAppTransportError('Configure as credenciais da Z-API.');
+    if (!zapi && !settings.token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -524,12 +553,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const latestSync = await getLatestCacheSync(channel.id, supabaseAdmin);
-    if (body.forceSync === true || isContactCacheStale(latestSync)) {
+    if (body.forceSync === true || isContactCacheStale(latestSync) || (zapi && (!latestSync || latestSync < transport.changedAt))) {
       try {
         await syncContactsToCache({
           supabaseAdmin,
           channelId: channel.id,
           token: settings.token,
+          zapi,
         });
       } catch (syncError) {
         console.error('[comm-whatsapp-contacts] sync ignorado, servindo cache existente:', syncError);
@@ -614,12 +644,13 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const checkedIdentity = await checkWhapiContactIdentity({
-        token: settings.token,
-        contactId: phoneNumber,
-      });
-
-      if (!checkedIdentity.exists || !checkedIdentity.waId) {
+      const checkedIdentity = zapi
+        ? { exists: await getZapiContactStatus(phoneNumber, transport), phone: phoneNumber, waId: `${phoneNumber}@s.whatsapp.net` }
+        : await checkWhapiContactIdentity({ token: settings.token, contactId: phoneNumber });
+      if (checkedIdentity.exists === 'unknown') {
+        throw new WhatsAppTransportError('Não foi possível confirmar esse número na Z-API.', false, 503);
+      }
+      if (checkedIdentity.exists === false || checkedIdentity.exists === 'invalid' || !checkedIdentity.waId) {
         return new Response(JSON.stringify({ error: 'Esse numero nao existe no WhatsApp.' }), {
           status: 400,
           headers: jsonHeaders,
@@ -628,7 +659,7 @@ Deno.serve(async (req: Request) => {
 
       phoneNumber = checkedIdentity.phone;
       const directChatId = checkedIdentity.waId;
-      const verifiedIdentity = await resolveVerifiedWhapiDirectIdentity({
+      const verifiedIdentity = zapi ? null : await resolveVerifiedWhapiDirectIdentity({
         token: settings.token,
         chatId: directChatId,
       }).catch(() => null);
@@ -646,7 +677,7 @@ Deno.serve(async (req: Request) => {
         if (reconcileError) throw new Error(`Erro ao reconciliar identidade WhatsApp: ${reconcileError.message}`);
       }
 
-      if (!savedContactName) {
+      if (!savedContactName && !zapi) {
         const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: directChatId }).catch(() => '');
         const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();
         if (isValidCommWhatsAppDisplayName(whapiChatName) && !isOwnChannelName) {
@@ -726,9 +757,23 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
-        await addWhapiContact({ token: settings.token, phone: phoneNumber, name: displayName });
+        if (zapi) {
+          await runZapiMutation(supabaseAdmin, transport, channel.phone_number, async (adapter) => {
+            const [firstName, ...lastName] = displayName.split(/\s+/);
+            const result = zapiRecord(await adapter.request('contacts/add', {
+              body: [{ phone: phoneNumber, firstName, lastName: lastName.join(' ') }],
+            }));
+            if (result.success !== true || (Array.isArray(result.errors) && result.errors.length)) {
+              throw new WhatsAppTransportError('A Z-API não confirmou o cadastro do contato.');
+            }
+            return Response.json({ success: true });
+          });
+        } else {
+          await withWhatsAppOperation(supabaseAdmin, transport, () =>
+            addWhapiContact({ token: settings.token, phone: phoneNumber, name: displayName }));
+        }
       } catch {
-        return new Response(JSON.stringify({ error: 'Falha ao adicionar contato na Whapi. Verifique se o numero e valido.' }), {
+        return new Response(JSON.stringify({ error: 'O serviço de WhatsApp não confirmou o cadastro do contato. Verifique o número.' }), {
           status: 502,
           headers: jsonHeaders,
         });
@@ -742,7 +787,7 @@ Deno.serve(async (req: Request) => {
       });
 
       try {
-        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
+        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token, zapi });
       } catch {
         console.warn('[comm-whatsapp-contacts] sync apos salvar contato ignorado, servindo cache existente');
       }
@@ -754,6 +799,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'renameContact') {
+      if (zapi) throw new WhatsAppTransportError('Renomear na agenda do aparelho não está disponível pela Z-API neste painel.', false, 422);
       const phoneNumber = normalizeCommWhatsAppPhone(body.phoneNumber);
       const displayName = toTrimmedString(body.displayName);
 
@@ -772,7 +818,8 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
-        await editWhapiContact({ token: settings.token, phone: phoneNumber, name: displayName });
+        await withWhatsAppOperation(supabaseAdmin, transport, () =>
+          editWhapiContact({ token: settings.token, phone: phoneNumber, name: displayName }));
       } catch {
         return new Response(JSON.stringify({ error: 'Falha ao renomear contato na Whapi. Verifique se o numero ja esta salvo.' }), {
           status: 502,
@@ -788,7 +835,7 @@ Deno.serve(async (req: Request) => {
       });
 
       try {
-        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
+        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token, zapi });
       } catch {
         console.warn('[comm-whatsapp-contacts] sync apos renomear contato ignorado, servindo cache existente');
       }
@@ -808,7 +855,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao processar contatos do WhatsApp.' }),
       {
-        status: 500,
+        status: error instanceof WhatsAppTransportError ? error.status : 500,
         headers: jsonHeaders,
       },
     );

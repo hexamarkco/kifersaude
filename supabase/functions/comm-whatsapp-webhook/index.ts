@@ -1,3 +1,6 @@
+import { beginWhatsAppOperation, finishWhatsAppOperation, readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
+import { isZapiMessageId } from '../_shared/comm-whatsapp/zapi.ts';
+import { handleZapiCallback } from './zapi-callback.ts';
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { dispatchPendingAutonomousReply } from '../_shared/ai-autonomous-dispatch.ts';
 import { getMessageContent } from '../_shared/comm-whatsapp-transcript.ts';
@@ -36,7 +39,6 @@ import {
   persistWhapiGroupEvent,
   persistWhapiPresence,
   restoreWhapiGroupSenderPhone,
-  resolveCommWhatsAppWebhookProvidedSecret,
   isPhoneLabelLikeDisplayName,
   isWhapiTechnicalPlaceholderMessage,
   isRecord,
@@ -212,6 +214,7 @@ async function persistMessageFromWebhook(
   message: Record<string, unknown>,
   eventAction: string,
   patch: WhapiWebhookMessagePatch | null,
+  provider: 'whapi' | 'zapi' = 'whapi',
 ) {
   const externalChatId = resolveMessageChatId(message);
   if (!externalChatId || !isInboxWhapiChatId(externalChatId)) {
@@ -448,7 +451,7 @@ async function persistMessageFromWebhook(
     });
   }
 
-  if (isGroup) {
+  if (isGroup && provider === 'whapi') {
     await ensureWhapiGroupChatMetadata(supabaseAdmin, {
       channelId: channel.id,
       groupId: externalChatId,
@@ -456,7 +459,8 @@ async function persistMessageFromWebhook(
     });
   }
 
-  if (direction === 'inbound' && !patch && !isTechnicalPlaceholder && !isGroup) {
+  if (direction === 'inbound' && !patch && !isTechnicalPlaceholder && !isGroup &&
+      (provider === 'whapi' || result.inserted)) {
     try {
       await supabaseAdmin.rpc('resolve_comm_whatsapp_campaign_stop_on_reply', {
         p_chat_id: result.chatId,
@@ -601,11 +605,16 @@ Deno.serve(async (req: Request) => {
   }
 
   let startedAt = 0;
+  let lease: { admin: SupabaseClient; id: string } | null = null;
 
   try {
     const supabaseAdmin = createServiceClient();
     const channel = (await ensurePrimaryChannel(supabaseAdmin)) as ChannelRow;
     const requestUrl = new URL(req.url);
+    if (requestUrl.searchParams.get('provider') === 'zapi') {
+      return await handleZapiCallback(req, supabaseAdmin, channel, (message) =>
+        persistMessageFromWebhook(supabaseAdmin, channel, message, 'post', null, 'zapi'));
+    }
     const channelSlug = requestUrl.searchParams.get('channel')?.trim() || COMM_WHATSAPP_CHANNEL_SLUG;
     const webhookSecret = getCommWhatsAppWebhookSecret();
 
@@ -632,17 +641,7 @@ Deno.serve(async (req: Request) => {
     // reescreve automaticamente no painel, ja esta correta. Ver comentario em
     // isCommWhatsAppWebhookRequestAuthorized.
     if (!isCommWhatsAppWebhookRequestAuthorized(headerSecret, querySecret, webhookSecret)) {
-      // Nao logamos os segredos inteiros, so tamanho + ultimos 4 chars de cada
-      // lado, o suficiente pra diferenciar "header/URL desatualizados na Whapi"
-      // de "bug na comparacao" sem expor o segredo nos logs.
-      const providedSecret = resolveCommWhatsAppWebhookProvidedSecret(headerSecret, querySecret);
-      console.warn(
-        `[${correlationId}] webhook nao autorizado `
-        + `header_len=${toTrimmedString(headerSecret).length} header_tail=${toTrimmedString(headerSecret).slice(-4)} `
-        + `query_len=${toTrimmedString(querySecret).length} query_tail=${toTrimmedString(querySecret).slice(-4)} `
-        + `resolved_tail=${(providedSecret ?? '').slice(-4)} `
-        + `expected_len=${webhookSecret.length} expected_tail=${webhookSecret.slice(-4)}`,
-      );
+      console.warn(`[${correlationId}] webhook não autorizado`);
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {
         status: 401,
         headers: jsonHeaders,
@@ -674,6 +673,22 @@ Deno.serve(async (req: Request) => {
     const event = isRecord(payload.event) ? payload.event : {};
     const eventType = toTrimmedString(event.type).toLowerCase();
     const eventAction = toTrimmedString(event.event).toLowerCase();
+    const incomingChannelId = toTrimmedString(payload.channel_id);
+    if (incomingChannelId && channel.whapi_channel_id && incomingChannelId !== channel.whapi_channel_id) {
+      return Response.json({ error: 'Instância não autorizada para o canal.' }, { status: 400 });
+    }
+    const transport = await readWhatsAppTransport(supabaseAdmin);
+    if (transport.provider !== 'whapi') {
+      if (eventType === 'statuses' && Array.isArray(payload.statuses)) {
+        for (const status of payload.statuses) {
+          if (isRecord(status) && !isZapiMessageId(toTrimmedString(status.id))) {
+            await applyMessageStatus(supabaseAdmin, channel.id, status);
+          }
+        }
+      }
+      return Response.json({ success: true, skipped: 'inactive_provider' });
+    }
+    lease = { admin: supabaseAdmin, id: (await beginWhatsAppOperation(supabaseAdmin, transport)).id };
     const nowIso = getNowIso();
 
     console.log(
@@ -720,7 +735,9 @@ Deno.serve(async (req: Request) => {
         };
 
         const chatId = resolveMessageChatId(item.message);
-        if (!chatId || !isInboxWhapiChatId(chatId)) {
+        const messageAt = unixTimestampToIso(item.message.timestamp);
+        if (!chatId || !isInboxWhapiChatId(chatId) || isZapiMessageId(toTrimmedString(item.message.id)) ||
+            (transport.revision > 0 && (!messageAt || Date.parse(messageAt) < Date.parse(transport.changedAt)))) {
           skippedMessages += 1;
           continue;
         }
@@ -857,7 +874,7 @@ Deno.serve(async (req: Request) => {
 
     if (eventType === 'statuses' && Array.isArray(payload.statuses)) {
       for (const item of payload.statuses) {
-        if (!isRecord(item)) continue;
+        if (!isRecord(item) || isZapiMessageId(toTrimmedString(item.id))) continue;
 
         const eventKey = buildStatusEventKey(eventAction, item);
         if (await findEventReceipt(supabaseAdmin, eventKey)) continue;
@@ -980,5 +997,7 @@ Deno.serve(async (req: Request) => {
         headers: jsonHeaders,
       },
     );
+  } finally {
+    if (lease) await finishWhatsAppOperation(lease.admin, lease.id);
   }
 });

@@ -1,3 +1,4 @@
+import { createWhatsAppDispatch, readWhatsAppTransport, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { assertContactPermissionForSend, ContactPermissionBlockedError } from '../_shared/contact-permissions.ts';
@@ -5,7 +6,7 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   extractWhapiMessageId,
-  fetchWhapiWithTimeout,
+  extractWhapiMediaId,
   getNowIso,
   isWhapiGroupChatId,
   normalizeWhapiChatId,
@@ -259,6 +260,7 @@ async function sendTextMessage(
   channelRow: { id: string; phone_number: string | null },
   msg: ScheduledMessageRow,
   token: string,
+  segmentIndex = 0,
 ): Promise<{ externalMessageId: string; deliveryStatus: string }> {
   const { data: schedule, error: scheduleError } = await admin.from('comm_whatsapp_scheduled_messages').select('sequence_id,created_by').eq('id', msg.message_id).single();
   if (scheduleError || !schedule) throw new Error('Não foi possível recuperar a autoria do agendamento.');
@@ -278,7 +280,15 @@ async function sendTextMessage(
     clientRequestId: `scheduled:${msg.message_id}`,
   };
 
-  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
+  const dispatch = await createWhatsAppDispatch(admin, {
+    key: `scheduled:${msg.message_id}:${msg.scheduled_at}:${segmentIndex}`,
+    phone: destination.phoneDigits,
+    channelPhone: channelRow.phone_number,
+    beforeAttempt: async () => {
+      if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
+    },
+  });
+  const response = await dispatch(`${WHAPI_BASE_URL}/messages/text`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -353,11 +363,17 @@ async function sendMediaMessage(
   const destination = await resolveScheduledDestination(admin, msg);
   if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
   const chatId = destination.chatId;
+  const state = await readWhatsAppTransport(admin);
   let mediaUrl = msg.media_url;
+  let storedAttachment: Blob | null = null;
   const storagePath = mediaUrl?.startsWith(SCHEDULED_MEDIA_URL_PREFIX)
     ? mediaUrl.slice(SCHEDULED_MEDIA_URL_PREFIX.length)
     : '';
-  if (storagePath) {
+  if (storagePath && state.provider === 'zapi') {
+    const { data: blob, error } = await admin.storage.from(SCHEDULED_MEDIA_BUCKET).download(storagePath);
+    if (error || !blob || blob.size > 32 * 1024 * 1024) throw new Error('O anexo agendado não está disponível no formato ou tamanho aceito.');
+    storedAttachment = blob;
+  } else if (storagePath) {
     const { data: signedMedia, error: signedMediaError } = await admin.storage
       .from(SCHEDULED_MEDIA_BUCKET)
       .createSignedUrl(storagePath, 60 * 60);
@@ -368,13 +384,28 @@ async function sendMediaMessage(
 
   const mediaKind = (msg.message_type === 'voice' ? 'audio' : msg.message_type) as 'image' | 'video' | 'document' | 'audio';
 
-  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
+  const dispatch = await createWhatsAppDispatch(admin, {
+    state,
+    key: `scheduled:${msg.message_id}:${msg.scheduled_at}:media`,
+    phone: destination.phoneDigits,
+    channelPhone: channelRow.phone_number,
+    beforeAttempt: async () => {
+      if (!destination.isGroup) await assertContactPermissionForSend(admin, destination.phoneDigits, 'commercial');
+    },
+  });
+  const form = storedAttachment ? new FormData() : null;
+  if (form && storedAttachment) {
+    form.set('to', chatId);
+    form.set('media', storedAttachment, msg.media_file_name || storagePath.split('/').pop() || 'anexo');
+    form.set('caption', msg.text_content ?? '');
+  }
+  const response = await dispatch(`${WHAPI_BASE_URL}/messages/${state.provider === 'zapi' ? msg.message_type : mediaKind}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
+    body: form ?? JSON.stringify({
       to: chatId,
       mediaUrl,
       caption: msg.text_content ?? undefined,
@@ -420,7 +451,7 @@ async function sendMediaMessage(
     senderPhone: null,
     statusUpdatedAt: null,
     errorMessage: null,
-    mediaId: null,
+    mediaId: state.provider === 'zapi' ? extractWhapiMediaId(payload) || null : null,
     mediaUrl: msg.media_url ?? null,
     mediaMimeType: msg.media_mime_type ?? null,
     mediaFileName: msg.media_file_name ?? null,
@@ -669,7 +700,7 @@ async function processSequenceBatch(
   const groups = groupSequenceClaims((data ?? []) as ScheduledSequenceStepClaim[]);
   if (groups.size === 0) return { processed: 0, sent: 0, failed: 0, errors: [] };
 
-  let token: string | null = null;
+  let token = '';
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
@@ -705,9 +736,11 @@ async function processSequenceBatch(
           channelRow = channel;
           channelCache.set(step.channel_id, channel);
         }
-        if (!token) {
+        if (!token && (await readWhatsAppTransport(admin)).provider === 'whapi') {
           token = sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
-          if (!token) throw new Error('Token do WhatsApp não configurado.');
+          if (!token && (await readWhatsAppTransport(admin)).provider === 'whapi') {
+            throw new Error('Token do WhatsApp não configurado.');
+          }
         }
 
         const { data: scheduledMessage, error: scheduledMessageError } = await admin
@@ -768,8 +801,8 @@ async function processSequenceBatch(
             result = await sendTextMessage(admin, channelRow, message, token);
           } else {
             let lastResult = { externalMessageId: '', deliveryStatus: '' };
-            for (const segment of segments) {
-              lastResult = await sendTextMessage(admin, channelRow, { ...message, text_content: segment }, token);
+            for (const [segmentIndex, segment] of segments.entries()) {
+              lastResult = await sendTextMessage(admin, channelRow, { ...message, text_content: segment }, token, segmentIndex);
             }
             result = lastResult;
           }
@@ -793,6 +826,7 @@ async function processSequenceBatch(
       await finishSequenceStep(admin, step, actions);
       sent++;
     } catch (error) {
+      const uncertain = error instanceof WhatsAppTransportError && error.uncertain;
       const message = error instanceof Error ? error.message : String(error);
       errors.push(`Sequence step ${step.step_id}: ${message}`);
       failed++;
@@ -802,11 +836,11 @@ async function processSequenceBatch(
           status: 'failed',
           error_message: message,
           last_attempt_at: new Date().toISOString(),
-          next_retry_at: step.attempts < 3 ? new Date(Date.now() + Math.pow(2, step.attempts - 1) * 60000).toISOString() : null,
+          next_retry_at: !uncertain && step.attempts < 3 ? new Date(Date.now() + Math.pow(2, step.attempts - 1) * 60000).toISOString() : null,
         }).eq('id', scheduledMessageId).eq('status', 'sending');
       }
 
-      if (messageSent || !scheduledMessageId || step.attempts >= 3) {
+      if (uncertain || messageSent || !scheduledMessageId || step.attempts >= 3) {
         await admin.from('comm_whatsapp_scheduled_sequence_steps').update({
           status: 'failed',
           last_error: message,
@@ -855,7 +889,7 @@ async function processBatch(
   await ensureCommWhatsAppSettings(admin);
   const rawToken = Deno.env.get('WHAPI_TOKEN') || '';
   const token = sanitizeWhapiToken(rawToken);
-  if (!token) {
+  if (!token && (await readWhatsAppTransport(admin)).provider === 'whapi') {
     throw new Error('Token do WhatsApp não configurado.');
   }
 
@@ -887,8 +921,8 @@ async function processBatch(
           result = await sendTextMessage(admin, channelRow, msg, token);
         } else {
           let lastResult = { externalMessageId: '', deliveryStatus: '' };
-          for (const segment of segments) {
-            lastResult = await sendTextMessage(admin, channelRow, { ...msg, text_content: segment }, token);
+          for (const [segmentIndex, segment] of segments.entries()) {
+            lastResult = await sendTextMessage(admin, channelRow, { ...msg, text_content: segment }, token, segmentIndex);
           }
           result = lastResult;
         }
@@ -924,7 +958,8 @@ async function processBatch(
         continue;
       }
 
-      const nextRetryAt = msg.attempts < msg.max_attempts - 1
+      const uncertain = err instanceof WhatsAppTransportError && err.uncertain;
+      const nextRetryAt = !uncertain && msg.attempts < msg.max_attempts - 1
         ? new Date(Date.now() + Math.pow(2, msg.attempts) * 60000).toISOString()
         : null;
 

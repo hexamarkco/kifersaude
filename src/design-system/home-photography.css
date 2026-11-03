@@ -28,15 +28,23 @@
 .kifer-home .home-trust-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--trust-focus); clip-path: url(#home-photo-trust); }
 
 /* 03 — One stable panel; each original has its own focal point. */
-.kifer-home #audience-panel-PF { --audience-focus: 67% 43%; }
-.kifer-home #audience-panel-MEI { --audience-focus: 53% 38%; }
-.kifer-home #audience-panel-CNPJ { --audience-focus: 49% 28%; }
+.kifer-home #audience-panel-PF { --audience-focus: 40% 0%; }
+.kifer-home #audience-panel-MEI { --audience-focus: 38% 0%; }
+.kifer-home #audience-panel-CNPJ { --audience-focus: 49% 0%; }
+.kifer-home .home-audience-panel { overflow: visible; }
 .kifer-home .home-audience-photo { position: relative; grid-column: 2; grid-row: 1 / -1; height: 100%; min-width: 0; isolation: isolate; }
-.kifer-home .home-audience-photo::before { content: ''; position: absolute; inset: 0; background: var(--home-soft); clip-path: url(#home-photo-audience); transform: translateY(5%); }
-.kifer-home .home-audience-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--audience-focus); clip-path: url(#home-photo-audience); }
-.kifer-home .home-audience-curve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.kifer-home .home-audience-photo-window { position: absolute; inset: 0; clip-path: url(#home-photo-audience); z-index: 1; }
+.kifer-home .home-audience-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--audience-focus); }
+.kifer-home .home-audience-curve { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
 .kifer-home .home-audience-curve path:first-child { fill: var(--home-soft); }
-.kifer-home .home-audience-curve path:last-child { fill: none; stroke: var(--accent-copper); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.kifer-home .home-audience-curve path:not(:first-child) { fill: none; stroke: var(--accent-copper); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.kifer-home .home-audience-line-mobile { display: none; }
+@media (min-width: 1200px) {
+  .kifer-home .home-audience > .home-container { width: 94.3%; max-width: 100rem; }
+  /* Size the shared grid: a subgrid's own min-height does not size its tracks. */
+  .kifer-home .home-audience-slides { min-height: clamp(34rem, 39.35vw, 42rem); }
+  .kifer-home .home-audience-panel { grid-template-columns: minmax(0, 48fr) minmax(0, 52fr); }
+}
 
 /* 06 — Leave the desk/cup in the frame; the arc is above the photograph. */
 .kifer-home .home-about-photo { --about-focus: 35% 50%; position: relative; isolation: isolate; width: 116%; }
@@ -107,14 +115,15 @@
   .kifer-home .home-hero-benefits { margin-top: var(--space-2); position: relative; }
   .kifer-home .home-trust-photo { --trust-focus: 42% 0%; width: 72%; aspect-ratio: 1.7; }
   .kifer-home .home-trust-photo-row { margin-inline: calc(-0.25 * var(--home-gutter)); }
-  .kifer-home #audience-panel-PF { --audience-focus: 54% 30%; }
-  .kifer-home #audience-panel-MEI { --audience-focus: 53% 32%; }
-  .kifer-home #audience-panel-CNPJ { --audience-focus: 49% 26%; }
+  .kifer-home #audience-panel-PF { --audience-focus: 54% 0%; }
+  .kifer-home #audience-panel-MEI { --audience-focus: 53% 0%; }
+  .kifer-home #audience-panel-CNPJ { --audience-focus: 49% 0%; }
   .kifer-home .home-audience-photo { grid-column: 1; grid-row: 2; height: 100%; width: calc(100% + var(--home-gutter) * 2); margin-inline: calc(-1 * var(--home-gutter)); }
-  .kifer-home .home-audience-photo img, .kifer-home .home-audience-photo::before { clip-path: url(#home-photo-audience-mobile); }
-  .kifer-home .home-audience-photo::before { inset: 6% 0 0; transform: rotate(-7deg); }
-  .kifer-home .home-audience-curve { height: 104%; }
-  .kifer-home .home-audience-curve path:first-child { fill: none; }
+  .kifer-home .home-audience-photo-window { clip-path: url(#home-photo-audience-mobile); }
+  .kifer-home .home-audience-curve { height: 100%; }
+  .kifer-home .home-audience-curve path:first-child { transform: translateY(6%); }
+  .kifer-home .home-audience-line-desktop { display: none; }
+  .kifer-home .home-audience-line-mobile { display: block; }
   .kifer-home .home-about-photo { --about-focus: 5% 43%; width: 100%; aspect-ratio: 1.13; }
   .kifer-home .home-about-photo img { clip-path: url(#home-photo-about-mobile); }
   .kifer-home .home-about-photo > span { display: none; }

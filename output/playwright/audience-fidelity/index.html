@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kifer Saúde — Para quem é: referência e composição</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#f8f5f1;color:#38281f;font:16px/1.55 system-ui,sans-serif}
+  header{padding:28px 3vw 18px;border-bottom:1px solid #e6d9cf}h1{font-size:26px;margin:0 0 8px}p{margin:8px 0;max-width:90ch;color:#6d5d52}
+  .controls{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px}label{display:flex;align-items:center;gap:10px}select{padding:9px;border:1px solid #c8b4a6;border-radius:6px;background:white;font:inherit}
+  main{padding:20px 3vw}.comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}figure{margin:0;background:white;border:1px solid #e6d9cf;border-radius:8px;overflow:hidden}figcaption{padding:12px;font-weight:600;color:#a83c1c}img{display:block;width:100%;height:auto}a{color:#a83c1c}.note{font-size:14px;margin-bottom:18px}footer{padding:10px 3vw 32px}
+  @media(max-width:900px){.comparison{grid-template-columns:1fr}figure{max-width:760px;width:100%;margin-inline:auto}}
+</style>
+<header>
+  <h1>Para quem é — referência, antes e depois</h1>
+  <p>Recorte orgânico da foto, faixa decorativa atrás da imagem e enquadramento próprio para cada perfil. Textos, fotografias de origem e comportamento dos botões foram preservados.</p>
+  <div class="controls">
+    <label>Tela <select id="viewport"><option value="1672">Desktop · 1672 px</option><option value="1440">Desktop · 1440 px</option><option value="390">Mobile · 390 px</option></select></label>
+    <label>Perfil <select id="profile"><option value="PF">Pessoa física</option><option value="MEI">MEI</option><option value="CNPJ">Empresa</option></select></label>
+  </div>
+</header>
+<main>
+  <p class="note" id="note">A referência fornecida mostra o perfil Pessoa física. Clique em qualquer imagem para ver a captura no tamanho original.</p>
+  <div class="comparison">
+    <figure><figcaption>Referência aprovada · Pessoa física</figcaption><a id="reference-link" href="../home-redesign/references/03_PARA_QUEM_E.png"><img id="reference" src="../home-redesign/references/03_PARA_QUEM_E.png" alt="Referência aprovada da composição de Para quem é"></a></figure>
+    <figure><figcaption>Antes deste ajuste</figcaption><a id="before-link" href="before/1672-PF.png"><img id="before" src="before/1672-PF.png" alt="Captura real antes do ajuste"></a></figure>
+    <figure><figcaption>Após o ajuste</figcaption><a id="after-link" href="verified/1672-PF.png"><img id="after" src="verified/1672-PF.png" alt="Captura real após o ajuste"></a></figure>
+  </div>
+</main>
+<footer><a href="RELATORIO.md">Detalhes e validação</a> · <a href="validation.json">Medições em oito larguras</a><p class="note">Capturas do navegador em pixels CSS, sem redimensionamento ou edição das fotografias. Somente o cabeçalho fixo foi ocultado durante a captura para não cobrir a seção.</p></footer>
+<script>
+  const viewport=document.getElementById('viewport'),profile=document.getElementById('profile');
+  function update(){
+    const paths={reference:viewport.value==='390'?'../home-mobile-comparison/references/03_PARA_QUEM_E_MOBILE.png':'../home-redesign/references/03_PARA_QUEM_E.png',before:`before/${viewport.value}-${profile.value}.png`,after:`verified/${viewport.value}-${profile.value}.png`};
+    for(const [key,path] of Object.entries(paths)){document.getElementById(key).src=path;document.getElementById(key+'-link').href=path;}
+    document.getElementById('note').textContent=profile.value==='PF'?'A referência fornecida mostra o perfil Pessoa física. Clique em qualquer imagem para ver a captura no tamanho original.':'Não foi fornecida uma composição específica de MEI ou Empresa. A referência de Pessoa física orienta a máscara e as camadas; os demais perfis mantêm suas fotografias de origem.';
+  }
+  viewport.addEventListener('change',update);profile.addEventListener('change',update);
+</script>
+</html>

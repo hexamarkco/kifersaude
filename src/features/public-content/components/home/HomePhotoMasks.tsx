@@ -15,7 +15,7 @@ export default function HomePhotoMasks() {
           <path d="M0 .43C0 .19 .14 0 .34 0H.69C.87 0 1 .17 1 .41V.91Q1 1 .94 1H0Z" />
         </clipPath>
         <clipPath id="home-photo-audience" clipPathUnits="objectBoundingBox">
-          <path d="M.49 0H1V.72C.83 .84 .66 .96 .48 .95C.22 .94 .01 .7 0 .48C-.01 .26 .22 .01 .49 0Z" />
+          <path d="M.455 0H.96Q1 0 1 .04V.69C.84 .81 .64 .965 .455 .95C.195 .93 0 .705 0 .47C0 .255 .22 0 .455 0Z" />
         </clipPath>
         <clipPath id="home-photo-audience-mobile" clipPathUnits="objectBoundingBox">
           <path d="M.57 0H.83C.95 0 1 .12 1 .3V.78C.82 .86 .62 1 .37 1C.18 1 .02 .89 .035 .68C.05 .43 .29 .04 .57 0Z" />

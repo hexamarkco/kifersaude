@@ -121,16 +121,19 @@ export default function HomeAudience({
                   </Button>
                 </div>
                 <div className="home-audience-photo">
-                  <Image
-                    src={profile.photo}
-                    alt={profile.alt}
-                    width={profile.photoWidth}
-                    height={profile.photoHeight}
-                    loading="lazy"
-                  />
+                  <div className="home-audience-photo-window">
+                    <Image
+                      src={profile.photo}
+                      alt={profile.alt}
+                      width={profile.photoWidth}
+                      height={profile.photoHeight}
+                      loading="lazy"
+                    />
+                  </div>
                   <svg className="home-audience-curve" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M0 1000C310 850 680 930 1000 670V1000Z" />
-                    <path d="M0 230C280 35 660 -160 1000 -120M260 1000C530 1110 760 840 1000 800" />
+                    <path d="M0 1000C250 900 650 770 1000 670V970Q1000 1000 970 1000Z" />
+                    <path className="home-audience-line-desktop" d="M540 0C820 -120 950 -160 1070 -130M540 1000C720 1050 910 870 1070 800" />
+                    <path className="home-audience-line-mobile" d="M0 340C200 125 390 40 600 35M520 1020C710 970 870 815 1000 755" />
                   </svg>
                 </div>
               </div>

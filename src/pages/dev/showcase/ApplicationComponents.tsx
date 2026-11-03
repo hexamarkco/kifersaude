@@ -21,7 +21,9 @@ const skeletons: Record<string, ComponentType> = {
   'Calendário': TodoCalendarSkeleton, 'Configurações': SystemSettingsSkeleton,
   'Operadoras': OperadorasSkeleton, 'Usuários': UsersSkeleton,
   'Integrações': IntegrationsSkeleton, 'Automações': AutomationFlowsSkeleton,
-  'Canal de atendimento': WhatsAppApiSkeleton, 'Carregamento da aplicação': AppLoadingScreen,
+  'Canal de atendimento': WhatsAppApiSkeleton,
+  'Carregamento da aplicação · modo claro': () => <AppLoadingScreen theme="light" />,
+  'Carregamento da aplicação · modo escuro': () => <AppLoadingScreen theme="dark" />,
 };
 
 function WorkflowExampleNode({ data }: NodeProps<{ label: string }>) {

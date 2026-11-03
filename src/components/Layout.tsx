@@ -1,6 +1,6 @@
 import { Text, WorkspaceHeader, BrandWordmark } from '../design-system';
 import { ActionSurface, Button, IconButton } from '../design-system';
-import { DesignSystemProvider } from '../design-system';
+import { DesignSystemProvider, PANEL_THEME_STORAGE_KEY, readPanelTheme } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import {
@@ -65,23 +65,6 @@ type LayoutProps = {
   newLeadsCount?: number;
 };
 
-type ThemeMode = 'light' | 'dark';
-
-const PANEL_THEME_STORAGE_KEY = 'painel.theme.v2';
-
-const getInitialThemeMode = (): ThemeMode => {
-  if (typeof window === 'undefined') {
-    return 'light';
-  }
-
-  const storedTheme = window.localStorage.getItem(PANEL_THEME_STORAGE_KEY);
-  if (storedTheme === 'light' || storedTheme === 'dark') {
-    return storedTheme;
-  }
-
-  return 'light';
-};
-
 export default function Layout({
   children,
   activeTab,
@@ -108,7 +91,7 @@ export default function Layout({
   const mobileMenuOpenedFromRef = useRef<'header' | 'more'>('header');
   const mobileMoreTriggerRef = useRef<HTMLButtonElement>(null);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
+  const [themeMode, setThemeMode] = useState(readPanelTheme);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [notificationsWarning, setNotificationsWarning] = useState<string | null>(null);

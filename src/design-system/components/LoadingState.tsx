@@ -2,8 +2,12 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import { useDesignSystemAppearance, type DesignSystemTheme } from '../appearanceContext';
+import { readPanelTheme } from '../themePreference';
 import type { ControlSize } from '../tokens';
 import Button from './Button';
+import { DesignSystemProvider } from './DesignSystemProvider';
+import { LoadingMonogram } from './LoadingMonogram';
 
 export type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
   /** Hides the decorative placeholder from assistive technologies by default. */
@@ -27,12 +31,14 @@ export type LoadingStateProps = HTMLAttributes<HTMLDivElement> & {
   label?: ReactNode;
   description?: ReactNode;
   compact?: boolean;
+  indicator?: 'spinner' | 'brand';
 };
 
 export function LoadingState({
   label = 'Carregando',
   description,
   compact = false,
+  indicator = 'spinner',
   className,
   ...props
 }: LoadingStateProps) {
@@ -40,10 +46,17 @@ export function LoadingState({
     <div
       role="status"
       aria-live="polite"
-      className={cx('kds-loading-state', compact && 'kds-loading-state-compact', className)}
+      className={cx(
+        'kds-loading-state',
+        compact && 'kds-loading-state-compact',
+        indicator === 'brand' && 'kds-loading-state-brand',
+        className,
+      )}
       {...props}
     >
-      <Loader2 className="kds-loading-state-spinner" aria-hidden="true" />
+      {indicator === 'brand'
+        ? <LoadingMonogram />
+        : <Loader2 className="kds-loading-state-spinner" aria-hidden="true" />}
       <div>
         <p className="kds-loading-state-label">{label}</p>
         {description && <p className="kds-loading-state-description">{description}</p>}
@@ -54,6 +67,7 @@ export function LoadingState({
 
 export type AppLoadingScreenProps = {
   className?: string;
+  theme?: DesignSystemTheme;
 };
 
 const APP_LOADING_STALL_MS = 8000;
@@ -68,7 +82,8 @@ const APP_LOADING_STALL_MS = 8000;
  * or a stale/paused backend), it swaps the spinner for a clear message and a
  * reload action instead of spinning forever with no way out.
  */
-export function AppLoadingScreen({ className }: AppLoadingScreenProps) {
+export function AppLoadingScreen({ className, theme }: AppLoadingScreenProps) {
+  const appearance = useDesignSystemAppearance();
   const [isStalled, setIsStalled] = useState(false);
 
   useEffect(() => {
@@ -77,9 +92,10 @@ export function AppLoadingScreen({ className }: AppLoadingScreenProps) {
   }, []);
 
   return (
-    <div
+    <DesignSystemProvider
+      theme={theme ?? appearance?.theme ?? readPanelTheme()}
       className={cx(
-        'painel-theme kifer-ds flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4',
+        'flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4',
         className,
       )}
     >
@@ -96,8 +112,8 @@ export function AppLoadingScreen({ className }: AppLoadingScreenProps) {
           </Button>
         </div>
       ) : (
-        <LoadingState compact />
+        <LoadingState compact indicator="brand" />
       )}
-    </div>
+    </DesignSystemProvider>
   );
 }

@@ -1,3 +1,4 @@
+import { matchPath, useLocation } from 'react-router-dom';
 import {
   AppLoadingScreen,
 } from '../design-system';
@@ -25,7 +26,9 @@ export const FinanceiroComissoesTab = lazyWithChunkRecovery(() => import('../fea
 export const FinanceiroAgendaTab = lazyWithChunkRecovery(() => import('../features/agenda/AgendaScreen'));
 
 export function RouteLoading() {
-  return <AppLoadingScreen />;
+  const { pathname } = useLocation();
+  const isPanel = matchPath('/painel/*', pathname) || matchPath('/chat', pathname);
+  return <AppLoadingScreen theme={isPanel ? undefined : 'light'} />;
 }
 
 export const PrivacyPolicyPage = lazyWithChunkRecovery(() => import('../features/public-content/PrivacyPolicyPage'));

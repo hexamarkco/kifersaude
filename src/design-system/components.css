@@ -382,6 +382,65 @@
   animation: kds-loading-spin 0.8s linear infinite;
 }
 
+.kds-loading-state-brand {
+  flex-direction: column;
+  text-align: center;
+}
+
+.kds-loading-monogram {
+  --loading-monogram-cycle: 2.4s;
+  width: 5rem;
+  flex: none;
+  color: var(--brand-primary);
+  animation: kds-loading-monogram-repeat var(--loading-monogram-cycle) ease-in-out infinite;
+}
+
+.kds-loading-monogram-stem,
+.kds-loading-monogram-letters {
+  stroke: currentColor;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+}
+
+.kds-loading-monogram-stem {
+  animation: kds-loading-monogram-stem var(--loading-monogram-cycle) ease-in-out infinite;
+}
+
+.kds-loading-monogram-letters {
+  animation: kds-loading-monogram-letters var(--loading-monogram-cycle) ease-in-out infinite;
+}
+
+.kds-loading-monogram-star {
+  fill: var(--accent-gold);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kds-loading-monogram-star var(--loading-monogram-cycle) ease-out infinite;
+}
+
+@keyframes kds-loading-monogram-stem {
+  0% { stroke-dashoffset: 1; stroke-opacity: 1; fill-opacity: 0; }
+  23% { stroke-dashoffset: 0; stroke-opacity: 1; fill-opacity: 0; }
+  33%, 100% { stroke-dashoffset: 0; stroke-opacity: 0; fill-opacity: 1; }
+}
+
+@keyframes kds-loading-monogram-letters {
+  0%, 16% { stroke-dashoffset: 1; stroke-opacity: 1; fill-opacity: 0; }
+  55% { stroke-dashoffset: 0; stroke-opacity: 1; fill-opacity: 0; }
+  65%, 100% { stroke-dashoffset: 0; stroke-opacity: 0; fill-opacity: 1; }
+}
+
+@keyframes kds-loading-monogram-star {
+  0%, 58% { opacity: 0; transform: scale(0.6); }
+  70%, 100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes kds-loading-monogram-repeat {
+  0%, 83% { opacity: 1; }
+  99%, 100% { opacity: 0; }
+}
+
 .kds-loading-state-label {
   color: var(--text-primary);
   font: var(--type-label);
@@ -403,8 +462,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   .kds-skeleton,
-  .kds-loading-state-spinner {
+  .kds-loading-state-spinner,
+  .kds-loading-monogram,
+  .kds-loading-monogram path {
     animation: none;
+  }
+
+  .kds-loading-monogram path {
+    stroke: none;
   }
 }
 

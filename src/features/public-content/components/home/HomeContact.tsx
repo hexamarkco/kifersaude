@@ -56,8 +56,26 @@ export function HomeFaq() {
             planos de saúde, contratação e atendimento.
           </Text>
           <div className="home-faq-art" aria-hidden="true">
-            <MessageCircle />
-            <MessageCircle />
+            <svg viewBox="-112 0 684 393" focusable="false">
+              <circle cx="229" cy="341" r="340" fill="none" stroke="var(--brand-primary-border)" strokeOpacity=".4" strokeWidth="2" />
+              <circle cx="204" cy="350" r="301" fill="var(--home-soft)" fillOpacity=".4" />
+              <g transform="translate(147 113) rotate(-8)">
+                <path className="home-faq-art-bubble" d="M0 48C0 21 22 0 50 0H154C179 0 197 17 197 42V97C197 126 177 145 149 145H72L11 184Q3 189 5 179L10 147Q-8 135 -8 109Z" />
+                <g fill="var(--brand-primary)" opacity=".23">
+                  <circle cx="55" cy="78" r="10" />
+                  <circle cx="92" cy="78" r="10" />
+                  <circle cx="129" cy="78" r="10" />
+                </g>
+              </g>
+              <g transform="translate(274 189) rotate(-8)">
+                <path d="M0 36C0 15 17 0 38 0H103C124 0 138 15 138 36V68Q138 97 107 102L105 127Q104 133 98 128L69 103H31C12 103 -9 92 -9 70Z" fill="var(--home-paper)" />
+                <g fill="var(--brand-primary)" opacity=".23">
+                  <circle cx="38" cy="54" r="7" />
+                  <circle cx="64" cy="54" r="7" />
+                  <circle cx="90" cy="54" r="7" />
+                </g>
+              </g>
+            </svg>
           </div>
         </div>
         <div className="home-faq-list">

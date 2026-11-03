@@ -184,13 +184,25 @@
 .kifer-home .home-about-name .home-eyebrow { justify-content: center; margin-top: var(--space-2); font-size: 0.6875rem; }
 
 /* 07 — FAQ, real answers and actual accessible buttons */
+.kifer-home .home-faq { overflow: clip; }
 .kifer-home .home-faq-layout { display: grid; grid-template-columns: 34% 61%; gap: 5%; align-items: start; }
 .kifer-home .home-faq-copy { padding-top: var(--space-5); }
 .kifer-home .home-faq .home-title { font-size: clamp(2.5rem, 3.8vw, 4rem); }
-.kifer-home .home-faq-art { position: relative; height: 15rem; margin-top: var(--space-10); color: var(--home-soft); }
-.kifer-home .home-faq-art::before { content: ''; position: absolute; width: 22rem; height: 22rem; border: 1px solid var(--brand-primary-border); border-radius: 50%; left: -6rem; top: -1rem; }
-.kifer-home .home-faq-art svg { position: absolute; width: 10rem; height: 10rem; left: 2rem; top: 1rem; fill: currentColor; stroke-width: 0.6; }
-.kifer-home .home-faq-art svg + svg { left: 8rem; top: 6rem; width: 7rem; height: 7rem; color: var(--brand-primary-border); }
+.kifer-home .home-faq-art {
+  width: min(41vw, 42.75rem);
+  margin-top: var(--space-8);
+  margin-left: min(-5.2vw, calc((var(--home-width) - 100vw) / 2));
+  margin-bottom: calc(-1 * var(--home-space));
+}
+.kifer-home .home-faq-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  translate: -16.37% 0;
+}
+.kifer-home .home-faq-art-bubble {
+  fill: color-mix(in srgb, var(--brand-primary-border) 62%, var(--brand-primary-muted));
+}
 .kifer-home .home-faq-list { display: grid; gap: var(--space-3); }
 .kifer-home .home-faq-layout > *, .kifer-home .home-faq-list > * { min-width: 0; }
 .kifer-home .home-faq-item { border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--bg-surface) 40%, transparent); }
@@ -701,10 +713,17 @@
   .kifer-home .home-faq-copy > .home-lead { order: 2; margin-bottom: var(--space-6); }
   .kifer-home .home-faq-list { order: 3; width: 100%; }
   .kifer-home .home-faq-trigger.kds-button { min-height: 4.75rem; padding: var(--space-3); gap: var(--space-3); font-size: 1.125rem; }
-  .kifer-home .home-faq-art { display: block; order: 4; width: 100%; height: 9rem; margin-top: var(--space-6); }
-  .kifer-home .home-faq-art::before { width: 17rem; height: 17rem; left: calc(50% - 8.5rem); }
-  .kifer-home .home-faq-art svg { width: 7rem; height: 7rem; left: calc(50% - 5rem); top: 0; }
-  .kifer-home .home-faq-art svg + svg { width: 5rem; height: 5rem; left: 50%; top: 3rem; }
+  .kifer-home .home-faq-art {
+    display: block;
+    order: 4;
+    align-self: center;
+    width: min(94vw, 30rem);
+    height: min(45vw, 14.4rem);
+    flex: none;
+    margin: var(--space-2) 0 calc(-1 * var(--home-space));
+    overflow: clip;
+  }
+  .kifer-home .home-faq-art svg { translate: none; }
 
   /* 08: contextual photograph, actual form, then the supporting benefits. */
   .kifer-home .home-quote { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-5) var(--space-3); padding-inline: var(--home-gutter); }

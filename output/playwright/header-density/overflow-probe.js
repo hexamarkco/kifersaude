@@ -1,1 +1,0 @@
-async(page)=>{return page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,tail:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:String(e.className),right:e.getBoundingClientRect().right})).filter(e=>e.right>innerWidth+1).slice(-16)}));}

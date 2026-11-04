@@ -48,3 +48,16 @@ scripts/hospital_location_report.csv
 
 # Generated browser audit session setup can contain local authentication state.
 /output/playwright/ui-audit-run/setup.js
+
+# Local redesign references, browser sessions and generated audit artifacts.
+/kifersaude-ui-redesign/
+/output/
+/.playwright-cli/
+/tmp/
+/docs/design-system/screenshots/
+/docs/design-system.zip
+/docs/ui-audit/desktop/
+/docs/ui-audit/tablet/
+/docs/ui-audit/mobile/
+/docs/ui-refinements/
+/config-users-refined-320-latest.png

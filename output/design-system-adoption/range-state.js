@@ -1,1 +1,0 @@
-async(page)=>({range:await page.getByRole('slider').inputValue(),labels:await page.getByRole('slider').evaluate(el=>({min:el.min,max:el.max,step:el.step,dir:getComputedStyle(el).direction,default:el.defaultValue})),url:page.url()})

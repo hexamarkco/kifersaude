@@ -60,11 +60,11 @@ export const WhatsAppThreadActionsMenu = ({
     onClose={() => setOpen(false)}
     ariaLabel="Ações da conversa"
     role="menu"
-    className="kds-dropdown-menu before:hidden overflow-y-auto p-1"
+    className="comm-whatsapp-action-menu before:hidden overflow-y-auto"
     style={{ width: position?.width ?? 288, maxHeight: position?.maxHeight }}
   >
     {selectedChat ? (
-      <div className="flex flex-col gap-1">
+      <div>
         {!selectedChat.is_group && selectedChat.lead_id ? (
           <DropdownOption
             type="button"

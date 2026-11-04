@@ -2,7 +2,7 @@ import { Text, FieldLabel, Image, Video, LoadingState } from '../../../../design
 import { ActionSurface, IconButton } from '../../../../design-system';
 import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
-import { Avatar, Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
+import { Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import type { CommWhatsAppMessageSearchResult } from '../data';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
@@ -388,9 +388,6 @@ export function InboxChatListItem({
       }}
     >
       <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-chat-select text-left">
-        <span aria-hidden="true">
-          <Avatar name={displayName} tone="brand" fallback={chat.is_group ? <Users className="kds-control-icon" /> : undefined} />
-        </span>
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1.5">
             <LeadFavoriteBadge favorito={favorito} />
@@ -485,7 +482,6 @@ export function InboxMessageSearchListItem({
     <div className={`whatsapp-inbox-chat-card transition-colors ${selected ? 'is-active' : ''}`}>
       <div className="px-4 py-3">
         <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(result.chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-search-result min-w-0 w-full text-left">
-          <span aria-hidden="true"><Avatar name={getSafeChatDisplayName(result.chat, connectedUserName)} tone="brand" /></span>
           <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">

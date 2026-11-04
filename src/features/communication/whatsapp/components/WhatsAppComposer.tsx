@@ -11,7 +11,7 @@ import type {
 } from 'react';
 import { FileAudio, FileText, Images, MessageCircle, Mic, Pencil, Plus, Reply, SendHorizontal, SlidersHorizontal, Smile, Sparkles, X } from 'lucide-react';
 
-import { Button, ButtonGroup, IconButton, Popover, PopoverContent, PopoverTrigger } from '../../../../design-system';
+import { Button, ButtonGroup, DropdownOption, IconButton, Popover, PopoverContent, PopoverTrigger } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
 import type { MediaUploadProgress } from '../domain/mediaUploadState';
@@ -588,10 +588,11 @@ export function WhatsAppComposer({
                         <PopoverContent
                           side="top"
                           align="start"
-                          className="whatsapp-inbox-attach-menu min-w-[208px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
+                          className="comm-whatsapp-action-menu whatsapp-inbox-attach-menu min-w-[208px]"
+                          role="menu"
                           aria-label="Anexar arquivo"
                         >
-                          <ActionSurface variant="plain" padding="none"
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('document')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
@@ -600,8 +601,8 @@ export function WhatsAppComposer({
                               <FileText className="h-4 w-4" />
                             </span>
                             <span>Documento</span>
-                          </ActionSurface>
-                          <ActionSurface variant="plain" padding="none"
+                          </DropdownOption>
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('media')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
@@ -610,8 +611,8 @@ export function WhatsAppComposer({
                               <Images className="h-4 w-4" />
                             </span>
                             <span>Fotos e vídeos</span>
-                          </ActionSurface>
-                          <ActionSurface variant="plain" padding="none"
+                          </DropdownOption>
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => handleAttachmentMenuAction('audio')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
@@ -620,7 +621,7 @@ export function WhatsAppComposer({
                               <FileAudio className="h-4 w-4" />
                             </span>
                             <span>Áudio</span>
-                          </ActionSurface>
+                          </DropdownOption>
                         </PopoverContent>
                       </Popover>
                         <IconButton
@@ -660,10 +661,11 @@ export function WhatsAppComposer({
                         <PopoverContent
                           side="top"
                           align="start"
-                          className="whatsapp-inbox-attach-menu min-w-[216px] overflow-hidden rounded-[var(--radius-2xl)] border p-1.5 shadow-xl"
+                          className="comm-whatsapp-action-menu whatsapp-inbox-attach-menu min-w-[216px]"
+                          role="menu"
                           aria-label="Ações de inteligência artificial"
                         >
-                          <ActionSurface variant="plain" padding="none"
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -677,8 +679,8 @@ export function WhatsAppComposer({
                               {<LoadingMonogram active={rewritingComposer} fallback={<Pencil className="h-4 w-4" />} className="h-4 w-4" />}
                             </span>
                             <span>Corrigir texto</span>
-                          </ActionSurface>
-                          <ActionSurface variant="plain" padding="none"
+                          </DropdownOption>
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -692,8 +694,8 @@ export function WhatsAppComposer({
                               {<LoadingMonogram active={rewritingComposer} fallback={<Sparkles className="h-4 w-4" />} className="h-4 w-4" />}
                             </span>
                             <span>Adaptar ao contexto</span>
-                          </ActionSurface>
-                          <ActionSurface variant="plain" padding="none"
+                          </DropdownOption>
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -707,8 +709,8 @@ export function WhatsAppComposer({
                               <SlidersHorizontal className="h-4 w-4" />
                             </span>
                             <span>Mais opções</span>
-                          </ActionSurface>
-                          <ActionSurface variant="plain" padding="none"
+                          </DropdownOption>
+                          <DropdownOption role="menuitem"
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
@@ -722,10 +724,10 @@ export function WhatsAppComposer({
                               {<LoadingMonogram active={replySuggestionLoading} fallback={<MessageCircle className="h-4 w-4" />} className="h-4 w-4" />}
                             </span>
                             <span>Sugerir resposta</span>
-                          </ActionSurface>
+                          </DropdownOption>
                           <div className="my-1 border-t border-[var(--border-subtle)]" />
-                          <div className="grid grid-cols-3 gap-1 px-1 pb-1" aria-label="Formatacao do texto">
-                            <ActionSurface variant="plain" padding="none"
+                          <div className="grid grid-cols-3 gap-1 px-1 pb-1" role="group" aria-label="Formatacao do texto">
+                            <DropdownOption role="menuitem"
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
@@ -737,9 +739,9 @@ export function WhatsAppComposer({
                               aria-label="Negrito"
                               title="Negrito"
                             >
-                              B
-                            </ActionSurface>
-                            <ActionSurface variant="plain" padding="none"
+                              <Text as="span" size="sm" weight="bold">B</Text>
+                            </DropdownOption>
+                            <DropdownOption role="menuitem"
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
@@ -751,9 +753,9 @@ export function WhatsAppComposer({
                               aria-label="Italico"
                               title="Italico"
                             >
-                              I
-                            </ActionSurface>
-                            <ActionSurface variant="plain" padding="none"
+                              <Text as="span" size="sm" className="italic">I</Text>
+                            </DropdownOption>
+                            <DropdownOption role="menuitem"
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
@@ -766,7 +768,7 @@ export function WhatsAppComposer({
                               title="Riscado"
                             >
                               S
-                            </ActionSurface>
+                            </DropdownOption>
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -774,7 +776,7 @@ export function WhatsAppComposer({
 
                     <div className={`whatsapp-inbox-composer-input-wrap relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       {quickReplyMenuOpen && (
-                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xl">
+                        <div className="kds-popover comm-whatsapp-action-menu absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden">
                           <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                               Mensagens rápidas por atalho
@@ -798,7 +800,7 @@ export function WhatsAppComposer({
                                 const isActive = index === quickReplyActiveIndex;
 
                                 return (
-                                  <ActionSurface variant="plain" padding="none"
+                                  <DropdownOption
                                     key={option.id}
                                     id={`${quickReplyListboxId}-option-${index}`}
                                     type="button"
@@ -821,7 +823,7 @@ export function WhatsAppComposer({
                                         {option.preview}
                                       </Text>
                                     </div>
-                                  </ActionSurface>
+                                  </DropdownOption>
                                 );
                               })
                             ) : (

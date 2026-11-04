@@ -112,6 +112,7 @@ test('disponibiliza ações de CRM em chats individuais e fecha o menu antes de 
 
   try {
     const menu = getMenu();
+    assert.equal(menu.querySelector('.kds-button'), null);
     const followUpItem = getMenuItem(menu, 'Gerar follow-up com IA');
     const attendanceItem = getMenuItem(menu, 'Desativar IA neste chat');
     const contextPanelItem = getMenuItem(menu, 'Informações do contato');

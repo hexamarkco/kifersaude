@@ -6,6 +6,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
+  DropdownOption,
+  LoadingMonogram,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { PositionedPopover as PanelPopoverShell } from '../../../design-system';
@@ -2431,12 +2433,13 @@ export default function WhatsAppInboxScreen() {
             setOpenChatMenuChatId(null);
           }}
           ariaLabel="Menu da conversa"
-          className="before:hidden rounded-2xl border-[var(--border-default)] bg-[var(--bg-elevated)] p-1 shadow-2xl"
+          role="menu"
+          className="comm-whatsapp-action-menu before:hidden overflow-y-auto"
           style={{ width: chatMenuPosition?.width ?? 248 }}
         >
           {openChatMenuChat ? (
-            <div className="flex flex-col gap-1">
-                <Button variant="ghost"
+            <div>
+                <DropdownOption role="menuitem"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2446,10 +2449,10 @@ export default function WhatsAppInboxScreen() {
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center text-left transition disabled:opacity-60"
               >
-                {openChatMenuChat.is_archived ? <ArchiveRestore className="shrink-0" /> : <Archive className="shrink-0" />}
+                {openChatMenuChat.is_archived ? <ArchiveRestore className="kds-control-icon" /> : <Archive className="kds-control-icon" />}
                 <span>{openChatMenuChat.is_archived ? 'Remover dos arquivados' : 'Arquivar conversa'}</span>
-              </Button>
-                <Button variant="ghost"
+              </DropdownOption>
+                <DropdownOption role="menuitem"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2459,10 +2462,10 @@ export default function WhatsAppInboxScreen() {
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center text-left transition disabled:opacity-60"
               >
-                {openChatMenuChat.is_muted ? <Bell className="shrink-0" /> : <BellOff className="shrink-0" />}
+                {openChatMenuChat.is_muted ? <Bell className="kds-control-icon" /> : <BellOff className="kds-control-icon" />}
                 <span>{openChatMenuChat.is_muted ? 'Ativar notificacoes' : 'Silenciar notificacoes'}</span>
-              </Button>
-                <Button variant="ghost"
+              </DropdownOption>
+                <DropdownOption role="menuitem"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2472,10 +2475,10 @@ export default function WhatsAppInboxScreen() {
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center text-left transition disabled:opacity-60"
               >
-                <Pin className="shrink-0" />
+                <Pin className="kds-control-icon" />
                 <span>{openChatMenuChat.is_pinned ? 'Desafixar conversa' : 'Fixar conversa'}</span>
-              </Button>
-                <Button variant="ghost"
+              </DropdownOption>
+                <DropdownOption role="menuitem"
                   type="button"
                   onClick={() => {
                     setChatMenuPointerAnchor(null);
@@ -2485,10 +2488,10 @@ export default function WhatsAppInboxScreen() {
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center text-left transition disabled:opacity-60"
               >
-                <MessageCircle className="shrink-0" />
+                <MessageCircle className="kds-control-icon" />
                 <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como não lida'}</span>
-              </Button>
-              <Button loading={deletingChatId === openChatMenuChat.id} variant="destructive"
+              </DropdownOption>
+              <DropdownOption role="menuitem"
                 type="button"
                 onClick={() => {
                   setChatMenuPointerAnchor(null);
@@ -2496,11 +2499,11 @@ export default function WhatsAppInboxScreen() {
                   setChatPendingDeletion(openChatMenuChat);
                 }}
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center text-left transition disabled:opacity-60"
+                className="kds-record-action-danger"
               >
-                <Trash2 className="shrink-0" />
+                <LoadingMonogram active={deletingChatId === openChatMenuChat.id} fallback={<Trash2 className="kds-control-icon" />} className="kds-control-icon" />
                 <span>Excluir conversa</span>
-              </Button>
+              </DropdownOption>
             </div>
           ) : null}
         </PanelPopoverShell>

@@ -52,6 +52,7 @@ test('mantém no cabeçalho da conversa apenas o nome e o próximo lembrete', ()
   try {
     const header = view.container.querySelector('.whatsapp-inbox-thread-header');
     assert.ok(header);
+    assert.equal(header.querySelector('.kds-avatar'), null);
     assert.match(header.textContent ?? '', /Gisele Goulart \(cliente\)/);
     assert.match(header.textContent ?? '', /Próximo lembrete: conferir retorno sobre proposta/);
     assert.equal(header.textContent?.includes('Renomear contato'), false);

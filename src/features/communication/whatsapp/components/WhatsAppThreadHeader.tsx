@@ -1,7 +1,7 @@
 import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, MoreHorizontal, Pause, Search, Sparkles, Users } from 'lucide-react';
 import type { RefObject } from 'react';
 
-import { Avatar, Badge, ButtonGroup, Heading, IconButton } from '../../../../design-system';
+import { Badge, ButtonGroup, Heading, IconButton } from '../../../../design-system';
 import { isOverdue } from '../../../../lib/dateUtils';
 import type { CommWhatsAppChat } from '../domain/types';
 
@@ -91,9 +91,6 @@ export function WhatsAppThreadHeader({
         <IconButton variant="ghost" size="md" type="button" onClick={onBack} className="whatsapp-inbox-thread-back" aria-label="Voltar para a lista de conversas">
           <ChevronLeft aria-hidden="true" />
         </IconButton>
-        <span aria-hidden="true" className="shrink-0">
-          <Avatar name={selectedChatDisplayName} tone="brand" fallback={selectedChat.is_group ? <Users className="kds-control-icon" /> : undefined} />
-        </span>
         <div className="min-w-0 flex-1">
           <Heading level={2} family="interface" weight="semibold" size="lg" className="whatsapp-inbox-heading truncate" title={selectedChatDisplayName}>
             {selectedChat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}

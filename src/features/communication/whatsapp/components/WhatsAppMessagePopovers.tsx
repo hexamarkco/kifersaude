@@ -1,4 +1,4 @@
-import { LoadingMonogram, ActionSurface, Button } from '../../../../design-system';
+import { LoadingMonogram, ActionSurface, DropdownOption } from '../../../../design-system';
 import { Forward, Info, Pencil, Reply, Star, Trash2 } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
@@ -85,11 +85,12 @@ export function WhatsAppMessagePopovers({
         position={messageActionMenuPosition}
         onClose={onCloseMessageActionMenu}
         ariaLabel="Menu da mensagem"
-        className="comm-whatsapp-popover comm-whatsapp-message-menu before:hidden overflow-y-auto"
+        role="menu"
+        className="comm-whatsapp-action-menu before:hidden overflow-y-auto"
         style={{ width: messageActionMenuPosition?.width ?? 268, maxHeight: messageActionMenuPosition?.maxHeight }}
       >
         {openMessageActionMenuMessage ? (
-          <div className="flex flex-col gap-1">
+          <div>
             {openMessageActionMenuMessage.direction === 'outbound' ? <ActionButton icon={<Info className="h-4 w-4 shrink-0" />} label="Dados da mensagem" onClick={() => onOpenMessageDetails(openMessageActionMenuMessage)} /> : null}
             {canReplyOrForwardMessage(openMessageActionMenuMessage) ? (
               <>
@@ -114,9 +115,9 @@ export function WhatsAppMessagePopovers({
 
 function ActionButton({ icon, label, onClick, disabled = false, destructive = false }: { icon: ReactNode; label: string; onClick: () => void; disabled?: boolean; destructive?: boolean }) {
   return (
-    <Button variant="ghost" type="button" onClick={onClick} disabled={disabled}
-      className={`comm-whatsapp-menu-action ${destructive ? 'is-destructive' : ''}`}>
+    <DropdownOption role="menuitem" onClick={onClick} disabled={disabled}
+      className={destructive ? 'kds-record-action-danger' : undefined}>
       {icon}<span>{label}</span>
-    </Button>
+    </DropdownOption>
   );
 }

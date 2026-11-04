@@ -31,6 +31,7 @@ import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import {
   Badge,
   Button,
+  DropdownOption,
   DateTimePicker,
   ControlGroup,
   EmptyState,
@@ -1445,11 +1446,12 @@ export default function WhatsAppAgendaModal({
                       position={quickScheduleDropdown.position}
                       onClose={() => setQuickScheduleDropdown(null)}
                       ariaLabel="Selecionar dias para agendar"
-                      className="comm-quick-schedule-popover rounded-xl border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 shadow-xl"
+                      role="menu"
+                      className="comm-whatsapp-action-menu comm-quick-schedule-popover"
                     >
-                      <div className="flex flex-col gap-1">
+                      <div>
                         {[1, 2, 3, 4, 5].map((days) => (
-                          <Button variant="ghost"
+                          <DropdownOption role="menuitem"
                             key={days}
                             type="button"
                             onClick={() => {
@@ -1459,9 +1461,9 @@ export default function WhatsAppAgendaModal({
                             disabled={isQuickSchedulingCurrentReminder}
                             className="flex items-center text-left transition disabled:opacity-60"
                           >
-                            <CalendarPlus className="" />
+                            <CalendarPlus className="kds-control-icon" />
                             <span>+{days} dia{days > 1 ? 's' : ''}</span>
-                          </Button>
+                          </DropdownOption>
                         ))}
                       </div>
                     </PanelPopoverShell>

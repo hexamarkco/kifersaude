@@ -1,71 +1,69 @@
-/* Desktop artboard: approved 1672 × 941 reference, including its 85 px header.
-   All measurements below belong to the hero; mobile/tablet retain their layout.
-   The source photograph is unchanged. Its crop and the mask are independent. */
+/* Desktop composition follows the approved artboard with capped typography
+   and controls so the first fold stays compact on large monitors. */
 .kifer-home .home-hero-desktop-art { display: none; }
 
 @media (min-width: 1024px) {
+  .painel-theme.kifer-ds.kifer-home { --home-header-height: clamp(3.5rem, 4.15vw, 4.25rem); }
   .kifer-home .home-hero { background: color-mix(in srgb, var(--accent-copper) 3%, var(--home-paper)); }
   .kifer-home .kds-public-header-inner {
     max-width: none;
-    min-height: 5.08vw;
+    min-height: var(--home-header-height);
   }
-  .kifer-home .kds-public-header-brand .kds-workspace-brand > span { font-size: clamp(2.2rem, 2.68vw, 3.25rem); }
-  .kifer-home .kds-public-header-brand .kds-workspace-brand > span > span { font-size: clamp(1.8rem, 2.21vw, 2.75rem); }
-  .kifer-home .kds-public-header-navigation a { font-size: clamp(.8125rem, 1.08vw, 1.25rem); }
+  .kifer-home .kds-public-header-brand .kds-workspace-brand > span { font-size: clamp(1.85rem, 2.25vw, 2.5rem); }
+  .kifer-home .kds-public-header-brand .kds-workspace-brand > span > span { font-size: .82em; }
+  .kifer-home .kds-public-header-navigation a { font-size: clamp(.8125rem, 1vw, 1rem); }
   .kifer-home .kds-public-header-actions > .kds-button {
-    --control-height-lg: max(2.75rem, 3.4vw);
-    --control-font-lg: clamp(.875rem, 1.2vw, 1.4375rem);
-    min-width: 12.1vw;
+    --control-height-lg: 2.75rem;
+    --control-font-lg: .9375rem;
   }
   .kifer-home .home-hero-grid {
     max-width: none;
-    min-height: 51.2vw;
+    min-height: clamp(30rem, 41vw, 44rem);
     grid-template-columns: 51% 49%;
     align-items: start;
   }
-  .kifer-home .home-hero-copy { padding-block: 3.6vw 4vw; }
+  .kifer-home .home-hero-copy { padding-block: clamp(1.75rem, 2.6vw, 3rem); }
   .kifer-home .home-hero-copy > .home-eyebrow {
-    font-size: clamp(0.625rem, .86vw, 1rem);
-    gap: 1.1vw;
+    font-size: clamp(.625rem, .78vw, .8125rem);
+    gap: var(--space-3);
     letter-spacing: .27em;
   }
-  .kifer-home .home-hero-copy > .home-eyebrow::before { width: 2.5vw; }
+  .kifer-home .home-hero-copy > .home-eyebrow::before { width: clamp(1.5rem, 2.3vw, 2.5rem); }
   .kifer-home .home-hero-title {
-    font-size: 5.62vw;
+    font-size: clamp(2.875rem, 4.75vw, 5.25rem);
     font-weight: 400;
     line-height: .94;
     letter-spacing: -.045em;
-    margin-block: 1.45vw 1.15vw;
+    margin-block: var(--space-5) var(--space-4);
   }
   .kifer-home .home-hero-title em { font-weight: 600; }
   .kifer-home .home-hero-description {
-    max-width: 36.5vw;
-    font-size: clamp(1rem, 1.39vw, 1.75rem);
+    max-width: min(34vw, 36rem);
+    font-size: clamp(1rem, 1.24vw, 1.25rem);
     line-height: 1.44;
   }
   .kifer-home .home-hero-actions {
     display: grid;
     grid-template-columns: 1.37fr 1fr;
-    width: 43vw;
-    gap: 1.3vw;
-    margin-top: 2vw;
-    --control-height-lg: max(3rem, 4vw);
-    --control-font-lg: clamp(.8125rem, 1.2vw, 1.4375rem);
-    --control-padding-lg: 1vw;
+    width: min(100%, clamp(25rem, 38vw, 41rem));
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    --control-height-lg: 3rem;
+    --control-padding-lg: var(--space-3);
   }
-  .kifer-home .home-hero-actions .kds-button { font-size: clamp(.8125rem, 1.2vw, 1.4375rem); }
-  .kifer-home .home-hero-actions .kds-control-icon { width: 1.3vw; height: 1.3vw; }
+  .kifer-home .home-hero-actions .kds-button { font-size: clamp(.8125rem, 1.03vw, 1.0625rem); }
+  .kifer-home .home-hero-actions .kds-control-icon { width: 1.125rem; height: 1.125rem; }
   .kifer-home .home-hero-benefits {
-    width: 39.5vw;
+    width: min(38vw, 39rem);
     max-width: none;
     grid-template-columns: 26.5% 34.8% 38.7%;
-    margin-top: 1.55vw;
+    margin-top: var(--space-5);
   }
   .kifer-home .home-hero-benefits li {
     position: relative;
-    gap: .55vw;
-    padding-inline: 3.3vw 1vw;
-    font-size: clamp(.75rem, 1.08vw, 1.25rem);
+    gap: var(--space-2);
+    padding-inline: clamp(.75rem, 2.4vw, 2.25rem) var(--space-2);
+    font-size: clamp(.75rem, 1vw, 1rem);
   }
   .kifer-home .home-hero-benefits li:first-child { padding-left: 1.1vw; }
   .kifer-home .home-hero-benefits li + li { border: 0; }
@@ -76,9 +74,9 @@
     width: 1px;
     background: var(--brand-primary-border);
   }
-  .kifer-home .home-hero-benefits .home-icon { width: 3.6vw; height: 3.6vw; }
-  .kifer-home .home-hero-benefits .home-icon svg { width: 1.85vw; height: 1.85vw; }
-  .kifer-home .home-support-link { margin-top: 1.1vw; }
+  .kifer-home .home-hero-benefits .home-icon { width: 2.75rem; height: 2.75rem; }
+  .kifer-home .home-hero-benefits .home-icon svg { width: 1.375rem; height: 1.375rem; }
+  .kifer-home .home-support-link { margin-top: var(--space-3); }
 
   .kifer-home .home-hero-portrait {
     left: calc((100% - 100vw) / 2);
@@ -94,7 +92,7 @@
   .kifer-home .home-luiza-photo {
     width: 78%;
     left: auto; right: 0;
-    object-position: 100% 30%;
+    object-position: 100% 18%;
     transform: none;
   }
   /* The approved artwork has no plaque over the laptop. Keep the identification

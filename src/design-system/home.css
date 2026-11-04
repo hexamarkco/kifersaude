@@ -356,7 +356,18 @@
 @keyframes home-motion-line-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes home-motion-feedback { from { opacity: 0.5; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
-@media (min-width: 1920px) {
+@media (min-width: 1024px) {
+  .painel-theme.kifer-ds.kifer-home {
+    --home-space: clamp(2.75rem, 3.35vw, 4rem);
+    --home-body: clamp(1rem, 1.05vw, 1.0625rem);
+  }
+  .kifer-home :is(.home-trust, .home-process, .home-testimonials, .home-quote-copy, .home-whatsapp) .home-title {
+    font-size: clamp(2rem, 2.85vw, 3rem);
+  }
+  .kifer-home .home-faq .home-title { font-size: clamp(2.5rem, 3.3vw, 3.5rem); }
+  .kifer-home .home-process-line li > .kds-text { font-size: clamp(.9375rem, 1.05vw, 1.0625rem); }
+  .kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: clamp(2.75rem, 3.25vw, 3.5rem); }
+  .kifer-home .home-footer-tagline { font-size: clamp(1.125rem, 1.4vw, 1.5rem); }
 }
 @media (max-width: 1199.98px) {
   .painel-theme.kifer-ds.kifer-home { --home-gutter: 4%; --home-body: 1rem; }

@@ -125,15 +125,15 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
   const previousCritiques = critiques.filter((item) => item.id !== selected?.id);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className="whatsapp-inbox-critique flex flex-col gap-4">
+      <div className="whatsapp-inbox-critique-header">
+        <div className="min-w-0">
           <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Análise do atendimento</Heading>
           <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
             A IA avalia como este atendimento foi conduzido, apontando acertos, pontos de atenção e erros.
           </Text>
         </div>
-        <Button variant="primary" size="sm" onClick={() => void handleGenerate()} loading={generating} disabled={!chatId || generating}>
+        <Button className="whatsapp-inbox-critique-generate" variant="primary" size="sm" onClick={() => void handleGenerate()} loading={generating} disabled={!chatId || generating}>
           {!generating && <Sparkles className="kds-control-icon" />}
           Analisar atendimento
         </Button>
@@ -162,7 +162,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
       ) : (
         <div className="flex flex-col gap-3">
           <Surface padding="md" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
+            <div className="whatsapp-inbox-critique-result-meta flex flex-wrap items-center justify-between gap-2">
               <Badge tone={AVALIACAO_TONE[selected.avaliacaoGeral]}>{AVALIACAO_LABEL[selected.avaliacaoGeral]}</Badge>
               <span className="text-xs text-[var(--text-muted)]">{formatDateTime(selected.generatedAt)}</span>
             </div>
@@ -239,7 +239,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
                       key={item.id}
                       type="button"
                       onClick={() => setSelectedId(item.id)}
-                      className="flex items-center justify-between border text-left"
+                      className="whatsapp-inbox-critique-history-item flex items-center justify-between border text-left"
                     >
                       <span className="text-[var(--text-muted)]">{formatDateTime(item.generatedAt)}</span>
                       <Badge tone={AVALIACAO_TONE[item.avaliacaoGeral]} size="sm">{AVALIACAO_LABEL[item.avaliacaoGeral]}</Badge>

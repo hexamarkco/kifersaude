@@ -53,7 +53,7 @@ type LeadDrawerTab = 'info' | 'critique';
 
 const LEAD_DRAWER_TABS: TabItem<LeadDrawerTab>[] = [
   { id: 'info', label: 'Dados do lead' },
-  { id: 'critique', label: 'Análise do atendimento', icon: Sparkles },
+  { id: 'critique', label: 'Análise com IA' },
 ];
 
 type WhatsAppLeadDrawerProps = {
@@ -467,10 +467,17 @@ export default function WhatsAppLeadDrawer({
     <>
         <WhatsAppInboxPanelHeader icon={UserRound} title="Informações do contato" context={chatDisplayName} className="comm-whatsapp-lead-drawer-header"
           description="Dados do lead, contratos e próximos acompanhamentos." onClose={onClose}>
-          <div className="mt-3 min-w-0 space-y-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-sm text-[var(--text-secondary)]">
+          <div className="whatsapp-inbox-contact-summary">
+            <div className="whatsapp-inbox-contact-status">
               <Badge tone={linkedLead?.status_nome ? 'accent' : 'neutral'} size="sm">{linkedLead?.status_nome || 'Contato do WhatsApp'}</Badge>
-              <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</span>
+              {chat.autonomous_attendance_status === 'active' ? (
+                <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA atendendo</OperationalStatusBadge>
+              ) : chat.autonomous_attendance_status === 'handed_off' ? (
+                <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA encerrada</OperationalStatusBadge>
+              ) : null}
+            </div>
+            <Text size="sm" tone="primary" weight="medium" className="whatsapp-inbox-contact-phone">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</Text>
+            <div className="whatsapp-inbox-contact-location">
               {phoneRegion ? (
                 <Badge tone="neutral" size="sm" icon={MapPin} title={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}. Região do telefone; não indica a localização atual do contato.`} aria-label={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}`}>
                   {phoneRegion.uf} · DDD {phoneRegion.ddd}
@@ -478,22 +485,16 @@ export default function WhatsAppLeadDrawer({
               ) : null}
               <WhatsAppPresenceIndicator chat={chat} />
             </div>
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Button
                 variant="secondary"
                 size="sm"
                 type="button"
+                className="whatsapp-inbox-contact-save"
                 onClick={() => onSaveContact(chat.saved_contact_name || chatDisplayName)}
               >
                 {chat.saved_contact_name ? <Pencil className="kds-control-icon" /> : <UserPlus className="kds-control-icon" />}
                 {chat.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}
               </Button>
-              {chat.autonomous_attendance_status === 'active' ? (
-                <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA atendendo</OperationalStatusBadge>
-              ) : chat.autonomous_attendance_status === 'handed_off' ? (
-                <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA encerrada</OperationalStatusBadge>
-              ) : null}
-            </div>
           </div>
         </WhatsAppInboxPanelHeader>
         <DrawerBody className={'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto'}>
@@ -526,8 +527,8 @@ export default function WhatsAppLeadDrawer({
               <LeadDetailsPanel
                 className="whatsapp-lead-drawer-panel"
                 showAvatar={false}
+                headerMetadata={autoLinked ? <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge> : null}
                 headerActions={<>
-                  {autoLinked ? <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge> : null}
                 {onUnlinkLead && (
                   <Button
                     variant="secondary"
@@ -542,7 +543,7 @@ export default function WhatsAppLeadDrawer({
                   </Button>
                 )}
                 </>}
-                lead={{ ...linkedLead, observacoes: linkedLead.observacoes ?? undefined, favorito: linkedLead.favorito ?? undefined }}
+                lead={{ ...linkedLead, telefone: linkedLead.telefone ? formatCommWhatsAppPhoneLabel(linkedLead.telefone) : linkedLead.telefone, observacoes: linkedLead.observacoes ?? undefined, favorito: linkedLead.favorito ?? undefined }}
                 statusOptions={statusOptions}
                 responsavelOptions={responsavelOptions}
                 onStatusChange={onStatusChange}

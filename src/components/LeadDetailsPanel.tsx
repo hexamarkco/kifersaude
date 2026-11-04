@@ -44,6 +44,7 @@ type LeadDetailsPanelProps = {
   disabled?: boolean;
   showAvatar?: boolean;
   headerActions?: ReactNode;
+  headerMetadata?: ReactNode;
 };
 
 const formatCurrencyBRL = (value: number | null | undefined) => {
@@ -78,6 +79,7 @@ export default function LeadDetailsPanel({
   disabled = false,
   showAvatar = true,
   headerActions,
+  headerMetadata,
 }: LeadDetailsPanelProps) {
   const [isUpdatingResponsavel, setIsUpdatingResponsavel] = useState(false);
   const showContractsLoading = useMinimumLoading(contractsLoading);
@@ -208,14 +210,17 @@ export default function LeadDetailsPanel({
 
   return (
     <aside className={rootClassName}>
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="kds-lead-details-header flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-5">
+        <div className="kds-lead-details-identity flex min-w-0 items-center gap-3">
           {showAvatar ? <Avatar name={lead.nome_completo || lead.telefone || 'Lead'} size="lg" className="shrink-0" /> : null}
           <div className="min-w-0">
-            <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              Lead vinculado
-            </Text>
-            <Heading level={3} className="mt-0.5 flex min-w-0 items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
+            <div className="kds-lead-details-metadata flex flex-wrap items-center gap-2">
+              <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                Lead vinculado
+              </Text>
+              {headerMetadata}
+            </div>
+            <Heading level={3} className="kds-lead-details-name mt-0.5 flex min-w-0 items-center gap-1.5 text-base font-semibold text-[var(--text-primary)]">
               <LeadFavoriteToggle leadId={lead.id} favorito={favorito} size="sm" onToggled={setFavorito} />
               <span className="truncate">{lead.nome_completo || 'Lead sem nome'}</span>
             </Heading>
@@ -224,7 +229,7 @@ export default function LeadDetailsPanel({
             )}
           </div>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="kds-lead-details-actions flex shrink-0 flex-wrap items-center gap-2">
           {headerActions}
           {onViewLead && (
             <Button

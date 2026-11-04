@@ -261,7 +261,7 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
               </RadioGroup>
             </div>
             <Field
-              label="Quantas pessoas serão incluídas?"
+              label="Quantas pessoas?"
               required
               error={error("quote-lives")}
             >
@@ -386,9 +386,9 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
               size="lg"
               loading={submitting}
               fullWidth
-              className="home-quote-full"
+              className="home-quote-full home-quote-submit"
             >
-              Quero receber minha cotação
+              {submitting ? 'Enviando...' : 'Receber minha cotação'}
               <ChevronRight className="kds-control-icon" aria-hidden="true" />
             </Button>
           </fieldset>
@@ -425,10 +425,12 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
             </Text>
           )}
           <div className="home-quote-privacy">
-            <LockKeyhole aria-hidden="true" />
-            <Text>Seus dados são usados para atender sua solicitação.</Text>
+            <span className="home-quote-privacy-icon" aria-hidden="true"><LockKeyhole /></span>
+            <div className="home-quote-privacy-copy">
+              <Text className="home-quote-reassurance">Seus dados são usados para atender sua solicitação.</Text>
+              <PrivacyNotice className="home-quote-privacy-notice" newTabHint="screen-reader" />
+            </div>
           </div>
-          <PrivacyNotice />
         </form>
       </div>
     </section>

@@ -25,7 +25,7 @@ import {
   IconButton,
   LoadingState,
   Surface,
-  Tabs,
+  FilterSelect,
 } from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import { getMessageLinkPreview } from '../domain/messageMetadata';
@@ -41,8 +41,8 @@ type ChatFilesDrawerProps = {
   onOpenMedia: (message: CommWhatsAppMessage) => void;
 };
 
-type MediaTab = {
-  id: CommWhatsAppMediaType;
+type MediaFilter = {
+  value: CommWhatsAppMediaType;
   label: string;
   icon: LucideIcon;
 };
@@ -53,13 +53,13 @@ type MediaGroup = {
   messages: CommWhatsAppMessage[];
 };
 
-const mediaTabs: readonly MediaTab[] = [
-  { id: 'all', label: 'Todos', icon: Files },
-  { id: 'image', label: 'Fotos', icon: Images },
-  { id: 'video', label: 'Vídeos', icon: Video },
-  { id: 'document', label: 'Documentos', icon: FileText },
-  { id: 'audio', label: 'Áudios', icon: FileAudio },
-  { id: 'link', label: 'Links', icon: Link2 },
+const mediaFilters: readonly MediaFilter[] = [
+  { value: 'all', label: 'Todos', icon: Files },
+  { value: 'image', label: 'Fotos', icon: Images },
+  { value: 'video', label: 'Vídeos', icon: Video },
+  { value: 'document', label: 'Documentos', icon: FileText },
+  { value: 'audio', label: 'Áudios', icon: FileAudio },
+  { value: 'link', label: 'Links', icon: Link2 },
 ];
 
 const mediaDateFormatter = new Intl.DateTimeFormat('pt-BR', {
@@ -514,23 +514,29 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
   }, [chatId, isOpen, load, mediaType]);
 
   const groups = groupMessagesByDay(messages);
-  const filterLabel = mediaTabs.find((tab) => tab.id === mediaType)?.label.toLocaleLowerCase('pt-BR') ?? 'arquivos';
+  const selectedFilter = mediaFilters.find((filter) => filter.value === mediaType) ?? mediaFilters[0];
+  const filterLabel = selectedFilter.label.toLocaleLowerCase('pt-BR');
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" size="md" className="comm-whatsapp-chat-files-drawer">
       <WhatsAppInboxPanelHeader icon={Files} title="Arquivos da conversa" context={chatDisplayName}
         description="Encontre as mídias e os documentos compartilhados neste atendimento." onClose={onClose} />
       <DrawerBody className="comm-whatsapp-chat-files-body">
-        <Tabs
-          items={mediaTabs}
-          value={mediaType}
-          onChange={setMediaType}
-          size="sm"
-          variant="underline"
-          ariaLabel="Filtrar arquivos por tipo"
-          className="comm-whatsapp-chat-files-tabs"
-          listClassName="comm-whatsapp-chat-files-tabs-list"
-        />
+        <div className="comm-whatsapp-chat-files-filter" role="group" aria-label="Filtrar arquivos por tipo">
+          <Text size="xs" tone="muted">Tipo de arquivo</Text>
+          <FilterSelect
+            icon={selectedFilter.icon}
+            options={mediaFilters}
+            value={mediaType}
+            onChange={(value) => {
+              const option = mediaFilters.find((filter) => filter.value === value);
+              if (option) setMediaType(option.value);
+            }}
+            placeholder="Filtrar arquivos por tipo"
+            includePlaceholderOption={false}
+            neutralValues={['all']}
+          />
+        </div>
 
         {<LoadingState active={loading} label="Carregando arquivos da conversa" fallback={() => error ? (
           <EmptyState

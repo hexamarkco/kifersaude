@@ -5,7 +5,7 @@ Texto público atualizado em 23/10/2026 para apresentação como versão final, 
 ## Informações a validar
 
 - Razão social completa: `siteConfig.legalName` contém somente Kifer Saúde. CNPJ 46.423.078/0001-10 extraído do rodapé existente e centralizado em `src/config/site.ts`; validar sua titularidade.
-- Confirmar que contato@kifersaude.com.br e +55 21 97930-2389 recebem solicitações de titulares, responsáveis e procedimento de identificação. Definir encarregado/canal específico se aplicável.
+- Confirmar que contato@kifersaude.com.br e +55 21 99746-2039 recebem solicitações de titulares, responsáveis e procedimento de identificação. Definir encarregado/canal específico se aplicável.
 - Validar bases legais por finalidade, preferências comerciais, tratamento de menores e dados sensíveis. A ciência da política não é consentimento genérico.
 - Confirmar perguntas dos anúncios Meta e integrações realmente ativas; nenhuma campanha ou configuração remota foi consultada/modificada.
 - Validar fornecedores ativos (inclusive IA), contratos, papéis de controlador/operador, transferências internacionais e medidas organizacionais.

@@ -4,6 +4,7 @@ import { ArrowLeft, Check, MapPin, MessageCircle, Moon, RefreshCw, ShieldCheck, 
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo from '../../components/public/PublicSeo';
+import { siteConfig } from '../../config/site';
 import { formsService, type PublicFormSubmitPayload } from '../../lib/formsService';
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import { PrivacyNotice, type PublicForm, type PublicFormGeoPermission, type PublicFormStep } from '../../features/public-content';
@@ -26,7 +27,6 @@ import {
 
 const DARK_CANVAS_COLOR = KIFER_THEME_COLORS.darkCanvas;
 const LIGHT_CANVAS_COLOR = KIFER_THEME_COLORS.lightCanvas;
-const WHATSAPP_PHONE = '5521979302389';
 const THEME_STORAGE_KEY = 'kifer-forms-theme';
 const MIN_STEP_WIDTH_PX = 44;
 const MIN_STEPPER_WIDTH_PX = 180;
@@ -58,7 +58,7 @@ const EMPTY_CONTACT: ContactFormState = { name: '', phone: '', email: '' };
 const EMPTY_GEO: GeoState = { permission: 'not_requested', latitude: null, longitude: null, accuracyMeters: null, requesting: false };
 
 const buildWhatsAppUrl = (template: string, name: string) =>
-  `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(template.replace(/\{\{\s*nome\s*\}\}/gi, name))}`;
+  `${siteConfig.whatsappUrl}?text=${encodeURIComponent(template.replace(/\{\{\s*nome\s*\}\}/gi, name))}`;
 
 export default function FormPage() {
   const { slug } = useParams<{ slug: string }>();

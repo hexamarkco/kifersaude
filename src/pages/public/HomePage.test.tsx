@@ -87,7 +87,7 @@ test("preserva o contrato da captação, normalização e redirecionamento somen
       website: "",
     });
     assert.equal(api.opened.length, 1);
-    assert.ok(api.opened[0].includes("https://wa.me/5521979302389?text="));
+    assert.ok(api.opened[0].includes("https://wa.me/5521997462039?text="));
     assert.equal(
       view.container.querySelector<HTMLInputElement>("#quote-name")?.value,
       "",

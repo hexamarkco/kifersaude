@@ -2,7 +2,6 @@ import {
   Heart,
   Instagram,
   Mail,
-  MapPin,
   MessageCircle,
   Phone,
   ShieldCheck,
@@ -119,10 +118,11 @@ export default function HomeFooter({ onQuote }: Props) {
               <div>
                 <Text>Telefone</Text>
                 <TextLink
-                  href={`tel:${siteConfig.telephone.replace(/\s/g, "")}`}
+                  href={siteConfig.telephoneHref}
                 >
                   {siteConfig.telephone}
                 </TextLink>
+                <Text className="home-footer-contact-note">Seg. a Sex. das 9h às 18h</Text>
               </div>
             </li>
             <li>
@@ -138,6 +138,7 @@ export default function HomeFooter({ onQuote }: Props) {
                 >
                   {siteConfig.telephone}
                 </TextLink>
+                <Text className="home-footer-contact-note">Atendimento rápido e consultivo</Text>
               </div>
             </li>
             <li>
@@ -149,22 +150,19 @@ export default function HomeFooter({ onQuote }: Props) {
                 <TextLink href={`mailto:${siteConfig.email}`}>
                   {siteConfig.email}
                 </TextLink>
+                <Text className="home-footer-contact-note">Respondemos em até 1 dia útil</Text>
               </div>
-            </li>
-            <li>
-              <MapPin aria-hidden="true" />
-              <Text>Rio de Janeiro, RJ</Text>
             </li>
           </ul>
           <div className="home-footer-social">
             <Heading level={2}>Siga a Kifer</Heading>
             <TextLink
               href={siteConfig.instagramUrl}
+              aria-label="Instagram da Kifer Saúde"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Instagram aria-hidden="true" />
-              @souluizakifer
             </TextLink>
           </div>
         </div>

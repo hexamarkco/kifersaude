@@ -4,7 +4,7 @@
 
 @media (min-width: 1024px) {
   .painel-theme.kifer-ds.kifer-home { --home-header-height: clamp(3.5rem, 4.15vw, 4.25rem); }
-  .kifer-home .home-hero { background: color-mix(in srgb, var(--accent-copper) 3%, var(--home-paper)); }
+  .kifer-home .home-hero { background: var(--home-paper); }
   .kifer-home .kds-public-header-inner {
     max-width: none;
     min-height: var(--home-header-height);

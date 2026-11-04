@@ -1,4 +1,6 @@
 const FALLBACK_SITE_URL = 'https://www.kifersaude.com.br';
+const TELEPHONE = '+55 21 99746-2039';
+const TELEPHONE_DIGITS = TELEPHONE.replace(/\D/g, '');
 
 const normalizeSiteUrl = (value: string | undefined) => {
   try {
@@ -20,8 +22,9 @@ export const siteConfig = {
   locale: 'pt_BR',
   language: 'pt-BR',
   email: 'contato@kifersaude.com.br',
-  telephone: '+55 21 97930-2389',
-  whatsappUrl: 'https://wa.me/5521979302389',
+  telephone: TELEPHONE,
+  telephoneHref: `tel:+${TELEPHONE_DIGITS}`,
+  whatsappUrl: `https://wa.me/${TELEPHONE_DIGITS}`,
   instagramUrl: 'https://instagram.com/souluizakifer',
   areaServed: 'Rio de Janeiro',
   defaultOgImage: '/luiza-kifer-hero.png',

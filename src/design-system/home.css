@@ -242,8 +242,9 @@
 .kifer-home .home-quote-profiles .kds-radio-label svg { width: 1.3rem; height: 1.3rem; color: var(--text-secondary); margin-bottom: var(--space-1); }
 .kifer-home .home-quote-profiles .kds-radio-label strong { font-size: 0.75rem; font-weight: 500; }
 .kifer-home .home-quote-profiles .kds-radio-label small { font-size: 0.625rem; color: var(--text-secondary); font-weight: 400; line-height: 1.45; }
-.kifer-home .home-quote-profiles .kds-radio-checked .kds-radio-indicator { border-color: var(--brand-primary); }
-.kifer-home .home-quote-profiles .kds-radio-checked .kds-radio-indicator::after { background: var(--brand-primary); }
+.kifer-home .home-quote-profiles .kds-radio-indicator { background: var(--bg-surface); }
+.kifer-home .home-quote-profiles .kds-radio-checked .kds-radio-indicator { border-color: var(--text-primary); }
+.kifer-home .home-quote-profiles .kds-radio-checked .kds-radio-indicator::after { background: var(--text-primary); }
 .kifer-home .home-age-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); }
 .kifer-home .home-age-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .kifer-home .home-city { position: relative; }
@@ -295,11 +296,14 @@
 /* 10 — Deep terracotta footer with only official channels */
 .kifer-home .home-footer { position: relative; overflow: clip; background: var(--home-footer); color: var(--text-on-brand); }
 .kifer-home .home-footer::before, .kifer-home .home-footer::after { content: ''; pointer-events: none; position: absolute; border-radius: 45% 25% 60% 40%; }
-.kifer-home .home-footer::before { left: -12%; top: -28%; width: 32%; height: 60%; background: color-mix(in srgb, var(--brand-primary) 22%, transparent); transform: rotate(-24deg); }
+.kifer-home .home-footer::before { left: -10rem; top: -12rem; width: 24rem; height: 20rem; background: color-mix(in srgb, var(--brand-primary) 22%, transparent); transform: rotate(-24deg); }
 .kifer-home .home-footer::after { right: -18%; bottom: -34%; width: 35rem; height: 50rem; border: 6rem solid color-mix(in srgb, var(--brand-primary) 16%, transparent); transform: rotate(38deg); }
 .kifer-home .home-footer-grid, .kifer-home .home-footer-bottom { position: relative; z-index: 1; }
 .kifer-home .home-footer :is(.kds-heading, .kds-text, .kds-text-link, .kds-workspace-brand) { color: inherit; }
-.kifer-home .home-footer-grid { display: grid; grid-template-columns: 1.5fr 0.7fr 0.95fr 1.2fr; gap: 6%; padding-block: var(--home-space) var(--space-16); }
+.kifer-home .home-footer-grid { display: grid; grid-template-columns: 1.5fr 0.7fr 1fr 1.15fr; gap: 5%; padding-block: var(--space-16); }
+.kifer-home .home-footer > .home-container, .kifer-home .home-footer-bottom > .home-container { max-width: 100rem; }
+.kifer-home .home-footer-brand .kds-workspace-brand > span,
+.kifer-home .home-footer-brand .kds-workspace-brand > span > span { color: var(--text-on-brand); }
 .kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: clamp(3rem, 4vw, 4rem); }
 .kifer-home .home-footer-brand .kds-workspace-brand > span > span { font-size: 0.73em; font-weight: 400; }
 .kifer-home .home-footer-tagline { font-size: clamp(1.25rem, 1.65vw, 1.75rem); line-height: 1.45; margin-block: var(--space-8) var(--space-5); }
@@ -320,15 +324,38 @@
 .kifer-home .home-footer-contact li { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
 .kifer-home .home-footer-contact li > div { min-width: 0; }
 .kifer-home .home-footer-contact li .kds-text { font-size: 0.8125rem; opacity: 0.85; }
-.kifer-home .home-footer-contact li a { display: inline-block; font-size: 0.9375rem; font-weight: 600; overflow-wrap: anywhere; min-height: 2rem; }
+.kifer-home .home-footer-contact li a { display: inline-block; font-size: 0.9375rem; font-weight: 600; overflow-wrap: anywhere; line-height: 1.5; }
+.kifer-home .home-footer-contact li .home-footer-contact-note { font-size: .75rem; margin-top: var(--space-1); }
 .kifer-home .home-footer-social { padding-top: var(--space-6); margin-top: var(--space-6); border-top: 1px solid color-mix(in srgb, var(--text-on-brand) 15%, transparent); }
-.kifer-home .home-footer-social a { display: inline-flex; align-items: center; gap: var(--space-3); font-size: 0.875rem; min-height: 2.75rem; }
+.kifer-home .home-footer-social a { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-full); background: color-mix(in srgb, var(--brand-primary) 75%, transparent); }
 .kifer-home .home-footer-social h2 { margin-bottom: var(--space-3); }
 .kifer-home .home-footer-bottom { border-top: 1px solid color-mix(in srgb, var(--text-on-brand) 15%, transparent); padding-block: var(--space-8); }
 .kifer-home .home-footer-bottom > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-8); }
 .kifer-home .home-footer-bottom .kds-text, .kifer-home .home-footer-bottom a { font-size: 0.75rem; }
 .kifer-home .home-footer-bottom a { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .kifer-home .home-footer-bottom > div > div { display: flex; align-items: center; gap: var(--space-4); }
+.kifer-home .home-footer-bottom > div > div::before { content: ''; width: 1px; height: var(--space-6); margin-right: var(--space-4); background: color-mix(in srgb, var(--text-on-brand) 45%, transparent); }
+
+/* Carry the paper surface through the editorial sections. Let large decorative
+   backgrounds taper before the following section instead of ending on a seam. */
+.kifer-home main { background: var(--home-paper); }
+.kifer-home .home-hero { background: var(--home-paper); }
+.kifer-home .home-faq-art {
+  mask-image: url('/images/home/section-finish-mask.svg');
+  mask-size: 100% 100%;
+}
+.kifer-home .home-quote-background {
+  mask-image: url('/images/home/section-finish-mask.svg');
+  mask-size: 100% 100%;
+}
+.kifer-home .home-whatsapp-photo {
+  mask-image: url('/images/home/section-finish-mask.svg');
+  mask-size: 100% 100%;
+}
+.kifer-home .home-footer {
+  border-start-start-radius: 55% 1.75rem;
+  border-start-end-radius: 45% 1rem;
+}
 
 /* Motion never supplies resting visibility: the page also works without observers or animations. */
 .kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button,
@@ -357,6 +384,15 @@
 @keyframes home-motion-feedback { from { opacity: 0.5; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 1024px) {
+  .kifer-home .home-about::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px;
+    height: clamp(1rem, 2vw, 2rem);
+    border-radius: 70% 100% 0 0;
+    background: var(--home-paper);
+    pointer-events: none;
+  }
   .painel-theme.kifer-ds.kifer-home {
     --home-space: clamp(2.75rem, 3.35vw, 4rem);
     --home-body: clamp(1rem, 1.05vw, 1.0625rem);
@@ -614,7 +650,7 @@
   .kifer-home .home-phone-status > i { height: 1.4rem; }
   .kifer-home .home-phone-header { gap: var(--space-1); }
   .kifer-home .home-phone-header > svg:nth-last-child(3), .kifer-home .home-phone-header > svg:last-child { display: none; }
-  .kifer-home .home-footer-grid { grid-template-columns: 1fr 1fr; gap: var(--space-10) var(--space-5); padding-block: var(--space-12); }
+  .kifer-home .home-footer-grid { grid-template-columns: 1fr; gap: var(--space-8); max-width: 30rem; padding-block: var(--space-10); }
   .kifer-home .home-footer-brand { grid-column: 1 / -1; grid-row: auto; }
   .kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: 3.75rem; }
   .kifer-home .home-footer-tagline { font-size: 1.5rem; margin-top: var(--space-6); }
@@ -631,6 +667,7 @@
   .kifer-home .home-footer-contact > .kds-text { margin-top: var(--space-5); }
   .kifer-home .home-footer-social { margin-top: var(--space-6); }
   .kifer-home .home-footer-bottom > div { flex-direction: column; align-items: flex-start; gap: var(--space-5); }
+  .kifer-home .home-footer-bottom > div > div::before { display: none; }
   .kifer-home .home-footer-bottom .kds-text { font-size: 0.6875rem; }
 }
 /* Mobile reference compositions. The approved tablet and desktop rules stay above. */

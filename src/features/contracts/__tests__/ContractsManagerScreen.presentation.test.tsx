@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { act } from 'react';
 import { test, vi } from 'vitest';
 import { render, screen } from '../../../testing-library/react';
+import { LOADING_CYCLE_MS } from '../../../design-system/useMinimumLoading';
 
 const mocks = vi.hoisted(() => ({
   loadContracts: vi.fn(),
@@ -72,7 +73,6 @@ vi.mock('../../../hooks/usePanelMotion', () => ({
     ease: 'none',
   }),
 }));
-vi.mock('../../../hooks/useAdaptiveLoading', () => ({ useAdaptiveLoading: () => ({ phase: 'hidden' }) }));
 vi.mock('../../../hooks/useConfirmationModal', () => ({
   useConfirmationModal: () => ({ requestConfirmation: vi.fn(), ConfirmationDialog: null }),
 }));
@@ -80,6 +80,7 @@ vi.mock('../../../hooks/useConfirmationModal', () => ({
 import ContractsManagerScreen from '../ContractsManagerScreen';
 
 test('opens the bulk import dialog from the labeled secondary header action', async () => {
+  vi.useFakeTimers();
   loadContractsMock.mockResolvedValue({
     contracts: [],
     holdersByContractId: {},
@@ -94,6 +95,7 @@ test('opens the bulk import dialog from the labeled secondary header action', as
       await Promise.resolve();
       await Promise.resolve();
     });
+    await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
     await screen.findByText('Gestão de contratos');
     const importButton = Array.from(view.container.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.textContent?.includes('Importar em massa'));
@@ -110,6 +112,7 @@ test('opens the bulk import dialog from the labeled secondary header action', as
   } finally {
     view.unmount();
     loadContractsMock.mockReset();
+    vi.useRealTimers();
   }
 });
 
@@ -127,6 +130,7 @@ const contract = {
 };
 
 test('opening a contract loads the real details drawer over the retained list', async () => {
+  vi.useFakeTimers();
   loadContractsMock.mockResolvedValue({
     contracts: [contract],
     holdersByContractId: {
@@ -149,6 +153,7 @@ test('opening a contract loads the real details drawer over the retained list', 
       await Promise.resolve();
       await Promise.resolve();
     });
+    await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
     await screen.findByText('Contato Demonstração');
     const contractButton = view.container.querySelector<HTMLButtonElement>(
       'button[title="Contato Demonstração · DS-DEMO-01"]',
@@ -177,6 +182,7 @@ test('opening a contract loads the real details drawer over the retained list', 
       await Promise.resolve();
     });
 
+    await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
     assert.ok(document.body.querySelector('[role="dialog"][aria-label="Detalhes do contrato"]')?.textContent?.includes('Mais informações do contrato'));
     assert.ok(view.container.querySelector('h1')?.textContent?.trim() === 'Gestão de contratos');
   } finally {
@@ -184,5 +190,6 @@ test('opening a contract loads the real details drawer over the retained list', 
     loadContractsMock.mockReset();
     loadContractDetailsMock.mockReset();
     subscribeToContractChangesMock.mockClear();
+    vi.useRealTimers();
   }
 });

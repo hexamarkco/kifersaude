@@ -1354,86 +1354,6 @@ html,
   border-color: var(--success);
 }
 
-@media (max-width: 1023px) {
-  .painel-theme .whatsapp-inbox-thread-header {
-    gap: 0.75rem;
-  }
-
-  .painel-theme .whatsapp-inbox-thread-actions {
-    align-self: stretch;
-    border-top: 1px solid var(--border-subtle);
-    padding-top: 0.75rem;
-  }
-
-  .painel-theme .whatsapp-inbox-messages {
-    overflow-x: hidden;
-    padding-inline: clamp(0.75rem, 3.5vw, 1.25rem);
-    padding-block: 0.875rem;
-  }
-
-  .painel-theme .whatsapp-inbox-thread .message-bubble-row > .relative {
-    max-width: min(92%, 38rem) !important;
-  }
-
-  .painel-theme .whatsapp-inbox-composer-area {
-    padding: 0.75rem;
-  }
-}
-
-@media (max-width: 767px) {
-  .painel-theme .whatsapp-inbox-shell {
-    height: 100%;
-    border-radius: 0;
-  }
-
-  .painel-theme .whatsapp-inbox-status-banner {
-    margin: 0.75rem;
-    margin-bottom: 0;
-  }
-
-  .painel-theme .whatsapp-inbox-sidebar,
-  .painel-theme .whatsapp-inbox-thread {
-    border-inline: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .painel-theme .whatsapp-inbox-sidebar-header {
-    padding: 0.875rem;
-  }
-
-  .painel-theme .whatsapp-inbox-thread-header {
-    padding: 0.75rem;
-  }
-
-  .painel-theme .whatsapp-inbox-thread-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(2.5rem, max-content));
-    justify-content: start;
-    gap: 0.5rem;
-  }
-
-  .painel-theme .whatsapp-inbox-thread .message-bubble-row > .relative {
-    max-width: 94% !important;
-  }
-
-  .painel-theme .whatsapp-inbox-thread .message-bubble {
-    overflow-wrap: anywhere;
-  }
-
-  .painel-theme .whatsapp-inbox-chat-card {
-    box-shadow: none;
-  }
-
-  .painel-theme .whatsapp-inbox-composer {
-    border-radius: var(--radius-xl);
-  }
-
-  .painel-theme .whatsapp-inbox-composer-input {
-    max-height: min(7rem, 26dvh);
-  }
-}
-
 @keyframes whatsapp-waveform-pulse {
   from {
     opacity: 0.6;
@@ -2213,11 +2133,6 @@ html,
     min-height: 2.75rem;
   }
 
-  .whatsapp-inbox-thread-header > div > .flex.items-start.gap-2 > button[aria-label="Voltar para a lista de conversas"] {
-    width: 2.75rem;
-    height: 2.75rem;
-    margin-top: 0;
-  }
 }
 
 /* Keep horizontally scrollable config tab rails free of 1px vertical scrollbars. */

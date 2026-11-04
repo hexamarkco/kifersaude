@@ -1,6 +1,6 @@
-import { FieldLabel, Image, Text, Heading } from '../../../design-system';
+import { LoadingState, FieldLabel, Image, Text, Heading } from '../../../design-system';
 import { FileInput } from '../../../design-system';
-import { ArrowLeft, Image as ImageIcon, Loader, Save, Tag, Upload } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon, Save, Tag, Upload } from "lucide-react";
 import { useMemo, useRef, type ChangeEvent, type ElementRef } from "react";
 import { RichTextEditor } from '../../../design-system';
 
@@ -189,12 +189,7 @@ export default function BlogEditor({
                   className="sr-only"
                   disabled={uploadingCover}
                 />
-                {uploadingCover ? (
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-[var(--warning-text)]">
-                    <Loader className="h-5 w-5 animate-spin" />
-                    <span className="font-semibold">Fazendo upload...</span>
-                  </div>
-                ) : (
+                {<LoadingState active={uploadingCover} className="flex flex-wrap items-center justify-center gap-2 text-[var(--warning-text)]" label={<><span className="font-semibold">Fazendo upload...</span></>} fallback={() => (
                   <div className="flex flex-wrap items-center justify-center gap-2 text-[var(--warning-text)]">
                     <Upload className="h-5 w-5" />
                     <span className="font-semibold">
@@ -204,7 +199,7 @@ export default function BlogEditor({
                       (JPG, PNG, WEBP, GIF - max 5MB)
                     </span>
                   </div>
-                )}
+                )} />}
               </FieldLabel>
             </div>
 
@@ -252,21 +247,16 @@ export default function BlogEditor({
                 className="sr-only"
                 disabled={uploadingContent}
               />
-              {uploadingContent ? (
-                <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span className="text-sm font-semibold">
+              {<LoadingState active={uploadingContent} className="flex items-center gap-2 text-[var(--text-secondary)]" label={<><span className="text-sm font-semibold">
                     Fazendo upload...
-                  </span>
-                </div>
-              ) : (
+                  </span></>} fallback={() => (
                 <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                   <Upload className="h-4 w-4" />
                   <span className="text-sm font-semibold">
                     Adicionar imagem ao conteúdo
                   </span>
                 </div>
-              )}
+              )} />}
             </FieldLabel>
             <Text className="mt-1 text-xs text-[var(--text-muted)]">
               Faça upload de imagens que serão inseridas no final do editor.

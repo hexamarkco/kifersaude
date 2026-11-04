@@ -1,4 +1,4 @@
-import { Heading, Text, Image } from '../../../../design-system';
+import { useMinimumLoading, LoadingMonogram, Heading, Text, Image } from '../../../../design-system';
 import { IconButton, ActionSurface, Input } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -7,7 +7,6 @@ import {
   Flame,
   Globe,
   Heart,
-  Loader2,
   PartyPopper,
   PawPrint,
   Search,
@@ -278,6 +277,7 @@ export default function WhatsAppMediaDrawer({
   const [recentEmojis, setRecentEmojis] = useState<string[]>(readStoredRecents);
   const [mediaItems, setMediaItems] = useState<TenorMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
+  const showMediaLoading = useMinimumLoading(mediaLoading);
   const [mediaError, setMediaError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -533,9 +533,9 @@ export default function WhatsAppMediaDrawer({
               ))}
             </div>
           )
-        ) : mediaLoading ? (
+        ) : showMediaLoading ? (
           <div className="comm-media-picker-empty-state">
-            <Loader2 className="h-6 w-6 animate-spin text-[var(--text-secondary)]" />
+            <LoadingMonogram className="h-6 w-6 text-[var(--text-secondary)]" />
             <Heading level={3} className="comm-media-picker-empty-title">Carregando {mode === 'gif' ? 'GIFs' : 'figurinhas'}</Heading>
           </div>
         ) : mediaError ? (

@@ -18,6 +18,7 @@ import {
   Input,
   LinkButton,
   LoadingState,
+  useMinimumLoading,
   PublicEmptyState,
   PublicShell,
   Stepper,
@@ -64,6 +65,7 @@ export default function FormPage() {
   const { slug } = useParams<{ slug: string }>();
 
   const [loading, setLoading] = useState(true);
+  const showLoading = useMinimumLoading(loading);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [form, setForm] = useState<PublicForm | null>(null);
@@ -319,7 +321,7 @@ export default function FormPage() {
       </IconButton>
 
       <main className="w-full max-w-md">
-        {loading ? (
+        {showLoading ? (
           <div className="flex min-h-[60vh] items-center justify-center">
             <LoadingState compact label="Carregando..." />
           </div>

@@ -1,5 +1,4 @@
-import { Text } from '../../../../design-system';
-import { Button } from '../../../../design-system';
+import { Button, Heading, Text } from '../../../../design-system';
 import type { ComponentProps, DragEventHandler } from 'react';
 import { MessageCircle } from 'lucide-react';
 
@@ -40,7 +39,7 @@ export const WhatsAppInboxConversationPane = ({
   onDrop,
 }: WhatsAppInboxConversationPaneProps) => (
   <div
-    className={`whatsapp-inbox-panel whatsapp-inbox-thread relative h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-l-none lg:border-l-0 ${conversation ? 'flex' : 'hidden lg:flex'}`}
+    className={`whatsapp-inbox-panel whatsapp-inbox-thread relative min-h-0 flex-col ${conversation ? 'has-selection' : ''}`}
     onDragEnter={onDragEnter}
     onDragOver={onDragOver}
     onDragLeave={onDragLeave}
@@ -71,10 +70,10 @@ export const WhatsAppInboxConversationPane = ({
         <WhatsAppComposer selectedChat={conversation.selectedChat} {...conversation.composer} />
       </>
     ) : (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
+      <div className="whatsapp-inbox-idle flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+        <span className="whatsapp-inbox-idle-icon"><MessageCircle className="whatsapp-inbox-empty-icon" aria-hidden="true" /></span>
         <div className="space-y-1">
-          <Text className="whatsapp-inbox-heading text-base font-semibold text-[var(--text-primary)]">Selecione uma conversa</Text>
+          <Heading level={2}>Selecione uma conversa</Heading>
           <Text className="text-sm text-[var(--text-secondary)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</Text>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 
 import {
   Button,
+  Avatar,
   ConfirmDialog,
   Dialog,
   DialogBody,
@@ -99,7 +100,8 @@ export function WhatsAppInboxDialogs({
                 const isSelected = forwardingTargetIds.includes(chat.id);
                 return (
                   <ActionSurface variant="plain" padding="none" key={chat.id} type="button" onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
-                    <div className="min-w-0"><Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</Text><Text className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</Text></div>
+                    <span aria-hidden="true"><Avatar name={getSafeChatDisplayName(chat, connectedUserName)} tone="brand" /></span>
+                    <div className="min-w-0 flex-1"><Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</Text><Text className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</Text></div>
                     {isSelected ? <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"><Check className="h-3 w-3" /></span> : <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />}
                   </ActionSurface>
                 );
@@ -113,11 +115,11 @@ export function WhatsAppInboxDialogs({
         </Dialog>
       ) : null}
 
-      <ConfirmDialog open={Boolean(chatPendingDeletion)} onOpenChange={(open) => { if (!open) onCloseChatDeletion(); }} onConfirm={async () => { if (chatPendingDeletion) { await onDeleteChat(chatPendingDeletion); onCloseChatDeletion(); } }} title="Excluir conversa" description="Excluir esta conversa da lista? Novas mensagens recebidas do contato podem reabrir a conversa." confirmLabel="Excluir" destructive loading={Boolean(chatPendingDeletion && deletingChatId === chatPendingDeletion.id)} />
-      <ConfirmDialog open={Boolean(messagePendingDeletion)} onOpenChange={(open) => { if (!open) onCloseMessageDeletion(); }} onConfirm={async () => { if (messagePendingDeletion) { await onDeleteMessage(messagePendingDeletion); onCloseMessageDeletion(); } }} title="Apagar mensagem" description="Apagar esta mensagem no WhatsApp para todos?" confirmLabel="Apagar" destructive loading={Boolean(messagePendingDeletion && deletingMessageId === messagePendingDeletion.id)} />
-      <ConfirmDialog open={Boolean(retryPendingMessage)} onOpenChange={(open) => { if (!open) onCloseRetryMessage(); }} onConfirm={async () => { if (retryPendingMessage) { await onRetryMediaMessage(retryPendingMessage); onCloseRetryMessage(); } }} title="Reenviar mensagem" description="Confirme que a mensagem anterior realmente não chegou no WhatsApp antes de reenviar. Reenviar uma mensagem que já foi entregue cria uma duplicata para o contato." confirmLabel="Reenviar mesmo assim" loading={Boolean(retryPendingMessage && retryingMessageId === retryPendingMessage.id)} />
+      <ConfirmDialog className="comm-whatsapp-overlay" open={Boolean(chatPendingDeletion)} onOpenChange={(open) => { if (!open) onCloseChatDeletion(); }} onConfirm={async () => { if (chatPendingDeletion) { await onDeleteChat(chatPendingDeletion); onCloseChatDeletion(); } }} title="Excluir conversa" description="Excluir esta conversa da lista? Novas mensagens recebidas do contato podem reabrir a conversa." confirmLabel="Excluir" destructive loading={Boolean(chatPendingDeletion && deletingChatId === chatPendingDeletion.id)} />
+      <ConfirmDialog className="comm-whatsapp-overlay" open={Boolean(messagePendingDeletion)} onOpenChange={(open) => { if (!open) onCloseMessageDeletion(); }} onConfirm={async () => { if (messagePendingDeletion) { await onDeleteMessage(messagePendingDeletion); onCloseMessageDeletion(); } }} title="Apagar mensagem" description="Apagar esta mensagem no WhatsApp para todos?" confirmLabel="Apagar" destructive loading={Boolean(messagePendingDeletion && deletingMessageId === messagePendingDeletion.id)} />
+      <ConfirmDialog className="comm-whatsapp-overlay" open={Boolean(retryPendingMessage)} onOpenChange={(open) => { if (!open) onCloseRetryMessage(); }} onConfirm={async () => { if (retryPendingMessage) { await onRetryMediaMessage(retryPendingMessage); onCloseRetryMessage(); } }} title="Reenviar mensagem" description="Confirme que a mensagem anterior realmente não chegou no WhatsApp antes de reenviar. Reenviar uma mensagem que já foi entregue cria uma duplicata para o contato." confirmLabel="Reenviar mesmo assim" loading={Boolean(retryPendingMessage && retryingMessageId === retryPendingMessage.id)} />
 
-      <Dialog open={saveContactDialogOpen} onOpenChange={(open) => { if (!open) onCloseSaveContact(); }} size="sm">
+      <Dialog open={saveContactDialogOpen} onOpenChange={(open) => { if (!open) onCloseSaveContact(); }} size="sm" className="comm-whatsapp-overlay">
         <DialogHeader onClose={onCloseSaveContact} showCloseButton><DialogTitle>{savedContactNameExists ? 'Renomear contato' : 'Salvar contato'}</DialogTitle></DialogHeader>
         <DialogBody className="space-y-4">
           <DialogDescription placement="visible">{savedContactNameExists ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.' : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}</DialogDescription>

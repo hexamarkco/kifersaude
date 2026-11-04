@@ -1,7 +1,7 @@
 import { Text } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useRef, useState } from 'react';
-import { CheckCircle2, Download, FileUp, Loader2 } from 'lucide-react';
+import { CheckCircle2, Download, FileUp } from 'lucide-react';
 
 import {
   CONTRACT_JSON_BULK_IMPORT_TEMPLATE,
@@ -167,13 +167,13 @@ export function ContractBulkJsonImportDialog({
       <DialogFooter className="kds-contract-bulk-import-footer">
         <Button type="button" variant="secondary" onClick={onClose} disabled={loading || importing}>Cancelar</Button>
         {payload ? (
-          <Button type="button" onClick={() => void handleImport()} disabled={importing}>
-            {importing ? <Loader2 className="kds-control-icon animate-spin" /> : <CheckCircle2 className="kds-control-icon" />}
+          <Button loading={importing} type="button" onClick={() => void handleImport()} disabled={importing}>
+            <CheckCircle2 className="kds-control-icon" />
             {importing ? 'Importando contratos...' : `Importar ${payload.contracts.length} contrato(s)`}
           </Button>
         ) : (
-          <Button type="button" disabled={!file || Boolean(error) || loading} onClick={() => void handleValidate()}>
-            {loading && <Loader2 className="kds-control-icon animate-spin" />}
+          <Button loading={loading} type="button" disabled={!file || Boolean(error) || loading} onClick={() => void handleValidate()}>
+
             {loading ? 'Validando JSON...' : 'Validar arquivo'}
           </Button>
         )}

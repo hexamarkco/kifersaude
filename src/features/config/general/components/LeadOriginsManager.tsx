@@ -231,7 +231,7 @@ export default function LeadOriginsManager() {
           >
             Cancelar
           </Button>
-          <Button type="submit" form="lead-origin-create-form" disabled={saving}>
+          <Button type="submit" form="lead-origin-create-form" loading={saving}>
             <Plus className="kds-control-icon" />
             <span>{saving ? 'Salvando' : 'Adicionar'}</span>
           </Button>

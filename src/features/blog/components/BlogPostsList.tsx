@@ -11,7 +11,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { BlogTabSkeletonList } from '../../../design-system';
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Badge,
@@ -31,14 +30,13 @@ import {
   RecordActions,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../../../design-system";
-import type { AdaptiveLoadingPhase } from "../../../hooks/useAdaptiveLoading";
 import type { BlogPost } from "../shared/blogTypes";
 
 type BlogPostsListProps = {
   hasPostsSnapshot: boolean;
   loading: boolean;
   loadError: boolean;
-  loadingPhase: AdaptiveLoadingPhase;
+
   onRetry: () => void;
   onCreatePost: () => void;
   onDeletePost: (post: BlogPost) => void;
@@ -57,7 +55,7 @@ export default function BlogPostsList({
   hasPostsSnapshot,
   loading,
   loadError,
-  loadingPhase,
+
   onRetry,
   onCreatePost,
   onDeletePost,
@@ -134,9 +132,9 @@ export default function BlogPostsList({
         )}
         <PanelAdaptiveLoadingFrame
           loading={loading}
-          phase={loadingPhase}
+          label="Carregando artigos"
           hasContent={hasPostsSnapshot}
-          skeleton={<BlogTabSkeletonList />}
+
           overlayLabel="Atualizando posts..."
           stageClassName="min-h-[360px]"
         >

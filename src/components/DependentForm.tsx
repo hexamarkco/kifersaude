@@ -329,12 +329,13 @@ export default function DependentForm({
               <IconButton
                 type="button"
                 onClick={() => void handleConsultarCPF({ force: true })}
-                disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
+                loading={cpfLoading}
+                disabled={formData.cpf.replace(/\D/g, '').length !== 11}
                 aria-label="Buscar CPF"
                 variant="ghost"
                 className="absolute right-1 top-1/2 -translate-y-1/2"
                size="sm">
-                <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
+                <Search className="kds-control-icon" />
               </IconButton>
             </div>
           </Field>

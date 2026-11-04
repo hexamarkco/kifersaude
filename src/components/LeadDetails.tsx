@@ -221,9 +221,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
             className="mb-4"
             action={<History className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />}
           />
-          {loading ? (
-            <LoadingState compact label="Carregando linha do tempo" className="py-8" />
-          ) : timelineLoadError ? (
+          {<LoadingState active={loading} compact label="Carregando linha do tempo" className="py-8" fallback={() => timelineLoadError ? (
             <Alert tone="danger" role="alert" className="items-start">
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -280,7 +278,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
                 </Surface>
               ))}
             </div>
-          )}
+          )} />}
         </section>
 
 );
@@ -366,9 +364,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
           </Surface>
         )}
 
-        {loading ? (
-          <LoadingState compact label="Carregando interações" className="py-12" />
-        ) : timelineLoadError ? (
+        {<LoadingState active={loading} compact label="Carregando interações" className="py-12" fallback={() => timelineLoadError ? (
           <Text className="py-8 text-sm text-[var(--text-muted)]">
             As interações não estão disponíveis enquanto o histórico não for carregado.
           </Text>
@@ -397,7 +393,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
               </Surface>
             ))}
           </div>
-        )}
+        )} />}
 </Surface>;
   const leadData = [
     ['Nome', lead.nome_completo], ['Telefone', lead.telefone], ['E-mail', lead.email],
@@ -431,7 +427,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
       {activeSection === 'history' && <><Surface>{renderTimeline()}</Surface>{interaction}</>}
       {activeSection === 'data' && <Surface><SectionHeader as="h2" title="Dados do lead" /><dl className="kds-detail-data-grid">{leadData.map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}</dl></Surface>}
       {activeSection === 'followups' && <Surface className="kds-detail-followups"><SectionHeader as="h2" title="Follow-ups" action={canEditLead && onScheduleReminder ? <Button onClick={() => onScheduleReminder(lead)}>Agendar follow-up</Button> : undefined} />
-        {loading ? <LoadingState label="Carregando follow-ups" /> : timelineLoadError ? <Alert tone="danger">Não foi possível carregar os follow-ups. Consulte novamente o histórico.</Alert> : reminders.length === 0 ? <EmptyState title="Nenhum follow-up registrado" description="Agende o próximo contato para acompanhar este lead." /> : reminders.map(reminder => <Surface key={reminder.id} variant="muted"><div className="kds-detail-reminder-heading"><Text>{reminder.titulo}</Text><Badge tone={reminder.lido ? 'success' : 'warning'}>{reminder.lido ? 'Concluído' : 'Pendente'}</Badge></div><Text>{reminder.descricao}</Text><time dateTime={reminder.data_lembrete}>{formatDateTimeFullBR(reminder.data_lembrete)}</time></Surface>)}
+        {<LoadingState active={loading} label="Carregando follow-ups" fallback={() => timelineLoadError ? <Alert tone="danger">Não foi possível carregar os follow-ups. Consulte novamente o histórico.</Alert> : reminders.length === 0 ? <EmptyState title="Nenhum follow-up registrado" description="Agende o próximo contato para acompanhar este lead." /> : reminders.map(reminder => <Surface key={reminder.id} variant="muted"><div className="kds-detail-reminder-heading"><Text>{reminder.titulo}</Text><Badge tone={reminder.lido ? 'success' : 'warning'}>{reminder.lido ? 'Concluído' : 'Pendente'}</Badge></div><Text>{reminder.descricao}</Text><time dateTime={reminder.data_lembrete}>{formatDateTimeFullBR(reminder.data_lembrete)}</time></Surface>)} />}
       </Surface>}
     </section>
   );

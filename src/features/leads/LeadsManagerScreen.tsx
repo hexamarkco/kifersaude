@@ -107,8 +107,6 @@ import {
 } from "../../lib/leadReminderUtils";
 import { downloadXlsx } from "../../lib/xlsxExport";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { LeadsPageSkeleton } from '../../design-system';
-import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import { LeadStatusMutationLock } from "./shared/leadStatusMutationLock";
@@ -238,7 +236,6 @@ export default function LeadsManager({
     revealDistance,
     ease,
   } = usePanelMotion();
-  const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const activeLeadStatuses = useMemo(
     () => leadStatuses.filter((status) => status.ativo),
@@ -1638,9 +1635,9 @@ export default function LeadsManager({
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
-      phase={loadingUi.phase}
+      label="Carregando contatos"
       hasContent={hasLeadsSnapshot}
-      skeleton={<LeadsPageSkeleton />}
+
       overlayLabel="Atualizando leads..."
       stageClassName="panel-dashboard-immersive"
     >

@@ -14,8 +14,6 @@ import {
   type AutoContactSettings,
 } from "../../../../lib/autoContactService";
 import type { IntegrationSetting } from "../../domain/types";
-import { WhatsAppApiSkeleton } from '../../../../design-system';
-import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../../../design-system';
 import { toast } from "../../../../lib/toast";
 import { formatConnectionStatusLabel } from '../../../communication/whatsapp';
@@ -56,7 +54,6 @@ export default function WhatsAppApiSettingsPanel() {
   const [selection, setSelection] = useState<WhatsAppProvider>();
   const selectedProvider = selection ?? transport?.activeProvider;
   const provider = selectedProvider ? transport?.providers[selectedProvider] : undefined;
-  const loadingUi = useAdaptiveLoading(loading);
 
   const setStatusMessage = (message: MessageState) => {
     if (!message) return;
@@ -306,9 +303,9 @@ export default function WhatsAppApiSettingsPanel() {
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
-      phase={loadingUi.phase}
+      label="Carregando conexão do WhatsApp"
       hasContent={autoContactIntegration !== null}
-      skeleton={<WhatsAppApiSkeleton />}
+
       overlayLabel="Atualizando conexão do WhatsApp..."
       stageClassName="min-h-[340px]"
     >

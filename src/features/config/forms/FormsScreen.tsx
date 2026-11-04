@@ -440,7 +440,7 @@ export default function FormsScreen({
           <Button type="button" variant="secondary" onClick={closeCreateDialog} disabled={creating}>
             Cancelar
           </Button>
-          <Button type="submit" form="form-create-form" disabled={creating}>
+          <Button type="submit" form="form-create-form" loading={creating}>
             <Plus className="kds-control-icon" />
             <span>{creating ? "Criando" : "Criar"}</span>
           </Button>

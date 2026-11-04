@@ -1,10 +1,13 @@
-import { AlertTriangle, ArrowUpRight, Bell, Bot, CalendarPlus, Check, Clock3, Loader2, MapPin, Pencil, RefreshCw, Sparkles, Unlink, Info, Link2, Plus, UserPlus } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Bell, Bot, CalendarPlus, Check, Clock3, MapPin, Pencil, RefreshCw, Sparkles, Unlink, Info, Link2, Plus, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import {
+  LoadingMonogram,
+  LoadingState,
+  useMinimumLoading,
   Avatar,
   Badge,
   Button,
@@ -147,6 +150,7 @@ export default function WhatsAppLeadDrawer({
   canEditAgenda,
   onSaveContact,
 }: WhatsAppLeadDrawerProps) {
+  const showSearchLoading = useMinimumLoading(searchLoading);
   const [activeTab, setActiveTab] = useState<LeadDrawerTab>('info');
   const phoneRegion = getCommWhatsAppPhoneRegion(chatPhoneNumber);
 
@@ -523,12 +527,7 @@ export default function WhatsAppLeadDrawer({
 
           {activeTab === 'critique' ? (
             <WhatsAppAttendanceCritiquePanel chatId={chatId} isActive={activeTab === 'critique'} />
-          ) : loading ? (
-            <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Carregando informações do chat...
-            </div>
-          ) : leadPanelError ? (
+          ) : <LoadingState active={loading} className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]" label="Carregando informações do chat..." fallback={() => leadPanelError ? (
             <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="min-w-0 flex-1">
@@ -606,8 +605,8 @@ export default function WhatsAppLeadDrawer({
                           Agendar
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => void loadAgendaReminders()} disabled={agendaLoading}>
-                        <RefreshCw className={`h-4 w-4 ${agendaLoading ? 'animate-spin' : ''}`} />
+                      <Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => void loadAgendaReminders()} loading={agendaLoading}>
+                        <RefreshCw className="kds-control-icon" />
                         Atualizar
                       </Button>
                     </div>
@@ -618,17 +617,7 @@ export default function WhatsAppLeadDrawer({
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                       <span className="text-sm">{agendaError}</span>
                     </Surface>
-                  ) : agendaLoading ? (
-                    <div className="mt-4 space-y-3">
-                      {[1, 2, 3].map((item) => (
-                        <div key={item} className="animate-pulse rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4">
-                          <div className="h-4 w-28 rounded bg-[var(--bg-hover)]" />
-                          <div className="mt-3 h-3 w-40 rounded bg-[var(--bg-inset)]" />
-                          <div className="mt-4 h-8 w-full rounded bg-[var(--bg-inset)]" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : pendingAgendaReminders.length === 0 ? (
+                  ) : <LoadingState active={agendaLoading} className="mt-4" label="Carregando lembretes" fallback={() => pendingAgendaReminders.length === 0 ? (
                     <EmptyState
                       className="mt-4"
                       icon={<Bell className="h-5 w-5" />}
@@ -679,7 +668,7 @@ export default function WhatsAppLeadDrawer({
                         </div>
                       ))}
                     </div>
-                  )}
+                  )} />}
                 </Surface>
               ) : null}
             </div>
@@ -759,9 +748,9 @@ export default function WhatsAppLeadDrawer({
                       </Button>
                     </div>
                   </Surface>
-                ) : searchLoading ? (
+                ) : showSearchLoading ? (
                   <div className="flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] px-4 py-6 text-sm text-[var(--text-muted)]">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoadingMonogram className="mr-2 h-4 w-4" />
                     Buscando leads...
                   </div>
                 ) : searchResults.length === 0 ? (
@@ -805,7 +794,7 @@ export default function WhatsAppLeadDrawer({
                 )}
               </div>
             </div>
-          )}
+          )} />}
         </DrawerBody>
     </>
   );

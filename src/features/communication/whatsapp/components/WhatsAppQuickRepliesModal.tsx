@@ -120,6 +120,7 @@ export default function WhatsAppQuickRepliesModal({
 
   return (
     <DialogShell
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
       closeOnOverlay={!saving}

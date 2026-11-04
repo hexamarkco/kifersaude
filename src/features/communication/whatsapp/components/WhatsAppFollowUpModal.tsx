@@ -310,6 +310,7 @@ export default function WhatsAppFollowUpModal({
 
   return (
     <WorkspaceDialog
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
       title="Gerar follow-up"

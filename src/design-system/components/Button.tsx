@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes } from 'react';
-import { Loader2 } from 'lucide-react';
-
 import { cx } from '../../lib/cx';
+import { LoadingMonogram } from './LoadingMonogram';
+import { useMinimumLoading } from '../useMinimumLoading';
 import {
   getPanelButtonClass,
   panelIconButtonSizeClasses,
@@ -35,15 +35,16 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   },
   ref,
 ) {
-  const isDisabled = Boolean(disabled || loading);
+  const showLoading = useMinimumLoading(loading);
+  const isDisabled = Boolean(disabled || showLoading);
 
   return (
     <button
       ref={ref}
       type={type ?? 'button'}
       disabled={isDisabled}
-      aria-busy={loading || undefined}
-      data-loading={loading || undefined}
+      aria-busy={showLoading || undefined}
+      data-loading={showLoading || undefined}
       className={getPanelButtonClass({
         variant,
         size,
@@ -52,7 +53,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       })}
       {...props}
     >
-      {loading && <Loader2 className={cx('kds-button-spinner animate-spin', panelButtonSpinnerSizeClasses[size])} aria-hidden="true" />}
+      {showLoading && <LoadingMonogram className={cx('kds-button-spinner', panelButtonSpinnerSizeClasses[size])} />}
       <span className="kds-button-content">{children}</span>
     </button>
   );

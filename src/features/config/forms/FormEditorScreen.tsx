@@ -450,9 +450,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           </Button>
         </div>
 
-        {loadingSteps ? (
-          <LoadingState compact label="Carregando perguntas..." />
-        ) : stepsLoadError && steps.length === 0 ? (
+        {<LoadingState active={loadingSteps} compact label="Carregando perguntas..." fallback={() => stepsLoadError && steps.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--danger)] p-5 text-center" role="alert">
             <Text className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as perguntas.</Text>
             <Text className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</Text>
@@ -502,7 +500,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
               );
             })}
           </div>
-        )}
+        )} />}
 
         {contactStep && (
           <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
@@ -528,9 +526,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           <Users className="h-5 w-5 text-[var(--text-muted)]" />
         </div>
 
-        {loadingSubmissions ? (
-          <LoadingState compact label="Carregando respostas..." />
-        ) : submissionsLoadError && submissions.length === 0 ? (
+        {<LoadingState active={loadingSubmissions} compact label="Carregando respostas..." fallback={() => submissionsLoadError && submissions.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--danger)] p-5 text-center" role="alert">
             <Text className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as respostas.</Text>
             <Text className="text-sm text-[var(--text-secondary)]">Verifique sua conexão ou sessão e tente novamente.</Text>
@@ -572,7 +568,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
               </Card>
             ))}
           </div>
-        )}
+        )} />}
       </Card>
 
       <StepEditorDialog

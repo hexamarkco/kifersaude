@@ -17,7 +17,8 @@ import {
   PageActions,
   SearchInput,
   SectionHeader,
-  Skeleton,
+  LoadingState,
+  useMinimumLoading,
   Tabs,
   Text,
 } from "../../../design-system";
@@ -50,6 +51,7 @@ export default function AiConfigScreen() {
   const [features, setFeatures] = useState<AiFeatureWithConfig[]>([]);
   const [globalConfigs, setGlobalConfigs] = useState<AiGlobalConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const showGlobalLoading = useMinimumLoading(loading);
   const [loadFailures, setLoadFailures] = useState({ features: false, global: false });
   const [section, setSection] = useConfigParam(
     "section",
@@ -389,19 +391,7 @@ export default function AiConfigScreen() {
             />
           </div>
 
-          {loading ? (
-            <div className="kds-ai-feature-loading" aria-label="Carregando funcionalidades de IA" aria-busy="true">
-              {Array.from({ length: 4 }, (_, index) => (
-                <div className="kds-ai-feature-loading-row" key={index}>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton variant="line" className="h-4 w-48 max-w-full" />
-                    <Skeleton variant="line" className="h-3 w-72 max-w-full" />
-                  </div>
-                  <Skeleton className="h-9 w-24" />
-                </div>
-              ))}
-            </div>
-          ) : loadFailures.features ? (
+          {<LoadingState active={loading} label="Carregando funcionalidades de IA" fallback={() => loadFailures.features ? (
             <EmptyState
               icon={<Brain />}
               title="Não foi possível carregar as funcionalidades"
@@ -428,16 +418,14 @@ export default function AiConfigScreen() {
               description={search.trim() ? "Revise o termo digitado ou limpe a busca para ver todos os recursos." : "As funcionalidades de IA disponíveis aparecerão aqui."}
               className="kds-ai-config-empty"
             />
-          )}
+          )} />}
         </Card>
       )}
 
       {section === "global" && (
-        loading ? (
-          <Card padding="md" className="kds-ai-global-loading" aria-busy="true" aria-label="Carregando configurações globais">
-            <Skeleton variant="line" className="h-5 w-52" />
-            <Skeleton className="h-28 w-full" />
-            <Skeleton variant="line" className="ml-auto h-9 w-28" />
+        showGlobalLoading ? (
+          <Card padding="md">
+            <LoadingState label="Carregando configurações globais" />
           </Card>
         ) : loadFailures.global ? (
           <Card padding="md">

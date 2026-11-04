@@ -1,10 +1,9 @@
-import { Text, FieldLabel, Image, Video } from '../../../../design-system';
+import { Text, FieldLabel, Image, Video, LoadingState } from '../../../../design-system';
 import { ActionSurface, IconButton } from '../../../../design-system';
-import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Loader2, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
-import { Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
+import { Avatar, Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
-import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppMessageSearchResult } from '../data';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
 import {
@@ -86,7 +85,7 @@ export function RetryMediaButton({
   onRetry: () => void;
 }) {
   return (
-    <Button
+    <Button loading={loading}
       type="button"
       onClick={onRetry}
       disabled={loading}
@@ -94,7 +93,7 @@ export function RetryMediaButton({
       size="sm"
       className="whatsapp-inbox-retry-button"
     >
-      {loading ? <Loader2 className="animate-spin" /> : <SendHorizontal className="kds-control-icon" />}
+      <SendHorizontal className="kds-control-icon" />
       Reenviar
     </Button>
   );
@@ -267,10 +266,10 @@ export function WhatsAppGalleryMediaTile({
           </ActionSurface>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-            {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
+            <LoadingState compact active={loading} label={'Carregando imagem...'} fallback={() => error || 'Imagem indisponivel'} />
           </div>
         )}
-        {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+        <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
       </div>
     );
   }
@@ -296,10 +295,10 @@ export function WhatsAppGalleryMediaTile({
         </ActionSurface>
       ) : (
         <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-          {loading ? 'Carregando video...' : error || 'Video indisponivel'}
+          <LoadingState compact active={loading} label={'Carregando video...'} fallback={() => error || 'Video indisponivel'} />
         </div>
       )}
-      {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+      <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
     </div>
   );
 }
@@ -378,41 +377,39 @@ export function InboxChatListItem({
     : null;
   const OutboundPreviewStatusIcon = outboundPreviewStatusMeta?.icon;
   const hasUnreadBadge = chat.unread_count > 0 || chat.manual_unread;
+  const displayName = getSafeChatDisplayName(chat, connectedUserName);
 
   return (
     <div
-      className={`group/chat relative whatsapp-inbox-chat-card border-b transition-colors duration-200 ease-out ${selected ? 'is-active' : ''}`}
+      className={`whatsapp-inbox-chat-card whatsapp-inbox-chat-row transition-colors ${selected ? 'is-active' : ''}`}
       onContextMenu={(event) => {
         event.preventDefault();
         onOpenContextMenu(chat.id, { x: event.clientX, y: event.clientY });
       }}
     >
-      <div className="px-4 py-3">
-        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} className="whatsapp-inbox-chat-select min-w-0 w-full text-left">
-          <div className="kds-inbox-chat-copy">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <LeadFavoriteBadge favorito={favorito} />
-                <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
-                  {chat.is_group ? <Users className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" aria-label="Grupo" /> : null}
-                  {getSafeChatDisplayName(chat, connectedUserName)}
-                </Text>
-                {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
-                  <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
-                    <span className="min-w-0 truncate">{chat.lead_status}</span>
-                  </OperationalStatusBadge>
-                ) : null}
-                {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
-                {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
-                {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-start">
-              <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
-            </div>
+      <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-chat-select text-left">
+        <span aria-hidden="true">
+          <Avatar name={displayName} tone="brand" fallback={chat.is_group ? <Users className="kds-control-icon" /> : undefined} />
+        </span>
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <LeadFavoriteBadge favorito={favorito} />
+            <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]" title={displayName}>
+              {chat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}
+              {displayName}
+            </Text>
           </div>
-          <Text className={`mt-px truncate text-sm text-[var(--text-secondary)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
+          <div className="whatsapp-inbox-chat-flags">
+            {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
+              <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
+                <span className="min-w-0 truncate">{chat.lead_status}</span>
+              </OperationalStatusBadge>
+            ) : null}
+            {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
+            {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
+            {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
+          </div>
+          <Text className="truncate text-sm text-[var(--text-secondary)]">
             <WhatsAppPresenceIndicator chat={chat} fallback={draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
@@ -433,31 +430,30 @@ export function InboxChatListItem({
               </>
             ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'} />
           </Text>
+        </div>
+        <div className="whatsapp-inbox-chat-trailing">
+          <span className="whatsapp-inbox-chat-meta text-xs font-medium">{formatMessageTime(chat.last_message_at)}</span>
           {hasUnreadBadge ? (
-            <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
+            <span aria-label={chat.unread_count > 0 ? `${chat.unread_count} mensagens não lidas` : 'Marcada como não lida'} className="whatsapp-inbox-unread-badge inline-flex min-h-5 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
               {chat.unread_count > 0 ? chat.unread_count : '•'}
             </span>
           ) : null}
-          </div>
-        </ActionSurface>
-      </div>
+        </div>
+      </ActionSurface>
 
-      <IconButton variant="ghost" size="sm"
+      <IconButton loading={menuBusy} variant="ghost" size="sm"
         ref={menuTriggerRef}
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           onToggleMenu(chat.id);
         }}
-        className={cx(
-          "whatsapp-inbox-chat-menu-trigger absolute right-3 top-2.5 z-[2] inline-flex items-center justify-center transition-opacity duration-150",
-          menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0 group-hover/chat:pointer-events-auto group-hover/chat:opacity-100 group-focus-within/chat:pointer-events-auto group-focus-within/chat:opacity-100",
-        )}
+        className="whatsapp-inbox-chat-menu-trigger"
         aria-label="Abrir menu da conversa"
         aria-expanded={menuOpen}
         disabled={menuBusy}
       >
-        {menuBusy ? <Loader2 className="animate-spin" /> : <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />}
+        <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />
       </IconButton>
     </div>
   );
@@ -486,10 +482,11 @@ export function InboxMessageSearchListItem({
   }
 
   return (
-    <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
+    <div className={`whatsapp-inbox-chat-card transition-colors ${selected ? 'is-active' : ''}`}>
       <div className="px-4 py-3">
-        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
-          <div className="flex items-start justify-between gap-3">
+        <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(result.chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-search-result min-w-0 w-full text-left">
+          <span aria-hidden="true"><Avatar name={getSafeChatDisplayName(result.chat, connectedUserName)} tone="brand" /></span>
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
                 <LeadFavoriteBadge favorito={favorito} />

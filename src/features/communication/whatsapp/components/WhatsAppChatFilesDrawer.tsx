@@ -1,4 +1,4 @@
-import { Image as DsImage, Video as DsVideo, Audio, Text, TextLink, Heading } from '../../../../design-system';
+import { Image as DsImage, Video as DsVideo, Audio, Text, TextLink, Heading, LoadingMonogram } from '../../../../design-system';
 import { ActionSurface, Slider } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
@@ -27,7 +27,7 @@ import {
   IconButton,
   SectionHeader,
   SegmentedControl,
-  Skeleton,
+  LoadingState,
   Surface,
 } from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
@@ -245,7 +245,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
         </ActionSurface>
       ) : (
         <div className="comm-whatsapp-chat-files-visual-preview is-unavailable" role={error ? 'alert' : 'status'} aria-busy={loading}>
-          <span className="comm-whatsapp-chat-files-visual-placeholder"><Icon className="kds-control-icon" /></span>
+          <span className="comm-whatsapp-chat-files-visual-placeholder">{<LoadingMonogram active={loading} fallback={<Icon className="kds-control-icon" />} className="kds-control-icon" />}</span>
           <Text className="text-xs">{loading ? 'Carregando mídia...' : error || 'Prévia indisponível'}</Text>
           {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
         </div>
@@ -374,6 +374,7 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
         </>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2" role={error ? 'alert' : 'status'} aria-busy={loading}>
+          {<LoadingMonogram active={loading} />}
           <Text className="text-sm text-[var(--text-secondary)]">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
           {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
         </div>
@@ -432,21 +433,6 @@ function LinkFileRow({ message }: { message: CommWhatsAppMessage }) {
         <ExternalLink className="kds-control-icon" />
       </TextLink>
     </Surface>
-  );
-}
-
-function ChatFilesLoadingSkeleton() {
-  return (
-    <div className="comm-whatsapp-chat-files-loading" role="status" aria-live="polite">
-      <span className="sr-only">Carregando arquivos da conversa</span>
-      <div className="comm-whatsapp-chat-files-visual-grid" aria-hidden="true">
-        <Skeleton variant="card" />
-        <Skeleton variant="card" />
-        <Skeleton variant="card" />
-      </div>
-      <Skeleton variant="table-row" aria-hidden="true" />
-      <Skeleton variant="table-row" aria-hidden="true" />
-    </div>
   );
 }
 
@@ -551,9 +537,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
           listClassName="comm-whatsapp-chat-files-tabs-list"
         />
 
-        {loading ? (
-          <ChatFilesLoadingSkeleton />
-        ) : error ? (
+        {<LoadingState active={loading} label="Carregando arquivos da conversa" fallback={() => error ? (
           <EmptyState
             icon={<Files className="kds-control-icon" />}
             title="Arquivos indisponíveis"
@@ -619,7 +603,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
               </Button>
             )}
           </div>
-        )}
+        )} />}
       </DrawerBody>
     </Drawer>
   );

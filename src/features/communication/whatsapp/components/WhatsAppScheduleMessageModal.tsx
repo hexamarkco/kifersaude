@@ -556,6 +556,7 @@ export default function WhatsAppScheduleMessageModal({
 
   return (
     <DialogShell
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
       title={scheduledSequence ? 'Editar sequência agendada' : scheduledMessage ? 'Editar mensagem agendada' : 'Agendar mensagem'}

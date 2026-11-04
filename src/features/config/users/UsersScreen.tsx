@@ -18,8 +18,6 @@ import {
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
 import { toast } from "../../../lib/toast";
-import { UsersSkeleton } from '../../../design-system';
-import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Alert,
@@ -83,7 +81,6 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
   const { sorting, sortBy } = useTableSorting<"username" | "role" | "created_at">("username");
   const usersLoadRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
-  const loadingUi = useAdaptiveLoading(loading);
   const canManageUsers = getRoleModulePermission(
     currentRole,
     "config-users",
@@ -335,9 +332,9 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
-      phase={loadingUi.phase}
+      label="Carregando usuários"
       hasContent={hasUsersSnapshot}
-      skeleton={<UsersSkeleton />}
+
       overlayLabel="Atualizando usuários..."
       stageClassName="min-h-[420px]"
     >

@@ -542,12 +542,13 @@ export default function HolderForm({
                     <IconButton
                       type="button"
                       onClick={() => void handleConsultarCPF({ force: true })}
-                      disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
+                      loading={cpfLoading}
+                      disabled={formData.cpf.replace(/\D/g, '').length !== 11}
                       aria-label="Buscar CPF"
                       variant="ghost"
                       className="absolute right-1 top-1/2 -translate-y-1/2"
                      size="sm">
-                      <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
+                      <Search className="kds-control-icon" />
                     </IconButton>
                   </div>
                 </Field>
@@ -672,11 +673,12 @@ export default function HolderForm({
                     <IconButton
                       type="button"
                       onClick={() => void handleCepSearch()}
+                      loading={loadingCep}
                       aria-label="Buscar CEP"
                       variant="ghost"
                       className="absolute right-1 top-1/2 -translate-y-1/2"
                      size="sm">
-                      <Search className={`h-5 w-5 ${loadingCep ? 'animate-pulse' : ''}`} />
+                      <Search className="kds-control-icon" />
                     </IconButton>
                   </div>
                 </Field>
@@ -749,6 +751,7 @@ export default function HolderForm({
                         : 'Escolha primeiro o estado'
                     }
                     options={citySelectOptions}
+                    loading={loadingCities}
                     disabled={!formData.estado || loadingCities || citySelectOptions.length === 0}
                   />
                 </Field>

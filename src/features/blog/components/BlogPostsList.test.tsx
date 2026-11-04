@@ -7,7 +7,7 @@ import BlogPostsList from './BlogPostsList';
 test('shows a retry instead of an empty state when loading articles fails', () => {
   let retries = 0;
   const retry = () => { retries += 1; };
-  const view = render(<BlogPostsList hasPostsSnapshot={false} loading={false} loadError loadingPhase="hidden"
+  const view = render(<BlogPostsList hasPostsSnapshot={false} loading={false} loadError
     onRetry={retry} onCreatePost={vi.fn()} onDeletePost={vi.fn()} onEditPost={vi.fn()}
     onPreviewPost={vi.fn()} onSearchTermChange={vi.fn()} onTogglePublish={vi.fn()}
     onStatusFilterChange={vi.fn()} statusFilter="" summary={{ published: 0, drafts: 0, views: 0, updated: 0 }}
@@ -28,7 +28,7 @@ test('paginates articles and returns to a valid page when results shrink', () =>
     content: 'Conteúdo', category: 'Guias', read_time: '2 min', author_id: 'demo', published: false,
     created_at: '2026-01-01T12:00:00', updated_at: '2026-01-01T12:00:00', views_count: 0,
   }));
-  const props = { hasPostsSnapshot: true, loading: false, loadError: false, loadingPhase: 'hidden' as const,
+  const props = { hasPostsSnapshot: true, loading: false, loadError: false,
     onRetry: vi.fn(), onCreatePost: vi.fn(), onDeletePost: vi.fn(), onEditPost: vi.fn(),
     onPreviewPost: vi.fn(), onSearchTermChange: vi.fn(), onStatusFilterChange: vi.fn(), onTogglePublish: vi.fn(),
     searchTerm: '', statusFilter: '', summary: { published: 0, drafts: 12, views: 0, updated: 0 } };

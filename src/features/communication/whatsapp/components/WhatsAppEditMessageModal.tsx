@@ -1,7 +1,7 @@
 import {
   Button,
   Textarea,
-  WorkspaceDialog,
+  DialogShell,
 } from '../../../../design-system';
 
 type WhatsAppEditMessageModalProps = {
@@ -26,12 +26,14 @@ export default function WhatsAppEditMessageModal({
   onSubmit,
 }: WhatsAppEditMessageModalProps) {
   return (
-    <WorkspaceDialog
+    <DialogShell
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
       title={title}
       description={description}
-      size="lg"
+      size="form"
+      initialFocus="first-content"
       footer={(
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
@@ -52,6 +54,6 @@ export default function WhatsAppEditMessageModal({
         disabled={loading}
         autoFocus
       />
-    </WorkspaceDialog>
+    </DialogShell>
   );
 }

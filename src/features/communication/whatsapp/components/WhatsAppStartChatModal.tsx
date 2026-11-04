@@ -1,6 +1,6 @@
-import { Text } from '../../../../design-system';
+import { LoadingMonogram, Text } from '../../../../design-system';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Loader2, MessageSquarePlus, Phone, RefreshCw, Search, UserCircle2, UserRound } from 'lucide-react';
+import { AlertTriangle, MessageSquarePlus, Phone, RefreshCw, Search, UserCircle2, UserRound } from 'lucide-react';
 
 import {
   ActionSurface,
@@ -99,6 +99,7 @@ export default function WhatsAppStartChatModal({
 
   return (
     <DialogShell
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
       title={(
@@ -169,13 +170,9 @@ export default function WhatsAppStartChatModal({
                     </Button>
                   </div>
                 </Surface>
-              ) : (source === 'saved' ? contactsLoading : crmLoading) ? (
-                <LoadingState
-                  compact
+              ) : <LoadingState active={(source === 'saved' ? contactsLoading : crmLoading)} compact
                   className="min-h-[12rem] justify-center"
-                  label={`Carregando ${source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...`}
-                />
-              ) : source === 'saved' ? (
+                  label={`Carregando ${source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...`} fallback={() => source === 'saved' ? (
                 contacts.length === 0 ? (
                   <EmptyState
                     className="h-full min-h-0 border-0 bg-transparent px-3 py-8"
@@ -211,7 +208,7 @@ export default function WhatsAppStartChatModal({
                           <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</Text>
                           <Text className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</Text>
                         </div>
-                        {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}
+                        {<LoadingMonogram active={startingKey === `saved:${contact.phone_digits}`} fallback={<UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />} className="h-4 w-4 shrink-0" />}
                       </ActionSurface>
                     ))}
 
@@ -263,11 +260,11 @@ export default function WhatsAppStartChatModal({
                           {lead.responsavel_label ? <Badge tone="neutral" size="sm">{lead.responsavel_label}</Badge> : null}
                         </div>
                       </div>
-                      {startingKey === `crm:${lead.id}` ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserCircle2 className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />}
+                      {<LoadingMonogram active={startingKey === `crm:${lead.id}`} fallback={<UserCircle2 className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />} className="h-4 w-4 shrink-0" />}
                     </ActionSurface>
                   ))}
                 </div>
-              )}
+              )} />}
             </Surface>
           </div>
         )}

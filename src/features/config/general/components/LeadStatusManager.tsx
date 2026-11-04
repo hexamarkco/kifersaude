@@ -308,7 +308,7 @@ export default function LeadStatusManager() {
           >
             Cancelar
           </Button>
-          <Button type="submit" form="lead-status-create-form" disabled={saving}>
+          <Button type="submit" form="lead-status-create-form" loading={saving}>
             <Plus className="kds-control-icon" />
             <span>{saving ? 'Salvando' : 'Adicionar'}</span>
           </Button>

@@ -191,9 +191,7 @@ export function AiSandboxChatPage({
             aria-live="polite"
             aria-relevant="additions text"
           >
-            {messagesLoading ? (
-              <LoadingState compact label="Carregando conversa..." />
-            ) : messages.length === 0 ? (
+            {<LoadingState active={messagesLoading} compact label="Carregando conversa..." fallback={() => messages.length === 0 ? (
               <EmptyState
                 className="kds-ai-thread-empty"
                 icon={<Sparkles className="kds-control-icon kds-ai-empty-icon" />}
@@ -217,7 +215,7 @@ export function AiSandboxChatPage({
                   )}
                 </div>
               ))
-            )}
+            )} />}
 
             {runningScenario && activeConversation?.is_automated && (
               <div className="kds-ai-run-progress" role="status">
@@ -373,9 +371,7 @@ export function AiSandboxChatPage({
           </div>
         </DrawerHeader>
         <DrawerBody className="kds-ai-history-body">
-          {conversationsLoading ? (
-            <LoadingState label="Carregando simulações..." />
-          ) : conversations.length === 0 ? (
+          {<LoadingState active={conversationsLoading} label="Carregando simulações..." fallback={() => conversations.length === 0 ? (
             <EmptyState
               icon={<Clock3 className="kds-control-icon kds-ai-empty-icon" />}
               title="Nenhuma simulação salva"
@@ -407,7 +403,7 @@ export function AiSandboxChatPage({
                 </li>
               ))}
             </ul>
-          )}
+          )} />}
         </DrawerBody>
       </Drawer>
 

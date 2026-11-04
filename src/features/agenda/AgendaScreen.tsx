@@ -1,4 +1,4 @@
-import { ButtonGroup, Heading, Text } from '../../design-system';
+import { useMinimumLoading, LoadingMonogram, ButtonGroup, Heading, Text } from '../../design-system';
 import {
   useCallback,
   useEffect,
@@ -21,7 +21,6 @@ import {
   Circle,
   Clock3,
   ExternalLink,
-  Loader2,
   Plus,
   Search,
   SlidersHorizontal,
@@ -156,6 +155,7 @@ export default function AgendaScreen() {
   const [leadsMap, setLeadsMap] = useState<Map<string, ReminderLeadContext>>(new Map());
   const [contractsMap, setContractsMap] = useState<Map<string, ReminderContractContext>>(new Map());
   const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
+  const showLeadLoading = useMinimumLoading(Boolean(loadingLeadId));
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [manualReminderQueue, setManualReminderQueue] = useState<ManualReminderPrompt[]>([]);
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
@@ -1411,8 +1411,8 @@ export default function AgendaScreen() {
                   <>
                     <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
                       <PopoverTrigger className="inline-flex">
-                        <IconButton type="button" disabled={isQuickSchedulingCurrentReminder || updatingReminderIds.has(reminder.id) || Boolean(reschedulingInFlightId) || markingAllFiltered} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
-                          {isQuickSchedulingCurrentReminder ? <Loader2 className="animate-spin" /> : (
+                        <IconButton loading={isQuickSchedulingCurrentReminder} type="button" disabled={isQuickSchedulingCurrentReminder || updatingReminderIds.has(reminder.id) || Boolean(reschedulingInFlightId) || markingAllFiltered} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
+                          {(
                             <CalendarClock className="kds-control-icon" aria-hidden="true" />
                           )}
                         </IconButton>
@@ -1501,9 +1501,7 @@ export default function AgendaScreen() {
   });
   return (
     <>
-      {loading && !hasAgendaSnapshot ? (
-        <LoadingState label="Carregando agenda..." className="min-h-96" />
-      ) : (
+      {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." className="min-h-96" fallback={() => (
       <div className="kds-agenda-page panel-page-shell space-y-4 sm:space-y-5">
         <PageHeader
           eyebrow="Kifer Saúde / produtividade"
@@ -1870,7 +1868,7 @@ export default function AgendaScreen() {
           />
         )}
 
-        {loadingLeadId && (
+        {showLeadLoading && (
           <Dialog
             open
             aria-label="Carregando dados do lead"
@@ -1886,7 +1884,7 @@ export default function AgendaScreen() {
             </DialogHeader>
             <DialogBody className="flex min-h-44 items-center justify-center">
               <Surface variant="strong" padding="sm" className="flex items-center gap-2 px-4 py-3" role="status">
-                <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-primary)]" aria-hidden="true" />
+                <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" />
                 <span className="text-sm font-medium text-[var(--text-secondary)]">
                 Carregando lead...
                 </span>
@@ -1903,7 +1901,7 @@ export default function AgendaScreen() {
         />
         {ConfirmationDialog}
       </div>
-      )}
+      )} />}
     </>
   );
 }
@@ -1976,7 +1974,7 @@ function AgendaReminderContextLink({
 
   return (
     <Badge tone="neutral" className="kds-agenda-context-badge max-w-full min-w-0 gap-1 font-medium">
-      {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
+      {<LoadingMonogram active={isLoading} fallback={<Bell className="h-3 w-3" />} className="h-3 w-3" />}
       {contextInfo.type === "lead" ? <LeadFavoriteBadge favorito={contextInfo.favorito} /> : null}
       <span className="min-w-0 truncate">{contextInfo.label}</span>
     </Badge>

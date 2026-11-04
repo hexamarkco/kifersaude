@@ -9,7 +9,7 @@ declare module 'vitest' {
     fn: <T extends (...args: unknown[]) => unknown>(implementation?: T) => T;
     hoisted: <T>(factory: () => T) => T;
     mock: (module: string, factory: () => unknown) => void;
-    useFakeTimers: () => void;
+    useFakeTimers: (options?: { toFake: Array<'performance' | 'setTimeout' | 'clearTimeout'> }) => void;
     useRealTimers: () => void;
     clearAllTimers: () => void;
     advanceTimersByTimeAsync: (milliseconds: number) => Promise<void>;

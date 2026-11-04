@@ -1,4 +1,4 @@
-import { Text, Image, Video } from '../../../../design-system';
+import { LoadingMonogram, Text, Image, Video } from '../../../../design-system';
 import { FileInput, ActionSurface, Textarea } from '../../../../design-system';
 import { useId } from 'react';
 import type {
@@ -9,7 +9,7 @@ import type {
   RefObject,
   SetStateAction,
 } from 'react';
-import { FileAudio, FileText, Images, Loader2, MessageCircle, Mic, Pencil, Plus, Reply, SendHorizontal, SlidersHorizontal, Smile, Sparkles, X } from 'lucide-react';
+import { FileAudio, FileText, Images, MessageCircle, Mic, Pencil, Plus, Reply, SendHorizontal, SlidersHorizontal, Smile, Sparkles, X } from 'lucide-react';
 
 import { Button, ButtonGroup, IconButton, Popover, PopoverContent, PopoverTrigger } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
@@ -319,7 +319,7 @@ export function WhatsAppComposer({
                             aria-label="Enviar documento"
                             title={sendDisabledReason ?? undefined}
                           >
-                            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+                            {<LoadingMonogram active={sending} fallback={<SendHorizontal className="h-5 w-5" />} className="h-5 w-5" />}
                           </ActionSurface>
                         </div>
 
@@ -453,7 +453,7 @@ export function WhatsAppComposer({
                           aria-label="Enviar mídia"
                           title={sendDisabledReason ?? undefined}
                         >
-                          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+                          {<LoadingMonogram active={sending} fallback={<SendHorizontal className="h-5 w-5" />} className="h-5 w-5" />}
                         </ActionSurface>
                       </div>
 
@@ -514,7 +514,7 @@ export function WhatsAppComposer({
                     <div className="mb-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-sm">
                       <div className="flex items-start gap-2">
                         <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                          {replySuggestionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                          {<LoadingMonogram active={replySuggestionLoading} fallback={<Sparkles className="h-3.5 w-3.5" />} className="h-3.5 w-3.5" />}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -644,7 +644,7 @@ export function WhatsAppComposer({
                             setMediaDrawerOpen(false);
                           }}
                         >
-                          <IconButton
+                          <IconButton loading={replySuggestionLoading || rewritingComposer}
                             variant="ghost"
                             size="md"
                             disabled={(Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)) || rewritingComposer}
@@ -654,7 +654,7 @@ export function WhatsAppComposer({
                             aria-busy={rewritingComposer || replySuggestionLoading}
                             title={rewritingComposer ? 'Reescrevendo texto com IA' : 'Ações com IA'}
                           >
-                            {replySuggestionLoading || rewritingComposer ? <Loader2 className="kds-control-icon animate-spin" /> : <Sparkles className="kds-control-icon" />}
+                            <Sparkles className="kds-control-icon" />
                           </IconButton>
                         </PopoverTrigger>
                         <PopoverContent
@@ -674,7 +674,7 @@ export function WhatsAppComposer({
                             title={composerRewriteDisabledReason ?? 'Corrigir texto com IA'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                              {<LoadingMonogram active={rewritingComposer} fallback={<Pencil className="h-4 w-4" />} className="h-4 w-4" />}
                             </span>
                             <span>Corrigir texto</span>
                           </ActionSurface>
@@ -689,7 +689,7 @@ export function WhatsAppComposer({
                             title={composerRewriteDisabledReason ?? 'Adaptar texto ao contexto'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                              {<LoadingMonogram active={rewritingComposer} fallback={<Sparkles className="h-4 w-4" />} className="h-4 w-4" />}
                             </span>
                             <span>Adaptar ao contexto</span>
                           </ActionSurface>
@@ -719,7 +719,7 @@ export function WhatsAppComposer({
                             title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
-                              {replySuggestionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                              {<LoadingMonogram active={replySuggestionLoading} fallback={<MessageCircle className="h-4 w-4" />} className="h-4 w-4" />}
                             </span>
                             <span>Sugerir resposta</span>
                           </ActionSurface>
@@ -892,13 +892,11 @@ export function WhatsAppComposer({
                         aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
                         title={sendDisabledReason ?? undefined}
                       >
-                        {voiceRecordingState === 'requesting' ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : hasSendPayload ? (
+                        {<LoadingMonogram active={voiceRecordingState === 'requesting'} fallback={hasSendPayload ? (
                           <SendHorizontal className="h-5 w-5" />
                         ) : (
                           <Mic className="h-5 w-5" />
-                        )}
+                        )} className="h-5 w-5" />}
                       </ActionSurface>
                     </div>
                   </div>

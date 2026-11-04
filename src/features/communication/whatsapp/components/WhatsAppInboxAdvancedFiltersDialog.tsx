@@ -47,7 +47,7 @@ export function WhatsAppInboxAdvancedFiltersDialog({
       onOpenChange={(open) => { if (!open) onClose(); }}
       size="sm"
       initialFocus="first-content"
-      className="whatsapp-inbox-filter-dialog"
+      className="whatsapp-inbox-filter-dialog comm-whatsapp-overlay"
       style={position ? {
         top: position.top,
         left: position.left,

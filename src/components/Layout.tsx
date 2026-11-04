@@ -1,4 +1,4 @@
-import { Text, WorkspaceHeader, BrandWordmark } from '../design-system';
+import { Text, WorkspaceHeader, BrandWordmark, LoadingState } from '../design-system';
 import { ActionSurface, Button, IconButton } from '../design-system';
 import { DesignSystemProvider, PANEL_THEME_STORAGE_KEY, readPanelTheme } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -1060,9 +1060,7 @@ export default function Layout({
                       </Button>
                     </div>
 
-                    {notificationsLoading ? (
-                      <div className="px-4 py-6 text-sm text-[var(--text-muted)]">Carregando...</div>
-                    ) : notificationsError ? (
+                    {<LoadingState active={notificationsLoading} compact className="px-4 py-6" label="Carregando notificações" fallback={() => notificationsError ? (
                       <div className="px-4 py-6 text-sm text-[var(--danger-text)]">{notificationsError}</div>
                     ) : (
                       <div className="max-h-[70vh] overflow-y-auto">
@@ -1134,7 +1132,7 @@ export default function Layout({
                           )}
                         </div>
                       </div>
-                    )}
+                    )} />}
                   </div>
                 )}
               </div>

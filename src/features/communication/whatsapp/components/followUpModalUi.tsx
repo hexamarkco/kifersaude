@@ -6,7 +6,6 @@ import {
   CalendarPlus,
   Clock3,
   HeartHandshake,
-  Loader2,
   MessageSquare,
   Sparkles,
 } from 'lucide-react';
@@ -205,14 +204,14 @@ export function RefinementChip({
   disabled?: boolean;
 }) {
   return (
-    <IconButton variant="ghost" size="sm" aria-label={description}
+    <IconButton loading={loading} variant="ghost" size="sm" aria-label={description}
       type="button"
       onClick={onClick}
       disabled={disabled}
       title={description}
       className="flex items-center border font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {loading ? <Loader2 className="animate-spin" /> : <Icon className="" />}
+      <Icon className="" />
       {label}
     </IconButton>
   );

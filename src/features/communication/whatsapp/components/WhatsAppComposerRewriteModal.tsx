@@ -74,6 +74,7 @@ export default function WhatsAppComposerRewriteModal({
 }: WhatsAppComposerRewriteModalProps) {
   return (
     <WorkspaceDialog
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
       title="Reescrever mensagem com IA"

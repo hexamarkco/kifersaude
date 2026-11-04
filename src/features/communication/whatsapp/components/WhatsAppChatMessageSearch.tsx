@@ -1,7 +1,7 @@
-import { Text } from '../../../../design-system';
+import { LoadingMonogram, Text } from '../../../../design-system';
 import { Button, ActionSurface } from '../../../../design-system';
 import type { RefObject } from 'react';
-import { AlertCircle, Loader2, X } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 
 import { IconButton, SearchInput } from '../../../../design-system';
 import type { CommWhatsAppMessageSearchResult } from '../data';
@@ -35,7 +35,7 @@ export function WhatsAppChatMessageSearch({
   onSelect,
 }: WhatsAppChatMessageSearchProps) {
   return (
-    <div className="border-b bg-[var(--bg-elevated)] px-5 py-3">
+    <div className="whatsapp-inbox-chat-search shrink-0 border-b" role="search" aria-label="Buscar no histórico da conversa">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <SearchInput
@@ -57,10 +57,10 @@ export function WhatsAppChatMessageSearch({
         </div>
 
         {query ? (
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
+          <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
               <span>{error ? 'Busca indisponível' : searching ? 'Buscando neste chat...' : `${results.length} resultado${results.length === 1 ? '' : 's'}`}</span>
-              {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              {<LoadingMonogram active={searching} className="h-3.5 w-3.5" />}
             </div>
             {error ? (
               <div className="flex items-start gap-2 px-3 py-3 text-sm text-[var(--text-secondary)]" role="alert">
@@ -70,7 +70,7 @@ export function WhatsAppChatMessageSearch({
             ) : !searching && results.length === 0 ? (
               <div className="px-3 py-3 text-sm text-[var(--text-secondary)]">Nenhuma mensagem encontrada neste chat.</div>
             ) : (
-              <div className="max-h-52 overflow-y-auto py-1">
+              <div className="whatsapp-inbox-chat-search-results py-1">
                 {results.map((result) => {
                   const previewText = getMessageSearchPreviewText(result.message);
                   const previewIconType = getChatPreviewIconType(previewText);

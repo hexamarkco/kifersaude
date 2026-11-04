@@ -12,8 +12,6 @@ import {
 import { configService } from "../data/configService";
 import type { IntegrationSetting } from "../domain/types";
 import { toast } from "../../../lib/toast";
-import { IntegrationsSkeleton } from '../../../design-system';
-import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Alert,
@@ -350,7 +348,6 @@ export default function IntegrationsScreen() {
     else toast.error(message.text);
   };
 
-  const loadingUi = useAdaptiveLoading(loadingAi);
 
   const loadProviderModels = useCallback(async (provider: AiProvider) => {
     const requestId = ++aiModelsRequestIdRef.current[provider];
@@ -785,9 +782,9 @@ export default function IntegrationsScreen() {
   return (
     <PanelAdaptiveLoadingFrame
       loading={activeSection === "ai" && loadingAi}
-      phase={loadingUi.phase}
+      label="Carregando integrações"
       hasContent={activeSection === "ai" ? hasIntegrationSnapshot : true}
-      skeleton={<IntegrationsSkeleton />}
+
       overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >

@@ -1,5 +1,5 @@
-import { Text } from '../../../../design-system';
-import { Archive, Calendar, CalendarClock, Cog, Loader2, MessageCircle, Plus, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { useMinimumLoading, LoadingState, LoadingMonogram, Text } from '../../../../design-system';
+import { Archive, Calendar, CalendarClock, Cog, MessageCircle, Plus, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import type { MutableRefObject } from 'react';
 import type { LeadStatusConfig } from '../../../leads';
 
@@ -119,6 +119,9 @@ export function WhatsAppInboxSidebar({
   onOpenChatMenuFromContext,
   chatMenuTriggerRefs,
 }: WhatsAppInboxSidebarProps) {
+  const showChatSearch = useMinimumLoading(searchingChats && sidebarChats.length === 0);
+  const showMessageSearch = useMinimumLoading(searchingMessages);
+  const showArchiveLoading = useMinimumLoading(archivedSectionOpen && archivedChatsLoading && sidebarChats.length === 0);
   const renderChat = (chat: CommWhatsAppChat) => (
     <InboxChatListItem
       key={chat.id}
@@ -144,13 +147,42 @@ export function WhatsAppInboxSidebar({
   );
 
   return (
-    <div className={`whatsapp-inbox-panel whatsapp-inbox-sidebar h-full min-h-0 flex-col border shadow-sm lg:flex lg:rounded-r-none lg:border-r ${selectedChatId ? 'hidden lg:flex' : 'flex'}`}>
-      <div className="whatsapp-inbox-sidebar-header border-b p-4">
+    <div className={`whatsapp-inbox-panel whatsapp-inbox-sidebar min-h-0 flex-col ${selectedChatId ? 'has-selection' : ''}`}>
+      <header className="whatsapp-inbox-sidebar-header shrink-0">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <Text className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-              {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
-            </Text>
+          <div className="whatsapp-inbox-sidebar-title flex items-center justify-between gap-2">
+            <span>WhatsApp Inbox</span>
+            {onStartChat ? (
+              <Button variant="primary" size="sm" className="shrink-0" onClick={onStartChat}>
+                <Plus className="kds-control-icon" aria-hidden="true" />
+                Nova conversa
+              </Button>
+            ) : null}
+          </div>
+
+          <SearchInput
+            value={searchDraft}
+            onChange={(event) => onSearchDraftChange(event.target.value)}
+            placeholder="Buscar por nome ou telefone"
+            className="whatsapp-inbox-search-input"
+          />
+
+          <div className="whatsapp-inbox-sidebar-tools">
+            <div className="flex items-center gap-2">
+              <InboxFilterChip active={!hasActiveChatFilters} label="Todas" onClick={onClearFilters} />
+              <Button
+                ref={advancedFiltersTriggerRef}
+                type="button"
+                onClick={onToggleAdvancedFilters}
+                aria-expanded={advancedFiltersOpen}
+                aria-haspopup="dialog"
+                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
+                size="sm"
+              >
+                <SlidersHorizontal className="kds-control-icon" />
+                Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
+              </Button>
+            </div>
             <ButtonGroup className="whatsapp-inbox-action-group shrink-0" role="group" aria-label="Ações das conversas">
               <IconButton
                 variant={archivedSectionOpen ? 'soft' : 'ghost'}
@@ -158,6 +190,7 @@ export function WhatsAppInboxSidebar({
                 size="md"
                 onClick={() => onSwitchArchivedSection(!archivedSectionOpen)}
                 aria-label="Chats arquivados"
+                aria-pressed={archivedSectionOpen}
                 title={archivedChatsCount > 0 ? `Chats arquivados (${archivedChatsCount})` : 'Chats arquivados'}
               >
                 <span className="relative inline-flex">
@@ -200,47 +233,10 @@ export function WhatsAppInboxSidebar({
               >
                 <Cog className="kds-control-icon" />
               </IconButton>
-              {onStartChat ? (
-                <IconButton
-                  variant="ghost"
-                  className="shrink-0"
-                  size="md"
-                  onClick={onStartChat}
-                  aria-label="Novo chat"
-                  title="Novo chat"
-                >
-                  <Plus className="kds-control-icon" />
-                </IconButton>
-              ) : null}
             </ButtonGroup>
           </div>
-
-          <SearchInput
-            value={searchDraft}
-            onChange={(event) => onSearchDraftChange(event.target.value)}
-            placeholder="Buscar por nome ou telefone"
-            className="whatsapp-inbox-search-input"
-          />
-
-          <div className="flex items-center gap-2 overflow-visible pb-1">
-            <InboxFilterChip active={!hasActiveChatFilters} label="Todas" onClick={onClearFilters} />
-            <div className="relative shrink-0">
-              <Button
-                ref={advancedFiltersTriggerRef}
-                type="button"
-                onClick={onToggleAdvancedFilters}
-                aria-expanded={advancedFiltersOpen}
-                aria-haspopup="dialog"
-                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
-                size="sm"
-              >
-                <SlidersHorizontal className="kds-control-icon" />
-                Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
-              </Button>
-            </div>
-          </div>
         </div>
-      </div>
+      </header>
 
       <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
         {archivedSectionOpen ? (
@@ -266,12 +262,7 @@ export function WhatsAppInboxSidebar({
             {chatRefreshError}
           </Alert>
         ) : null}
-        {loading ? (
-          <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Carregando conversas...
-          </div>
-        ) : chatLoadError ? (
+        {<LoadingState active={loading} className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]" label="Carregando conversas..." fallback={() => chatLoadError ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed border-[var(--danger)] p-6 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 text-[var(--danger)]" />
             <div className="space-y-1">
@@ -303,12 +294,12 @@ export function WhatsAppInboxSidebar({
                 </Alert>
               ) : null}
               {sidebarChats.length > 0 ? <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Conversas</div> : null}
-              {searchingChats && sidebarChats.length === 0 ? (
-                <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]"><Loader2 className="h-4 w-4 animate-spin" />Buscando conversas...</div>
+              {showChatSearch ? (
+                <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]"><LoadingMonogram className="h-4 w-4" />Buscando conversas...</div>
               ) : null}
               {sidebarChats.map(renderChat)}
               {filteredMessageSearchResults.length > 0 || searchingMessages ? <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Mensagens</div> : null}
-              {searchingMessages ? <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]"><Loader2 className="h-4 w-4 animate-spin" />Buscando mensagens...</div> : null}
+              {showMessageSearch ? <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]"><LoadingMonogram className="h-4 w-4" />Buscando mensagens...</div> : null}
               {filteredMessageSearchResults.map((result) => (
                 <InboxMessageSearchListItem
                   key={result.message.id}
@@ -322,8 +313,8 @@ export function WhatsAppInboxSidebar({
               ))}
             </>
           )
-        ) : archivedSectionOpen && archivedChatsLoading && sidebarChats.length === 0 ? (
-          <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando conversas arquivadas...</div>
+        ) : showArchiveLoading ? (
+          <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]"><LoadingMonogram className="mr-2 h-4 w-4" />Carregando conversas arquivadas...</div>
         ) : archivedSectionOpen && chatRefreshError && sidebarChats.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 text-[var(--warning)]" />
@@ -352,7 +343,7 @@ export function WhatsAppInboxSidebar({
               </div>
             ) : null}
           </>
-        )}
+        )} />}
       </div>
     </div>
   );

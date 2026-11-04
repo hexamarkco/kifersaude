@@ -1,6 +1,6 @@
-import { DropdownOption } from '../../../../design-system';
+import { LoadingMonogram, DropdownOption } from '../../../../design-system';
 import type { Dispatch, Ref, SetStateAction } from 'react';
-import { Bot, CalendarClock, Copy, Download, FolderOpen, Info, Loader2, Search, Sparkles } from 'lucide-react';
+import { Bot, CalendarClock, Copy, Download, FolderOpen, Info, Search, Sparkles } from 'lucide-react';
 
 import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import type { CommWhatsAppChat } from '../domain/types';
@@ -79,7 +79,7 @@ export const WhatsAppThreadActionsMenu = ({
             disabled={assumingControlChatId === selectedChat.id || isSelectedChatWaitingForQuote}
             className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
           >
-            {assumingControlChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Bot className="h-4 w-4 shrink-0" />}
+            {<LoadingMonogram active={assumingControlChatId === selectedChat.id} fallback={<Bot className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
             <span>{isSelectedChatWaitingForQuote
               ? 'IA encerrada enquanto aguarda cotação'
               : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
@@ -131,7 +131,7 @@ export const WhatsAppThreadActionsMenu = ({
           disabled={copyingTranscript}
           className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
         >
-          {copyingTranscript ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Copy className="h-4 w-4 shrink-0" />}
+          {<LoadingMonogram active={copyingTranscript} fallback={<Copy className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
           <span>Copiar conversa formatada</span>
         </DropdownOption>
         <DropdownOption
@@ -145,7 +145,7 @@ export const WhatsAppThreadActionsMenu = ({
           className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
           title={historyRecoveryDisabledReason ?? undefined}
         >
-          {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Download className="h-4 w-4 shrink-0" />}
+          {<LoadingMonogram active={syncingHistoryChatId === selectedChat.id} fallback={<Download className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
           <span>Recuperar histórico antigo</span>
         </DropdownOption>
         {!selectedChat.is_group ? (
@@ -160,7 +160,7 @@ export const WhatsAppThreadActionsMenu = ({
             className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
             title={followUpGenerationDisabledReason ?? undefined}
           >
-            {generatingFollowUp ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Sparkles className="h-4 w-4 shrink-0" />}
+            {<LoadingMonogram active={generatingFollowUp} fallback={<Sparkles className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
             <span>Gerar follow-up com IA</span>
           </DropdownOption>
         ) : null}

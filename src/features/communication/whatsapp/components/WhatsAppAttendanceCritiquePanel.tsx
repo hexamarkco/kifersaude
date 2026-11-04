@@ -1,6 +1,6 @@
-import { Heading, Text } from '../../../../design-system';
+import { LoadingState, Heading, Text } from '../../../../design-system';
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Sparkles, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Sparkles, XCircle } from 'lucide-react';
 
 import {
   Alert,
@@ -148,12 +148,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
         </Alert>
       ) : null}
 
-      {listLoading ? (
-        <div className="flex items-center justify-center py-10 text-sm text-[var(--text-muted)]">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Carregando análises...
-        </div>
-      ) : listError ? (
+      {<LoadingState active={listLoading} className="flex items-center justify-center py-10 text-sm text-[var(--text-muted)]" label="Carregando análises..." fallback={() => listError ? (
         <Alert tone="danger">
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -255,7 +250,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
             </div>
           ) : null}
         </div>
-      )}
+      )} />}
     </div>
   );
 }

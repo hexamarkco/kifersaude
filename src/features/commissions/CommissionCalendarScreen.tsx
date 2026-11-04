@@ -9,7 +9,6 @@ import {
 
 import {
   Alert,
-  CommissionCalendarSkeleton,
   Heading,
   IconButton,
   KpiCard,
@@ -20,7 +19,6 @@ import {
   Surface,
   Text,
 } from "../../design-system";
-import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { listActiveCommissionContracts } from "./data/commissionRepository";
 import type { CommissionContract } from "./domain/types";
 import CommissionMonthGrid from "./components/CommissionMonthGrid";
@@ -46,7 +44,6 @@ export default function CommissionCalendarScreen() {
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const contractsRequestIdRef = useRef(0);
-  const loadingUi = useAdaptiveLoading(loading);
 
   useEffect(() => {
     const requestId = ++contractsRequestIdRef.current;
@@ -191,9 +188,9 @@ export default function CommissionCalendarScreen() {
 
       <PanelAdaptiveLoadingFrame
         loading={loading}
-        phase={loadingUi.phase}
+        label="Carregando agenda de comissões"
         hasContent={hasContractsSnapshot}
-        skeleton={<CommissionCalendarSkeleton />}
+
         overlayLabel="Atualizando agenda de comissões..."
         stageClassName="min-h-[560px]"
       >

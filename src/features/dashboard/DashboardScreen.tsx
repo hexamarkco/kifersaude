@@ -23,8 +23,6 @@ import {
 import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { DashboardPageSkeleton } from '../../design-system';
-import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { Alert, Button, SectionHeader, Surface } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
@@ -221,7 +219,6 @@ export default function DashboardScreen({
   const deferredDashboardOperatorFilter = useDeferredValue(dashboardOperatorFilter);
   const deferredDashboardContractTypeFilter = useDeferredValue(dashboardContractTypeFilter);
   const deferredDashboardStatusFilter = useDeferredValue(dashboardStatusFilter);
-  const loadingUi = useAdaptiveLoading(loading);
   const resolvePeriodFilter = useCallback(() => {
     const urlValue = searchParams.get("periodFilter");
     const validValues: DashboardPeriodFilter[] = ["hoje", "7d", "30d", "mes-atual", "mes-anterior", "todo-periodo", "personalizado"];
@@ -2265,9 +2262,9 @@ export default function DashboardScreen({
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
-      phase={loadingUi.phase}
+      label="Carregando painel"
       hasContent={hasDashboardSnapshot}
-      skeleton={<DashboardPageSkeleton />}
+
       overlayLabel="Atualizando dashboard..."
       stageClassName="panel-dashboard-immersive"
     >

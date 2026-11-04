@@ -9,6 +9,8 @@ import {
 import { ChevronDown } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
+import { useMinimumLoading } from '../useMinimumLoading';
+import { LoadingMonogram } from './LoadingMonogram';
 import { ActionSurface } from './Surface';
 import DropdownOption from './DropdownOption';
 import { OperationalStatusDot } from './Operational';
@@ -56,15 +58,16 @@ export function OperationalStatusSelect({
   className,
 }: OperationalStatusSelectProps) {
   const [open, setOpen] = useState(false);
+  const showLoading = useMinimumLoading(loading);
   const id = useId();
   const menuId = `${id}-menu`;
   const listboxId = `${id}-options`;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const hasContext = beforeOptions !== undefined && beforeOptions !== null;
   const selectedOption = options.find((option) => option.value === value);
-  const isDisabled = disabled || loading || options.length === 0;
+  const isDisabled = disabled || showLoading || options.length === 0;
   const currentColor = statusColor ?? selectedOption?.color ?? null;
-  const currentLabel = loading
+  const currentLabel = showLoading
     ? loadingLabel
     : triggerLabel ?? selectedOption?.label ?? value;
 
@@ -108,9 +111,10 @@ export function OperationalStatusSelect({
           aria-haspopup={hasContext ? 'dialog' : 'listbox'}
           aria-controls={menuId}
           aria-expanded={open && !isDisabled}
-          aria-busy={loading || undefined}
+          aria-busy={showLoading || undefined}
         >
           <span>{currentLabel}</span>
+          {showLoading && <LoadingMonogram className="kds-control-icon" />}
           {!isDisabled && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
         </ActionSurface>
       </PopoverTrigger>

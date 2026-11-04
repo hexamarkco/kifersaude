@@ -242,9 +242,7 @@ export default function IntegrationsOverview({
             description="Acompanhe o estado dos canais usados pela operação."
             descriptionPlacement="visible"
           />
-          {state.loading && !state.whatsapp && !state.meta ? (
-            <LoadingState compact label="Consultando conexões" className="mt-4" />
-          ) : (
+          {<LoadingState active={state.loading && !state.whatsapp && !state.meta} compact label="Consultando conexões" className="mt-4" fallback={() => (
             <div className="mt-3">
               <div className="border-b border-[var(--border-subtle)] last:border-b-0">
                 <OverviewAction
@@ -277,7 +275,7 @@ export default function IntegrationsOverview({
                 />
               </div>
             </div>
-          )}
+          )} />}
         </Card>
 
         <Card className="xl:col-span-2">

@@ -1,7 +1,7 @@
-import { Text, Heading, FieldLabel } from '../../../../design-system';
+import { useMinimumLoading, LoadingMonogram, Text, Heading, FieldLabel } from '../../../../design-system';
 import { Checkbox, Input } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, Loader2, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
 
 import {
   Button,
@@ -111,6 +111,8 @@ export default function WhatsAppBatchFollowUpModal({
 }: WhatsAppBatchFollowUpModalProps) {
   const [items, setItems] = useState<BatchItemState[]>([]);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'generating' | 'sending' | 'sent'>('loading');
+  const showInitialLoading = useMinimumLoading(phase === 'loading');
+  const showSending = useMinimumLoading(phase === 'sending');
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
   const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
   const [sentSummary, setSentSummary] = useState<SentSummary | null>(null);
@@ -533,9 +535,9 @@ export default function WhatsAppBatchFollowUpModal({
 
   // ---- Render: sent state ----
 
-  if (phase === 'sent' && sentSummary) {
+  if (phase === 'sent' && sentSummary && !showSending) {
     return (
-      <WorkspaceDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="full"
+      <WorkspaceDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="full"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex flex-col items-center gap-6 py-12">
@@ -626,11 +628,11 @@ export default function WhatsAppBatchFollowUpModal({
 
   // ---- Render: loading state ----
 
-  if (phase === 'loading') {
+  if (showInitialLoading) {
     return (
-      <WorkspaceDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
+      <WorkspaceDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
         <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
+          <LoadingMonogram className="h-8 w-8 text-[var(--brand-primary)]" />
           <div className="text-center">
             <Text className="text-sm font-semibold text-[var(--text-primary)]">Buscando follow-ups pendentes...</Text>
             <Text className="mt-1 text-xs text-[var(--text-muted)]">Aguarde enquanto carregamos os leads com follow-up atrasado.</Text>
@@ -644,6 +646,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   return (
     <WorkspaceDialog
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
       title="Follow-ups em lote"
@@ -657,10 +660,10 @@ export default function WhatsAppBatchFollowUpModal({
               <Button variant="secondary" size="sm" onClick={() => { cancelRequestedRef.current = true; }}>
                 Cancelar geração
               </Button>
-            ) : phase === 'sending' ? (
+            ) : showSending ? (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <LoadingMonogram className="h-3.5 w-3.5" />
                   <span>Enviando {sendingFinished} de {sendingTotal}</span>
                 </div>
                 <Progress value={sendingProgressPercent} size="sm" className="min-w-[160px] flex-1" showLabel />
@@ -695,13 +698,13 @@ export default function WhatsAppBatchFollowUpModal({
             <Button variant="secondary" size="sm" onClick={handleClose} disabled={phase === 'sending'}>
               Fechar
             </Button>
-            <Button
+            <Button loading={phase === 'sending'}
               variant="primary"
               size="sm"
               onClick={() => void handleSendSelected()}
               disabled={readyCount === 0 || phase === 'sending'}
             >
-              {phase === 'sending' ? <Loader2 className="animate-spin" /> : <Send className="kds-control-icon" />}
+              <Send className="kds-control-icon" />
               {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar ${readyCount} selecionado(s)`}
             </Button>
           </div>
@@ -794,11 +797,7 @@ export default function WhatsAppBatchFollowUpModal({
                       }`}
                     >
                       <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                        {statusDot === 'generating' || statusDot === 'sending' ? (
-                          <Loader2 className="animate-spin" style={{ color: dotColor }} />
-                        ) : (
-                          <span className="block h-2 w-2 rounded-full" style={{ background: dotColor }} />
-                        )}
+                        {<LoadingMonogram active={statusDot === 'generating' || statusDot === 'sending'} fallback={<span className="comm-whatsapp-batch-status-dot" style={{ background: dotColor }} />} />}
                       </span>
                       <span className="flex min-w-0 flex-1 items-center gap-1 truncate font-medium text-[var(--text-primary)]">
                         <LeadFavoriteBadge favorito={item.leadFavorito} />

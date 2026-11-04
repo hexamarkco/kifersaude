@@ -64,8 +64,6 @@ import {
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { ContractsPageSkeleton } from '../../design-system';
-import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { toast } from "../../lib/toast";
 import { downloadXlsx } from "../../lib/xlsxExport";
@@ -155,7 +153,6 @@ export default function ContractsManager({
     revealDistance,
     ease,
   } = usePanelMotion();
-  const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const operadoraOptions = useMemo(
     () => {
@@ -681,9 +678,9 @@ export default function ContractsManager({
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading && !selectedContract}
-      phase={loadingUi.phase}
+      label="Carregando contratos"
       hasContent={hasContractsSnapshot}
-      skeleton={<ContractsPageSkeleton />}
+
       overlayLabel="Atualizando contratos..."
       stageClassName="panel-dashboard-immersive"
     >

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { act } from 'react';
 import { test } from 'vitest';
 
 import { render } from '../../../../../testing-library/react';
@@ -33,17 +34,19 @@ const createChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat
   ...overrides,
 });
 
-test('renders chat identity and preview without a profile avatar in the list', () => {
+test('renders chat identity with initials and preserves independent selection and menu actions', () => {
+  const selectedChatIds: string[] = [];
+  const openedMenuChatIds: string[] = [];
   const view = render(
     <InboxChatListItem
-      chat={createChat({ last_message_text: 'Olá', last_message_at: '2026-10-28T12:00:00.000Z' })}
-      selected={false}
+      chat={createChat({ last_message_text: 'Olá', last_message_at: '2026-10-28T12:00:00.000Z', unread_count: 3 })}
+      selected
       connectedUserName={null}
       draftPreview=""
-      onSelect={() => undefined}
+      onSelect={(chatId) => selectedChatIds.push(chatId)}
       menuOpen={false}
       menuBusy={false}
-      onToggleMenu={() => undefined}
+      onToggleMenu={(chatId) => openedMenuChatIds.push(chatId)}
       onOpenContextMenu={() => undefined}
       menuTriggerRef={() => undefined}
     />,
@@ -52,7 +55,17 @@ test('renders chat identity and preview without a profile avatar in the list', (
   try {
     assert.match(view.container.textContent ?? '', /Contato de demonstração/);
     assert.match(view.container.textContent ?? '', /Olá/);
-    assert.equal(view.container.querySelector('.kds-avatar'), null);
+    assert.equal(view.container.querySelector('.kds-avatar-initials')?.textContent, 'CD');
+    assert.ok(view.container.querySelector('[aria-label="3 mensagens não lidas"]'));
+    const selectButton = view.container.querySelector<HTMLButtonElement>('.whatsapp-inbox-chat-select');
+    const menuButton = view.container.querySelector<HTMLButtonElement>('[aria-label="Abrir menu da conversa"]');
+    assert.ok(selectButton);
+    assert.ok(menuButton);
+    assert.equal(selectButton.getAttribute('aria-current'), 'true');
+    act(() => selectButton.click());
+    act(() => menuButton.click());
+    assert.deepEqual(selectedChatIds, ['chat-1']);
+    assert.deepEqual(openedMenuChatIds, ['chat-1']);
   } finally {
     view.unmount();
   }

@@ -1,4 +1,5 @@
 import {
+  LoadingMonogram,
   ButtonGroup,
   Card,
   Field,
@@ -10,6 +11,7 @@ import {
   InfoTooltip,
   Input,
   LoadingState,
+  useMinimumLoading,
   PageActions,
   PageHeader,
   RecordActions,
@@ -44,7 +46,6 @@ import {
   Copy,
   ExternalLink,
   ImageIcon,
-  Loader,
   Plus,
   Pencil,
   RefreshCw,
@@ -82,6 +83,7 @@ export default function LinksScreen({
   onCreateDialogOpenChange,
 }: LinksScreenProps = {}) {
   const [loading, setLoading] = useState(true);
+  const showLoading = useMinimumLoading(loading);
   const [loadError, setLoadError] = useState(false);
   const [pageSettings, setPageSettings] = useState<PublicLinkPageSettings | null>(null);
   const [links, setLinks] = useState<PublicLinkItem[]>([]);
@@ -494,7 +496,7 @@ export default function LinksScreen({
     }
   };
 
-  if (loading) {
+  if (showLoading) {
     return <LoadingState label="Carregando página de links..." />;
   }
 
@@ -590,11 +592,7 @@ export default function LinksScreen({
                     className="hidden"
                     disabled={uploadingAvatar}
                   />
-                  {uploadingAvatar ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
+                  {<LoadingMonogram active={uploadingAvatar} fallback={<Upload className="h-4 w-4" />} className="h-4 w-4" />}
                 </FieldLabel>
               </div>
 
@@ -957,7 +955,7 @@ export default function LinksScreen({
           >
             Cancelar
           </Button>
-          <Button type="submit" form="link-create-form" disabled={creating}>
+          <Button type="submit" form="link-create-form" loading={creating}>
             <Plus className="kds-control-icon" />
             <span>{creating ? "Salvando" : "Adicionar"}</span>
           </Button>

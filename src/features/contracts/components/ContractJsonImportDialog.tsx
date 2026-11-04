@@ -1,7 +1,7 @@
 import { Text } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useRef, useState } from 'react';
-import { CheckCircle2, Download, FileUp, Loader2 } from 'lucide-react';
+import { CheckCircle2, Download, FileUp } from 'lucide-react';
 
 import {
   CONTRACT_JSON_IMPORT_TEMPLATE,
@@ -155,8 +155,8 @@ export function ContractJsonImportDialog({
             Aplicar ao formulário
           </Button>
         ) : (
-          <Button type="button" disabled={!file || Boolean(error) || loading} onClick={() => void handleReadFile()}>
-            {loading ? <Loader2 className="animate-spin" /> : <FileUp className="kds-control-icon" />}
+          <Button loading={loading} type="button" disabled={!file || Boolean(error) || loading} onClick={() => void handleReadFile()}>
+            <FileUp className="kds-control-icon" />
             {loading ? 'Validando JSON...' : 'Validar arquivo'}
           </Button>
         )}

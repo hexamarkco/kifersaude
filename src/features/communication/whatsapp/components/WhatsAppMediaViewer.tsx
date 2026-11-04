@@ -1,8 +1,8 @@
-import { ButtonGroup, Video, Image, Text, TextLink } from '../../../../design-system';
+import { LoadingState, ButtonGroup, Video, Image, Text, TextLink } from '../../../../design-system';
 import { ActionSurface, IconButton, Button } from '../../../../design-system';
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Download, Loader2, Play, RotateCw, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Play, RotateCw, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 import type { CommWhatsAppMessage } from '../domain/types';
 import { formatMessageDaySeparatorLabel, formatMessageTime } from '../domain/messageTimeline';
@@ -207,12 +207,7 @@ export function WhatsAppMediaViewer({
         ) : null}
 
         <div className="flex h-full w-full items-center justify-center">
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Carregando mídia...
-            </div>
-          ) : mediaUrl ? (
+          {<LoadingState active={loading} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]" label="Carregando mídia..." fallback={() => mediaUrl ? (
             isVideo ? (
               <Video controls autoPlay className="max-h-full max-w-full bg-[var(--overlay)] object-contain">
                 <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
@@ -242,7 +237,7 @@ export function WhatsAppMediaViewer({
               <Text className="text-sm text-[var(--text-secondary)]">{error || 'Mídia indisponível no momento.'}</Text>
               {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
             </div>
-          )}
+          )} />}
         </div>
 
         {canGoNext ? (

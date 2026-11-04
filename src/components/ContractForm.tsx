@@ -1316,7 +1316,7 @@ export default function ContractForm({
                       <IconButton
                         type="button"
                         onClick={handleConsultarCNPJ}
-                        disabled={cnpjLoading}
+                        loading={cnpjLoading}
                         variant="ghost"
                         className="absolute right-1 top-1/2 -translate-y-1/2"
                         aria-label={cnpjLoading ? "Buscando CNPJ" : "Buscar CNPJ na Receita"}
@@ -1324,9 +1324,7 @@ export default function ContractForm({
                           cnpjLoading ? "Buscando..." : "Buscar na Receita"
                         }
                        size="sm">
-                        <Search
-                          className={`w-5 h-5 ${cnpjLoading ? "animate-pulse" : ""}`}
-                        />
+                        <Search className="kds-control-icon" />
                       </IconButton>
                     </div>
                   </Field>

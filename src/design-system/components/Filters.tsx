@@ -21,10 +21,11 @@ export type FilterSelectProps = {
   includePlaceholderOption?: boolean;
   neutralValues?: string[];
   disabled?: boolean;
+  loading?: boolean;
   size?: ControlSize;
 };
 
-export function FilterSelect({ icon, options, placeholder, value, onChange, includePlaceholderOption = true, neutralValues = [], disabled = false, size = 'md' }: FilterSelectProps) {
+export function FilterSelect({ icon, options, placeholder, value, onChange, includePlaceholderOption = true, neutralValues = [], disabled = false, loading = false, size = 'md' }: FilterSelectProps) {
   const [open, setOpen] = useState(false);
   const items = useMemo(() => includePlaceholderOption && !options.some((option) => option.value === '') ? [{ value: '', label: placeholder }, ...options] : [...options], [includePlaceholderOption, options, placeholder]);
   const selected = items.find((option) => option.value === value);
@@ -32,7 +33,7 @@ export function FilterSelect({ icon, options, placeholder, value, onChange, incl
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="block">
-        <FilterTrigger icon={icon} value={selected?.label ?? placeholder} active={active} open={open} size={size} disabled={disabled} aria-haspopup="listbox" />
+        <FilterTrigger icon={icon} value={selected?.label ?? placeholder} active={active} open={open} size={size} disabled={disabled} loading={loading} aria-haspopup="listbox" />
       </PopoverTrigger>
       <PopoverContent className="kds-dropdown-menu w-[min(20rem,calc(100vw-1rem))] p-1" role="listbox" aria-label={placeholder}>
         {items.map((option) => (

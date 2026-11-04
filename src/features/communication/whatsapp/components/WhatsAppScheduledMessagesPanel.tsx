@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarClock, Clock, Loader2, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
+import { CalendarClock, Clock, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
 import {
   Alert,
@@ -636,7 +636,7 @@ export default function WhatsAppScheduledMessagesPanel({
         }}
         size="full"
         presentation="workspace"
-        className="kds-dialog-workspace-tall"
+        className="kds-dialog-workspace-tall comm-whatsapp-overlay"
       >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border-subtle)] px-6 py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -952,21 +952,21 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
               </IconButton>
             )}
             {message.status === 'scheduled' && (
-              <IconButton
+              <IconButton loading={cancelling}
                 onClick={onCancel}
                 disabled={cancelling}
                 aria-label="Cancelar agendamento"
               >
-                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <X className="kds-control-icon" />}
+                <X className="kds-control-icon" />
               </IconButton>
             )}
             {message.status === 'failed' && (
-              <IconButton
+              <IconButton loading={cancelling}
                 onClick={onDelete}
                 disabled={cancelling}
                 aria-label="Excluir mensagem"
               >
-                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <Trash2 className="kds-control-icon" />}
+                <Trash2 className="kds-control-icon" />
               </IconButton>
             )}
           </ButtonGroup>
@@ -1034,13 +1034,13 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
               </IconButton>
             )}
             {canRetry && (
-              <IconButton onClick={onRetry} disabled={cancelling} aria-label="Retomar sequência" title="Retomar sequência">
-                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <RotateCcw className="kds-control-icon" />}
+              <IconButton loading={cancelling} onClick={onRetry} disabled={cancelling} aria-label="Retomar sequência" title="Retomar sequência">
+                <RotateCcw className="kds-control-icon" />
               </IconButton>
             )}
             {canCancel && (
-              <IconButton onClick={onCancel} disabled={cancelling} aria-label="Cancelar sequência" title="Cancelar sequência">
-                {cancelling ? <Loader2 className="kds-control-icon animate-spin" /> : <X className="kds-control-icon" />}
+              <IconButton loading={cancelling} onClick={onCancel} disabled={cancelling} aria-label="Cancelar sequência" title="Cancelar sequência">
+                <X className="kds-control-icon" />
               </IconButton>
             )}
           </ButtonGroup>

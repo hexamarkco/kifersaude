@@ -1,4 +1,4 @@
-import { Text, Heading } from '../design-system';
+import { LoadingMonogram, LoadingState, Text, Heading, useMinimumLoading } from '../design-system';
 import { useEffect, useMemo, useState } from 'react';
 import type { Contract } from '../features/contracts';
 import type { ConfigOption } from '../features/config';
@@ -17,7 +17,6 @@ import {
   Edit3,
   ExternalLink,
   FileText,
-  Loader2,
   StickyNote,
   UserCircle,
 } from 'lucide-react';
@@ -77,6 +76,7 @@ export default function LeadDetailsPanel({
   disabled = false,
 }: LeadDetailsPanelProps) {
   const [isUpdatingResponsavel, setIsUpdatingResponsavel] = useState(false);
+  const showContractsLoading = useMinimumLoading(contractsLoading);
   const [favorito, setFavorito] = useState(Boolean(lead?.favorito));
 
   useEffect(() => {
@@ -121,10 +121,10 @@ export default function LeadDetailsPanel({
   };
 
   const renderContracts = () => {
-    if (contractsLoading) {
+    if (showContractsLoading) {
       return (
         <div className="flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] py-8 text-[var(--text-muted)]">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <LoadingMonogram className="mr-2 h-4 w-4" />
           <span className="text-sm font-medium">Carregando contratos...</span>
         </div>
       );
@@ -292,12 +292,7 @@ export default function LeadDetailsPanel({
                   {lead.responsavel_label || 'Responsável não informado'}
                 </div>
               )}
-              {isUpdatingResponsavel && (
-                <div className="mt-1 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Atualizando responsável...
-                </div>
-              )}
+              <LoadingState active={isUpdatingResponsavel} compact label="Atualizando responsável..." className="mt-1 justify-start" />
             </div>
           </div>
         </section>

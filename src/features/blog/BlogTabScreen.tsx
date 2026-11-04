@@ -8,7 +8,6 @@ import {
 } from "react";
 
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
-import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { uploadBlogImage } from "../../lib/imageUploadService";
 import { toast } from "../../lib/toast";
 import { useAuth } from "../../contexts/AuthContext";
@@ -49,7 +48,6 @@ export default function BlogTabScreen() {
   const [formData, setFormData] = useState(createEmptyBlogFormData);
   const postsRequestIdRef = useRef(0);
   const savingRef = useRef(false);
-  const loadingUi = useAdaptiveLoading(loading);
 
   const loadPosts = useCallback(async () => {
     const requestId = postsRequestIdRef.current + 1;
@@ -298,7 +296,7 @@ export default function BlogTabScreen() {
           hasPostsSnapshot={hasPostsSnapshot}
           loading={loading}
           loadError={loadError}
-          loadingPhase={loadingUi.phase}
+
           onRetry={() => void loadPosts()}
           onCreatePost={() => setShowEditor(true)}
           onDeletePost={handleDelete}

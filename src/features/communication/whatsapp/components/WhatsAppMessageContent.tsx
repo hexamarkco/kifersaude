@@ -1,8 +1,8 @@
-import { ButtonGroup } from '../../../../design-system';
+import { useMinimumLoading, LoadingMonogram, LoadingState, ButtonGroup } from '../../../../design-system';
 import { Text, Audio, Image, TextLink, Video } from '../../../../design-system';
 import { ActionSurface } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, Loader2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { Button } from '../../../../design-system';
 import { getPanelButtonClass } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
@@ -42,18 +42,22 @@ const inboxInlineActionClassName = getPanelButtonClass({
 });
 
 export function MediaSendingOverlay({
+  active = true,
   progress,
   onCancel,
 }: {
+  active?: boolean;
   progress: number | null;
   onCancel?: () => void;
 }) {
+  const visible = useMinimumLoading(active);
+  if (!visible) return null;
   return (
     <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-[1px]">
       <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm">
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-primary)]" />
+        <LoadingMonogram className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
         <span>{progress === null ? 'Enviando' : `${progress}%`}</span>
-        {onCancel ? (
+        {onCancel && active ? (
           <Button variant="ghost"
             type="button"
             onClick={onCancel}
@@ -119,6 +123,7 @@ export function WhatsAppAudioPlayerCard({
   mediaSendingProgress: number | null;
   onCancelMediaUpload?: () => void;
 }) {
+  const showTranscribing = useMinimumLoading(transcriptionStatus === 'processing' || transcribing === true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -206,9 +211,9 @@ export function WhatsAppAudioPlayerCard({
     });
   };
 
-  const transcriptionAction = transcriptionStatus === 'processing' || transcribing ? (
+  const transcriptionAction = showTranscribing ? (
     <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status whatsapp-inbox-audio-transcribe-button" role="status" aria-live="polite">
-      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+      <LoadingMonogram className="h-3 w-3" />
       <span>Transcrevendo...</span>
     </span>
   ) : canTranscribe ? (
@@ -232,11 +237,11 @@ export function WhatsAppAudioPlayerCard({
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           {kind !== 'voice' ? <Text className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</Text> : null}
-          <Text className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
+          <LoadingState compact active={loading} label={'Carregando áudio...'} fallback={() => <Text className="text-xs opacity-75">{error || 'Áudio indisponível'}</Text>} />
           {error && retryable ? <MediaRetryAction retry={onRetryMedia} loading={loading} /> : null}
         </div>
         {transcriptionAction ? <div className="shrink-0 self-center">{transcriptionAction}</div> : null}
-        {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+        <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
       </div>
     );
   }
@@ -299,7 +304,7 @@ export function WhatsAppAudioPlayerCard({
           </div>
         </div>
       </div>
-      {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+      <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
     </div>
   );
 }
@@ -690,11 +695,11 @@ export function WhatsAppMessageBody({
                 ? 'flex h-32 w-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
                 : `flex h-40 w-[13.75rem] max-w-full flex-col items-center justify-center gap-2 border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}
               >
-                <Text className="text-[var(--text-secondary)]">{loading ? loadingLabel : error || unavailableLabel}</Text>
+                <LoadingState compact active={loading} label={loadingLabel} fallback={() => <Text className="text-[var(--text-secondary)]">{error || unavailableLabel}</Text>} />
                 {error && retryable ? <MediaRetryAction retry={retry} loading={loading} /> : null}
               </div>
             )}
-            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+            <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
           </div>
           {caption ? (
             <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
@@ -728,11 +733,11 @@ export function WhatsAppMessageBody({
               </ActionSurface>
             ) : (
               <div className={`flex h-[11rem] flex-col items-center justify-center gap-2 bg-[var(--bg-inset)] px-3 text-center text-sm ${caption ? 'rounded-t-[var(--kds-radius-lg)]' : 'rounded-[var(--kds-radius-lg)]'}`}>
-                <Text className="text-[var(--text-secondary)]">{loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}</Text>
+                <LoadingState compact active={loading} label={'Carregando vídeo...'} fallback={() => <Text className="text-[var(--text-secondary)]">{error || 'Vídeo indisponível'}</Text>} />
                 {error && retryable ? <MediaRetryAction retry={retry} loading={loading} /> : null}
               </div>
             )}
-            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+            <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
           </div>
           {caption ? (
             <LinkifiedText className="whatsapp-inbox-media-caption whitespace-pre-wrap break-words px-3 py-2.5 text-sm leading-6" text={caption} />
@@ -765,13 +770,13 @@ export function WhatsAppMessageBody({
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-[var(--text-muted)]">
                 <FileText className="h-8 w-8 text-[var(--danger-text)]" />
-                <span>{loading ? 'Carregando prévia...' : error || 'Prévia indisponível'}</span>
+                <LoadingState compact active={loading} label={'Carregando prévia...'} fallback={() => <span>{error || 'Prévia indisponível'}</span>} />
               </div>
             )}
             <span className="absolute left-3 top-3 inline-flex items-center rounded-md bg-[var(--danger-text)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-on-brand)] shadow-sm">
               PDF
             </span>
-            {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+            <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
           </div>
           <div className="border-t border-[var(--border-subtle)] px-3 py-3">
             <div className="flex items-start gap-3">
@@ -798,7 +803,7 @@ export function WhatsAppMessageBody({
                 </>
               ) : (
                 <>
-                  <span className="text-xs text-[var(--text-muted)]">{loading ? 'Carregando arquivo...' : error || 'Arquivo indisponível'}</span>
+                  <LoadingState compact active={loading} label={'Carregando arquivo...'} fallback={() => <span className="text-xs text-[var(--text-muted)]">{error || 'Arquivo indisponível'}</span>} />
                   {error && retryable ? <MediaRetryAction retry={retry} loading={loading} /> : null}
                 </>
               )}
@@ -851,14 +856,14 @@ export function WhatsAppMessageBody({
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
+                <LoadingState compact active={loading} label={'Carregando...'} fallback={() => <span className="text-xs opacity-75">{error || 'Sem arquivo'}</span>} />
                 {error && retryable ? (
                   <MediaRetryAction retry={retry} loading={loading} />
                 ) : null}
               </div>
             )}
           </div>
-          {mediaSending ? <MediaSendingOverlay progress={mediaSendingProgress} onCancel={onCancelMediaUpload} /> : null}
+          <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
         </div>
         {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}

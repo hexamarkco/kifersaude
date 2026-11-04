@@ -1,4 +1,4 @@
-import { ButtonGroup } from '../../../design-system';
+import { useMinimumLoading, ButtonGroup, LoadingState } from '../../../design-system';
 import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Ban, Filter, PauseCircle, Pencil, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
@@ -140,6 +140,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const [failureReasons, setFailureReasons] = useState<Array<{ error_message: string; total_count: number }>>([]);
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
+  const showCampaignLoading = useMinimumLoading(loading && !campaign);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<'all' | 'partial' | false>(false);
   const [liveRefreshError, setLiveRefreshError] = useState<string | null>(null);
@@ -678,8 +679,8 @@ export default function WhatsAppCampaignDetailScreen() {
         </Alert>
       )}
 
-      {loading && !campaign ? (
-        <Card className="h-48 animate-pulse" />
+      {showCampaignLoading ? (
+        <Card><LoadingState className="h-48" label="Carregando campanha" /></Card>
       ) : campaign ? (
         <>
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

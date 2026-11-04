@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
-  AppLoadingScreen, Audio, AutomationFlowsSkeleton, BlogTabSkeletonList, Button,
+  AppLoadingBoundary, AppLoadingScreen, Audio, AutomationFlowsSkeleton, BlogTabSkeletonList, Button,
   CommissionCalendarSkeleton, ContractsPageSkeleton, DashboardPageSkeleton,
   DonutChart, DropdownOption, Field, FieldLabel, FileInput, Image, IntegrationsSkeleton,
-  LeadsPageSkeleton, MonthlyTrendChart, OperadorasSkeleton, PanelAdaptiveLoadingFrame,
+  LeadsPageSkeleton, LoadingMonogram, MonthlyTrendChart, OperadorasSkeleton, PanelAdaptiveLoadingFrame,
   PanelBootSkeleton, PositionedPopover, RemindersPageSkeleton, RichTextEditor,
   Select, Slider, SystemSettingsSkeleton, Text, TodoCalendarSkeleton,
   UsersSkeleton, VariableAutocompleteTextarea, Video, WhatsAppApiSkeleton,
@@ -22,8 +22,8 @@ const skeletons: Record<string, ComponentType> = {
   'Operadoras': OperadorasSkeleton, 'Usuários': UsersSkeleton,
   'Integrações': IntegrationsSkeleton, 'Automações': AutomationFlowsSkeleton,
   'Canal de atendimento': WhatsAppApiSkeleton,
-  'Carregamento da aplicação · modo claro': () => <AppLoadingScreen theme="light" />,
-  'Carregamento da aplicação · modo escuro': () => <AppLoadingScreen theme="dark" />,
+  'Carregamento da aplicação · modo claro': () => <AppLoadingBoundary><AppLoadingScreen theme="light" /></AppLoadingBoundary>,
+  'Carregamento da aplicação · modo escuro': () => <AppLoadingBoundary><AppLoadingScreen theme="dark" /></AppLoadingBoundary>,
 };
 
 function WorkflowExampleNode({ data }: NodeProps<{ label: string }>) {
@@ -96,11 +96,12 @@ export default function ApplicationComponents() {
       <Specimen title="Canvas de fluxos" description="Navegue e ajuste o zoom no mesmo canvas utilizado por campanhas e automações." source="WorkflowCanvas · WorkflowControls · WorkflowBackground" wide>
         <div className="kds-catalog-workflow"><WorkflowCanvas nodeTypes={workflowNodeTypes} nodes={[{ id: 'start', type: 'example', position: { x: 0, y: 30 }, data: { label: 'Iniciar atendimento' } }, { id: 'follow', type: 'example', position: { x: 250, y: 30 }, data: { label: 'Organizar próximo passo' } }]} edges={[{ id: 'next', source: 'start', target: 'follow' }]} fitView nodesDraggable={false} nodesConnectable={false} deleteKeyCode={null}><WorkflowBackground color="var(--border-default)" /><WorkflowControls /><WorkflowMiniMap nodeColor="var(--brand-primary)" maskColor="var(--overlay)" /><WorkflowPanel position="top-right"><Text size="sm">Exemplo de sequência</Text></WorkflowPanel></WorkflowCanvas></div>
       </Specimen>
-      <Specimen title="Carregamento das telas reais" description="Consulte os placeholders usados em cada módulo e o estado de carregamento compartilhado." source="ApplicationSkeletons · PanelAdaptiveLoadingFrame · AppLoadingScreen" wide>
+      <Specimen title="Carregamento das telas reais" description="Confira a animação em página inteira e em tamanho compacto." source="LoadingMonogram · PanelAdaptiveLoadingFrame · AppLoadingScreen" wide>
+        <LoadingMonogram label="Carregando item" />
         <Field label="Página em carregamento"><Select value={skeleton} options={Object.keys(skeletons).map((label) => ({ value: label, label }))} onChange={(event) => setSkeleton(event.target.value)} /></Field>
         <div className="kds-catalog-skeleton-viewer"><SkeletonExample /></div>
         <Button variant="secondary" onClick={() => setLoading(!loading)}>{loading ? 'Mostrar conteúdo' : 'Simular carregamento local'}</Button>
-        <PanelAdaptiveLoadingFrame loading={loading} phase="skeleton" hasContent={!loading} skeleton={<SkeletonExample />}><Text>Conteúdo do exemplo disponível.</Text></PanelAdaptiveLoadingFrame>
+        <PanelAdaptiveLoadingFrame loading={loading} hasContent={!loading}><Text>Conteúdo do exemplo disponível.</Text></PanelAdaptiveLoadingFrame>
       </Specimen>
     </div>
   </>;

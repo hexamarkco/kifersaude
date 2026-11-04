@@ -1,7 +1,7 @@
-import { Text } from '../../../../design-system';
+import { LoadingMonogram, LoadingState, Text, useMinimumLoading } from '../../../../design-system';
 import { ActionSurface } from '../../../../design-system';
 import type { MutableRefObject, ReactNode, UIEventHandler } from 'react';
-import { ChevronDown, ChevronUp, Forward, Loader2, Smile, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Forward, Smile, Star } from 'lucide-react';
 
 import { Button } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
@@ -107,6 +107,10 @@ export function WhatsAppMessageThread({
   sharedContactActionKey: string | null;
   transcribingMessageId: string | null;
 }) {
+  const loadingInitialMessages = loadingMessages && messages.length === 0;
+  const reconcilingEmptyThread = !messageLoadError && threadReconcileChatId === selectedChat.id && messages.length === 0;
+  const showThreadLoading = useMinimumLoading(loadingInitialMessages || reconcilingEmptyThread);
+
   return (
               <div
                 ref={messagesContainerRef}
@@ -118,32 +122,24 @@ export function WhatsAppMessageThread({
                   <div className="sticky top-0 z-[1] flex justify-center pb-3">
                     <Button
                       type="button"
+                      loading={loadingOlderMessages}
                       onClick={() => void handleLoadOlderMessages()}
                       disabled={loadingOlderMessages}
                       variant="secondary"
                       size="sm"
                       className="whatsapp-inbox-load-older"
                     >
-                      {loadingOlderMessages ? (
-                        <Loader2 className="animate-spin" />
-                      ) : (
-                        <ChevronUp className="kds-control-icon" />
-                      )}
+                      <ChevronUp className="kds-control-icon" />
                       {loadingOlderMessages ? 'Carregando...' : 'Carregar mais'}
                     </Button>
                   </div>
                 )}
 
-                {loadingMessages && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Carregando mensagens...
-                  </div>
-                ) : !messageLoadError && threadReconcileChatId === selectedChat.id && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Atualizando histórico desta conversa...
-                  </div>
+                {showThreadLoading ? (
+                  <LoadingState
+                    className="min-h-[220px]"
+                    label={reconcilingEmptyThread && !loadingInitialMessages ? 'Atualizando histórico desta conversa...' : 'Carregando mensagens...'}
+                  />
                 ) : !messageLoadError && messages.length === 0 ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
                     Nenhuma mensagem carregada para esta conversa.
@@ -301,7 +297,7 @@ export function WhatsAppMessageThread({
                             aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
                             title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
                           >
-                            {starringMessageIds.has(message.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />}
+                            {<LoadingMonogram active={starringMessageIds.has(message.id)} fallback={<Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />} className="h-3.5 w-3.5" />}
                         </ActionSurface>
                         ) : null}
                         {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
@@ -309,12 +305,7 @@ export function WhatsAppMessageThread({
                             <RetryMediaButton loading={false} onRetry={() => setRetryPendingMessage(message)} />
                           </span>
                         ) : null}
-                        {message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending ? (
-                          <span className="order-4 whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Reenviando</span>
-                          </span>
-                        ) : null}
+                        <LoadingState compact active={message.direction === 'outbound' && retryingMessageId === message.id && !mediaSending} className="order-4 whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending inline-flex items-center gap-1" label="Reenviando" />
                       </div>
                     );
 

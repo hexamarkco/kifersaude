@@ -7,6 +7,7 @@ import AppErrorBoundary from './components/AppErrorBoundary';
 import ToastViewport from './components/ui/ToastViewport';
 import NoIndex from './components/seo/NoIndex';
 import { VercelSpeedInsights } from './app/VercelSpeedInsights';
+import { AppLoadingBoundary } from './design-system';
 import {
   AiSandboxChatWrapper,
   ApiDocsWrapper,
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
       <BrowserRouter>
+        <AppLoadingBoundary>
         <Routes>
           <Route path="/politica-de-privacidade" element={<Suspense fallback={<RouteLoading />}><PrivacyPolicyPage /></Suspense>} />
           <Route path="*" element={
@@ -105,6 +107,7 @@ createRoot(document.getElementById('root')!).render(
         </AuthProvider>
           } />
         </Routes>
+        </AppLoadingBoundary>
       </BrowserRouter>
     </AppErrorBoundary>
   </StrictMode>,

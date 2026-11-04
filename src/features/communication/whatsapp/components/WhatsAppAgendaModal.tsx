@@ -1,4 +1,4 @@
-import { ButtonGroup, Heading, Text, FieldLabel } from '../../../../design-system';
+import { useMinimumLoading, LoadingMonogram, ButtonGroup, Heading, Text, FieldLabel } from '../../../../design-system';
 import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Copy,
   ExternalLink,
-  Loader2,
   MessageCircle,
   Plus,
   Search,
@@ -149,6 +148,7 @@ export default function WhatsAppAgendaModal({
 }: WhatsAppAgendaModalProps) {
   const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const showLoading = useMinimumLoading(loading);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -1406,7 +1406,7 @@ export default function WhatsAppAgendaModal({
               <>
                 <div className="relative">
                   <IconButton
-                    ref={(node) => {
+                    loading={isQuickSchedulingCurrentReminder} ref={(node) => {
                       quickScheduleButtonRefs.current[reminder.id] = node;
                     }}
                     type="button"
@@ -1436,11 +1436,7 @@ export default function WhatsAppAgendaModal({
                     aria-label="Agendar dias úteis e marcar atual como lido"
                     size="md"
                   >
-                    {isQuickSchedulingCurrentReminder ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <CalendarClock className="kds-control-icon" aria-hidden="true" />
-                    )}
+                    <CalendarClock className="kds-control-icon" aria-hidden="true" />
                   </IconButton>
                   {quickScheduleDropdown?.reminderId === reminder.id && (
                     <PanelPopoverShell
@@ -1571,6 +1567,7 @@ export default function WhatsAppAgendaModal({
   return (
     <>
       <WorkspaceDialog
+        panelClassName="comm-whatsapp-overlay"
         isOpen={isOpen}
         onClose={onClose}
         title="Agenda do WhatsApp"
@@ -1586,10 +1583,10 @@ export default function WhatsAppAgendaModal({
           </div>
         }
       >
-        {loading ? (
+        {showLoading ? (
           <Surface variant="muted" padding="none" className="flex min-h-[520px] items-center justify-center">
             <Surface variant="strong" padding="sm" className="flex items-center gap-3 shadow-lg">
-              <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-primary)]" />
+              <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" />
               <span className="text-sm font-medium text-[var(--text-secondary)]">
                 Carregando agenda...
               </span>
@@ -1813,6 +1810,7 @@ export default function WhatsAppAgendaModal({
 
       {isAddTaskModalOpen ? (
         <WorkspaceDialog
+          panelClassName="comm-whatsapp-overlay"
           isOpen
           onClose={() => { if (!savingTask) closeAddTaskModal(); }}
           title="Nova tarefa"
@@ -1897,6 +1895,7 @@ export default function WhatsAppAgendaModal({
 
       {isDuplicatesModalOpen ? (
         <WorkspaceDialog
+          panelClassName="comm-whatsapp-overlay"
           isOpen
           onClose={() => setIsDuplicatesModalOpen(false)}
           title="Lembretes duplicados"

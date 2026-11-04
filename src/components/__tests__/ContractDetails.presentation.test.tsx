@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { act } from 'react';
 import { test, vi } from 'vitest';
 import { render } from '../../testing-library/react';
+import { LOADING_CYCLE_MS } from '../../design-system/useMinimumLoading';
 
 type ContractDetailsSnapshot = Awaited<ReturnType<typeof import('../../features/contracts').getContractDetailsSnapshot>>;
 type SnapshotMock = (() => Promise<ContractDetailsSnapshot>) & {
@@ -36,6 +37,7 @@ const contract = {
 };
 
 test('contract details page keeps loading in-page and exposes header actions after loading', async () => {
+  vi.useFakeTimers();
   let resolveSnapshot!: (value: ContractDetailsSnapshot) => void;
   loadSnapshotMock.mockImplementation(() => new Promise((resolve) => { resolveSnapshot = resolve; }));
   const calls: string[] = [];
@@ -87,6 +89,7 @@ test('contract details page keeps loading in-page and exposes header actions aft
 
     assert.equal(view.container.querySelector('[role="dialog"]'), null);
     assert.ok(view.container.textContent?.includes('Ficha do contrato'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
     assert.ok(view.container.textContent?.includes('Dados do contrato'));
     assert.ok(view.container.textContent?.includes('Beneficiários'));
     assert.ok(view.container.textContent?.includes('Mais informações do contrato'));
@@ -115,5 +118,6 @@ test('contract details page keeps loading in-page and exposes header actions aft
   } finally {
     view.unmount();
     loadSnapshotMock.mockReset();
+    vi.useRealTimers();
   }
 });

@@ -11,6 +11,7 @@ import {
   KIFER_THEME_COLORS,
   LinkButton,
   LoadingState,
+  useMinimumLoading,
   PublicEmptyState,
   PublicShell,
   Text,
@@ -27,6 +28,7 @@ const DEFAULT_THEME_COLOR = KIFER_THEME_COLORS.lightCanvas;
 
 export default function LinksPage() {
   const [loading, setLoading] = useState(true);
+  const showLoading = useMinimumLoading(loading);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [settings, setSettings] = useState<PublicLinkPageSettings | null>(null);
@@ -92,7 +94,7 @@ export default function LinksPage() {
       />
 
       <main className="w-full max-w-sm sm:max-w-md">
-        {loading ? (
+        {showLoading ? (
           <div className="flex min-h-[60vh] items-center justify-center">
             <LoadingState compact label="Carregando..." />
           </div>

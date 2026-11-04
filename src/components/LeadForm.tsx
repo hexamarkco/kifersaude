@@ -4,7 +4,8 @@ import {
   FormPage,
   FormSection,
   IconButton,
-  Text,
+  LoadingState,
+  useMinimumLoading,
 } from '../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -266,13 +267,13 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
     [cityOptions, formData.cidade],
   );
 
-  if (configLoading && !lead) {
+  const showConfigLoading = useMinimumLoading(configLoading && !lead);
+  if (showConfigLoading) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
         <DialogHeader showCloseButton={false}><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
         <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
-          <div className="kds-loading-spinner" role="status" aria-label="Carregando configurações" />
-          <Text className="mt-4 text-center text-sm text-[var(--text-secondary)]">Carregando configurações...</Text>
+          <LoadingState compact indicator="brand" label="Carregando configurações" />
         </DialogBody>
       </Dialog>
     );
@@ -499,18 +500,15 @@ const formFields = (
                 onChange={(e) => handleCepChange(e.target.value)}
                 placeholder="00000-000"
                 maxLength={9}
-                action={loadingCep ? (
-                  <span className="w-5 animate-spin border-2 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Consultando CEP" />
-                ) : (
-                  <IconButton variant="ghost" size="sm"
+                action={<IconButton variant="ghost" size="sm"
                     type="button"
+                    loading={loadingCep}
                     onClick={() => void handleCepSearch()}
                     className="transition-colors"
                     aria-label="Buscar CEP"
                   >
                     <Search className="" />
-                  </IconButton>
-                )}
+                  </IconButton>}
               />
           </Field>
           <Field label="Endereço" htmlFor="lead-endereco">
@@ -554,6 +552,7 @@ const formFields = (
                   : 'Escolha primeiro o estado'
               }
               options={citySelectOptions}
+              loading={loadingCities}
               disabled={!formData.estado || loadingCities || citySelectOptions.length === 0}
             />
           </Field>

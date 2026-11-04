@@ -1,13 +1,11 @@
-import { Text } from '../../../design-system';
+import { Heading, Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, Loader2, MessageCircle, Pin, Plus, Trash2, WifiOff } from 'lucide-react';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
-  ActionSurface,
   Alert,
   Button,
-  PageHeader,
 } from '../../../design-system';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
 import { PositionedPopover as PanelPopoverShell } from '../../../design-system';
@@ -2017,19 +2015,9 @@ export default function WhatsAppInboxScreen() {
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
     <div className={`comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0 ${selectedChat ? 'is-conversation-open' : ''}`}>
       <div className="flex h-full min-h-0 flex-col gap-0">
-        <PageHeader
-          className={`whatsapp-inbox-page-header shrink-0 ${selectedChat ? 'hidden md:block' : ''}`}
-          title="WhatsApp Inbox"
-          description="Atenda seus leads e acompanhe cada conversa em um único lugar."
-          actions={(
-            <Button variant="primary" size="md" onClick={() => setStartChatModalOpen(true)}>
-              <Plus className="kds-control-icon" aria-hidden="true" />
-              Nova conversa
-            </Button>
-          )}
-        />
+        <Heading level={1} className="sr-only">WhatsApp Inbox</Heading>
         {operationalBanner && (
-          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-3 mb-0 flex items-start gap-2.5 rounded-[var(--kds-radius-md)] border px-3 py-2.5 sm:mx-4`}>
+          <section role="status" className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} flex shrink-0 items-start gap-2.5 border-b`}>
             <operationalBanner.icon className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="whatsapp-inbox-status-banner-copy min-w-0 sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-2">
               <Text className="whatsapp-inbox-heading text-sm font-semibold">{operationalBanner.title}</Text>
@@ -2038,7 +2026,7 @@ export default function WhatsAppInboxScreen() {
           </section>
         )}
 
-        <section className={`kds-inbox-workspace-grid grid min-h-0 flex-1 gap-0 ${contactContextPanelOpen && selectedChat && !selectedChat.is_group ? 'is-contact-panel-open' : ''}`}>
+        <section aria-label="Área de atendimento" className={`kds-inbox-workspace-grid grid min-h-0 flex-1 ${contactContextPanelOpen && selectedChat && !selectedChat.is_group ? 'is-contact-panel-open' : ''}`}>
         <WhatsAppInboxSidebar
           leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}
@@ -2051,6 +2039,7 @@ export default function WhatsAppInboxScreen() {
           onOpenAgenda={() => setWhatsAppAgendaOpen(true)}
           onOpenScheduledMessages={() => setAllScheduledMessagesPanelOpen(true)}
           onOpenDashboard={() => setWhatsAppDashboardOpen(true)}
+          onStartChat={() => setStartChatModalOpen(true)}
           canViewAgenda={canViewAgenda}
           allScheduledMessagesPanelOpen={allScheduledMessagesPanelOpen}
           searchDraft={searchDraft}
@@ -2099,16 +2088,6 @@ export default function WhatsAppInboxScreen() {
           onDragLeave={handleThreadDragLeave}
           onDrop={handleThreadDrop}
         />
-        {contactContextPanelOpen && selectedChat && !selectedChat.is_group ? (
-          <ActionSurface
-            type="button"
-            variant="plain"
-            padding="none"
-            className="kds-inbox-context-backdrop"
-            onClick={() => setContactContextPanelOpen(false)}
-            aria-label="Fechar informações do contato"
-          />
-        ) : null}
         {contactContextPanelOpen && selectedChat && !selectedChat.is_group ? (
           <Suspense fallback={<WhatsAppInboxLazyLoadingFallback />}>
             <WhatsAppLeadDrawer
@@ -2509,7 +2488,7 @@ export default function WhatsAppInboxScreen() {
                 <MessageCircle className="shrink-0" />
                 <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como não lida'}</span>
               </Button>
-              <Button variant="destructive"
+              <Button loading={deletingChatId === openChatMenuChat.id} variant="destructive"
                 type="button"
                 onClick={() => {
                   setChatMenuPointerAnchor(null);
@@ -2519,7 +2498,7 @@ export default function WhatsAppInboxScreen() {
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center text-left transition disabled:opacity-60"
               >
-                {deletingChatId === openChatMenuChat.id ? <Loader2 className="animate-spin shrink-0" /> : <Trash2 className="shrink-0" />}
+                <Trash2 className="shrink-0" />
                 <span>Excluir conversa</span>
               </Button>
             </div>

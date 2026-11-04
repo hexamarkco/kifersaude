@@ -198,7 +198,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
         <Button variant="secondary" size="sm" className="ml-3" onClick={retryLoad} disabled={loading}>Tentar novamente</Button>
       </Alert>}
 
-      {loading && profiles.length === 0 ? <LoadingState label="Carregando perfis e acessos…" /> : selectedProfile ? (
+      {<LoadingState active={loading && profiles.length === 0} label="Carregando perfis e acessos…" fallback={() => selectedProfile ? (
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
           <Card padding="md" className="sticky top-4 hidden min-w-0 lg:block">
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -294,7 +294,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
                                     <option value="edit">Visualizar e editar</option>
                                   </Select>
                                 </Field>
-                                {isUpdating && <span role="status" className="mt-1 block text-xs text-[var(--text-muted)]">Salvando permissão…</span>}
+                                <LoadingState compact active={isUpdating} className="mt-1" label="Salvando permissão…" />
                               </div>
                             </li>;
                           })}
@@ -308,7 +308,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
             </Card>
           </div>
         </div>
-      ) : !loadError && <EmptyState icon={<ShieldCheck aria-hidden="true" />} title="Nenhum perfil cadastrado" description="Crie um perfil para definir as áreas que seus usuários poderão acessar." action={<Button onClick={startCreatingProfile}>Criar primeiro perfil</Button>} />}
+      ) : !loadError && <EmptyState icon={<ShieldCheck aria-hidden="true" />} title="Nenhum perfil cadastrado" description="Crie um perfil para definir as áreas que seus usuários poderão acessar." action={<Button onClick={startCreatingProfile}>Criar primeiro perfil</Button>} />} />}
 
       <Dialog open={creatingProfile || Boolean(editingProfileId)} onOpenChange={(open) => { if (!open && !savingProfile) resetProfileForm(); }} size="sm" initialFocus="first-content" closeOnEscape={!savingProfile} closeOnOverlay={!savingProfile} className="kds-access-profile-dialog">
         <DialogHeader onClose={savingProfile ? undefined : resetProfileForm}>
@@ -325,7 +325,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
               <span className="text-sm text-[var(--text-primary)]">Conceder acesso total<span className="mt-1 block text-xs leading-5 text-[var(--text-muted)]">Permite visualizar e editar todas as áreas, incluindo usuários e permissões.</span></span>
             </FieldLabel>
           </DialogBody>
-          <DialogFooter><Button type="button" variant="secondary" onClick={resetProfileForm} disabled={savingProfile}>Cancelar</Button><Button type="submit" disabled={savingProfile}>{savingProfile ? "Salvando…" : editingProfileId ? "Salvar perfil" : "Criar perfil"}</Button></DialogFooter>
+          <DialogFooter><Button type="button" variant="secondary" onClick={resetProfileForm} disabled={savingProfile}>Cancelar</Button><Button type="submit" loading={savingProfile}>{savingProfile ? "Salvando…" : editingProfileId ? "Salvar perfil" : "Criar perfil"}</Button></DialogFooter>
         </form>
       </Dialog>
       {ConfirmationDialog}

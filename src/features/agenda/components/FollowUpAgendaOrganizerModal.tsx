@@ -1,6 +1,6 @@
-import { FieldLabel, Text } from '../../../design-system';
+import { LoadingState, FieldLabel, Text } from '../../../design-system';
 import { useMemo, useState, type ChangeEvent } from 'react';
-import { CalendarClock, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Sparkles } from 'lucide-react';
 
 import {
   Badge,
@@ -219,12 +219,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
               />
             ) : null}
 
-            {loadingPreview ? (
-              <div className="flex min-h-48 items-center justify-center gap-3 text-sm font-semibold text-[var(--text-secondary)]" role="status">
-                <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-primary)]" aria-hidden="true" />
-                Organizando follow-ups...
-              </div>
-            ) : null}
+            {<LoadingState active={loadingPreview} className="flex min-h-48 items-center justify-center gap-3 text-sm font-semibold text-[var(--text-secondary)]" label="Organizando follow-ups..." />}
 
             {preview ? (
               <div className="space-y-4">

@@ -1,6 +1,6 @@
-import { Text, Heading } from '../../../../design-system';
+import { LoadingState, Text, Heading } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
+import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
 import {
   Badge,
@@ -431,6 +431,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
   return (
     <WorkspaceDialog
+      panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
       title="Painel WhatsApp"
@@ -464,12 +465,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
         </div>
       )}
     >
-      {loading && !metrics ? (
-        <div className="flex min-h-[420px] items-center justify-center text-sm text-[var(--text-muted)]">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin text-[var(--brand-primary)]" />
-          Carregando métricas do WhatsApp...
-        </div>
-      ) : error ? (
+      {<LoadingState active={loading && !metrics} className="flex min-h-[420px] items-center justify-center text-sm text-[var(--text-muted)]" label="Carregando métricas do WhatsApp..." fallback={() => error ? (
         <EmptyState
           icon={<AlertTriangle className="h-7 w-7" />}
           title="Não foi possível carregar o dashboard"
@@ -581,7 +577,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
             )}
           </div>
         </div>
-      ) : null}
+      ) : null} />}
     </WorkspaceDialog>
   );
 }

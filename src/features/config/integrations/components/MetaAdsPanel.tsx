@@ -96,7 +96,7 @@ export default function MetaAdsPanel() {
         <Heading level={3} className="font-[var(--font-display)] text-lg">Origem e progresso comercial</Heading>
         <form className="my-3 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); state.search(search); setSelected(''); }}>
           <Field label="Buscar lead por nome ou identificação da Meta"><Input value={search} maxLength={100} onChange={(e) => setSearch(e.target.value)} /></Field>
-          <Button variant="secondary" type="submit" disabled={state.loading}>Buscar</Button>
+          <Button variant="secondary" type="submit" loading={state.loading}>Buscar</Button>
         </form>
         {snapshot.attributions.length === 0 ? <Text className="mt-2 text-sm">{snapshot.imported===0 ? 'Nenhum lead da Meta foi importado. Após configurar e ativar o recebimento, acompanhe o primeiro formulário enviado.' : 'Nenhum lead encontrado nesta busca. Confira o nome ou a identificação informada.'}</Text> : <>
           <Field label="Lead recebido pela Meta"><Select value={selected} onChange={(e) => setSelected(e.target.value)}>

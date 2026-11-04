@@ -1729,9 +1729,7 @@ export default function WhatsAppCampaignsScreen() {
           </Alert>
         ) : null}
 
-        {loading ? (
-          <LoadingState compact label="Carregando campanhas" />
-        ) : loadError === 'all' && campaigns.length === 0 ? (
+        {<LoadingState active={loading} compact label="Carregando campanhas" fallback={() => loadError === 'all' && campaigns.length === 0 ? (
           <EmptyState
             className="rounded-[var(--kds-radius-lg)]"
             icon={<Send aria-hidden="true" />}
@@ -1857,7 +1855,7 @@ export default function WhatsAppCampaignsScreen() {
               />
             )}
           </>
-        )}
+        )} />}
       </Card>
 
       <ConfirmDialog

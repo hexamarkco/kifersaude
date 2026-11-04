@@ -3,6 +3,8 @@ import { ChevronDown, type LucideIcon } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
 import { panelInputSizeClasses, type PanelInputSize } from '../tokens';
+import { useMinimumLoading } from '../useMinimumLoading';
+import { LoadingMonogram } from './LoadingMonogram';
 
 export type FilterTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'value'> & {
   icon?: LucideIcon;
@@ -12,6 +14,7 @@ export type FilterTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, '
   size?: PanelInputSize;
   leadingLabel?: ReactNode;
   trailingSlot?: ReactNode;
+  loading?: boolean;
 };
 
 export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(function FilterTrigger(
@@ -23,12 +26,15 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
     size = 'md',
     leadingLabel,
     trailingSlot,
+    loading = false,
+    disabled,
     className,
     type,
     ...props
   },
   ref,
 ) {
+  const showLoading = useMinimumLoading(loading);
   return (
     <button
       ref={ref}
@@ -40,6 +46,8 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
         className,
       )}
       aria-expanded={open}
+      aria-busy={showLoading || undefined}
+      disabled={disabled || showLoading}
       {...props}
     >
       {Icon && <Icon className="kds-filter-trigger-icon kds-control-icon" aria-hidden="true" />}
@@ -50,7 +58,7 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
         </span>
       </span>
       <span className="kds-filter-trigger-trailing">
-        {trailingSlot ?? (
+        {showLoading ? <LoadingMonogram className="kds-control-icon" /> : trailingSlot ?? (
           <ChevronDown
             className={cx('kds-filter-trigger-chevron kds-control-icon transition-transform', open && 'rotate-180')}
             aria-hidden="true"

@@ -93,7 +93,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              loading={loading}
               size="md"
             >
               {loading ? 'Entrando...' : <>Entrar no CRM <ArrowRight className="kds-control-icon" aria-hidden="true" /></>}

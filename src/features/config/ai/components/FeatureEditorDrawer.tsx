@@ -17,7 +17,7 @@ import {
   PageActions,
   Radio,
   Select,
-  Skeleton,
+  LoadingState,
   Text,
   Textarea,
 } from "../../../../design-system";
@@ -415,9 +415,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                   <Input value="OpenAI" readOnly aria-label="Provedor de IA" />
                 </Field>
                 <Field label="Modelo">
-                  {providerLoading ? (
-                    <Skeleton variant="control" label="Carregando modelos" />
-                  ) : providerError ? (
+                  {<LoadingState active={providerLoading} compact label="Carregando modelos" fallback={() => providerError ? (
                     <Alert
                       tone="danger"
                       title="Não foi possível carregar os modelos"
@@ -439,7 +437,7 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
                         label: `${modelOption.label}${!modelOption.hasPricing ? " (sem preço)" : ""}${modelOption.deprecated ? " (descontinuado)" : ""}`,
                       }))}
                     />
-                  )}
+                  )} />}
                 </Field>
               </div>
             )}

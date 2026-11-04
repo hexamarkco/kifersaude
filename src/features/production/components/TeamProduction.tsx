@@ -1,4 +1,4 @@
-import { Heading, Text } from '../../../design-system';
+import { Heading, LoadingState, Text } from '../../../design-system';
 import { Alert, Button, Field, Input, Select, Table, TableHeader, SortableTableHead, TableBody, TableRow, TableCell, useTableSorting, useSortedTableRows } from '../../../design-system';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProduction } from '../hooks/useProduction';
@@ -44,7 +44,7 @@ export function TeamProduction({ onNavigateToLead }: { onNavigateToLead: (id: st
         <option value="">Toda a equipe</option>{report?.operators.map((operator) => <option key={operator.user_id} value={operator.user_id}>{operator.display_name}</option>)}
       </Select></Field>
     </div>
-    {model.loading && <Text role="status">Carregando produção…</Text>}
+    {<LoadingState active={model.loading} compact label="Carregando produção…" />}
     {model.error && <Alert tone="warning">{model.error}</Alert>}
     {report && !report.started_at && <Alert
       tone="info"

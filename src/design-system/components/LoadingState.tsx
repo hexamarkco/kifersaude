@@ -1,10 +1,12 @@
-import { Loader2, RefreshCw } from 'lucide-react';
-import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState, type HTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
+import { AppLoadingContext } from '../appLoadingContext';
 import { useDesignSystemAppearance, type DesignSystemTheme } from '../appearanceContext';
 import { readPanelTheme } from '../themePreference';
 import type { ControlSize } from '../tokens';
+import { useMinimumLoading } from '../useMinimumLoading';
 import Button from './Button';
 import { DesignSystemProvider } from './DesignSystemProvider';
 import { LoadingMonogram } from './LoadingMonogram';
@@ -31,17 +33,25 @@ export type LoadingStateProps = HTMLAttributes<HTMLDivElement> & {
   label?: ReactNode;
   description?: ReactNode;
   compact?: boolean;
-  indicator?: 'spinner' | 'brand';
+  active?: boolean;
+  fallback?: () => ReactNode;
+  /** Places a larger monogram above the label. */
+  indicator?: 'brand';
 };
 
 export function LoadingState({
   label = 'Carregando',
   description,
   compact = false,
-  indicator = 'spinner',
+  active,
+  fallback,
+  indicator,
   className,
   ...props
 }: LoadingStateProps) {
+  const visible = useMinimumLoading(active === true);
+  if (active !== undefined && !visible) return fallback?.() ?? null;
+
   return (
     <div
       role="status"
@@ -54,9 +64,7 @@ export function LoadingState({
       )}
       {...props}
     >
-      {indicator === 'brand'
-        ? <LoadingMonogram />
-        : <Loader2 className="kds-loading-state-spinner" aria-hidden="true" />}
+      <LoadingMonogram />
       <div>
         <p className="kds-loading-state-label">{label}</p>
         {description && <p className="kds-loading-state-description">{description}</p>}
@@ -72,18 +80,38 @@ export type AppLoadingScreenProps = {
 
 const APP_LOADING_STALL_MS = 8000;
 
+export function AppLoadingBoundary({ children }: { children: ReactNode }) {
+  const [pending, setPending] = useState<{ count: number; theme: DesignSystemTheme }>({ count: 0, theme: 'light' });
+  const register = useCallback((theme?: DesignSystemTheme) => {
+    setPending((current) => ({ count: current.count + 1, theme: theme ?? current.theme }));
+    return () => setPending((current) => ({ ...current, count: current.count - 1 }));
+  }, []);
+  const visible = useMinimumLoading(pending.count > 0);
+  const context = useMemo(() => ({ register, visible }), [register, visible]);
+
+  return (
+    <AppLoadingContext.Provider value={context}>
+      <div hidden={visible} className={visible ? undefined : 'contents'}>{children}</div>
+      {visible && <AppLoadingView theme={pending.theme} />}
+    </AppLoadingContext.Provider>
+  );
+}
+
 /**
- * The single loading screen used everywhere the app has nothing to show yet:
- * route chunk loading, auth check, panel config, and every tab's data fetch.
- * Reusing one component keeps all of these visually identical instead of
- * flashing between differently styled/labelled spinners.
- *
- * If it stays mounted past APP_LOADING_STALL_MS (e.g. Supabase unreachable
- * or a stale/paused backend), it swaps the spinner for a clear message and a
- * reload action instead of spinning forever with no way out.
+ * Full-screen fallback for route chunks, session checks and panel startup.
+ * A prolonged wait offers a recovery action while keeping the same indicator.
  */
 export function AppLoadingScreen({ className, theme }: AppLoadingScreenProps) {
   const appearance = useDesignSystemAppearance();
+  const register = useContext(AppLoadingContext)?.register;
+  const resolvedTheme = theme ?? appearance?.theme ?? readPanelTheme();
+
+  useLayoutEffect(() => register?.(resolvedTheme), [register, resolvedTheme]);
+
+  return register ? null : <AppLoadingView className={className} theme={resolvedTheme} />;
+}
+
+function AppLoadingView({ className, theme }: AppLoadingScreenProps) {
   const [isStalled, setIsStalled] = useState(false);
 
   useEffect(() => {
@@ -93,27 +121,26 @@ export function AppLoadingScreen({ className, theme }: AppLoadingScreenProps) {
 
   return (
     <DesignSystemProvider
-      theme={theme ?? appearance?.theme ?? readPanelTheme()}
+      theme={theme}
       className={cx(
         'flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4',
         className,
       )}
     >
-      {isStalled ? (
-        <div className="flex flex-col items-center gap-4 text-center">
-          <LoadingState
-            compact
-            label="Isso está demorando mais que o esperado"
-            description="Verifique sua conexão ou tente novamente em instantes."
-          />
+      <div className="flex flex-col items-center gap-4 text-center">
+        <LoadingState
+          compact
+          indicator="brand"
+          label={isStalled ? 'Isso está demorando mais que o esperado' : 'Carregando'}
+          description={isStalled ? 'Verifique sua conexão ou tente novamente em instantes.' : undefined}
+        />
+        {isStalled && (
           <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
             <RefreshCw className="kds-control-icon" />
             <span>Tentar novamente</span>
           </Button>
-        </div>
-      ) : (
-        <LoadingState compact indicator="brand" />
-      )}
+        )}
+      </div>
     </DesignSystemProvider>
   );
 }

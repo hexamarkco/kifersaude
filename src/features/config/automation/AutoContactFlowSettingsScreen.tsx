@@ -1,4 +1,4 @@
-import { ButtonGroup, Text, Heading, FieldLabel, InfoTooltip } from '../../../design-system';
+import { LoadingMonogram, ButtonGroup, Text, Heading, FieldLabel, InfoTooltip } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -14,7 +14,6 @@ import {
   Globe2,
   Image as ImageIcon,
   Info,
-  Loader2,
   MessageCircle,
   Mic,
   Plus,
@@ -68,8 +67,6 @@ import FlowBuilder from "./components/FlowBuilder";
 import AutomationFlowsWorkspace from "./components/AutomationFlowsWorkspace";
 import { MessageListEditor } from "./components/MessageListEditor";
 import { VariableAutocompleteTextarea } from '../../../design-system';
-import { AutomationFlowsSkeleton } from '../../../design-system';
-import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
@@ -129,7 +126,6 @@ export default function AutoContactFlowSettingsScreen() {
   );
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [loadingFlow, setLoadingFlow] = useState(true);
-  const loadingUi = useAdaptiveLoading(loadingFlow);
   const [savingFlow, setSavingFlow] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [savingTemplateId, setSavingTemplateId] = useState<string | null>(null);
@@ -1784,9 +1780,9 @@ export default function AutoContactFlowSettingsScreen() {
   return (
     <PanelAdaptiveLoadingFrame
       loading={loadingFlow}
-      phase={loadingUi.phase}
+      label="Carregando fluxos de automação"
       hasContent={hasFlowSnapshot}
-      skeleton={<AutomationFlowsSkeleton />}
+
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
@@ -1807,7 +1803,7 @@ export default function AutoContactFlowSettingsScreen() {
             />
             <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
               <span role="status" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                {autoSaveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} aria-hidden="true" />}
+                {<LoadingMonogram active={autoSaveState === "saving"} fallback={<span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} aria-hidden="true" />} className="h-3.5 w-3.5" />}
                 {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
               </span>
               {activeWorkspace === "flows" && (
@@ -1843,7 +1839,7 @@ export default function AutoContactFlowSettingsScreen() {
                     <Badge
                       tone={autoSaveState === "error" ? "danger" : autoSaveState === "saved" ? "success" : "neutral"}
                       size="sm"
-                      icon={autoSaveState === "saving" ? <Loader2 className="kds-control-icon animate-spin" /> : autoSaveState === "error" ? AlertCircle : Save}
+                      icon={<LoadingMonogram active={autoSaveState === "saving"} fallback={autoSaveState === "error" ? <AlertCircle className="kds-control-icon" /> : <Save className="kds-control-icon" />} className="kds-control-icon" />}
                     >
                       {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
                     </Badge>

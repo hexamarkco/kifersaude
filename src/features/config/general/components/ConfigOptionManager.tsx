@@ -271,7 +271,7 @@ export default function ConfigOptionManager({
           >
             Cancelar
           </Button>
-          <Button type="submit" form="config-option-create-form" disabled={saving}>
+          <Button type="submit" form="config-option-create-form" loading={saving}>
             <Plus className="kds-control-icon" />
             <span>{saving ? 'Salvando' : 'Adicionar'}</span>
           </Button>

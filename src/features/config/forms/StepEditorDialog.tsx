@@ -262,7 +262,7 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
         <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={saving}>
+        <Button type="button" onClick={handleSubmit} loading={saving}>
           {saving ? "Salvando" : "Salvar"}
         </Button>
       </DialogFooter>

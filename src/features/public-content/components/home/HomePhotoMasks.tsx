@@ -26,15 +26,6 @@ export default function HomePhotoMasks() {
         <clipPath id="home-photo-about-mobile" clipPathUnits="objectBoundingBox">
           <path d="M0 .04C.17 .01 .32 0 .5 0H1V.75C.98 .91 .87 .985 .65 .965C.38 .94 .16 .9 0 .64Z" />
         </clipPath>
-        <clipPath id="home-photo-quote" clipPathUnits="objectBoundingBox">
-          <path d="M.28 0H1V1C.8 .92 .7 .8 .4 .77C.1 .74 .04 .57 .11 .39C-.09 .25 .03 .03 .28 0Z" />
-        </clipPath>
-        <clipPath id="home-photo-whatsapp" clipPathUnits="objectBoundingBox">
-          <path d="M0 .31C.03 .1 .18 0 .43 0C.7 0 .82 .13 1 .03V1H0Z" />
-        </clipPath>
-        <clipPath id="home-photo-whatsapp-mobile" clipPathUnits="objectBoundingBox">
-          <path d="M0 .27C.14 .07 .34 0 .57 0C.78 0 .92 .065 1 .14V1H0Z" />
-        </clipPath>
       </defs>
     </svg>
   );

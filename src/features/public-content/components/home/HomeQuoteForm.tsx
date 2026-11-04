@@ -174,16 +174,6 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
       className="home-section home-quote"
       aria-labelledby="quote-title"
     >
-      <div className="home-quote-background" aria-hidden="true">
-        <Image
-          src={homePhotos.quote}
-          alt=""
-          width={1448}
-          height={1086}
-          loading="lazy"
-        />
-        <span />
-      </div>
       <div className="home-container home-quote-layout">
         <div className="home-quote-copy">
           <Text className="home-eyebrow">Cotação</Text>
@@ -196,6 +186,15 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
             Compare operadoras, receba uma proposta personalizada e conte com o
             suporte da Kifer em todo o processo. É gratuito e sem compromisso.
           </Text>
+          <div className="home-quote-photo" aria-hidden="true">
+            <Image
+              src={homePhotos.quote}
+              alt=""
+              width={1448}
+              height={1086}
+              loading="lazy"
+            />
+          </div>
           <ul className="home-quote-benefits">
             {homeQuoteBenefits.map(({ title, text, icon: Icon }) => (
               <li key={title}>

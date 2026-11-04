@@ -351,18 +351,6 @@
   mask-image: url('/images/home/section-finish-mask.svg');
   mask-size: 100% 100%;
 }
-.kifer-home .home-quote-background {
-  mask-image: url('/images/home/section-finish-mask.svg');
-  mask-size: 100% 100%;
-}
-.kifer-home .home-whatsapp-photo {
-  mask-image: url('/images/home/section-finish-mask.svg');
-  mask-size: 100% 100%;
-}
-.kifer-home .home-footer {
-  border-start-start-radius: 55% 1.75rem;
-  border-start-end-radius: 45% 1rem;
-}
 
 /* Motion never supplies resting visibility: the page also works without observers or animations. */
 .kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button,

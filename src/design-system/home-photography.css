@@ -59,22 +59,21 @@
 .kifer-home .home-about-line-mobile { display: none; }
 .kifer-home .home-about-copy { position: relative; z-index: 1; }
 
-/* 08 — The family sits behind the form, independently of the colored loop. */
-.kifer-home .home-quote-layout { padding-right: 6vw; }
-.kifer-home .home-quote-background { --quote-focus: 35% 34%; position: absolute; top: 0; bottom: 0; right: 0; width: 34%; z-index: -1; }
-.kifer-home .home-quote-background::before { content: ''; position: absolute; inset: 0 0 26% -8%; background: var(--home-soft); clip-path: url(#home-photo-quote); }
-.kifer-home .home-quote-background::after { content: ''; position: absolute; top: -4%; left: 18%; width: 72%; height: 35%; border-top: 2px solid var(--brand-primary); border-left: 2px solid var(--brand-primary); border-radius: 100% 0 0 0; pointer-events: none; }
-.kifer-home .home-quote-background img { position: absolute; top: 0; right: 0; width: 100%; height: 65%; object-fit: cover; object-position: var(--quote-focus); clip-path: url(#home-photo-quote); }
-.kifer-home .home-quote-background > span { position: absolute; right: -29%; bottom: -25%; width: 110%; height: 76%; border: clamp(4rem, 7vw, 8rem) solid var(--brand-primary-active); border-radius: 50%; }
+/* 08 — Give the family a complete frame beside the quote instead of hiding it behind the form. */
+.kifer-home .home-quote-layout { padding-right: 0; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(var(--space-6), 4vw, var(--space-12)); }
+.kifer-home .home-quote-photo { width: 100%; aspect-ratio: 1.6; margin-top: var(--space-6); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); background: var(--home-soft); }
+.kifer-home .home-quote-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; }
+.kifer-home .home-quote-benefits { margin-top: var(--space-6); }
 
-/* 09 — The portrait and phone overlap in one scene. The phone's internal
-   dimensions (including the 2.1 ratio on touch screens) stay in home.css. */
-.kifer-home .home-whatsapp-visual { align-self: stretch; display: flex; align-items: center; position: relative; min-height: 38rem; isolation: isolate; }
-.kifer-home .home-whatsapp-visual::before { content: ''; position: absolute; inset: 6% -20% 0 28%; background: var(--brand-primary-active); border-radius: 48% 35% 0 0; z-index: -1; }
-.kifer-home .home-whatsapp-photo { --whatsapp-focus: 61% 29%; position: absolute; top: 0; bottom: 0; left: 29%; right: calc((min(100vw - 10.4vw, 84rem) - 100vw) / 2); }
-.kifer-home .home-whatsapp-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--whatsapp-focus); clip-path: url(#home-photo-whatsapp); }
-.kifer-home .home-whatsapp-photo .home-portrait-label { right: 7%; bottom: 8%; padding: var(--space-3) var(--space-4); }
-.kifer-home .home-whatsapp-photo .home-portrait-label::before { content: ''; position: absolute; width: var(--space-5); height: 2px; background: var(--brand-primary); top: 50%; right: calc(100% - var(--space-2)); }
+/* 09 — Keep the portrait and illustrative phone within the same bounded scene. */
+.kifer-home .home-whatsapp-layout { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: clamp(var(--space-6), 4vw, var(--space-12)); }
+.kifer-home .home-whatsapp-visual { align-self: stretch; display: flex; align-items: center; position: relative; min-height: 38rem; margin-block: var(--home-space); isolation: isolate; }
+.kifer-home .home-whatsapp-visual::before { content: ''; position: absolute; inset: var(--space-4) 0 0 25%; background: var(--home-soft); border-radius: var(--radius-xl); z-index: -1; }
+.kifer-home .home-whatsapp-photo { --whatsapp-focus: 60% 28%; position: absolute; inset: 0 0 var(--space-4) 29%; overflow: hidden; border-radius: var(--radius-xl); }
+.kifer-home .home-whatsapp-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--whatsapp-focus); }
+.kifer-home .home-whatsapp-photo .home-portrait-label { right: var(--space-4); bottom: var(--space-4); z-index: 3; max-width: calc(100% - var(--space-8)); padding: var(--space-3) var(--space-4); }
+.kifer-home .home-whatsapp-photo .home-portrait-label::before { content: none; }
+.kifer-home .home-whatsapp-visual .home-phone { left: 0; }
 
 @media (min-width: 1920px) {
   .kifer-home .home-hero-portrait { width: calc(59% + (100vw - var(--home-width)) / 2 - 5.2vw); }
@@ -96,16 +95,14 @@
   .kifer-home .home-quote-copy > .home-eyebrow { grid-column: 1; grid-row: 1; }
   .kifer-home .home-quote-copy > .home-title { grid-column: 1; grid-row: 2; margin: 0; }
   .kifer-home .home-quote-copy > .home-lead { grid-column: 1; grid-row: 3; }
-  .kifer-home .home-quote-background { position: relative; inset: auto; grid-column: 2; grid-row: 1 / 4; width: calc(100% + var(--home-gutter)); height: auto; --quote-focus: 65% 30%; }
-  .kifer-home .home-quote-background img { height: 100%; }
-  .kifer-home .home-quote-background > span { display: none; }
-  .kifer-home .home-quote-benefits { width: 100%; grid-column: 1 / -1; grid-row: 4; margin-block: var(--space-5); }
-  .kifer-home .home-quote-form { grid-column: 1 / -1; grid-row: 5; }
+  .kifer-home .home-quote-photo { grid-column: 2; grid-row: 1 / 4; align-self: center; margin: 0; aspect-ratio: 1.35; }
+  .kifer-home .home-quote-benefits { width: 100%; grid-column: 1 / -1; grid-row: 5; margin-block: var(--space-5); }
+  .kifer-home .home-quote-form { grid-column: 1 / -1; grid-row: 4; }
   .kifer-home .home-whatsapp-layout { grid-template-columns: 1fr; }
   .kifer-home .home-whatsapp-copy { max-width: 38rem; }
-  .kifer-home .home-whatsapp-visual { width: 100%; min-height: 37rem; }
+  .kifer-home .home-whatsapp-visual { width: 100%; min-height: 37rem; margin-top: 0; }
   .kifer-home .home-phone { margin-left: 6%; }
-  .kifer-home .home-whatsapp-photo { left: 35%; right: -5.8%; }
+  .kifer-home .home-whatsapp-photo { left: 35%; right: 0; }
 }
 @media (max-width: 639.98px) {
   /* The mobile layouts have different silhouettes, subject positions and layers. */
@@ -141,50 +138,23 @@
   .kifer-home .home-about-line-desktop { display: none; }
   .kifer-home .home-about-line-mobile { display: block; }
   .kifer-home .home-about-copy { padding-top: var(--space-4); }
-  .kifer-home .home-quote { column-gap: var(--space-2); }
-  .kifer-home .home-quote-background {
-    --quote-focus: 64% 30%;
-    position: relative;
-    inset: auto;
-    grid-column: 2;
-    grid-row: 1 / 4;
-    width: calc(100% + var(--home-gutter) + 4rem);
-    margin-left: -4rem;
-    opacity: 1;
-    mask-image: none;
-  }
-  .kifer-home .home-quote-background img {
-    height: 100%;
-    clip-path: none;
-    border-start-start-radius: 48% 24%;
-    mask: url('/images/home/quote-mobile-mask.svg') 0 0 / 100% 100% no-repeat;
-  }
-  .kifer-home .home-quote-background::before { inset: 0 0 32% 8%; clip-path: ellipse(75% 48% at 90% 35%); }
-  .kifer-home .home-quote-background > span { display: block; bottom: -15%; right: -35%; width: 70%; height: 40%; border-width: 2rem; z-index: -1; }
-  .kifer-home .home-quote-background::after { top: -9%; height: 40%; }
-  .kifer-home .home-quote-copy > .home-title { font-size: clamp(1.5rem, 6.7vw, 2rem); }
-  .kifer-home .home-quote-copy > .home-lead { grid-column: 1; font-size: 0.8125rem; line-height: 1.55; }
-  .kifer-home .home-quote-copy > :is(.home-title, .home-lead) { position: relative; z-index: 1; }
-  .kifer-home .home-quote-form { margin-top: calc(-1 * var(--space-3)); }
-  .kifer-home .home-whatsapp-visual { width: calc(100% + var(--home-gutter) * 2); margin-inline: calc(-1 * var(--home-gutter)); min-height: 0; display: grid; grid-template-columns: 1fr; padding: 0 0 var(--space-5); gap: 0; }
-  .kifer-home .home-whatsapp-visual::before { inset: 0 -10% 0 0; border-radius: 80% 60% 0 0; background: var(--home-footer); }
-  .kifer-home .home-whatsapp-visual::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 -1px;
-    height: var(--space-8);
-    border-radius: 70% 70% 0 0;
-    background: var(--home-footer);
-    pointer-events: none;
-    z-index: 1;
-  }
-  .kifer-home .home-phone { margin-left: 5.8%; }
-  .kifer-home .home-whatsapp-photo { --whatsapp-focus: 67% 35%; position: absolute; inset: 0 0 0 30%; width: auto; height: auto; mask-image: none; }
-  .kifer-home .home-whatsapp-photo img { clip-path: url(#home-photo-whatsapp-mobile); }
-  .kifer-home .home-whatsapp-photo .home-portrait-label { max-width: 58%; padding: var(--space-2); bottom: 8%; right: 5%; }
+  .kifer-home .home-quote { display: block; padding-inline: 0; }
+  .kifer-home .home-quote-layout { display: flex; flex-direction: column; width: calc(100% - var(--home-gutter) * 2); gap: var(--space-5); }
+  .kifer-home .home-quote-copy { display: contents; }
+  .kifer-home .home-quote-copy > .home-eyebrow { order: 0; margin: 0; }
+  .kifer-home .home-quote-copy > .home-title { order: 1; margin: 0; }
+  .kifer-home .home-quote-copy > .home-lead { order: 2; margin: 0; }
+  .kifer-home .home-quote-photo { order: 3; flex: 0 0 auto; width: 100%; margin: 0; aspect-ratio: 1.5; }
+  .kifer-home .home-quote-form { order: 4; width: 100%; margin: 0; }
+  .kifer-home .home-quote-benefits { order: 5; width: 100%; margin: var(--space-3) 0 0; }
+  .kifer-home .home-whatsapp-visual { width: 100%; margin: 0; min-height: 0; display: grid; grid-template-columns: 1fr; padding: var(--space-4) 0 var(--space-5); gap: 0; }
+  .kifer-home .home-whatsapp-visual::before { inset: var(--space-8) 0 0 25%; border-radius: var(--radius-xl); background: var(--home-soft); }
+  .kifer-home .home-whatsapp-visual::after { content: none; }
+  .kifer-home .home-whatsapp-visual .home-phone { margin-left: 0; }
+  .kifer-home .home-whatsapp-photo { --whatsapp-focus: 40% 28%; inset: 0 0 var(--space-5) 30%; }
+  .kifer-home .home-whatsapp-photo .home-portrait-label { max-width: calc(100% - var(--space-4)); padding: var(--space-2); bottom: var(--space-3); right: var(--space-2); }
   .kifer-home .home-whatsapp-photo .home-portrait-label strong { font-size: 0.6875rem; }
   .kifer-home .home-whatsapp-photo .home-portrait-label span { font-size: 0.5625rem; }
-  .kifer-home .home-footer { border-start-start-radius: 0; border-start-end-radius: 0; }
 }
 @supports not (aspect-ratio: 1) {
   @media (max-width: 639.98px) {

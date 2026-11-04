@@ -9,7 +9,7 @@ export default function HomePhotoMasks() {
           <path d="M.3 0H1V1H0C.04 .82 .21 .65 .2 .43C.19 .23 .22 .1 .3 0Z" />
         </clipPath>
         <clipPath id="home-photo-hero-mobile" clipPathUnits="objectBoundingBox">
-          <path d="M.55 0H1V1H0V.62C.07 .45 .08 .07 .55 0Z" />
+          <path d="M.5 0H1V1H0V.64C.025 .39 .16 .06 .5 0Z" />
         </clipPath>
         <clipPath id="home-photo-trust" clipPathUnits="objectBoundingBox">
           <path d="M0 .43C0 .19 .14 0 .34 0H.69C.87 0 1 .17 1 .41V.91Q1 1 .94 1H0Z" />
@@ -18,19 +18,22 @@ export default function HomePhotoMasks() {
           <path d="M.455 0H.96Q1 0 1 .04V.69C.84 .81 .64 .965 .455 .95C.195 .93 0 .705 0 .47C0 .255 .22 0 .455 0Z" />
         </clipPath>
         <clipPath id="home-photo-audience-mobile" clipPathUnits="objectBoundingBox">
-          <path d="M.57 0H.83C.95 0 1 .12 1 .3V.78C.82 .86 .62 1 .37 1C.18 1 .02 .89 .035 .68C.05 .43 .29 .04 .57 0Z" />
+          <path d="M.58 0H.84C.94 0 1 .1 1 .26V.79C.83 .86 .64 .995 .39 .995C.17 .995 .025 .87 .035 .7C.045 .46 .3 .045 .58 0Z" />
         </clipPath>
         <clipPath id="home-photo-about" clipPathUnits="objectBoundingBox">
           <path d="M0 0H.9V.74C.9 .85 .96 .92 1 1H0Z" />
         </clipPath>
         <clipPath id="home-photo-about-mobile" clipPathUnits="objectBoundingBox">
-          <path d="M0 0H1V.75C.95 .99 .84 1 .62 .965C.38 .935 .17 .91 0 .62Z" />
+          <path d="M0 .04C.17 .01 .32 0 .5 0H1V.75C.98 .91 .87 .985 .65 .965C.38 .94 .16 .9 0 .64Z" />
         </clipPath>
         <clipPath id="home-photo-quote" clipPathUnits="objectBoundingBox">
           <path d="M.28 0H1V1C.8 .92 .7 .8 .4 .77C.1 .74 .04 .57 .11 .39C-.09 .25 .03 .03 .28 0Z" />
         </clipPath>
         <clipPath id="home-photo-whatsapp" clipPathUnits="objectBoundingBox">
           <path d="M0 .31C.03 .1 .18 0 .43 0C.7 0 .82 .13 1 .03V1H0Z" />
+        </clipPath>
+        <clipPath id="home-photo-whatsapp-mobile" clipPathUnits="objectBoundingBox">
+          <path d="M0 .27C.14 .07 .34 0 .57 0C.78 0 .92 .065 1 .14V1H0Z" />
         </clipPath>
       </defs>
     </svg>

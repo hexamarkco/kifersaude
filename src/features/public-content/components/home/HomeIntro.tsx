@@ -135,8 +135,8 @@ export function HomeHero({ onQuote }: Props) {
             />
           </div>
           <svg className="home-hero-photo-wave" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 65C140 30 225 170 420 125S690 50 840 112S970 150 1000 150V160H0Z" />
-            <path d="M0 60C140 20 235 155 420 115S690 35 840 100S970 145 1000 140" />
+            <path d="M0 40C190 30 235 150 440 112S680 30 855 95S970 143 1000 145V160H0Z" />
+            <path d="M0 40C190 30 235 150 440 112S680 30 855 95S970 143 1000 145" />
           </svg>
           <div className="home-portrait-label">
             <strong>Luíza Kifer</strong>
@@ -152,13 +152,17 @@ export function HomeHero({ onQuote }: Props) {
         aria-hidden="true"
       >
         <path
+          className="home-hero-sand-desktop"
           d="M0 55C190 55 160 165 360 110S620 45 820 158H0Z"
           fill="currentColor"
         />
         <path
+          className="home-hero-sand-desktop"
           d="M0 0C160 45 120 140 310 130S480 115 590 160"
           stroke="currentColor"
         />
+        <path className="home-hero-sand-mobile" d="M0 10C160 45 195 140 360 115S570 10 740 45S980 145 1100 100V145C950 175 810 95 680 90S455 160 310 150S100 45 0 40Z" fill="currentColor" />
+        <path className="home-hero-sand-mobile" d="M0 10C160 45 195 140 360 115S570 10 740 45S980 145 1100 100" stroke="currentColor" />
       </svg>
     </section>
   );

@@ -139,7 +139,8 @@ export function HomeAbout() {
           loading="lazy"
         />
         <svg className="home-about-curve" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 620C170 610 170 910 390 950S780 960 1000 1000M730 0C780 110 880 130 940 105" />
+          <path className="home-about-line-desktop" d="M0 620C170 610 170 910 390 950S780 960 1000 1000M730 0C780 110 880 130 940 105" />
+          <path className="home-about-line-mobile" d="M0 640C160 680 165 935 650 980C820 995 930 975 1000 915M690 0C760 145 900 160 1000 130" />
         </svg>
       </div>
       <div className="home-about-copy">

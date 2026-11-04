@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="left-edge">
+      <stop offset=".24" stop-color="white" stop-opacity="0"/>
+      <stop offset=".55" stop-color="white"/>
+    </linearGradient>
+    <linearGradient id="bottom-edge" x1="0" x2="0" y1="0" y2="1">
+      <stop offset=".86" stop-color="white"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="feather" maskContentUnits="objectBoundingBox">
+      <path d="M0 0H1V1H0Z" fill="url(#left-edge)"/>
+    </mask>
+  </defs>
+  <path d="M0 0H100V100H0Z" fill="url(#bottom-edge)" mask="url(#feather)"/>
+</svg>

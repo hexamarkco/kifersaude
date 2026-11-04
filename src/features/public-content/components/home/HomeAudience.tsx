@@ -131,7 +131,8 @@ export default function HomeAudience({
                     />
                   </div>
                   <svg className="home-audience-curve" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M0 1000C250 900 650 770 1000 670V970Q1000 1000 970 1000Z" />
+                    <path className="home-audience-sand-desktop" d="M0 1000C250 900 650 770 1000 670V970Q1000 1000 970 1000Z" />
+                    <path className="home-audience-sand-mobile" d="M0 335C260 110 460 20 700 0L680 30C450 80 170 255 40 650C0 790 125 970 340 1005C570 1050 820 875 1000 805V920C800 1010 570 1150 340 1090C115 1030 -35 900 0 740Z" />
                     <path className="home-audience-line-desktop" d="M540 0C820 -120 950 -160 1070 -130M540 1000C720 1050 910 870 1070 800" />
                     <path className="home-audience-line-mobile" d="M0 340C200 125 390 40 600 35M520 1020C710 970 870 815 1000 755" />
                   </svg>

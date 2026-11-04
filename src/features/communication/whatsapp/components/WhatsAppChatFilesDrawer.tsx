@@ -1,3 +1,4 @@
+import { WhatsAppInboxPanelHeader } from './WhatsAppInboxPanelHeader';
 import { Image as DsImage, Video as DsVideo, Audio, Text, TextLink, Heading, LoadingMonogram } from '../../../../design-system';
 import { ActionSurface, Slider } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -17,18 +18,14 @@ import {
 } from 'lucide-react';
 
 import {
-  Badge,
   Button,
-  DialogTitle,
   Drawer,
   DrawerBody,
-  DrawerHeader,
   EmptyState,
   IconButton,
-  SectionHeader,
-  SegmentedControl,
   LoadingState,
   Surface,
+  Tabs,
 } from '../../../../design-system';
 import { whatsappMediaRepository, type CommWhatsAppMediaType } from '../data';
 import { getMessageLinkPreview } from '../domain/messageMetadata';
@@ -521,17 +518,15 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} side="right" size="md" className="comm-whatsapp-chat-files-drawer">
-      <DrawerHeader onClose={onClose} className="comm-whatsapp-chat-files-header">
-        <Text className="comm-whatsapp-chat-files-eyebrow">Arquivos da conversa</Text>
-        <DialogTitle>{chatDisplayName}</DialogTitle>
-        <Text className="comm-whatsapp-chat-files-description">Fotos, vídeos, documentos, áudios e links compartilhados neste atendimento.</Text>
-      </DrawerHeader>
+      <WhatsAppInboxPanelHeader icon={Files} title="Arquivos da conversa" context={chatDisplayName}
+        description="Encontre as mídias e os documentos compartilhados neste atendimento." onClose={onClose} />
       <DrawerBody className="comm-whatsapp-chat-files-body">
-        <SegmentedControl
+        <Tabs
           items={mediaTabs}
           value={mediaType}
           onChange={setMediaType}
           size="sm"
+          variant="underline"
           ariaLabel="Filtrar arquivos por tipo"
           className="comm-whatsapp-chat-files-tabs"
           listClassName="comm-whatsapp-chat-files-tabs-list"
@@ -552,13 +547,10 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
           />
         ) : (
           <div className="comm-whatsapp-chat-files-results">
-            <SectionHeader
-              as="h3"
-              eyebrow="Mais recentes"
-              title="Arquivos compartilhados"
-              description={`Exibindo ${messages.length} ${messages.length === 1 ? 'item' : 'itens'}${hasMore ? ' mais recentes' : ''}.`}
-              action={<Badge tone="neutral" size="sm">{messages.length}</Badge>}
-            />
+            <div className="whatsapp-inbox-library-summary">
+              <Text>Mais recentes</Text>
+              <Text>{messages.length} {messages.length === 1 ? 'arquivo' : 'arquivos'}{hasMore ? ' carregados' : ''}</Text>
+            </div>
 
             {groups.map((group) => {
               const visuals = group.messages.filter(isVisualMessage);

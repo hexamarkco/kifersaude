@@ -1,20 +1,18 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { LoadingMonogram, Text } from '../../../../design-system';
 import { useMemo, useState } from 'react';
 import { AlertTriangle, MessageSquarePlus, Phone, RefreshCw, Search, UserCircle2, UserRound } from 'lucide-react';
 
 import {
   ActionSurface,
-  Avatar,
   Badge,
   Button,
   EmptyState,
-  InfoTooltip,
   Input,
   LoadingState,
   Surface,
   type TabItem,
-  DialogShell,
-  SegmentedControl,
+  Tabs,
 } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import { getBadgeStyle } from '../../../../lib/colorUtils';
@@ -98,23 +96,21 @@ export default function WhatsAppStartChatModal({
   const sourceHasResults = source === 'saved' ? contacts.length > 0 : crmLeads.length > 0;
 
   return (
-    <DialogShell
-      panelClassName="comm-whatsapp-overlay"
+    <WhatsAppInboxDialog
+      panelClassName="whatsapp-inbox-start-chat"
+      icon={MessageSquarePlus}
+      description="Escolha um contato salvo, encontre um lead no CRM ou informe um número."
       isOpen={isOpen}
       onClose={onClose}
-      title={(
-        <span className="inline-flex items-center gap-1">
-          <span>Novo chat</span>
-          <InfoTooltip content="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente." side="bottom" label="Informações sobre o novo chat" />
-        </span>
-      )}
+      title="Novo chat"
       size="form"
       initialFocus="first-content"
-      bodyScrollable={false}
+      bodyScrollable
       bodyClassName="flex min-h-0 flex-col"
     >
       <div className="flex min-w-0 flex-col gap-5">
-        <SegmentedControl
+        <Tabs
+          variant="underline"
           items={SOURCE_TABS}
           value={source}
           onChange={setSource}
@@ -156,7 +152,7 @@ export default function WhatsAppStartChatModal({
             <Surface
               variant="default"
               padding="sm"
-              className={`max-h-[20rem] overflow-y-auto ${sourceHasResults ? 'min-h-0' : 'min-h-[12rem]'}`}
+              className={`whatsapp-inbox-start-chat-results ${sourceHasResults ? 'min-h-0' : 'min-h-[12rem]'}`}
             >
               {loadError ? (
                 <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
@@ -197,13 +193,8 @@ export default function WhatsAppStartChatModal({
                         type="button"
                         onClick={() => onStartFromSavedContact(contact)}
                         disabled={starting}
-                        variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
+                        variant="default" padding="sm" className="whatsapp-inbox-contact-option flex w-full items-center gap-3 text-left"
                       >
-                        <Avatar
-                          size="md"
-                          tone="brand"
-                          name={contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}
-                        />
                         <div className="min-w-0 flex-1">
                           <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</Text>
                           <Text className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</Text>
@@ -240,9 +231,8 @@ export default function WhatsAppStartChatModal({
                       type="button"
                       onClick={() => onStartFromLead(lead)}
                       disabled={starting}
-                      variant="default" padding="sm" className="flex w-full items-center gap-3 text-left"
+                      variant="default" padding="sm" className="whatsapp-inbox-contact-option flex w-full items-center gap-3 text-left"
                     >
-                      <Avatar size="md" name={lead.nome_completo || lead.telefone || '?'} />
                       <div className="min-w-0 flex-1">
                         <Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                           <LeadFavoriteBadge favorito={lead.favorito} />
@@ -269,6 +259,6 @@ export default function WhatsAppStartChatModal({
           </div>
         )}
       </div>
-    </DialogShell>
+    </WhatsAppInboxDialog>
   );
 }

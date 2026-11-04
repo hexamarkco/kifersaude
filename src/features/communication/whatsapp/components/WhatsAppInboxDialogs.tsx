@@ -1,17 +1,15 @@
+import { WhatsAppInboxPanelHeader } from './WhatsAppInboxPanelHeader';
 import { Text, FieldLabel } from '../../../../design-system';
 import { ActionSurface } from '../../../../design-system';
-import { Check } from 'lucide-react';
+import { Check, Forward, UserRound } from 'lucide-react';
 
 import {
   Button,
-  Avatar,
   ConfirmDialog,
   Dialog,
   DialogBody,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
   SearchInput,
 } from '../../../../design-system';
@@ -89,18 +87,16 @@ export function WhatsAppInboxDialogs({
   return (
     <>
       {forwardingMessage ? (
-        <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagem" className="comm-whatsapp-overlay">
-          <DialogHeader onClose={onCloseForwardMessage}>
-            <div><DialogTitle>Encaminhar mensagem</DialogTitle><Text className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</Text></div>
-          </DialogHeader>
+        <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagem" className="comm-whatsapp-overlay whatsapp-inbox-dialog">
+          <WhatsAppInboxPanelHeader icon={Forward} title="Encaminhar mensagem" description="Escolha as conversas que vão receber esta mensagem." onClose={onCloseForwardMessage} />
           <DialogBody className="space-y-3">
+            <Text className="line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</Text>
             <SearchInput value={forwardSearch} onChange={(event) => onForwardSearchChange(event.target.value)} placeholder="Buscar conversa" />
             <div className="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
               {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => {
                 const isSelected = forwardingTargetIds.includes(chat.id);
                 return (
                   <ActionSurface variant="plain" padding="none" key={chat.id} type="button" onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
-                    <span aria-hidden="true"><Avatar name={getSafeChatDisplayName(chat, connectedUserName)} tone="brand" /></span>
                     <div className="min-w-0 flex-1"><Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</Text><Text className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</Text></div>
                     {isSelected ? <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"><Check className="h-3 w-3" /></span> : <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />}
                   </ActionSurface>
@@ -119,8 +115,8 @@ export function WhatsAppInboxDialogs({
       <ConfirmDialog className="comm-whatsapp-overlay" open={Boolean(messagePendingDeletion)} onOpenChange={(open) => { if (!open) onCloseMessageDeletion(); }} onConfirm={async () => { if (messagePendingDeletion) { await onDeleteMessage(messagePendingDeletion); onCloseMessageDeletion(); } }} title="Apagar mensagem" description="Apagar esta mensagem no WhatsApp para todos?" confirmLabel="Apagar" destructive loading={Boolean(messagePendingDeletion && deletingMessageId === messagePendingDeletion.id)} />
       <ConfirmDialog className="comm-whatsapp-overlay" open={Boolean(retryPendingMessage)} onOpenChange={(open) => { if (!open) onCloseRetryMessage(); }} onConfirm={async () => { if (retryPendingMessage) { await onRetryMediaMessage(retryPendingMessage); onCloseRetryMessage(); } }} title="Reenviar mensagem" description="Confirme que a mensagem anterior realmente não chegou no WhatsApp antes de reenviar. Reenviar uma mensagem que já foi entregue cria uma duplicata para o contato." confirmLabel="Reenviar mesmo assim" loading={Boolean(retryPendingMessage && retryingMessageId === retryPendingMessage.id)} />
 
-      <Dialog open={saveContactDialogOpen} onOpenChange={(open) => { if (!open) onCloseSaveContact(); }} size="sm" className="comm-whatsapp-overlay">
-        <DialogHeader onClose={onCloseSaveContact} showCloseButton><DialogTitle>{savedContactNameExists ? 'Renomear contato' : 'Salvar contato'}</DialogTitle></DialogHeader>
+      <Dialog open={saveContactDialogOpen} onOpenChange={(open) => { if (!open) onCloseSaveContact(); }} size="sm" className="comm-whatsapp-overlay whatsapp-inbox-dialog">
+        <WhatsAppInboxPanelHeader icon={UserRound} title={savedContactNameExists ? 'Renomear contato' : 'Salvar contato'} onClose={onCloseSaveContact} />
         <DialogBody className="space-y-4">
           <DialogDescription placement="visible">{savedContactNameExists ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.' : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}</DialogDescription>
           <div><FieldLabel className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">Nome do contato</FieldLabel><Input id="save-contact-name" type="text" value={saveContactName} onChange={(event) => onSaveContactNameChange(event.target.value)} placeholder="Nome do contato" autoFocus disabled={savingContact} onKeyDown={(event) => { if (event.key === 'Enter' && !savingContact) onSaveContact(); }} /></div>

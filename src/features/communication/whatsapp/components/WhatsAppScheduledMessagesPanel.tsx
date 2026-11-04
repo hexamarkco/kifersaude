@@ -1,3 +1,4 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Clock, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
@@ -8,11 +9,8 @@ import {
   ButtonGroup,
   Card,
   DateTimePicker,
-  Dialog,
-  DialogBody,
   EmptyState,
   FieldLabel,
-  Heading,
   IconButton,
   Input,
   LoadingState,
@@ -629,39 +627,21 @@ export default function WhatsAppScheduledMessagesPanel({
 
   return (
     <>
-      <Dialog
-        open={isOpen}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) onClose();
-        }}
-        size="full"
-        presentation="workspace"
-        className="kds-dialog-workspace-tall comm-whatsapp-overlay"
+      <WhatsAppInboxDialog
+        isOpen={isOpen}
+        onClose={onClose}
+        size="xl"
+        icon={CalendarClock}
+        title={isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
+        context={isFiltered ? currentContactName : 'Programação de envios'}
+        description={headerSummary}
+        panelClassName={`whatsapp-inbox-scheduled-panel ${isFiltered ? 'is-contact' : ''}`}
+        bodyClassName="whatsapp-inbox-scheduled-body"
       >
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border-subtle)] px-6 py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <CalendarClock className="kds-control-icon text-[var(--brand-primary)]" />
-            <div>
-              <Heading level={2} className="text-lg font-semibold text-[var(--text-primary)]">
-                {isFiltered ? 'Agendamentos do Contato' : 'Mensagens Agendadas'}
-              </Heading>
-              <Text className="text-sm text-[var(--text-muted)]">{headerSummary}</Text>
-            </div>
-          </div>
-          <ButtonGroup size="md" className="ml-auto" aria-label="Ações dos agendamentos">
-            {onScheduleNew && (
-              <Button onClick={onScheduleNew} size="sm">
-                <Plus className="kds-control-icon" />
-                Agendar nova
-              </Button>
-            )}
-            <IconButton onClick={onClose} aria-label="Fechar">
-              <X className="kds-control-icon" />
-            </IconButton>
-          </ButtonGroup>
-        </div>
-
-      <DialogBody className="flex flex-col space-y-4 px-6 py-4">
+        {onScheduleNew ? <div className="whatsapp-inbox-scheduled-create">
+          <Text>Organize os próximos envios e acompanhe o histórico.</Text>
+          <Button onClick={onScheduleNew} size="sm"><Plus className="kds-control-icon" />Agendar nova</Button>
+        </div> : null}
           {loading ? (
             <div className="flex flex-1 items-center justify-center">
               <LoadingState label="Carregando agendamentos" compact />
@@ -708,10 +688,10 @@ export default function WhatsAppScheduledMessagesPanel({
                 items={viewTabs}
                 value={activeView}
                 onChange={setActiveView}
-                variant="pill"
+                variant="underline"
                 size="sm"
                 ariaLabel="Filtrar mensagens agendadas por situação"
-                listClassName="overflow-x-auto"
+                className="whatsapp-inbox-scheduled-tabs" listClassName="overflow-x-auto"
               />
 
               {messages.length === 0 && sequences.length === 0 ? (
@@ -729,7 +709,7 @@ export default function WhatsAppScheduledMessagesPanel({
                 />
               ) : (
                 <>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
+              <div className="whatsapp-inbox-scheduled-filters">
                 <div className="space-y-1">
                   <FieldLabel htmlFor="scheduled-messages-search" className="text-xs font-medium text-[var(--text-muted)]">
                     Buscar
@@ -841,8 +821,7 @@ export default function WhatsAppScheduledMessagesPanel({
               )}
             </>
           )}
-      </DialogBody>
-      </Dialog>
+      </WhatsAppInboxDialog>
 
       {editingMessage ? (
         <WhatsAppScheduleMessageModal
@@ -900,7 +879,7 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
   const contactDisplayName = getScheduledContactDisplayName(message, currentContactName);
 
   return (
-    <Card padding="sm" className="transition-colors hover:border-[var(--border-default)]">
+    <Card padding="sm" className="whatsapp-inbox-scheduled-item transition-colors hover:border-[var(--border-default)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -914,7 +893,7 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
             )}
           </div>
 
-          <Text className="text-sm text-[var(--text-primary)] truncate">
+          <Text className="whatsapp-inbox-scheduled-text text-sm text-[var(--text-primary)]">
             {message.text_content ?? '(Mídia)'}
           </Text>
 
@@ -996,7 +975,7 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
   const contactDisplayName = getScheduledContactDisplayName(sequence, currentContactName);
 
   return (
-    <Card padding="sm" className="transition-colors hover:border-[var(--border-default)]">
+    <Card padding="sm" className="whatsapp-inbox-scheduled-item transition-colors hover:border-[var(--border-default)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">

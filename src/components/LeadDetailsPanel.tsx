@@ -1,5 +1,5 @@
 import { LoadingMonogram, LoadingState, Text, Heading, useMinimumLoading } from '../design-system';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Contract } from '../features/contracts';
 import type { ConfigOption } from '../features/config';
 import type { Lead, LeadStatusConfig } from '../features/leads';
@@ -42,6 +42,8 @@ type LeadDetailsPanelProps = {
   onViewLead?: (() => void) | undefined;
   onEditLead?: (() => void) | undefined;
   disabled?: boolean;
+  showAvatar?: boolean;
+  headerActions?: ReactNode;
 };
 
 const formatCurrencyBRL = (value: number | null | undefined) => {
@@ -74,6 +76,8 @@ export default function LeadDetailsPanel({
   onViewLead,
   onEditLead,
   disabled = false,
+  showAvatar = true,
+  headerActions,
 }: LeadDetailsPanelProps) {
   const [isUpdatingResponsavel, setIsUpdatingResponsavel] = useState(false);
   const showContractsLoading = useMinimumLoading(contractsLoading);
@@ -206,7 +210,7 @@ export default function LeadDetailsPanel({
     <aside className={rootClassName}>
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <Avatar name={lead.nome_completo || lead.telefone || 'Lead'} size="lg" className="shrink-0" />
+          {showAvatar ? <Avatar name={lead.nome_completo || lead.telefone || 'Lead'} size="lg" className="shrink-0" /> : null}
           <div className="min-w-0">
             <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
               Lead vinculado
@@ -221,6 +225,7 @@ export default function LeadDetailsPanel({
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {headerActions}
           {onViewLead && (
             <Button
               variant="secondary"

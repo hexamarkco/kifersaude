@@ -77,7 +77,7 @@ test('advanced filters stay beside their trigger and fit the desktop viewport', 
   );
   assert.deepEqual(
     getAdvancedFiltersPosition(rect(140, 500, 100, 32), { width: 390, height: 844 }),
-    { top: 0, left: 0, width: 390, maxHeight: 844 },
+    { top: 16, left: 16, width: 358, maxHeight: 476 },
   );
   assert.deepEqual(
     getThreadActionsMenuPosition(rect(900, 700, 20, 40), { width: 1024, height: 768 }),

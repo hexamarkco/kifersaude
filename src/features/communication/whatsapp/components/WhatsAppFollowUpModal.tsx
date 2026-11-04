@@ -1,3 +1,4 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { Heading, Text } from '../../../../design-system';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
@@ -5,7 +6,6 @@ import { CalendarPlus, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react
 import {
   Button,
   Textarea,
-  WorkspaceDialog,
 } from '../../../../design-system';
 import { VariableAutocompleteTextarea } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
@@ -309,7 +309,7 @@ export default function WhatsAppFollowUpModal({
   };
 
   return (
-    <WorkspaceDialog
+    <WhatsAppInboxDialog
       panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
@@ -500,6 +500,6 @@ export default function WhatsAppFollowUpModal({
           ) : null}
         </aside>
       </div>
-    </WorkspaceDialog>
+    </WhatsAppInboxDialog>
   );
 }

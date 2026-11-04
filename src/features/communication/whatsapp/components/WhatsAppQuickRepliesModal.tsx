@@ -1,10 +1,10 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 import {
   Alert,
   Button,
-  DialogShell,
   EmptyState,
   Field,
   Input,
@@ -119,7 +119,7 @@ export default function WhatsAppQuickRepliesModal({
   };
 
   return (
-    <DialogShell
+    <WhatsAppInboxDialog
       panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
@@ -252,6 +252,6 @@ export default function WhatsAppQuickRepliesModal({
           />
         )}
       </div>
-    </DialogShell>
+    </WhatsAppInboxDialog>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { AlertCircle, Clock, Tag } from 'lucide-react';
 import type { Lead } from '../features/leads';
 import { touchLeadContact } from '../features/leads';
@@ -46,6 +46,8 @@ type ReminderSchedulerModalProps = {
   defaultType?: (typeof TYPE_OPTIONS)[number];
   defaultPriority?: (typeof PRIORITY_OPTIONS)[number];
   promptMessage?: string;
+  className?: string;
+  renderHeader?: (options: { onClose: () => void; showCloseButton: boolean }) => ReactNode;
 };
 
 const formatDateTimeLocal = (date: Date) => {
@@ -88,6 +90,8 @@ export default function ReminderSchedulerModal({
   defaultType = FOLLOW_UP_REMINDER_TYPE,
   defaultPriority = 'normal',
   promptMessage,
+  className,
+  renderHeader,
 }: ReminderSchedulerModalProps) {
   const [scheduledFor, setScheduledFor] = useState(getDefaultDateTime);
   const [title, setTitle] = useState(() => defaultTitle ?? `Follow-up: ${lead.nome_completo}`);
@@ -186,8 +190,8 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="form" className="kds-lead-reminder-dialog">
-      <DialogHeader onClose={saving ? undefined : onClose}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="form" className={`kds-lead-reminder-dialog${className ? ` ${className}` : ''}`}>
+      {renderHeader ? renderHeader({ onClose: () => { if (!saving) onClose(); }, showCloseButton: !saving }) : <DialogHeader onClose={saving ? undefined : onClose}>
         <div>
           <DialogTitle>Agendar novo lembrete</DialogTitle>
           <DialogDescription placement="visible" className="flex items-center gap-1.5">
@@ -195,7 +199,7 @@ export default function ReminderSchedulerModal({
             {formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}
           </DialogDescription>
         </div>
-      </DialogHeader>
+      </DialogHeader>}
       <DialogBody>
         <div className="space-y-4">
           <Text as="p" size="sm" tone="muted" className="kds-lead-reminder-intro">

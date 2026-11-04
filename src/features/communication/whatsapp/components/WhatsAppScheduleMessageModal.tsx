@@ -1,3 +1,4 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { FieldLabel, Text } from '../../../../design-system';
 import { FileInput, ActionSurface } from '../../../../design-system';
 import { useState, useMemo, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
@@ -13,7 +14,6 @@ import {
   SegmentedControl,
   Select,
   Textarea,
-  DialogShell,
 } from '../../../../design-system';
 import { toast } from '../../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
@@ -555,7 +555,7 @@ export default function WhatsAppScheduleMessageModal({
   }, [submitting, updateSequenceStep, uploadingSequenceStepIds]);
 
   return (
-    <DialogShell
+    <WhatsAppInboxDialog
       panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
@@ -984,6 +984,6 @@ export default function WhatsAppScheduleMessageModal({
         )}
 
       </div>
-    </DialogShell>
+    </WhatsAppInboxDialog>
   );
 }

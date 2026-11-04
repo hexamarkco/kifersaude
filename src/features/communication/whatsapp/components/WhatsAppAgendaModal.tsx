@@ -1,4 +1,5 @@
-import { useMinimumLoading, LoadingMonogram, ButtonGroup, Heading, Text, FieldLabel } from '../../../../design-system';
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
+import { useMinimumLoading, LoadingMonogram, Heading, Text, FieldLabel } from '../../../../design-system';
 import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
@@ -26,7 +27,7 @@ import {
 
 import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
-import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
+import ReminderSchedulerModal from './WhatsAppReminderSchedulerModal';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import {
   Badge,
@@ -40,7 +41,6 @@ import {
   Textarea,
   IconButton,
   FilterSelect,
-  WorkspaceDialog,
 } from '../../../../design-system';
 import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import type { PanelTone } from '../../../../design-system';
@@ -1317,7 +1317,7 @@ export default function WhatsAppAgendaModal({
         key={reminder.id}
         variant={getReminderCardVariant(reminder)}
         padding="sm"
-        className="transition-all"
+        className="whatsapp-inbox-agenda-item"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
@@ -1387,7 +1387,7 @@ export default function WhatsAppAgendaModal({
             </div>
           </div>
 
-          <ButtonGroup size="md" aria-label="Ações do lembrete" className="overflow-x-auto">
+          <ControlGroup size="md" aria-label="Ações do lembrete" className="whatsapp-inbox-agenda-item-actions">
             {onOpenLeadChat && leadId ? (
               <IconButton
                 onClick={() => void handleOpenReminderChat(reminder)}
@@ -1558,7 +1558,7 @@ export default function WhatsAppAgendaModal({
                 {!deletingReminderIds.has(reminder.id) && <Trash2 aria-hidden="true" />}
               </IconButton>
             ) : null}
-          </ButtonGroup>
+          </ControlGroup>
         </div>
       </Surface>
     );
@@ -1568,15 +1568,16 @@ export default function WhatsAppAgendaModal({
 
   return (
     <>
-      <WorkspaceDialog
-        panelClassName="comm-whatsapp-overlay"
+      <WhatsAppInboxDialog
+        panelClassName="whatsapp-inbox-agenda-panel"
+        icon={Calendar}
         isOpen={isOpen}
         onClose={onClose}
         title="Agenda do WhatsApp"
-        description="Consulte e organize seus lembretes sem sair da conversa. As alterações também aparecem na Agenda do sistema."
+        description="Lembretes e tarefas do atendimento, sincronizados com a Agenda do sistema."
         size="xl"
         initialFocus="first-content"
-        bodyClassName="whatsapp-agenda-dialog-body"
+        bodyClassName="whatsapp-inbox-agenda-body"
         footer={
           <div className="flex items-center justify-end gap-3">
             <Button variant="secondary" onClick={onClose}>
@@ -1595,9 +1596,10 @@ export default function WhatsAppAgendaModal({
             </Surface>
           </Surface>
         ) : (
-          <div className="space-y-5">
-            <Surface padding="sm" className="sm:p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="whatsapp-inbox-agenda-workspace">
+            <aside className="whatsapp-inbox-agenda-rail" aria-label="Navegação e filtros da agenda">
+            <section className="whatsapp-inbox-agenda-day-control">
+              <div className="flex flex-col gap-4">
                 <div>
                   <Text className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
                     Dia em foco
@@ -1612,7 +1614,7 @@ export default function WhatsAppAgendaModal({
                   </Text>
                 </div>
 
-                <ControlGroup aria-label="Ações do dia" className="grid w-full grid-cols-[var(--control-height-md)_var(--control-height-md)_minmax(0,1fr)_var(--control-height-md)] items-center gap-2 sm:flex sm:flex-wrap sm:justify-end xl:w-auto">
+                <ControlGroup aria-label="Ações do dia" className="whatsapp-inbox-agenda-day-actions">
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
                       <IconButton variant="secondary"  size="md" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
@@ -1628,29 +1630,30 @@ export default function WhatsAppAgendaModal({
                   <IconButton onClick={goToPreviousDay} variant="secondary"  aria-label="Dia anterior" size="md">
                     <ChevronLeft className="kds-control-icon" />
                   </IconButton>
-                  <div className={onSendBatchFollowUps ? "min-w-0 w-full sm:flex-none sm:w-[176px]" : "col-span-2 min-w-0 w-full sm:flex-none sm:w-[176px]"}>
+                  <div className="whatsapp-inbox-agenda-date">
                     <DateTimePicker type="date" value={selectedDateInputValue} onChange={(event) => handleSelectedDateChange(event.target.value)} />
                   </div>
                   <IconButton onClick={goToNextDay} variant="secondary"  aria-label="Próximo dia" size="md">
                     <ChevronRight className="kds-control-icon" />
                   </IconButton>
-                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="col-span-2 w-full sm:w-auto">
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="whatsapp-inbox-agenda-day-button">
                     Hoje
                   </Button>
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="col-span-2 w-full sm:w-auto" disabled={!canEdit}>
+                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="whatsapp-inbox-agenda-day-button" disabled={!canEdit}>
                     <Plus className="kds-control-icon" />
                     Nova tarefa
                   </Button>
                 </ControlGroup>
               </div>
-            </Surface>
+            </section>
 
-            <Surface padding="sm" className="sm:p-5">
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto_auto]">
+            <section className="whatsapp-inbox-agenda-filter-controls">
+              <div className="grid gap-3">
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="Buscar por título, descrição, lead ou contrato..."
+                    aria-label="Buscar na agenda"
+                    placeholder="Buscar tarefa, lead ou contrato..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     leftIcon={Search}
@@ -1701,8 +1704,9 @@ export default function WhatsAppAgendaModal({
                   </Button>
                 ) : null}
               </div>
-            </Surface>
-
+            </section>
+            </aside>
+            <div className="whatsapp-inbox-agenda-results">
             {duplicateReminderCount > 0 ? (
               <Surface variant="warning" padding="sm" className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                 <div className="flex items-center gap-2">
@@ -1734,7 +1738,7 @@ export default function WhatsAppAgendaModal({
             ) : (
               <div className="space-y-4">
                 {overdueReminders.length > 0 ? (
-                  <Surface padding="sm" className="sm:p-5">
+                  <Surface padding="sm" className="whatsapp-inbox-agenda-section">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
                         <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--danger-text)]">
@@ -1750,7 +1754,7 @@ export default function WhatsAppAgendaModal({
                   </Surface>
                 ) : null}
 
-                <Surface padding="sm" className="sm:p-5">
+                <Surface padding="sm" className="whatsapp-inbox-agenda-section">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
@@ -1772,7 +1776,7 @@ export default function WhatsAppAgendaModal({
                   )}
                 </Surface>
 
-                <Surface padding="sm" className="sm:p-5">
+                <Surface padding="sm" className="whatsapp-inbox-agenda-section">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
@@ -1806,12 +1810,13 @@ export default function WhatsAppAgendaModal({
                 </Surface>
               </div>
             )}
+            </div>
           </div>
         )}
-      </WorkspaceDialog>
+      </WhatsAppInboxDialog>
 
       {isAddTaskModalOpen ? (
-        <WorkspaceDialog
+        <WhatsAppInboxDialog
           panelClassName="comm-whatsapp-overlay"
           isOpen
           onClose={() => { if (!savingTask) closeAddTaskModal(); }}
@@ -1859,7 +1864,7 @@ export default function WhatsAppAgendaModal({
               </Button>
             </div>
           </form>
-        </WorkspaceDialog>
+        </WhatsAppInboxDialog>
       ) : null}
 
       {schedulerDraft ? (
@@ -1896,7 +1901,7 @@ export default function WhatsAppAgendaModal({
       ) : null}
 
       {isDuplicatesModalOpen ? (
-        <WorkspaceDialog
+        <WhatsAppInboxDialog
           panelClassName="comm-whatsapp-overlay"
           isOpen
           onClose={() => setIsDuplicatesModalOpen(false)}
@@ -1997,7 +2002,7 @@ export default function WhatsAppAgendaModal({
               })}
             </div>
           )}
-        </WorkspaceDialog>
+        </WhatsAppInboxDialog>
       ) : null}
 
       <WhatsAppBatchFollowUpModal

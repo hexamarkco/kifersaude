@@ -1,3 +1,4 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { LoadingState, Text, Heading } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
@@ -9,8 +10,7 @@ import {
   OperationalMetricChip,
   Surface,
   type TabItem,
-  WorkspaceDialog,
-  SegmentedControl,
+  Tabs,
 } from '../../../../design-system';
 import {
   whatsappConversationsRepository,
@@ -430,8 +430,10 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   }, [loadMetrics, syncingAll]);
 
   return (
-    <WorkspaceDialog
-      panelClassName="comm-whatsapp-overlay"
+    <WhatsAppInboxDialog
+      panelClassName="whatsapp-inbox-dashboard"
+      icon={BarChart3}
+      bodyClassName="whatsapp-inbox-dashboard-body"
       isOpen={isOpen}
       onClose={handleClose}
       title="Painel WhatsApp"
@@ -473,9 +475,9 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           action={<Button variant="secondary" size="sm" onClick={() => void loadMetrics()}>Tentar novamente</Button>}
         />
       ) : metrics ? (
-        <div className="flex min-h-[min(560px,calc(100dvh-12rem))] flex-col gap-5 lg:flex-row lg:items-start">
+        <div className="whatsapp-inbox-dashboard-workspace">
           {/* Left rail: channel health + at-a-glance metrics */}
-          <aside className="flex w-full shrink-0 flex-col gap-4 lg:sticky lg:top-0 lg:w-[280px]">
+          <aside className="whatsapp-inbox-dashboard-rail">
             <Surface
               variant={channelHealth.tone === 'success' ? 'success' : channelHealth.tone === 'danger' ? 'danger' : channelHealth.tone === 'warning' ? 'warning' : 'default'}
               padding="sm"
@@ -520,7 +522,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
 
           {/* Right: tabbed priorities / recent chats */}
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <SegmentedControl items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} />
+            <Tabs items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} variant="underline" ariaLabel="Visão do painel WhatsApp" />
 
             {view === 'priorities' ? (
               <div className="space-y-2.5">
@@ -531,7 +533,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                       key={`${item.title}:${item.description}`}
                       variant={item.tone === 'neutral' ? 'muted' : item.tone}
                       padding="sm"
-                      className="flex items-start gap-3"
+                      className="whatsapp-inbox-dashboard-priority flex items-start gap-3"
                     >
                       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
                       <div className="min-w-0">
@@ -545,7 +547,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
             ) : (
               <div className="space-y-2.5">
                 {metrics.recentChats.length > 0 ? metrics.recentChats.map((chat) => (
-                  <Surface key={chat.id} variant="muted" padding="sm">
+                  <Surface key={chat.id} variant="muted" padding="sm" className="whatsapp-inbox-dashboard-chat">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-sm font-semibold text-[var(--brand-primary)]">
@@ -578,6 +580,6 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           </div>
         </div>
       ) : null} />}
-    </WorkspaceDialog>
+    </WhatsAppInboxDialog>
   );
 }

@@ -651,11 +651,104 @@
 /* Public identity remains separate from the CRM navigation and preserves content. */
 .kds-public-shell { background: var(--bg-canvas); }
 .kds-public-card { border-radius: var(--radius-panel); box-shadow: none; background: var(--bg-surface); }
-.kds-login-heading { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); }
-.kds-login-heading .kds-workspace-brand { margin-bottom: var(--space-4); }
-.kds-login-page .kds-login-card { width: 100%; max-width: 26.875rem; margin-inline: auto; padding: var(--space-8); }
-.kds-login-page .kds-login-access-note { margin-top: var(--space-4); }
-.kds-login-page .kds-surface { background: var(--bg-surface); }
+/* Login: a branded entry point, with a compact form and a dedicated mobile composition. */
+.kds-login-page {
+  --login-page-gutter: clamp(var(--space-4), 3.5vw, var(--space-12));
+  display: grid;
+  min-height: 100svh;
+  align-items: center;
+  padding: var(--login-page-gutter);
+  background: var(--bg-canvas);
+}
+.kds-login-page .kds-public-shell-inner { max-width: 88rem; }
+.kds-login-layout {
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+  min-height: min(48rem, calc(100svh - 2 * var(--login-page-gutter)));
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-card);
+}
+.kds-login-brand-panel {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(var(--space-8), 4vw, var(--space-12));
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+}
+.kds-login-brand-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); }
+.kds-login-brand-panel .kds-workspace-brand { color: inherit; }
+.kds-login-brand-panel .kds-workspace-brand > span { font-size: 2.25rem; }
+.kds-login-brand-panel .kds-workspace-brand > span > span { font-size: 1.5rem; }
+.kds-login-brand-label {
+  color: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: var(--radius-sm);
+  font: var(--type-label);
+  letter-spacing: 0.16em;
+}
+.kds-login-brand-copy { position: relative; z-index: 1; padding-block: var(--space-12); }
+.kds-login-eyebrow { margin: 0; color: var(--text-muted); font: var(--type-label); letter-spacing: 0.12em; text-transform: uppercase; }
+.kds-login-brand-copy .kds-login-eyebrow { max-width: 28ch; color: inherit; opacity: 0.8; line-height: 1.7; }
+.kds-login-brand-panel .kds-login-brand-title {
+  max-width: 10ch;
+  margin: var(--space-5) 0 var(--space-6);
+  color: inherit;
+  font: var(--font-weight-medium) clamp(2.75rem, 4.1vw, 4.5rem) / 1.08 var(--font-display);
+  letter-spacing: -0.035em;
+}
+.kds-login-brand-description { max-width: 32ch; margin: 0; color: inherit; font: var(--type-body-lg); opacity: 0.86; }
+.kds-login-brand-signature { position: relative; z-index: 1; margin: 0; padding-top: var(--space-5); border-top: 1px solid color-mix(in srgb, currentColor 28%, transparent); color: inherit; font: var(--type-caption); letter-spacing: 0.025em; }
+.kds-login-brand-art { position: absolute; z-index: 0; right: -17rem; bottom: -19rem; width: 43rem; height: 43rem; border: 1px solid color-mix(in srgb, var(--text-on-brand) 24%, transparent); border-radius: 50%; pointer-events: none; }
+.kds-login-brand-art::before,
+.kds-login-brand-art::after { position: absolute; content: ''; inset: 4rem; border: inherit; border-radius: inherit; }
+.kds-login-brand-art::after { inset: 8rem; background: color-mix(in srgb, var(--text-on-brand) 4%, transparent); }
+.kds-login-form-panel { display: flex; min-width: 0; align-items: center; justify-content: center; padding: clamp(var(--space-8), 5vw, var(--space-12)); background: var(--bg-surface); }
+.kds-login-page .kds-login-card { width: 100%; max-width: 25rem; }
+.kds-login-heading { display: grid; gap: var(--space-3); margin-bottom: var(--space-8); }
+.kds-login-heading .kds-heading { margin: var(--space-1) 0 0; color: var(--text-primary); font: var(--font-weight-medium) clamp(1.875rem, 2.5vw, 2.5rem) / 1.2 var(--font-display); letter-spacing: -0.03em; }
+.kds-login-heading > .kds-text:last-child { margin: 0; color: var(--text-secondary); line-height: 1.7; }
+.kds-login-form { display: grid; gap: var(--space-5); }
+.kds-login-form .kds-input { min-height: 3.25rem; font-size: 1rem; }
+.kds-login-form .kds-input-action { right: var(--space-2); }
+.kds-login-form .kds-input-with-action { padding-right: 3.5rem; }
+.kds-login-form .kds-alert { padding: var(--space-3); }
+.kds-login-submit.kds-button { min-height: 3.25rem; margin-top: var(--space-2); }
+.kds-login-submit .kds-button-content { display: flex; width: 100%; align-items: center; justify-content: center; gap: var(--space-3); }
+.kds-login-access-note { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font: var(--type-caption); text-align: center; }
+.kds-login-access-note > svg { flex: 0 0 auto; }
+@media (max-width: 900px) {
+  .kds-login-layout { grid-template-columns: 0.9fr 1fr; }
+  .kds-login-brand-panel,
+  .kds-login-form-panel { padding: var(--space-8); }
+  .kds-login-brand-panel .kds-login-brand-title { font-size: 2.75rem; }
+}
+@media (max-width: 700px) {
+  .kds-login-page { display: block; padding: 0; }
+  .kds-login-layout { display: block; min-height: 100svh; padding-bottom: var(--space-6); overflow: visible; border: 0; border-radius: 0; background: var(--bg-canvas); box-shadow: none; }
+  .kds-login-brand-panel { min-height: 12rem; padding: var(--space-8) var(--space-6) var(--space-10); }
+  .kds-login-brand-copy { display: none; }
+  .kds-login-brand-signature { margin-top: var(--space-5); padding-top: 0; border: 0; opacity: 0.86; }
+  .kds-login-brand-art { width: 25rem; height: 25rem; right: -10rem; bottom: -21rem; }
+  .kds-login-form-panel { position: relative; z-index: 1; margin: calc(-1 * var(--space-6)) var(--space-4) 0; padding: var(--space-8) var(--space-6); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
+  .kds-login-heading { gap: var(--space-3); margin-bottom: var(--space-8); }
+  .kds-login-heading .kds-heading { font-size: 2rem; }
+}
+@media (max-width: 360px) {
+  .kds-login-brand-panel { min-height: 10.5rem; padding: var(--space-6) var(--space-5) var(--space-8); }
+  .kds-login-brand-panel .kds-workspace-brand > span { font-size: 2rem; }
+  .kds-login-form-panel { margin-inline: var(--space-3); padding: var(--space-6) var(--space-5); }
+  .kds-login-heading .kds-heading { font-size: 1.75rem; }
+  .kds-login-form { gap: var(--space-4); }
+}
 .kds-public-home-hero { background: var(--bg-canvas); }
 .kds-public-home-hero::before, .kds-public-home-hero::after { display: none; }
 .kds-public-home-hero :is(.kds-public-home-hero-disc,.kds-public-home-hero-ring,.kds-public-home-hero-dot) { display: none; }

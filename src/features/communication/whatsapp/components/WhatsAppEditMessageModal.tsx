@@ -1,7 +1,7 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import {
   Button,
   Textarea,
-  DialogShell,
 } from '../../../../design-system';
 
 type WhatsAppEditMessageModalProps = {
@@ -26,7 +26,7 @@ export default function WhatsAppEditMessageModal({
   onSubmit,
 }: WhatsAppEditMessageModalProps) {
   return (
-    <DialogShell
+    <WhatsAppInboxDialog
       panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
@@ -54,6 +54,6 @@ export default function WhatsAppEditMessageModal({
         disabled={loading}
         autoFocus
       />
-    </DialogShell>
+    </WhatsAppInboxDialog>
   );
 }

@@ -1,3 +1,4 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { useMinimumLoading, LoadingMonogram, Text, Heading, FieldLabel } from '../../../../design-system';
 import { Checkbox, Input } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -8,7 +9,6 @@ import {
   Progress,
   Stepper,
   Textarea,
-  WorkspaceDialog,
 } from '../../../../design-system';
 import { VariableAutocompleteTextarea } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
@@ -537,7 +537,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'sent' && sentSummary && !showSending) {
     return (
-      <WorkspaceDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="full"
+      <WhatsAppInboxDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="full"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex flex-col items-center gap-6 py-12">
@@ -622,7 +622,7 @@ export default function WhatsAppBatchFollowUpModal({
             </div>
           </div>
         </div>
-      </WorkspaceDialog>
+      </WhatsAppInboxDialog>
     );
   }
 
@@ -630,7 +630,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (showInitialLoading) {
     return (
-      <WorkspaceDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
+      <WhatsAppInboxDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
         <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
           <LoadingMonogram className="h-8 w-8 text-[var(--brand-primary)]" />
           <div className="text-center">
@@ -638,14 +638,14 @@ export default function WhatsAppBatchFollowUpModal({
             <Text className="mt-1 text-xs text-[var(--text-muted)]">Aguarde enquanto carregamos os leads com follow-up atrasado.</Text>
           </div>
         </div>
-      </WorkspaceDialog>
+      </WhatsAppInboxDialog>
     );
   }
 
   // ---- Render: main layout ----
 
   return (
-    <WorkspaceDialog
+    <WhatsAppInboxDialog
       panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={handleClose}
@@ -1081,7 +1081,7 @@ export default function WhatsAppBatchFollowUpModal({
           )}
         </div>
       </div>
-    </WorkspaceDialog>
+    </WhatsAppInboxDialog>
   );
 }
 

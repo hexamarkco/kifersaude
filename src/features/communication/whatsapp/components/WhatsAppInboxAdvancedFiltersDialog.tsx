@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 
 import {
   Button,
-  Dialog,
+  PositionedPopover,
   DialogBody,
   DialogFooter,
   DialogHeader,
@@ -21,6 +21,7 @@ export type InboxAdvancedFilterValues = {
 type InboxAdvancedFiltersDialogProps = {
   isOpen: boolean;
   position: InboxOverlayPosition | null;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
   activityFilter: ChatActivityFilter;
   leadStatusFilters: string[];
   leadResponsavelFilters: string[];
@@ -33,6 +34,7 @@ type InboxAdvancedFiltersDialogProps = {
 export function WhatsAppInboxAdvancedFiltersDialog({
   isOpen,
   position,
+  triggerRef,
   activityFilter,
   leadStatusFilters,
   leadResponsavelFilters,
@@ -41,19 +43,38 @@ export function WhatsAppInboxAdvancedFiltersDialog({
   onClose,
   onApply,
 }: InboxAdvancedFiltersDialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const positioned = position !== null;
+
+  useEffect(() => {
+    if (!isOpen || !positioned) return;
+    const trigger = triggerRef?.current ?? document.activeElement;
+    const panel = panelRef.current;
+    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('.kds-dialog-body button, .kds-dialog-body input')?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      if ((document.activeElement === document.body || panel?.contains(document.activeElement)) && trigger instanceof HTMLElement) trigger.focus();
+    };
+  }, [isOpen, positioned, triggerRef]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!(event.target instanceof Node) || panelRef.current?.contains(event.target) || triggerRef?.current?.contains(event.target)) return;
+      onClose();
+    };
+    document.addEventListener('pointerdown', dismissOutside);
+    return () => document.removeEventListener('pointerdown', dismissOutside);
+  }, [isOpen, onClose, triggerRef]);
+
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => { if (!open) onClose(); }}
-      size="sm"
-      initialFocus="first-content"
-      className="whatsapp-inbox-filter-dialog comm-whatsapp-overlay"
-      style={position ? {
-        top: position.top,
-        left: position.left,
-        width: position.width,
-        maxHeight: position.maxHeight,
-      } : undefined}
+    <PositionedPopover
+      ref={panelRef}
+      isOpen={isOpen}
+      position={position}
+      onClose={onClose}
+      ariaLabel="Filtros do inbox"
+      className="whatsapp-inbox-filter-dropdown"
     >
       {isOpen ? (
         <InboxAdvancedFiltersDialogContent
@@ -66,11 +87,11 @@ export function WhatsAppInboxAdvancedFiltersDialog({
           onClose={onClose}
         />
       ) : null}
-    </Dialog>
+    </PositionedPopover>
   );
 }
 
-type InboxAdvancedFiltersDialogContentProps = Omit<InboxAdvancedFiltersDialogProps, 'isOpen' | 'position'>;
+type InboxAdvancedFiltersDialogContentProps = Omit<InboxAdvancedFiltersDialogProps, 'isOpen' | 'position' | 'triggerRef'>;
 
 function InboxAdvancedFiltersDialogContent({
   activityFilter: appliedActivityFilter,

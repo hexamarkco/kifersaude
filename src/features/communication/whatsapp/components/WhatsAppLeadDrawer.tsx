@@ -1,9 +1,10 @@
-import { AlertTriangle, ArrowUpRight, Bell, Bot, CalendarPlus, Check, Clock3, MapPin, Pencil, RefreshCw, Sparkles, Unlink, Info, Link2, Plus, UserPlus } from 'lucide-react';
+import { WhatsAppInboxPanelHeader } from './WhatsAppInboxPanelHeader';
+import { AlertTriangle, ArrowUpRight, Bell, Bot, CalendarPlus, Check, Clock3, MapPin, Pencil, RefreshCw, Sparkles, Unlink, Info, Link2, Plus, UserPlus, UserRound } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
-import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
+import ReminderSchedulerModal from './WhatsAppReminderSchedulerModal';
 import {
   LoadingMonogram,
   LoadingState,
@@ -12,10 +13,8 @@ import {
   Badge,
   Button,
   DateTimePicker,
-  DialogTitle,
   Drawer,
   DrawerBody,
-  DrawerHeader,
   EmptyState,
   Heading,
   InfoTooltip,
@@ -466,28 +465,11 @@ export default function WhatsAppLeadDrawer({
 
   const drawerContent = (
     <>
-        <DrawerHeader onClose={onClose} className="comm-whatsapp-lead-drawer-header">
-          {presentation === 'sidebar' ? (
-            <>
-              <Heading level={2} family="interface" weight="semibold">Informações do contato</Heading>
-              <Text size="xs" tone="muted" className="mt-1">Dados do contato, lead e próximos acompanhamentos</Text>
-              <div className="mt-3 flex min-w-0 items-center gap-3">
-                <div className="shrink-0" aria-hidden="true"><Avatar name={chatDisplayName} size="md" tone="brand" /></div>
-                <div className="min-w-0">
-                  <Text as="div" size="sm" tone="primary" weight="semibold" className="truncate">{chatDisplayName}</Text>
-                  <Text as="div" size="xs" tone="muted" className="mt-0.5 truncate">{linkedLead?.status_nome || 'Contato do WhatsApp'}</Text>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <Text size="xs" tone="brand" weight="semibold" className="uppercase tracking-[0.14em]">Info do chat</Text>
-              <DialogTitle className="mt-1">{chatDisplayName}</DialogTitle>
-              <Text size="sm" tone="muted" className="mt-1">Lead, contratos e próximos acompanhamentos</Text>
-            </>
-          )}
+        <WhatsAppInboxPanelHeader icon={UserRound} title="Informações do contato" context={chatDisplayName} className="comm-whatsapp-lead-drawer-header"
+          description="Dados do lead, contratos e próximos acompanhamentos." onClose={onClose}>
           <div className="mt-3 min-w-0 space-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-sm text-[var(--text-secondary)]">
+              <Badge tone={linkedLead?.status_nome ? 'accent' : 'neutral'} size="sm">{linkedLead?.status_nome || 'Contato do WhatsApp'}</Badge>
               <span className="min-w-0 truncate">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</span>
               {phoneRegion ? (
                 <Badge tone="neutral" size="sm" icon={MapPin} title={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}. Região do telefone; não indica a localização atual do contato.`} aria-label={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}`}>
@@ -513,13 +495,13 @@ export default function WhatsAppLeadDrawer({
               ) : null}
             </div>
           </div>
-        </DrawerHeader>
-        <DrawerBody className={presentation === 'sidebar' ? 'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto' : 'overflow-y-auto'}>
+        </WhatsAppInboxPanelHeader>
+        <DrawerBody className={'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto'}>
           <Tabs
             items={LEAD_DRAWER_TABS}
             value={activeTab}
             onChange={setActiveTab}
-            variant="pill"
+            variant="underline"
             size="sm"
             ariaLabel="Seções de informações do chat"
             className="comm-whatsapp-lead-drawer-tabs mb-5"
@@ -541,19 +523,11 @@ export default function WhatsAppLeadDrawer({
             </Surface>
           ) : linkedLead ? (
             <div className="space-y-5">
-              <Surface variant="muted" padding="sm" className="comm-whatsapp-lead-link-state flex flex-wrap items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
-                    <Link2 className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <Text className="text-sm font-semibold text-[var(--text-primary)]">Lead vinculado</Text>
-                    <Text className="text-xs text-[var(--text-muted)]">Informações comerciais desta conversa</Text>
-                  </div>
-                  {autoLinked && (
-                    <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge>
-                  )}
-                </div>
+              <LeadDetailsPanel
+                className="whatsapp-lead-drawer-panel"
+                showAvatar={false}
+                headerActions={<>
+                  {autoLinked ? <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge> : null}
                 {onUnlinkLead && (
                   <Button
                     variant="secondary"
@@ -567,10 +541,7 @@ export default function WhatsAppLeadDrawer({
                     {leadMutationLoading ? 'Atualizando...' : 'Desvincular'}
                   </Button>
                 )}
-              </Surface>
-
-              <LeadDetailsPanel
-                className="whatsapp-lead-drawer-panel rounded-2xl border-[var(--border-subtle)] bg-transparent shadow-none"
+                </>}
                 lead={{ ...linkedLead, observacoes: linkedLead.observacoes ?? undefined, favorito: linkedLead.favorito ?? undefined }}
                 statusOptions={statusOptions}
                 responsavelOptions={responsavelOptions}
@@ -585,7 +556,7 @@ export default function WhatsAppLeadDrawer({
               />
 
               {canViewAgenda ? (
-                <Surface variant="muted" padding="sm" className="sm:p-5">
+                <Surface variant="muted" padding="sm" className="whatsapp-inbox-contact-agenda">
                   <div className="comm-whatsapp-chat-agenda-header flex min-w-0 flex-col gap-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <Heading level={3} className="min-w-0 text-base font-semibold leading-tight text-[var(--text-primary)]">

@@ -22,11 +22,11 @@ export default function ScheduledItemsSection<T>({ title, icon: Icon, items, ren
   const start = (page - 1) * PAGE_SIZE;
 
   return (
-    <section className="space-y-2" aria-label={title}>
+    <section className="whatsapp-inbox-scheduled-section space-y-2" aria-label={title}>
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-between"
+        className="whatsapp-inbox-scheduled-section-toggle w-full justify-between"
         aria-expanded={expanded}
         aria-controls={contentId}
         onClick={() => setExpanded((value) => !value)}

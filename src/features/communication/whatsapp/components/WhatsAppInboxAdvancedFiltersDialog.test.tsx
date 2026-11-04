@@ -30,7 +30,7 @@ const findCheckbox = (dialog: HTMLElement, label: string) => {
   return row?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
 };
 
-test('advanced filters are staged and applied together from the accessible dialog', () => {
+test('advanced filters are staged and applied together from an anchored non-modal dropdown', () => {
   const applied: InboxAdvancedFilterValues[] = [];
   let closeCount = 0;
   const view = render(
@@ -45,7 +45,9 @@ test('advanced filters are staged and applied together from the accessible dialo
   try {
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
     assert.ok(dialog);
-    assert.equal(dialog.getAttribute('aria-modal'), 'true');
+    assert.equal(dialog.getAttribute('aria-modal'), null);
+    assert.equal(document.querySelector('.kds-dialog-backdrop'), null);
+    assert.notEqual(document.body.style.overflow, 'hidden');
     assert.equal(dialog.querySelector('h2')?.textContent, 'Filtros do inbox');
 
     const unreadButton = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Não lidas'));
@@ -108,4 +110,20 @@ test('closing the filters discards draft selections and reopening starts from ap
   } finally {
     view.unmount();
   }
+});
+
+
+test('clicking outside dismisses the filter dropdown without applying the draft', () => {
+  let closed = 0;
+  let applied = 0;
+  const view = render(<WhatsAppInboxAdvancedFiltersDialog {...sharedProps} isOpen onClose={() => { closed += 1; }} onApply={() => { applied += 1; }} />);
+  try {
+    const panel = document.body.querySelector('[role="dialog"]');
+    assert.ok(panel);
+    act(() => panel.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    assert.equal(closed, 0);
+    act(() => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    assert.equal(closed, 1);
+    assert.equal(applied, 0);
+  } finally { view.unmount(); }
 });

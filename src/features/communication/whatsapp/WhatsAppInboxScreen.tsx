@@ -110,7 +110,7 @@ import {
 import type { ChatActivityFilter } from './domain/chatFilters';
 
 const LeadForm = lazyWithChunkRecovery(() => import('../../../components/LeadForm'));
-const ReminderSchedulerModal = lazyWithChunkRecovery(() => import('../../../components/ReminderSchedulerModal'));
+const ReminderSchedulerModal = lazyWithChunkRecovery(() => import('./components/WhatsAppReminderSchedulerModal'));
 const WhatsAppAgendaModal = lazyWithChunkRecovery(() => import('./components/WhatsAppAgendaModal'));
 const WhatsAppComposerRewriteModal = lazyWithChunkRecovery(() => import('./components/WhatsAppComposerRewriteModal'));
 const WhatsAppDashboardModal = lazyWithChunkRecovery(() => import('./components/WhatsAppDashboardModal'));
@@ -2540,6 +2540,7 @@ export default function WhatsAppInboxScreen() {
 
         <WhatsAppInboxAdvancedFiltersDialog
           isOpen={advancedFiltersOpen}
+          triggerRef={advancedFiltersTriggerRef}
           position={advancedFiltersPosition}
           activityFilter={chatActivityFilter}
           leadStatusFilters={leadStatusFilters}

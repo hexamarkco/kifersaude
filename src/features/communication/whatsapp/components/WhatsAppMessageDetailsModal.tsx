@@ -1,8 +1,9 @@
+import { WhatsAppInboxPanelHeader } from './WhatsAppInboxPanelHeader';
 import { Text } from '../../../../design-system';
 import { useMemo } from 'react';
 import { AlertCircle, Check, CheckCheck, Clock3, Info, Volume2 } from 'lucide-react';
 
-import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from '../../../../design-system';
+import { Dialog, DialogBody, DialogDescription } from '../../../../design-system';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { cx } from '../../../../lib/cx';
 import { getMessageDeliveryStatusHistory, type MessageDeliveryStatusEvent } from '../domain/messageMetadata';
@@ -95,15 +96,11 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
       }}
       size="sm"
       aria-label="Dados da mensagem"
-      className="comm-whatsapp-overlay"
+      className="comm-whatsapp-overlay whatsapp-inbox-dialog"
     >
-      <DialogHeader onClose={onClose} showCloseButton>
-        <div className="min-w-0">
-          <DialogTitle>Dados da mensagem</DialogTitle>
-          <Text className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{preview}</Text>
-        </div>
-      </DialogHeader>
+      <WhatsAppInboxPanelHeader icon={Info} title="Dados da mensagem" onClose={onClose} />
       <DialogBody className="space-y-4">
+        <Text className="line-clamp-2 text-sm text-[var(--text-secondary)]">{preview}</Text>
         {message ? (
           <>
             <DialogDescription>

@@ -1,10 +1,10 @@
+import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { Heading, Text } from '../../../../design-system';
 import { ActionSurface } from '../../../../design-system';
 import {
   Button,
   Surface,
   Textarea,
-  WorkspaceDialog,
 } from '../../../../design-system';
 import type { CommWhatsAppRewriteTone } from '../data';
 
@@ -73,7 +73,7 @@ export default function WhatsAppComposerRewriteModal({
   onApply,
 }: WhatsAppComposerRewriteModalProps) {
   return (
-    <WorkspaceDialog
+    <WhatsAppInboxDialog
       panelClassName="comm-whatsapp-overlay"
       isOpen={isOpen}
       onClose={onClose}
@@ -173,6 +173,6 @@ export default function WhatsAppComposerRewriteModal({
           </Surface>
         </div>
       </div>
-    </WorkspaceDialog>
+    </WhatsAppInboxDialog>
   );
 }

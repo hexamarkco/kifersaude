@@ -388,45 +388,43 @@ export function InboxChatListItem({
       }}
     >
       <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-chat-select text-left">
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <LeadFavoriteBadge favorito={favorito} />
-            <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]" title={displayName}>
-              {chat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}
-              {displayName}
-            </Text>
-          </div>
-          <div className="whatsapp-inbox-chat-flags">
-            {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
-              <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
-                <span className="min-w-0 truncate">{chat.lead_status}</span>
-              </OperationalStatusBadge>
-            ) : null}
+        <div className="whatsapp-inbox-chat-identity flex min-w-0 items-center gap-1.5">
+          <LeadFavoriteBadge favorito={favorito} />
+          <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]" title={displayName}>
+            {chat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}
+            {displayName}
+          </Text>
+          {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
+            <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
+              <span className="min-w-0 truncate">{chat.lead_status}</span>
+            </OperationalStatusBadge>
+          ) : null}
+          <span className="whatsapp-inbox-chat-flags">
             {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
             {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
-          </div>
-          <Text className="truncate text-sm text-[var(--text-secondary)]">
-            <WhatsAppPresenceIndicator chat={chat} fallback={draftPreview ? (
-              <>
-                <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
-                <span>{draftPreview}</span>
-              </>
-            ) : visibleLastMessageText ? (
-              <>
-                {OutboundPreviewStatusIcon && outboundPreviewStatusMeta ? (
-                  <span className={`mr-1 inline-flex align-middle whatsapp-inbox-preview-status whatsapp-inbox-preview-status-${outboundPreviewStatusMeta.tone}`} title={outboundPreviewStatusMeta.label} aria-label={outboundPreviewStatusMeta.label}>
-                    <OutboundPreviewStatusIcon className="h-3.5 w-3.5" />
-                  </span>
-                ) : null}
-                {previewIconType ? (
-                  <ChatPreviewIcon type={previewIconType} />
-                ) : (
-                  <span>{visibleLastMessageText}</span>
-                )}
-              </>
-            ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'} />
-          </Text>
+          </span>
         </div>
+        <Text className="whatsapp-inbox-chat-preview min-w-0 truncate text-sm text-[var(--text-secondary)]">
+          <WhatsAppPresenceIndicator chat={chat} fallback={draftPreview ? (
+            <>
+              <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
+              <span>{draftPreview}</span>
+            </>
+          ) : visibleLastMessageText ? (
+            <>
+              {OutboundPreviewStatusIcon && outboundPreviewStatusMeta ? (
+                <span className={`mr-1 inline-flex align-middle whatsapp-inbox-preview-status whatsapp-inbox-preview-status-${outboundPreviewStatusMeta.tone}`} title={outboundPreviewStatusMeta.label} aria-label={outboundPreviewStatusMeta.label}>
+                  <OutboundPreviewStatusIcon className="h-3.5 w-3.5" />
+                </span>
+              ) : null}
+              {previewIconType ? (
+                <ChatPreviewIcon type={previewIconType} />
+              ) : (
+                <span>{visibleLastMessageText}</span>
+              )}
+            </>
+          ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'} />
+        </Text>
         <div className="whatsapp-inbox-chat-trailing">
           <span className="whatsapp-inbox-chat-meta text-xs font-medium">{formatMessageTime(chat.last_message_at)}</span>
           {hasUnreadBadge ? (

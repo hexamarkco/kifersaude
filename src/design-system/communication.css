@@ -244,11 +244,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   min-height: 4.25rem;
   padding: var(--space-2);
   border-radius: var(--kds-radius-md);
 }
+
+.whatsapp-inbox-chat-identity { grid-column: 1 / -1; }
+.whatsapp-inbox-chat-identity .whatsapp-inbox-heading { min-width: 0; }
+.whatsapp-inbox-chat-preview { grid-column: 1; }
+.whatsapp-inbox-chat-select > .whatsapp-inbox-chat-trailing { grid-column: 2; grid-row: 2; }
 
 .whatsapp-inbox-chat-flags,
 .whatsapp-inbox-chat-trailing {

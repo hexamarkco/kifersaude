@@ -99,7 +99,7 @@ export const applySavedContactName = (
   return {
     ...chat,
     saved_contact_name: normalizedName,
-    display_name: normalizedName,
+    display_name: getValidWhatsAppDisplayName(chat.lead_name) || normalizedName,
   };
 };
 
@@ -125,8 +125,10 @@ export const getSafeChatDisplayName = (
     && Boolean(ownName)
     && displayName.toLowerCase() === ownName;
 
-  return savedContactName
-    || resolvedLeadName
+  // O cadastro do CRM é a identidade principal; a agenda do WhatsApp continua
+  // disponível como alternativa e como alias de busca.
+  return resolvedLeadName
+    || savedContactName
     || pushName
     || (!isOwnNameLeak ? displayName : '')
     || formatCommWhatsAppPhoneLabel(chat.phone_number || chat.phone_digits)
@@ -172,7 +174,7 @@ export const stabilizeChatIdentityForLocalMerge = (
   const leadLinkedBy = incoming.lead_linked_by ?? (canReusePreviousLeadLink ? previous?.lead_linked_by ?? null : null);
   const pushName = getValidWhatsAppDisplayName(incoming.push_name) || getValidWhatsAppDisplayName(previous?.push_name);
   const displayName = getValidWhatsAppDisplayName(incoming.display_name);
-  const resolvedDisplayName = savedContactName || leadName || pushName || displayName;
+  const resolvedDisplayName = leadName || savedContactName || pushName || displayName;
 
   return {
     ...incoming,

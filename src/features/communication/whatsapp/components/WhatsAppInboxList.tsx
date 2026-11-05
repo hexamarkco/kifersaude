@@ -402,7 +402,6 @@ export function InboxChatListItem({
                 <span className="min-w-0 truncate">{chat.lead_status}</span>
               </OperationalStatusBadge>
             ) : null}
-            {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
             {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
             {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
           </div>
@@ -438,20 +437,23 @@ export function InboxChatListItem({
         </div>
       </ActionSurface>
 
-      <IconButton loading={menuBusy} variant="ghost" size="sm"
-        ref={menuTriggerRef}
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggleMenu(chat.id);
-        }}
-        className="whatsapp-inbox-chat-menu-trigger"
-        aria-label="Abrir menu da conversa"
-        aria-expanded={menuOpen}
-        disabled={menuBusy}
-      >
-        <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />
-      </IconButton>
+      <div className="whatsapp-inbox-chat-actions">
+        {chat.is_pinned ? <Pin className="whatsapp-inbox-chat-pin h-3.5 w-3.5" aria-label="Conversa fixada" role="img" /> : null}
+        <IconButton loading={menuBusy} variant="ghost" size="sm"
+          ref={menuTriggerRef}
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleMenu(chat.id);
+          }}
+          className="whatsapp-inbox-chat-menu-trigger"
+          aria-label="Abrir menu da conversa"
+          aria-expanded={menuOpen}
+          disabled={menuBusy}
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />
+        </IconButton>
+      </div>
     </div>
   );
 }

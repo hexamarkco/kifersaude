@@ -72,7 +72,7 @@ test('preserves a useful newer preview when a stale chat update arrives', () => 
   assert.equal(result.last_message_delivery_status, 'read');
 });
 
-test('chooses stable contact names and hides a leaked connected-user name', () => {
+test('prioriza o CRM, mantém nomes de contato como alternativa e oculta o nome vazado do atendente', () => {
   const namedChat = createChat({
     saved_contact_name: 'Contato salvo',
     lead_name: 'Nome do lead',
@@ -80,8 +80,11 @@ test('chooses stable contact names and hides a leaked connected-user name', () =
   });
   const leakedOwnName = createChat({ display_name: 'Atendente', saved_contact_name: null, lead_id: null });
 
-  assert.equal(getSafeChatDisplayName(namedChat), 'Contato salvo');
+  assert.equal(getSafeChatDisplayName(namedChat), 'Nome do lead');
   assert.equal(getSafeChatDisplayName({ ...namedChat, saved_contact_name: null }), 'Nome do lead');
+  assert.equal(getSafeChatDisplayName({ ...namedChat, lead_name: null }), 'Contato salvo');
+  assert.equal(getSafeChatDisplayName({ ...namedChat, lead_name: '   ' }), 'Contato salvo');
+  assert.equal(getSafeChatDisplayName({ ...namedChat, lead_name: null, saved_contact_name: null }), 'Nome do WhatsApp');
   assert.equal(getSafeChatDisplayName(leakedOwnName, 'Atendente'), '+55 (11) 99999-9999');
 });
 
@@ -94,6 +97,26 @@ test('applies saved names to partial chat identities from related screens', () =
     }),
     'Mariangela',
   );
+});
+
+test('prioriza o nome do CRM e preserva o apelido do WhatsApp na busca após sincronização', () => {
+  const chat = createChat({
+    lead_id: 'lead-carlos',
+    lead_name: 'Carlos',
+    saved_contact_name: 'Carlos eletricanow cliente',
+    push_name: 'Carlos WhatsApp',
+    display_name: 'Carlos eletricanow cliente',
+  });
+  const synchronized = applySavedContactName(chat, 'Carlos eletricanow cliente');
+  const refreshed = stabilizeChatIdentityForLocalMerge({ ...chat, lead_name: null }, synchronized);
+
+  for (const candidate of [chat, synchronized, refreshed]) {
+    assert.equal(getSafeChatDisplayName(candidate), 'Carlos');
+    assert.equal(candidate.saved_contact_name, 'Carlos eletricanow cliente');
+    assert.deepEqual(rankChatsBySearch([candidate], 'eletricanow').map((item) => item.id), [chat.id]);
+  }
+  assert.equal(synchronized.display_name, 'Carlos');
+  assert.equal(refreshed.display_name, 'Carlos');
 });
 
 test('keeps known identity fields while merging a partial update for the same lead', () => {
@@ -113,7 +136,7 @@ test('keeps known identity fields while merging a partial update for the same le
   });
 
   const result = stabilizeChatIdentityForLocalMerge(incoming, previous);
-  assert.equal(result.display_name, 'Maria');
+  assert.equal(result.display_name, 'Maria da Silva');
   assert.equal(result.lead_name, 'Maria da Silva');
   assert.equal(result.lead_link_source, 'manual');
   assert.equal(result.lead_linked_by, 'user-1');

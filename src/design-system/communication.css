@@ -260,6 +260,21 @@
 .whatsapp-inbox-chat-flags:empty { display: none; }
 .whatsapp-inbox-chat-trailing { flex-direction: column; align-items: flex-end; }
 
+.whatsapp-inbox-chat-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+
+.whatsapp-inbox-chat-pin {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  color: var(--brand-primary);
+}
+
 .comm-terracotta .whatsapp-inbox-search-result {
   display: block;
   background: transparent;
@@ -276,6 +291,10 @@
 }
 
 .comm-terracotta .whatsapp-inbox-chat-card.is-active {
+  /* Keep the selected outline above adjacent rows and outside skipped paint. */
+  position: relative;
+  z-index: 0;
+  content-visibility: visible;
   border-color: var(--brand-primary-border);
   background: var(--brand-primary-muted);
   box-shadow: inset 3px 0 0 var(--brand-primary);
@@ -420,8 +439,16 @@
   box-shadow: none;
 }
 
-.comm-terracotta .whatsapp-inbox-message-bubble-wrap:has(.whatsapp-inbox-audio-native-card) {
-  width: min(100%, 28rem);
+/* Audio width belongs to the message, independently of player/transcript state.
+   The thread's shared max-width still limits it on narrow viewports. */
+.comm-terracotta .whatsapp-inbox-audio-message {
+  width: 28rem;
+  flex: 0 0 auto;
+}
+
+.comm-terracotta .whatsapp-inbox-audio-bubble {
+  width: 100%;
+  max-width: 100%;
 }
 
 .comm-terracotta .whatsapp-inbox-audio-native-header {
@@ -444,6 +471,18 @@
 .comm-terracotta .whatsapp-inbox-audio-native-card.is-playing {
   border-color: var(--brand-primary-border);
   background: color-mix(in srgb, var(--brand-primary-muted) 48%, var(--bg-elevated));
+}
+
+/* The audio player and its timestamp share one message surface. */
+.comm-terracotta .whatsapp-inbox-audio-bubble .whatsapp-inbox-audio-native-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.comm-terracotta .whatsapp-inbox-audio-bubble:has(.whatsapp-inbox-audio-native-card.is-playing) {
+  border-color: var(--brand-primary-border);
 }
 
 .comm-terracotta .whatsapp-inbox-transcribe-button {

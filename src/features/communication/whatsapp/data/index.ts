@@ -1,5 +1,7 @@
 export * from './commWhatsAppService';
 export { whatsappContactsRepository } from './contactsRepository';
+export { providerOperationsRepository, ProviderOperationError } from './providerOperationsRepository';
+export type { ProviderOperationResult } from './providerOperationsRepository';
 export { whatsappConversationsRepository } from './conversationsRepository';
 export { loadInboxChatSection } from './inboxChatLoader';
 export { whatsappDashboardService } from './dashboardService';

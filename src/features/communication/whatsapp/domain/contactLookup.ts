@@ -1,4 +1,5 @@
 import type { CommWhatsAppChat, CommWhatsAppPhoneContact } from './types';
+import { applySavedContactName } from './chatPresentation';
 
 export const collectPhoneLookupKeys = (value?: string | null) => {
   const digits = String(value ?? '').replace(/\D/g, '');
@@ -376,11 +377,7 @@ export const applySavedContactNameFromLookup = (
     return chat;
   }
 
-  return {
-    ...chat,
-    saved_contact_name: savedName,
-    display_name: savedName,
-  };
+  return applySavedContactName(chat, savedName);
 };
 
 export const applySavedContactNameToContact = (

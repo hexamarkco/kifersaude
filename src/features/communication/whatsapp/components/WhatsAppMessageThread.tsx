@@ -12,6 +12,7 @@ import {
   getMessageBubbleClasses,
   getMessageRowClasses,
   hasVisualMediaCaption,
+  isAudioMessage,
   isBubblelessMediaMessage,
   isGroupChatMessage,
   isMediaSendingMessage,
@@ -233,19 +234,22 @@ export function WhatsAppMessageThread({
                     const mediaSending = isMediaSendingMessage(message, mediaUploadProgress, retryingMessageId === message.id);
                     const mediaSendingProgress = mediaUploadProgress?.attachmentId === message.id ? mediaUploadProgress.progress : null;
                     const isGroupMessage = isGroupChatMessage(selectedChat, message);
-                    const hasMessageBubble = !isBubblelessMediaMessage(message) || hasVisualMediaCaption(message);
+                    const isAudio = isAudioMessage(message);
+                    const hasMessageBubble = isAudio || !isBubblelessMediaMessage(message) || hasVisualMediaCaption(message);
                     const messageBubbleClass = !hasMessageBubble
                       ? 'whatsapp-inbox-media-message'
-                      : isBubblelessMediaMessage(message)
-                        ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
-                        : `rounded-[var(--kds-radius-lg)] px-3 py-2 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
-                    const messageMetaJustify = message.direction === 'outbound' ? 'justify-end' : 'justify-start';
-                    const messageMetaTimeOrder = message.direction === 'outbound' ? 'order-3' : 'order-1';
-                    const messageMetaActionsOrder = message.direction === 'outbound' ? 'order-1' : 'order-3';
+                      : isAudio
+                        ? `rounded-[var(--kds-radius-lg)] px-3 py-2 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-audio-bubble`
+                        : isBubblelessMediaMessage(message)
+                          ? `${getVisualMediaBubbleWidth(message)} max-w-full rounded-[var(--kds-radius-lg)] p-0 shadow-sm ${getMessageBubbleClasses(message.direction)} whatsapp-inbox-media-caption-bubble`
+                          : `rounded-[var(--kds-radius-lg)] px-3 py-2 shadow-sm ${getMessageBubbleClasses(message.direction)}`;
+                    const messageMetaJustify = isAudio || message.direction === 'outbound' ? 'justify-end' : 'justify-start';
+                    const messageMetaTimeOrder = isAudio || message.direction === 'outbound' ? 'order-3' : 'order-1';
+                    const messageMetaActionsOrder = isAudio || message.direction === 'outbound' ? 'order-1' : 'order-3';
                     const messageMeta = (
                       <div className={cx(
                         'whatsapp-inbox-message-meta flex w-full flex-wrap items-center gap-1.5 text-[11px] font-medium',
-                        isBubblelessMediaMessage(message) ? inboxMediaMetaSpacing : null,
+                        !isAudio && isBubblelessMediaMessage(message) ? inboxMediaMetaSpacing : null,
                         !hasMessageBubble ? 'whatsapp-inbox-message-meta-external' : null,
                         reactions.length > 0
                           ? `mt-0 ${messageMetaJustify}`
@@ -253,7 +257,7 @@ export function WhatsAppMessageThread({
                       )}>
                         <span className={cx(
                           `${messageMetaTimeOrder} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`,
-                          isBubblelessMediaMessage(message) ? 'whatsapp-inbox-media-meta-time' : null,
+                          !isAudio && isBubblelessMediaMessage(message) ? 'whatsapp-inbox-media-meta-time' : null,
                         )}>
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
@@ -321,7 +325,7 @@ export function WhatsAppMessageThread({
                               delete messageBubbleRefs.current[message.id];
                             }
                           }}
-                          className="relative whatsapp-inbox-message-bubble-wrap"
+                          className={cx('relative whatsapp-inbox-message-bubble-wrap', isAudio ? 'whatsapp-inbox-audio-message' : null)}
                         >
                           <div className="relative">
                             {message.direction !== 'system' && message.external_message_id ? (

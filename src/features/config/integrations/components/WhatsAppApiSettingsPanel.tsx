@@ -16,7 +16,7 @@ import {
 import type { IntegrationSetting } from "../../domain/types";
 import { PanelAdaptiveLoadingFrame } from '../../../../design-system';
 import { toast } from "../../../../lib/toast";
-import { formatConnectionStatusLabel } from '../../../communication/whatsapp';
+import { formatConnectionStatusLabel, WhatsAppProviderOperationsPanel } from '../../../communication/whatsapp';
 import {
   Alert,
   Button,
@@ -573,6 +573,7 @@ export default function WhatsAppApiSettingsPanel() {
             <span>{saving ? "Salvando..." : "Salvar configuração"}</span>
           </Button>
         </div>
+        {transport?.activeProvider === 'zapi' && <WhatsAppProviderOperationsPanel key={transport.revision} revision={transport.revision} />}
       </div>
     </PanelAdaptiveLoadingFrame>
   );

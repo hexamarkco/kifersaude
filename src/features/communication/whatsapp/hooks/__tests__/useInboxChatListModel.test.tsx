@@ -130,6 +130,21 @@ const readSnapshot = (params: ModelParams): ModelSnapshot => {
   return JSON.parse(output) as ModelSnapshot;
 };
 
+test('mantém o nome do CRM na lista e no cabeçalho mesmo com outro nome no cache de contatos', () => {
+  const chat = createChat({ lead_id: 'lead-carlos', lead_name: 'Carlos', saved_contact_name: 'Carlos eletricanow cliente' });
+  const snapshot = readSnapshot(createParams({
+    chats: [chat],
+    selectedChatId: chat.id,
+    selectedChat: chat,
+    synchronizedContactNames: new Map([['5511999999999', 'Carlos eletricanow cliente']]),
+  }));
+
+  assert.equal(snapshot.sidebar[0]?.displayName, 'Carlos');
+  assert.equal(snapshot.selected?.displayName, 'Carlos');
+  assert.equal(snapshot.transcriptLabel, 'Carlos');
+  assert.equal(snapshot.selected?.savedName, 'Carlos eletricanow cliente');
+});
+
 test('encontra imediatamente o contato pelo nome salvo mesmo sem resultados remotos', () => {
   for (const lookup of ['savedContactNameOverrides', 'synchronizedContactNames'] as const) {
     const snapshot = readSnapshot(createParams({

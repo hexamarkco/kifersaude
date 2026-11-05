@@ -1,4 +1,5 @@
 import { zapiExternalId, zapiPhone, zapiRecord, zapiString } from './zapi.ts';
+import { zapiRichContentText } from './zapi-rich-content.ts';
 
 export type ZapiWebhookEvent =
   | { kind: 'status'; ids: string[]; status: string; at: string; error: string | null }
@@ -69,7 +70,7 @@ export function normalizeZapiWebhook(
 
   const fromMe = payload.fromMe;
   const sender = isGroup ? zapiPhone(payload.participantPhone) : phone;
-  const text = zapiString(zapiRecord(payload.text).message);
+  const text = zapiString(zapiRecord(payload.text).message) || zapiRichContentText(payload);
   const reaction = zapiRecord(payload.reaction);
   const referenceId = zapiExternalId(instanceId, payload.referenceMessageId);
   if (Object.keys(reaction).length) {

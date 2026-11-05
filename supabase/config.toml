@@ -1,5 +1,9 @@
 project_id = "eaxvvhamkmovkoqssahj"
 
+# Provider operations are called by authenticated dashboard users only.
+[functions.comm-whatsapp-provider-operations]
+verify_jwt = true
+
 # Functions abaixo fazem sua propria autenticacao interna
 # (authorizeDashboardUser, token de bootstrap, etc.) e nao devem
 # passar pelo gate de JWT da plataforma. Esta secao e a fonte unica

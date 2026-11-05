@@ -70,7 +70,7 @@ export async function beginWhatsAppOperation(
 export async function finishWhatsAppOperation(
   admin: SupabaseClient,
   id: string,
-  result: Record<string, string | number | null> | null = null,
+  result: Record<string, unknown> | null = null,
 ) {
   const query = admin.from('whatsapp_transport_attempts');
   const { error } = await (result ? query.update({ finished_at: new Date().toISOString(), result }) : query.delete()).eq('id', id);

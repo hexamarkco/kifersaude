@@ -2,6 +2,8 @@
 
 A operação usa um provedor por vez no canal principal. A Z-API é a escolha para a operação regular e a WHAPI Cloud fica disponível para contingência manual. Em instalações existentes, a primeira aplicação da migration mantém a seleção WHAPI até um administrador ativar a Z-API.
 
+O painel de operações cobre agora as 107 operações documentadas (96 rotas distintas) de Mensagens, Contatos, Grupos, Comunidades, Canais/Newsletter e Listas de transmissão. Consulte o [catálogo de operações, acesso e limitações](zapi-operations.md). Essa cobertura amplia as ações disponíveis no painel; a matriz abaixo também descreve limitações dos fluxos tradicionais do Inbox e da sincronização automática.
+
 ## Arquitetura e inventário
 
 - **Frontend.** Configurações → Integrações → WhatsApp consulta `comm-whatsapp-admin`. O Inbox continua lendo histórico, estado das conversas, pesquisas, lembretes e atualizações em tempo real do Supabase. A interface mantém a seleção em edição separada do provedor confirmado pelo servidor.

@@ -1,0 +1,2114 @@
+[
+  {
+    "operation": "message/send-text",
+    "method": "POST",
+    "path": "send-text",
+    "input": {
+      "phone": "5511999999999",
+      "message": "Welcome to *Z-API*"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "message": "Welcome to *Z-API*"
+    }
+  },
+  {
+    "operation": "message/forward-message",
+    "method": "POST",
+    "path": "forward-message",
+    "input": {
+      "phone": "5511999999999",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA",
+      "messagePhone": "5511888888888"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA",
+      "messagePhone": "5511888888888"
+    }
+  },
+  {
+    "operation": "message/send-message-reaction",
+    "method": "POST",
+    "path": "send-reaction",
+    "input": {
+      "phone": "5511999999999",
+      "reaction": "❤️",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "reaction": "❤️",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    }
+  },
+  {
+    "operation": "message/send-remove-reaction",
+    "method": "POST",
+    "path": "send-remove-reaction",
+    "input": {
+      "phone": "5511999999999",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    }
+  },
+  {
+    "operation": "message/send-message-image",
+    "method": "POST",
+    "path": "send-image",
+    "input": {
+      "phone": "5511999999999",
+      "image": "https://www.z-api.io/wp-content/themes/z-api/dist/images/logo.svg",
+      "caption": "Logo",
+      "viewOnce": false
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "image": "https://www.z-api.io/wp-content/themes/z-api/dist/images/logo.svg",
+      "caption": "Logo",
+      "viewOnce": false
+    }
+  },
+  {
+    "operation": "message/send-message-sticker",
+    "method": "POST",
+    "path": "send-sticker",
+    "input": {
+      "phone": "5511999999999",
+      "sticker": "https://exemplo.com/sticker.png"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "sticker": "https://exemplo.com/sticker.png"
+    }
+  },
+  {
+    "operation": "message/send-message-gif",
+    "method": "POST",
+    "path": "send-gif",
+    "input": {
+      "phone": "5511999999999",
+      "gif": "https://exemplo.com/arquivo.mp4",
+      "caption": ""
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "gif": "https://exemplo.com/arquivo.mp4",
+      "caption": ""
+    }
+  },
+  {
+    "operation": "message/send-message-audio",
+    "method": "POST",
+    "path": "send-audio",
+    "input": {
+      "phone": "5511999999999",
+      "audio": "https://exemplo.com/audio.mp3",
+      "viewOnce": false,
+      "waveform": true
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "audio": "https://exemplo.com/audio.mp3",
+      "viewOnce": false,
+      "waveform": true
+    }
+  },
+  {
+    "operation": "message/send-message-video",
+    "method": "POST",
+    "path": "send-video",
+    "input": {
+      "phone": "5511999999999",
+      "video": "https://exemplo.com/video.mp4",
+      "caption": "",
+      "viewOnce": false
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "video": "https://exemplo.com/video.mp4",
+      "caption": "",
+      "viewOnce": false
+    }
+  },
+  {
+    "operation": "message/send-message-ptv",
+    "method": "POST",
+    "path": "send-ptv",
+    "input": {
+      "phone": "5511999999999",
+      "ptv": "https://exemplo.com/video.mp4"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "ptv": "https://exemplo.com/video.mp4"
+    }
+  },
+  {
+    "operation": "message/send-message-document",
+    "method": "POST",
+    "path": "send-document/{extension}",
+    "input": {
+      "phone": "5511999999999",
+      "document": "https://expoforest.com.br/wp-content/uploads/2017/05/exemplo.pdf",
+      "fileName": "Meu PDF",
+      "extension": "pdf"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "document": "https://expoforest.com.br/wp-content/uploads/2017/05/exemplo.pdf",
+      "fileName": "Meu PDF"
+    }
+  },
+  {
+    "operation": "message/send-message-link",
+    "method": "POST",
+    "path": "send-link",
+    "input": {
+      "phone": "5511999998888",
+      "message": "Aqui você coloca um texto sobre o site, atenção esse texto precisa ter o link que será enviado no final da mensagem! Assim: https://z-api.io",
+      "image": "https://firebasestorage.googleapis.com/v0/b/zaap-messenger-web.appspot.com/o/logo.png?alt=media",
+      "linkUrl": "https://z-api.io",
+      "title": "Z-API",
+      "linkDescription": "Integração com o whatsapp"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999998888",
+      "message": "Aqui você coloca um texto sobre o site, atenção esse texto precisa ter o link que será enviado no final da mensagem! Assim: https://z-api.io",
+      "image": "https://firebasestorage.googleapis.com/v0/b/zaap-messenger-web.appspot.com/o/logo.png?alt=media",
+      "linkUrl": "https://z-api.io",
+      "title": "Z-API",
+      "linkDescription": "Integração com o whatsapp"
+    }
+  },
+  {
+    "operation": "message/send-message-location",
+    "method": "POST",
+    "path": "send-location",
+    "input": {
+      "phone": "5511999998888",
+      "title": "Google Brasil",
+      "address": "Av. Brg. Faria Lima, 3477 - Itaim Bibi, São Paulo - SP, 04538-133",
+      "latitude": "-23.0696347",
+      "longitude": "-50.4357913"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999998888",
+      "title": "Google Brasil",
+      "address": "Av. Brg. Faria Lima, 3477 - Itaim Bibi, São Paulo - SP, 04538-133",
+      "latitude": "-23.0696347",
+      "longitude": "-50.4357913"
+    }
+  },
+  {
+    "operation": "message/send-message-product",
+    "method": "POST",
+    "path": "send-product",
+    "input": {
+      "phone": "5511999999999",
+      "catalogPhone": "5511999999999",
+      "productId": "7190654897637620"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "catalogPhone": "5511999999999",
+      "productId": "7190654897637620"
+    }
+  },
+  {
+    "operation": "message/send-message-catalog",
+    "method": "POST",
+    "path": "send-catalog",
+    "input": {
+      "phone": "5511999999999",
+      "catalogPhone": "5511999999999"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "catalogPhone": "5511999999999"
+    }
+  },
+  {
+    "operation": "message/send-message-contact",
+    "method": "POST",
+    "path": "send-contact",
+    "input": {
+      "phone": "5511999999999",
+      "contactName": "Z-API Contato",
+      "contactPhone": "554498398733"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "contactName": "Z-API Contato",
+      "contactPhone": "554498398733"
+    }
+  },
+  {
+    "operation": "message/send-message-multiple-contacts",
+    "method": "POST",
+    "path": "send-contacts",
+    "input": {
+      "phone": "5511999999999",
+      "contacts": [
+        {
+          "name": "Nome do contato",
+          "phones": [
+            "5544999999999",
+            "5544888888888"
+          ]
+        },
+        {
+          "name": "Nome do contato",
+          "phones": [
+            "5544999999999"
+          ]
+        },
+        {
+          "name": "Nome do contato",
+          "businessDescription": "Uma empresa do Grupo Irrah",
+          "phones": [
+            "5544999999999"
+          ]
+        }
+      ]
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "contacts": [
+        {
+          "name": "Nome do contato",
+          "phones": [
+            "5544999999999",
+            "5544888888888"
+          ]
+        },
+        {
+          "name": "Nome do contato",
+          "phones": [
+            "5544999999999"
+          ]
+        },
+        {
+          "name": "Nome do contato",
+          "businessDescription": "Uma empresa do Grupo Irrah",
+          "phones": [
+            "5544999999999"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "operation": "message/send-button-actions",
+    "method": "POST",
+    "path": "send-button-actions",
+    "input": {
+      "phone": "551199999999",
+      "message": "uma mensagem",
+      "title": "se quiser vincular um titulo",
+      "footer": "se quiser vincular um rodape top",
+      "image": "https://app.z-api.io/logos/zapi-dark.png",
+      "buttonActions": [
+        {
+          "id": "1",
+          "type": "CALL",
+          "phone": "554498398733",
+          "label": "Fale conosco"
+        },
+        {
+          "id": "2",
+          "type": "URL",
+          "url": "https://z-api.io",
+          "label": "Visite nosso site"
+        }
+      ]
+    },
+    "query": {},
+    "body": {
+      "phone": "551199999999",
+      "message": "uma mensagem",
+      "title": "se quiser vincular um titulo",
+      "footer": "se quiser vincular um rodape top",
+      "image": "https://app.z-api.io/logos/zapi-dark.png",
+      "buttonActions": [
+        {
+          "id": "1",
+          "type": "CALL",
+          "phone": "554498398733",
+          "label": "Fale conosco"
+        },
+        {
+          "id": "2",
+          "type": "URL",
+          "url": "https://z-api.io",
+          "label": "Visite nosso site"
+        }
+      ]
+    }
+  },
+  {
+    "operation": "message/send-button-list",
+    "method": "POST",
+    "path": "send-button-list",
+    "input": {
+      "phone": "5511999999999",
+      "message": "Z-API é Bom ?",
+      "buttonList": {
+        "buttons": [
+          {
+            "id": "1",
+            "label": "Ótimo"
+          },
+          {
+            "id": "2",
+            "label": "Excelente"
+          }
+        ]
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "message": "Z-API é Bom ?",
+      "buttonList": {
+        "buttons": [
+          {
+            "id": "1",
+            "label": "Ótimo"
+          },
+          {
+            "id": "2",
+            "label": "Excelente"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation": "message/send-button-list-image",
+    "method": "POST",
+    "path": "send-button-list",
+    "input": {
+      "phone": "5511999999999",
+      "message": "Z-API é Bom ?",
+      "buttonList": {
+        "image": "https://avatars.githubusercontent.com/u/60630101?s=280&v=4",
+        "buttons": [
+          {
+            "id": "1",
+            "label": "Ótimo"
+          },
+          {
+            "id": "2",
+            "label": "Excelente"
+          }
+        ]
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "message": "Z-API é Bom ?",
+      "buttonList": {
+        "image": "https://avatars.githubusercontent.com/u/60630101?s=280&v=4",
+        "buttons": [
+          {
+            "id": "1",
+            "label": "Ótimo"
+          },
+          {
+            "id": "2",
+            "label": "Excelente"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation": "message/send-button-list-video",
+    "method": "POST",
+    "path": "send-button-list",
+    "input": {
+      "phone": "5511999999999",
+      "message": "Z-API é Bom ?",
+      "buttonList": {
+        "video": "https://exemplo.com/video.mp4",
+        "buttons": [
+          {
+            "id": "1",
+            "label": "Ótimo"
+          },
+          {
+            "id": "2",
+            "label": "Excelente"
+          }
+        ]
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "message": "Z-API é Bom ?",
+      "buttonList": {
+        "video": "https://exemplo.com/video.mp4",
+        "buttons": [
+          {
+            "id": "1",
+            "label": "Ótimo"
+          },
+          {
+            "id": "2",
+            "label": "Excelente"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation": "message/send-option-list",
+    "method": "POST",
+    "path": "send-option-list",
+    "input": {
+      "phone": "5511999999999",
+      "message": "Selecione a melhor opção:",
+      "optionList": {
+        "title": "Opções disponíveis",
+        "buttonLabel": "Abrir lista de opções",
+        "options": [
+          {
+            "id": "1",
+            "description": "Z-API Asas para sua imaginação",
+            "title": "Z-API"
+          },
+          {
+            "id": "2",
+            "description": "Não funcionam",
+            "title": "Outros"
+          }
+        ]
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "message": "Selecione a melhor opção:",
+      "optionList": {
+        "title": "Opções disponíveis",
+        "buttonLabel": "Abrir lista de opções",
+        "options": [
+          {
+            "id": "1",
+            "description": "Z-API Asas para sua imaginação",
+            "title": "Z-API"
+          },
+          {
+            "id": "2",
+            "description": "Não funcionam",
+            "title": "Outros"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation": "message/send-button-otp",
+    "method": "POST",
+    "path": "send-button-otp",
+    "input": {
+      "phone": "551199999999",
+      "message": "Texto da mensagem",
+      "code": "Valor a ser copiado"
+    },
+    "query": {},
+    "body": {
+      "phone": "551199999999",
+      "message": "Texto da mensagem",
+      "code": "Valor a ser copiado"
+    }
+  },
+  {
+    "operation": "message/send-button-pix",
+    "method": "POST",
+    "path": "send-button-pix",
+    "input": {
+      "phone": "551199999999",
+      "pixKey": "chave pix",
+      "type": "EVP"
+    },
+    "query": {},
+    "body": {
+      "phone": "551199999999",
+      "pixKey": "chave pix",
+      "type": "EVP"
+    }
+  },
+  {
+    "operation": "message/send-carousel",
+    "method": "POST",
+    "path": "send-carousel",
+    "input": {
+      "phone": "551199999999",
+      "message": "Texto da mensagem",
+      "carousel": [
+        {
+          "text": "Texto do cartão",
+          "image": "https://firebasestorage.googleapis.com/v0/b/zaap-messenger-web.appspot.com/o/logo.png?alt=media",
+          "buttons": [
+            {
+              "id": "1",
+              "label": "Nome do botão",
+              "url": "https://z-api.io",
+              "type": "URL"
+            },
+            {
+              "id": "2",
+              "label": "Nome do botão",
+              "type": "REPLY"
+            }
+          ]
+        },
+        {
+          "text": "Texto do cartão",
+          "image": "https://firebasestorage.googleapis.com/v0/b/zaap-messenger-web.appspot.com/o/logo.png?alt=media",
+          "buttons": [
+            {
+              "id": "1",
+              "label": "Nome do botão",
+              "url": "https://z-api.io",
+              "type": "URL"
+            },
+            {
+              "id": "2",
+              "label": "Nome do botão",
+              "type": "REPLY"
+            }
+          ]
+        }
+      ],
+      "text": "fixture-id",
+      "image": "fixture-id",
+      "label": "fixture-id",
+      "type": "fixture-id"
+    },
+    "query": {},
+    "body": {
+      "phone": "551199999999",
+      "message": "Texto da mensagem",
+      "carousel": [
+        {
+          "text": "Texto do cartão",
+          "image": "https://firebasestorage.googleapis.com/v0/b/zaap-messenger-web.appspot.com/o/logo.png?alt=media",
+          "buttons": [
+            {
+              "id": "1",
+              "label": "Nome do botão",
+              "url": "https://z-api.io",
+              "type": "URL"
+            },
+            {
+              "id": "2",
+              "label": "Nome do botão",
+              "type": "REPLY"
+            }
+          ]
+        },
+        {
+          "text": "Texto do cartão",
+          "image": "https://firebasestorage.googleapis.com/v0/b/zaap-messenger-web.appspot.com/o/logo.png?alt=media",
+          "buttons": [
+            {
+              "id": "1",
+              "label": "Nome do botão",
+              "url": "https://z-api.io",
+              "type": "URL"
+            },
+            {
+              "id": "2",
+              "label": "Nome do botão",
+              "type": "REPLY"
+            }
+          ]
+        }
+      ],
+      "text": "fixture-id",
+      "image": "fixture-id",
+      "label": "fixture-id",
+      "type": "fixture-id"
+    }
+  },
+  {
+    "operation": "message/delete-message",
+    "method": "DELETE",
+    "path": "messages",
+    "input": {
+      "messageId": "fixture-id",
+      "phone": "5511999999999",
+      "owner": false
+    },
+    "query": {
+      "messageId": "fixture-id",
+      "phone": "5511999999999",
+      "owner": false
+    },
+    "body": null
+  },
+  {
+    "operation": "message/read-message",
+    "method": "POST",
+    "path": "read-message",
+    "input": {
+      "phone": "5511999998888",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999998888",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    }
+  },
+  {
+    "operation": "message/reply-message",
+    "method": "POST",
+    "path": "send-text",
+    "input": {
+      "phone": "5511999999999",
+      "message": "Welcome to *Z-API*",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "message": "Welcome to *Z-API*",
+      "messageId": "3999984263738042930CD6ECDE9VDWSA"
+    }
+  },
+  {
+    "operation": "message/send-poll",
+    "method": "POST",
+    "path": "send-poll",
+    "input": {
+      "phone": "120363019502650977-group",
+      "message": "Qual a melhor API para WhatsApp?",
+      "poll": [
+        {
+          "name": "Z-API"
+        },
+        {
+          "name": "Outras"
+        }
+      ]
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "message": "Qual a melhor API para WhatsApp?",
+      "poll": [
+        {
+          "name": "Z-API"
+        },
+        {
+          "name": "Outras"
+        }
+      ]
+    }
+  },
+  {
+    "operation": "message/send-poll-vote",
+    "method": "POST",
+    "path": "send-poll-vote",
+    "input": {
+      "phone": "120363019502650977-group",
+      "pollMessageId": "3999984263738042930CD6ECDE9VDWSA",
+      "pollVote": [
+        {
+          "name": "Z-API"
+        }
+      ]
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "pollMessageId": "3999984263738042930CD6ECDE9VDWSA",
+      "pollVote": [
+        {
+          "name": "Z-API"
+        }
+      ]
+    }
+  },
+  {
+    "operation": "message/send-message-order",
+    "method": "POST",
+    "path": "send-order",
+    "input": {
+      "phone": "554499999999",
+      "order": {
+        "currency": "BRL",
+        "discount": 10,
+        "tax": 10,
+        "shipping": 5,
+        "products": [
+          {
+            "productId": "23940797548900636",
+            "name": "Nome do produto",
+            "value": 10,
+            "quantity": 2
+          }
+        ]
+      },
+      "paymentSettings": {
+        "pix": {
+          "key": "Chave PIX",
+          "keyType": "cpf",
+          "name": "Nome da chave"
+        },
+        "card": {
+          "enabled": true
+        }
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "554499999999",
+      "order": {
+        "currency": "BRL",
+        "discount": 10,
+        "tax": 10,
+        "shipping": 5,
+        "products": [
+          {
+            "productId": "23940797548900636",
+            "name": "Nome do produto",
+            "value": 10,
+            "quantity": 2
+          }
+        ]
+      },
+      "paymentSettings": {
+        "pix": {
+          "key": "Chave PIX",
+          "keyType": "cpf",
+          "name": "Nome da chave"
+        },
+        "card": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  {
+    "operation": "message/send-order-status-update",
+    "method": "POST",
+    "path": "order-status-update",
+    "input": {
+      "phone": "554499999999",
+      "messageId": "3EB0F91BBA791BB0A787FC",
+      "message": "Mensagem de texto da atualização do pedido",
+      "referenceId": "4N8FCTW1WM6",
+      "orderRequestId": "4N8FCTW22W4",
+      "orderStatus": "processing",
+      "paymentStatus": "pending",
+      "order": {
+        "currency": "BRL",
+        "discount": 10,
+        "tax": 10,
+        "shipping": 5,
+        "products": [
+          {
+            "value": 150,
+            "quantity": 2,
+            "name": "order 1",
+            "isCustomItem": true,
+            "productId": "custom-item-4N8FCTW23N7"
+          },
+          {
+            "productId": "23940797548900636",
+            "value": 150,
+            "quantity": 2,
+            "name": "order 2",
+            "isCustomItem": false
+          }
+        ]
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "554499999999",
+      "messageId": "3EB0F91BBA791BB0A787FC",
+      "message": "Mensagem de texto da atualização do pedido",
+      "referenceId": "4N8FCTW1WM6",
+      "orderRequestId": "4N8FCTW22W4",
+      "orderStatus": "processing",
+      "paymentStatus": "pending",
+      "order": {
+        "currency": "BRL",
+        "discount": 10,
+        "tax": 10,
+        "shipping": 5,
+        "products": [
+          {
+            "value": 150,
+            "quantity": 2,
+            "name": "order 1",
+            "isCustomItem": true,
+            "productId": "custom-item-4N8FCTW23N7"
+          },
+          {
+            "productId": "23940797548900636",
+            "value": 150,
+            "quantity": 2,
+            "name": "order 2",
+            "isCustomItem": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation": "message/send-order-payment-update",
+    "method": "POST",
+    "path": "order-payment-update",
+    "input": {
+      "phone": "554499999999",
+      "messageId": "3EB0F91BBA791BB0A787FC",
+      "message": "Mensagem de texto da atualização do pedido",
+      "referenceId": "4N8FCTW1WM6",
+      "orderRequestId": "4N8FCTW22W4",
+      "orderStatus": "processing",
+      "paymentStatus": "paid",
+      "order": {
+        "currency": "BRL",
+        "discount": 10,
+        "tax": 10,
+        "shipping": 5,
+        "products": [
+          {
+            "value": 150,
+            "quantity": 2,
+            "name": "order 1",
+            "isCustomItem": true,
+            "productId": "custom-item-4N8FCTW23N7"
+          },
+          {
+            "productId": "23940797548900636",
+            "value": 150,
+            "quantity": 2,
+            "name": "order 2",
+            "isCustomItem": false
+          }
+        ]
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "554499999999",
+      "messageId": "3EB0F91BBA791BB0A787FC",
+      "message": "Mensagem de texto da atualização do pedido",
+      "referenceId": "4N8FCTW1WM6",
+      "orderRequestId": "4N8FCTW22W4",
+      "orderStatus": "processing",
+      "paymentStatus": "paid",
+      "order": {
+        "currency": "BRL",
+        "discount": 10,
+        "tax": 10,
+        "shipping": 5,
+        "products": [
+          {
+            "value": 150,
+            "quantity": 2,
+            "name": "order 1",
+            "isCustomItem": true,
+            "productId": "custom-item-4N8FCTW23N7"
+          },
+          {
+            "productId": "23940797548900636",
+            "value": 150,
+            "quantity": 2,
+            "name": "order 2",
+            "isCustomItem": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation": "message/send-pin-message",
+    "method": "POST",
+    "path": "pin-message",
+    "input": {
+      "phone": "5511999999999",
+      "messageId": "77DF5293EBC176FFA6A88838E7A6AD83",
+      "messageAction": "pin",
+      "pinMessageDuration": "7_days"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "messageId": "77DF5293EBC176FFA6A88838E7A6AD83",
+      "messageAction": "pin",
+      "pinMessageDuration": "7_days"
+    }
+  },
+  {
+    "operation": "message/send-newsletter-admin-invite",
+    "method": "POST",
+    "path": "send-newsletter-admin-invite",
+    "input": {
+      "phone": "5511999999999",
+      "adminInviteMessage": {
+        "newsletterId": "120363166555745933@newsletter",
+        "caption": "Quero convidar você para ser admin do meu canal no WhatsApp."
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "adminInviteMessage": {
+        "newsletterId": "120363166555745933@newsletter",
+        "caption": "Quero convidar você para ser admin do meu canal no WhatsApp."
+      }
+    }
+  },
+  {
+    "operation": "message/send-event",
+    "method": "POST",
+    "path": "send-event",
+    "input": {
+      "phone": "120363019502650977-group",
+      "event": {
+        "name": "Nome do evento",
+        "description": "Descrição do evento",
+        "dateTime": "2024-04-29T09:30:53.309Z",
+        "timeZone": "UTC-3",
+        "location": {
+          "name": "Nome do lugar"
+        },
+        "callLinkType": "voice",
+        "canceled": false
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "event": {
+        "name": "Nome do evento",
+        "description": "Descrição do evento",
+        "dateTime": "2024-04-29T09:30:53.309Z",
+        "timeZone": "UTC-3",
+        "location": {
+          "name": "Nome do lugar"
+        },
+        "callLinkType": "voice",
+        "canceled": false
+      }
+    }
+  },
+  {
+    "operation": "message/send-edit-event",
+    "method": "POST",
+    "path": "send-edit-event",
+    "input": {
+      "phone": "120363019502650977-group",
+      "eventMessageId": "3EB058359730B7C2895C55",
+      "event": {
+        "name": "Novo nome do evento",
+        "description": "Descrição do evento",
+        "dateTime": "2024-04-29T09:30:53.309Z",
+        "location": {
+          "name": "Nome do lugar"
+        },
+        "callLinkType": "voice",
+        "canceled": false
+      }
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "eventMessageId": "3EB058359730B7C2895C55",
+      "event": {
+        "name": "Novo nome do evento",
+        "description": "Descrição do evento",
+        "dateTime": "2024-04-29T09:30:53.309Z",
+        "location": {
+          "name": "Nome do lugar"
+        },
+        "callLinkType": "voice",
+        "canceled": false
+      }
+    }
+  },
+  {
+    "operation": "message/send-event-response",
+    "method": "POST",
+    "path": "send-event-response",
+    "input": {
+      "phone": "120363019502650977-group",
+      "eventMessageId": "D2D612289D9E8F62307D72409A8D9DC3",
+      "eventResponse": "GOING"
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "eventMessageId": "D2D612289D9E8F62307D72409A8D9DC3",
+      "eventResponse": "GOING"
+    }
+  },
+  {
+    "operation": "message/reply-button",
+    "method": "POST",
+    "path": "reply-button",
+    "input": {
+      "phone": "5511999999999",
+      "responseButtonId": "1",
+      "messageId": "D241XXXX732339502B68"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "responseButtonId": "1",
+      "messageId": "D241XXXX732339502B68"
+    }
+  },
+  {
+    "operation": "message/reply-template-button",
+    "method": "POST",
+    "path": "reply-template-button",
+    "input": {
+      "phone": "5511999999999",
+      "responseTemplateButtonId": "1",
+      "messageId": "D241XXXX732339502B68"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "responseTemplateButtonId": "1",
+      "messageId": "D241XXXX732339502B68"
+    }
+  },
+  {
+    "operation": "message/reply-option-list",
+    "method": "POST",
+    "path": "reply-option-list",
+    "input": {
+      "phone": "5511999999999",
+      "messageId": "3EB0C767D82B0A6E9F5F",
+      "responseOptionId": "1"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "messageId": "3EB0C767D82B0A6E9F5F",
+      "responseOptionId": "1"
+    }
+  },
+  {
+    "operation": "contacts/get-contacts",
+    "method": "GET",
+    "path": "contacts",
+    "input": {
+      "page": 1,
+      "pageSize": 100
+    },
+    "query": {
+      "page": 1,
+      "pageSize": 100
+    },
+    "body": null
+  },
+  {
+    "operation": "contacts/add-contacts",
+    "method": "POST",
+    "path": "contacts/add",
+    "input": {
+      "contacts": [
+        {
+          "firstName": "Contato 1",
+          "lastName": "Sobrenome 1",
+          "phone": "554499999999"
+        },
+        {
+          "firstName": "Contato 2",
+          "lastName": "Sobrenome 2",
+          "phone": "554499998888"
+        }
+      ]
+    },
+    "query": {},
+    "body": [
+      {
+        "firstName": "Contato 1",
+        "lastName": "Sobrenome 1",
+        "phone": "554499999999"
+      },
+      {
+        "firstName": "Contato 2",
+        "lastName": "Sobrenome 2",
+        "phone": "554499998888"
+      }
+    ]
+  },
+  {
+    "operation": "contacts/remove-contacts",
+    "method": "DELETE",
+    "path": "contacts/remove",
+    "input": {
+      "phones": [
+        "554499999999",
+        "554499998888"
+      ]
+    },
+    "query": {},
+    "body": [
+      "554499999999",
+      "554499998888"
+    ]
+  },
+  {
+    "operation": "contacts/get-metadata-contact",
+    "method": "GET",
+    "path": "contacts/{phone}",
+    "input": {
+      "phone": "5511999999999"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "contacts/get-profile-picture",
+    "method": "GET",
+    "path": "profile-picture",
+    "input": {
+      "phone": "5511999999999"
+    },
+    "query": {
+      "phone": "5511999999999"
+    },
+    "body": null
+  },
+  {
+    "operation": "contacts/get-iswhatsapp",
+    "method": "GET",
+    "path": "phone-exists/{phone}",
+    "input": {
+      "phone": "5511999999999"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "contacts/get-iswhatsapp-batch",
+    "method": "POST",
+    "path": "phone-exists-batch",
+    "input": {
+      "phones": [
+        "554499999999",
+        "554488888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "phones": [
+        "554499999999",
+        "554488888888"
+      ]
+    }
+  },
+  {
+    "operation": "contacts/block-contact",
+    "method": "POST",
+    "path": "contacts/modify-blocked",
+    "input": {
+      "phone": "5544999999999",
+      "action": "block"
+    },
+    "query": {},
+    "body": {
+      "phone": "5544999999999",
+      "action": "block"
+    }
+  },
+  {
+    "operation": "contacts/report-contact",
+    "method": "POST",
+    "path": "contacts/{phone}/report",
+    "input": {
+      "phone": "5511999999999"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "group/get-groups",
+    "method": "GET",
+    "path": "groups",
+    "input": {
+      "page": 1,
+      "pageSize": 100
+    },
+    "query": {
+      "page": 1,
+      "pageSize": 100
+    },
+    "body": null
+  },
+  {
+    "operation": "group/create-group",
+    "method": "POST",
+    "path": "create-group",
+    "input": {
+      "autoInvite": true,
+      "groupName": "Grupo Z-API",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "autoInvite": true,
+      "groupName": "Grupo Z-API",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/update-group-name",
+    "method": "POST",
+    "path": "update-group-name",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "groupName": "Mudou o nome Meu grupo no Z-API"
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "groupName": "Mudou o nome Meu grupo no Z-API"
+    }
+  },
+  {
+    "operation": "group/update-group-photo",
+    "method": "POST",
+    "path": "update-group-photo",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "groupPhoto": "https://www.z-api.io/wp-content/themes/z-api/dist/images/logo.svg"
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "groupPhoto": "https://www.z-api.io/wp-content/themes/z-api/dist/images/logo.svg"
+    }
+  },
+  {
+    "operation": "group/add-participant",
+    "method": "POST",
+    "path": "add-participant",
+    "input": {
+      "autoInvite": true,
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "autoInvite": true,
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/remove-participant",
+    "method": "POST",
+    "path": "remove-participant",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/approve-participant",
+    "method": "POST",
+    "path": "approve-participant",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/reject-participant",
+    "method": "POST",
+    "path": "reject-participant",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/mention-participant",
+    "method": "POST",
+    "path": "send-text",
+    "input": {
+      "phone": "5511999999999-group",
+      "message": "Welcome to *Z-API group* @5544999999999",
+      "mentioned": [
+        "5544999999999"
+      ]
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999-group",
+      "message": "Welcome to *Z-API group* @5544999999999",
+      "mentioned": [
+        "5544999999999"
+      ]
+    }
+  },
+  {
+    "operation": "group/mention-group",
+    "method": "POST",
+    "path": "send-text",
+    "input": {
+      "phone": "5511999999999-group",
+      "message": "Welcome to *Z-API group* @1203634230225498-group",
+      "groupMentioned": [
+        {
+          "phone": "1203634230225498-group",
+          "subject": "Z-API subgroup"
+        }
+      ]
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999-group",
+      "message": "Welcome to *Z-API group* @1203634230225498-group",
+      "groupMentioned": [
+        {
+          "phone": "1203634230225498-group",
+          "subject": "Z-API subgroup"
+        }
+      ]
+    }
+  },
+  {
+    "operation": "group/mention-all",
+    "method": "POST",
+    "path": "send-text",
+    "input": {
+      "phone": "120363019502650977-group",
+      "message": "Mensagem Teste @all",
+      "mentionAll": true
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "message": "Mensagem Teste @all",
+      "mentionAll": true
+    }
+  },
+  {
+    "operation": "group/add-admin",
+    "method": "POST",
+    "path": "add-admin",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/remove-admin",
+    "method": "POST",
+    "path": "remove-admin",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "group/leave-group",
+    "method": "POST",
+    "path": "leave-group",
+    "input": {
+      "groupId": "120363019502650977-group"
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group"
+    }
+  },
+  {
+    "operation": "group/metadata-group",
+    "method": "GET",
+    "path": "group-metadata/{phone}",
+    "input": {
+      "phone": "5511999999999"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "group/light-group-metadata",
+    "method": "GET",
+    "path": "light-group-metadata/{phone}",
+    "input": {
+      "phone": "5511999999999"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "group/group-invitation-metadata",
+    "method": "GET",
+    "path": "group-invitation-metadata",
+    "input": {
+      "url": "https://chat.whatsapp.com/invitation"
+    },
+    "query": {
+      "url": "https://chat.whatsapp.com/invitation"
+    },
+    "body": null
+  },
+  {
+    "operation": "group/update-group-settings",
+    "method": "POST",
+    "path": "update-group-settings",
+    "input": {
+      "phone": "120363019502650977-group",
+      "adminOnlyMessage": true,
+      "adminOnlySettings": true,
+      "requireAdminApproval": false,
+      "adminOnlyAddMember": true
+    },
+    "query": {},
+    "body": {
+      "phone": "120363019502650977-group",
+      "adminOnlyMessage": true,
+      "adminOnlySettings": true,
+      "requireAdminApproval": false,
+      "adminOnlyAddMember": true
+    }
+  },
+  {
+    "operation": "group/update-group-description",
+    "method": "POST",
+    "path": "update-group-description",
+    "input": {
+      "groupId": "120363019502650977-group",
+      "groupDescription": "descrição do grupo"
+    },
+    "query": {},
+    "body": {
+      "groupId": "120363019502650977-group",
+      "groupDescription": "descrição do grupo"
+    }
+  },
+  {
+    "operation": "group/redefine-invitation-link",
+    "method": "POST",
+    "path": "redefine-invitation-link/{groupId}",
+    "input": {
+      "groupId": "120363019502650977-group"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "group/get-invitation-link",
+    "method": "GET",
+    "path": "group-invitation-link/{groupId}",
+    "input": {
+      "groupId": "120363019502650977-group"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "group/accept-group-invite",
+    "method": "GET",
+    "path": "accept-invite-group",
+    "input": {
+      "url": "https://chat.whatsapp.com/invitation"
+    },
+    "query": {
+      "url": "https://chat.whatsapp.com/invitation"
+    },
+    "body": null
+  },
+  {
+    "operation": "communities/create-community",
+    "method": "POST",
+    "path": "communities",
+    "input": {
+      "name": "Minha primeira Comunidade"
+    },
+    "query": {},
+    "body": {
+      "name": "Minha primeira Comunidade"
+    }
+  },
+  {
+    "operation": "communities/list-communities",
+    "method": "GET",
+    "path": "communities",
+    "input": {},
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "communities/link-groups",
+    "method": "POST",
+    "path": "communities/link",
+    "input": {
+      "communityId": "98372465382764532938",
+      "groupsPhones": [
+        "1345353454354354-group",
+        "1203634230225498-group"
+      ]
+    },
+    "query": {},
+    "body": {
+      "communityId": "98372465382764532938",
+      "groupsPhones": [
+        "1345353454354354-group",
+        "1203634230225498-group"
+      ]
+    }
+  },
+  {
+    "operation": "communities/unlink-groups",
+    "method": "POST",
+    "path": "communities/unlink",
+    "input": {
+      "communityId": "98372465382764532938",
+      "groupsPhones": [
+        "1345353454354354-group"
+      ]
+    },
+    "query": {},
+    "body": {
+      "communityId": "98372465382764532938",
+      "groupsPhones": [
+        "1345353454354354-group"
+      ]
+    }
+  },
+  {
+    "operation": "communities/community-metadata",
+    "method": "GET",
+    "path": "communities-metadata/{communityId}",
+    "input": {
+      "communityId": "120363019502650977"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "communities/redefine-invitation-link",
+    "method": "POST",
+    "path": "redefine-invitation-link/{communityId}",
+    "input": {
+      "communityId": "120363019502650977"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "communities/add-community-participant",
+    "method": "POST",
+    "path": "add-participant",
+    "input": {
+      "autoInvite": true,
+      "communityId": "120363019502650977",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "autoInvite": true,
+      "communityId": "120363019502650977",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "communities/remove-community-participant",
+    "method": "POST",
+    "path": "remove-participant",
+    "input": {
+      "communityId": "120363019502650977",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "communityId": "120363019502650977",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "communities/add-community-admin",
+    "method": "POST",
+    "path": "add-admin",
+    "input": {
+      "communityId": "120363186053925765",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "communityId": "120363186053925765",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "communities/remove-community-admin",
+    "method": "POST",
+    "path": "remove-admin",
+    "input": {
+      "communityId": "120363019502650977",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "communityId": "120363019502650977",
+      "phones": [
+        "5544999999999",
+        "5544888888888"
+      ]
+    }
+  },
+  {
+    "operation": "communities/community-settings",
+    "method": "POST",
+    "path": "communities/settings",
+    "input": {
+      "communityId": "98372465382764532938",
+      "whoCanAddNewGroups": "admins"
+    },
+    "query": {},
+    "body": {
+      "communityId": "98372465382764532938",
+      "whoCanAddNewGroups": "admins"
+    }
+  },
+  {
+    "operation": "communities/deactivate-community",
+    "method": "DELETE",
+    "path": "communities/{communityId}",
+    "input": {
+      "communityId": "120363019502650977"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "communities/update-community-description",
+    "method": "POST",
+    "path": "update-community-description",
+    "input": {
+      "communityId": "120363019502650977",
+      "communityDescription": "descrição da comunidade"
+    },
+    "query": {},
+    "body": {
+      "communityId": "120363019502650977",
+      "communityDescription": "descrição da comunidade"
+    }
+  },
+  {
+    "operation": "newsletter/create-newsletter",
+    "method": "POST",
+    "path": "create-newsletter",
+    "input": {
+      "name": "Nome do canal",
+      "description": "Descrição do canal"
+    },
+    "query": {},
+    "body": {
+      "name": "Nome do canal",
+      "description": "Descrição do canal"
+    }
+  },
+  {
+    "operation": "newsletter/update-newsletter-picture",
+    "method": "POST",
+    "path": "update-newsletter-picture",
+    "input": {
+      "id": "999999999999999999@newsletter",
+      "pictureUrl": "https://example.com/logo.svg"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter",
+      "pictureUrl": "https://example.com/logo.svg"
+    }
+  },
+  {
+    "operation": "newsletter/update-newsletter-name",
+    "method": "POST",
+    "path": "update-newsletter-name",
+    "input": {
+      "id": "999999999999999999@newsletter",
+      "name": "Novo nome do canal"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter",
+      "name": "Novo nome do canal"
+    }
+  },
+  {
+    "operation": "newsletter/update-newsletter-description",
+    "method": "POST",
+    "path": "update-newsletter-description",
+    "input": {
+      "id": "999999999999999999@newsletter",
+      "description": "Nova descrição do canal"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter",
+      "description": "Nova descrição do canal"
+    }
+  },
+  {
+    "operation": "newsletter/follow-newsletter",
+    "method": "PUT",
+    "path": "follow-newsletter",
+    "input": {
+      "id": "999999999999999999@newsletter"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter"
+    }
+  },
+  {
+    "operation": "newsletter/unfollow-newsletter",
+    "method": "PUT",
+    "path": "unfollow-newsletter",
+    "input": {
+      "id": "999999999999999999@newsletter"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter"
+    }
+  },
+  {
+    "operation": "newsletter/mute-newsletter",
+    "method": "PUT",
+    "path": "mute-newsletter",
+    "input": {
+      "id": "999999999999999999@newsletter"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter"
+    }
+  },
+  {
+    "operation": "newsletter/unmute-newsletter",
+    "method": "PUT",
+    "path": "unmute-newsletter",
+    "input": {
+      "id": "999999999999999999@newsletter"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter"
+    }
+  },
+  {
+    "operation": "newsletter/delete-newsletter",
+    "method": "DELETE",
+    "path": "delete-newsletter",
+    "input": {
+      "id": "999999999999999999@newsletter"
+    },
+    "query": {},
+    "body": {
+      "id": "999999999999999999@newsletter"
+    }
+  },
+  {
+    "operation": "newsletter/newsletter-metadata",
+    "method": "GET",
+    "path": "newsletter/metadata/{newsletterId}",
+    "input": {
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "newsletter/newsletter-subscribers",
+    "method": "GET",
+    "path": "newsletter/subscribers/{newsletterId}",
+    "input": {
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "newsletter/newsletter-list",
+    "method": "GET",
+    "path": "newsletter",
+    "input": {},
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "newsletter/search-newsletter",
+    "method": "POST",
+    "path": "search-newsletter",
+    "input": {
+      "limit": 50,
+      "view": "TRENDING",
+      "filters": {
+        "countryCodes": [
+          "BR",
+          "AF",
+          "CA"
+        ]
+      },
+      "searchText": "Z-API"
+    },
+    "query": {},
+    "body": {
+      "limit": 50,
+      "view": "TRENDING",
+      "filters": {
+        "countryCodes": [
+          "BR",
+          "AF",
+          "CA"
+        ]
+      },
+      "searchText": "Z-API"
+    }
+  },
+  {
+    "operation": "newsletter/update-newsletter-config",
+    "method": "POST",
+    "path": "newsletter/settings/{newsletterId}",
+    "input": {
+      "reactionCodes": "basic",
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": {
+      "reactionCodes": "basic"
+    }
+  },
+  {
+    "operation": "newsletter/accept-newsletter-admin-invite",
+    "method": "POST",
+    "path": "newsletter/accept-admin-invite/{newsletterId}",
+    "input": {
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "newsletter/newsletter-remove-admin",
+    "method": "POST",
+    "path": "newsletter/remove-admin/{newsletterId}",
+    "input": {
+      "phone": "5511999999999",
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999"
+    }
+  },
+  {
+    "operation": "newsletter/newsletter-revoke-admin-invite",
+    "method": "POST",
+    "path": "newsletter/revoke-admin-invite/{newsletterId}",
+    "input": {
+      "phone": "5511999999999",
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999"
+    }
+  },
+  {
+    "operation": "newsletter/transfer-newsletter-ownership",
+    "method": "POST",
+    "path": "newsletter/transfer-ownership/{newsletterId}",
+    "input": {
+      "phone": "5511999999999",
+      "quitAdmin": true,
+      "newsletterId": "120363019502650977@newsletter"
+    },
+    "query": {},
+    "body": {
+      "phone": "5511999999999",
+      "quitAdmin": true
+    }
+  },
+  {
+    "operation": "broadcast/create-broadcast",
+    "method": "POST",
+    "path": "broadcast",
+    "input": {
+      "name": "Nome da lista",
+      "phones": [
+        "5511999999999",
+        "5511888888888"
+      ]
+    },
+    "query": {},
+    "body": {
+      "name": "Nome da lista",
+      "phones": [
+        "5511999999999",
+        "5511888888888"
+      ]
+    }
+  },
+  {
+    "operation": "broadcast/update-broadcast",
+    "method": "PUT",
+    "path": "broadcast/{broadcastId}",
+    "input": {
+      "name": "Nome da lista",
+      "phones": [
+        "5511999999999",
+        "5511888888888"
+      ],
+      "broadcastId": "1779395073@broadcast"
+    },
+    "query": {},
+    "body": {
+      "name": "Nome da lista",
+      "phones": [
+        "5511999999999",
+        "5511888888888"
+      ]
+    }
+  },
+  {
+    "operation": "broadcast/list-broadcast",
+    "method": "GET",
+    "path": "broadcast",
+    "input": {},
+    "query": {},
+    "body": null
+  },
+  {
+    "operation": "broadcast/delete-broadcast",
+    "method": "DELETE",
+    "path": "broadcast/{broadcastId}",
+    "input": {
+      "broadcastId": "1779395073@broadcast"
+    },
+    "query": {},
+    "body": null
+  }
+]

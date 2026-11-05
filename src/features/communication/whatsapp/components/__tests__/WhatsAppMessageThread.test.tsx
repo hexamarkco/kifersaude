@@ -143,12 +143,24 @@ test('mantém o horário recuado quando a mídia inbound também tem legenda', (
   assert.ok(markup.includes('whatsapp-inbox-media-caption-bubble'));
 });
 
-test('mantém o horário inbound com recuo em mensagens de áudio sem bubble', () => {
-  const message = createMessage('voice-1', 'voice');
-  const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
+for (const kind of ['voice', 'audio']) {
+  for (const direction of ['inbound', 'outbound'] as const) {
+    test(`mantém data, horário e ações dentro da bolha de ${kind} ${direction}`, () => {
+      const message = { ...createMessage(`${kind}-${direction}`, kind), direction, external_message_id: `${kind}-${direction}-external` };
+      const markup = renderThread([{ type: 'message', key: `message:${message.id}`, message }], [message]);
+      const container = document.createElement('div');
+      container.innerHTML = markup;
+      const bubble = container.querySelector('.whatsapp-inbox-audio-bubble');
+      const meta = bubble?.querySelector('.whatsapp-inbox-message-meta');
 
-  assertExternalMediaMetaHasInset(markup);
-});
+      assert.ok(bubble?.querySelector('[data-testid="message-body"]'));
+      assert.ok(meta?.textContent?.includes('30/10'));
+      assert.ok(meta?.classList.contains('justify-end'));
+      assert.ok(meta?.querySelector('[aria-label="Mais acoes da mensagem"]'));
+      assert.equal(container.querySelector('.whatsapp-inbox-message-meta-external'), null);
+    });
+  }
+}
 
 test('mantém o horário inbound recuado em stickers sem bubble', () => {
   const message = createMessage('sticker-1', 'sticker');

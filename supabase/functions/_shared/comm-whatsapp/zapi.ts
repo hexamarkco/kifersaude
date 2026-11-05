@@ -1,3 +1,5 @@
+import type { ZapiJson } from './zapi-operation-contract.ts';
+
 export type ZapiCredentials = {
   instanceId: string;
   instanceToken: string;
@@ -10,7 +12,7 @@ export type ZapiSend =
   | { phone: string; kind: 'text'; text: string; quote?: string }
   | { phone: string; kind: MediaKind; media: string | Blob; caption?: string; fileName?: string; quote?: string };
 export type ZapiAcceptance = { messageId: string; queueId: string | null };
-type ZapiBody = Record<string, string | number | boolean> | Array<Record<string, string>>;
+type ZapiBody = ZapiJson;
 
 export class ZapiRequestError extends Error {
   constructor(readonly status: number, readonly uncertain: boolean) {
@@ -92,7 +94,14 @@ export function createZapiAdapter(credentials: ZapiCredentials, fetcher: typeof 
         throw new ZapiRequestError(response.status, options.dispatch === true &&
           (response.status >= 500 || response.status === 408 || response.status === 429));
       }
-      return await response.json();
+      if (response.status === 204) return null;
+      const payload: unknown = await response.json();
+      const result = zapiRecord(payload);
+      if (result.value === false || result.success === false || result.error ||
+          (Array.isArray(result.errors) && result.errors.length > 0)) {
+        throw new ZapiRequestError(422, false);
+      }
+      return payload;
     } catch (error) {
       if (error instanceof ZapiRequestError) throw error;
       throw new ZapiRequestError(signal.aborted ? 504 : 502, options.dispatch === true);

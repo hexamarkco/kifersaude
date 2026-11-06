@@ -149,6 +149,14 @@ const describeStep = (
   ];
 
   if (step.actionType === 'send_message') {
+    if (step.messageVariations?.length) {
+      lines.push(`Variações: ${step.messageVariations.length + 1}; somente uma versão é enviada por execução.`);
+      step.messageVariations.forEach((variation, index) => {
+        lines.push(`Variação ${index + 2} (${variation.id}):`);
+        lines.push(...describeStep({ ...step, messageVariations: undefined, messages: variation.messages }, templates, flowActionLabels));
+      });
+      lines.push('Variação 1 (principal):');
+    }
     if (Array.isArray(step.messages) && step.messages.length > 0) {
       lines.push(`Source: multi (${step.messages.length} mensagens)`);
       step.messages.forEach((item, index) => {

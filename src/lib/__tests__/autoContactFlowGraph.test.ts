@@ -195,6 +195,7 @@ test('canonical flow steps replace stale visual graph steps', () => {
     delayUnit: 'hours',
     actionType: 'send_message',
     messages: [{ ai: { instruction: 'Retome a conversa com naturalidade.' } }],
+    messageVariations: [{ id: 'alternative', messages: [{ custom: { type: 'text', text: 'Outra abordagem' } }] }],
   };
   const flow = { ...buildBaseFlow(), steps: [canonicalStep] };
 
@@ -203,7 +204,9 @@ test('canonical flow steps replace stale visual graph steps', () => {
 
   assert.equal(actionNode?.data.label, 'Enviar mensagem (IA)');
   assert.deepEqual(actionNode?.data.step?.messages, canonicalStep.messages);
+  assert.deepEqual(actionNode?.data.step?.messageVariations, canonicalStep.messageVariations);
 
   const expanded = expandFlowGraphToFlows(flow);
   assert.deepEqual(expanded[0]?.steps.find((step) => step.id === 'step-intro')?.messages, canonicalStep.messages);
+  assert.deepEqual(expanded[0]?.steps.find((step) => step.id === 'step-intro')?.messageVariations, canonicalStep.messageVariations);
 });

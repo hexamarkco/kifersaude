@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from '../infrastructure/supabase';
 import type { Lead } from '../features/leads';
+import { normalizeFlowMessageVariations, type FlowMessageVariation } from '../features/config';
 import { BRAZIL_STATES } from './brasilLocations';
 import { formatGreetingTitle, getGreetingForDate } from './greeting';
 import { evaluateSafeFormula } from './safeFormula';
@@ -67,6 +68,7 @@ export type AutoContactFlowStep = {
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
   messages?: AutoContactFlowMessageItem[];
+  messageVariations?: FlowMessageVariation[];
   statusToSet?: string;
   webhookUrl?: string;
   webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
@@ -809,6 +811,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               messageSource,
               templateId: validTemplateId,
               customMessage: normalizeCustomMessage(step?.customMessage),
+              messageVariations: normalizeFlowMessageVariations(step?.messageVariations, messageTemplates, validTemplateId),
               messages: Array.isArray(step?.messages)
                 ? step.messages
                     .map((item: any) => {

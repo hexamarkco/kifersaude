@@ -1,3 +1,5 @@
+import { normalizeFlowMessageVariations, type FlowMessageVariation } from './domain/message-variations.ts';
+import { resolveMessageVariation } from './domain/resolve-message-variation.ts';
 import { createWhatsAppDispatch, getZapiContactStatus, hasWhatsAppDispatchCredentials, readWhatsAppTransport, WhatsAppTransportError } from '../_shared/comm-whatsapp/transport.ts';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -405,6 +407,7 @@ type AutoContactFlowStep = {
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
   messages?: AutoContactFlowMessageItem[];
+  messageVariations?: FlowMessageVariation[];
   statusToSet?: string;
   webhookUrl?: string;
   webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
@@ -1775,6 +1778,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
             messageSource,
             templateId: validTemplateId,
             customMessage: normalizeCustomMessage(step?.customMessage),
+            messageVariations: normalizeFlowMessageVariations(step?.messageVariations, messageTemplates, validTemplateId),
             messages: Array.isArray(step?.messages)
               ? step.messages
                   .map((item: any) => {
@@ -2494,6 +2498,7 @@ async function scheduleFlowJobs({
     if (step.actionType === 'send_message' && Array.isArray(step.messages) && step.messages.length > 0) {
       if (!finalActionPayload) finalActionPayload = {};
       finalActionPayload.messages = step.messages;
+      finalActionPayload.message_variations = step.messageVariations ?? [];
     }
     if (isRetroactiveBacklog) {
       finalActionPayload = {
@@ -2707,6 +2712,7 @@ async function scheduleNextFlowStep({
   const finalActionPayload = mergeJobActionPayload(actionPayload, runtimeContext);
   if (nextStep.actionType === 'send_message' && Array.isArray(nextStep.messages) && nextStep.messages.length > 0) {
     finalActionPayload.messages = nextStep.messages;
+    finalActionPayload.message_variations = nextStep.messageVariations ?? [];
   }
   const continuationTriggerMessageAt = resolveContinuationTriggerMessageAt({
     triggerType: flow.triggerType,
@@ -3937,7 +3943,20 @@ const resolveFlowMessagePayloads = async ({
   contentType: FlowMessageType;
   content: string | { url: string; caption?: string; filename?: string };
 }>> => {
-  const items = getFlowMessageItemsForJob(step, job);
+  const items = await resolveMessageVariation({
+    primaryMessages: getFlowMessageItemsForJob(step, job),
+    variations: job?.action_payload?.message_variations ?? step.messageVariations,
+    storedSelection: job?.action_payload?.selected_message_variation,
+    preservePrimary: getStoredAutoContactAiMessages(job?.action_payload).length > 0,
+    seed: job?.id ?? crypto.randomUUID(),
+    persist: job ? async (selection) => {
+      const nextPayload = { ...job.action_payload, selected_message_variation: selection };
+      const { error } = await supabase.from('auto_contact_flow_jobs')
+        .update({ action_payload: nextPayload }).eq('id', job.id);
+      if (error) throw new Error(`Não foi possível salvar a variação escolhida: ${error.message}`);
+      job.action_payload = nextPayload;
+    } : undefined,
+  });
   const storedMessages = getStoredAutoContactAiMessages(job?.action_payload);
   const storedByIndex = new Map(storedMessages.map((item) => [item.itemIndex, item]));
   const hasUncachedAi = items.some((item, itemIndex) => 'ai' in item && !storedByIndex.has(itemIndex));

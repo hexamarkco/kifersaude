@@ -24,6 +24,8 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { hasIncompleteMessageVariations, normalizeFlowMessageVariations } from "./domain/messageVariations";
+import { applyFlowGraphEdits } from "./domain/flowGraphEdits";
 import { configService } from "../data/configService";
 import { useConfig } from "../../../contexts/ConfigContext";
 import {
@@ -65,7 +67,7 @@ import type { Lead, LeadStatusConfig } from "../../leads";
 import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
 import AutomationFlowsWorkspace from "./components/AutomationFlowsWorkspace";
-import { MessageListEditor } from "./components/MessageListEditor";
+import { MessageVariationsEditor } from "./components/MessageVariationsEditor";
 import { VariableAutocompleteTextarea } from '../../../design-system';
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
@@ -562,6 +564,21 @@ export default function AutoContactFlowSettingsScreen() {
       return false;
     }
 
+    const incompleteVariations = flowsToSave.some((flow) => {
+      const steps = flow.flowGraph
+        ? expandFlowGraphToFlows(flow).flatMap((expanded) => expanded.steps)
+        : flow.steps;
+      return steps.some((step) => step.actionType === "send_message" && (
+        hasIncompleteMessageVariations(step.messageVariations, messageTemplatesDraft) ||
+        (step.messageVariations?.length && hasIncompleteMessageVariations(
+          [{ id: 'primary', messages: getAutoContactFlowMessageItems(step) }], messageTemplatesDraft))
+      ));
+    });
+    if (incompleteVariations) {
+      toast.error("Preencha todas as mensagens das variações antes de salvar: selecione um modelo, escreva o texto ou informe a instrução de IA.");
+      return false;
+    }
+
     setSavingFlow(true);
 
     const sanitizedTemplates = normalizeTemplatesForSettings(
@@ -620,6 +637,7 @@ export default function AutoContactFlowSettingsScreen() {
                 messageSource,
                 templateId,
                 customMessage,
+                messageVariations: normalizeFlowMessageVariations(step.messageVariations, sanitizedTemplates, fallbackTemplateId),
                 messages: (() => {
                   if (!Array.isArray(step.messages)) return undefined;
                   const items: NonNullable<AutoContactFlowStep["messages"]> = [];
@@ -1088,7 +1106,8 @@ export default function AutoContactFlowSettingsScreen() {
     flowId: string,
     flowGraph: AutoContactFlowGraph,
   ) => {
-    handleUpdateFlow(flowId, { flowGraph });
+    setFlowDrafts((previous) => previous.map((flow) =>
+      flow.id === flowId ? applyFlowGraphEdits(flow, flowGraph) : flow));
   };
   const handleUpdateFlowScheduling = (
     flowId: string,
@@ -2773,14 +2792,14 @@ export default function AutoContactFlowSettingsScreen() {
                                   Integrações). Cada item abaixo é enviado
                                   como uma mensagem própria, em ordem.
                                 </div>
-                                <MessageListEditor
+                                <MessageVariationsEditor
                                   step={step}
                                   messageTemplates={messageTemplatesDraft}
-                                  onUpdate={(messages) =>
+                                  onUpdate={(updates) =>
                                     handleUpdateFlowStep(
                                       activeFlow.id,
                                       step.id,
-                                      { messages },
+                                      updates,
                                     )
                                   }
                                   onPreviewAiMessage={handlePreviewAiMessage}

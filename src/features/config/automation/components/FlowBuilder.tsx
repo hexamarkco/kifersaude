@@ -23,7 +23,7 @@ import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
 import { evaluateSafeFormula } from "../../../../lib/safeFormula";
 import { VariableAutocompleteTextarea } from '../../../../design-system';
-import { MessageListEditor } from "./MessageListEditor";
+import { MessageVariationsEditor } from "./MessageVariationsEditor";
 import {
   Button,
   Field,
@@ -1626,12 +1626,10 @@ export default function FlowBuilder({
                       item abaixo é enviado como uma mensagem própria, em
                       ordem.
                     </div>
-                    <MessageListEditor
+                    <MessageVariationsEditor
                       step={selectedNode.data.step}
                       messageTemplates={messageTemplates}
-                      onUpdate={(messages) =>
-                        updateSelectedStep({ messages })
-                      }
+                      onUpdate={updateSelectedStep}
                       onPreviewAiMessage={(instruction, itemIndex) =>
                         onPreviewAiMessage?.({
                           stepId: selectedNode.data.step?.id ?? "",

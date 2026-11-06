@@ -13,6 +13,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - `finalStatus` é aplicado somente após a conclusão da última etapa e não substitui um status que mudou durante a execução.
 - A primeira etapa de inatividade ancora em `inactivity_started_at + triggerDurationHours`. Spread determinístico vale para backlog real e excesso de cap, nunca para a abordagem `lead_created`.
 - `step.messages[]` representa um pacote ordenado de mensagens na mesma etapa. Não existe modo `together`.
+- `step.messageVariations[]` contém versões alternativas completas desse pacote. Uma execução escolhe apenas uma versão (incluindo a principal), distribuída pelo UUID do job, e grava seu ID e mensagens em `action_payload.selected_message_variation` antes de gerar IA ou enviar. Retries reutilizam o snapshot mesmo após editar/remover versões; etapas sem variações preservam o envio sequencial existente.
 - Cada item de `step.messages[]` é Template, Custom ou IA. A instrução IA é obrigatória, gera exatamente um texto no worker antes do primeiro envio e o resultado fica em `action_payload.ai_generated_messages` para retries determinísticos. Falha de geração invalida o job e cancela as próximas etapas sem fallback textual.
 - `settings.autoSend=false` pausa globalmente; cada fluxo também possui `ativo`. Jobs pendentes de fluxo inativo viram `skipped`, sem envio.
 - `leads.skip_automation` é persistente e deve ser respeitado pelo trigger, cron, `leads-api`, engine e scripts de distribuição.

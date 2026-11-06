@@ -18,7 +18,8 @@ test('adiciona, edita, alterna e remove uma variação sem alterar a principal',
   }
   const view = render(<Editor />);
   const click = (label: string) => {
-    const button = Array.from(view.container.querySelectorAll('button')).find((item) => item.textContent?.trim() === label);
+    const button = Array.from(view.container.querySelectorAll('button')).find((item) =>
+      item.textContent?.trim() === label || item.getAttribute('aria-label') === label);
     assert.ok(button, `Botão ${label} disponível`);
     act(() => button.click());
   };
@@ -40,7 +41,7 @@ test('adiciona, edita, alterna e remove uma variação sem alterar a principal',
     click('Remover variação');
     assert.deepEqual(latest!.messageVariations, []);
     assert.equal(view.container.querySelector('textarea')?.value, 'Abordagem original');
-    assert.equal(view.container.querySelectorAll('[aria-pressed="true"]').length, 1);
+    assert.equal(view.container.querySelectorAll('[role="tab"][aria-selected="true"]').length, 1);
   } finally {
     view.unmount();
   }

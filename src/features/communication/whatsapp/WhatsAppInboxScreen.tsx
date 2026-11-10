@@ -1843,10 +1843,30 @@ export default function WhatsAppInboxScreen() {
     setSaveContactDialogOpen(true);
   };
 
+  // A seleção pode mudar enquanto os dados do lead anterior ainda são carregados.
+  const headerLeadPanel = selectedChat?.lead_id && leadPanel?.id === selectedChat.lead_id ? leadPanel : null;
+  const headerLeadStatus = headerLeadPanel?.status_nome ?? headerLeadPanel?.status_value ?? selectedChat?.lead_status ?? null;
+
   const conversationView: WhatsAppInboxConversationView | null = selectedChat ? {
     selectedChat,
     header: {
       selectedChatDisplayName,
+      leadStatus: headerLeadStatus,
+      leadStatusOptions: leadStatuses
+        .filter((status) => status.ativo || status.nome === headerLeadStatus)
+        .map((status) => ({
+          value: status.nome,
+          label: status.nome,
+          color: status.cor,
+          disabled: !status.ativo,
+        })),
+      leadStatusUpdating: selectedChatLeadMutationLoading,
+      leadStatusDisabled: !headerLeadPanel || leadPanelLoading || Boolean(leadPanelError),
+      onLeadStatusChange: (newStatus) => {
+        if (!headerLeadPanel || !selectedChat.lead_id) return;
+        // A mutação já notifica o operador em caso de erro.
+        void handleLeadStatusChange(headerLeadPanel.id, newStatus).catch(() => undefined);
+      },
       isSelectedChatWaitingForQuote,
       assumingControl: assumingControlChatId === selectedChat.id,
       chatFilesOpen,

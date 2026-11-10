@@ -86,7 +86,7 @@ test('permite alterar o status do lead ao lado do nome', () => {
     );
     assert.ok(name);
     assert.ok(trigger);
-    assert.equal(name.parentElement, trigger.parentElement);
+    assert.equal(name.parentElement, trigger.parentElement?.parentElement);
 
     act(() => trigger.click());
     const option = document.body.querySelector<HTMLButtonElement>(

@@ -1,7 +1,7 @@
 import { Bot, Calendar, CalendarClock, ChevronLeft, Copy, Download, FolderOpen, Info, MoreHorizontal, Pause, Search, Sparkles, Users } from 'lucide-react';
 import type { RefObject } from 'react';
 
-import { Badge, ButtonGroup, Heading, IconButton } from '../../../../design-system';
+import { Badge, ButtonGroup, Heading, IconButton, OperationalStatusSelect, type OperationalStatusSelectOption } from '../../../../design-system';
 import { isOverdue } from '../../../../lib/dateUtils';
 import type { CommWhatsAppChat } from '../domain/types';
 
@@ -15,6 +15,11 @@ type ChatAgendaSummary = {
 type WhatsAppThreadHeaderProps = {
   selectedChat: CommWhatsAppChat;
   selectedChatDisplayName: string;
+  leadStatus: string | null;
+  leadStatusOptions: readonly OperationalStatusSelectOption[];
+  leadStatusUpdating: boolean;
+  leadStatusDisabled: boolean;
+  onLeadStatusChange: (status: string) => void;
   isSelectedChatWaitingForQuote: boolean;
   assumingControl: boolean;
   chatFilesOpen: boolean;
@@ -46,6 +51,11 @@ type WhatsAppThreadHeaderProps = {
 export function WhatsAppThreadHeader({
   selectedChat,
   selectedChatDisplayName,
+  leadStatus,
+  leadStatusOptions,
+  leadStatusUpdating,
+  leadStatusDisabled,
+  onLeadStatusChange,
   isSelectedChatWaitingForQuote,
   assumingControl,
   chatFilesOpen,
@@ -92,10 +102,25 @@ export function WhatsAppThreadHeader({
           <ChevronLeft aria-hidden="true" />
         </IconButton>
         <div className="min-w-0 flex-1">
-          <Heading level={2} family="interface" weight="semibold" size="lg" className="whatsapp-inbox-heading truncate" title={selectedChatDisplayName}>
-            {selectedChat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}
-            {selectedChatDisplayName}
-          </Heading>
+          <div className="flex min-w-0 items-center gap-2">
+            <Heading level={2} family="interface" weight="semibold" size="lg" className="whatsapp-inbox-heading min-w-0 truncate" title={selectedChatDisplayName}>
+              {selectedChat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}
+              {selectedChatDisplayName}
+            </Heading>
+            {!selectedChat.is_group && selectedChat.lead_id ? (
+              <OperationalStatusSelect
+                value={leadStatus ?? ''}
+                options={leadStatusOptions}
+                triggerLabel={leadStatus || 'Sem status'}
+                onValueChange={onLeadStatusChange}
+                triggerAriaLabel={`Alterar status do lead ${selectedChatDisplayName}: ${leadStatus || 'Sem status'}`}
+                menuAriaLabel="Alterar status do lead"
+                loading={leadStatusUpdating}
+                disabled={leadStatusDisabled}
+                className="max-w-40 shrink-0 [&>span]:truncate"
+              />
+            ) : null}
+          </div>
           {agendaBadge ? <div className="mt-1 flex min-w-0">{agendaBadge}</div> : null}
         </div>
       </div>

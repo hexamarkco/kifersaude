@@ -122,3 +122,32 @@ test('campanha sem alternancia mantém somente a copy principal; modelos A/B ant
   assert.deepEqual(buildStepRows('legacy', stages, false).map((row) => row.variant_label), ['ANY']);
   assert.deepEqual(buildStepRows('legacy', stages, true).map((row) => row.variant_label), ['A', 'B']);
 });
+
+test('copies A, B e C podem variar todos os baloes da mesma sequencia', () => {
+  const rows = buildStepRows('campaign-full-copies', [{
+    kind: 'message', delayAmount: 0, delayUnit: 'minutes',
+    messages: [
+      { messageText: 'A1', variantBMessageText: 'B1', variantCopies: { C: 'C1' } },
+      { messageText: 'A2', variantBMessageText: 'B2', variantCopies: { C: 'C2' } },
+      { messageText: 'A3', variantBMessageText: 'B3', variantCopies: { C: 'C3' } },
+      { messageText: 'A4', variantBMessageText: 'B4', variantCopies: { C: 'C4' } },
+    ],
+  }], true);
+  assert.equal(rows.length, 12);
+  for (let step = 0; step < 4; step += 1) {
+    assert.deepEqual(rows.filter((row) => row.step_index === step)
+      .map((row) => [row.variant_label, row.message_text]),
+      [['A', `A${step + 1}`], ['B', `B${step + 1}`], ['C', `C${step + 1}`]]);
+  }
+});
+
+test('baloes sem override continuam compartilhados entre as copies', () => {
+  const rows = buildStepRows('campaign-mixed-copies', [{
+    kind: 'message', delayAmount: 0, delayUnit: 'minutes',
+    messages: [
+      { messageText: 'A1', variantBMessageText: 'B1', variantCopies: { C: 'C1' } },
+      { messageText: 'Compartilhado' },
+    ],
+  }], true);
+  assert.deepEqual(rows.filter((row) => row.step_index === 1).map((row) => row.variant_label), ['ANY']);
+});

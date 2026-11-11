@@ -1210,10 +1210,10 @@ export default function WhatsAppCampaignsScreen() {
               <span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-[color:var(--panel-text)]">
                   <FlaskConical className="h-3.5 w-3.5" />
-                  Alternar copies da mensagem inicial
+                  Alternar copies da sequência
                 </span>
                 <br />
-                Cadastre versões A, B, C, D... e distribua as abordagens entre os contatos. Cada lead mantém a mesma versão em novas tentativas.
+                Cadastre versões A, B, C... e varie os balões de cada abordagem. Cada contato mantém sua versão em novas tentativas.
               </span>
             </DsFieldLabel>
             {abTestEnabled && (
@@ -1304,12 +1304,13 @@ export default function WhatsAppCampaignsScreen() {
                         {stage.messages.map((message, messageIndex) => {
                           const refKey = `${stageIndex}-${messageIndex}`;
                           const isVeryFirstMessage = isFirstStage && messageIndex === 0;
-                          const extraCopyLabels = Object.keys(message.variantCopies ?? {}).filter((label) => /^[C-Z]$/.test(label)).sort();
-                          const nextCopyLabel = 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((label) => !extraCopyLabels.includes(label));
+                          const initialCopyOptions = stages[0]?.kind === 'message' ? stages[0].messages[0]?.variantCopies : undefined;
+                          const extraCopyLabels = Object.keys(isVeryFirstMessage ? (message.variantCopies ?? {}) : (initialCopyOptions ?? {})).filter((label) => /^[C-Z]$/.test(label)).sort();
+                          const nextCopyLabel = isVeryFirstMessage ? 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((label) => !extraCopyLabels.includes(label)) : undefined;
                           return (
                             <div key={messageIndex} className="rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-2">
                               <div className="mb-1 flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}{isVeryFirstMessage && abTestEnabled ? ' · Copy A' : ''}</span>
+                                <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}{abTestEnabled ? ' · Copy A' : ''}</span>
                                 {stage.messages.length > 1 && (
                                   <ButtonGroup size="sm" aria-label="Ações da mensagem">
                                     <IconButton type="button" size="sm" variant="ghost" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
@@ -1397,9 +1398,9 @@ export default function WhatsAppCampaignsScreen() {
                                   )}
                                 </div>
 
-                                {isVeryFirstMessage && abTestEnabled && (
+                                {abTestEnabled && (
                                   <div className="mt-3 space-y-3 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] p-3">
-                                    <Field label={<FieldLabel text="Copy B" hint="Uma alternativa completa para a primeira mensagem. Para três ou mais versões, use a alternância equilibrada." />}>
+                                    <Field label={<FieldLabel text="Copy B" hint="Texto alternativo para este balão. No primeiro balão é obrigatório; nos demais, vazio reutiliza a Copy A." />}>
                                       <Textarea
                                         size="sm"
                                         value={message.variantBMessageText ?? ''}
@@ -1419,13 +1420,15 @@ export default function WhatsAppCampaignsScreen() {
                                             placeholder={`Escreva a abordagem ${label}...`}
                                           />
                                         </Field>
-                                        <Button size="sm" variant="text" type="button" onClick={() => {
-                                          const nextCopies = { ...message.variantCopies };
-                                          delete nextCopies[label];
-                                          updateMessage(stageIndex, messageIndex, { variantCopies: nextCopies });
-                                        }}>
-                                          <Trash2 className="kds-control-icon" /> Remover copy {label}
-                                        </Button>
+                                        {isVeryFirstMessage && (
+                                          <Button size="sm" variant="text" type="button" onClick={() => {
+                                            const nextCopies = { ...message.variantCopies };
+                                            delete nextCopies[label];
+                                            updateMessage(stageIndex, messageIndex, { variantCopies: nextCopies });
+                                          }}>
+                                            <Trash2 className="kds-control-icon" /> Remover copy {label}
+                                          </Button>
+                                        )}
                                       </div>
                                     ))}
                                     {nextCopyLabel && (

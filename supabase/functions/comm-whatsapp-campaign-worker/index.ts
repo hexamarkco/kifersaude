@@ -60,7 +60,7 @@ type WorkerRequestBody = {
   source?: 'cron' | 'manual' | 'dashboard' | 'api';
   phoneNumber?: string;
   stepIndex?: number;
-  variant?: 'A' | 'B';
+  variant?: string;
 };
 
 type CampaignRow = {
@@ -107,7 +107,7 @@ type TargetRow = {
   lock_token: string | null;
   sent_at: string | null;
   responded_at: string | null;
-  ab_variant: 'A' | 'B' | null;
+  ab_variant: string | null;
 };
 
 type CampaignStepRow = {
@@ -123,7 +123,7 @@ type CampaignStepRow = {
   media_url: string | null;
   media_type: 'image' | 'document' | 'video' | null;
   media_filename: string | null;
-  variant_label: 'ANY' | 'A' | 'B';
+  variant_label: string;
 };
 
 type LeadRow = {
@@ -1173,7 +1173,7 @@ async function activateCampaign(
 
 async function sendCampaignTestMessage(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
-  params: { campaignId: string; phoneNumber: string; stepIndex: number; variant: 'A' | 'B'; profileId: string | null },
+  params: { campaignId: string; phoneNumber: string; stepIndex: number; variant: string; profileId: string | null },
 ) {
   const phoneDigits = normalizeCommWhatsAppPhone(params.phoneNumber);
   const chatId = phoneDigits ? buildWhapiDirectChatId(phoneDigits) : null;
@@ -2692,7 +2692,7 @@ async function reconcileOrphanedStepDispatches(params: {
       // Load target to get chat_id / phone_digits
       const { data: target } = await supabaseAdmin
         .from('comm_whatsapp_campaign_targets')
-        .select('id,phone_digits,phone_number,display_name,lead_id,chat_id')
+        .select('id,phone_digits,phone_number,display_name,lead_id,chat_id,ab_variant')
         .eq('id', dispatch.target_id)
         .maybeSingle();
 
@@ -2707,12 +2707,16 @@ async function reconcileOrphanedStepDispatches(params: {
       }
 
       // Load the step definition for message matching
-      const { data: stepDef } = await supabaseAdmin
+      const targetVariant = typeof target.ab_variant === 'string' ? target.ab_variant : 'A';
+      const { data: stepDefs, error: stepDefsError } = await supabaseAdmin
         .from('comm_whatsapp_campaign_steps')
-        .select('message_text,media_url,media_type,media_filename')
+        .select('message_text,media_url,media_type,media_filename,variant_label')
         .eq('campaign_id', dispatch.campaign_id)
         .eq('step_index', dispatch.step_index)
-        .maybeSingle();
+        .in('variant_label', ['ANY', targetVariant]);
+      if (stepDefsError) throw new Error(`Erro ao reconciliar copy do disparo: ${stepDefsError.message}`);
+      const stepDef = stepDefs?.find((row) => row.variant_label === targetVariant)
+        ?? stepDefs?.find((row) => row.variant_label === 'ANY') ?? null;
       const lead = stepDef?.message_text && target.lead_id
         ? await getLeadById(supabaseAdmin, target.lead_id)
         : null;
@@ -2916,7 +2920,7 @@ async function getLeadById(supabaseAdmin: ReturnType<typeof createAdminClient>, 
 async function getCampaignSteps(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   campaign: CampaignRow,
-  variant: 'A' | 'B' | null = null,
+  variant: string | null = null,
 ): Promise<CampaignStepRow[]> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_steps')
@@ -2947,9 +2951,8 @@ async function getCampaignSteps(
     }];
   }
 
-  // Uma etapa marcada com a variante especifica (A ou B) sobrepoe a versao
-  // compartilhada ('ANY') no mesmo indice, permitindo A/B so na mensagem
-  // inicial enquanto os follow-ups continuam unicos para as duas variantes.
+  // A copy especifica (A..Z) sobrepoe a etapa inicial compartilhada.
+  // As mensagens seguintes continuam comuns a todas as copies.
   const byIndex = new Map<number, CampaignStepRow>();
   for (const step of rows) {
     if (step.variant_label === 'ANY') {
@@ -3551,12 +3554,23 @@ async function sendTarget(params: {
 
   const lead = await getLeadById(supabaseAdmin, target.lead_id);
 
-  // Sorteia a variante A/B na primeira tentativa de envio do alvo e persiste,
-  // para que os follow-ups do mesmo contato continuem na variante sorteada.
+  // A alternancia equilibrada usa um cursor atomico no Postgres e persiste
+  // a copy antes do envio. Tentativas e follow-ups reutilizam a mesma letra.
+  // Campanhas A/B antigas preservam o percentual aleatorio original.
   let abVariant = target.ab_variant;
   if (campaign.ab_test_enabled && !abVariant) {
-    abVariant = Math.random() * 100 < campaign.ab_split_percent ? 'B' : 'A';
-    await updateClaimedTarget(supabaseAdmin, target, { ab_variant: abVariant });
+    if (campaign.audience_config?.copy_distribution === 'balanced') {
+      const { data: assignedVariant, error: assignmentError } = await supabaseAdmin
+        .rpc('assign_comm_whatsapp_campaign_copy', { p_target_id: target.id });
+      if (assignmentError) throw new Error(`Erro ao atribuir copy (verifique a migration): ${assignmentError.message}`);
+      if (typeof assignedVariant !== 'string' || !/^[A-Z]$/.test(assignedVariant)) {
+        throw new Error('Campanha com alternancia de copies sem duas versoes validas.');
+      }
+      abVariant = assignedVariant;
+    } else {
+      abVariant = Math.random() * 100 < campaign.ab_split_percent ? 'B' : 'A';
+      await updateClaimedTarget(supabaseAdmin, target, { ab_variant: abVariant });
+    }
     target.ab_variant = abVariant;
   }
 
@@ -4572,7 +4586,7 @@ Deno.serve(async (req) => {
       const phoneNumber = toTrimmedString(body.phoneNumber);
       if (!phoneNumber) return createJsonResponse({ error: 'Informe um telefone para o envio de teste.' }, 400);
       const stepIndex = Number.isFinite(body.stepIndex) ? Math.max(Math.floor(body.stepIndex as number), 0) : 0;
-      const variant = body.variant === 'B' ? 'B' : 'A';
+      const variant = typeof body.variant === 'string' && /^[A-Z]$/.test(body.variant) ? body.variant : 'A';
       const result = await sendCampaignTestMessage(supabaseAdmin, {
         campaignId,
         phoneNumber,

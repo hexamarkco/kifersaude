@@ -326,6 +326,7 @@ export default function WhatsAppCampaignsScreen() {
   const stepTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [abTestEnabled, setAbTestEnabled] = useState(false);
   const [abSplitPercent, setAbSplitPercent] = useState(50);
+  const [copyDistribution, setCopyDistribution] = useState<'balanced' | 'weighted_ab'>('balanced');
   const [recurrenceRule, setRecurrenceRule] = useState<CommWhatsAppCampaignRecurrenceRule>('none');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndAt, setRecurrenceEndAt] = useState('');
@@ -493,6 +494,7 @@ export default function WhatsAppCampaignsScreen() {
     setVariableAutocomplete(null);
     setAbTestEnabled(false);
     setAbSplitPercent(50);
+    setCopyDistribution('balanced');
     setRecurrenceRule('none');
     setRecurrenceInterval(1);
     setRecurrenceEndAt('');
@@ -541,8 +543,7 @@ export default function WhatsAppCampaignsScreen() {
       setName(campaign.name);
       setObjective(campaign.objective ?? '');
       setMessageText(campaign.message_text ?? '');
-      // Passo 1: colapsa pares de variante A/B que compartilham o mesmo
-      // step_index em uma unica mensagem com variantBMessageText anexado.
+      // Uma linha logica por step_index, com copies B..Z na mensagem inicial.
       const rowsByStepIndex = new Map<number, typeof campaignSteps>();
       for (const row of campaignSteps) {
         rowsByStepIndex.set(row.step_index, [...(rowsByStepIndex.get(row.step_index) ?? []), row]);
@@ -550,9 +551,12 @@ export default function WhatsAppCampaignsScreen() {
       const collapsedRows = Array.from(rowsByStepIndex.entries())
         .sort(([a], [b]) => a - b)
         .map(([, group]) => {
-          const primary = group.find((item) => item.variant_label !== 'B') ?? group[0];
+          const primary = group.find((item) => item.variant_label === 'A' || item.variant_label === 'ANY') ?? group[0];
           const variantB = group.find((item) => item.variant_label === 'B');
-          return { ...primary, variantBMessageText: variantB?.message_text };
+          const variantCopies = Object.fromEntries(group
+            .filter((item) => /^[C-Z]$/.test(item.variant_label))
+            .map((item) => [item.variant_label, item.message_text]));
+          return { ...primary, variantBMessageText: variantB?.message_text, variantCopies };
         });
 
       // Passo 2: agrupa as linhas fisicas (ja colapsadas) em estagios pelo
@@ -584,12 +588,14 @@ export default function WhatsAppCampaignsScreen() {
               mediaType: row.media_type,
               mediaFilename: row.media_filename,
               variantBMessageText: row.variantBMessageText,
+              variantCopies: row.variantCopies,
             })),
           };
         });
       setStages(loadedStages.length > 0 ? loadedStages : [{ ...defaultStage(), messages: [{ messageText: campaign.message_text ?? '' }] }]);
       setAbTestEnabled(campaign.ab_test_enabled);
       setAbSplitPercent(campaign.ab_split_percent || 50);
+      setCopyDistribution(campaign.audience_config?.copy_distribution === 'balanced' ? 'balanced' : 'weighted_ab');
       setRecurrenceRule(campaign.recurrence_rule || 'none');
       setRecurrenceInterval(campaign.recurrence_interval || 1);
       setRecurrenceEndAt(campaign.recurrence_end_at ? campaign.recurrence_end_at.slice(0, 16) : '');
@@ -659,6 +665,23 @@ export default function WhatsAppCampaignsScreen() {
       return;
     }
 
+    if (abTestEnabled) {
+      const firstCopy = stages[0]?.kind === 'message' ? stages[0].messages[0] : null;
+      if (!firstCopy?.messageText.trim() || !firstCopy.variantBMessageText?.trim()) {
+        toast.warning('Preencha as copies A e B da primeira mensagem.');
+        return;
+      }
+      const extraCopies = Object.entries(firstCopy.variantCopies ?? {});
+      if (extraCopies.some(([, text]) => !text.trim())) {
+        toast.warning('Preencha ou remova as copies adicionais vazias.');
+        return;
+      }
+      if (copyDistribution === 'weighted_ab' && extraCopies.length > 0) {
+        toast.warning('Para usar três ou mais copies, selecione alternância equilibrada.');
+        return;
+      }
+    }
+
     if (!editingCampaign && audienceMode === 'csv' && csvValidTargets.length === 0) {
       toast.warning('Cole ou importe um CSV com pelo menos um telefone válido.');
       return;
@@ -709,6 +732,7 @@ export default function WhatsAppCampaignsScreen() {
                 mediaType: message.mediaUrl ? message.mediaType : null,
                 mediaFilename: message.mediaUrl ? message.mediaFilename : null,
                 variantBMessageText: message.variantBMessageText?.trim(),
+                variantCopies: Object.fromEntries(Object.entries(message.variantCopies ?? {}).map(([label, text]) => [label, text.trim()])),
               })),
             }
       ));
@@ -719,7 +743,7 @@ export default function WhatsAppCampaignsScreen() {
         name,
         objective,
         audienceSource,
-        audienceConfig,
+        audienceConfig: { ...audienceConfig, copy_distribution: copyDistribution },
         messageText: firstMessageText,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         // Coluna mantida por compatibilidade; o intervalo de admissao real e
@@ -877,6 +901,11 @@ export default function WhatsAppCampaignsScreen() {
     setStages(template.stages.length > 0 ? template.stages : [defaultStage()]);
     const firstStage = template.stages[0];
     setMessageText(firstStage?.kind === 'message' ? firstStage.messages[0]?.messageText ?? '' : '');
+    const firstCopy = firstStage?.kind === 'message' ? firstStage.messages[0] : null;
+    if (firstCopy?.variantBMessageText?.trim()) {
+      setAbTestEnabled(true);
+      if (Object.keys(firstCopy.variantCopies ?? {}).length > 0) setCopyDistribution('balanced');
+    }
     toast.success(`Modelo "${template.name}" carregado.`);
   };
 
@@ -1181,22 +1210,26 @@ export default function WhatsAppCampaignsScreen() {
               <span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-[color:var(--panel-text)]">
                   <FlaskConical className="h-3.5 w-3.5" />
-                  Teste A/B na mensagem inicial
+                  Alternar copies da mensagem inicial
                 </span>
                 <br />
-                Sorteia entre duas versões da primeira mensagem (primeira etapa) e permite comparar a taxa de resposta de cada uma.
+                Cadastre versões A, B, C, D... e distribua as abordagens entre os contatos. Cada lead mantém a mesma versão em novas tentativas.
               </span>
             </DsFieldLabel>
             {abTestEnabled && (
-              <Field label={<FieldLabel text={`Percentual para a variante B (${abSplitPercent}%)`} hint="Chance de um contato receber a variante B em vez da A. Ex: 50% divide igualmente entre as duas versões." />}>
-                <Input
-                  type="range"
-                  min={1}
-                  max={99}
-                  value={abSplitPercent}
-                  onChange={(event) => setAbSplitPercent(Number(event.target.value) || 50)}
-                />
-              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label={<FieldLabel text="Distribuição entre copies" hint="Equilibrada alterna entre A, B, C... conforme os contatos entram no envio. O modo percentual preserva campanhas A/B antigas." />}>
+                  <Select value={copyDistribution} onChange={(event) => setCopyDistribution(event.target.value as 'balanced' | 'weighted_ab')}>
+                    <option value="balanced">Alternância equilibrada (recomendado)</option>
+                    <option value="weighted_ab">A/B por percentual (legado)</option>
+                  </Select>
+                </Field>
+                {copyDistribution === 'weighted_ab' && (
+                  <Field label={<FieldLabel text={`Percentual para a copy B (${abSplitPercent}%)`} hint="Disponível somente com duas copies: A e B." />}>
+                    <Input type="range" min={1} max={99} value={abSplitPercent} onChange={(event) => setAbSplitPercent(Number(event.target.value) || 50)} />
+                  </Field>
+                )}
+              </div>
             )}
 
             <CampaignSequenceFlow
@@ -1271,10 +1304,12 @@ export default function WhatsAppCampaignsScreen() {
                         {stage.messages.map((message, messageIndex) => {
                           const refKey = `${stageIndex}-${messageIndex}`;
                           const isVeryFirstMessage = isFirstStage && messageIndex === 0;
+                          const extraCopyLabels = Object.keys(message.variantCopies ?? {}).filter((label) => /^[C-Z]$/.test(label)).sort();
+                          const nextCopyLabel = 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((label) => !extraCopyLabels.includes(label));
                           return (
                             <div key={messageIndex} className="rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-2">
                               <div className="mb-1 flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}</span>
+                                <span className="text-[10px] font-medium text-[color:var(--panel-text-muted)]">Mensagem {messageIndex + 1}{isVeryFirstMessage && abTestEnabled ? ' · Copy A' : ''}</span>
                                 {stage.messages.length > 1 && (
                                   <ButtonGroup size="sm" aria-label="Ações da mensagem">
                                     <IconButton type="button" size="sm" variant="ghost" disabled={messageIndex === 0} onClick={() => moveMessageInStage(stageIndex, messageIndex, -1)} aria-label="Mover para cima">
@@ -1363,15 +1398,46 @@ export default function WhatsAppCampaignsScreen() {
                                 </div>
 
                                 {isVeryFirstMessage && abTestEnabled && (
-                                  <div className="mt-3">
-                                    <Field label={<FieldLabel text="Variante B (texto alternativo)" hint="Versão alternativa da mensagem inicial, sorteada para uma fração dos contatos, para comparar qual converte mais." />}>
+                                  <div className="mt-3 space-y-3 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] p-3">
+                                    <Field label={<FieldLabel text="Copy B" hint="Uma alternativa completa para a primeira mensagem. Para três ou mais versões, use a alternância equilibrada." />}>
                                       <Textarea
                                         size="sm"
                                         value={message.variantBMessageText ?? ''}
                                         onChange={(event) => updateMessage(stageIndex, messageIndex, { variantBMessageText: event.target.value })}
-                                        placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotação em aberto - posso te ajudar?"
+                                        placeholder="Ex: Oi {{primeiro_nome}}, ainda temos a sua cotação em aberto. Posso te ajudar?"
                                       />
                                     </Field>
+                                    {extraCopyLabels.map((label) => (
+                                      <div key={label} className="space-y-1">
+                                        <Field label={`Copy ${label}`}>
+                                          <Textarea
+                                            size="sm"
+                                            value={message.variantCopies?.[label] ?? ''}
+                                            onChange={(event) => updateMessage(stageIndex, messageIndex, {
+                                              variantCopies: { ...message.variantCopies, [label]: event.target.value },
+                                            })}
+                                            placeholder={`Escreva a abordagem ${label}...`}
+                                          />
+                                        </Field>
+                                        <Button size="sm" variant="text" type="button" onClick={() => {
+                                          const nextCopies = { ...message.variantCopies };
+                                          delete nextCopies[label];
+                                          updateMessage(stageIndex, messageIndex, { variantCopies: nextCopies });
+                                        }}>
+                                          <Trash2 className="kds-control-icon" /> Remover copy {label}
+                                        </Button>
+                                      </div>
+                                    ))}
+                                    {nextCopyLabel && (
+                                      <Button type="button" size="sm" variant="secondary" onClick={() => updateMessage(stageIndex, messageIndex, {
+                                        variantCopies: { ...message.variantCopies, [nextCopyLabel]: '' },
+                                      })}>
+                                        <Plus className="kds-control-icon" /> Adicionar copy {nextCopyLabel}
+                                      </Button>
+                                    )}
+                                    <Text className="text-xs text-[color:var(--panel-text-muted)]">
+                                      As copies alternam apenas a primeira mensagem. Os próximos balões e etapas continuam iguais para todos.
+                                    </Text>
                                   </div>
                                 )}
                               </div>
@@ -1609,7 +1675,7 @@ export default function WhatsAppCampaignsScreen() {
             <DialogBody className="min-h-0 flex-1 space-y-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
-                <PreviewMetric label="Etapas da sequência" value={activationPreview.steps.filter((step) => step.variant_label !== 'B').length} />
+                <PreviewMetric label="Etapas da sequência" value={activationPreview.steps.filter((step) => step.variant_label === 'ANY' || step.variant_label === 'A').length} />
                 <PreviewMetric label="Intervalo entre contatos" value={formatContactInterval(computeContactIntervalMinutes(activationPreview.campaign.contact_interval_minutes, activationPreview.campaign.daily_send_limit, activationPreview.campaign.send_window_start, activationPreview.campaign.send_window_end, activationPreview.estimatedTargets))} />
                 <PreviewMetric label="Duração estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
               </div>
@@ -1660,7 +1726,7 @@ export default function WhatsAppCampaignsScreen() {
                     <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <Badge tone={step.step_kind === 'status_change' ? 'accent' : 'neutral'}>
-                          {step.step_kind === 'status_change' ? 'Mudar status' : `Mensagem ${index + 1}`}
+                          {step.step_kind === 'status_change' ? 'Mudar status' : `Mensagem ${step.step_index + 1}`}
                         </Badge>
                         {step.variant_label !== 'ANY' && <Badge tone="warning" size="sm">Variante {step.variant_label}</Badge>}
                         {step.delay_amount > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Após {step.delay_amount} {step.delay_unit}</span>}

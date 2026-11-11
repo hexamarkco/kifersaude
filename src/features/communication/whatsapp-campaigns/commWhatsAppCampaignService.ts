@@ -62,8 +62,10 @@ export type CommWhatsAppCampaignMessageDraft = {
   mediaUrl?: string | null;
   mediaType?: CommWhatsAppCampaignMediaType | null;
   mediaFilename?: string | null;
-  /** Somente na primeira mensagem do primeiro estagio: texto alternativo da variante B do teste A/B. */
+  /** Compatibilidade com modelos existentes que guardam somente a copy B. */
   variantBMessageText?: string;
+  /** Copies adicionais C..Z para a primeira mensagem da campanha. */
+  variantCopies?: Record<string, string>;
 };
 
 /**
@@ -94,7 +96,7 @@ export type CommWhatsAppCampaignStep = {
   media_url: string | null;
   media_type: CommWhatsAppCampaignMediaType | null;
   media_filename: string | null;
-  variant_label: 'ANY' | 'A' | 'B';
+  variant_label: string;
   created_at: string;
   updated_at: string;
 };
@@ -123,7 +125,7 @@ export type CommWhatsAppCampaignTarget = {
   stopped_reason: string | null;
   error_message: string | null;
   external_message_id: string | null;
-  ab_variant: 'A' | 'B' | null;
+  ab_variant: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -137,6 +139,7 @@ export type CommWhatsAppCampaignTargetListItem = Pick<
   | 'status'
   | 'current_step_index'
   | 'next_send_at'
+  | 'ab_variant'
   | 'last_attempt_at'
   | 'error_message'
 > & {
@@ -319,6 +322,7 @@ const CAMPAIGN_TARGET_LIST_SELECT = [
   'status',
   'current_step_index',
   'next_send_at',
+  'ab_variant',
   'last_attempt_at',
   'error_message',
   'chat:comm_whatsapp_chats!left(display_name,phone_number,phone_digits,saved_contact_name,push_name,lead_id,is_group)',
@@ -641,7 +645,7 @@ type CampaignStepInsertRow = {
   media_type: CommWhatsAppCampaignMediaType | null;
   media_filename: string | null;
   message_text: string;
-  variant_label: 'ANY' | 'A' | 'B';
+  variant_label: string;
 };
 
 /**
@@ -652,7 +656,7 @@ type CampaignStepInsertRow = {
  * em sequencia logo depois da anterior. O primeiro passo fisico da campanha
  * nunca tem intervalo, mesmo que o estagio tenha um configurado.
  */
-const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
+export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
   const rows: CampaignStepInsertRow[] = [];
   let stepIndex = 0;
 
@@ -697,10 +701,14 @@ const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraf
         media_filename: message.mediaUrl ? message.mediaFilename || null : null,
       };
 
-      const variantBText = message.variantBMessageText?.trim() || '';
+      const variantBText = message.variantBMessageText?.trim() || message.variantCopies?.B?.trim() || '';
       if (stepIndex === 0 && abTestEnabled && variantBText) {
         rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'A' });
         rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
+        Object.entries(message.variantCopies ?? {})
+          .filter(([label, copy]) => /^[C-Z]$/.test(label) && copy.trim().length > 0)
+          .sort(([labelA], [labelB]) => labelA.localeCompare(labelB))
+          .forEach(([label, copy]) => rows.push({ ...base, message_text: copy.trim(), variant_label: label }));
       } else {
         rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'ANY' });
       }
@@ -798,7 +806,7 @@ export const commWhatsAppCampaignService = {
       .map((row) => ({ error_message: row.error_message, total_count: Number(row.total_count) }));
   },
 
-  async getCampaignTargetStatusCounts(campaignId: string): Promise<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>> {
+  async getCampaignTargetStatusCounts(campaignId: string): Promise<Array<{ status: string; ab_variant: string | null; total_count: number; responded_count: number }>> {
     const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_target_status_counts', { p_campaign_id: campaignId });
 
     if (error) {
@@ -808,7 +816,7 @@ export const commWhatsAppCampaignService = {
     return ((data ?? []) as Array<{ status: string; ab_variant: string | null; total_count: number | string; responded_count: number | string }>)
       .map((row) => ({
         status: row.status,
-        ab_variant: row.ab_variant === 'A' || row.ab_variant === 'B' ? row.ab_variant : null,
+        ab_variant: row.ab_variant && /^[A-Z]$/.test(row.ab_variant) ? row.ab_variant : null,
         total_count: Number(row.total_count),
         responded_count: Number(row.responded_count),
       }));
@@ -918,7 +926,7 @@ export const commWhatsAppCampaignService = {
 
     let estimatedTargets = materializedTargetsCount ?? 0;
     let sample: CommWhatsAppCampaignPreviewSample[] = [];
-    const firstMessageStep = steps.find((step) => step.step_kind === 'message' && step.variant_label !== 'B');
+    const firstMessageStep = steps.find((step) => step.step_kind === 'message' && (step.variant_label === 'A' || step.variant_label === 'ANY'));
     const firstStepTemplate = firstMessageStep?.message_text || '';
 
     if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {

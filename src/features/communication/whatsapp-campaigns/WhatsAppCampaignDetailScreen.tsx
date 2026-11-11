@@ -136,7 +136,7 @@ export default function WhatsAppCampaignDetailScreen() {
   const [targetsStatusFilter, setTargetsStatusFilter] = useState<CommWhatsAppCampaignTargetStatus[]>([]);
   const { sorting: targetSorting, sortBy: sortTargetsBy } = useTableSorting<"contact" | "status" | "step" | "next" | "last" | "error">();
   const [loadingTargetsPage, setLoadingTargetsPage] = useState(false);
-  const [statusCounts, setStatusCounts] = useState<Array<{ status: string; ab_variant: 'A' | 'B' | null; total_count: number; responded_count: number }>>([]);
+  const [statusCounts, setStatusCounts] = useState<Array<{ status: string; ab_variant: string | null; total_count: number; responded_count: number }>>([]);
   const [failureReasons, setFailureReasons] = useState<Array<{ error_message: string; total_count: number }>>([]);
   const [pendingWhatsAppValidation, setPendingWhatsAppValidation] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -526,16 +526,15 @@ export default function WhatsAppCampaignDetailScreen() {
 
   const variantBreakdown = useMemo(() => {
     if (!campaign?.ab_test_enabled) return [];
-    const byVariant: Record<'A' | 'B', { sent: number; responded: number }> = {
-      A: { sent: 0, responded: 0 },
-      B: { sent: 0, responded: 0 },
-    };
+    const byVariant: Record<string, { sent: number; responded: number }> = {};
     for (const row of statusCounts) {
-      if (row.ab_variant !== 'A' && row.ab_variant !== 'B') continue;
-      if (['sent', 'responded', 'failed', 'invalid', 'stopped'].includes(row.status)) byVariant[row.ab_variant].sent += row.total_count;
-      if (row.status === 'responded') byVariant[row.ab_variant].responded += row.total_count;
+      const label = row.ab_variant;
+      if (!label || !/^[A-Z]$/.test(label)) continue;
+      byVariant[label] ??= { sent: 0, responded: 0 };
+      if (['sent', 'responded', 'failed', 'invalid', 'stopped'].includes(row.status)) byVariant[label].sent += row.total_count;
+      if (row.status === 'responded') byVariant[label].responded += row.total_count;
     }
-    return (['A', 'B'] as const).map((variant) => ({
+    return Object.keys(byVariant).sort().map((variant) => ({
       variant,
       sent: byVariant[variant].sent,
       responded: byVariant[variant].responded,
@@ -781,7 +780,7 @@ export default function WhatsAppCampaignDetailScreen() {
               </div>
               {campaign.ab_test_enabled && (
                 <div>
-                  <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Teste A/B - resposta por variante</Heading>
+                  <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Respostas por copy</Heading>
                   <div className="mt-2 space-y-2">
                     {variantBreakdown.map((row) => (
                       <div key={row.variant} className="flex items-center justify-between gap-3 rounded-[var(--kds-radius-md)] bg-[color:var(--panel-surface-soft)] p-2 text-sm">
@@ -837,7 +836,10 @@ export default function WhatsAppCampaignDetailScreen() {
                       <Text className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</Text>
                       <Text className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</Text>
                     </div>
-                    <Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {target.ab_variant && <Badge tone="neutral" size="sm">Copy {target.ab_variant}</Badge>}
+                      <Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge>
+                    </div>
                   </div>
                   <div className="grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
                     <Info label="Etapa" value={String(target.current_step_index + 1)} />
@@ -868,7 +870,10 @@ export default function WhatsAppCampaignDetailScreen() {
                         <Text className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</Text>
                         <Text className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</Text>
                       </TableCell>
-                      <TableCell><Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge></TableCell>
+                      <TableCell>
+                        <Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge>
+                        {target.ab_variant && <Text className="mt-1 text-xs text-[var(--text-muted)]">Copy {target.ab_variant}</Text>}
+                      </TableCell>
                       <TableCell className="text-[var(--text-secondary)]">{target.current_step_index + 1}</TableCell>
                       <TableCell className="text-[var(--text-secondary)]">{formatDateTime(target.next_send_at)}</TableCell>
                       <TableCell className="text-[var(--text-secondary)]">{formatDateTime(target.last_attempt_at)}</TableCell>

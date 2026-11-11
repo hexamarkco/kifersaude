@@ -56,6 +56,7 @@ vi.mock('../../../infrastructure/supabase', () => ({
 
 import {
   commWhatsAppCampaignService,
+  buildStepRows,
   computeAdmissionIntervalMinutes,
   computeContactIntervalMinutes,
   formatContactInterval,
@@ -91,4 +92,33 @@ test('consultas de campanhas nao pedem lead_name removido dos chats remotos', as
   assert.equal(campaignSelects.length, 2);
   assert.equal(campaignSelects.every((fields) => !fields.includes('lead_name')), true);
   assert.equal(campaignSelects.every((fields) => fields.includes('lead_id')), true);
+});
+
+test('copies A, B, C e D compartilham o mesmo indice de mensagem e preservam os demais baloes', () => {
+  const rows = buildStepRows('campaign-copies', [{
+    kind: 'message', delayAmount: 0, delayUnit: 'minutes',
+    messages: [{
+      messageText: 'Mensagem A: {{nome}}',
+      variantBMessageText: 'Mensagem B: {{nome}}',
+      variantCopies: { D: 'Mensagem D: {{nome}}', C: 'Mensagem C: {{nome}}' },
+    }, { messageText: 'Segundo balao para todos' }],
+  }, { kind: 'message', delayAmount: 1, delayUnit: 'days', messages: [{ messageText: 'Follow-up' }] }], true);
+
+  assert.deepEqual(rows.filter((row) => row.step_index === 0).map((row) => row.variant_label), ['A', 'B', 'C', 'D']);
+  assert.deepEqual(rows.filter((row) => row.step_index === 0).map((row) => row.message_text), [
+    'Mensagem A: {{nome}}', 'Mensagem B: {{nome}}', 'Mensagem C: {{nome}}', 'Mensagem D: {{nome}}',
+  ]);
+  assert.deepEqual(rows.filter((row) => row.step_index > 0).map((row) => [row.step_index, row.variant_label]), [
+    [1, 'ANY'], [2, 'ANY'],
+  ]);
+  assert.equal(rows.find((row) => row.step_index === 2)?.delay_amount, 1);
+});
+
+test('campanha sem alternancia mantém somente a copy principal; modelos A/B antigos continuam válidos', () => {
+  const stages = [{
+    kind: 'message' as const, delayAmount: 0, delayUnit: 'minutes' as const,
+    messages: [{ messageText: 'A', variantBMessageText: 'B' }],
+  }];
+  assert.deepEqual(buildStepRows('legacy', stages, false).map((row) => row.variant_label), ['ANY']);
+  assert.deepEqual(buildStepRows('legacy', stages, true).map((row) => row.variant_label), ['A', 'B']);
 });

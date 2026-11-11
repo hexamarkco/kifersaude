@@ -14,7 +14,7 @@ type StageNodeData = {
   waitLabel: string;
   kind: CommWhatsAppCampaignStepKind;
   attachmentCount: number;
-  hasAlternative: boolean;
+  alternativeCount: number;
   active: boolean;
   onSelect: () => void;
 };
@@ -68,10 +68,10 @@ function StageNode({ data }: NodeProps<StageNodeData>) {
           {data.title}
         </span>
         <span className="mt-2 block line-clamp-3 whitespace-pre-wrap break-words text-xs leading-relaxed text-[color:var(--panel-text-soft)]">{data.description}</span>
-        {(data.attachmentCount > 0 || data.hasAlternative) && (
+        {(data.attachmentCount > 0 || data.alternativeCount > 1) && (
           <span className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[color:var(--panel-text-muted)]">
             {data.attachmentCount > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" aria-hidden="true" />{data.attachmentCount} anexo(s)</span>}
-            {data.hasAlternative && <span>Duas versões da mensagem inicial</span>}
+            {data.alternativeCount > 1 && <span>{data.alternativeCount} copies da mensagem inicial</span>}
           </span>
         )}
         <span className="mt-3 block text-xs font-medium text-[color:var(--panel-accent-strong)]">{data.active ? 'Em edição' : 'Selecionar para editar'}</span>
@@ -132,7 +132,9 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
           waitLabel: describeWait(stage, index),
           kind: stage.kind,
           attachmentCount: stage.kind === 'message' ? stage.messages.filter((message) => message.mediaUrl).length : 0,
-          hasAlternative: index === 0 && stage.kind === 'message' && abTestEnabled,
+          alternativeCount: index === 0 && stage.kind === 'message' && abTestEnabled
+            ? 2 + Object.keys(stage.messages[0]?.variantCopies ?? {}).length
+            : 1,
           active: index === activeIndex,
           onSelect: () => selectStage(index),
         },

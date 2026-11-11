@@ -64,7 +64,7 @@ export type CommWhatsAppCampaignMessageDraft = {
   mediaFilename?: string | null;
   /** Compatibilidade com modelos existentes que guardam somente a copy B. */
   variantBMessageText?: string;
-  /** Copies adicionais C..Z para a primeira mensagem da campanha. */
+  /** Copies adicionais C..Z para qualquer balão da sequência. */
   variantCopies?: Record<string, string>;
 };
 
@@ -659,6 +659,10 @@ type CampaignStepInsertRow = {
 export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
   const rows: CampaignStepInsertRow[] = [];
   let stepIndex = 0;
+  const firstCopy = stages[0]?.kind === 'message' ? stages[0].messages[0] : null;
+  const activeExtraLabels = new Set(Object.entries(firstCopy?.variantCopies ?? {})
+    .filter(([label, value]) => /^[C-Z]$/.test(label) && value.trim().length > 0)
+    .map(([label]) => label));
 
   const resolveDelay = (isFirstInStage: boolean, stage: CommWhatsAppCampaignStageDraft) => (
     stepIndex === 0 ? 0 : (isFirstInStage ? Math.max(Math.floor(stage.delayAmount || 0), 0) : 0)
@@ -702,13 +706,16 @@ export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignSt
       };
 
       const variantBText = message.variantBMessageText?.trim() || message.variantCopies?.B?.trim() || '';
-      if (stepIndex === 0 && abTestEnabled && variantBText) {
+      const extraCopies = Object.entries(message.variantCopies ?? {})
+        .filter(([label, copy]) => activeExtraLabels.has(label) && copy.trim().length > 0)
+        .sort(([labelA], [labelB]) => labelA.localeCompare(labelB));
+      // Apenas os balões com alternativas explícitas geram A/B/C. Os outros
+      // continuam ANY e são compartilhados por todas as versões.
+      if (abTestEnabled && (variantBText || extraCopies.length > 0)) {
         rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'A' });
-        rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
-        Object.entries(message.variantCopies ?? {})
-          .filter(([label, copy]) => /^[C-Z]$/.test(label) && copy.trim().length > 0)
-          .sort(([labelA], [labelB]) => labelA.localeCompare(labelB))
-          .forEach(([label, copy]) => rows.push({ ...base, message_text: copy.trim(), variant_label: label }));
+        if (variantBText) rows.push({ ...base, message_text: variantBText, variant_label: 'B' });
+        extraCopies.forEach(([label, copy]) =>
+          rows.push({ ...base, message_text: copy.trim(), variant_label: label }));
       } else {
         rows.push({ ...base, message_text: message.messageText.trim(), variant_label: 'ANY' });
       }

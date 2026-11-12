@@ -67,7 +67,16 @@ export const WhatsAppInboxConversationPane = ({
             </Button>
           </div>
         ) : null}
-        <WhatsAppComposer selectedChat={conversation.selectedChat} {...conversation.composer} />
+        {conversation.thread.forwardSelection ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3" role="region" aria-label="Encaminhar mensagens selecionadas">
+            <div className="min-w-0 flex-1">
+              <Text className="text-sm font-semibold" role="status">{conversation.thread.forwardSelection.selectedMessageIds.size} {conversation.thread.forwardSelection.selectedMessageIds.size === 1 ? 'mensagem selecionada' : 'mensagens selecionadas'}</Text>
+              <Text className="text-xs text-[var(--text-secondary)]">Selecione as mensagens no histórico e depois escolha o destino.</Text>
+            </div>
+            <Button variant="secondary" onClick={conversation.thread.forwardSelection.onCancel}>Cancelar</Button>
+            <Button variant="primary" disabled={conversation.thread.forwardSelection.selectedMessageIds.size === 0} onClick={conversation.thread.forwardSelection.onContinue}>Encaminhar</Button>
+          </div>
+        ) : <WhatsAppComposer selectedChat={conversation.selectedChat} {...conversation.composer} />}
       </>
     ) : (
       <div className="whatsapp-inbox-idle flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">

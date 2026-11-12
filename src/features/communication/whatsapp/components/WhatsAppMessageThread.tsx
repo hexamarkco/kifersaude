@@ -3,7 +3,7 @@ import { ActionSurface } from '../../../../design-system';
 import type { MutableRefObject, ReactNode, UIEventHandler } from 'react';
 import { ChevronDown, ChevronUp, Forward, Smile, Star } from 'lucide-react';
 
-import { Button } from '../../../../design-system';
+import { Button, Checkbox } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
 import type { MediaUploadProgress } from '../domain/mediaUploadState';
@@ -22,6 +22,7 @@ import {
   canDeleteOutboundMessage,
   canEditOutboundMessage,
   canReplyOrForwardMessage,
+  getMessageSearchPreviewText,
   isMessageStarred,
 } from '../domain/messagePresentation';
 import { getMessageReactions, getReactionTooltipText, isMessageForwarded } from '../domain/messageMetadata';
@@ -32,6 +33,13 @@ import { WhatsAppMessageBody } from './WhatsAppMessageContent';
 type MessageElementRefs = MutableRefObject<Record<string, HTMLDivElement | null>>;
 type ButtonElementRefs = MutableRefObject<Record<string, HTMLButtonElement | null>>;
 const inboxMediaMetaSpacing = 'whatsapp-inbox-media-meta';
+
+export type InboxForwardSelection = {
+  selectedMessageIds: ReadonlySet<string>;
+  onToggle: (message: CommWhatsAppMessage) => void;
+  onCancel: () => void;
+  onContinue: () => void;
+};
 
 export function WhatsAppMessageThread({
   messagesContainerRef,
@@ -70,6 +78,7 @@ export function WhatsAppMessageThread({
   handleSaveSharedContact,
   sharedContactActionKey,
   transcribingMessageId,
+  forwardSelection = null,
 }: {
   messagesContainerRef: MutableRefObject<HTMLDivElement | null>;
   messageBubbleRefs: MessageElementRefs;
@@ -107,6 +116,7 @@ export function WhatsAppMessageThread({
   handleSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void | Promise<void>;
   sharedContactActionKey: string | null;
   transcribingMessageId: string | null;
+  forwardSelection?: InboxForwardSelection | null;
 }) {
   const loadingInitialMessages = loadingMessages && messages.length === 0;
   const reconcilingEmptyThread = !messageLoadError && threadReconcileChatId === selectedChat.id && messages.length === 0;
@@ -146,7 +156,9 @@ export function WhatsAppMessageThread({
                     Nenhuma mensagem carregada para esta conversa.
                   </div>
                 ) : (
-                  messageTimelineItems.map((item) => {
+                  messageTimelineItems.flatMap((item) => forwardSelection && item.type === 'media-group'
+                    ? item.messages.map((message): InboxMessageTimelineItem => ({ type: 'message', key: `message:${message.id}`, message }))
+                    : [item]).map((item) => {
                     if (item.type === 'day') {
                       return (
                         <div key={item.key} className="flex w-full justify-center py-1">
@@ -164,6 +176,7 @@ export function WhatsAppMessageThread({
                       }
 
                       const lastMessage = groupMessages[groupMessages.length - 1];
+                      const canForwardGroupMessage = canReplyOrForwardMessage(lastMessage);
 
                       const groupHighlighted = groupMessages.some((message) => message.id === highlightedMessageId);
                       const groupMediaSendingMessage = groupMessages.find((message) => (
@@ -185,6 +198,18 @@ export function WhatsAppMessageThread({
                             <span>{formatMessageTime(lastMessage.message_at)}</span>
                             {lastMessage.direction === 'outbound' && !groupMediaSendingMessage ? <DeliveryStatusIndicator message={lastMessage} /> : null}
                           </span>
+                          {canForwardGroupMessage ? (
+                            <ActionSurface variant="plain" padding="none"
+                              ref={(node) => { messageActionTriggerRefs.current[lastMessage.id] = node; }}
+                              type="button"
+                              onClick={() => handleToggleMessageActionMenu(lastMessage.id)}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]"
+                              aria-label="Mais acoes da mensagem"
+                              aria-expanded={openMessageActionMenuMessageId === lastMessage.id}
+                            >
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </ActionSurface>
+                          ) : null}
                         </div>
                       );
 
@@ -201,6 +226,11 @@ export function WhatsAppMessageThread({
                             }
                           }}
                           className={`message-bubble-row flex w-full ${getMessageRowClasses(lastMessage.direction)}`}
+                          onContextMenu={(event) => {
+                            if (!canForwardGroupMessage) return;
+                            event.preventDefault();
+                            handleOpenMessageActionMenuFromContext(lastMessage.id, { x: event.clientX, y: event.clientY });
+                          }}
                         >
                           <div className="relative max-w-[82%] pb-2">
                             {isGroupChatMessage(selectedChat, lastMessage) && lastMessage.direction === 'inbound' && lastMessage.sender_name ? (
@@ -262,7 +292,7 @@ export function WhatsAppMessageThread({
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && !mediaSending ? <DeliveryStatusIndicator message={message} /> : null}
                         </span>
-                        {message.direction === 'outbound' || showEditAction || showDeleteAction || showReplyForwardActions ? (
+                        {!forwardSelection && (message.direction === 'outbound' || showEditAction || showDeleteAction || showReplyForwardActions) ? (
                           <ActionSurface variant="plain" padding="none"
                             ref={(node) => {
                               if (node) {
@@ -286,7 +316,7 @@ export function WhatsAppMessageThread({
                             <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
                           </ActionSurface>
                         ) : null}
-                        {showReplyForwardActions ? (
+                        {!forwardSelection && showReplyForwardActions ? (
                           <ActionSurface variant="plain" padding="none"
                             type="button"
                             onClick={() => void handleToggleStarMessage(message)}
@@ -314,7 +344,30 @@ export function WhatsAppMessageThread({
                     );
 
                     return (
-                      <div key={item.key} className={`message-bubble-row group/message flex w-full ${getMessageRowClasses(message.direction)}`}>
+                      <div
+                        key={item.key}
+                        className={cx(
+                          `message-bubble-row group/message flex w-full ${getMessageRowClasses(message.direction)}`,
+                          forwardSelection ? 'items-center gap-3 rounded-lg px-2 py-1' : null,
+                          forwardSelection?.selectedMessageIds.has(message.id) ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : null,
+                          forwardSelection && showReplyForwardActions ? 'cursor-pointer' : null,
+                        )}
+                        onClickCapture={forwardSelection ? (event) => {
+                          if (event.target instanceof HTMLInputElement && event.target.type === 'checkbox') return;
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (showReplyForwardActions) forwardSelection.onToggle(message);
+                        } : undefined}
+                      >
+                        {forwardSelection ? (
+                          <Checkbox
+                            touchTarget
+                            checked={forwardSelection.selectedMessageIds.has(message.id)}
+                            disabled={!showReplyForwardActions}
+                            onChange={() => forwardSelection.onToggle(message)}
+                            aria-label={`Selecionar mensagem: ${getMessageSearchPreviewText(message)} (${formatMessageTime(message.message_at)})`}
+                          />
+                        ) : null}
                         <div
                           ref={(node) => {
                             if (node) {
@@ -328,7 +381,7 @@ export function WhatsAppMessageThread({
                           className={cx('relative whatsapp-inbox-message-bubble-wrap', isAudio ? 'whatsapp-inbox-audio-message' : null)}
                         >
                           <div className="relative">
-                            {message.direction !== 'system' && message.external_message_id ? (
+                            {!forwardSelection && message.direction !== 'system' && message.external_message_id ? (
                               <>
                                 <ActionSurface variant="plain" padding="none"
                                   ref={(node) => {
@@ -365,6 +418,10 @@ export function WhatsAppMessageThread({
                                 highlightedMessageId === message.id ? 'message-bubble-search-highlight' : null,
                               )}
                               onContextMenu={(event) => {
+                                if (forwardSelection) {
+                                  event.preventDefault();
+                                  return;
+                                }
                                 if (message.direction !== 'outbound' && !showEditAction && !showDeleteAction && !showReplyForwardActions) {
                                   return;
                                 }

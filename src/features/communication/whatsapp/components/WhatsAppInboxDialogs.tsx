@@ -20,7 +20,8 @@ import { getMessageSearchPreviewText } from '../domain/messagePresentation';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
 
 type WhatsAppInboxDialogsProps = {
-  forwardingMessage: CommWhatsAppMessage | null;
+  forwardingMessages: CommWhatsAppMessage[];
+  forwardDialogOpen: boolean;
   forwardSearch: string;
   forwardTargetChats: CommWhatsAppChat[];
   forwardingTargetIds: string[];
@@ -28,6 +29,7 @@ type WhatsAppInboxDialogsProps = {
   connectedUserName: string | null;
   favoritedLeadIds: ReadonlySet<string>;
   onCloseForwardMessage: () => void;
+  onBackToForwardSelection: () => void;
   onForwardSearchChange: (value: string) => void;
   onToggleForwardTarget: (chatId: string) => void;
   onForwardToSelectedChats: () => void;
@@ -53,7 +55,8 @@ type WhatsAppInboxDialogsProps = {
 };
 
 export function WhatsAppInboxDialogs({
-  forwardingMessage,
+  forwardingMessages,
+  forwardDialogOpen,
   forwardSearch,
   forwardTargetChats,
   forwardingTargetIds,
@@ -61,6 +64,7 @@ export function WhatsAppInboxDialogs({
   connectedUserName,
   favoritedLeadIds,
   onCloseForwardMessage,
+  onBackToForwardSelection,
   onForwardSearchChange,
   onToggleForwardTarget,
   onForwardToSelectedChats,
@@ -86,17 +90,19 @@ export function WhatsAppInboxDialogs({
 }: WhatsAppInboxDialogsProps) {
   return (
     <>
-      {forwardingMessage ? (
-        <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagem" className="comm-whatsapp-overlay whatsapp-inbox-dialog">
-          <WhatsAppInboxPanelHeader icon={Forward} title="Encaminhar mensagem" description="Escolha as conversas que vão receber esta mensagem." onClose={onCloseForwardMessage} />
+      {forwardDialogOpen ? (
+        <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagens" className="comm-whatsapp-overlay whatsapp-inbox-dialog">
+          <WhatsAppInboxPanelHeader icon={Forward} title={forwardingMessages.length === 1 ? 'Encaminhar mensagem' : `Encaminhar ${forwardingMessages.length} mensagens`} description="Escolha as conversas que vão receber as mensagens selecionadas, na ordem do histórico." onClose={onCloseForwardMessage} showCloseButton={!forwardingInProgress} />
           <DialogBody className="space-y-3">
-            <Text className="line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</Text>
-            <SearchInput value={forwardSearch} onChange={(event) => onForwardSearchChange(event.target.value)} placeholder="Buscar conversa" />
+            <div className="max-h-32 space-y-1 overflow-y-auto">
+              {forwardingMessages.map((message) => <Text key={message.id} className="line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(message)}</Text>)}
+            </div>
+            <SearchInput value={forwardSearch} onChange={(event) => onForwardSearchChange(event.target.value)} placeholder="Buscar conversa" disabled={forwardingInProgress} />
             <div className="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
               {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => {
                 const isSelected = forwardingTargetIds.includes(chat.id);
                 return (
-                  <ActionSurface variant="plain" padding="none" key={chat.id} type="button" onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
+                  <ActionSurface variant="plain" padding="none" key={chat.id} type="button" aria-pressed={isSelected} onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
                     <div className="min-w-0 flex-1"><Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</Text><Text className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</Text></div>
                     {isSelected ? <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"><Check className="h-3 w-3" /></span> : <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />}
                   </ActionSurface>
@@ -105,7 +111,7 @@ export function WhatsAppInboxDialogs({
             </div>
           </DialogBody>
           <DialogFooter className="gap-2">
-            <Button variant="secondary" onClick={onCloseForwardMessage} disabled={forwardingInProgress}>Cancelar</Button>
+            <Button variant="secondary" onClick={onBackToForwardSelection} disabled={forwardingInProgress}>Voltar à seleção</Button>
             <Button variant="primary" onClick={onForwardToSelectedChats} loading={forwardingInProgress} disabled={forwardingInProgress || forwardingTargetIds.length === 0}>{forwardingTargetIds.length > 0 ? `Encaminhar para ${forwardingTargetIds.length} ${forwardingTargetIds.length === 1 ? 'conversa' : 'conversas'}` : 'Encaminhar'}</Button>
           </DialogFooter>
         </Dialog>

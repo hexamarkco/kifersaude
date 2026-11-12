@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import type { MutableRefObject } from 'react';
+import { act, type MutableRefObject } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { test, vi } from 'vitest';
 
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../../domain/types';
 import type { InboxMessageTimelineItem } from '../../domain/inboxMessageTimeline';
-import { WhatsAppMessageThread } from '../WhatsAppMessageThread';
+import { WhatsAppMessageThread, type InboxForwardSelection } from '../WhatsAppMessageThread';
+import { render } from '../../../../../testing-library/react';
 
 vi.mock('../WhatsAppMessageContent', () => ({
   WhatsAppMessageBody: () => <div data-testid="message-body" />,
@@ -62,7 +63,7 @@ const createMessage = (id: string, messageType: string): CommWhatsAppMessage => 
 const mutableRef = <T,>(current: T): MutableRefObject<T> => ({ current });
 const noop = () => undefined;
 
-const renderThread = (messageTimelineItems: InboxMessageTimelineItem[], messages: CommWhatsAppMessage[]) => renderToStaticMarkup(
+const createThread = (messageTimelineItems: InboxMessageTimelineItem[], messages: CommWhatsAppMessage[], forwardSelection?: InboxForwardSelection) => (
   <WhatsAppMessageThread
     messagesContainerRef={mutableRef<HTMLDivElement | null>(null)}
     messageBubbleRefs={mutableRef<Record<string, HTMLDivElement | null>>({})}
@@ -100,8 +101,11 @@ const renderThread = (messageTimelineItems: InboxMessageTimelineItem[], messages
     handleSaveSharedContact={noop}
     sharedContactActionKey={null}
     transcribingMessageId={null}
-  />,
+    forwardSelection={forwardSelection}
+  />
 );
+
+const renderThread = (items: InboxMessageTimelineItem[], messages: CommWhatsAppMessage[]) => renderToStaticMarkup(createThread(items, messages));
 
 const assertMediaMetaHasConsistentSpacing = (markup: string) => {
   const classLists = [...markup.matchAll(/class="([^"]*)"/g)]
@@ -177,4 +181,46 @@ test('mantém o horário do último item de grupo inbound afastado da borda', ()
   ], [firstMessage, lastMessage]);
 
   assertExternalMediaMetaHasInset(markup);
+});
+
+test('disponibiliza o menu para iniciar o encaminhamento a partir de mídias agrupadas', () => {
+  const first = { ...createMessage('image-1', 'image'), external_message_id: 'external-1' };
+  const last = { ...createMessage('image-2', 'image'), external_message_id: 'external-2' };
+  const markup = renderThread([
+    { type: 'media-group', key: 'media-group:images', messages: [first, last] },
+  ], [first, last]);
+  assert.ok(markup.includes('aria-label="Mais acoes da mensagem"'));
+});
+
+test('seleciona mídias agrupadas individualmente, por clique na mensagem ou checkbox', () => {
+  const first = { ...createMessage('image-1', 'image'), external_message_id: 'external-1' };
+  const second = { ...createMessage('image-2', 'image'), external_message_id: 'external-2' };
+  const deleted = { ...createMessage('deleted', 'text'), external_message_id: 'external-deleted', delivery_status: 'deleted' };
+  const toggled: string[] = [];
+  const view = render(createThread([
+    { type: 'media-group', key: 'media-group:images', messages: [first, second] },
+    { type: 'message', key: 'message:deleted', message: deleted },
+  ], [first, second, deleted], {
+    selectedMessageIds: new Set([first.id]),
+    onToggle: (message) => toggled.push(message.id),
+    onCancel: noop,
+    onContinue: noop,
+  }));
+  try {
+    assert.equal(view.container.querySelector('[data-testid="media-group-body"]'), null);
+    const checkboxes = view.container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    assert.equal(checkboxes.length, 3);
+    assert.equal(checkboxes[0].checked, true);
+    assert.equal(checkboxes[1].checked, false);
+    assert.equal(checkboxes[2].disabled, true);
+    const bodies = view.container.querySelectorAll('[data-testid="message-body"]');
+    act(() => bodies[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+    act(() => checkboxes[1].click());
+    act(() => bodies[2].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+    assert.deepEqual(toggled, ['image-1', 'image-2']);
+    assert.equal(view.container.querySelector('[aria-label="Mais acoes da mensagem"]'), null);
+    assert.equal(view.container.querySelector('[aria-label="Reagir à mensagem"]'), null);
+  } finally {
+    view.unmount();
+  }
 });

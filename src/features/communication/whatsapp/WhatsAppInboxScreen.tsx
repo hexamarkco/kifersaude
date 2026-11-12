@@ -1616,15 +1616,20 @@ export default function WhatsAppInboxScreen() {
   });
 
   const {
-    forwardingMessage,
+    forwardingMessages,
+    selectingMessagesToForward,
+    forwardDialogOpen,
     forwardingTargetIds,
     forwardingInProgress,
     handleOpenForwardMessageModal,
     handleCloseForwardMessageModal,
+    handleToggleForwardMessage,
+    handleChooseForwardTargets,
+    handleBackToForwardSelection,
     handleToggleForwardTarget,
     handleForwardToSelectedChats,
   } = useInboxMessageForwarding({
-    forwardTargetChats,
+    selectedChatId,
     selectedChatIdRef,
     latestChatsRef,
     loadChats,
@@ -1919,6 +1924,12 @@ export default function WhatsAppInboxScreen() {
       onSelect: handleSelectChatMessageSearchResult,
     } : null,
     thread: {
+      forwardSelection: selectingMessagesToForward ? {
+        selectedMessageIds: new Set(forwardingMessages.map((message) => message.id)),
+        onToggle: handleToggleForwardMessage,
+        onCancel: handleCloseForwardMessageModal,
+        onContinue: handleChooseForwardTargets,
+      } : null,
       messagesContainerRef,
       messageBubbleRefs,
       reactionAnchorRefs,
@@ -2198,7 +2209,9 @@ export default function WhatsAppInboxScreen() {
           ) : null}
 
         <WhatsAppInboxDialogs
-          forwardingMessage={forwardingMessage}
+          forwardingMessages={forwardingMessages}
+          forwardDialogOpen={forwardDialogOpen}
+          onBackToForwardSelection={handleBackToForwardSelection}
           forwardSearch={forwardSearch}
           forwardTargetChats={forwardTargetChats}
           forwardingTargetIds={forwardingTargetIds}

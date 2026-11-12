@@ -80,8 +80,9 @@ const Harness = () => {
   const selectedChatIdRef = { current: 'chat-1' };
   const latestChatsRef = { current: chats };
   const [search, setSearch] = useState('busca anterior');
+  const [selectedChatId, setSelectedChatId] = useState('chat-1');
   actions = useInboxMessageForwarding({
-    forwardTargetChats: chats,
+    selectedChatId,
     selectedChatIdRef,
     latestChatsRef,
     loadChats: async () => { await Promise.resolve(mocks.loadChats()); },
@@ -93,7 +94,10 @@ const Harness = () => {
   return (
     <>
       <output data-testid="snapshot">{JSON.stringify({
-        messageId: actions.forwardingMessage?.id ?? null,
+        messageId: actions.forwardingMessages[0]?.id ?? null,
+        messageIds: actions.forwardingMessages.map((item) => item.id),
+        selecting: actions.selectingMessagesToForward,
+        dialogOpen: actions.forwardDialogOpen,
         targetIds: actions.forwardingTargetIds,
         inProgress: actions.forwardingInProgress,
         search,
@@ -104,6 +108,13 @@ const Harness = () => {
         direction: 'system',
       }))}>Invalid</button>
       <button data-testid="close" onClick={actions.handleCloseForwardMessageModal}>Close</button>
+      <button data-testid="choose-targets" onClick={actions.handleChooseForwardTargets}>Choose targets</button>
+      <button data-testid="back" onClick={actions.handleBackToForwardSelection}>Back</button>
+      <button data-testid="switch-chat" onClick={() => setSelectedChatId('chat-2')}>Switch chat</button>
+      <button data-testid="search" onClick={() => setSearch('Outro contato')}>Search</button>
+      <button data-testid="toggle-1" onClick={() => actions.handleToggleForwardMessage(message())}>Toggle 1</button>
+      <button data-testid="toggle-2" onClick={() => actions.handleToggleForwardMessage(message({ id: 'message-2', message_at: '2026-09-28T12:01:00.000Z' }))}>Toggle 2</button>
+      <button data-testid="toggle-older" onClick={() => actions.handleToggleForwardMessage(message({ id: 'message-older', message_at: '2026-09-28T11:59:00.000Z' }))}>Toggle older</button>
       <button data-testid="target-1" onClick={() => actions.handleToggleForwardTarget('chat-1')}>Target 1</button>
       <button data-testid="target-2" onClick={() => actions.handleToggleForwardTarget('chat-2')}>Target 2</button>
     </>
@@ -115,6 +126,9 @@ const readSnapshot = (container: HTMLElement) => {
   assert.ok(content);
   return JSON.parse(content) as {
     messageId: string | null;
+    messageIds: string[];
+    selecting: boolean;
+    dialogOpen: boolean;
     targetIds: string[];
     inProgress: boolean;
     search: string;
@@ -139,7 +153,7 @@ const resetMocks = () => {
   mocks.loadMessages.mockResolvedValue(undefined);
 };
 
-test('valida a mensagem, limpa a busca e fecha o menu de ações ao abrir o modal', () => {
+test('valida a mensagem, limpa a busca e inicia a seleção antes de escolher destinos', () => {
   resetMocks();
   const view = render(<Harness />);
 
@@ -149,6 +163,8 @@ test('valida a mensagem, limpa a busca e fecha o menu de ações ao abrir o moda
 
   click(view.container, 'open');
   assert.equal(readSnapshot(view.container).messageId, 'message-1');
+  assert.equal(readSnapshot(view.container).selecting, true);
+  assert.equal(readSnapshot(view.container).dialogOpen, false);
   assert.equal(readSnapshot(view.container).search, '');
   assert.equal(mocks.closeMenu.mock.calls.length, 1);
   view.unmount();
@@ -160,6 +176,7 @@ test('encaminha somente para os destinos selecionados e recarrega chats e a conv
   click(view.container, 'open');
   click(view.container, 'target-1');
   click(view.container, 'target-2');
+  click(view.container, 'choose-targets');
 
   await act(async () => actions.handleForwardToSelectedChats());
 
@@ -183,6 +200,7 @@ test('exige destinos e mantém o modal recuperável quando o encaminhamento falh
     mocks.forward.mockRejectedValueOnce(new Error('WhatsApp indisponível'));
     const view = render(<Harness />);
     click(view.container, 'open');
+    click(view.container, 'choose-targets');
 
     await act(async () => actions.handleForwardToSelectedChats());
     assert.deepEqual(mocks.toastError.mock.calls[0], ['Selecione pelo menos uma conversa para encaminhar.']);
@@ -191,7 +209,7 @@ test('exige destinos e mantém o modal recuperável quando o encaminhamento falh
     click(view.container, 'target-2');
     await act(async () => actions.handleForwardToSelectedChats());
     assert.deepEqual(mocks.forward.mock.calls[0], ['message-1', ['chat-2@s.whatsapp.net']]);
-    assert.deepEqual(mocks.toastError.mock.calls[1], ['WhatsApp indisponível']);
+    assert.match(String(mocks.toastError.mock.calls[1]?.[0]), /WhatsApp indisponível.*Confira as conversas de destino/);
     assert.equal(readSnapshot(view.container).messageId, 'message-1');
     assert.deepEqual(readSnapshot(view.container).targetIds, ['chat-2']);
     assert.equal(readSnapshot(view.container).inProgress, false);
@@ -199,4 +217,144 @@ test('exige destinos e mantém o modal recuperável quando o encaminhamento falh
   } finally {
     console.error = originalConsoleError;
   }
+});
+
+test('seleciona e desmarca mensagens, preserva ordem cronológica e envia o lote só após escolher destinos', async () => {
+  resetMocks();
+  const view = render(<Harness />);
+  click(view.container, 'open');
+  click(view.container, 'toggle-2');
+  click(view.container, 'toggle-older');
+  click(view.container, 'toggle-1');
+  click(view.container, 'toggle-1');
+  assert.deepEqual(readSnapshot(view.container).messageIds, ['message-older', 'message-1', 'message-2']);
+  await act(async () => actions.handleForwardToSelectedChats());
+  assert.equal(mocks.forward.mock.calls.length, 0);
+  click(view.container, 'choose-targets');
+  click(view.container, 'target-1');
+  click(view.container, 'target-2');
+  click(view.container, 'search');
+  click(view.container, 'back');
+  assert.equal(readSnapshot(view.container).selecting, true);
+  assert.deepEqual(readSnapshot(view.container).targetIds, ['chat-1', 'chat-2']);
+  click(view.container, 'choose-targets');
+  await act(async () => actions.handleForwardToSelectedChats());
+  assert.deepEqual(mocks.forward.mock.calls.map((call) => call[0]), ['message-older', 'message-1', 'message-2']);
+  assert.ok(mocks.forward.mock.calls.every((call) => JSON.stringify(call[1]) === JSON.stringify(['chat-1@s.whatsapp.net', 'chat-2@s.whatsapp.net'])));
+  assert.deepEqual(mocks.toastSuccess.mock.calls[0], ['3 mensagens encaminhadas para 2 conversas.']);
+  assert.equal(mocks.loadChats.mock.calls.length, 1);
+  view.unmount();
+});
+
+test('permite zerar a seleção e descarta a seleção ao mudar de conversa', () => {
+  resetMocks();
+  const view = render(<Harness />);
+  click(view.container, 'open');
+  click(view.container, 'toggle-1');
+  click(view.container, 'choose-targets');
+  assert.equal(readSnapshot(view.container).selecting, true);
+  assert.equal(readSnapshot(view.container).dialogOpen, false);
+  click(view.container, 'toggle-2');
+  click(view.container, 'target-1');
+  click(view.container, 'switch-chat');
+  assert.equal(readSnapshot(view.container).selecting, false);
+  assert.deepEqual(readSnapshot(view.container).messageIds, []);
+  assert.deepEqual(readSnapshot(view.container).targetIds, []);
+  view.unmount();
+});
+
+test('interrompe na falha e remove do lote as mensagens já confirmadas', async () => {
+  resetMocks();
+  const originalConsoleError = console.error;
+  console.error = () => undefined;
+  try {
+    mocks.forward.mockResolvedValueOnce(['sent-1']);
+    mocks.forward.mockRejectedValueOnce(new Error('Falha no envio'));
+    const view = render(<Harness />);
+    click(view.container, 'open');
+    click(view.container, 'toggle-2');
+    click(view.container, 'choose-targets');
+    click(view.container, 'target-2');
+    await act(async () => actions.handleForwardToSelectedChats());
+    assert.deepEqual(readSnapshot(view.container).messageIds, ['message-2']);
+    assert.equal(readSnapshot(view.container).inProgress, false);
+    assert.match(String(mocks.toastError.mock.calls[0]?.[0]), /1 de 2 mensagens já foram encaminhadas/);
+    assert.equal(mocks.toastSuccess.mock.calls.length, 0);
+    mocks.forward.mockResolvedValueOnce(['sent-2']);
+    await act(async () => actions.handleForwardToSelectedChats());
+    assert.deepEqual(mocks.forward.mock.calls.map((call) => call[0]), ['message-1', 'message-2', 'message-2']);
+    view.unmount();
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
+test('não informa sucesso quando a resposta não confirma encaminhamentos', async () => {
+  resetMocks();
+  const originalConsoleError = console.error;
+  console.error = () => undefined;
+  try {
+    mocks.forward.mockResolvedValueOnce([]);
+    const view = render(<Harness />);
+    click(view.container, 'open');
+    click(view.container, 'choose-targets');
+    click(view.container, 'target-2');
+    await act(async () => actions.handleForwardToSelectedChats());
+    assert.equal(mocks.toastSuccess.mock.calls.length, 0);
+    assert.equal(readSnapshot(view.container).messageId, 'message-1');
+    assert.match(String(mocks.toastError.mock.calls[0]?.[0]), /não foi confirmado/);
+    view.unmount();
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
+test('uma falha ao atualizar o histórico não recoloca mensagens já encaminhadas no lote', async () => {
+  resetMocks();
+  const originalConsoleError = console.error;
+  console.error = () => undefined;
+  try {
+    mocks.forward.mockResolvedValueOnce(['sent-1']);
+    mocks.loadChats.mockRejectedValueOnce(new Error('Falha ao atualizar histórico'));
+    const view = render(<Harness />);
+    click(view.container, 'open');
+    click(view.container, 'choose-targets');
+    click(view.container, 'target-2');
+    await act(async () => actions.handleForwardToSelectedChats());
+    assert.equal(readSnapshot(view.container).messageId, null);
+    assert.equal(mocks.toastSuccess.mock.calls.length, 1);
+    assert.match(String(mocks.toastError.mock.calls[0]?.[0]), /Não foi possível atualizar o histórico/);
+    await act(async () => actions.handleForwardToSelectedChats());
+    assert.equal(mocks.forward.mock.calls.length, 1);
+    view.unmount();
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
+test('bloqueia confirmação duplicada e fechamento durante o envio', async () => {
+  resetMocks();
+  let complete: (value: unknown) => void = () => undefined;
+  mocks.forward.mockResolvedValueOnce(new Promise((resolve) => { complete = resolve; }));
+  const view = render(<Harness />);
+  click(view.container, 'open');
+  click(view.container, 'choose-targets');
+  click(view.container, 'target-2');
+  let sending: Promise<void>;
+  act(() => {
+    sending = actions.handleForwardToSelectedChats();
+    void actions.handleForwardToSelectedChats();
+    actions.handleCloseForwardMessageModal();
+    actions.handleBackToForwardSelection();
+    actions.handleToggleForwardTarget('chat-1');
+  });
+  assert.equal(mocks.forward.mock.calls.length, 1);
+  assert.equal(readSnapshot(view.container).dialogOpen, true);
+  assert.deepEqual(readSnapshot(view.container).targetIds, ['chat-2']);
+  await act(async () => {
+    complete(['sent-1']);
+    await sending;
+  });
+  assert.equal(readSnapshot(view.container).dialogOpen, false);
+  view.unmount();
 });

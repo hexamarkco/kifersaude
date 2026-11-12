@@ -112,6 +112,7 @@ export default function ContractsManager({
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(
     null,
   );
@@ -404,6 +405,7 @@ export default function ContractsManager({
       confirmLabel: "Excluir",
       cancelLabel: "Cancelar",
       tone: "danger",
+      dialogClassName: "kds-crm-dialog",
       content: (
         <ConfirmationSummary
           warning="A exclusão é permanente. Este contrato será removido da carteira."
@@ -547,6 +549,7 @@ export default function ContractsManager({
       filterOperadora.length > 0 ||
       dateProximityFilter.length > 0,
   );
+  const activeFilterCount = filterStatus.length + filterOperadora.length + dateProximityFilter.length + (filterResponsavel !== 'todos' ? 1 : 0);
 
   const handleExportContracts = () => {
     const headers = [
@@ -788,6 +791,10 @@ export default function ContractsManager({
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-contracts-toolbar-actions">
+              <Button type="button" variant="secondary" className="kds-contracts-mobile-filter-toggle" aria-controls="contracts-filter-controls" aria-expanded={mobileFiltersOpen} onClick={() => setMobileFiltersOpen((open) => !open)}>
+                <Filter className="kds-control-icon" aria-hidden="true" />
+                Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+              </Button>
               {hasActiveFilters && (
                 <Button
                   type="button"
@@ -806,8 +813,8 @@ export default function ContractsManager({
             </ToolbarActions>
           </Toolbar>
 
-          <div className="kds-contracts-filter-grid grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <FilterMultiSelect
+          <div id="contracts-filter-controls" className={`kds-contracts-filter-grid grid grid-cols-2 gap-3 xl:grid-cols-4 ${mobileFiltersOpen ? 'is-open' : ''}`}>
+            <FilterMultiSelect dialogClassName="kds-crm-dialog"
               icon={Filter}
               values={filterStatus}
               onChange={setFilterStatus}
@@ -832,7 +839,7 @@ export default function ContractsManager({
               ]}
             />
 
-            <FilterMultiSelect
+            <FilterMultiSelect dialogClassName="kds-crm-dialog"
               icon={Calendar}
               values={dateProximityFilter}
               onChange={setDateProximityFilter}
@@ -856,7 +863,7 @@ export default function ContractsManager({
           </div>
           {advancedFiltersOpen && (
             <div id="contracts-advanced-filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <FilterMultiSelect
+              <FilterMultiSelect dialogClassName="kds-crm-dialog"
                 icon={FileText}
                 values={filterOperadora}
                 onChange={setFilterOperadora}
@@ -887,7 +894,7 @@ export default function ContractsManager({
           />
 
           <div className="kds-contracts-table-container hidden lg:block">
-            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="min-w-[75rem]" columnWidths={['19%', '12%', '18%', '17%', '14%', '12%', '8%']}>
+            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="kds-contracts-table" columnWidths={['19%', '12%', '18%', '17%', '13%', '12%', '9%']}>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />

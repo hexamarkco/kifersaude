@@ -92,7 +92,7 @@ export function ContractJsonImportDialog({
       closeOnOverlay={!loading}
       closeOnEscape={!loading}
       size="form"
-      className="kds-contract-json-import-dialog"
+      className="kds-contract-json-import-dialog kds-crm-dialog"
     >
       <DialogHeader onClose={loading ? undefined : onClose}>
         <DialogTitle>Importar contrato de arquivo</DialogTitle>

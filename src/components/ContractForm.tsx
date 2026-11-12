@@ -938,6 +938,7 @@ export default function ContractForm({
   const handleDeleteAdjustment = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: "Remover ajuste",
+      dialogClassName: "kds-crm-dialog",
       description:
         "Deseja remover este ajuste? Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
@@ -1204,6 +1205,8 @@ export default function ContractForm({
           className="kds-form-page"
         >
           <FormSection
+            step="01"
+            descriptionPlacement="visible"
             title="Informações do Contrato"
             description="Identifique o contrato, o vínculo comercial e o plano contratado."
           >
@@ -1458,6 +1461,8 @@ export default function ContractForm({
           </FormSection>
 
           <FormSection
+            step="02"
+            descriptionPlacement="visible"
             title="Vigência e valores"
             description="Registre as datas importantes e o valor mensal do contrato."
           >
@@ -1655,6 +1660,8 @@ export default function ContractForm({
           </FormSection>
 
           <FormSection
+            step="03"
+            descriptionPlacement="visible"
             title="Comissão e recebimento"
             description="Confira o cálculo da comissão e defina como e quando será recebida."
           >
@@ -2026,6 +2033,8 @@ export default function ContractForm({
           </FormSection>
 
           <FormSection
+            step="04"
+            descriptionPlacement="visible"
             title="Vidas e bonificações"
             description="Informe a quantidade de pessoas cobertas e configure os bônus aplicáveis."
           >
@@ -2225,6 +2234,8 @@ export default function ContractForm({
           </FormSection>
 
           <FormSection
+            step="05"
+            descriptionPlacement="visible"
             title="Responsáveis e observações"
             description="Defina as pessoas responsáveis pelo relacionamento e registre notas internas."
           >
@@ -2278,14 +2289,14 @@ export default function ContractForm({
 </>);
   const title = contract ? 'Editar contrato' : leadToConvert ? 'Converter lead em contrato' : 'Novo contrato';
   return <>
-    {presentation === 'page' ? <section className="kds-record-form kds-detail-workspace">
+    {presentation === 'page' ? <section className="kds-record-form kds-detail-workspace kds-contract-form-page kds-crm-form">
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose} disabled={saving}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
       <PageHeader eyebrow="Contratos" title={title} description="Registre os dados comerciais, financeiros e de vigência do contrato." actions={<Button variant="secondary" onClick={() => setShowJsonImport(true)} disabled={saving}><FileUp className="kds-control-icon" aria-hidden="true" />Importar de arquivo</Button>} />
       {leadToConvert && <Alert tone="info">Conversão de {leadToConvert.nome_completo}. Os dados do lead foram preservados no formulário.</Alert>}
       {formContent}
       <FormActions onCancel={onClose} submitLabel={contract ? 'Salvar alterações' : 'Continuar para titular'} loading={saving} form="contract-form" />
     </section> : <>
-      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg">
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg" className="kds-crm-dialog kds-contract-form-dialog">
         <DialogHeader onClose={saving ? undefined : onClose}>
           <DialogTitle>
             {contract

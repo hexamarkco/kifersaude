@@ -234,6 +234,7 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
           }
         }}
         size="wide"
+        className="kds-crm-dialog kds-holder-import-dialog"
       >
         <DialogHeader>
           <DialogTitle>Preparar titular para importação</DialogTitle>

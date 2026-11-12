@@ -693,6 +693,7 @@ export default function ContractDetails({
   const handleDeleteDependent = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: "Remover dependente",
+      dialogClassName: "kds-crm-dialog",
       description:
         "Deseja remover este dependente? Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
@@ -713,6 +714,7 @@ export default function ContractDetails({
   const handleDeleteHolder = async (holder: ContractHolder) => {
     const confirmed = await requestConfirmation({
       title: "Remover titular",
+      dialogClassName: "kds-crm-dialog",
       description:
         "Deseja remover este titular? Dependentes e documentos vinculados também serão removidos. Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
@@ -781,6 +783,7 @@ export default function ContractDetails({
   const handleDeleteInteraction = async (interactionId: string) => {
     const confirmed = await requestConfirmation({
       title: "Remover interação",
+      dialogClassName: "kds-crm-dialog",
       description:
         "Deseja remover esta interação? Esta ação não pode ser desfeita.",
       confirmLabel: "Remover",
@@ -820,7 +823,7 @@ export default function ContractDetails({
   ) : null;
 
   if (presentation === 'drawer' && (showLoading || loadError)) return (
-    <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
+    <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="lg" aria-label="Detalhes do contrato" className="kds-crm-dialog kds-contract-details-drawer">
       <DrawerHeader onClose={onClose}>
         <DialogTitle>Detalhes do contrato</DialogTitle>
         <DialogDescription placement="visible" className={showLoading ? 'sr-only' : undefined}>
@@ -845,7 +848,7 @@ export default function ContractDetails({
   );
 
   if (pendingContent && presentation === 'page') return (
-    <section className="kds-record-detail kds-detail-workspace" aria-busy={showLoading}>
+    <section className="kds-crm-detail kds-record-detail kds-detail-workspace" aria-busy={showLoading}>
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
       <PageHeader eyebrow="Contratos" title={`Ficha do contrato ${contract.codigo_contrato}`} />
       {pendingContent}
@@ -854,7 +857,7 @@ export default function ContractDetails({
 
   if (showLoading) {
     return (
-      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
         <DialogHeader showCloseButton={false} className="sr-only">
           <DialogTitle>Carregando contrato</DialogTitle>
           <DialogDescription placement="visible">Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
@@ -868,7 +871,7 @@ export default function ContractDetails({
 
   if (loadError) {
     return (
-      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
         <DialogHeader onClose={onClose}>
           <DialogTitle>{contract.codigo_contrato}</DialogTitle>
           <DialogDescription placement="visible">Não foi possível carregar os dados atualizados do contrato.</DialogDescription>
@@ -923,8 +926,8 @@ export default function ContractDetails({
         )}
       </div>}
 
-      <div className="p-1">
-        <div className={`mb-6 ${detailPanelMutedClass} p-4`}>
+      <div className="kds-contract-detail-sections p-1">
+        <div id={`contract-${contract.id}-summary`} className={`kds-contract-detail-section mb-6 ${detailPanelMutedClass} p-4`}>
           {eligibleLivesUpdateError ? (
             <Alert tone="warning" role="alert" className="mb-4 items-start">
               <div className="flex items-start gap-2">
@@ -1357,7 +1360,7 @@ export default function ContractDetails({
           )}
         </div>
 
-        <div className="mb-6">
+        <div id={`contract-${contract.id}-holders`} className="kds-contract-detail-section mb-6">
           <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailSectionHeadingClass}>
               <User className={detailSectionIconClass} />
@@ -1466,7 +1469,7 @@ export default function ContractDetails({
             </div>
           )}
         </div>
-        <div className="mb-6">
+        <div id={`contract-${contract.id}-dependents`} className="kds-contract-detail-section mb-6">
           <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailSectionHeadingClass}>
               <Users className={detailSectionIconClass} />
@@ -1599,7 +1602,7 @@ export default function ContractDetails({
           )}
         </div>
 
-        <div className="mb-6">
+        <div id={`contract-${contract.id}-documents`} className="kds-contract-detail-section mb-6">
           <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Documentos</Heading>
             <span className={detailMutedTextClass}>
@@ -1659,7 +1662,7 @@ export default function ContractDetails({
           )}
         </div>
 
-        <div className="mb-6">
+        <div id={`contract-${contract.id}-history`} className="kds-contract-detail-section mb-6">
           <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Auditoria</Heading>
             <span className={detailMutedTextClass}>
@@ -1695,7 +1698,7 @@ export default function ContractDetails({
             </div>
           )}
         </div>
-        <div>
+        <div id={`contract-${contract.id}-interactions`} className="kds-contract-detail-section mb-6">
           <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Histórico de interações</Heading>
             {canEditContracts && (
@@ -1812,8 +1815,8 @@ export default function ContractDetails({
                   key={interaction.id}
                   className={`${detailNestedPanelClass} p-4`}
                 >
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                  <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <Badge tone="info" size="sm">
                         {interaction.tipo}
                       </Badge>
@@ -1822,7 +1825,7 @@ export default function ContractDetails({
                       </span>
                     </div>
                     <div
-                      className={`flex items-center gap-3 text-sm ${detailMutedTextClass}`}
+                      className={`flex flex-wrap items-center gap-3 text-sm ${detailMutedTextClass}`}
                     >
                       <span>
                         {new Date(
@@ -1905,6 +1908,7 @@ export default function ContractDetails({
             await loadData();
             const addAnother = await requestConfirmation({
               title: "Adicionar outro dependente?",
+              dialogClassName: "kds-crm-dialog",
               description: "O dependente foi salvo. Deseja cadastrar outro dependente para este titular?",
               confirmLabel: "Adicionar outro",
               cancelLabel: "Concluir",
@@ -1966,34 +1970,19 @@ export default function ContractDetails({
         ? formatDateOnly(contract.data_inicio)
         : 'Não informado';
     const lifeCount = contract.vidas ?? participants.length;
-    const planDetails = [
-      normalizeOperadoraLabel(contract.operadora),
-      formatContractModalityLabel(contract.modalidade) ?? contract.modalidade,
-      contract.abrangencia,
-      contract.acomodacao,
-      contract.carencia ? `Carências: ${contract.carencia}` : null,
-    ].filter(Boolean);
 
     return (
-      <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
+      <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="lg" aria-label="Detalhes do contrato" className="kds-crm-dialog kds-contract-details-drawer">
         <DrawerHeader onClose={onClose}>
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <DialogTitle className="min-w-0 flex-1">Detalhes do contrato</DialogTitle>
-                <DialogDescription className="shrink-0">Visualização e ações do registro</DialogDescription>
-              </div>
+              <DialogTitle>Detalhes do contrato</DialogTitle>
+              <DialogDescription placement="visible">{contract.codigo_contrato} · {normalizeOperadoraLabel(contract.operadora)} · {formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}</DialogDescription>
             </div>
-            {canEditContracts && onDelete && (
-              <RecordActions
-                actions={[{ label: 'Excluir contrato', icon: Trash2, onClick: () => onDelete(contract), destructive: true }]}
-                visibleCount={0}
-                label="Ações do contrato"
-              />
-            )}
+            {canEditContracts && onDelete && <RecordActions actions={[{ label: 'Excluir contrato', icon: Trash2, onClick: () => onDelete(contract), destructive: true }]} visibleCount={0} label="Ações do contrato" />}
           </div>
         </DrawerHeader>
-        <DrawerBody className="space-y-5">
+        <DrawerBody>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Card kind="summary" padding="sm" className="min-w-0 space-y-2">
               <Text className="text-xs font-medium text-[var(--text-secondary)]">Mensalidade</Text>
@@ -2019,60 +2008,25 @@ export default function ContractDetails({
             </Card>
           </div>
 
-          <section aria-labelledby="contract-drawer-participants-title" className="space-y-2">
-            <Heading id="contract-drawer-participants-title" level={4} className="text-sm font-semibold text-[var(--text-primary)]">
-              Titular e beneficiários
-            </Heading>
-            {participants.length > 0 ? (
-              <div className="divide-y divide-[var(--border-subtle)]">
-                {participants.map((participant) => (
-                  <div key={participant.id} className="flex min-w-0 items-center justify-between gap-3 py-3">
-                    <div className="min-w-0">
-                      <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{participant.name}</Text>
-                      <Text className="mt-1 text-xs text-[var(--text-muted)]">{participant.role}</Text>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Text className="py-2 text-sm text-[var(--text-secondary)]">Nenhum titular ou beneficiário cadastrado.</Text>
-            )}
-          </section>
 
-          <section aria-labelledby="contract-drawer-plan-title" className="border-t border-[var(--border-subtle)] pt-4">
-            <Heading id="contract-drawer-plan-title" level={4} className="text-sm font-semibold text-[var(--text-primary)]">
-              Informações do plano
-            </Heading>
-            <Text className="mt-1 text-sm text-[var(--text-secondary)]">
-              {planDetails.join(' · ') || 'Informações do plano ainda não cadastradas.'}
-            </Text>
-          </section>
-
-          {documentsLoadError && (
-            <Alert tone="warning" role="alert" className="text-sm">
-              Os dados do contrato foram carregados, mas não foi possível verificar os documentos anexados.
-            </Alert>
-          )}
-
-          <details className="kds-contract-detail-expanded border-t border-[var(--border-subtle)] pt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">
-              Mais informações do contrato
-            </summary>
-            <div className="mt-4">{detailContent}</div>
-          </details>
+          <nav className="kds-contract-detail-nav" aria-label="Seções do contrato">
+            {[
+              ['summary', 'Resumo e valores'], ['holders', 'Titulares'],
+              ['dependents', 'Dependentes'], ['documents', 'Documentos'],
+              ['history', 'Histórico'], ['interactions', 'Interações'],
+            ].map(([id, label]) => (
+              <Button key={id} type="button" variant="secondary" size="sm" onClick={() => document.getElementById(`contract-${contract.id}-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{label}</Button>
+            ))}
+          </nav>
+          <div className="kds-contract-detail-content">{detailContent}</div>
         </DrawerBody>
         <DrawerFooter className="flex items-center justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-          {canEditContracts && (
-            <Button type="button" onClick={handleEditContract}>
-              Editar contrato
-            </Button>
-          )}
+          <Button type="button" variant="secondary" onClick={onClose}>Fechar</Button>
+          {canEditContracts && <Button type="button" onClick={handleEditContract}>Editar contrato</Button>}
         </DrawerFooter>
       </Drawer>
     );
   }
-
   if (presentation === 'page') {
     const primaryHolder = holders[0];
     const primaryHolderName = primaryHolder
@@ -2094,7 +2048,7 @@ export default function ContractDetails({
     ];
 
     return (
-      <section className="kds-record-detail kds-detail-workspace kds-contract-detail-page">
+      <section className="kds-crm-detail kds-record-detail kds-detail-workspace kds-contract-detail-page">
         <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}>
           <ArrowLeft className="kds-control-icon" aria-hidden="true" />
           Gestão de contratos
@@ -2164,7 +2118,7 @@ export default function ContractDetails({
           </Card>
         </div>
 
-        <details className="kds-contract-detail-expanded">
+        <details open className="kds-contract-detail-expanded">
           <DisclosureTrigger size="md" className="w-full justify-between">
             Mais informações do contrato
           </DisclosureTrigger>
@@ -2175,7 +2129,7 @@ export default function ContractDetails({
       </section>
     );
   }
-  return (<Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+  return (<Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{contract.codigo_contrato}</DialogTitle>
         <DialogDescription placement="visible">{`${normalizeOperadoraLabel(contract.operadora)} - ${formatContractPlanLabel(contract.produto_plano) ?? contract.produto_plano}`}</DialogDescription>

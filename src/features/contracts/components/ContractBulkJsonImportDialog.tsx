@@ -101,7 +101,7 @@ export function ContractBulkJsonImportDialog({
       closeOnOverlay={!loading && !importing}
       closeOnEscape={!loading && !importing}
       size="md"
-      className="kds-contract-bulk-import-dialog"
+      className="kds-contract-bulk-import-dialog kds-crm-dialog"
     >
       <DialogHeader onClose={loading || importing ? undefined : onClose}>
         <DialogTitle>Importar contratos em massa</DialogTitle>

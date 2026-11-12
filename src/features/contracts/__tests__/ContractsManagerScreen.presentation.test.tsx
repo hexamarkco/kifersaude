@@ -183,7 +183,11 @@ test('opening a contract loads the real details drawer over the retained list', 
     });
 
     await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
-    assert.ok(document.body.querySelector('[role="dialog"][aria-label="Detalhes do contrato"]')?.textContent?.includes('Mais informações do contrato'));
+    const loadedDrawer = document.body.querySelector('[role="dialog"][aria-label="Detalhes do contrato"]');
+    assert.ok(loadedDrawer?.querySelector('nav[aria-label="Seções do contrato"]'));
+    assert.ok(loadedDrawer?.textContent?.includes('Adicionar titular'));
+    assert.ok(loadedDrawer?.querySelector('.kds-contract-detail-content'));
+    assert.equal(loadedDrawer?.querySelector('.kds-contract-detail-expanded'), null);
     assert.ok(view.container.querySelector('h1')?.textContent?.trim() === 'Gestão de contratos');
   } finally {
     view.unmount();

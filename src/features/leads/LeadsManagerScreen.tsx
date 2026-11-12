@@ -1093,6 +1093,7 @@ export default function LeadsManager({
       confirmLabel: "Excluir",
       cancelLabel: "Cancelar",
       tone: "danger",
+      dialogClassName: "kds-crm-dialog",
       content: <LeadDeletionSummary leadName={lead.nome_completo} />,
     });
 
@@ -1532,7 +1533,7 @@ export default function LeadsManager({
 
   const advancedFilterFields = (
     <div className="kds-leads-advanced-fields">
-      <FilterMultiSelect
+      <FilterMultiSelect dialogClassName="kds-crm-dialog"
         icon={Tag}
         options={tagFilterOptions}
         placeholder="Todas as tags"
@@ -1540,7 +1541,7 @@ export default function LeadsManager({
         values={advancedFilterDraft.tags}
         onChange={(tags) => setAdvancedFilterDraft((current) => ({ ...current, tags }))}
       />
-      <FilterMultiSelect
+      <FilterMultiSelect dialogClassName="kds-crm-dialog"
         icon={Share2}
         options={canalFilterOptions}
         placeholder="Todos os canais"
@@ -1586,7 +1587,7 @@ export default function LeadsManager({
         onOpenChange={setAdvancedFiltersOpen}
         side="right"
         size="sm"
-        className="kds-leads-filter-drawer"
+        className="kds-leads-filter-drawer kds-crm-dialog"
       >
         <DrawerHeader onClose={() => setAdvancedFiltersOpen(false)}>
           <DialogTitle>Filtros avançados</DialogTitle>
@@ -1604,7 +1605,7 @@ export default function LeadsManager({
         open
         onOpenChange={setAdvancedFiltersOpen}
         size="md"
-        className="kds-leads-filter-dialog"
+        className="kds-leads-filter-dialog kds-crm-dialog"
       >
         <DialogHeader onClose={() => setAdvancedFiltersOpen(false)}>
           <DialogTitle>Filtros avançados</DialogTitle>
@@ -1768,7 +1769,7 @@ export default function LeadsManager({
                 },
               ].map((filter) => {
                 const { id, ...props } = filter;
-                return <FilterMultiSelect key={id} {...props} />;
+                return <FilterMultiSelect dialogClassName="kds-crm-dialog" key={id} {...props} />;
               })}
               <Button
                 type="button"
@@ -2004,7 +2005,7 @@ export default function LeadsManager({
                 </Surface>
             )}
             <div className="hidden lg:block">
-              <Table size="sm" stickyHeader className="min-w-[70rem]" columnWidths={canSelectLeads
+              <Table size="sm" stickyHeader aria-label="Carteira de leads" className="kds-leads-table" columnWidths={canSelectLeads
                 ? ['3.5%', '23.5%', '14%', '14%', '11%', '14%', '11%', '9%']
                 : ['27%', '14%', '14%', '11%', '14%', '11%', '9%']}>
                 <TableHeader>
@@ -2170,6 +2171,7 @@ export default function LeadsManager({
 
         {reminderLead && (
           <ReminderSchedulerModal
+            className="kds-crm-dialog"
             lead={reminderLead}
             onClose={closeReminderScheduler}
             onScheduled={(_details) => {

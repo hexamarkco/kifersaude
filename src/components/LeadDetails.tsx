@@ -406,7 +406,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
   ];
 
   if (presentation === 'page') return (
-    <section className="kds-detail-workspace">
+    <section className="kds-detail-workspace kds-crm-detail">
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de leads</Button>
       <PageHeader eyebrow="Relacionamento" title={lead.nome_completo} identity={favorite} status={<Badge>{lead.status_nome ?? lead.status ?? 'Sem status'}</Badge>} description={`Responsável: ${lead.responsavel_label ?? lead.responsavel ?? 'Não atribuído'}`} actions={actions} />
       <Tabs ariaLabel="Seções do lead" listClassName="kds-lead-detail-tabs-list" triggerClassName="kds-lead-detail-tab" items={[{id:'overview',label:'Visão geral'},{id:'history',label:'Histórico'},{id:'followups',label:'Follow-ups'},{id:'data',label:'Dados do lead'}]} value={activeSection} onChange={setActiveSection} />
@@ -439,7 +439,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
       side="right"
       size="md"
       aria-label="Detalhes do lead"
-      className="kds-lead-details-drawer"
+      className="kds-lead-details-drawer kds-crm-dialog"
     >
       <DrawerHeader onClose={onClose}>
         <div className="min-w-0">
@@ -472,6 +472,11 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
               ))}
             </dl>
           </Surface>
+          <div className="kds-lead-drawer-quick-actions" aria-label="Ações rápidas do lead">
+            {onOpenFullPage && <Button variant="secondary" onClick={onOpenFullPage}><FileText className="kds-control-icon" aria-hidden="true" />Abrir ficha completa</Button>}
+            {canEditLead && onScheduleReminder && <Button onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Agendar follow-up</Button>}
+            {canEditLead && onConvert && <Button variant="secondary" onClick={() => onConvert(lead)}>Converter em contrato</Button>}
+          </div>
           {renderTimeline('Histórico de interações')}
         </div>
       </DrawerBody>
@@ -482,8 +487,8 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
     </Drawer>
   );
 
-  return <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+  return <Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
     <DialogHeader onClose={onClose}><div><DialogTitle className="flex items-center gap-2">{favorite}{lead.nome_completo}</DialogTitle><DialogDescription>Histórico de interações, status e lembretes.</DialogDescription></div></DialogHeader>
-    <DialogBody><div className="kds-detail-workspace"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<Surface>{renderTimeline()}</Surface>{interaction}</div></DialogBody>
+    <DialogBody><div className="kds-detail-workspace kds-crm-detail"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<Surface>{renderTimeline()}</Surface>{interaction}</div></DialogBody>
   </Dialog>;
 }

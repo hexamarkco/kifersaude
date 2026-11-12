@@ -95,7 +95,7 @@ test('contract details page keeps loading in-page and exposes header actions aft
     assert.ok(view.container.textContent?.includes('Mais informações do contrato'));
     assert.ok(view.container.textContent?.includes('Contato Demonstração 01'));
     assert.ok(view.container.textContent?.includes('Dependente de demonstração'));
-    assert.equal(view.container.querySelector('details')?.open, false);
+    assert.equal(view.container.querySelector('details')?.open, true);
     const edit = [...view.container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Editar contrato');
     assert.ok(edit);
     assert.equal([...view.container.querySelectorAll('button')].filter((button) => button.textContent?.trim() === 'Editar contrato').length, 1);

@@ -51,12 +51,13 @@ export type FilterMultiSelectProps = {
   options: readonly SelectOption[];
   placeholder: string;
   dialogTitle: string;
+  dialogClassName?: string;
   values: string[];
   onChange: (values: string[]) => void;
   size?: ControlSize;
 };
 
-export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, values, onChange, size = 'md' }: FilterMultiSelectProps) {
+export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, dialogClassName, values, onChange, size = 'md' }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [draftValues, setDraftValues] = useState<string[]>(values);
   const dialogId = useId().replace(/:/g, '');
@@ -131,7 +132,7 @@ export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, val
           open
           onOpenChange={(nextOpen) => !nextOpen && closeFilters()}
           size="sm"
-          className="kds-filter-multi-dialog"
+          className={`kds-filter-multi-dialog${dialogClassName ? ` ${dialogClassName}` : ''}`}
         >
           <DialogHeader onClose={closeFilters}>
             <DialogTitle>{dialogTitle}</DialogTitle>

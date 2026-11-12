@@ -82,7 +82,7 @@ export default function ValueAdjustmentForm({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="sm">
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="sm" className="kds-crm-dialog kds-value-adjustment-dialog">
       <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
       </DialogHeader>

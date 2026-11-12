@@ -1,0 +1,229 @@
+/* Leads and contracts: one operational language for lists, forms and overlays.
+   Scope stays on these workspaces so other modules keep their presentation. */
+.painel-theme.kifer-ds :is(.kds-leads-page, .kds-contracts-page) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  max-width: none;
+}
+.painel-theme.kifer-ds :is(.kds-leads-page, .kds-contracts-page) > * { margin-block: 0; }
+.painel-theme.kifer-ds :is(.kds-leads-header, .kds-contracts-header) {
+  padding-block: var(--space-2);
+  gap: var(--space-4);
+}
+.painel-theme.kifer-ds :is(.kds-leads-header, .kds-contracts-header, .kds-crm-form, .kds-crm-detail) .kds-page-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.625rem, 2.2vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+:is(.kds-leads-header, .kds-contracts-header) .kds-page-description { max-width: 48rem; }
+.kds-leads-view-tabs { width: fit-content; }
+.kds-leads-view-tabs .kds-tabs-list { padding: var(--space-1); background: var(--bg-elevated); border-radius: var(--radius-md); }
+.painel-theme.kifer-ds :is(.kds-leads-filters, .kds-contracts-page .kds-record-filters) {
+  padding: var(--space-4);
+  border-color: var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+.kds-leads-filters > * + * { margin-top: var(--space-3); }
+.painel-theme.kifer-ds :is(.kds-leads-search-toolbar, .kds-contracts-search-toolbar) {
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.painel-theme.kifer-ds :is(.kds-leads-search-toolbar, .kds-contracts-search-toolbar) .kds-toolbar-search { width: auto; max-width: none; flex: 1; }
+.painel-theme.kifer-ds :is(.kds-leads-search-toolbar, .kds-contracts-search-toolbar) .kds-toolbar-actions { flex: 0 0 auto; width: auto; }
+.kds-leads-filters .kds-leads-filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: var(--space-2); }
+.kds-leads-filter-secondary { padding-top: var(--space-3); border-top: var(--border-width) solid var(--border-subtle); }
+.kds-contracts-page .kds-contracts-filter-grid { gap: var(--space-2); }
+.painel-theme.kifer-ds .kds-contracts-mobile-filter-toggle { display: none; }
+.kds-contracts-summary-grid { gap: var(--space-3); }
+.painel-theme.kifer-ds .kds-contracts-summary-grid > .kds-card-kpi {
+  grid-row: auto;
+  grid-template-rows: auto auto auto;
+  row-gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+.kds-contracts-summary-grid .kds-card-title { min-block-size: auto; font: var(--type-body-sm); font-weight: var(--font-weight-semibold); }
+.kds-contracts-summary-grid .kds-card-title-row { margin: 0; }
+.painel-theme.kifer-ds .kds-contracts-summary-grid .kds-kpi-value {
+  margin-top: var(--space-2);
+  font-size: clamp(1.375rem, 2vw, 1.875rem);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.kds-contracts-summary-grid .kds-kpi-trend { margin-top: var(--space-2); font: var(--type-caption); }
+.painel-theme.kifer-ds :is(.kds-leads-results, .kds-contracts-results) {
+  overflow: hidden;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+:is(.kds-leads-results, .kds-contracts-results) > .kds-record-results-header {
+  padding: var(--space-5);
+  margin: 0;
+  align-items: center;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+:is(.kds-leads-results, .kds-contracts-results) .kds-op-section-label { color: var(--text-muted); }
+:is(.kds-leads-results, .kds-contracts-results) .kds-table-wrapper { border-radius: 0; }
+:is(.kds-leads-results, .kds-contracts-results) .kds-table-head {
+  padding-block: var(--space-3);
+  background: var(--bg-canvas-subtle);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.045em;
+}
+:is(.kds-leads-results, .kds-contracts-results) .kds-table-cell {
+  padding-block: var(--space-4);
+  border-color: var(--border-subtle);
+  vertical-align: middle;
+  font: var(--type-body-sm);
+}
+.kds-contracts-results .kds-contracts-table-container { padding-inline: 0; }
+:is(.kds-leads-results, .kds-contracts-results) > .kds-record-results-pagination {
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-canvas-subtle);
+}
+.kds-leads-results .kds-leads-bulk-panel { margin: var(--space-3); border-color: var(--brand-primary-border); }
+.kds-leads-results .kds-op-lead-list { padding: var(--space-3); gap: var(--space-3); }
+.kds-lead-list-card { padding: var(--space-4); border-radius: var(--radius-lg); gap: var(--space-3); }
+.kds-lead-list-card-status { gap: var(--space-2); }
+.kds-lead-list-card-title { font-size: 0.9375rem; line-height: 1.4; }
+.kds-lead-list-card-followup { min-width: 0; }
+.kds-contracts-mobile-list { padding-block: var(--space-3); }
+.kds-contracts-mobile-list > .kds-surface { padding: var(--space-4); border-radius: var(--radius-lg); }
+.painel-theme.kifer-ds .kds-leads-page .kds-kanban-board { border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: none; }
+.kds-leads-page .kds-kanban-track { gap: var(--space-4); }
+.painel-theme.kifer-ds .kds-leads-page .kds-kanban-column {
+  flex: 0 0 19rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--bg-canvas-subtle);
+}
+.kds-leads-page .kds-kanban-column-body { max-height: 65dvh; scrollbar-gutter: stable; }
+.kds-leads-page .kds-kanban-card { padding: var(--space-4); }
+.kds-leads-page .kds-kanban-wip { margin-bottom: var(--space-4); }
+
+/* The same section rhythm carries into creation, editing and related records. */
+.painel-theme.kifer-ds .kds-crm-form { min-width: 0; width: 100%; max-width: none; }
+.painel-theme.kifer-ds .kds-crm-form.kds-page-layout { padding: 0; }
+.painel-theme.kifer-ds .kds-crm-form h1.kds-page-title { font-family: var(--font-display); }
+:is(.kds-crm-form, .kds-crm-dialog) .kds-filter-trigger:not(:has(.kds-filter-trigger-icon)) { grid-template-columns: minmax(0, 1fr) var(--kds-control-icon); }
+.kds-crm-form .kds-form-page { gap: var(--space-5); }
+.kds-crm-form .kds-form-section,
+.kds-crm-dialog .kds-form-section {
+  min-width: 0;
+  padding: var(--space-5);
+  border-color: var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+:is(.kds-crm-form, .kds-crm-dialog) .kds-form-section > legend {
+  float: left;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font: var(--type-subtitle);
+  font-weight: var(--font-weight-semibold);
+}
+:is(.kds-crm-form, .kds-crm-dialog) .kds-form-section-description { clear: both; margin-bottom: var(--space-5); color: var(--text-muted); font: var(--type-body-sm); }
+:is(.kds-crm-form, .kds-crm-dialog) .kds-form-fields { gap: var(--space-4) var(--space-5); }
+.kds-crm-form .kds-page-action-bar-form { border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.kds-crm-detail { min-width: 0; gap: var(--space-5); }
+.kds-crm-detail .kds-detail-overview-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(16rem, .8fr); gap: var(--space-5); }
+.kds-crm-detail .kds-surface { border-radius: var(--radius-lg); box-shadow: none; }
+.kds-crm-detail .kds-detail-data-grid { gap: var(--space-5) var(--space-6); }
+.kds-crm-detail .kds-tabs-list { gap: var(--space-4); }
+.kds-lead-drawer-quick-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.kds-crm-dialog .kds-lead-details-drawer-content { gap: var(--space-5); }
+
+/* Explicit overlay scope also covers portals, which are outside the page DOM. */
+.painel-theme.kifer-ds .kds-crm-dialog {
+  border-color: var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
+}
+.kds-crm-dialog :is(.kds-dialog-header, .kds-drawer-header) {
+  padding: var(--space-5) var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.kds-crm-dialog .kds-dialog-title { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.3; }
+.kds-crm-dialog :is(.kds-dialog-body, .kds-drawer-body) { padding: var(--space-6); background: var(--bg-canvas-subtle); }
+.kds-crm-dialog :is(.kds-dialog-footer, .kds-drawer-footer) { padding: var(--space-4) var(--space-6); border-top: var(--border-width) solid var(--border-subtle); background: var(--bg-surface); gap: var(--space-2); }
+.painel-theme.kifer-ds .kds-contract-details-drawer { width: min(76rem, calc(100vw - var(--space-8))); max-width: none; border-radius: var(--radius-xl) 0 0 var(--radius-xl); }
+.kds-contract-detail-nav { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: var(--space-2); padding-block: var(--space-3); margin-bottom: var(--space-4); background: var(--bg-canvas-subtle); border-bottom: var(--border-width) solid var(--border-subtle); }
+.kds-contract-detail-nav .kds-button { background: var(--bg-surface); border-color: var(--border-default); }
+.kds-contract-detail-section { scroll-margin-block-start: 5rem; }
+.kds-contract-detail-section .kds-detail-data-fields { overflow-wrap: anywhere; }
+.kds-contract-detail-section .kds-badge { max-width: 100%; flex-wrap: wrap; white-space: normal; }
+.kds-contract-detail-content > .kds-contract-detail-sections { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); padding: 0; }
+.kds-contract-detail-content > .kds-contract-detail-sections > .kds-contract-detail-section { margin: 0; padding: var(--space-5); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface); }
+.kds-crm-dialog .kds-detail-person-card { gap: var(--space-4); }
+.kds-crm-dialog .grid > *, .kds-crm-dialog .flex-1 { min-width: 0; }
+.kds-crm-dialog .kds-detail-workspace .kds-surface { box-shadow: none; }
+.kds-crm-dialog .kds-empty-state { padding-block: var(--space-6); }
+
+.kds-contract-form-page #contract-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+.painel-theme.kifer-ds .kds-lead-details-drawer { width: min(56rem, calc(100vw - var(--space-8))); max-width: none; }
+@media (max-width: 1199px) {
+  .kds-leads-filters .kds-leads-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kds-leads-filter-secondary { flex-direction: column; align-items: stretch; gap: var(--space-3); }
+  .kds-leads-filter-count { justify-content: space-between; }
+  .kds-crm-detail .kds-detail-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kds-crm-detail .kds-detail-quick-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds :is(.kds-leads-page, .kds-contracts-page) { gap: var(--space-4); }
+  .painel-theme.kifer-ds :is(.kds-leads-header, .kds-contracts-header) .kds-page-title { max-width: none; font-size: 1.625rem; }
+  .painel-theme.kifer-ds .kds-leads-header .kds-page-actions { position: static; display: flex; width: 100%; justify-content: flex-end; }
+  .painel-theme.kifer-ds .kds-leads-header .kds-page-actions > :not(.kds-button-group) { width: auto; min-width: 0; padding-inline: var(--space-3); }
+  .kds-leads-header .kds-leads-action-label { display: inline; }
+  .kds-leads-header .kds-page-actions > .kds-button-secondary .kds-leads-action-label { display: none; }
+  .painel-theme.kifer-ds :is(.kds-leads-filters, .kds-contracts-page .kds-record-filters) { padding: var(--space-3); }
+  .kds-leads-filters .kds-leads-filter-grid { grid-template-columns: minmax(0, 1fr); }
+  .kds-contracts-page .kds-contracts-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kds-contracts-page .kds-contracts-filter-grid:not(.is-open) { display: none; }
+  .painel-theme.kifer-ds .kds-contracts-mobile-filter-toggle { display: inline-flex; }
+  .painel-theme.kifer-ds .kds-contracts-search-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .painel-theme.kifer-ds .kds-contracts-search-toolbar .kds-toolbar-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: var(--space-2); }
+  .painel-theme.kifer-ds .kds-contracts-toolbar-actions > .kds-button { width: 100%; min-width: 0; flex: none; }
+  .painel-theme.kifer-ds .kds-contracts-header-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; width: 100%; gap: var(--space-2); }
+  .painel-theme.kifer-ds .kds-contracts-header-actions > .kds-button { width: 100%; min-width: 0; height: auto; padding-inline: var(--space-2); }
+  .kds-contracts-header-actions > .kds-button > span { white-space: normal; }
+  .kds-contracts-summary-grid { gap: var(--space-2); }
+  .painel-theme.kifer-ds .kds-contracts-summary-grid > .kds-card-kpi { padding: var(--space-3); }
+  .painel-theme.kifer-ds .kds-contracts-summary-grid .kds-kpi-value { font-size: 1.25rem; overflow-wrap: anywhere; }
+  .painel-theme.kifer-ds .kds-contracts-summary-grid > .kds-card-kpi:last-child .kds-kpi-value { font-size: clamp(.9375rem, 4.25vw, 1.25rem); white-space: nowrap; overflow-wrap: normal; }
+  .kds-contracts-summary-grid .kds-kpi-trend { display: block; }
+  :is(.kds-leads-results, .kds-contracts-results) > .kds-record-results-header { padding: var(--space-4); gap: var(--space-3); }
+  .kds-crm-detail .kds-detail-overview-grid { grid-template-columns: minmax(0, 1fr); }
+  .kds-crm-detail .kds-detail-quick-actions { grid-column: auto; }
+  .kds-crm-form .kds-form-section, .kds-crm-dialog .kds-form-section { padding: var(--space-4); }
+  .kds-crm-dialog :is(.kds-dialog-header, .kds-drawer-header) { padding: var(--space-4); }
+  .kds-crm-dialog :is(.kds-dialog-body, .kds-drawer-body) { padding: var(--space-4); }
+  .kds-crm-dialog :is(.kds-dialog-footer, .kds-drawer-footer) { padding: var(--space-3) var(--space-4); }
+  .painel-theme.kifer-ds :is(.kds-contract-details-drawer, .kds-lead-details-drawer) { width: 100%; border-radius: 0; }
+  .kds-contract-detail-section { scroll-margin-block-start: 9rem; }
+  .kds-contract-detail-content > .kds-contract-detail-sections > .kds-contract-detail-section { padding: var(--space-4); }
+}
+@media (max-width: 479px) {
+  .kds-contracts-page .kds-contracts-filter-grid { grid-template-columns: minmax(0, 1fr); }
+  .kds-crm-dialog .kds-dialog-title { font-size: 1.25rem; }
+  .kds-contract-detail-nav { gap: var(--space-1); }
+}

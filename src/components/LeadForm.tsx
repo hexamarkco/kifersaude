@@ -270,7 +270,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
   const showConfigLoading = useMinimumLoading(configLoading && !lead);
   if (showConfigLoading) {
     return (
-      <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="sm" className="kds-crm-dialog">
         <DialogHeader showCloseButton={false} className="sr-only"><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
         <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
           <LoadingState compact indicator="brand" label="Carregando configurações" />
@@ -801,10 +801,11 @@ const formFields = (
   );
   if (presentation === 'page') return (
     <FormPage
-      className="kds-lead-form-page"
+      className="kds-lead-form-page kds-crm-form"
       id="lead-form"
       onSubmit={handleSubmit}
       header={{
+        descriptionPlacement: 'visible',
         eyebrow: lead ? 'Atualizar cadastro' : 'Novo cadastro',
         title: lead ? 'Editar lead' : 'Novo lead',
         description: lead
@@ -839,7 +840,7 @@ const formFields = (
   );
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-lead-form-dialog">
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-lead-form-dialog kds-crm-dialog">
       <DialogHeader onClose={saving ? undefined : onClose}>
         <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
         <DialogDescription>

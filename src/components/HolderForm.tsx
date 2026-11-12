@@ -501,6 +501,7 @@ export default function HolderForm({
         await loadHolders();
         const confirmed = await requestConfirmation({
           title: 'Adicionar dependentes?',
+          dialogClassName: 'kds-crm-dialog',
           description: 'Deseja cadastrar dependentes para este contrato agora?',
           confirmLabel: 'Sim, adicionar',
           cancelLabel: 'Agora nao',
@@ -838,7 +839,7 @@ export default function HolderForm({
   return (
     <>
       {presentation === 'page' ? (
-        <section className="kds-record-detail kds-detail-workspace kds-contract-holder-form-page">
+        <section className="kds-record-detail kds-detail-workspace kds-contract-holder-form-page kds-crm-form">
           <Button type="button" variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}>
             <ArrowLeft className="kds-control-icon" aria-hidden="true" />
             Voltar à ficha do contrato
@@ -859,7 +860,7 @@ export default function HolderForm({
           />
         </section>
       ) : (
-      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl">
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-crm-dialog kds-holder-form-dialog">
         <DialogHeader onClose={saving ? undefined : onClose}>
           <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
           <DialogDescription>

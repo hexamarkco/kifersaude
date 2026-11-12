@@ -25,3 +25,4 @@ export {
   type LeadTimelineStatusHistory,
 } from './data/leadDetailsRepository';
 export { default as LeadsManagerScreen } from './LeadsManagerScreen';
+export { LeadRelationshipsPanel } from './components/LeadRelationshipsPanel';

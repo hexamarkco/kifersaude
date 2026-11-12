@@ -5,6 +5,8 @@ import { test, vi } from 'vitest';
 import { render } from '../../../../../testing-library/react';
 import WhatsAppLeadDrawer from '../WhatsAppLeadDrawer';
 
+vi.mock('../../../../leads', () => ({ LeadRelationshipsPanel: () => <div>Negociações em conjunto</div> }));
+
 vi.mock('../../../../reminders', async () => {
   const actual = await (vi as typeof vi & { importActual: <T>(path: string) => Promise<T> })
     .importActual<typeof import('../../../../reminders')>('../../../../reminders');

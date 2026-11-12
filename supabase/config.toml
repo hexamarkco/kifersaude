@@ -1,5 +1,9 @@
 project_id = "eaxvvhamkmovkoqssahj"
 
+# Admin dashboard session is verified again before calling opportunity RPCs.
+[functions.lead-opportunities]
+verify_jwt = true
+
 # Provider operations are called by authenticated dashboard users only.
 [functions.comm-whatsapp-provider-operations]
 verify_jwt = true

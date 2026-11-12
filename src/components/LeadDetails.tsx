@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   addLeadInteraction,
   getLeadTimeline,
+  LeadRelationshipsPanel,
   type Lead,
   type LeadTimelineInteraction,
   type LeadTimelineReminder,
@@ -422,6 +423,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
             <NextStepSuggestion leadStatus={lead.status_nome ?? lead.status ?? 'Novo'} lastContact={lead.ultimo_contato ?? undefined} />
           </Surface>
         </div>
+        <LeadRelationshipsPanel lead={lead} />
         {interaction}
       </>}
       {activeSection === 'history' && <><Surface>{renderTimeline()}</Surface>{interaction}</>}
@@ -477,6 +479,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
             {canEditLead && onScheduleReminder && <Button onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Agendar follow-up</Button>}
             {canEditLead && onConvert && <Button variant="secondary" onClick={() => onConvert(lead)}>Converter em contrato</Button>}
           </div>
+          <LeadRelationshipsPanel lead={lead} />
           {renderTimeline('Histórico de interações')}
         </div>
       </DrawerBody>
@@ -489,6 +492,6 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
 
   return <Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
     <DialogHeader onClose={onClose}><div><DialogTitle className="flex items-center gap-2">{favorite}{lead.nome_completo}</DialogTitle><DialogDescription>Histórico de interações, status e lembretes.</DialogDescription></div></DialogHeader>
-    <DialogBody><div className="kds-detail-workspace kds-crm-detail"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<Surface>{renderTimeline()}</Surface>{interaction}</div></DialogBody>
+    <DialogBody><div className="kds-detail-workspace kds-crm-detail"><div className="kds-detail-dialog-actions">{actions}</div>{contact}<LeadRelationshipsPanel lead={lead} /><Surface>{renderTimeline()}</Surface>{interaction}</div></DialogBody>
   </Dialog>;
 }

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ role: 'admin' }) }));
 vi.mock('../../contexts/ConfigContext', () => ({ useConfig: () => ({ getRoleModulePermission: () => ({ can_edit: true }) }) }));
-vi.mock('../../features/leads', () => ({ getLeadTimeline: async () => mocks.timeline, addLeadInteraction: async () => undefined }));
+vi.mock('../../features/leads', () => ({ getLeadTimeline: async () => mocks.timeline, addLeadInteraction: async () => undefined, LeadRelationshipsPanel: () => <div>Negociações em conjunto</div> }));
 vi.mock('../LeadFavoriteStar', () => ({ LeadFavoriteToggle: () => <span>Favorito</span> }));
 vi.mock('../NextStepSuggestion', () => ({ default: () => null }));
 import LeadDetails from '../LeadDetails';

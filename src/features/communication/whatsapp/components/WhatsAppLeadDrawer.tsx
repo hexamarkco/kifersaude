@@ -44,7 +44,7 @@ import type {
 } from '../data';
 import type { ConfigOption } from '../../../config';
 import type { Contract } from '../../../contracts';
-import type { LeadStatusConfig } from '../../../leads';
+import { LeadRelationshipsPanel, type LeadStatusConfig } from '../../../leads';
 import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
 import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppPresenceIndicator from './WhatsAppPresenceIndicator';
@@ -555,6 +555,8 @@ export default function WhatsAppLeadDrawer({
                 onViewLead={onViewLead}
                 disabled={leadMutationLoading}
               />
+
+              <LeadRelationshipsPanel lead={linkedLead} />
 
               {canViewAgenda ? (
                 <Surface variant="muted" padding="sm" className="whatsapp-inbox-contact-agenda">

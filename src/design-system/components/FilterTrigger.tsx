@@ -50,14 +50,14 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
       disabled={disabled || showLoading}
       {...props}
     >
-      {Icon && <Icon className="kds-filter-trigger-icon kds-control-icon" aria-hidden="true" />}
-      <span className="block min-w-0 truncate whitespace-nowrap">
+      {Icon && !showLoading && <Icon className="kds-filter-trigger-icon kds-control-icon" aria-hidden="true" />}
+      <span className={showLoading ? 'sr-only' : 'block min-w-0 truncate whitespace-nowrap'}>
         {leadingLabel && <span className="kds-filter-trigger-label">{leadingLabel}: </span>}
         <span className={active ? 'kds-filter-trigger-value-active' : 'kds-filter-trigger-value'}>
           {value}
         </span>
       </span>
-      <span className="kds-filter-trigger-trailing">
+      <span className={cx('kds-filter-trigger-trailing', showLoading && 'col-span-full')}>
         {showLoading ? <LoadingMonogram className="kds-control-icon" /> : trailingSlot ?? (
           <ChevronDown
             className={cx('kds-filter-trigger-chevron kds-control-icon transition-transform', open && 'rotate-180')}

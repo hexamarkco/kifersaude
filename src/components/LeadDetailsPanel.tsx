@@ -130,8 +130,7 @@ export default function LeadDetailsPanel({
     if (showContractsLoading) {
       return (
         <div className="flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] py-8 text-[var(--text-muted)]">
-          <LoadingMonogram className="mr-2 h-4 w-4" />
-          <span className="text-sm font-medium">Carregando contratos...</span>
+          <LoadingMonogram className="h-4 w-4" label="Carregando contratos" />
         </div>
       );
     }

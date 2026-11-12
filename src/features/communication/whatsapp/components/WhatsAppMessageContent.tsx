@@ -56,7 +56,7 @@ export function MediaSendingOverlay({
     <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-[1px]">
       <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm">
         <LoadingMonogram className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
-        <span>{progress === null ? 'Enviando' : `${progress}%`}</span>
+        <span className="sr-only" role="status">{progress === null ? 'Enviando' : `${progress}%`}</span>
         {onCancel && active ? (
           <Button variant="ghost"
             type="button"
@@ -214,7 +214,7 @@ export function WhatsAppAudioPlayerCard({
   const transcriptionAction = showTranscribing ? (
     <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status whatsapp-inbox-audio-transcribe-button" role="status" aria-live="polite">
       <LoadingMonogram className="h-3 w-3" />
-      <span>Transcrevendo...</span>
+      <span className="sr-only">Transcrevendo...</span>
     </span>
   ) : canTranscribe ? (
       <ActionSurface variant="plain" padding="none"
@@ -473,6 +473,7 @@ export function WhatsAppMessageBody({
                     <ButtonGroup size="sm" aria-label="Ações do contato compartilhado" className="mt-2 overflow-x-auto">
                       <Button variant="ghost"
                         type="button"
+                        loading={sharedContactActionKey === `open:${item.phoneNumber}`}
                         onClick={() => onOpenSharedContactChat(item)}
                         disabled={sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
                         className={inboxInlineActionClassName}
@@ -481,6 +482,7 @@ export function WhatsAppMessageBody({
                       </Button>
                       <Button variant="ghost" size="sm" aria-label={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
                         type="button"
+                        loading={sharedContactActionKey === `save:${item.phoneNumber}`}
                         onClick={() => onSaveSharedContact(item)}
                         disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
                         className={inboxInlineActionClassName}

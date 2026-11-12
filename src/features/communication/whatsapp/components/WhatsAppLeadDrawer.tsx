@@ -722,8 +722,7 @@ export default function WhatsAppLeadDrawer({
                   </Surface>
                 ) : showSearchLoading ? (
                   <div className="flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] px-4 py-6 text-sm text-[var(--text-muted)]">
-                    <LoadingMonogram className="mr-2 h-4 w-4" />
-                    Buscando leads...
+                    <LoadingMonogram className="h-4 w-4" label="Buscando leads" />
                   </div>
                 ) : searchResults.length === 0 ? (
                   <EmptyState title="Nenhum lead encontrado" description="Tente buscar por outro nome ou telefone." />

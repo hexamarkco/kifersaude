@@ -530,7 +530,7 @@ export function WhatsAppComposer({
                           ) : replySuggestionError ? (
                             <Text className="mt-1 text-sm leading-6 text-[var(--danger-text)]">{replySuggestionError}</Text>
                           ) : (
-                            <Text className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Analisando histórico e padrão de atendimento...</Text>
+                            <Text className="sr-only" role="status">Analisando histórico e padrão de atendimento...</Text>
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (

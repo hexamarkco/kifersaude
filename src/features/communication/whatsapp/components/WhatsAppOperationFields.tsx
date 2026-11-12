@@ -1,4 +1,4 @@
-import { Button, Field, Input, Select, Text } from '../../../../design-system';
+import { Button, Field, Input, LoadingState, Select, Text } from '../../../../design-system';
 import type { ZapiJson, ZapiSchema } from '../domain/zapiOperationContract.generated';
 import { useProviderMediaInput } from '../hooks/useProviderMediaInput';
 import { providerChoiceLabel } from '../domain/providerOperationPresentation';
@@ -16,7 +16,7 @@ function MediaField({ schema, value, onChange, path, disabled }: Props) {
       <Input type="file" aria-label={`Escolher ${schema.label?.toLocaleLowerCase('pt-BR')}`} accept={schema.accept}
         disabled={disabled || media.loading} onChange={(event) => media.select(event.target.files?.[0])} />
       {uploaded && <Text className="text-sm text-[var(--text-secondary)]">Arquivo preparado: {media.name || 'arquivo selecionado'}</Text>}
-      {media.loading && <Text role="status">Preparando arquivo…</Text>}
+      <LoadingState active={media.loading} compact label="Preparando arquivo" />
     </div>
   </Field>;
 }

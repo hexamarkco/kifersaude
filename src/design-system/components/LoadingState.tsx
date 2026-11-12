@@ -7,7 +7,7 @@ import { useDesignSystemAppearance, type DesignSystemTheme } from '../appearance
 import { readPanelTheme } from '../themePreference';
 import type { ControlSize } from '../tokens';
 import { useMinimumLoading } from '../useMinimumLoading';
-import Button from './Button';
+import { IconButton } from './Button';
 import { DesignSystemProvider } from './DesignSystemProvider';
 import { LoadingMonogram } from './LoadingMonogram';
 
@@ -35,7 +35,7 @@ export type LoadingStateProps = HTMLAttributes<HTMLDivElement> & {
   compact?: boolean;
   active?: boolean;
   fallback?: () => ReactNode;
-  /** Places a larger monogram above the label. */
+  /** Uses a larger monogram. Labels remain available to assistive technologies. */
   indicator?: 'brand';
 };
 
@@ -65,7 +65,7 @@ export function LoadingState({
       {...props}
     >
       <LoadingMonogram />
-      <div>
+      <div className="sr-only">
         <p className="kds-loading-state-label">{label}</p>
         {description && <p className="kds-loading-state-description">{description}</p>}
       </div>
@@ -135,10 +135,9 @@ function AppLoadingView({ className, theme }: AppLoadingScreenProps) {
           description={isStalled ? 'Verifique sua conexão ou tente novamente em instantes.' : undefined}
         />
         {isStalled && (
-          <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
+          <IconButton variant="secondary" size="sm" aria-label="Tentar novamente" title="Tentar novamente" onClick={() => window.location.reload()}>
             <RefreshCw className="kds-control-icon" />
-            <span>Tentar novamente</span>
-          </Button>
+          </IconButton>
         )}
       </div>
     </DesignSystemProvider>

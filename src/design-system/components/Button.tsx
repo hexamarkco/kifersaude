@@ -54,7 +54,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       {...props}
     >
       {showLoading && <LoadingMonogram className={cx('kds-button-spinner', panelButtonSpinnerSizeClasses[size])} />}
-      <span className="kds-button-content">{children}</span>
+      <span className={cx('kds-button-content', showLoading && 'kds-button-content-loading')}>{children}</span>
     </button>
   );
 });

@@ -873,8 +873,24 @@
   display: contents;
 }
 
-.kds-button[data-loading='true'] .kds-button-content svg {
-  display: none;
+:where(.kds-button[data-loading='true']) {
+  position: relative;
+}
+
+.kds-button[data-loading='true'] > .kds-button-content-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kds-button[data-loading='true'] > .kds-button-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .kds-button:focus-visible {

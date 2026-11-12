@@ -1970,6 +1970,7 @@ export default function LeadsManager({
                         <Button
                           type="button"
                           onClick={handleBulkStatusApply}
+                          loading={isBulkUpdating}
                           disabled={!bulkStatus || isBulkUpdating}
                           variant="primary"
                           size="sm"

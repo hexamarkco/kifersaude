@@ -113,7 +113,7 @@ export function OperationalStatusSelect({
           aria-expanded={open && !isDisabled}
           aria-busy={showLoading || undefined}
         >
-          <span>{currentLabel}</span>
+          <span className={showLoading ? 'sr-only' : undefined}>{currentLabel}</span>
           {showLoading && <LoadingMonogram className="kds-control-icon" />}
           {!isDisabled && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
         </ActionSurface>

@@ -243,7 +243,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
       ) : (
         <div className="comm-whatsapp-chat-files-visual-preview is-unavailable" role={error ? 'alert' : 'status'} aria-busy={loading}>
           <span className="comm-whatsapp-chat-files-visual-placeholder">{<LoadingMonogram active={loading} fallback={<Icon className="kds-control-icon" />} className="kds-control-icon" />}</span>
-          <Text className="text-xs">{loading ? 'Carregando mídia...' : error || 'Prévia indisponível'}</Text>
+          <Text className={loading ? 'sr-only' : 'text-xs'}>{loading ? 'Carregando mídia...' : error || 'Prévia indisponível'}</Text>
           {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
         </div>
       )}
@@ -372,7 +372,7 @@ function AudioFileRow({ message, onOpen }: { message: CommWhatsAppMessage; onOpe
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-2" role={error ? 'alert' : 'status'} aria-busy={loading}>
           {<LoadingMonogram active={loading} />}
-          <Text className="text-sm text-[var(--text-secondary)]">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
+          <Text className={loading ? 'sr-only' : 'text-sm text-[var(--text-secondary)]'}>{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</Text>
           {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
         </div>
       )}

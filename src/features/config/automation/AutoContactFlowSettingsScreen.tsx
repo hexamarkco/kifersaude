@@ -1823,7 +1823,7 @@ export default function AutoContactFlowSettingsScreen() {
             <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
               <span role="status" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
                 {<LoadingMonogram active={autoSaveState === "saving"} fallback={<span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} aria-hidden="true" />} className="h-3.5 w-3.5" />}
-                {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
+                <span className={autoSaveState === "saving" ? "sr-only" : undefined}>{autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}</span>
               </span>
               {activeWorkspace === "flows" && (
                 <Button className="w-full sm:w-auto" onClick={handleAddFlow}>
@@ -1860,7 +1860,7 @@ export default function AutoContactFlowSettingsScreen() {
                       size="sm"
                       icon={<LoadingMonogram active={autoSaveState === "saving"} fallback={autoSaveState === "error" ? <AlertCircle className="kds-control-icon" /> : <Save className="kds-control-icon" />} className="kds-control-icon" />}
                     >
-                      {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
+                      <span className={autoSaveState === "saving" ? "sr-only" : undefined}>{autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}</span>
                     </Badge>
                   </div>
                 </div>

@@ -1589,10 +1589,7 @@ export default function WhatsAppAgendaModal({
         {showLoading ? (
           <Surface variant="muted" padding="none" className="flex min-h-[520px] items-center justify-center">
             <Surface variant="strong" padding="sm" className="flex items-center gap-3 shadow-lg">
-              <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" />
-              <span className="text-sm font-medium text-[var(--text-secondary)]">
-                Carregando agenda...
-              </span>
+              <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" label="Carregando agenda" />
             </Surface>
           </Surface>
         ) : (

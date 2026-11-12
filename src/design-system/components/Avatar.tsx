@@ -112,7 +112,7 @@ export function AvatarBadge({ children, position = 'bottom-right', className, ..
     <span
       className={cx(
         'kds-avatar-badge',
-        position === 'top-right' && 'kds-avatar-badge-top',
+        position === 'top-right' ? 'kds-avatar-badge-top' : 'kds-avatar-badge-bottom',
         className,
       )}
       {...props}

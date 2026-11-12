@@ -59,7 +59,7 @@ export function WhatsAppChatMessageSearch({
         {query ? (
           <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
-              <span>{error ? 'Busca indisponível' : searching ? 'Buscando neste chat...' : `${results.length} resultado${results.length === 1 ? '' : 's'}`}</span>
+              <span className={searching && !error ? 'sr-only' : undefined}>{error ? 'Busca indisponível' : searching ? 'Buscando neste chat...' : `${results.length} resultado${results.length === 1 ? '' : 's'}`}</span>
               {<LoadingMonogram active={searching} className="h-3.5 w-3.5" />}
             </div>
             {error ? (

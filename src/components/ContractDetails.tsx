@@ -823,7 +823,7 @@ export default function ContractDetails({
     <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="md" aria-label="Detalhes do contrato" className="kds-contract-details-drawer">
       <DrawerHeader onClose={onClose}>
         <DialogTitle>Detalhes do contrato</DialogTitle>
-        <DialogDescription placement="visible">
+        <DialogDescription placement="visible" className={showLoading ? 'sr-only' : undefined}>
           {showLoading ? 'Buscando as informações mais recentes.' : `Contrato ${contract.codigo_contrato}`}
         </DialogDescription>
       </DrawerHeader>
@@ -855,7 +855,7 @@ export default function ContractDetails({
   if (showLoading) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
-        <DialogHeader showCloseButton={false}>
+        <DialogHeader showCloseButton={false} className="sr-only">
           <DialogTitle>Carregando contrato</DialogTitle>
           <DialogDescription placement="visible">Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
         </DialogHeader>

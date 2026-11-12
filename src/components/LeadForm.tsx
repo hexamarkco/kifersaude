@@ -271,7 +271,7 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
   if (showConfigLoading) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
-        <DialogHeader showCloseButton={false}><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
+        <DialogHeader showCloseButton={false} className="sr-only"><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
         <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
           <LoadingState compact indicator="brand" label="Carregando configurações" />
         </DialogBody>

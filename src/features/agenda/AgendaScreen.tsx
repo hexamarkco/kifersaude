@@ -1878,16 +1878,13 @@ export default function AgendaScreen() {
             closeOnEscape={false}
             className="max-w-sm"
           >
-            <DialogHeader showCloseButton={false}>
+            <DialogHeader showCloseButton={false} className="sr-only">
               <DialogTitle>Carregando lead</DialogTitle>
               <DialogDescription placement="visible">Aguarde enquanto buscamos os dados mais recentes.</DialogDescription>
             </DialogHeader>
             <DialogBody className="flex min-h-44 items-center justify-center">
               <Surface variant="strong" padding="sm" className="flex items-center gap-2 px-4 py-3" role="status">
-                <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" />
-                <span className="text-sm font-medium text-[var(--text-secondary)]">
-                Carregando lead...
-                </span>
+                <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" label="Carregando lead" />
               </Surface>
             </DialogBody>
           </Dialog>

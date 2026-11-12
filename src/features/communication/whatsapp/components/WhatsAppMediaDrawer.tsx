@@ -535,8 +535,7 @@ export default function WhatsAppMediaDrawer({
           )
         ) : showMediaLoading ? (
           <div className="comm-media-picker-empty-state">
-            <LoadingMonogram className="h-6 w-6 text-[var(--text-secondary)]" />
-            <Heading level={3} className="comm-media-picker-empty-title">Carregando {mode === 'gif' ? 'GIFs' : 'figurinhas'}</Heading>
+            <LoadingMonogram className="h-6 w-6 text-[var(--text-secondary)]" label={`Carregando ${mode === 'gif' ? 'GIFs' : 'figurinhas'}`} />
           </div>
         ) : mediaError ? (
           <div className="comm-media-picker-empty-state">

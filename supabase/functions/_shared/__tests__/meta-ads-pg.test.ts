@@ -15,6 +15,7 @@ let db: PGlite;
 const value = async <T>(sql: string, args: unknown[] = []) => (await db.query<{ value: T }>(sql,args)).rows[0]?.value;
 const scalar = <T>(fn: string,args: unknown[] = []) => value<T>(`SELECT public.${fn}(${args.map((_,i) => `$${i+1}`).join(',')}) AS value`,args);
 const count = (table: string) => value<number>(`SELECT count(*)::integer AS value FROM public.${table}`);
+const paidOriginMigration = () => db.exec(readFileSync(resolve('supabase/migrations/20261113151151_fix_meta_paid_lead_origin.sql'),'utf8'));
 
 beforeAll(async () => {
   db = new PGlite();
@@ -109,6 +110,65 @@ it('preserves existing lead history and contact restrictions; ambiguity never cr
   await enqueue('888888888888888'); const lease = (await claim())!;
   await expect(importClaim(lease)).rejects.toThrow('AMBIGUOUS_CONTACT');
   expect(await count('leads')).toBe(2); expect(await count('meta_lead_attributions')).toBe(1);
+});
+
+it('repairs the paid Meta default and proven FBS imports while preserving other lead origins', async () => {
+  await db.exec(`INSERT INTO lead_origens(nome,ativo) VALUES('FBS',true) ON CONFLICT (nome) DO NOTHING;
+    UPDATE integration_settings SET settings=jsonb_set(settings,'{defaultOrigem}','"FBS"');`);
+  const fbs = (await value<string>(`SELECT id AS value FROM lead_origens WHERE nome='FBS'`))!;
+  const { leadId } = await imported();
+  const leadOrigin = (lead: string) => value<string>(`SELECT o.nome AS value FROM leads l JOIN lead_origens o ON o.id=l.origem_id WHERE l.id=$1`,[lead]);
+  expect(await leadOrigin(leadId)).toBe('FBS');
+
+  const existing = id(40);
+  await db.query(`INSERT INTO leads(id,nome_completo,telefone,origem_id,responsavel_id,status_id,skip_automation)
+    VALUES($1,'Existing Synthetic','12025550101',$2,$3,$4,true)`,[existing,fbs,responsible,status]);
+  await enqueue('888888888888881');
+  await importClaim((await claim())!,'12025550101');
+
+  // Even FBS records must stay untouched if their attribution is not paid.
+  const nonPaid: string[] = [];
+  for (const [index,traffic] of ['organic','unknown'].entries()) {
+    await enqueue(`88888888888888${index+2}`);
+    const lease = (await claim())!;
+    nonPaid.push(await scalar<string>('meta_ads_import',[lease.leadgen_id,lease.lock_token,JSON.stringify({
+      name:'Synthetic Contact',phone:`1202555010${index+2}`,traffic_type:traffic,
+    })]));
+  }
+  await db.query(`UPDATE leads SET origem_id=$1 WHERE id=ANY($2::uuid[])`,[fbs,nonPaid]);
+
+  await enqueue('888888888888884');
+  const reassigned = await importClaim((await claim())!,'12025550104');
+  await db.query('UPDATE leads SET origem_id=$1 WHERE id=$2',[origin,reassigned]);
+  await db.query(`INSERT INTO leads(id,nome_completo,telefone,origem_id,responsavel_id,status_id,skip_automation)
+    VALUES($1,'Manual Synthetic','12025550105',$2,$3,$4,true)`,[id(41),fbs,responsible,status]);
+  const entries = await count('test_flow_entries');
+  const before = (await db.query('SELECT * FROM leads ORDER BY id')).rows;
+  const settings = await value<Record<string,unknown>>('SELECT settings AS value FROM integration_settings');
+
+  await paidOriginMigration();
+  await paidOriginMigration();
+  expect(await leadOrigin(leadId)).toBe('Facebook / Instagram');
+  for (const untouched of [existing,...nonPaid,id(41)]) expect(await leadOrigin(untouched)).toBe('FBS');
+  expect(await leadOrigin(reassigned)).toBe('tráfego pago');
+  const after = (await db.query('SELECT * FROM leads ORDER BY id')).rows;
+  expect(after).toEqual(before.map(lead => lead.id === leadId ? {...lead,origem_id:after.find(row => row.id === leadId)!.origem_id} : lead));
+  expect(await value('SELECT settings AS value FROM integration_settings')).toEqual({...settings,defaultOrigem:'Facebook / Instagram'});
+  expect(await count('test_flow_entries')).toBe(entries);
+  expect(await count('meta_conversion_events')).toBe(0);
+
+  await enqueue('888888888888886');
+  const next = await importClaim((await claim())!,'12025550106');
+  expect(await leadOrigin(next)).toBe('Facebook / Instagram');
+  expect(await count('test_flow_entries')).toBe(entries+1);
+});
+
+it('updates the legacy paid default but preserves an explicitly custom integration origin', async () => {
+  await paidOriginMigration();
+  expect(await value(`SELECT settings->>'defaultOrigem' AS value FROM integration_settings`)).toBe('Facebook / Instagram');
+  await db.exec(`UPDATE integration_settings SET settings=jsonb_set(settings,'{defaultOrigem}','"Custom campaign"')`);
+  await paidOriginMigration();
+  expect(await value(`SELECT settings->>'defaultOrigem' AS value FROM integration_settings`)).toBe('Custom campaign');
 });
 
 it('recovers expired leases and fences stale workers without losing the attempt history', async () => {

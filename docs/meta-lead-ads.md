@@ -163,9 +163,17 @@ Referências reais, utilizadas somente na configuração:
 
 Conferir `defaultOrigem`, `defaultResponsavel`, status ativo marcado como padrão,
 origem fallback `Meta — origem não confirmada` e a chave exata da pergunta comercial
-em `commercialField`. A configuração validada usa `FBS`, `Luiza` e a pergunta
+em `commercialField`. A configuração validada originalmente usa `FBS`, `Luiza` e a pergunta
 `perfil_contratacao`, conferida no formulário. O tipo de contratação permanece
 indefinido até a avaliação comercial.
+
+A migration `20261113151151_fix_meta_paid_lead_origin.sql`, preparada localmente e
+ainda pendente de autorização para produção, troca os defaults legados `FBS` e
+`tráfego pago` por `Facebook / Instagram`. A integração não identifica a rede de
+veiculação, por isso usa o nome conjunto. Também corrige somente cadastros ainda
+em `FBS` cuja atribuição comprova criação por importação paga, com anúncio e recibo
+concluído; contatos preexistentes, outras fontes FBS e origens alteradas são
+preservados. Orgânicos e origem desconhecida continuam usando o fallback.
 
 O callback configurado é
 `https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/meta-lead-webhook`.

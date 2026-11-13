@@ -383,7 +383,12 @@
   width: 1rem;
   height: 1rem;
   flex: none;
-  color: var(--brand-primary, currentColor);
+  color: var(--text-secondary, currentColor);
+}
+
+/* Loading stays neutral even when its surrounding action uses a status or brand color. */
+.painel-theme.kifer-ds .kds-loading-monogram {
+  color: var(--text-secondary);
 }
 
 .kds-loading-state > .kds-loading-monogram {
@@ -397,6 +402,10 @@
 }
 
 .kds-button .kds-loading-monogram {
+  color: var(--text-secondary, currentColor);
+}
+
+.painel-theme.kifer-ds .kds-button-primary .kds-loading-monogram {
   color: inherit;
 }
 
@@ -418,7 +427,7 @@
 }
 
 .kds-loading-monogram-star {
-  fill: var(--accent-gold, currentColor);
+  fill: currentColor;
   transform-box: fill-box;
   transform-origin: center;
   animation: kds-loading-monogram-star var(--loading-monogram-cycle) ease-out infinite;

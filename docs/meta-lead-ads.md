@@ -167,13 +167,25 @@ em `commercialField`. A configuração validada originalmente usa `FBS`, `Luiza`
 `perfil_contratacao`, conferida no formulário. O tipo de contratação permanece
 indefinido até a avaliação comercial.
 
-A migration `20261113151151_fix_meta_paid_lead_origin.sql`, preparada localmente e
-ainda pendente de autorização para produção, troca os defaults legados `FBS` e
+A migration `20261113151151_fix_meta_paid_lead_origin.sql`, aplicada em produção
+em 13/11/2026 após autorização, troca os defaults legados `FBS` e
 `tráfego pago` por `Facebook / Instagram`. A integração não identifica a rede de
 veiculação, por isso usa o nome conjunto. Também corrige somente cadastros ainda
 em `FBS` cuja atribuição comprova criação por importação paga, com anúncio e recibo
 concluído; contatos preexistentes, outras fontes FBS e origens alteradas são
 preservados. Orgânicos e origem desconhecida continuam usando o fallback.
+
+Na implantação de 13/11, essa era a única migration pendente e os dois cadastros
+elegíveis passaram para `Facebook / Instagram`, assim como o default da integração.
+As 43 Edge Functions do repositório foram publicadas e confirmadas ativas, com
+as mesmas configurações de JWT; a legada `comm-whatsapp-assistant`, existente
+somente no servidor, foi preservada. O dry-run posterior confirmou banco atualizado
+e os tipos persistidos passaram em `types:supabase:check`. A verificação de
+automações executou as mesmas RPCs do script pelo conector SQL, pois faltava a
+credencial local do script: quatro crons ativos, execução de inatividade `ok`,
+nenhum job com falha nos últimos sete dias e nenhum lead elegível pendente.
+As sondagens HTTP confirmaram bloqueio de acesso sem credenciais no worker,
+webhook e painel Meta, e resposta 200 nas métricas públicas.
 
 O callback configurado é
 `https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/meta-lead-webhook`.

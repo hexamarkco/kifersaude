@@ -10,6 +10,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp/.well-known/oauth-authorization-server"
+    },
     { "source": "/", "destination": "/index.html" },
     { "source": "/politica-de-privacidade", "destination": "/index.html" },
     { "source": "/links", "destination": "/index.html" },

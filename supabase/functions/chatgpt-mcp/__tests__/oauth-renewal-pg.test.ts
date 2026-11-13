@@ -58,6 +58,14 @@ describe('atomic OAuth renewal', () => {
     expect(await exchange()).toMatchObject({ success: true });
   });
 
+  it('exchanges and renews a Claude grant while rejecting a different callback for the same client', async () => {
+    const callback = 'https://claude.ai/api/mcp/auth_callback';
+    await db.query('UPDATE public.chatgpt_mcp_oauth_authorization_codes SET redirect_uri=$1', [callback]);
+    expect(await exchange()).toEqual({ success: false });
+    expect(await exchange('authorization_code', hash('c'), hash('a'), hash('r'), { redirect: callback })).toEqual({ success: true, scope: originalScope, expires_in: 3600 });
+    expect(await exchange('refresh_token', hash('r'), hash('b'), hash('s'))).toEqual({ success: true, scope: originalScope, expires_in: 3600 });
+  });
+
   it('rejects a wrong refresh resource/client without revoking the legitimate credential', async () => {
     await seedRefresh();
     expect(await exchange('refresh_token', hash('f'), hash('a'), hash('r'), { resource: 'https://other.test' })).toEqual({ success: false });

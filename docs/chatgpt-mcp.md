@@ -210,7 +210,17 @@ As migrations MCP incluem a base de contratos/oportunidades/consentimento/docume
 
    Defina `KIFER_MCP_WHATSAPP_INTERNAL_SECRET` como secret em `chatgpt-mcp` e `comm-whatsapp-send`. É uma credencial servidor-a-servidor: nunca use o prefixo `VITE_`, nunca a exponha no navegador e nunca a inclua no ChatGPT.
 
-4. Verifique os metadados OAuth e o desafio MCP. Uma chamada não autenticada ao MCP deve retornar `401` com `resource_metadata`; o ChatGPT então inicia o OAuth automaticamente.
+4. Verifique os metadados OAuth e o desafio MCP. Uma chamada não autenticada ao MCP deve retornar `401` com `resource_metadata`; o cliente então inicia o OAuth automaticamente. Publique primeiro o site com a regra de descoberta em `vercel.json` e depois a function `chatgpt-mcp`. Esta correção não exige migrations novas nem troca dos secrets existentes.
+
+### Descoberta OAuth compatível com Claude
+
+O servidor aceita tanto a URL exata de `KIFER_MCP_OAUTH_REDIRECT_URI` (ChatGPT) quanto `https://claude.ai/api/mcp/auth_callback`. Não substitua o callback do ChatGPT pelo do Claude: ambos podem usar o mesmo `client_id` configurado, e cada código fica vinculado ao callback que iniciou a autorização. PKCE S256, sessão de administrador, recurso e escopos continuam obrigatórios. Remover o callback configurado continua desabilitando novas autorizações para ambos os clientes.
+
+O `issuer` OAuth e o campo `authorization_servers` usam a origem de `KIFER_MCP_OAUTH_UI_URL`: em produção, `https://www.kifersaude.com.br`. A rota pública `https://www.kifersaude.com.br/.well-known/oauth-authorization-server` é encaminhada por `vercel.json` aos metadados da Edge Function. Os endpoints anunciados de autorização e token continuam em `/functions/v1/chatgpt-mcp/oauth/authorize` e `/functions/v1/chatgpt-mcp/oauth/token` no Supabase. O recurso MCP e os vínculos dos tokens existentes permanecem na URL original do Supabase, mesmo quando a descoberta passa pelo proxy do site.
+
+Isso evita que a descoberta RFC 8414 procure `/.well-known/oauth-authorization-server/functions/v1/chatgpt-mcp` na raiz do Supabase, que não encaminha essa rota à função. Quando a descoberta falhava, o Claude tentava o fallback `https://eaxvvhamkmovkoqssahj.supabase.co/authorize` e recebia `requested path is invalid`. Não use essa URL nem tente corrigir a raiz do domínio Supabase com uma rota interna da function.
+
+No Claude, mantenha a URL MCP `https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp`. Nas opções avançadas, informe o mesmo ID OAuth configurado (`chatgpt-kifer` por padrão), sem segredo de cliente; o servidor usa registro manual, não registro dinâmico. Após publicar o site e a function, reinicie a conexão no Claude para descartar a descoberta anterior. A nova autorização deve abrir a página de consentimento do CRM e retornar para `https://claude.ai/api/mcp/auth_callback`. A confirmação completa em produção exige concluir esse consentimento no Claude.
 
 ## Configuracao no ChatGPT
 

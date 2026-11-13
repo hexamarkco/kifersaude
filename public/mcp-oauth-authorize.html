@@ -19,7 +19,7 @@
   <body>
     <main>
       <h1>Conectar CRM Kifer Saúde</h1>
-      <p>Entre com uma conta <strong>administradora</strong> do CRM para autorizar o acesso solicitado pelo ChatGPT.</p>
+      <p>Entre com uma conta <strong>administradora</strong> do CRM para autorizar o acesso solicitado pelo aplicativo conectado.</p>
       <p id="error" class="error hidden" role="alert"></p>
       <form id="login-form" autocomplete="on">
         <label for="email">E-mail da conta administradora</label>
@@ -32,7 +32,7 @@
         <p id="access-summary" class="access"></p>
         <button id="authorize-button" type="button">Autorizar acesso</button>
       </section>
-      <p class="note">Sua senha é validada pelo Supabase Auth e nunca é enviada ao ChatGPT.</p>
+      <p class="note">Sua senha é validada pelo CRM e nunca é enviada ao aplicativo conectado.</p>
     </main>
     <script>
       const functionBase = 'https://eaxvvhamkmovkoqssahj.supabase.co/functions/v1/chatgpt-mcp';
@@ -48,8 +48,8 @@
       const canWrite = requestedScopes.has('kifer.write');
       const authorizeLabel = canWrite ? 'Autorizar leitura e escrita' : 'Autorizar consultas';
       accessSummary.textContent = canWrite
-        ? 'O ChatGPT poderá consultar e alterar dados do CRM. Convites e redefinições enviam e-mails; envios de WhatsApp, exclusões e outras ações sensíveis ainda exigem confirmação explícita.'
-        : 'O ChatGPT poderá consultar dados do CRM. Esta conexão não poderá criar, alterar ou excluir informações.';
+        ? 'O aplicativo conectado poderá consultar e alterar dados do CRM. Convites e redefinições enviam e-mails; envios de WhatsApp, exclusões e outras ações sensíveis ainda exigem confirmação explícita.'
+        : 'O aplicativo conectado poderá consultar dados do CRM. Esta conexão não poderá criar, alterar ou excluir informações.';
       authorizeButton.textContent = authorizeLabel;
       let config;
       let accessToken;
@@ -65,7 +65,7 @@
       async function login(event) {
         event.preventDefault();
         clearError();
-        if (fields.some((field) => !params[field])) return showError('Esta solicitação expirou. Volte ao ChatGPT e tente novamente.');
+        if (fields.some((field) => !params[field])) return showError('Esta solicitação expirou. Volte ao aplicativo que iniciou a conexão e tente novamente.');
         loginButton.disabled = true;
         loginButton.textContent = 'Entrando…';
         try {

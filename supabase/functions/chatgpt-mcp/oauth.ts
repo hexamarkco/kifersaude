@@ -9,6 +9,7 @@ const TOKEN_PATH = '/oauth/token';
 const OAUTH_METADATA_PATH = '/.well-known/oauth-authorization-server';
 const RESOURCE_METADATA_PATH = '/.well-known/oauth-protected-resource';
 const AUTHORIZATION_CODE_LIFETIME_SECONDS = 5 * 60;
+const CLAUDE_REDIRECT_URI = 'https://claude.ai/api/mcp/auth_callback';
 const ALLOWED_SCOPES = new Set(['openid', 'offline_access', 'kifer.read', 'kifer.write']);
 
 type OAuthPrincipal = {
@@ -54,8 +55,19 @@ const oauthConfig = () => ({
 // publico e sempre HTTPS e os metadados OAuth precisam anunciar essa URL.
 const getBaseUrl = (request: Request): string => {
   const url = new URL(request.url);
-  const host = text(request.headers.get('x-forwarded-host')) || url.host;
+  // Discovery is also proxied by the public CRM domain. Its forwarded host
+  // must not change the resource to which existing codes/tokens are bound.
+  const supabaseUrl = text(Deno.env.get('SUPABASE_URL'));
+  const host = supabaseUrl ? new URL(supabaseUrl).host : url.host;
   return `https://${host}${FUNCTION_PATH}`;
+};
+
+const getIssuerUrl = (request: Request): string => {
+  const uiUrl = oauthConfig().authorizationUiUrl;
+  // RFC 8414 discovery inserts .well-known before the issuer path. Supabase
+  // does not route that root URL to this function, so use the public CRM
+  // origin, whose root metadata route proxies this function (vercel.json).
+  return uiUrl ? new URL(uiUrl).origin : getBaseUrl(request);
 };
 
 const getRoute = (request: Request): string => {
@@ -112,7 +124,7 @@ const parseAuthorizationRequest = (url: URL, expectedResource: string): { reques
 
   if (text(url.searchParams.get('response_type')) !== 'code') return { error: 'Somente response_type=code e suportado.' };
   if (clientId !== config.clientId) return { error: 'Cliente OAuth desconhecido.' };
-  if (redirectUri !== config.redirectUri) return { error: 'URL de retorno nao autorizada.' };
+  if (redirectUri !== config.redirectUri && redirectUri !== CLAUDE_REDIRECT_URI) return { error: 'URL de retorno nao autorizada.' };
   if (!state) return { error: 'O parametro state e obrigatorio.' };
   if (codeChallengeMethod !== 'S256' || !isSafeCodeChallenge(codeChallenge)) return { error: 'PKCE S256 e obrigatorio.' };
   if (scopeResult.error || !scopeResult.scope) return { error: scopeResult.error || 'Escopo OAuth invalido.' };
@@ -254,14 +266,14 @@ export async function handleOAuthRoute(request: Request): Promise<Response | nul
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (route === OAUTH_METADATA_PATH && request.method === 'GET') {
     return json({
-      issuer: baseUrl, authorization_endpoint: `${baseUrl}${AUTHORIZE_PATH}`, token_endpoint: `${baseUrl}${TOKEN_PATH}`,
+      issuer: getIssuerUrl(request), authorization_endpoint: `${baseUrl}${AUTHORIZE_PATH}`, token_endpoint: `${baseUrl}${TOKEN_PATH}`,
       response_types_supported: ['code'], grant_types_supported: ['authorization_code', 'refresh_token'],
       code_challenge_methods_supported: ['S256'], token_endpoint_auth_methods_supported: ['none'],
       scopes_supported: [...ALLOWED_SCOPES],
     });
   }
   if (route === RESOURCE_METADATA_PATH && request.method === 'GET') {
-    return json({ resource: baseUrl, authorization_servers: [baseUrl], scopes_supported: [...ALLOWED_SCOPES], bearer_methods_supported: ['header'] });
+    return json({ resource: baseUrl, authorization_servers: [getIssuerUrl(request)], scopes_supported: [...ALLOWED_SCOPES], bearer_methods_supported: ['header'] });
   }
   if (route === AUTHORIZE_PATH) return request.method === 'GET' ? authorizeGet(request) : new Response('Metodo nao permitido', { status: 405 });
   if (route === AUTHORIZE_COMPLETE_PATH) return completeAuthorization(request);

@@ -1,4 +1,4 @@
-import { isRecord, metaId } from '../_shared/meta-ads/domain.ts';
+import { isRecord, metaId, MetaError } from '../_shared/meta-ads/domain.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -37,20 +37,46 @@ export function createAdminHandler(deps: AdminDependencies) {
         const changed = await deps.rpc('meta_ads_requeue_event', { p_actor: auth.actor,p_id: body.eventId });
         return changed === true ? json({ changed: true }) : json({ error: 'Este sinal exige revisão comercial ou está fora do prazo de envio.' }, 409);
       }
-      if (body.action === 'review' && uuid(body.attributionId) && typeof body.eligibleBusiness === 'boolean' &&
+      if (body.action === 'review' && uuid(body.attributionId) &&
         typeof body.regionServed === 'boolean' && typeof body.interestConfirmed === 'boolean' &&
         typeof body.lives === 'number' && Number.isInteger(body.lives) && body.lives >= 1 && body.lives <= 100000 &&
         (body.opportunityId === null || uuid(body.opportunityId)) && (body.contractId === null || uuid(body.contractId)) &&
         typeof body.contractCompleted === 'boolean' && (!body.contractCompleted || uuid(body.contractId))) {
-        const reviewId = await deps.rpc('meta_ads_review', {
-          p_actor: auth.actor,p_attribution: body.attributionId,p_eligible: body.eligibleBusiness,p_lives: body.lives,
+        const args = {
+          p_actor: auth.actor,p_attribution: body.attributionId,p_lives: body.lives,
           p_region: body.regionServed,p_interest: body.interestConfirmed,p_opportunity: body.opportunityId,
           p_contract: body.contractId,p_completed: body.contractCompleted,
-        });
+        };
+        let reviewId: unknown;
+        if ('contractingModality' in body || 'eligibilityConfirmed' in body || 'saleClosed' in body) {
+          if (!['individual','business','collective_membership'].includes(String(body.contractingModality))
+            || typeof body.eligibilityConfirmed !== 'boolean' || typeof body.saleClosed !== 'boolean'
+            || (body.contractCompleted && !body.saleClosed)) {
+            return json({ error: 'Selecione a modalidade e confira a elegibilidade e o fechamento.' }, 400);
+          }
+          reviewId = await deps.rpc('meta_ads_review_v2', {
+            ...args,p_modality: body.contractingModality,p_eligibility: body.eligibilityConfirmed,p_sale_closed: body.saleClosed,
+          });
+        } else if (typeof body.eligibleBusiness === 'boolean') {
+          // Preserve the HTTP contract and original PME rules for older clients.
+          reviewId = await deps.rpc('meta_ads_review', { ...args,p_eligible: body.eligibleBusiness });
+        } else return json({ error: 'Confirme a elegibilidade para a modalidade selecionada.' }, 400);
+        if (!uuid(reviewId)) return json({ error: 'A avaliação não foi confirmada. Atualize a consulta antes de tentar novamente.' }, 503);
         return json({ reviewId });
       }
       return json({ error: 'Confira os critérios e vínculos antes de salvar.' }, 400);
-    } catch {
+    } catch (error) {
+      if (error instanceof MetaError) {
+        const messages: Record<string, string> = {
+          FORBIDDEN: 'Acesso exclusivo de administradores.',
+          INVALID_REVIEW: 'Confira a modalidade, a quantidade de pessoas e os critérios da avaliação.',
+          OPPORTUNITY_MISMATCH: 'Esta negociação não está mais vinculada ao contato. Atualize os dados.',
+          CONTRACT_MISMATCH: 'Selecione um contrato deste contato ou de uma pessoa vinculada à negociação escolhida.',
+          CONTRACT_ALREADY_ATTRIBUTED: 'Este contrato já foi atribuído a outra entrada da Meta. Confira a origem da venda.',
+          CONTRACT_CONFIRMATION_REQUIRED: 'Selecione um contrato e confirme o fechamento antes de registrar a contratação.',
+        };
+        if (messages[error.code]) return json({ error: messages[error.code] }, error.code === 'FORBIDDEN' ? 403 : 409);
+      }
       return json({ error: 'Não foi possível concluir. Atualize os dados e confira os vínculos no CRM.' }, 503);
     }
   };

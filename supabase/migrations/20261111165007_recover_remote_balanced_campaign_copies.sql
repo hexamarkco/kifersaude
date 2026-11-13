@@ -1,0 +1,6 @@
+-- Recover the immutable remote migration-history version 20261111165007,
+-- originally named add_balanced_whatsapp_campaign_copies.
+-- Its stored SQL was verified equivalent, ignoring CRLF and outer whitespace, to
+-- 20261110223500_add_balanced_whatsapp_campaign_copies.sql on 2026-11-12.
+-- The earlier local version contains the complete implementation. This marker
+-- preserves the remote history without running those changes a second time.

@@ -1520,13 +1520,12 @@ export default function WhatsAppCampaignsScreen() {
             </Surface>
           )}
 
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid items-end gap-4 md:grid-cols-5">
             <Field label={<FieldLabel text="Agendar para" hint="A data só entra em vigor depois da ativação explícita da campanha." />}>
               <DateTimePicker type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </Field>
             <Field label={<FieldLabel text="Intervalo entre contatos (minutos)" hint="Deixe vazio para distribuir automaticamente os contatos elegíveis pela janela do dia. Um valor definido vira o intervalo mínimo entre novos contatos; o limite diário continua valendo." />}>
-              <Input type="number" min={1} max={1440} value={contactIntervalMinutes ?? ''} placeholder="Automático pela janela" onChange={(event) => { const value = Number(event.target.value); setContactIntervalMinutes(event.target.value.trim() && Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 1440) : null); }} />
-              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Cadência prevista: {formatContactInterval(admissionIntervalMinutes)}</Text>
+              <Input type="number" min={1} max={1440} value={contactIntervalMinutes ?? ''} placeholder="Automático pela janela" aria-describedby="campaign-contact-cadence" onChange={(event) => { const value = Number(event.target.value); setContactIntervalMinutes(event.target.value.trim() && Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 1440) : null); }} />
             </Field>
             <Field label={<FieldLabel text="Novos contatos por 24h" hint="Teto móvel de pessoas que iniciam a campanha em qualquer período de 24 horas. Cada pessoa conta uma vez; as mensagens seguintes do mesmo contato não consomem novas vagas." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
@@ -1537,6 +1536,7 @@ export default function WhatsAppCampaignsScreen() {
             <Field label={<FieldLabel text="Janela fim" hint="Horário limite para o envio. Fora da janela, o disparo fica pausado até o próximo horário permitido." />}>
               <DateTimePicker type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </Field>
+            <Text id="campaign-contact-cadence" className="text-xs text-[color:var(--panel-text-muted)] md:col-span-5">Cadência prevista: {formatContactInterval(admissionIntervalMinutes)}</Text>
           </div>
           <Field label={<FieldLabel text="Dias de envio" hint="Dias da semana em que o disparo pode enviar mensagens. Nos dias desmarcados, o disparo fica pausado (igual a fora da janela de horário) e retoma sozinho no próximo dia permitido." />}>
             <div className="flex flex-wrap gap-1.5">
@@ -1725,7 +1725,7 @@ export default function WhatsAppCampaignsScreen() {
               <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
                 <Heading level={3} className="text-sm font-semibold text-[color:var(--panel-text)]">Sequência da campanha</Heading>
                 <div className="space-y-2">
-                  {activationPreview.steps.map((step, index) => (
+                  {activationPreview.steps.map((step) => (
                     <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <Badge tone={step.step_kind === 'status_change' ? 'accent' : 'neutral'}>

@@ -7,6 +7,12 @@ aplicativo. O getLeads foi atribuído no Gerenciador de Acesso a Leads e o fluxo
 automático Meta → webhook → cron → importação com rollback foi comprovado com
 teste oficial, sem persistir contato nem enviar mensagens. A CAPI permanece desabilitada.
 
+A ampliação para PF, PJ e adesão foi publicada em 12/11/2026: migration
+`20261112230739_meta_commercial_review_modalities.sql` aplicada, `meta-ads-admin` atualizado
+e tipos regenerados do banco remoto. A consulta de origem, as permissões das RPCs e a
+saúde das automações foram verificadas no projeto. Os testes de gravação usam banco local
+e provedores simulados. O backend foi atualizado antes do push do frontend.
+
 ## O que já existia e o que foi reutilizado
 
 - A migration `20260822120000_add_facebook_ads_integration.sql` instalou somente
@@ -53,15 +59,24 @@ teste oficial, sem persistir contato nem enviar mensagens. A CAPI permanece desa
    `unknown` ficam separados, usam a origem de fallback e não produzem sinais CAPI.
    Não há backfill de leads antigos por telefone, origem ou status.
 6. `meta_commercial_reviews`: avaliação explícita do administrador, com ator, hora
-   e versão `pme-mei-v1`. Qualificado exige **todos**: empresário/MEI elegível,
-   pelo menos duas vidas, região atendida e interesse confirmado. A interpretação
-   comercial e a região devem ser verificadas pelo operador; respostas do formulário,
-   Atendimento, Proposta Enviada e `opportunities.status=qualified` não aprovam automaticamente.
+   e versão dos critérios. As avaliações `pme-mei-v1` e a RPC legada preservam a regra
+   original de empresa/MEI e duas vidas. A nova `meta_ads_review_v2` registra a modalidade
+   (`individual`, `business` ou `collective_membership`) e a elegibilidade do produto.
+   Qualificado exige elegibilidade confirmada, ao menos uma pessoa, atendimento na região
+   e interesse confirmado. Mínimos e demais requisitos do produto são conferidos pelo operador;
+   não se exige MEI ou duas vidas para todas as modalidades. O campo legado `eligible_business`
+   continua significando elegibilidade empresarial; a nova confirmação usa `eligibility_confirmed`.
+   Respostas do formulário, Atendimento, Proposta Enviada e `opportunities.status=qualified`
+   não aprovam automaticamente. `sale_closed=true` registra venda fechada com contrato pendente,
+   sem preparar um evento de contratação e sem alterar o status do lead.
 7. A oportunidade selecionada precisa ter vínculo ativo com o contato. Um contrato
-   precisa pertencer ao contato e ter sido criado depois da entrada Meta. Sua existência
-   ou status não gera venda: o administrador precisa selecionar o contrato relacionado
+   precisa pertencer ao contato ou a outro membro ativo da negociação explicitamente selecionada,
+   e ter sido criado depois da entrada Meta. Contratos de outro membro são oferecidos somente
+   após selecionar a negociação em conjunto; não se transfere a titularidade do contrato.
+   Sua existência ou status não gera venda: o administrador precisa selecionar o contrato relacionado
    àquela entrada e atestar a conclusão. O horário do sinal é o da confirmação no CRM;
-   não se infere uma data de venda a partir de `data_inicio`.
+   não se infere uma data de venda a partir de `data_inicio`. Para outro membro, o vínculo dos
+   dois contatos e a negociação ativa são revalidados antes de transmitir o evento.
 8. `meta_conversion_events`: primeira qualificação por entrada e conclusão por
    contrato, com identidade e horário estáveis. Um contrato não gera sinais para duas
    entradas distintas. Todos nascem **held**. Mudanças posteriores de qualificação

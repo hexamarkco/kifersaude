@@ -47,6 +47,7 @@ beforeAll(async () => {
   await db.query(`INSERT INTO public.integration_settings VALUES('facebook_ads_manager','{"pageAccessToken":"synthetic-old-secret","verifyToken":"synthetic-old-verify"}',now())`);
   await db.exec(readFileSync(resolve('supabase/migrations/20261024011732_meta_lead_ads_crm_pipeline.sql'),'utf8'));
   await db.exec(readFileSync(resolve('supabase/migrations/20261024022700_meta_lead_validation_probe.sql'),'utf8'));
+  await db.exec(readFileSync(resolve('supabase/migrations/20261112230739_meta_commercial_review_modalities.sql'),'utf8'));
   expect(await value<string>(`SELECT settings->>'pageAccessToken' AS value FROM integration_settings`)).toBeNull();
   expect(await value<boolean>(`SELECT (settings->>'enabled')::boolean AS value FROM integration_settings`)).toBe(false);
   await db.exec(`REVOKE ALL ON public.opportunities,public.opportunity_leads FROM service_role;
@@ -80,6 +81,8 @@ async function imported() {
 }
 const review = (attr: string,eligible = true,lives = 2,contract: string | null = null,completed = false,actor = admin,opportunity: string | null = null) =>
   scalar<string>('meta_ads_review',[actor,attr,eligible,lives,true,true,opportunity,contract,completed]);
+const reviewV2 = (attr: string,modality = 'individual',eligible = true,lives = 1,closed = false,contract: string | null = null,completed = false,opportunity: string | null = null,actor = admin) =>
+  scalar<string>('meta_ads_review_v2',[actor,attr,modality,eligible,lives,true,true,closed,opportunity,contract,completed]);
 
 it('atomically deduplicates notifications and imports through the canonical lead insertion', async () => {
   expect(await enqueue()).toBe(1); expect(await enqueue()).toBe(0);
@@ -153,6 +156,83 @@ it('requires explicit commercial evidence and an actual related contract, with s
   await expect(review(attr,true,2,null,false,admin,id(30))).rejects.toThrow('OPPORTUNITY_MISMATCH');
 });
 
+it('qualifies all three modalities with a single person when product eligibility is confirmed, preserving legacy decisions', async () => {
+  const { attr } = await imported();
+  const legacy = await review(attr,true,1);
+  for (const modality of ['individual','business','collective_membership']) {
+    const reviewId = await reviewV2(attr,modality);
+    const saved = await value<{ qualified: boolean; eligible_business: boolean; eligibility_confirmed: boolean; contracting_modality: string; criteria_version: string }>(
+      'SELECT to_jsonb(r) AS value FROM meta_commercial_reviews r WHERE id=$1',[reviewId]);
+    expect(saved.qualified).toBe(true);
+    expect(saved.eligible_business).toBe(modality === 'business');
+    expect(saved.eligibility_confirmed).toBe(true);
+    expect(saved.contracting_modality).toBe(modality);
+    expect(saved.criteria_version).toBe('all-modalities-v2');
+    const unqualified = await reviewV2(attr,modality,false);
+    expect(await value<boolean>('SELECT qualified AS value FROM meta_commercial_reviews WHERE id=$1',[unqualified])).toBe(false);
+  }
+  const original = await value<{ qualified: boolean; criteria_version: string; contracting_modality: string | null }>(
+    'SELECT to_jsonb(r) AS value FROM meta_commercial_reviews r WHERE id=$1',[legacy]);
+  expect(original.qualified).toBe(false);
+  expect(original.criteria_version).toBe('pme-mei-v1');
+  expect(original.contracting_modality).toBeNull();
+});
+
+it('records a sale with contract entry pending without producing a contract conversion', async () => {
+  const { attr } = await imported();
+  const reviewId = await reviewV2(attr,'collective_membership',true,1,true);
+  expect(await value<boolean>('SELECT sale_closed AND NOT contract_completed AND contract_id IS NULL AS value FROM meta_commercial_reviews WHERE id=$1',[reviewId])).toBe(true);
+  expect(await value<number>("SELECT count(*)::integer AS value FROM meta_conversion_events WHERE kind='contract_completed'")).toBe(0);
+  const snapshot = await scalar<{ attributions: { latest_review: { sale_closed: boolean; contract_completed: boolean; contracting_modality: string } }[] }>('meta_ads_snapshot',[admin]);
+  expect(snapshot.attributions[0].latest_review.sale_closed).toBe(true);
+  expect(snapshot.attributions[0].latest_review.contract_completed).toBe(false);
+  expect(snapshot.attributions[0].latest_review.contracting_modality).toBe('collective_membership');
+  await expect(reviewV2(attr,'individual',true,1,true,null,true)).rejects.toThrow('CONTRACT_CONFIRMATION_REQUIRED');
+  expect(await count('meta_commercial_reviews')).toBe(1);
+  expect(await scalar('meta_ads_claim',['outbound'])).toBeNull();
+});
+
+it('requires an explicitly selected shared negotiation for a beneficiary contract and revalidates membership before sending', async () => {
+  const { leadId,attr } = await imported();
+  const daughter = id(61), group = id(62), contract = id(63), unrelated = id(64);
+  await db.query(`INSERT INTO leads(id,nome_completo,telefone,origem_id,responsavel_id,status_id,status,skip_automation)
+    VALUES($1,'Synthetic Daughter','12025550102',$2,$3,$4,'Convertido',true)`,[daughter,origin,responsible,status]);
+  await db.query(`INSERT INTO opportunities VALUES($1,'Synthetic family sale','won',false)`,[group]);
+  await db.query(`INSERT INTO opportunity_leads VALUES($1,$2,NULL),($1,$3,NULL)`,[group,leadId,daughter]);
+  await db.query(`INSERT INTO contracts VALUES($1,$2,'SYNTHETIC-DAUGHTER',now(),'Ativo'),($3,$2,'SYNTHETIC-OLD',now()-interval '10 days','Ativo')`,[contract,daughter,unrelated]);
+  await expect(reviewV2(attr,'collective_membership',true,1,true,contract,true)).rejects.toThrow('CONTRACT_MISMATCH');
+  await expect(reviewV2(attr,'collective_membership',true,1,true,unrelated,true,group)).rejects.toThrow('CONTRACT_MISMATCH');
+  const snapshot = await scalar<{ attributions: { contracts: { id: string; lead_id: string; opportunity_ids: string[] }[] }[] }>('meta_ads_snapshot',[admin]);
+  expect(snapshot.attributions[0].contracts).toHaveLength(1);
+  expect(snapshot.attributions[0].contracts[0].lead_id).toBe(daughter);
+  expect(snapshot.attributions[0].contracts[0].opportunity_ids).toEqual([group]);
+  await reviewV2(attr,'collective_membership',true,1,true,contract,true,group);
+  await reviewV2(attr,'collective_membership',true,1,true,contract,true,group);
+  expect(await value<number>("SELECT count(*)::integer AS value FROM meta_conversion_events WHERE kind='contract_completed'")).toBe(1);
+  expect(await value<string>('SELECT lead_id::text AS value FROM contracts WHERE id=$1',[contract])).toBe(daughter);
+  const eventId = await value<string>("SELECT event_id::text AS value FROM meta_conversion_events WHERE kind='contract_completed'");
+  await scalar('meta_ads_release',[[eventId],'666666666666666','QualifiedLead','ConvertedLead','approval']);
+  const event = await scalar<{ event_id: string; lock_token: string }>('meta_ads_claim',['outbound']);
+  expect(await scalar('meta_ads_validate_event',[event.event_id,event.lock_token])).toBe(true);
+  await db.query('UPDATE opportunity_leads SET removed_at=now() WHERE lead_id=$1',[daughter]);
+  expect(await scalar('meta_ads_validate_event',[event.event_id,event.lock_token])).toBe(false);
+  const after = await scalar<{ attributions: { contracts: unknown[] }[] }>('meta_ads_snapshot',[admin]);
+  expect(after.attributions[0].contracts).toHaveLength(0);
+});
+
+it('rejects unknown modalities, invalid evidence and unauthorized actors without recording a review', async () => {
+  const { attr } = await imported();
+  await expect(reviewV2(attr,'other')).rejects.toThrow('INVALID_REVIEW');
+  await expect(reviewV2(attr,'individual',true,0)).rejects.toThrow('INVALID_REVIEW');
+  await expect(reviewV2(attr,'individual',true,100001)).rejects.toThrow('INVALID_REVIEW');
+  await expect(reviewV2(attr,'individual',true,1,false,null,false,null,observer)).rejects.toThrow('FORBIDDEN');
+  await expect(reviewV2(attr,'individual',true,1,false,id(90),true)).rejects.toThrow('CONTRACT_CONFIRMATION_REQUIRED');
+  expect(await count('meta_commercial_reviews')).toBe(0);
+  await db.exec('SET ROLE authenticated');
+  await expect(reviewV2(attr)).rejects.toThrow('permission denied');
+  await db.exec('RESET ROLE');
+});
+
 it('freezes approval/destination and validates the current commercial signal before transmission', async () => {
   const { attr } = await imported(); await review(attr);
   const eventId = await value<string>('SELECT event_id::text AS value FROM meta_conversion_events');
@@ -175,12 +255,15 @@ it('denies direct client table/RPC access and rejects credentials in integration
       await expect(db.query('SELECT * FROM public.meta_lead_attributions')).rejects.toThrow('permission denied');
       await expect(scalar('meta_ads_snapshot',[admin])).rejects.toThrow('permission denied');
       await expect(scalar('meta_ads_claim',['inbound'])).rejects.toThrow('permission denied');
+      await expect(scalar('meta_ads_review_v2',[admin,id(99),'individual',true,1,true,true,false,null,null,false])).rejects.toThrow('permission denied');
+      await expect(scalar('meta_ads_contract_is_related',[id(99),new Date().toISOString(),id(98),null])).rejects.toThrow('permission denied');
     } finally { await db.exec('RESET ROLE'); }
   }
   await db.exec('SET ROLE service_role');
   try {
     expect(await enqueue()).toBe(1); await importClaim((await claim())!);
     const snapshot = await scalar<{ imported: number }>('meta_ads_snapshot',[admin]); expect(snapshot.imported).toBe(1);
+    await expect(scalar('meta_ads_contract_is_related',[id(99),new Date().toISOString(),id(98),null])).rejects.toThrow('permission denied');
   } finally { await db.exec('RESET ROLE'); }
 });
 

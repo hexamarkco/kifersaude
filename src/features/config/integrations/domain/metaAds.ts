@@ -1,5 +1,18 @@
+export const metaContractingModalityLabels = {
+  individual: 'Pessoa física', business: 'Pessoa jurídica', collective_membership: 'Coletivo por adesão',
+} as const;
+export type MetaContractingModality = keyof typeof metaContractingModalityLabels;
+export const isMetaContractingModality = (value: unknown): value is MetaContractingModality =>
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(metaContractingModalityLabels, value);
+export const metaEligibilityLabels: Record<MetaContractingModality, string> = {
+  individual: 'Elegibilidade dos beneficiários confirmada para o plano pessoa física',
+  business: 'Elegibilidade da empresa e dos beneficiários confirmada para o plano empresarial',
+  collective_membership: 'Elegibilidade e vínculo de adesão confirmados para o plano escolhido',
+};
+
 export type MetaReviewInput = {
-  attributionId: string; eligibleBusiness: boolean; lives: number; regionServed: boolean;
+  attributionId: string; contractingModality: MetaContractingModality; eligibilityConfirmed: boolean;
+  saleClosed: boolean; lives: number; regionServed: boolean;
   interestConfirmed: boolean; opportunityId: string | null; contractId: string | null; contractCompleted: boolean;
 };
 export type MetaAttribution = {
@@ -12,8 +25,10 @@ export type MetaAttribution = {
     qualified: boolean; eligible_business: boolean; lives: number; region_served: boolean;
     interest_confirmed: boolean; contract_completed: boolean; reviewed_at: string;
     contract_id: string | null; opportunity_id: string | null;
+    contracting_modality?: MetaContractingModality | null; eligibility_confirmed?: boolean | null;
+    sale_closed?: boolean; criteria_version?: string;
   } | null;
-  contracts: { id: string; label: string }[];
+  contracts: { id: string; label: string; lead_id?: string; lead_name?: string | null; opportunity_ids?: string[] }[];
   opportunities: { id: string; label: string; status: string }[];
 };
 export type MetaSnapshot = {
@@ -38,5 +53,16 @@ export function metaConnectionLabel(snapshot: MetaConnectionState): string {
   return 'Leads recebidos pelo CRM';
 }
 export function isMetaQualified(input: MetaReviewInput): boolean {
-  return input.eligibleBusiness && Number.isInteger(input.lives) && input.lives >= 2 && input.regionServed && input.interestConfirmed;
+  return isMetaContractingModality(input.contractingModality) && input.eligibilityConfirmed
+    && Number.isInteger(input.lives) && input.lives >= 1 && input.lives <= 100000 && input.regionServed && input.interestConfirmed;
+}
+
+export function getMetaReviewProgress(review: { contract_completed: boolean; sale_closed?: boolean }): string {
+  if (review.contract_completed) return 'Contrato cadastrado e contratação confirmada';
+  return review.sale_closed ? 'Venda fechada — contrato pendente' : 'Em negociação';
+}
+
+export function getMetaReviewContracts(attribution: MetaAttribution, opportunityId: string): MetaAttribution['contracts'] {
+  return attribution.contracts.filter((contract) => !contract.lead_id || contract.lead_id === attribution.lead_id
+    || (Boolean(opportunityId) && contract.opportunity_ids?.includes(opportunityId)));
 }

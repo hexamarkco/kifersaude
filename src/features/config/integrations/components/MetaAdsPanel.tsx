@@ -1,9 +1,9 @@
-import { Heading, Text, FieldLabel } from '../../../../design-system';
-import { Checkbox } from '../../../../design-system';
+import { Heading, Text } from '../../../../design-system';
 import { useState } from 'react';
 import { Alert, Button, Card, Field, Select, Input, SectionHeader } from '../../../../design-system';
-import { isMetaQualified, metaConnectionLabel, type MetaAttribution, type MetaReviewInput } from '../domain/metaAds';
+import { metaConnectionLabel } from '../domain/metaAds';
 import { useMetaAds } from '../hooks/useMetaAds';
+import { MetaCommercialReview } from './MetaCommercialReview';
 
 const date = (value: string | null) => value ? new Date(value).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Ainda não registrado';
 const outcome: Record<string, string> = {
@@ -22,44 +22,6 @@ const failure: Record<string, string> = {
   QUALIFICATION_REVOKED: 'Uma nova avaliação retirou a qualificação deste lead.',
   COMMERCIAL_SIGNAL_REVOKED: 'O vínculo ou a avaliação comercial mudou. Confira o registro antes de continuar.',
 };
-
-function CommercialReview({ attribution, saving, save }: {
-  attribution: MetaAttribution; saving: boolean; save: (input: MetaReviewInput) => Promise<void>;
-}) {
-  const previous = attribution.latest_review;
-  const [eligible, setEligible] = useState(previous?.eligible_business ?? false);
-  const [lives, setLives] = useState(previous ? String(previous.lives) : '');
-  const [region, setRegion] = useState(previous?.region_served ?? false);
-  const [interest, setInterest] = useState(previous?.interest_confirmed ?? false);
-  const [opportunity, setOpportunity] = useState(previous?.opportunity_id ?? '');
-  const [contract, setContract] = useState(previous?.contract_id ?? '');
-  const [completed, setCompleted] = useState(false);
-  const input: MetaReviewInput = {
-    attributionId: attribution.id, eligibleBusiness: eligible, lives: Number(lives), regionServed: region,
-    interestConfirmed: interest, opportunityId: opportunity || null, contractId: contract || null, contractCompleted: completed,
-  };
-  return <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void save(input); }}>
-    <Heading level={3} className="font-[var(--font-display)] text-lg">Avaliação comercial</Heading>
-    <Text className="text-sm text-[var(--text-muted)]">Confirme cada critério com o cliente. Atendimento e proposta enviada não comprovam qualificação. Esta avaliação registra o administrador, a data e os critérios utilizados.</Text>
-    <FieldLabel className="flex items-center gap-2 text-sm"><Checkbox  checked={eligible} onChange={(e) => setEligible(e.target.checked)} />Empresário ou MEI com elegibilidade confirmada</FieldLabel>
-    <Field label="Quantidade de vidas confirmada"><Input type="number" min={1} max={100000} step={1} required value={lives} onChange={(e) => setLives(e.target.value)} /></Field>
-    <FieldLabel className="flex items-center gap-2 text-sm"><Checkbox  checked={region} onChange={(e) => setRegion(e.target.checked)} />Região atendida confirmada</FieldLabel>
-    <FieldLabel className="flex items-center gap-2 text-sm"><Checkbox  checked={interest} onChange={(e) => setInterest(e.target.checked)} />Interesse em contratar confirmado com o cliente</FieldLabel>
-    <Text className="text-sm font-medium">{isMetaQualified(input) ? 'Critérios de qualificação atendidos' : 'Qualificação ainda não confirmada'}</Text>
-    <Field label="Oportunidade ou proposta vinculada"><Select value={opportunity} onChange={(e) => setOpportunity(e.target.value)}>
-      <option value="">Sem vínculo selecionado</option>
-      {attribution.opportunities.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-    </Select></Field>
-    <Field label="Contrato do cliente"><Select value={contract} onChange={(e) => { setContract(e.target.value); setCompleted(false); }}>
-      <option value="">Sem contrato selecionado</option>
-      {attribution.contracts.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-    </Select></Field>
-    <FieldLabel className="flex items-start gap-2 text-sm"><Checkbox  disabled={!contract} checked={completed} onChange={(e) => setCompleted(e.target.checked)} />Conferi o contrato selecionado e confirmo que a contratação foi efetivamente concluída.</FieldLabel>
-    <Text className="text-sm text-[var(--text-muted)]">Selecione somente o contrato relacionado a esta entrada da Meta. O cadastro do contrato ou a mudança de status do lead, isoladamente, não confirma uma venda.</Text>
-    {previous && <Text className="text-sm">Última avaliação: {date(previous.reviewed_at)} · {previous.qualified ? 'Qualificado' : 'Não qualificado'}{previous.contract_completed ? ' · Contratação confirmada' : ''}</Text>}
-    <Button type="submit" loading={saving} disabled={!Number.isInteger(Number(lives)) || Number(lives) < 1}>Registrar avaliação</Button>
-  </form>;
-}
 
 export default function MetaAdsPanel() {
   const state = useMetaAds();
@@ -93,7 +55,8 @@ export default function MetaAdsPanel() {
         {snapshot.capiEnabled ? 'Somente sinais liberados individualmente podem ser enviados.' : 'As avaliações ficam registradas no CRM. O envio exige revisão das restrições de dados de saúde, aprovação da configuração e autorização explícita.'}
       </Alert>
       <Card>
-        <Heading level={3} className="font-[var(--font-display)] text-lg">Origem e progresso comercial</Heading>
+        <Heading level={3} className="font-[var(--font-display)] text-lg">Leads dos anúncios: origem e resultado</Heading>
+        <Text className="mt-2 text-sm text-[var(--text-muted)]">Confira de qual anúncio veio o contato e registre a modalidade, a qualificação e o fechamento da negociação.</Text>
         <form className="my-3 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); state.search(search); setSelected(''); }}>
           <Field label="Buscar lead por nome ou identificação da Meta"><Input value={search} maxLength={100} onChange={(e) => setSearch(e.target.value)} /></Field>
           <Button variant="secondary" type="submit" loading={state.loading}>Buscar</Button>
@@ -113,7 +76,7 @@ export default function MetaAdsPanel() {
               <div><dt>Cadastro no CRM</dt><dd>{attribution.matched_existing ? 'Contato existente preservado' : 'Novo contato'}</dd></div>
               <div><dt>Origem do formulário</dt><dd>{attribution.traffic_type === 'paid' ? 'Anúncio identificado' : attribution.traffic_type === 'organic' ? 'Preenchimento orgânico · sem sinal publicitário' : 'Origem ainda não confirmada · sem sinal publicitário'}</dd></div>
             </dl>
-            <CommercialReview key={`${attribution.id}:${attribution.latest_review?.reviewed_at ?? ''}`} attribution={attribution} saving={state.saving} save={state.review} />
+            <MetaCommercialReview key={`${attribution.id}:${attribution.latest_review?.reviewed_at ?? ''}`} attribution={attribution} saving={state.saving} save={state.review} />
           </div>}
         </>}
         <Text className="mt-3 text-xs text-[var(--text-muted)]">Exibindo até 50 entradas recentes. O histórico completo permanece armazenado.</Text>

@@ -1728,6 +1728,29 @@ export type Database = {
           },
         ]
       }
+      comm_whatsapp_campaign_copy_cursors: {
+        Row: {
+          campaign_id: string
+          next_index: number
+        }
+        Insert: {
+          campaign_id: string
+          next_index?: number
+        }
+        Update: {
+          campaign_id?: string
+          next_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comm_whatsapp_campaign_copy_cursors_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "comm_whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comm_whatsapp_campaign_events: {
         Row: {
           campaign_id: string
@@ -6080,7 +6103,9 @@ export type Database = {
           attribution_id: string
           contract_completed: boolean
           contract_id: string | null
+          contracting_modality: string | null
           criteria_version: string
+          eligibility_confirmed: boolean | null
           eligible_business: boolean
           id: string
           interest_confirmed: boolean
@@ -6089,13 +6114,16 @@ export type Database = {
           qualified: boolean
           region_served: boolean
           reviewed_at: string
+          sale_closed: boolean
         }
         Insert: {
           actor_id: string
           attribution_id: string
           contract_completed?: boolean
           contract_id?: string | null
+          contracting_modality?: string | null
           criteria_version?: string
+          eligibility_confirmed?: boolean | null
           eligible_business: boolean
           id?: string
           interest_confirmed: boolean
@@ -6104,13 +6132,16 @@ export type Database = {
           qualified: boolean
           region_served: boolean
           reviewed_at?: string
+          sale_closed?: boolean
         }
         Update: {
           actor_id?: string
           attribution_id?: string
           contract_completed?: boolean
           contract_id?: string | null
+          contracting_modality?: string | null
           criteria_version?: string
+          eligibility_confirmed?: boolean | null
           eligible_business?: boolean
           id?: string
           interest_confirmed?: boolean
@@ -6119,6 +6150,7 @@ export type Database = {
           qualified?: boolean
           region_served?: boolean
           reviewed_at?: string
+          sale_closed?: boolean
         }
         Relationships: [
           {
@@ -7317,6 +7349,161 @@ export type Database = {
           },
         ]
       }
+      whatsapp_transport_attempts: {
+        Row: {
+          finished_at: string | null
+          id: string
+          operation_key: string | null
+          provider: string
+          result: Json | null
+          started_at: string
+          uncertain: boolean
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          operation_key?: string | null
+          provider: string
+          result?: Json | null
+          started_at?: string
+          uncertain?: boolean
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          operation_key?: string | null
+          provider?: string
+          result?: Json | null
+          started_at?: string
+          uncertain?: boolean
+        }
+        Relationships: []
+      }
+      whatsapp_transport_diagnostics: {
+        Row: {
+          checked_at: string | null
+          connected: boolean | null
+          error: string | null
+          instance_id: string | null
+          last_inbound_at: string | null
+          last_webhook_at: string | null
+          phone: string | null
+          provider: string
+        }
+        Insert: {
+          checked_at?: string | null
+          connected?: boolean | null
+          error?: string | null
+          instance_id?: string | null
+          last_inbound_at?: string | null
+          last_webhook_at?: string | null
+          phone?: string | null
+          provider: string
+        }
+        Update: {
+          checked_at?: string | null
+          connected?: boolean | null
+          error?: string | null
+          instance_id?: string | null
+          last_inbound_at?: string | null
+          last_webhook_at?: string | null
+          phone?: string | null
+          provider?: string
+        }
+        Relationships: []
+      }
+      whatsapp_transport_identity_review: {
+        Row: {
+          channel_id: string
+          external_message_id: string
+          lid: string | null
+          occurred_at: string
+          phone: string | null
+          reason: string
+        }
+        Insert: {
+          channel_id: string
+          external_message_id: string
+          lid?: string | null
+          occurred_at: string
+          phone?: string | null
+          reason: string
+        }
+        Update: {
+          channel_id?: string
+          external_message_id?: string
+          lid?: string | null
+          occurred_at?: string
+          phone?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_transport_identity_review_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "comm_whatsapp_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_transport_state: {
+        Row: {
+          changed_at: string
+          instance_id: string | null
+          provider: string
+          revision: number
+          singleton: boolean
+        }
+        Insert: {
+          changed_at?: string
+          instance_id?: string | null
+          provider?: string
+          revision?: number
+          singleton?: boolean
+        }
+        Update: {
+          changed_at?: string
+          instance_id?: string | null
+          provider?: string
+          revision?: number
+          singleton?: boolean
+        }
+        Relationships: []
+      }
+      whatsapp_transport_switches: {
+        Row: {
+          actor_id: string
+          changed_at: string
+          instance_id: string | null
+          phone: string
+          previous_provider: string
+          provider: string
+          revision: number
+          transfer_pending: boolean
+        }
+        Insert: {
+          actor_id: string
+          changed_at?: string
+          instance_id?: string | null
+          phone: string
+          previous_provider: string
+          provider: string
+          revision: number
+          transfer_pending?: boolean
+        }
+        Update: {
+          actor_id?: string
+          changed_at?: string
+          instance_id?: string | null
+          phone?: string
+          previous_provider?: string
+          provider?: string
+          revision?: number
+          transfer_pending?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_cron_job_runs: {
@@ -7878,6 +8065,14 @@ export type Database = {
           old_status: string
         }[]
       }
+      ai_autonomous_turn_is_current: {
+        Args: {
+          p_chat_id: string
+          p_job_id: string
+          p_source_message_id: string
+        }
+        Returns: boolean
+      }
       ai_lead_is_waiting_for_quote: {
         Args: { p_lead_id: string }
         Returns: boolean
@@ -7885,6 +8080,10 @@ export type Database = {
       archive_comm_whatsapp_old_deleted_chat_messages: {
         Args: { p_batch_size?: number; p_older_than_days?: number }
         Returns: number
+      }
+      assign_comm_whatsapp_campaign_copy: {
+        Args: { p_target_id: string }
+        Returns: string
       }
       audit_apply_reativacao: { Args: never; Returns: undefined }
       audit_classify_single_lead: {
@@ -7980,6 +8179,15 @@ export type Database = {
       build_holder_pessoa_chave: {
         Args: { cpf_value: string }
         Returns: string
+      }
+      can_send_ai_autonomous_reply: {
+        Args: {
+          p_chat_id: string
+          p_idempotency_key: string
+          p_job_id: string
+          p_source_message_id: string
+        }
+        Returns: boolean
       }
       cancel_future_pending_dispatches: {
         Args: { p_after_step_index: number; p_target_id: string }
@@ -9680,6 +9888,10 @@ export type Database = {
       invoke_process_pending_leads: { Args: never; Returns: number }
       invoke_scheduled_messages_worker: { Args: never; Returns: number }
       is_leap_year: { Args: { year_value: number }; Returns: boolean }
+      latest_ai_autonomous_inbound: {
+        Args: { p_chat_id: string }
+        Returns: string
+      }
       mark_ai_autonomous_reply_delivery_key_sent: {
         Args: {
           p_external_message_id: string
@@ -10128,6 +10340,15 @@ export type Database = {
         Returns: Json
       }
       meta_ads_claim: { Args: { p_direction: string }; Returns: Json }
+      meta_ads_contract_is_related: {
+        Args: {
+          p_contract: string
+          p_lead: string
+          p_opportunity: string
+          p_received_at: string
+        }
+        Returns: boolean
+      }
       meta_ads_enqueue: { Args: { p_receipts: Json }; Returns: number }
       meta_ads_finish: {
         Args: {
@@ -10177,6 +10398,22 @@ export type Database = {
           p_lives: number
           p_opportunity?: string
           p_region: boolean
+        }
+        Returns: string
+      }
+      meta_ads_review_v2: {
+        Args: {
+          p_actor: string
+          p_attribution: string
+          p_completed?: boolean
+          p_contract?: string
+          p_eligibility: boolean
+          p_interest: boolean
+          p_lives: number
+          p_modality: string
+          p_opportunity?: string
+          p_region: boolean
+          p_sale_closed: boolean
         }
         Returns: string
       }
@@ -10253,6 +10490,7 @@ export type Database = {
         }
         Returns: string
       }
+      recover_stalled_ai_autonomous_jobs: { Args: never; Returns: undefined }
       release_ai_autonomous_reply_lock: {
         Args: { p_chat_id: string; p_owner_id: string }
         Returns: undefined
@@ -10349,6 +10587,16 @@ export type Database = {
           p_regiao: string
         }
         Returns: string
+      }
+      save_ai_autonomous_turn_memory: {
+        Args: {
+          p_chat_id: string
+          p_job_id: string
+          p_lead_id: string
+          p_source_message_id: string
+          p_state: Json
+        }
+        Returns: boolean
       }
       schedule_ai_autonomous_reply_job: {
         Args: { p_chat_id: string; p_delay_seconds?: number }
@@ -10466,6 +10714,25 @@ export type Database = {
         Returns: string
       }
       user_is_admin: { Args: never; Returns: boolean }
+      whatsapp_transport_begin: {
+        Args: {
+          p_operation_key?: string
+          p_provider: string
+          p_revision: number
+        }
+        Returns: Json
+      }
+      whatsapp_transport_switch: {
+        Args: {
+          p_actor_id: string
+          p_instance_id?: string
+          p_phone: string
+          p_provider: string
+          p_revision: number
+          p_transfer_pending?: boolean
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

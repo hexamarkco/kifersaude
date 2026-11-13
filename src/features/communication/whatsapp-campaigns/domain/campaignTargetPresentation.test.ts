@@ -12,6 +12,7 @@ const createTarget = (overrides: Partial<CommWhatsAppCampaignTargetListItem> = {
   status: 'pending',
   current_step_index: 0,
   next_send_at: null,
+  ab_variant: null,
   last_attempt_at: null,
   error_message: null,
   chat: null,

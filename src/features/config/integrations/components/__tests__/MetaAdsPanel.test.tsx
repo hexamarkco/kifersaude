@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { act } from 'react';
 import { render } from '@testing-library/react';
 import { test, vi } from 'vitest';
-import type { MetaSnapshot } from '../../domain/metaAds';
+import type { MetaReviewInput, MetaSnapshot } from '../../domain/metaAds';
 import { isMetaQualified, metaConnectionLabel } from '../../domain/metaAds';
 
 const mocks = vi.hoisted(() => ({
@@ -37,10 +37,10 @@ test('explica falhas sem exibir credenciais ou supor sucesso de importação', (
   try { assert.ok(document.body.textContent?.includes(mocks.error)); assert.ok(!document.body.textContent?.includes('Leads recebidos pelo CRM')); }
   finally { view.unmount(); }
 });
-test('qualificação exige os quatro critérios e status de conexão depende de evidência de importação', () => {
-  const input={ attributionId: 'synthetic',eligibleBusiness: true,lives: 2,regionServed: true,interestConfirmed: true,opportunityId: null,contractId: null,contractCompleted: false };
+test('qualificação considera a modalidade e a elegibilidade; conexão depende de evidência de importação', () => {
+  const input: MetaReviewInput={ attributionId: 'synthetic',contractingModality: 'individual',eligibilityConfirmed: true,saleClosed: false,lives: 1,regionServed: true,interestConfirmed: true,opportunityId: null,contractId: null,contractCompleted: false };
   assert.equal(isMetaQualified(input),true);
-  for (const partial of [{ eligibleBusiness: false },{ lives: 1 },{ regionServed: false },{ interestConfirmed: false }]) {
+  for (const partial of [{ eligibilityConfirmed: false },{ lives: 0 },{ lives: 1.5 },{ lives: 100001 },{ regionServed: false },{ interestConfirmed: false }]) {
     assert.equal(isMetaQualified({ ...input,...partial }),false);
   }
   const snapshot=emptySnapshot();

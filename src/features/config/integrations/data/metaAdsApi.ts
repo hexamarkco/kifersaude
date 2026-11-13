@@ -1,4 +1,4 @@
-import { databaseClient } from '../../../../infrastructure/supabase';
+import { databaseClient, getSupabaseErrorMessage } from '../../../../infrastructure/supabase';
 import type { MetaReviewInput, MetaSnapshot } from '../domain/metaAds';
 
 export async function loadMetaAds(search = ''): Promise<MetaSnapshot> {
@@ -12,8 +12,13 @@ export async function loadMetaHistory(before: string): Promise<MetaSnapshot['his
   return data;
 }
 export async function saveMetaReview(input: MetaReviewInput): Promise<void> {
-  const { error } = await databaseClient.functions.invoke('meta-ads-admin', { body: { action: 'review', ...input } });
-  if (error) throw new Error('Não foi possível salvar. Atualize a tela e confira os vínculos da oportunidade e do contrato.');
+  const { data, error } = await databaseClient.functions.invoke<{ reviewId?: string }>('meta-ads-admin', { body: { action: 'review', ...input } });
+  if (error) {
+    const fallback = 'Não foi possível salvar. Atualize a tela e confira os vínculos da oportunidade e do contrato.';
+    const hasServerResponse = error instanceof Error && 'context' in error && error.context instanceof Response;
+    throw new Error(hasServerResponse ? await getSupabaseErrorMessage(error, fallback) : fallback);
+  }
+  if (typeof data?.reviewId !== 'string' || !data.reviewId.trim()) throw new Error('A avaliação não foi confirmada. Atualize a consulta antes de tentar novamente.');
 }
 export async function requeueMetaReceipt(leadgenId: string): Promise<void> {
   const { error } = await databaseClient.functions.invoke('meta-ads-admin', { body: { action: 'requeue', leadgenId } });

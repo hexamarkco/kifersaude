@@ -6,7 +6,8 @@ export function createMetaRepository(client: SupabaseClient, graphVersion: strin
     const { data, error } = await client.rpc(name, args);
     if (error) {
       const known = ['LEASE_LOST','ORIGIN_MISMATCH','MISSING_CONTACT_FIELDS','AMBIGUOUS_CONTACT','LEAD_DEFAULTS_MISSING',
-        'INVALID_VALIDATION_CONTACT','VALIDATION_IMPORT_FAILED','VALIDATION_ROLLBACK_FAILED'];
+        'INVALID_VALIDATION_CONTACT','VALIDATION_IMPORT_FAILED','VALIDATION_ROLLBACK_FAILED',
+        'FORBIDDEN','INVALID_REVIEW','OPPORTUNITY_MISMATCH','CONTRACT_MISMATCH','CONTRACT_ALREADY_ATTRIBUTED','CONTRACT_CONFIRMATION_REQUIRED'];
       const code = known.find((item) => error.message === item);
       throw new MetaError(code ?? 'DATABASE_UNAVAILABLE', !code);
     }

@@ -170,6 +170,38 @@ describe('reliable worker and delivery gates', () => {
 });
 
 describe('admin HTTP boundary', () => {
+  it('preserves legacy review calls and routes explicit modalities and pending sales to the new RPC', async () => {
+    const reviewId = '00000000-0000-4000-8000-000000000010';
+    const rpc = vi.fn().mockResolvedValue(reviewId);
+    const handler = createAdminHandler({ authorize: async () => ({ actor: 'verified-admin' }),snapshot: vi.fn(),rpc });
+    const input = { action: 'review',attributionId: '00000000-0000-4000-8000-000000000011',eligibleBusiness: true,
+      lives: 1,regionServed: true,interestConfirmed: true,opportunityId: null,contractId: null,contractCompleted: false };
+    const request = (body: unknown) => new Request('https://local.invalid',{ method: 'POST',body: JSON.stringify(body) });
+    expect((await handler(request(input))).status).toBe(200);
+    expect(rpc.mock.calls[0][0]).toBe('meta_ads_review');
+    for (const modality of ['individual','business','collective_membership']) {
+      const response = await handler(request({ ...input,contractingModality: modality,eligibilityConfirmed: true,saleClosed: true,actor: 'spoofed-admin' }));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ reviewId });
+      expect(rpc).toHaveBeenLastCalledWith('meta_ads_review_v2', {
+        p_actor: 'verified-admin',p_attribution: input.attributionId,p_lives: 1,p_region: true,p_interest: true,
+        p_opportunity: null,p_contract: null,p_completed: false,p_modality: modality,p_eligibility: true,p_sale_closed: true,
+      });
+    }
+  });
+  it('rejects incomplete modality reviews and requires a confirmed RPC response', async () => {
+    const rpc = vi.fn().mockResolvedValue(null);
+    const handler = createAdminHandler({ authorize: async () => ({ actor: 'verified-admin' }),snapshot: vi.fn(),rpc });
+    const input = { action: 'review',attributionId: '00000000-0000-4000-8000-000000000011',lives: 1,
+      regionServed: true,interestConfirmed: true,opportunityId: null,contractId: null,contractCompleted: false,
+      contractingModality: 'individual',eligibilityConfirmed: true,saleClosed: true };
+    const request = (body: unknown) => new Request('https://local.invalid',{ method: 'POST',body: JSON.stringify(body) });
+    expect((await handler(request({ ...input,contractingModality: 'other' }))).status).toBe(400);
+    expect((await handler(request({ ...input,eligibilityConfirmed: undefined }))).status).toBe(400);
+    expect((await handler(request({ ...input,contractCompleted: true,contractId: '00000000-0000-4000-8000-000000000012',saleClosed: false }))).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+    expect((await handler(request(input))).status).toBe(503);
+  });
   it('rejects unauthenticated/non-admin requests before loading CRM data', async () => {
     const snapshot = vi.fn(); const rpc = vi.fn();
     const handler = createAdminHandler({ authorize: async () => ({ status: 403 }),snapshot,rpc });

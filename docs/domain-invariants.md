@@ -46,6 +46,12 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 - Os status da oportunidade são `open`, `qualified`, `proposal`, `won` e `lost`; `archived` é um estado separado para manter a etapa comercial original.
 - O auditor de follow-up agrupa datas no fuso `America/Sao_Paulo`; ele apenas sinaliza lembretes/mensagens equivalentes entre membros, retornos coincidentes e mensagens dirigidas a não principais sem justificativa registrada. Não altera agenda automaticamente e marca cobertura parcial quando RPCs truncam membros/oportunidades.
 
+## Avaliação comercial dos leads da Meta
+
+- A avaliação `all-modalities-v2` distingue pessoa física, pessoa jurídica e coletivo por adesão. A qualificação exige modalidade explícita, elegibilidade do produto confirmada, ao menos uma pessoa, região atendida e interesse confirmado. Mínimos específicos do produto são verificados pelo operador. A regra anterior `pme-mei-v1` e a RPC legada continuam preservadas.
+- `sale_closed` pode registrar uma venda fechada enquanto o contrato está pendente. Esse registro não produz evento de contratação. A confirmação exige contrato real selecionado e conferido; a mera existência do contrato ou o status de um lead não bastam.
+- O contrato pode pertencer a outro contato somente quando a negociação selecionada reúne os dois como membros ativos. A ligação é revalidada no banco e antes do envio de eventos; o contrato mantém o lead original. Uma confirmação contratual continua gerando no máximo um evento por contrato.
+
 ## Agenda e próximo follow-up
 
 - `leads.proximo_retorno` é uma projeção do primeiro lembrete pendente do lead ou dos seus contratos, incluindo atrasados. Sem pendência, o valor é nulo. Inserir, concluir, cancelar, reabrir, reagendar, excluir ou mover um lembrete recalcula essa projeção no banco; a lista, a ordenação e a exportação de leads usam o mesmo valor.

@@ -533,20 +533,17 @@ export function WhatsAppMessageBody({
           ) : null}
         </div>
         {interactiveInfo.buttons.length > 0 ? (
-          <div className="border-t border-[var(--border-subtle)]">
+          <div className="whatsapp-inbox-interactive-options border-t border-[var(--border-subtle)]">
             {interactiveInfo.buttons.map((button, index) => (
-              <ActionSurface variant="plain" padding="none"
+              <Button variant="secondary"
                 type="button"
                 key={button.id ?? `${button.title}-${index}`}
                 onClick={() => onSelectInteractiveReply(message, button)}
                 disabled={message.direction !== 'inbound' || (!button.title && !button.id)}
-                className={cx(
-                  'w-full py-2.5 text-center text-sm font-medium text-[var(--accent-text,var(--text-primary))] transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent',
-                  index > 0 ? 'border-t border-[var(--border-subtle)]' : null,
-                )}
+                className="whatsapp-inbox-interactive-option"
               >
                 {button.title || button.id}
-              </ActionSurface>
+              </Button>
             ))}
           </div>
         ) : null}
@@ -557,20 +554,20 @@ export function WhatsAppMessageBody({
                 {section.title ? (
                   <Text className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{section.title}</Text>
                 ) : null}
-                <div className="mt-1.5 space-y-1.5">
+                <div className="whatsapp-inbox-interactive-options">
                   {section.rows.map((row, rowIndex) => (
-                    <ActionSurface variant="plain" padding="none"
+                    <Button variant="secondary"
                       type="button"
                       key={row.id ?? `${section.title}-row-${rowIndex}`}
                       onClick={() => onSelectInteractiveReply(message, row)}
                       disabled={message.direction !== 'inbound' || (!row.title && !row.id)}
-                      className="w-full rounded-md py-1 text-left transition hover:bg-[var(--bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:hover:bg-transparent"
+                      className="whatsapp-inbox-interactive-option whatsapp-inbox-interactive-option-list"
                     >
-                      <Text className="text-sm font-medium leading-5 text-[var(--text-primary)]">{row.title || row.id}</Text>
+                      <span className="whatsapp-inbox-interactive-option-title">{row.title || row.id}</span>
                       {row.description ? (
-                        <Text className="text-xs leading-5 text-[var(--text-secondary)]">{row.description}</Text>
+                        <span className="whatsapp-inbox-interactive-option-description">{row.description}</span>
                       ) : null}
-                    </ActionSurface>
+                    </Button>
                   ))}
                 </div>
               </div>

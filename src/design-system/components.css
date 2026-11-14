@@ -383,12 +383,12 @@
   width: 1rem;
   height: 1rem;
   flex: none;
-  color: var(--loading-monogram-color, rgba(0, 0, 0, 0.45));
+  color: var(--loading-monogram-color, var(--text-muted, currentColor));
 }
 
-/* Translucent neutral ink picks up the actual surface beneath the monogram. */
+/* The monogram measures its surface and preserves its hue while changing lightness. */
 .painel-theme.kifer-ds .kds-loading-monogram {
-  color: var(--loading-monogram-color, rgba(0, 0, 0, 0.45));
+  color: var(--loading-monogram-color, var(--text-muted, currentColor));
 }
 
 .kds-loading-state > .kds-loading-monogram {

@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 import { LOADING_CYCLE_MS, useMinimumLoading } from '../useMinimumLoading';
+import { useLoadingMonogramTone } from '../hooks/useLoadingMonogramTone';
 
 const animationStyle = { '--loading-monogram-cycle': `${LOADING_CYCLE_MS}ms` } as CSSProperties;
 
@@ -14,10 +15,12 @@ type LoadingMonogramProps = {
 
 export function LoadingMonogram({ className, label, active, fallback }: LoadingMonogramProps) {
   const visible = useMinimumLoading(active === true);
+  const ref = useLoadingMonogramTone(active === undefined || visible);
   if (active !== undefined && !visible) return fallback ?? null;
 
   return (
     <svg
+      ref={ref}
       className={cx('kds-loading-monogram', className)}
       style={animationStyle}
       viewBox="235 296 610 490"

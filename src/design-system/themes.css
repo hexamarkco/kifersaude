@@ -32,7 +32,6 @@
   --text-inverse: #ffffff;
   --text-disabled: #b3a88f;
   --text-on-brand: #ffffff;
-  --loading-monogram-color: rgba(0, 0, 0, 0.45);
 
   --brand-primary: #c94c21;
   --brand-primary-hover: #a83d17;
@@ -248,7 +247,6 @@
   --text-inverse: #1b140d;
   --text-disabled: #665a51;
   --text-on-brand: #fff7ef;
-  --loading-monogram-color: rgba(255, 255, 255, 0.45);
   --brand-primary: #f0793f;
   --brand-primary-hover: #ff9159;
   --brand-primary-active: #cf5f28;

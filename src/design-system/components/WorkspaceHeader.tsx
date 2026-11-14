@@ -30,7 +30,7 @@ export function WorkspaceHeader({
   return <header className="kds-workspace-header">
     <div className="kds-workspace-header-desktop">
       <Breadcrumb>
-        <BreadcrumbItem><BreadcrumbLink onClick={onNavigateHome}>CRM</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem><BreadcrumbLink onClick={onNavigateHome}>Painel</BreadcrumbLink></BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem isCurrent>{title}</BreadcrumbItem>
       </Breadcrumb>

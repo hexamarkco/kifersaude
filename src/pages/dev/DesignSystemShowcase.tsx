@@ -165,7 +165,7 @@ function Showcase({
           </strong>
         </TextLink>
         <div className="ds-sidebar-section">
-          <span className="ds-eyebrow">BIBLIOTECA DO CRM</span>
+          <span className="ds-eyebrow">BIBLIOTECA DO PAINEL</span>
         </div>
         <NavigationList
           items={sections.map((item) => ({ ...item, href: `#${item.id}` }))}
@@ -175,14 +175,14 @@ function Showcase({
         />
         <div className="ds-sidebar-bottom">
           <span className="ds-live-dot" />
-          <span>Componentes reais do CRM</span>
+          <span>Componentes reais do painel</span>
           <Text>
             Uma base compartilhada.
             <br />
             Cada experiência conectada.
           </Text>
           <TextLink className="ds-text-link" href="/painel">
-            Acessar o CRM
+            Acessar o painel
             <ArrowRight size={14} aria-hidden="true" />
           </TextLink>
         </div>
@@ -372,7 +372,7 @@ function Overview({
             <Palette size={20} />
           </div>
           <div className="ds-identity-aa">
-            Aa<span>Playfair Display + Inter</span>
+            Aa<span>Sora + Poppins</span>
           </div>
           <div className="ds-identity-swatches">
             <span />

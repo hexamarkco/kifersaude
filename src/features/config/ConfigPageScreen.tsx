@@ -76,10 +76,10 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
     : activeAllowedTab === 'forms' ? isFormEditorOpen ? 'Editor de formulários' : 'Formulários de captação' : systemTitle;
   const description = area === 'automation'
     ? activeAllowedTab === 'integrations'
-      ? 'Conecte e acompanhe os serviços usados pelo CRM.'
+      ? 'Conecte e acompanhe os serviços usados pelo painel.'
       : activeAllowedTab === 'ai'
         ? 'Configure os recursos de inteligência artificial disponíveis para a equipe.'
-        : 'Organize os atendimentos automáticos e as regras que movimentam o CRM.'
+        : 'Organize os atendimentos automáticos e as regras que movimentam o painel.'
     : activeAllowedTab === 'users'
       ? 'Gerencie as contas que podem acessar a operação.'
       : activeAllowedTab === 'links'
@@ -89,14 +89,14 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
             ? 'Edite os dados, as perguntas e as respostas do formulário.'
             : 'Configure os formulários públicos que recebem novos contatos.'
           : section === 'access'
-            ? 'Controle quais áreas do CRM ficam disponíveis para cada perfil.'
+            ? 'Controle quais áreas do painel ficam disponíveis para cada perfil.'
             : section === 'leads'
               ? leadTab === 'origins'
                 ? 'Defina os canais de entrada e a visibilidade das origens para observadores.'
                 : leadManager?.description ?? 'Organize as etapas e os cadastros usados no acompanhamento de leads.'
               : section === 'contracts'
                 ? contractManager?.description ?? 'Organize as opções usadas no cadastro de contratos.'
-                : 'Defina como datas, sessões e notificações se comportam no CRM.';
+                : 'Defina como datas, sessões e notificações se comportam no painel.';
   const headerActions = activeAllowedTab === 'users' && getRoleModulePermission(role, 'config-users').can_edit
     ? <Button onClick={() => setCreateUserDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo usuário</Button>
     : activeAllowedTab === 'links'

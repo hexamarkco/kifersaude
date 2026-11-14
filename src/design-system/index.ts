@@ -5,6 +5,8 @@ export { default as FieldLabel } from './components/FieldLabel';
 export type { FieldLabelProps } from './components/FieldLabel';
 export { Image, Video, Audio } from './components/Media';
 export type { ImageProps } from './components/Media';
+export { default as ImageCropDialog } from './components/ImageCropDialog';
+export type { ImageCropDialogProps } from './components/ImageCropDialog';
 export { default as WorkflowCanvas, WorkflowBackground, WorkflowControls, WorkflowHandle, WorkflowMiniMap, WorkflowPanel } from './components/WorkflowCanvas';
 export { default as RichTextEditor } from './components/RichTextEditor';
 export type { RichTextEditorProps } from './components/RichTextEditor';

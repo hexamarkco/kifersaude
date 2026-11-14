@@ -1,5 +1,5 @@
 /* Public editorial compositions. All color/interaction tokens belong to Terracota CRM.
-   Poppins is scoped to the homepage; the operational system retains Inter. */
+   Poppins is shared by the homepage and the operational interface. */
 .painel-theme.kifer-ds.kifer-home {
   --font-sans: 'Poppins', sans-serif;
   --home-gutter: 5.2%;

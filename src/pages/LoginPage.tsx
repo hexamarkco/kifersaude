@@ -43,10 +43,10 @@ export default function LoginPage() {
   return (
     <PublicShell theme="light" width="full" className="kds-login-page">
       <main className="kds-login-layout">
-        <aside className="kds-login-brand-panel" aria-label="Kifer Saúde CRM">
+        <aside className="kds-login-brand-panel" aria-label="Painel Kifer Saúde">
           <div className="kds-login-brand-header">
             <BrandWordmark />
-            <Text as="span" className="kds-login-brand-label">CRM</Text>
+            <Text as="span" className="kds-login-brand-label">PAINEL</Text>
           </div>
 
           <div className="kds-login-brand-copy">
@@ -67,7 +67,7 @@ export default function LoginPage() {
           <div className="kds-login-card">
             <header className="kds-login-heading">
               <Text className="kds-login-eyebrow">Seu espaço de trabalho</Text>
-              <Heading family="display" level={1} id="login-title">Bem-vindo ao CRM</Heading>
+              <Heading family="display" level={1} id="login-title">Bem-vindo ao painel</Heading>
               <Text size="sm">Entre com seu usuário e senha para continuar.</Text>
             </header>
 
@@ -133,7 +133,7 @@ export default function LoginPage() {
                 fullWidth
                 className="kds-login-submit"
               >
-                {loading ? 'Entrando...' : <>Entrar no CRM <ArrowRight className="kds-control-icon" aria-hidden="true" /></>}
+                {loading ? 'Entrando...' : <>Entrar no painel <ArrowRight className="kds-control-icon" aria-hidden="true" /></>}
               </Button>
             </form>
 

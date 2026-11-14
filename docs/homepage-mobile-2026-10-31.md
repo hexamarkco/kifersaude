@@ -25,7 +25,7 @@ A comparação de produção abrange 768, 1024, 1440 e 1920 px, além de 1536 ×
 | 9. WhatsApp | Título forte, benefícios e ação principal, seguidos por telefone ilustrativo e retrato integrados. O destino real do link foi preservado. | [WhatsApp](../output/playwright/home-mobile/390-fale-agora.png) |
 | 10. Rodapé | Marca e apresentação no topo, grupos de links verticais, contatos, rede social e informações legais. | [Rodapé](../output/playwright/home-mobile/390-home-footer.png) |
 
-As imagens usam recorte com `object-fit: cover`, mantendo suas proporções. Os logotipos continuam proporcionais. O site usa Playfair Display nos destaques editoriais e Poppins na interface pública; a tipografia do CRM não foi alterada.
+As imagens usam recorte com `object-fit: cover`, mantendo suas proporções. Os logotipos continuam proporcionais. O site usa Sora nos destaques editoriais e Poppins na interface pública; a tipografia do CRM não foi alterada.
 
 ## Validação
 

@@ -48,7 +48,7 @@ Antes da substituição, foram inspecionados `HomePage`, a API pública e os tip
 | `src/design-system/home.css` | Composições e responsividade, com tokens oficiais e escopo `.kifer-home`. |
 | `src/design-system/styles.css` | Importação pelo único entrypoint visual. |
 | `src/design-system/components/Radio.tsx` | Suporte aditivo a nome e descrição acessíveis dos grupos. |
-| `index.html` | Carregamento de Poppins; Inter e Playfair existentes mantidos. |
+| `index.html` | Carregamento das famílias Sora e Poppins. |
 | `src/pages/public/HomePage.test.tsx` | Caracterização da captação e teste integrado de perfil/FAQ. |
 | `public/images/home/{family,work,business}.png` | Três imagens ilustrativas contextuais, geradas com a ferramenta integrada. |
 | `public/images/home/ASSETS.md` | Origem, finalidade e prompts finais dos três ativos. |
@@ -91,6 +91,6 @@ O browser de desenvolvimento também registra o aviso preexistente de lifecycle 
 3. As três fotografias contextuais são novas imagens ilustrativas, com direção de arte próxima das referências, sem representar clientes reais. [Prompts e arquivos](../public/images/home/ASSETS.md).
 4. A faixa de operadoras contém os cinco logos oficiais disponíveis; as outras marcas vistas no conceito não foram recriadas.
 5. Contatos, perguntas, campos e avisos legais reais prevalecem sobre dados ilustrativos. O formulário pode ficar maior ao informar idades de várias pessoas, preservando as regras de captação.
-6. Cores vêm dos tokens Terracota CRM; Poppins fica restrita à homepage e ao seu menu. Outros módulos conservam Inter e seus estilos.
+6. Cores vêm dos tokens Terracota CRM; Poppins é a fonte de interface em todo o sistema, incluindo a homepage e seu menu.
 
 Não houve deploy, alteração de schema/migrations, autenticação, CRM administrativo, automações ou envio de comunicação real. Modificações de outras tarefas no workspace não foram alteradas por este trabalho.

@@ -1,13 +1,12 @@
 import {
-  LoadingMonogram,
   ButtonGroup,
   Card,
   Field,
-  FieldLabel,
   FileInput,
   Heading,
   IconButton,
   Image,
+  ImageCropDialog,
   InfoTooltip,
   Input,
   LoadingState,
@@ -38,7 +37,7 @@ import {
   DialogTitle,
   DisclosureTrigger,
 } from '../../../design-system';
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import {
   Check,
   ChevronDown,
@@ -56,7 +55,7 @@ import {
 } from "lucide-react";
 
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { uploadLinkPageImage } from "../../../lib/imageUploadService";
+import { useProfilePhoto } from './hooks/useProfilePhoto';
 import { getLinkIcon, LINK_ICON_OPTIONS } from "../../../lib/linkIcons";
 import { linksService } from "../../../lib/linksService";
 import type { PublicLinkItem, PublicLinkPageSettings } from "../../public-content";
@@ -98,7 +97,8 @@ export default function LinksScreen({
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copiar link");
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const photoInputId = useId();
+  const profilePhoto = useProfilePhoto((url) => setProfileForm((prev) => ({ ...prev, avatar_url: url })));
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [linkSearch, setLinkSearch] = useState('');
@@ -170,26 +170,12 @@ export default function LinksScreen({
     }
   };
 
-  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
 
-    setUploadingAvatar(true);
-    try {
-      const result = await uploadLinkPageImage(file);
-
-      if (!result.success || !result.url) {
-        toast.error(result.error ?? "Não foi possível fazer upload da imagem.");
-      } else {
-        setProfileForm((prev) => ({ ...prev, avatar_url: result.url! }));
-      }
-    } catch (error) {
-      console.error("Erro ao enviar a imagem da página de links:", error);
-      toast.error(error instanceof Error ? error.message : "Não foi possível fazer upload da imagem.");
-    } finally {
-      setUploadingAvatar(false);
-    }
+    profilePhoto.selectPhoto(file);
   };
 
   const handleSaveProfile = async () => {
@@ -568,46 +554,39 @@ export default function LinksScreen({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Foto">
-            <div className="flex items-center gap-4">
-              <div className="relative h-20 w-20 shrink-0">
+          <div className="kds-link-profile-editor">
+          <Field label="Foto" htmlFor={photoInputId} className="kds-link-profile-photo-field">
+            <div className="kds-link-profile-photo-controls">
+              <div className="kds-link-profile-photo-preview">
                 {profileForm.avatar_url ? (
                   <Image
                     src={profileForm.avatar_url}
-                    alt="Preview da foto"
-                    className="h-20 w-20 rounded-full border border-[var(--border-subtle)] object-cover"
+                    alt="Prévia da foto do perfil"
+                    className="kds-link-profile-photo-image"
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--text-muted)]">
+                  <div className="kds-link-profile-photo-placeholder">
                     <ImageIcon className="h-6 w-6" />
                   </div>
                 )}
 
-                <FieldLabel className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)] shadow-sm transition-colors hover:bg-[var(--bg-hover)]">
-                  <FileInput
-
-                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                    onChange={(event) => void handleAvatarUpload(event)}
-                    className="hidden"
-                    disabled={uploadingAvatar}
-                  />
-                  {<LoadingMonogram active={uploadingAvatar} fallback={<Upload className="h-4 w-4" />} className="h-4 w-4" />}
-                </FieldLabel>
               </div>
-
-              <div className="flex-1 space-y-1.5">
-                <Input
-                  value={profileForm.avatar_url}
-                  onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))}
-                  placeholder="Cole a URL de uma imagem ou envie um arquivo"
-                  size="md"
-                />
-                <Text className="text-xs text-[var(--text-muted)]">JPG, PNG, WEBP ou GIF — máx 5MB.</Text>
-              </div>
+              <Button variant="secondary" size="sm" onClick={() => document.getElementById(photoInputId)?.click()} disabled={profilePhoto.uploading}>
+                <Upload className="kds-control-icon" aria-hidden="true" />
+                {profileForm.avatar_url ? 'Trocar foto' : 'Enviar foto'}
+              </Button>
+              <FileInput id={photoInputId} aria-label="Enviar foto do perfil" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" onChange={handleAvatarUpload} className="sr-only" disabled={profilePhoto.uploading} />
+              <Text size="xs" tone="muted">JPG, PNG, WEBP ou GIF — até 5 MB. Ajuste o corte e salve o perfil para publicar a foto.</Text>
+              <details className="min-w-0 w-full">
+                <DisclosureTrigger size="sm">Usar endereço de imagem</DisclosureTrigger>
+                <Field label="Endereço da foto" className="mt-3">
+                  <Input value={profileForm.avatar_url} onChange={(event) => setProfileForm((prev) => ({ ...prev, avatar_url: event.target.value }))} placeholder="https://…" type="url" />
+                </Field>
+              </details>
             </div>
           </Field>
 
+          <div className="kds-link-profile-details">
           <Field label="Título da página">
             <Input
               value={profileForm.title}
@@ -623,8 +602,7 @@ export default function LinksScreen({
               placeholder="Ex: Planos de saúde no RJ"
             />
           </Field>
-
-          <Field label="Biografia" className="md:col-span-2">
+          <Field label="Biografia" className="kds-link-profile-bio">
             <Textarea
               rows={3}
               value={profileForm.bio}
@@ -632,6 +610,7 @@ export default function LinksScreen({
               placeholder="Um resumo curto sobre você ou a Kifer Saúde."
             />
           </Field>
+          </div>
           </div>
 
           <div className="mt-4 flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -649,7 +628,7 @@ export default function LinksScreen({
             </div>
             <PageActions
             placement="header"
-            busy={savingProfile}
+            busy={savingProfile || profilePhoto.uploading}
             primary={{
               label: savingProfile ? 'Salvando perfil…' : 'Salvar perfil',
               icon: Save,
@@ -660,6 +639,8 @@ export default function LinksScreen({
           </div>
         </Card>
       </details>
+
+      {profilePhoto.file && <ImageCropDialog file={profilePhoto.file} onCancel={profilePhoto.cancel} onConfirm={profilePhoto.uploadPhoto} />}
 
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

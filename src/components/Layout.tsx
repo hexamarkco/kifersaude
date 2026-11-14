@@ -984,7 +984,7 @@ export default function Layout({
       >
         <div className="flex h-full flex-col">
           <div className={`kds-sidebar-divider terracota-sidebar-header flex h-16 items-center border-b px-4 transition-all duration-300 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isSidebarCollapsed && <BrandWordmark caption="CRM" />}
+            {!isSidebarCollapsed && <BrandWordmark caption="Painel" />}
             {isSidebarCollapsed && (
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
@@ -1303,7 +1303,7 @@ export default function Layout({
         style={{ '--terracota-sidebar-width': sidebarOffset } as CSSProperties}
       >
         {!useFullBleedContent && <WorkspaceHeader
-          title={headerTitle ?? tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'CRM'}
+          title={headerTitle ?? tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'Painel'}
           username={userProfile?.username}
           theme={themeMode}
           mobileMenuOpen={isMobileMenuOpen}

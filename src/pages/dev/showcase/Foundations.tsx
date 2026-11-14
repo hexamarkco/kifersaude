@@ -161,7 +161,7 @@ export default function Foundations() {
       <div className="ds-grid">
         <Specimen
           title="Tipografia de marca"
-          description="Playfair Display para apresentações editoriais e de marca. Na operação diária, use Inter."
+          description="Sora para apresentações editoriais e de marca. Na operação diária, use Poppins."
           source="Heading · Typography.tsx / --font-display"
         >
           <div className="ds-type-display">
@@ -181,7 +181,7 @@ export default function Foundations() {
         </Specimen>
         <Specimen
           title="Tipografia de operação"
-          description="Inter para leitura, navegação, controles, valores e tabelas."
+          description="Poppins para leitura, navegação, controles, valores e tabelas."
           source="Text · Typography.tsx / --font-sans"
         >
           <Heading family="interface" level={2}>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   AppLoadingBoundary, AppLoadingScreen, Audio, AutomationFlowsSkeleton, BlogTabSkeletonList, Button,
   CommissionCalendarSkeleton, ContractsPageSkeleton, DashboardPageSkeleton,
-  DonutChart, DropdownOption, Field, FieldLabel, FileInput, Image, IntegrationsSkeleton,
+  DonutChart, DropdownOption, Field, FieldLabel, FileInput, Image, ImageCropDialog, Input, Textarea, IntegrationsSkeleton,
   LeadsPageSkeleton, LoadingMonogram, MonthlyTrendChart, OperadorasSkeleton, PanelAdaptiveLoadingFrame,
   PanelBootSkeleton, PositionedPopover, RemindersPageSkeleton, RichTextEditor,
   Select, Slider, SystemSettingsSkeleton, Text, TodoCalendarSkeleton,
@@ -43,9 +43,12 @@ export default function ApplicationComponents() {
   const [segment, setSegment] = useState('Todos os contatos');
   const [mediaUrl, setMediaUrl] = useState<string>();
   const [mediaType, setMediaType] = useState('');
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string>();
   const [position, setPosition] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => () => { if (mediaUrl) URL.revokeObjectURL(mediaUrl); }, [mediaUrl]);
+  useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl); }, [photoUrl]);
   const SkeletonExample = skeletons[skeleton];
 
   return <>
@@ -64,6 +67,19 @@ export default function ApplicationComponents() {
         <Text size="sm" role="status">{fileName}</Text>
         <FieldLabel htmlFor="catalog-multiplier">Multiplicador: {amount}x</FieldLabel>
         <Slider id="catalog-multiplier" min="0" max="10" step="0.1" value={amount} onChange={(event) => setAmount(event.target.value)} />
+      </Specimen>
+      <Specimen title="Alinhamento de campos" description="Campos curtos, textos de ajuda e áreas de texto mantêm rótulos e controles no topo da linha, em páginas e janelas." source="Field · Input · Textarea" wide>
+        <div className="grid gap-4 sm:grid-cols-2" data-field-alignment-example>
+          <Field label="Observações" hint="Este campo é mais alto que o campo vizinho."><Textarea rows={4} defaultValue="Informações do atendimento" /></Field>
+          <Field label="Nome" description="Nome pelo qual a pessoa prefere ser chamada."><Input defaultValue="Luiza Kifer" /></Field>
+          <Field label="Cidade" hint="Informe a cidade de residência."><Input defaultValue="Rio de Janeiro" /></Field>
+          <Field label="Estado"><Input defaultValue="RJ" /></Field>
+        </div>
+      </Specimen>
+      <Specimen title="Recorte de foto do perfil" description="Escolha uma foto, arraste e ajuste o zoom. O resultado fica somente nesta prévia." source="ImageCropDialog · FileInput">
+        <Field label="Foto para enquadrar"><FileInput accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) setCropFile(file); }} /></Field>
+        {photoUrl && <Image src={photoUrl} alt="Foto recortada" className="kds-link-profile-photo-preview rounded-full" />}
+        {cropFile && <ImageCropDialog file={cropFile} onCancel={() => setCropFile(null)} onConfirm={async (file) => { setPhotoUrl(URL.createObjectURL(file)); setCropFile(null); }} />}
       </Specimen>
       <Specimen title="Menus posicionados" description="A mesma superfície dos menus de conversa, com opções separadas e tema compartilhado." source="PositionedPopover · DropdownOption">
         <Button ref={trigger} variant="secondary" onClick={() => {

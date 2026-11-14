@@ -11,7 +11,7 @@ export default {
   theme: {
     spacing,
     extend: {
-      fontFamily: { sans: ['var(--font-sans)', 'sans-serif'], serif: ['var(--font-display)', 'serif'] },
+      fontFamily: { sans: ['var(--font-sans)', 'sans-serif'], serif: ['var(--font-display)', 'sans-serif'] },
       borderRadius: {
         DEFAULT: 'var(--radius-control)', sm: 'var(--radius-sm)', md: 'var(--radius-control)',
         lg: 'var(--radius-panel)', xl: 'var(--radius-dialog)', '2xl': 'var(--radius-dialog)',

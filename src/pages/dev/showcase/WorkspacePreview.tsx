@@ -642,7 +642,7 @@ export default function WorkspacePreview({
             setView('list');
           }}
         >
-          CRM
+          Painel
         </BreadcrumbLink>
       </BreadcrumbItem>
       <BreadcrumbSeparator />
@@ -726,7 +726,7 @@ export default function WorkspacePreview({
         <div className="ds-brand">
           <span className="ds-brand-mark">k.</span>
           <strong>
-            Kifer Saúde<span>CRM · demonstração</span>
+            Kifer Saúde<span>Painel · demonstração</span>
           </strong>
         </div>
         <div className="ds-row">

@@ -35,9 +35,9 @@
   --op-status-menu-max-height: min(24rem, calc(100dvh - var(--space-4)));
   color-scheme: dark;
 
-  --font-display: 'Playfair Display', serif;
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: 'Inter', sans-serif;
+  --font-display: 'Sora', sans-serif;
+  --font-sans: 'Poppins', sans-serif;
+  --font-mono: 'Poppins', sans-serif;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -1304,6 +1304,9 @@
 .kds-field {
   display: grid;
   min-width: 0;
+  /* A tall neighbour must not distribute extra space between label, control and feedback. */
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: var(--space-2);
 }
 
@@ -1316,6 +1319,7 @@
 .kds-field-label-row {
   display: flex;
   min-width: 0;
+  min-height: 1.25rem;
   align-items: center;
   gap: var(--space-1);
 }

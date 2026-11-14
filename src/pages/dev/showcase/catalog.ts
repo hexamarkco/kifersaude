@@ -19,7 +19,7 @@ export const sections = [
     label: 'Fundamentos visuais',
     icon: Palette,
     description:
-      'Cores tokens paleta tipografia Playfair Inter espaçamentos bordas raios sombras ícones',
+      'Cores tokens paleta tipografia Sora Poppins espaçamentos bordas raios sombras ícones',
   },
   {
     id: 'components',

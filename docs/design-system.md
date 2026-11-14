@@ -4,7 +4,7 @@ A rota `/design-system` documenta a biblioteca real de `src/design-system`. É o
 
 ## Organização
 
-1. **Fundamentos visuais:** cores semânticas do tema ativo, Inter para operação e Playfair Display para usos editoriais, espaçamentos, raios, bordas, sombras e Lucide. Os valores vêm dos tokens existentes, sem uma segunda paleta.
+1. **Fundamentos visuais:** cores semânticas do tema ativo, Poppins para operação e Sora para usos editoriais, espaçamentos, raios, bordas, sombras e Lucide. Os valores vêm dos tokens existentes, sem uma segunda paleta.
 2. **Componentes:** ações, formulários, navegação, dados, feedback e interações. Cada amostra inclui uma referência expansível à implementação. Famílias e aliases de cards compartilham a base existente.
 3. **Estados:** hover e foco reais, indisponibilidade, validação, carregamento, conclusão, lista vazia e recuperação de erro.
 4. **Padrões de layout:** listagem, detalhes, criação, edição e dashboard com dados locais.
@@ -68,7 +68,7 @@ O código acima ilustra composição; handlers, estado, validação e breadcrumb
 
 ## Tokens e acessibilidade
 
-- **Tipografia:** Inter em títulos operacionais, campos, tabelas e ações. Tokens `--type-ui-title`, `--type-ui-section`, `--type-ui-heading` definem a hierarquia compacta. `Heading family="display"` reserva Playfair para apresentações editoriais.
+- **Tipografia:** Poppins em títulos operacionais, campos, tabelas e ações. Tokens `--type-ui-title`, `--type-ui-section`, `--type-ui-heading` definem a hierarquia compacta. `Heading family="display"` reserva Sora para apresentações editoriais.
 - **Escala:** `--layout-gap`, `--section-gap`, `--page-gutter` usam a escala existente de espaços. Raios `6/8/12/16px`; aliases semânticos `--radius-control`, `--radius-panel`, `--radius-dialog`. Superfícies planas; sombras para elementos sobrepostos.
 - **Controles compostos:** opções de dropdown, paginação, calendário e ações usam raio de 8px em todos os estados. Opções consecutivas de dropdown têm separação de 4px, preservando a distinção entre seleção, hover e foco. Segmentação tem contêiner de 12px, itens de 8px e recuo de 4px. Grupos de botões conectados usam contorno de 8px, extremidades internas de 7px (descontando a borda) e junções retas. Checkboxes usam 6px. Formas circulares ficam nos indicadores, avatares, radios e switches; estados não alteram a geometria do controle.
 - **Temas:** `--action-primary-bg`, `--action-primary-hover`, `--action-primary-text` e `--action-accent-text` mantêm legibilidade sobre terracota e dourado em claro/escuro. O tema acompanha toasts, tooltips, calendários e diálogos via contexto, inclusive com múltiplas raízes na página.

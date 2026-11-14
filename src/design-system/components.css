@@ -383,12 +383,12 @@
   width: 1rem;
   height: 1rem;
   flex: none;
-  color: var(--text-secondary, currentColor);
+  color: var(--loading-monogram-color, rgba(0, 0, 0, 0.45));
 }
 
-/* Loading stays neutral even when its surrounding action uses a status or brand color. */
+/* Translucent neutral ink picks up the actual surface beneath the monogram. */
 .painel-theme.kifer-ds .kds-loading-monogram {
-  color: var(--text-secondary);
+  color: var(--loading-monogram-color, rgba(0, 0, 0, 0.45));
 }
 
 .kds-loading-state > .kds-loading-monogram {
@@ -399,14 +399,6 @@
 .kds-loading-state-brand > .kds-loading-monogram {
   width: 5rem;
   height: auto;
-}
-
-.kds-button .kds-loading-monogram {
-  color: var(--text-secondary, currentColor);
-}
-
-.painel-theme.kifer-ds .kds-button-primary .kds-loading-monogram {
-  color: inherit;
 }
 
 .kds-loading-monogram-stem,
@@ -1165,6 +1157,16 @@
 .kds-avatar-md { width: 2.5rem; height: 2.5rem; font-size: 0.8125rem; }
 .kds-avatar-lg { width: 3rem; height: 3rem; font-size: 0.875rem; }
 .kds-avatar-xl { width: 4rem; height: 4rem; font-size: 1.125rem; }
+
+.kds-image-crop { display: grid; gap: var(--space-4); }
+.kds-image-crop-frame { position: relative; display: grid; place-items: center; width: min(100%, 18rem); aspect-ratio: 1; margin-inline: auto; overflow: hidden; border: var(--border-width) solid var(--border-default); border-radius: var(--radius-full); background: var(--bg-inset); touch-action: none; cursor: grab; user-select: none; }
+.kds-image-crop-frame:active { cursor: grabbing; }
+.kds-image-crop-frame:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
+.kds-image-crop-frame > img { position: absolute; max-width: none; pointer-events: none; }
+.kds-image-crop-position { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 479px) {
+  .kds-image-crop-position { grid-template-columns: minmax(0, 1fr); }
+}
 
 .kds-avatar-image {
   width: 100%;

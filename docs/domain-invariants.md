@@ -126,7 +126,7 @@ Este arquivo registra regras que não são evidentes pela estrutura de pastas. A
 
 - Terracota CRM é light-first; dark mode permanece opcional usando os mesmos tokens semânticos.
 - Canvas bege quente, superfícies branco quente, terracota primária, dourado de destaque e marrom profundo; cores de status só para semântica funcional.
-- Use Playfair Display em títulos e Inter em corpo/UI. Use tokens de raio `--kds-radius-*`; evite hardcodes e valide com `npm run audit:visual`.
+- Use Sora em títulos e Poppins em corpo/UI. Use tokens de raio `--kds-radius-*`; evite hardcodes e valide com `npm run audit:visual`.
 
 ## Produção individual
 

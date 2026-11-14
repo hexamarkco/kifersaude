@@ -817,7 +817,7 @@ function Navigation() {
           description="Links reais com indicação da seção atual. Também usada na navegação deste showcase."
           source="NavigationList · components/NavigationList.tsx"
         >
-          <BrandWordmark caption="CRM" className="kds-workspace-brand-preview" />
+          <BrandWordmark caption="Painel" className="kds-workspace-brand-preview" />
           <DesignSystemProvider theme={workspaceTheme}>
             <WorkspaceHeader
               title="Gestão de leads"
@@ -868,7 +868,7 @@ function Navigation() {
           </Surface>
           <Breadcrumb>
             <BreadcrumbItem>
-              <BreadcrumbLink href="#overview">CRM</BreadcrumbLink>
+              <BreadcrumbLink href="#overview">Painel</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>

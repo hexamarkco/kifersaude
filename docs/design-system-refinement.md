@@ -8,7 +8,7 @@ Antes da implementação foram inspecionados o catálogo existente, tokens, folh
 
 ## Resultado
 
-- Aparência operacional opt-in com `DesignSystemProvider`: Inter na operação; Playfair em contextos editoriais; terracota, superfícies claras e tema escuro preservados. Tokens semânticos de ações, tipografia, espaçamento, raio e dimensões de diálogos.
+- Aparência operacional opt-in com `DesignSystemProvider`: Poppins na operação; Sora em contextos editoriais; terracota, superfícies claras e tema escuro preservados. Tokens semânticos de ações, tipografia, espaçamento, raio e dimensões de diálogos.
 - `PageHeader`, `PageActions`, `ListPage`, `DetailPage`, `FormPage`, `FormSection` e `DashboardPage` definem composição e ordem de ações. `FormActions` reutiliza a mesma implementação de ações.
 - Exemplos reais de listagem com busca/filtro/ordenação/paginação, detalhes, criação/edição e dashboard utilizam esses componentes. `ResponsiveCollection` alterna tabela e cards conforme o espaço do contêiner.
 - Labels, descrições, erros e obrigatoriedade conectados aos controles compostos; switch acionável pelo texto; rolagem de tabelas acessível pelo teclado; áreas de toque ampliadas.

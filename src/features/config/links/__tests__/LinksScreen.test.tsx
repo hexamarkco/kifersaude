@@ -38,6 +38,12 @@ vi.mock('../../../../lib/imageUploadService', () => ({
   uploadLinkPageImage: vi.fn(() => Promise.resolve({ success: true, url: 'https://example.com/avatar.png' })),
 }));
 
+// These tests cover profile actions; the minimum animation cycle is tested separately.
+vi.mock('../../../../design-system/useMinimumLoading', () => ({
+  LOADING_CYCLE_MS: 0,
+  useMinimumLoading: (loading: boolean) => loading,
+}));
+
 import LinksScreen from '../LinksScreen';
 
 const waitForBodyText = async (text: string) => {

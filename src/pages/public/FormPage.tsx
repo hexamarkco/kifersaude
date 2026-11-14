@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, Check, MapPin, MessageCircle, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react';
 
@@ -83,19 +83,39 @@ export default function FormPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const [theme, setTheme] = useState<FormTheme>(getInitialTheme);
-  const originalThemeColorRef = useRef<string | null>(null);
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
-    originalThemeColorRef.current = meta?.getAttribute('content') ?? LIGHT_CANVAS_COLOR;
+    const viewport = document.querySelector('meta[name="viewport"]');
+    const originalThemeColor = meta?.getAttribute('content');
+    const originalViewport = viewport?.getAttribute('content');
+    const canvasColor = theme === 'dark' ? DARK_CANVAS_COLOR : LIGHT_CANVAS_COLOR;
+    const pageElements = [document.documentElement, document.body];
+    const originalStyles = pageElements.map((element) => ({
+      backgroundColor: element.style.backgroundColor,
+      colorScheme: element.style.colorScheme,
+    }));
+
+    // Safari uses the document canvas outside the app, including during overscroll.
+    meta?.setAttribute('content', canvasColor);
+    const viewportContent = (originalViewport ?? 'width=device-width, initial-scale=1.0')
+      .replace(/,?\s*viewport-fit\s*=\s*[^,]+/g, '');
+    viewport?.setAttribute('content', `${viewportContent}, viewport-fit=cover`);
+    pageElements.forEach((element) => {
+      element.style.backgroundColor = canvasColor;
+      element.style.colorScheme = theme;
+    });
+
     return () => {
-      meta?.setAttribute('content', originalThemeColorRef.current ?? LIGHT_CANVAS_COLOR);
+      if (originalThemeColor != null) meta?.setAttribute('content', originalThemeColor);
+      else meta?.removeAttribute('content');
+      if (originalViewport != null) viewport?.setAttribute('content', originalViewport);
+      else viewport?.removeAttribute('content');
+      pageElements.forEach((element, index) => {
+        element.style.backgroundColor = originalStyles[index].backgroundColor;
+        element.style.colorScheme = originalStyles[index].colorScheme;
+      });
     };
-  }, []);
-
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute('content', theme === 'dark' ? DARK_CANVAS_COLOR : LIGHT_CANVAS_COLOR);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -301,7 +321,7 @@ export default function FormPage() {
     <PublicShell
       theme={theme}
       width="narrow"
-      className="relative flex min-h-dvh w-full justify-center overflow-y-auto px-4 py-10 sm:py-16"
+      className="kds-public-form-page"
     >
       <PublicSeo
         title={pageTitle}
@@ -315,7 +335,7 @@ export default function FormPage() {
         onClick={toggleTheme}
         aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
         size="sm"
-        className="kds-public-theme-toggle absolute right-4 top-4 z-10 sm:right-6 sm:top-6"
+        className="kds-public-theme-toggle kds-public-form-theme-toggle"
       >
         {theme === 'dark' ? <Sun className="kds-control-icon" /> : <Moon className="kds-control-icon" />}
       </IconButton>
@@ -373,7 +393,7 @@ export default function FormPage() {
           </div>
         ) : (
           <>
-            <div className="mb-6 flex flex-col items-center gap-2 text-center">
+            <div className="kds-public-form-progress">
               <PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-sm mb-1 text-[color:var(--brand-primary)]" />
               <div className="w-full overflow-x-auto">
                 <Stepper
@@ -382,7 +402,7 @@ export default function FormPage() {
                   minWidth={Math.max(totalSteps * MIN_STEP_WIDTH_PX, MIN_STEPPER_WIDTH_PX)}
                 />
               </div>
-              <Text size="xs" weight="medium" tone="muted">
+              <Text size="xs" weight="medium" tone="muted" role="status" aria-live="polite" aria-atomic="true">
                 Etapa {stepIndex + 1} de {totalSteps}
               </Text>
             </div>

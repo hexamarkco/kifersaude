@@ -49,17 +49,17 @@ export function Stepper({ currentStep, steps, orientation = 'horizontal', minWid
                 <div className={cx('kds-stepper-line', status === 'completed' && 'kds-stepper-line-completed')} />
               )}
             </div>
-            <div className="kds-stepper-content">
+            {(step.label || step.description) && <div className="kds-stepper-content">
               <span className="kds-stepper-label">{step.label}</span>
               {step.description && (
                 <span className="kds-stepper-description">{step.description}</span>
               )}
-            </div>
+            </div>}
           </div>
         );
       })}
     </div>
-    {orientation === 'horizontal' && steps[currentStep] && <div className="kds-stepper-mobile-summary" aria-hidden="true">
+    {orientation === 'horizontal' && steps[currentStep]?.label && <div className="kds-stepper-mobile-summary" aria-hidden="true">
       <span className="kds-stepper-label">Etapa {currentStep + 1} de {steps.length} · {steps[currentStep].label}</span>
       {steps[currentStep].description && <span className="kds-stepper-description">{steps[currentStep].description}</span>}
     </div>}

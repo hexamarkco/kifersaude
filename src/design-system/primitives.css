@@ -171,6 +171,37 @@
 
 .kds-public-theme-toggle:hover { color: var(--brand-primary); }
 
+.kds-public-form-page {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: max(var(--space-6), env(safe-area-inset-top));
+  padding-right: max(var(--space-4), env(safe-area-inset-right));
+  padding-bottom: max(var(--space-8), env(safe-area-inset-bottom));
+  padding-left: max(var(--space-4), env(safe-area-inset-left));
+}
+
+.kds-public-form-theme-toggle {
+  position: absolute;
+  top: max(var(--space-4), env(safe-area-inset-top));
+  right: max(var(--space-4), env(safe-area-inset-right));
+  z-index: 1;
+}
+
+.kds-public-form-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .kds-public-form-page { padding-block: var(--space-16); }
+  .kds-public-form-theme-toggle { top: var(--space-6); right: var(--space-6); }
+}
+
 .kds-public-success-icon {
   width: var(--control-icon-lg);
   height: var(--control-icon-lg);

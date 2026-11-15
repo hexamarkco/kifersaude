@@ -5,7 +5,7 @@ const RETRY_DELAYS_MS = [15_000, 60_000, 180_000] as const;
 
 const isTerminalError = (message: string): boolean => {
   const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  return /whapi_token nao configurado|identidade do whatsapp|permissao de contato|atendimento autonomo foi desativado|chat sem lead vinculado|status atendimento nao encontrado/.test(normalized);
+  return /whapi_token nao configurado|identidade do whatsapp|permissao de contato|atendimento autonomo foi desativado|atendimento v2 pausado|chat sem lead vinculado|status atendimento nao encontrado/.test(normalized);
 };
 
 export const getAutonomousRetryDelayMs = (attemptNumber: number, error?: unknown): number => (
@@ -20,6 +20,7 @@ export const getAutonomousFailureAction = (params: {
   error?: unknown;
 }): 'retry' | 'handoff' | 'failed' => {
   if (params.deliveryAttemptStarted || isTerminalError(params.message)) return 'failed';
+  if (/Estado V2 inválido|Fato V2 inválido|Cursor V2 inválido|Perguntas V2 inválidas|Turno preparado V2 inválido/.test(params.message)) return 'handoff';
   if (getAiProviderFailure(params.error)?.retryable === false) return 'handoff';
   if (params.attemptNumber < MAX_JOB_ATTEMPTS) return 'retry';
   // Only exhausted generation failures stop automation for human review.

@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   // Vite's generated dependency cache is vendor output, not application source.
-  { ignores: ['dist', '.vite/**', 'local-artifacts/**'] },
+  { ignores: ['dist', '.vite/**', 'local-artifacts/**', 'output/**'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

@@ -1,4 +1,5 @@
 import { AiGenerationError, AiProviderHttpError, prepareAiJsonRequest, readAiProviderHttpError } from './ai-provider-http.ts';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
   AI_REASONING_EFFORTS,
   resolveOpenAiRequestProfile,
@@ -202,7 +203,22 @@ export type GenerateTextForFeatureOptions = {
   responseFormat?: AiJsonSchemaFormat;
   /** Stable, non-sensitive key used to improve OpenAI prompt-cache bucketing. */
   promptCacheKey?: string;
+  /** Server-owned, versioned profile for a staged release; still checked against the model catalog. */
+  runtimeModelProfile?: RuntimeModelProfile;
 };
+
+export type RuntimeModelProfile = { version: string; model: string; reasoningEffort: AiReasoningEffort };
+
+export async function resolveRuntimeModelProfile(client: Pick<SupabaseClient, 'from'>, profile: RuntimeModelProfile): Promise<ResolvedModel> {
+  if (!profile.version.trim() || profile.version.length > 80 || !/^[a-z0-9][a-z0-9._-]{1,119}$/.test(profile.model)
+    || !AI_REASONING_EFFORTS.includes(profile.reasoningEffort)) throw new Error('Perfil de modelo da versão inválido.');
+  const { data, error } = await client.from('ai_models').select('active, deprecated_at, capabilities')
+    .eq('provider', 'openai').eq('model', profile.model).maybeSingle();
+  if (error || !data?.active || data.deprecated_at || !Array.isArray(data.capabilities) || !data.capabilities.includes('text')) {
+    throw new Error('Modelo da versão não está disponível no catálogo.');
+  }
+  return { provider: 'openai', model: profile.model, source: 'feature', reasoningEffort: profile.reasoningEffort };
+}
 
 export type GenerateTextForFeatureResult = {
   text: string;
@@ -1325,7 +1341,9 @@ export const generateTextForFeature = async (
   const runtime = await loadAiRuntimeConfig(options.supabaseAdmin);
 
   // Resolve model with precedence: feature > ai_routing > provider default
-  const resolved = await resolveModelForFeature(options.supabaseAdmin, options.featureKey, options.task);
+  const resolved = options.runtimeModelProfile
+    ? await resolveRuntimeModelProfile(options.supabaseAdmin, options.runtimeModelProfile)
+    : await resolveModelForFeature(options.supabaseAdmin, options.featureKey, options.task);
 
   // Build attempt list following the same fallback chain as generateTextWithRouting
   const preferredProvider = resolved.provider;

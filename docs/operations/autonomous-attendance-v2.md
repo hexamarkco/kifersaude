@@ -1,0 +1,173 @@
+# Atendimento autônomo V2 — auditoria e projeto local
+
+Atualização de 15/11/2026: a V2 foi publicada no Supabase e o piloto está liberado para 10% dos leads novos DDD 21. A continuidade de conversas legadas foi implementada e testada, com habilitação ampla ainda pendente de escolha do usuário. O estado atual, versões, evidências e rollback estão em [Publicação de 15/11/2026](autonomous-attendance-v2-release-2026-11-15.md). As seções de auditoria e validação local abaixo preservam o registro das etapas anteriores.
+
+## Escopo e evidência
+
+Auditoria do código local em 14/11/2026. O relato do caso de migração PF para MEI e a amostra de cinco entre seis handoffs são evidência fornecida pelo solicitante, não consultas reproduzidas em produção. Não foram acessadas conversas reais, modificadas configurações remotas ou enviadas mensagens nessa etapa. Fixtures usam conversas sintéticas equivalentes, sem identificadores reais.
+
+## Arquitetura encontrada
+
+- `comm-whatsapp-webhook/index.ts` normaliza os eventos dos provedores, persiste mensagens e agenda `schedule_ai_autonomous_reply_job` com debounce de 16 segundos. Eventos técnicos, grupos e patches não devem iniciar atendimento. A persistência e as chaves externas deduplicam eventos; o scheduler agrega jobs pendentes. O despacho imediato é uma aceleração; cron recupera trabalhos.
+- `ai-autonomous-reply-worker/index.ts` captura jobs por atualização condicional, verifica chat ativo/lead, carrega até 100 mensagens e transcreve o áudio mais recente. Consulta exemplos humanos e respostas rápidas. O lease de conversa dura 120 segundos. Reservas de entrega e `can_send_ai_autonomous_reply` verificam turno, intervenção humana e permissões antes do provedor.
+- `ai-autonomous-memory.ts` deriva schema 2 com fatos, evidências e briefing. `save_ai_autonomous_turn_memory` valida job/lease/inbound, conserva a tabela existente e incrementa a versão. Entretanto `qualification` e `briefing.pending` são recalculados exclusivamente da janela recente, independentemente dos fatos antigos preservados.
+- `ai-autonomous-qualification.ts` extrai dados por expressões regulares. `extractAgeValues` deduplica valores numéricos, não pessoas. Duas pessoas da mesma idade podem perder uma idade. Referências a pessoa física podem negar CNPJ mesmo quando descrevem o contrato de origem. Não há uma intenção comercial principal estruturada.
+- `ai-autonomous-prompt.ts` concatena regras, preferências de feature, instruções globais, estilo humano e referências. O histórico e a memória vão em `buildAutonomousAttendanceUserPrompt`. Compreensão, seleção de perguntas, encerramento e redação ficam na mesma geração.
+- `validateAutonomousReplyOutput` protege formato, algumas repetições e estilo. Não valida requisitos obrigatórios para `QUALIFICACAO_COMPLETA`. O worker aceita a tag e chama `complete_ai_autonomous_attendance_handoff`; a RPC de outubro valida o código e o vínculo, mas não a qualificação. Inclusive o caminho de resposta contendo só tag pode encerrar sem texto válido.
+- Handoff completo muda o lead para `Aguardando cotação`; recusa muda para `Perdido`; intervenção humana preserva o status. Todos desativam IA e cancelam jobs pendentes. Isso é operação comercial, não venda.
+- Falhas técnicas usam roteador com tentativas limitadas e backoff durável. Entregas reservadas ou ambíguas não são reenviadas automaticamente. Há uma janela inevitável entre a última verificação local e o HTTP externo. Não existe transação distribuída com WhatsApp.
+- Configuração de IA é versionada em `ai_feature_configs`, com roteamento e instruções globais. Bancadas existentes usam a implementação antiga; automações de abordagem ativam chats e o status do chat controla o worker. Campanhas têm contratos próprios e não serão alteradas.
+
+## Causas confirmadas e hipóteses
+
+A ausência de validação de conclusão, a perda de idades iguais e a divergência entre memória e pendências são demonstráveis no código. São causas plausíveis para os sintomas relatados, mas não atribuem a causa histórica de cada mensagem do caso relatado. A falta de intenção estruturada permite perguntas genéricas mesmo com objetivo específico. Não se pode concluir qual versão de prompt, worker ou dado estava implantada no incidente somente pelo checkout.
+
+## Design adotado
+
+1. Intérprete semântico retorna somente observações JSON com trechos literais e IDs de mensagens do cliente. Não decide status nem escreve ao WhatsApp. Contrato validado em runtime; JSON inválido, fonte ausente e valores inválidos falham fechados.
+2. Estado tipado conserva valores, confirmação, origem, evidência, conflito e atualização. Atualizações incertas não apagam confirmação. Alteração sem correção explícita gera conflito; correção preserva evidência anterior. Idades pertencem a IDs de beneficiários, não a um conjunto de números. Cursor usa ordem de chegada, mantendo dados fora da janela.
+3. Motor puro calcula requisitos e escolhe ação. A IA pode priorizar apenas entre pendências reais. Nenhuma tag autoriza conclusão. Migração, carência, rede exigida e elegibilidade dependente de produto seguem para humano. Desconhecido/recusa resolvem a insistência por transferência antecipada, nunca por falsa conclusão.
+4. Redator recebe uma decisão imutável e contexto. Identidade vem de configuração explícita de implantação. Nenhuma instrução legada de roteiro participa do novo fluxo. Validação de saída limita formato, perguntas, tags e promessas; violações esgotadas vão para humano sem texto substituto.
+5. Worker reutiliza fila, permissões, roteador, locks, reservas e armazenamento schema 2. V2 fica em uma extensão `attendanceV2`, desativada por padrão e selecionada por allowlist de chats. Estado V2 existente nunca regride silenciosamente para a memória antiga.
+6. Nova migration local mantém o contrato HTTP/RPC e adiciona validação independente de conclusão e turno atual na RPC de handoff. Sem mudança em tabelas ou tipos gerados. Nenhuma migration histórica é editada.
+
+As etapas de validação, métricas, limitações e rollout estão registradas ao final deste documento após a execução dos testes.
+
+## Implementação entregue
+
+| Fronteira | Arquivos e comportamento |
+| --- | --- |
+| Estado e evidência | `ai-autonomous-reply-worker/domain/state.ts`: valida JSON e snapshots; mantém fatos por campo, origem, evidência e atualização. Confirmação não regride por desconhecimento. Correções conservam evidências. Pessoas têm IDs estáveis, idades iguais são preservadas e retirada de beneficiário exige instrução explícita com IDs. Cursor considera chegada persistida, não só horário declarado da mensagem. |
+| Decisão | `domain/decision.ts`: calcula obrigatoriedade, limita insistência e separa conclusão, esclarecimento, orientação e transferência antecipada. Sugestão semântica escolhe somente entre pendências reais. Recusa só muda para `Perdido` quando há evidência explícita e inequívoca de recusa da cotação; ambiguidade vai para humano. |
+| Interpretação e redação | `domain/turn.ts`: duas chamadas independentes, contratos validados e nenhuma tag textual executável. O redator recebe ação já definida. Não recebe o roteiro antigo nem os exemplos com identidade fixa. Mensagens de cliente e CRM são dados, não instruções. |
+| Integração | `generate-turn.ts`: conserva configuração de provider/modelo do roteador e eventos existentes. V2 tem até duas tentativas por etapa, limite de 20 s por tentativa e uma requisição física por tentativa. As duas etapas somam no máximo quatro requisições de texto; transcrição tem seu próprio orçamento. Snapshot preparado permite retomar falha anterior à reserva sem gerar texto diferente. |
+| Transporte | `index.ts`: conserva autenticação service role, debounce, permissão `service_reply`, resolução de identidade, lease, verificação de inbound e chaves de entrega. Salva memória antes do envio e contabiliza perguntas após envio aceito. Transferências do worker usam RPC com job e inbound explícitos para fechar também a corrida no handoff antecipado. |
+| Banco | `20261114193309_autonomous_attendance_v2_handoff_guard.sql`: proposta aditiva de funções, sem backfill ou alteração de tabelas/configurações. Recalcula completude no SQL, não confia no array de pendências declarado, verifica turno e mantém o contrato da RPC anterior. Funções invoker com execução restrita a service role e `search_path` vazio. |
+| Operação | `WhatsAppAttendanceBriefing` → `useAttendanceBriefing` → `attendanceRepository` → tabela existente. A consulta filtra chat e lead e usa RLS existente. O painel apresenta intenção, fatos, pendências, conferências, motivo e atualização em português de negócio, sem ação de envio. Ausência não aparece como sucesso. Troca de conversa descarta resposta antiga. |
+| Observabilidade | `v2_decision`, `v2_processing_failed` e eventos de geração/envio existentes. Traço contém versão da política/configuração, intenção, nomes dos campos usados/pendentes, ação, motivo e etapa de falha; não copia nome, idade, cidade ou trechos. Evidências permanecem no estado com as permissões existentes e limite de oito evidências por campo. `autonomous-v2-health.sql` separa qualidade, desempenho e resultados comerciais. |
+
+### Requisitos condicionais
+
+- Base obrigatória: quantidade e identificação dos beneficiários, idade de cada pessoa, localização de residência e resposta sobre existência de CNPJ/MEI. Resposta negativa é válida. Intenção, objetivo e plano atual não bloqueiam a conclusão.
+- Política local `2026-11-14.1`: capitais exigem bairro/região de residência antes da conclusão. Ao reconhecer uma capital, a UF vem de uma tabela geográfica com a evidência da cidade, sem perguntar novamente. `Rio`, quando interpretado como cidade, é normalizado para Rio de Janeiro; `Campo Grande` informado como bairro no Rio não vira a cidade de MS. Uma UF explicitamente conflitante é esclarecida. A mudança de cidade mantém a evidência do bairro antigo, mas o torna incerto até nova confirmação. Snapshots anteriores são atualizados na leitura, sem apagar os fatos.
+- Os requisitos essenciais têm prioridade. Plano atual, objetivo e operadora podem ser perguntados uma vez, com naturalidade, mas não há repetição obrigatória quando o cliente pula uma dessas perguntas. Tipo e antiguidade da empresa são preservados quando informados, sem inventar prazo mínimo.
+- Política local `2026-11-14.2`: número do CNPJ/MEI é opcional e só é solicitado a quem confirmou possuir empresa. Plano atual, expectativa, operadora e número da empresa são oferecidos uma vez; silêncio, recusa ou conflito nesses campos não viram pendência obrigatória ou recusa da cotação. Expectativa é contextualizada conforme a pessoa tenha plano ou não, sem assumir que quer trocar de operadora. Um pedido genérico de cotação não substitui uma expectativa concreta.
+- Política local `2026-11-15.1`: localização é perguntada como cidade e bairro, sem pedir estado/UF. Se a cidade já foi informada e só falta o bairro necessário, pergunta apenas bairro. Fora das capitais, a cidade é suficiente; a ausência de bairro ou resposta separada de UF não bloqueia a qualificação. UF fornecida espontaneamente ou identificada com segurança continua na memória; contradição geográfica é esclarecida pela cidade/bairro. A redação usa palavras simples, sem repetir justificativas sobre modalidades e condições em todas as respostas.
+- Dados essenciais desconhecidos recebem explicação breve e uma reformulação educada, com limite total de duas perguntas enviadas por campo. Persistindo a pendência, o atendimento vai para ajuda humana e não recebe qualificação completa. Solicitação de humano e irritação continuam prioritárias.
+- PF para MEI, portabilidade, inclusão de dependentes e preferências de rede são contexto comercial para a corretora. A IA não verifica nem aprova elegibilidade; esses cenários não bloqueiam a conclusão da coleta inicial quando os dados essenciais estão completos.
+- Política local `2026-11-15.2`: a IA apenas qualifica/coleta dados. MEI, modalidade desejada, preferências e idades não geram checagens automáticas de produto. `QUALIFICACAO_COMPLETA` significa coleta inicial concluída, nunca preço, rede ou elegibilidade aprovados. Perguntas sobre produto são deixadas para a corretora, enquanto a IA coleta os essenciais; quando eles já existem, a coleta é encerrada. Pedido explícito de pessoa, atrito com o atendimento, conflito ou ausência persistente de essencial ainda podem gerar transferência antecipada.
+- Bairro, número de CNPJ, mensalidade atual e data exata de abertura não são exigências universais. Desconhecimento ou recusa de dado essencial produzem transferência antecipada com pendência, não insistência indefinida ou conclusão fictícia.
+
+## Evidências e comparação reproduzível
+
+### Memória espontânea e tom de atendimento
+
+O intérprete captura todos os fatos novos, independentemente da pergunta em curso. Tipo de empresa confirmado implica existência de empresa; operadora atual confirmada implica possuir plano. Essas relações usam a interpretação com evidência literal, sem busca de palavras-chave. Desejar uma modalidade não implica possuir MEI. Os fatos continuam persistidos mesmo quando sua mensagem sai da janela recente.
+
+Atualizações de desconhecido/incerto/recusado para uma resposta confirmada não são conflitos. Apenas respostas confirmadas diferentes entram em conflito. Snapshots antigos de conflito entre `null` e uma única resposta válida são corrigidos preservando evidências; conflitos entre dois valores válidos continuam exigindo esclarecimento. Uma confirmação à pergunta de esclarecimento pode resolver um dos candidatos sem exigir palavras como corrigindo. O intérprete recebe também as últimas 16 mensagens da própria conversa, mantendo a extração com evidência apenas nas falas novas.
+
+O tom foi revisto com base em uma amostra de mensagens humanas consultadas apenas para leitura no Supabase. O redator deve reconhecer preocupações concretas antes de avançar, acompanhar clientes objetivos e explicar a finalidade de uma pergunta quando útil. Não existe obrigação de iniciar cada resposta com Entendi ou Perfeito. Localização orienta a pesquisa da rede; CNPJ/MEI permite avaliar modalidades e comparar condições, sem promessa universal de economia. Exemplos históricos não são fonte para preços, elegibilidade ou rede vigente.
+
+O estado e o briefing permanecem como memória e auditoria internas. O painel de resumo não é montado automaticamente na ficha do lead, e não existe mensagem automática com resumo para a corretora ou para o cliente na transferência. O histórico da conversa permanece como referência do atendimento humano.
+
+Executar `npm run test:autonomous-v2`. O comando inicializa apenas testes, mocks e Postgres embarcado PGlite. Não lê credenciais de produção para conectar serviços e não inicializa transporte de WhatsApp. Produz `local-artifacts/autonomous-v2/tests.json` e `commercial-simulations.json`, ignorados pelo Git. Fixtures são sintéticas e as mensagens escritas são saídas de mocks, não avaliação paga de um LLM.
+
+| Medida | Resultado local |
+| --- | --- |
+| Cenários comerciais obrigatórios | 15/15 aprovados, com interpretação e redação anotadas/simuladas |
+| Decisões nos 15 cenários com política 2026-11-15.2 | 9 conclusões iniciais, 1 transferência por pedido explícito, 4 perguntas necessárias e 1 esclarecimento de idade. As simulações de continuidade verificam as recusas opcionais e os limites de insistência. |
+| Conclusão V2 com pendências obrigatórias | 0/15; SQL também recalcula requisitos independentemente da decisão |
+| Migração PF para MEI | Intenção `pf_to_mei`, duas idades 80/80 e operadora preservadas. Número do MEI é pedido opcionalmente, sem obrigar o cliente; a revisão de elegibilidade permanece humana. |
+| Extrator anterior no caso equivalente | 80/null; teste de caracterização também demonstra PF de origem negando empresa de destino em formulação equivalente |
+| Validador textual anterior isolado | Aceitou tag de conclusão em 11/15 transcrições cuja projeção ainda tinha pendências. Isso demonstra a lacuna do validador; não mede 11 handoffs reais nem reproduz saídas históricas de IA. O adaptador legado novo bloqueia essas saídas antes de enviar. |
+| Memória e continuidade | Casos de janela truncada, ordem de chegada, número isolado, correção, alteração de objetivo, conflitos, desconhecimento e composição parcial preservam os fatos ou exigem revisão explícita |
+| Concorrência e duplicidade | Testes SQL existentes executam reserva única, nova inbound, intervenção humana e recuperação de queda; novos testes cobrem handoff atômico antecipado e de conclusão. Não representam teste distribuído nem garantia de entrega física exatamente uma vez. |
+
+A identificação de intenção nesses cenários é uma anotação fornecida ao intérprete simulado. Não é uma medida de acurácia do modelo real. Igualmente, os testes de estilo e promessas demonstram bloqueio dos casos exercitados; não provam ausência de qualquer promessa ou repetição semântica possível. Essa avaliação requer o modelo efetivamente configurado em homologação.
+
+## Validações executadas
+
+- Base anterior à implementação: 153 testes aprovados em cinco arquivos de qualificação, memória, validação, contratos e SQL de concorrência.
+- Regressões ampliadas de atendimento: 294 testes aprovados em 17 arquivos, antes dos dois últimos exemplos adicionais de bloqueio de promessas. A suíte dedicada final cobre esses exemplos adicionais.
+- Suíte dedicada final: 72 testes aprovados em quatro arquivos, incluindo 15 simulações comerciais, integração do adaptador, validação SQL/RPC, preservação do status de recusa e interface interna.
+- Typecheck, Deno do worker, lint dos arquivos alterados, build, auditoria visual, contrato do design system, arquitetura e baseline de migrations foram executados. Resultados finais são confirmados no fechamento deste documento.
+- Suíte completa: 2.207 testes aprovados e 26 falhas em 387 arquivos, durante a implementação e antes do último ajuste dos testes da interface. As 26 falhas estão em arquivos não modificados: Agenda, blog, telas de campanhas, contrato de recuperação de mídia de campanha, histórico de atribuição Meta, configuração de IA/integrações/usuários e coleção de chats. Não são classificadas como novas regressões da V2, nem como todas comprovadamente preexistentes: a base completa inicial não foi executada. A reexecução isolada do blog reproduziu suas sete falhas, com arquivos idênticos ao HEAD inicial.
+- Lint geral: quatro erros de regra `react-internal/safe-string-coercion` ausente em arquivos de cache `.vite-cache` de previews dentro de `output/playwright`, além de warnings fora do diff. O lint dos arquivos de implementação alterados passa. Não foram alterados caches, campanhas ou regras globais para esconder esses resultados.
+
+Os logs ficam em `local-artifacts/autonomous-audit/v2-*.log`. O build mantém o aviso de chunk grande existente. A validação de tipos gerados contra produção e `verify:automations` não foram executados; não houve mudança remota ou deploy autorizado. Não foi feita revisão visual em navegador autenticado com conversas reais; o painel foi validado por testes de DOM e contratos visuais locais.
+
+## Limitações e decisões abertas de produto
+
+1. Auditoria histórica do incidente e confirmação do schema implantado exigem acesso remoto somente leitura autorizado. O checkout permite provar falhas do código, não a versão que respondeu em 14/11.
+2. As bancadas remotas `ai-sandbox-chat` e `ai-sandbox-run-scenario` continuam usando o caminho legado. A bancada V2 entregue aqui é o comando local acima e usa a mesma implementação de domínio/adaptador do worker. Não apresentar o resultado da bancada antiga como resultado da V2.
+3. Regras de completude estão espelhadas em TypeScript e SQL e têm testes de paridade. Mudanças de política exigem atualizar ambos e incrementar a versão; não basta alterar o prompt ativo.
+4. As evidências são verificadas quanto a origem e literalidade. O backend não consegue provar sozinho que a interpretação semântica de cada trecho é correta. Informações confirmadas podem conter erro de interpretação; a revisão de conversas em homologação é obrigatória antes da ativação real.
+5. Dados legados não têm a granularidade da V2. São importados como origem legada, sem apagar o snapshot antigo. Empresa extraída pelo regex antigo fica incerta porque “PF” podia significar modalidade de origem, não ausência de MEI. Informação não recuperável precisa ser esclarecida, nunca inventada.
+6. HTTP do provedor e banco não compartilham transação. Reserva com resultado incerto permanece bloqueada para reenvio automático. Uma inbound pode chegar com o envio já em voo; o novo turno é preservado e o handoff revalidado.
+7. A migração é somente local. O schema mínimo PGlite valida funções e invariantes, mas não substitui testes de RLS, resolução canônica, permissões e concorrência no Supabase de homologação.
+
+## Plano inicial de rollout — registro anterior à publicação
+
+1. Revisar este diff e a migration nominal. Resolver/triagar as falhas gerais fora do escopo. Autorizar separadamente a aplicação da migration e o deploy; não executar script de migrations em lote por conveniência.
+2. Em homologação autorizada, aplicar a nova migration depois das dependências de outubro; publicar o worker com `AUTONOMOUS_ATTENDANCE_V2_CHAT_IDS` vazio. Confirmar que ambas as RPCs existem, que o contrato antigo continua disponível e que anon/authenticated não podem executar os validadores privilegiados. Preservar todas as versões de configuração.
+3. Definir `AUTONOMOUS_ATTENDANCE_V2_ADVISOR_NAME` somente com identidade comercial autorizada. Se ausente, a V2 não escolhe um nome. `featureConfigVersion` identifica o roteamento/parâmetros da feature; `policyVersion` identifica a política V2 versionada em código. O conteúdo do prompt antigo não controla a V2.
+4. Autorizar e executar avaliação com o modelo real em ambiente sem transporte real, usando os 15 cenários e variações não usadas nas fixtures. Avaliar intenção, pertinência da pergunta, evidência, ambiguidades, correções, segurança comercial, naturalidade, latência e custo por etapa. Não medir acurácia sem anotações independentes de revisão.
+5. Após aprovação explícita de produção, selecionar poucas conversas elegíveis para allowlist por UUID, com operador acompanhando. Não ativar chats existentes, consumir backlog ou inserir UUIDs automaticamente como parte do deploy. A lista não aceita `*` nem percentuais implícitos.
+6. Revisar cada uma das primeiras 20 conversas. Acompanhar decisões, pendências, transferências, aceitação de envio e entrega real separadamente. Tolerância zero para conclusão com pendência, status comercial errado, duplicidade ou promessa indevida. Comparar latência/custo e taxa de intervenção humana sem confundir triagem com venda.
+7. Ampliar a lista apenas após revisão comercial e técnica. Qualidade da qualificação é uma métrica; propostas, contratos e vendas são outras. Os SQLs operacionais são consultas manuais e não criam automações ou alertas.
+
+## Rollback
+
+Remover UUIDs da allowlist pausa a V2 nessas conversas. O worker reconhece memória V2 e não a sobrescreve com memória legada. Um operador deve assumir esses chats; não reiniciar automaticamente o atendimento nem liberar reservas para “recuperar” envios. Chats fora da allowlist sem memória V2 seguem pelo adaptador legado com bloqueio de conclusões incompletas.
+
+Para rollback do binário, restaurar a versão anterior do worker conforme plano de implantação autorizado, preservando as funções de validação, dados, histórico, configurações e chaves de entrega. Antes de voltar ao binário antigo, desativar explicitamente o atendimento autônomo dos chats V2, pois esse binário não conhece a proteção de memória V2. Não remover tabelas nem reverter migrations históricas. Qualquer ajuste SQL futuro exige outra migration revisada.
+
+## Fechamento da validação local
+
+A suíte dedicada final passou com **72/72**, após os ajustes finais. Typecheck do projeto, Deno do worker, lint focado dos arquivos de implementação e testes adicionados, build com verificação do bundle, auditorias visual/design system, arquitetura e baseline de migrations passaram. A suíte completa e o lint geral mantêm as falhas externas ao diff descritas acima; não se declara o repositório inteiro verde. O painel usa somente componentes/tokens existentes, acesso a dados via hook/repository e descarte de leitura tardia ao trocar de conversa.
+
+Nenhum deploy, SQL remoto, mudança de configuração ativa, ativação de chat, campanha, envio real ou chamada paga de IA foi executado. A allowlist continua vazia por padrão. Avaliação semântica com modelo real, permissões efetivas e teste distribuído em homologação são pré-condições de rollout, não resultados destes mocks.
+
+## Perfil local de modelo em avaliação
+
+Em 15/11/2026, a bancada local passou a usar GPT-6 Luna com raciocínio médio. A configuração ativa do CRM não foi alterada. A escolha foi comparada em oito cenários idênticos contra GPT-6.1 Sol low e medium, com chamadas reais, memória corrigida e contexto recente. Os três perfis passaram nos oito casos. O custo estimado da bateria de 20 chamadas foi US$ 0,006790 no Luna medium, US$ 0,085046 no Sol low e US$ 0,090072 no Sol medium, considerando uso retornado pela API, tokens em cache e preço Standard publicado. Essa amostra pequena não comprova equivalência geral de qualidade nem estima conversão. Evidências locais ficam em `local-artifacts/autonomous-v2-replay/model-comparison.json` e `model-comparison.md`. A adoção em produção exige versão de configuração própria e autorização de implantação.
+
+## Mensagens consecutivas e voz da bancada local
+
+A bancada em `local-artifacts/autonomous-v2-replay/chat-server.mjs` aceita mensagens imediatamente e aguarda 16 segundos desde a última antes de executar o domínio V2 com o modelo real. O campo de envio permanece disponível durante a geração. Um novo inbound cancela o rascunho em andamento e provoca processamento do conjunto atualizado; somente a resposta efetivamente publicada atualiza memória e contagem de perguntas. Identificadores de envio evitam duplicação em tentativas de rede. Reiniciar a conversa descarta resultados tardios da sessão anterior. Falhas técnicas preservam as mensagens e permitem tentar novamente, sem resposta comercial inventada.
+
+Seis testes isolados em `chat-session.test.mjs` cobrem agrupamento, chegada durante a geração, idempotência, falha e retry, reset e ordenação de timestamps. A conferência com o modelo real em `live-chat-check.json` também exercita três mensagens seguidas e uma chegada durante geração, verificando preservação dos dados e descarte do rascunho antigo. Essa simulação de transporte local não valida concorrência distribuída do WhatsApp. Os replays históricos já entregues mantêm suas condições e limitações originais.
+
+A redação do domínio V2 usa a primeira pessoa da identidade comercial autorizada, com linguagem simples e justificativas concretas quando úteis. Não se apresenta como auxiliar de outra corretora e não inventa identidade humana se questionada diretamente sobre a automação. Há regressão para a frase de intermediário observada na bancada. A suíte V2 passou em 140 testes neste ajuste; nenhum deploy ou alteração da configuração ativa foi feito.
+
+A revisão de linguagem seguinte removeu a orientação que provocava explicações literais como "Ela entra no valor da cotação". Confirmações breves como "Entendi, será só para você" são bem-vindas para criar rapport; o problema identificado foi a justificativa artificial, não esse reconhecimento. Justificativas são contextuais e opcionais. O arquivo `local-artifacts/autonomous-v2-replay/natural-questions-check.json` contém a conferência HTTP mais recente de quatro contextos sintéticos sobre idade individual, idades do casal e localização, já com a referência histórica descrita abaixo. Os testes determinísticos não comprovam naturalidade; esses exemplos permitem revisão comercial sem mensagens reais.
+
+## Referência histórica local de voz
+
+A bancada passou a carregar `local-artifacts/autonomous-v2-style/library.json` a cada nova geração. A biblioteca foi construída após SELECTs autenticados no Supabase sobre 332 mensagens atribuídas a operadores, em 35 conversas DDD 21 com marco de proposta. Filtros e revisão manual selecionaram 17 exemplos anonimizados de 12 conversas, sendo 16 atribuídos à Luiza e um ao Nick. A autoria comprova o usuário que enviou, não digitação manual. Campanhas, IA identificada, dados sensíveis, condições de produtos e exemplos incompatíveis foram excluídos. O relatório e a proveniência privada ficam na mesma pasta local ignorada pelo Git; nenhum dado de cliente foi adicionado ao repositório ou servido pela bancada.
+
+`domain/style.ts` seleciona até três referências pelo campo autorizado e público; somente a redação recebe esses exemplos como dados históricos. O intérprete, os fatos e os requisitos não recebem informações de outros leads. Não há mudança de pesos do modelo, sincronização automática ou consulta remota a cada resposta. Não havendo exemplo pertinente, vale a orientação geral. O adaptador implantável não fornece biblioteca por padrão; a ativação desse contexto está apenas no worker local da bancada. Versão e IDs de referência são registrados localmente como geração, sem confundir com entrega.
+
+Sete pares com modelo real mantiveram o mesmo campo escolhido; seis recuperaram exemplos pertinentes. A rodada final teve 14 respostas válidas ao término, sem medir tentativas intermediárias rejeitadas. Não se atribui melhora comercial geral a essa amostra pequena. Houve quatro conferências adicionais pelo HTTP da bancada. O relatório `RELATORIO.md` registra transcrições, limitações de cobertura e uma formulação ainda pouco fluida observada no teste do casal. A suíte agora inclui 143 testes V2 e quatro do preparador de exemplos, executados por `npm run test:autonomous-v2`.
+
+## Exportação e encerramento da bancada
+
+O botão Exportar conversa baixa um TXT UTF-8 no navegador, contendo mensagens em ordem, modelo, raciocínio e acompanhamento interno (decisão, memória e contadores). A exportação usa apenas a conversa local e esses campos explícitos, sem credenciais ou configurações globais. Mensagens ainda sem confirmação são identificadas; texto não enviado do campo de digitação não é incluído. Não há novo endpoint nem envio para outro serviço. Um download real foi conferido com sete mensagens do lead e dez da Kifer, preservando o histórico existente.
+
+No encerramento validado, a redação passou a usar "Já tenho as informações para seguir com a sua cotação", conforme a preferência comercial do usuário. Uma conferência com modelo real e dados essenciais completos retornou "Tudo bem, não precisa ter o CNPJ agora. Já tenho as informações para seguir com a sua cotação." A alteração vale para próximas gerações, sem reescrever respostas antigas ou alterar os requisitos de conclusão.
+
+## Plano anterior cancelado
+
+O teste exportado pelo usuário mostrou uma oportunidade de aprofundamento opcional após "cancelamos há pouco". A V2 agora registra separadamente o cancelamento já ocorrido, a operadora anterior e o motivo (`cancelledPreviousPlan`, `previousOperator`, `cancellationReason`). Se faltarem, oferece uma pergunta sobre a operadora e outra sobre o motivo, aproveitando o contexto antes de uma pergunta genérica sobre expectativa. Respostas espontâneas são aproveitadas. Cada pergunta é oferecida uma vez; recusa, desconhecimento, silêncio e conflitos nesses dados opcionais não viram pendências essenciais nem justificam conclusão falsa ou bloqueio da cotação. Nunca ter plano ou querer cancelar no futuro não confirma cancelamento ocorrido.
+
+A operadora anterior não implica plano atual, e o motivo do cancelamento é distinto da expectativa para o novo plano. Os requisitos essenciais e o contrato JSON existente permanecem compatíveis, sem mudança de schema ou migration. Não houve alteração remota ou reabertura da conversa já concluída. A mudança vale para as próximas gerações locais.
+
+Seis regressões adicionais cobrem prioridade contextual, separação de operadoras, dados espontâneos, desconhecimento, recusa e perguntas ignoradas. A suíte passou em 149 testes V2 e quatro do preparador. Dois cenários sintéticos de três turnos cada foram conferidos pelo HTTP com o modelo real: coleta normal e recusa dos dados anteriores. Ambos concluíram com os essenciais preenchidos, sem insistência, preservando plano atual como ausente e a expectativa de rede separada do motivo de custo. Evidência em `local-artifacts/autonomous-v2-replay/cancelled-plan-live-check.json`.
+
+## Respostas em duas partes na bancada
+
+Com `allowSplitReplies` habilitado somente no worker local, um texto já validado pode aparecer em duas bolhas consecutivas: um acolhimento com conteúdo e depois a pergunta. A separação usa uma pausa entre frases, sem gerar conteúdo adicional, cortar a pergunta ou criar uma bolha apenas para "Entendi!". Depois de uma divisão, as duas próximas rodadas permanecem em uma bolha. Mensagens do lead não são divididas. A quantidade total de perguntas, o limite de texto e as validações comerciais continuam sendo aplicados ao conjunto.
+
+O backend mantém uma única rodada canônica em texto, com a divisão indicada por uma linha em branco. A bancada renderiza e exporta as duas partes separadamente. Perguntas, memória e cancelamento por inbound mais recente continuam sendo contabilizados uma vez por rodada; não há fila de segunda mensagem que possa chegar atrasada. Isso é apresentação local, sem mudança no transporte WhatsApp ou implantação de múltiplos envios em produção. O adaptador implantável não habilita a opção.
+
+Uma primeira tentativa de delegar a quebra ao modelo teve uma falha final de JSON e foi preservada em `split-replies-live-check-first.json`. A solução final mantém o contrato de redação anterior e separa somente após validar. Os quatro cenários finais com modelo real terminaram com textos válidos e duas partes pertinentes; a amostra foi intencionalmente escolhida com contexto antes da pergunta e não estima frequência de divisão em atendimento geral. Evidência em `split-replies-live-check.json`. Duas regressões novas verificam uma única contagem de pergunta, segurança no conjunto, intervalo entre divisões e manutenção do texto. Passaram 151 testes V2, quatro do preparador e seis da sessão local, além de TypeScript estrito do domínio e lint focado. No Chrome, as duas bolhas e sua exportação em TXT também foram conferidas.

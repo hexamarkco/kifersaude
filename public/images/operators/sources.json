@@ -1,0 +1,42 @@
+[
+  {
+    "key": "medsenior",
+    "url": "https://medsenior.com.br/wp-content/uploads/2025/08/logo-medsenior-2025-scaled.png",
+    "file": "medsenior.png",
+    "type": "image/png",
+    "bytes": 50064
+  },
+  {
+    "key": "hapvida",
+    "url": "https://www2.hapvida.com.br/image/layout_set_logo?img_id=12975833",
+    "file": "hapvida.png",
+    "type": "image/png",
+    "bytes": 4495
+  },
+  {
+    "key": "leve",
+    "url": "https://www.levesaude.com.br/api/media/file/logo.svg",
+    "file": "leve.svg",
+    "type": "image/svg+xml",
+    "bytes": 8906
+  },
+  {
+    "key": "klini",
+    "url": "https://klinisaude.com.br/wp-content/uploads/2026/04/logo-header.webp",
+    "file": "klini.webp",
+    "type": "image/webp",
+    "bytes": 5898
+  },
+  {
+    "key": "unimed-brasil",
+    "url": "https://www.unimed.coop.br/site/image/layout_set_logo?img_id=70667720",
+    "file": "unimed-brasil.png",
+    "sourcePage": "https://www.unimed.coop.br/site/unimed-do-brasil"
+  },
+  {
+    "key": "notredame-saude",
+    "url": "https://www.notredame.com.br/documents/12522378/0/NotreDame_Logo_Horiz_Branco.svg/018318fd-1d18-51ba-5b0a-4b95f80d1f25?version=1.0&t=1791895664841",
+    "file": "notredame-saude.svg",
+    "sourcePage": "https://www.notredame.com.br/"
+  }
+]

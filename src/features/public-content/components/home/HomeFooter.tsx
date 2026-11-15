@@ -1,75 +1,55 @@
-import {
-  Heart,
-  Instagram,
-  Mail,
-  MessageCircle,
-  Phone,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
-import {
-  BrandWordmark,
-  Heading,
-  Text,
-  TextLink,
-} from "../../../../design-system";
+import { Instagram, Mail, MessageCircle } from "lucide-react";
+import { TextLink, Heading, Text } from "../../../../design-system";
 import { siteConfig } from "../../../../config/site";
 import {
   buildHomeWhatsAppUrl,
-  homeAudiences,
   homeNavigation,
   type ContractKind,
 } from "../../domain/homeContent";
+import HomeBrand from "./HomeBrand";
 
-type Props = { onQuote: (kind: ContractKind) => void };
-export default function HomeFooter({ onQuote }: Props) {
+export default function HomeFooter({
+  onQuote,
+}: {
+  onQuote: (kind: ContractKind) => void;
+}) {
+  const profiles = [
+    ["PF", "Pessoa física e família"],
+    ["MEI", "Planos para MEI"],
+    ["CNPJ", "Pequenas empresas"],
+  ] as const;
   return (
-    <footer className="home-footer">
-      <div className="home-container home-footer-grid">
-        <div className="home-footer-brand">
-          <BrandWordmark />
-          <Text className="home-footer-tagline">
-            Mais saúde, mais escolhas
-            <br /> para você, sua família e<br /> sua empresa.
-          </Text>
-          <Text>
-            A Kifer compara planos de diferentes operadoras, com atendimento
-            consultivo e sem custo, para você escolher com segurança e
-            tranquilidade.
-          </Text>
-          <ul className="home-footer-benefits">
-            {[
-              { icon: Users, text: "Atendimento especializado" },
-              { icon: ShieldCheck, text: "Comparação sem custo" },
-              { icon: Heart, text: "Mais saúde para o seu futuro" },
-            ].map(({ icon: Icon, text }) => (
-              <li key={text}>
-                <span className="home-icon">
-                  <Icon aria-hidden="true" />
-                </span>
-                {text}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <nav aria-label="Navegação do rodapé">
-          <Heading level={2}>Navegação</Heading>
-          <ul>
-            {homeNavigation.map(({ section, label }) => (
-              <li key={section}>
-                <TextLink href={`#${section}`}>{label}</TextLink>
-              </li>
-            ))}
-            <li>
-              <TextLink href="#quem-somos">Sobre a Luíza</TextLink>
-            </li>
-          </ul>
-        </nav>
-        <div>
-          <nav aria-label="Planos por perfil">
-            <Heading level={2}>Para quem é</Heading>
+    <footer className="footer">
+      <div className="wrap">
+        <div className="footer-grid">
+          <div className="footer-brand">
+            <TextLink href="#topo" aria-label="Kifer Saúde, início">
+              <HomeBrand />
+            </TextLink>
+            <Text>
+              Mais clareza nas escolhas.
+              <br />
+              Mais cuidado em cada fase.
+            </Text>
+          </div>
+          <nav aria-label="Navegação do rodapé">
+            <Heading family="display" level={2}>
+              Explore a Kifer
+            </Heading>
             <ul>
-              {homeAudiences.map(({ kind, label }) => (
+              {homeNavigation.map(({ section, label }) => (
+                <li key={section}>
+                  <TextLink href={`#${section}`}>{label}</TextLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Planos por perfil">
+            <Heading family="display" level={2}>
+              Encontre seu plano
+            </Heading>
+            <ul>
+              {profiles.map(([kind, label]) => (
                 <li key={kind}>
                   <TextLink
                     href="#cotacao"
@@ -82,107 +62,64 @@ export default function HomeFooter({ onQuote }: Props) {
                   </TextLink>
                 </li>
               ))}
-            </ul>
-          </nav>
-          <nav aria-label="Links úteis" className="home-footer-useful">
-            <Heading level={2}>Links úteis</Heading>
-            <ul>
               <li>
-                <TextLink href="#prova-social">Conheça as operadoras</TextLink>
-              </li>
-              <li>
-                <TextLink href="#faq">Tire suas dúvidas</TextLink>
-              </li>
-              <li>
-                <TextLink
-                  href={buildHomeWhatsAppUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Fale com um especialista
-                </TextLink>
+                <TextLink href="#operadoras">Conheça as operadoras</TextLink>
               </li>
             </ul>
           </nav>
-        </div>
-        <div className="home-footer-contact">
-          <Heading level={2}>Fale com a Kifer</Heading>
-          <Text>
-            Nosso time está pronto para ajudar você a encontrar seu plano.
-          </Text>
-          <ul>
-            <li>
-              <span className="home-icon">
-                <Phone aria-hidden="true" />
-              </span>
-              <div>
-                <Text>Telefone</Text>
-                <TextLink
-                  href={siteConfig.telephoneHref}
-                >
-                  {siteConfig.telephone}
-                </TextLink>
-                <Text className="home-footer-contact-note">Seg. a Sex. das 9h às 18h</Text>
-              </div>
-            </li>
-            <li>
-              <span className="home-icon">
+          <div className="footer-contact">
+            <Heading family="display" level={2}>
+              Vamos conversar
+            </Heading>
+            <Text>
+              <TextLink href={siteConfig.telephoneHref}>
+                {siteConfig.telephone}
+              </TextLink>
+            </Text>
+            <Text>
+              <TextLink href={`mailto:${siteConfig.email}`}>
+                {siteConfig.email}
+              </TextLink>
+            </Text>
+            <Text>Rio de Janeiro · RJ</Text>
+            <div className="footer-social">
+              <TextLink
+                href={siteConfig.instagramUrl}
+                aria-label="Instagram da Kifer Saúde"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Instagram aria-hidden="true" />
+              </TextLink>
+              <TextLink
+                href={buildHomeWhatsAppUrl()}
+                aria-label="WhatsApp da Kifer Saúde"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <MessageCircle aria-hidden="true" />
-              </span>
-              <div>
-                <Text>WhatsApp</Text>
-                <TextLink
-                  href={buildHomeWhatsAppUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {siteConfig.telephone}
-                </TextLink>
-                <Text className="home-footer-contact-note">Atendimento rápido e consultivo</Text>
-              </div>
-            </li>
-            <li>
-              <span className="home-icon">
+              </TextLink>
+              <TextLink
+                href={`mailto:${siteConfig.email}`}
+                aria-label="E-mail da Kifer Saúde"
+              >
                 <Mail aria-hidden="true" />
-              </span>
-              <div>
-                <Text>E-mail</Text>
-                <TextLink href={`mailto:${siteConfig.email}`}>
-                  {siteConfig.email}
-                </TextLink>
-                <Text className="home-footer-contact-note">Respondemos em até 1 dia útil</Text>
-              </div>
-            </li>
-          </ul>
-          <div className="home-footer-social">
-            <Heading level={2}>Siga a Kifer</Heading>
-            <TextLink
-              href={siteConfig.instagramUrl}
-              aria-label="Instagram da Kifer Saúde"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Instagram aria-hidden="true" />
-            </TextLink>
+              </TextLink>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="home-footer-bottom">
-        <div className="home-container">
+        <div className="footer-bottom">
           <Text>
             © {new Date().getFullYear()} Kifer Saúde. Todos os direitos
             reservados.
-            <br /> CNPJ {siteConfig.cnpj}
+            <br />
+            CNPJ {siteConfig.cnpj}
           </Text>
-          <TextLink href="/politica-de-privacidade">
-            Política de Privacidade
-          </TextLink>
           <div>
-            <ShieldCheck aria-hidden="true" />
-            <Text>
-              Seus dados tratados com
-              <br /> segurança e transparência.
-            </Text>
+            <TextLink href="/politica-de-privacidade">
+              Política de Privacidade
+            </TextLink>
+            <span>As condições variam conforme a operadora e o produto.</span>
           </div>
         </div>
       </div>

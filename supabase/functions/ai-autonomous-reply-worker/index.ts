@@ -1,14 +1,17 @@
 import { createWhatsAppDispatch, readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_shared/ai-autonomous-reply-failure.ts';
 import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
-import { deriveAutonomousConversationMemory } from '../_shared/ai-autonomous-memory.ts';
-import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
+import { generateAttendanceTurn } from './generate-turn.ts';
+import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_ROLLOUT, V2_STYLE_LIBRARY } from './deployment.ts';
+import { groupV2ReplyMessages, inV2Rollout } from './domain/rollout.ts';
+import { confirmed, initialState, isRecord } from './domain/state.ts';
+import { legacyEvidenceMessageIds, restoreV2State, runV2Turn, v2Enabled } from './domain/turn.ts';
+import { generateTextForFeature } from '../_shared/ai-router.ts';
+import type { AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { assertContactPermissionForSend } from '../_shared/contact-permissions.ts';
-import { generateTextForFeature, transcribeAudioWithRouting } from '../_shared/ai-router.ts';
-import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
-import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
+import { transcribeAudioWithRouting } from '../_shared/ai-router.ts';
 import {
   cacheCommWhatsAppMedia,
   corsHeaders,
@@ -28,12 +31,7 @@ import {
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
-  buildAutonomousAttendanceUserPrompt,
-  buildAutonomousValidationRetryInstruction,
   fetchQuickReplies,
-  getReliableLeadFirstName,
-  splitGeneratedReply,
-  validateAutonomousReplyOutput,
   type HandoffCode,
   type AutonomousMessageRow,
 } from '../_shared/ai-autonomous-helpers.ts';
@@ -53,12 +51,15 @@ const INLINE_DUE_WAIT_LIMIT_MS = 20_000;
 const AUTONOMOUS_WHAPI_REQUEST_TIMEOUT_MS = 20_000;
 
 type WorkerRequestBody = {
+  action?: string;
+  sample?: string;
   source?: string;
   chatId?: string;
   waitUntilDue?: boolean;
 };
 
 type AutonomousHistoryMessageRow = MessageRow & {
+  metadata: unknown;
   created_at: string;
   media_id: string | null;
   media_url: string | null;
@@ -182,16 +183,20 @@ async function completeAutonomousAttendanceHandoff(params: {
   chatId: string;
   leadId: string;
   handoffCode: HandoffCode;
-}): Promise<void> {
+  jobId: string;
+  sourceId: string;
+}): Promise<boolean> {
   const { supabaseAdmin, chatId, leadId, handoffCode } = params;
-  const { data, error } = await supabaseAdmin.rpc('complete_ai_autonomous_attendance_handoff', {
+  const { data, error } = await callAutonomousRpc(supabaseAdmin, 'complete_ai_autonomous_turn_handoff', {
     p_chat_id: chatId,
     p_lead_id: leadId,
     p_handoff_code: handoffCode,
+    p_job_id: params.jobId,
+    p_source_message_id: params.sourceId,
   });
   if (error) throw new Error(`Erro ao concluir handoff do atendimento autonomo: ${error.message}`);
 
-  const result = Array.isArray(data) ? data[0] : data;
+  const result = (Array.isArray(data) ? data[0] : data) as { status_applied?: boolean } | null;
   if (HANDOFF_STATUS_TARGET[handoffCode] && !result?.status_applied) {
     console.error('[ai-autonomous-reply-worker] status de handoff nao encontrado', {
       chatId,
@@ -200,6 +205,7 @@ async function completeAutonomousAttendanceHandoff(params: {
       targetStatusName: HANDOFF_STATUS_TARGET[handoffCode],
     });
   }
+  return result?.status_applied === true;
 }
 
 async function prepareAutonomousAttendanceReply(params: {
@@ -440,6 +446,56 @@ Deno.serve(async (req: Request) => {
 
     const supabaseAdmin = createAdminClient();
     const body = await req.json().catch(() => ({})) as WorkerRequestBody;
+    if (body.action === 'readiness') {
+      // Authenticated, read-only smoke check. Never claims a job or invokes WhatsApp.
+      const [catalog, guard] = await Promise.all([
+        supabaseAdmin.from('ai_models').select('active, deprecated_at, capabilities')
+          .eq('provider', 'openai').eq('model', V2_MODEL_PROFILE.model).maybeSingle(),
+        supabaseAdmin.rpc('ai_autonomous_qualification_can_complete', { p_state: {} }),
+      ]);
+      const ready = !catalog.error && catalog.data?.active === true && !catalog.data.deprecated_at
+        && Array.isArray(catalog.data.capabilities) && catalog.data.capabilities.includes('text')
+        && !guard.error && guard.data === false;
+      return new Response(JSON.stringify({ ready, deploymentVersion: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE,
+        styleLibraryVersion: V2_STYLE_LIBRARY.version, styleExampleCount: V2_STYLE_LIBRARY.examples.length,
+        rollout: V2_ROLLOUT, paused: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_PAUSED') === 'true' }),
+        { status: ready ? 200 : 503, headers: jsonHeaders });
+    }
+    if (body.action === 'preview') {
+      // Fixed synthetic inputs only; this path never loads chats, claims jobs, saves lead state or sends WhatsApp.
+      const samples: Record<string, string> = {
+        complete: 'Quero plano só para mim, tenho 35 anos, moro em Niterói, não tenho CNPJ nem MEI e não tenho plano. Quero uma boa rede de atendimento.',
+        missing_age: 'Quero um plano só para mim, moro em Niterói e não tenho CNPJ nem MEI.',
+        cancelled: 'Eu e minha esposa temos 38 e 40 anos, moramos em Niterói, sem CNPJ nem MEI. Cancelamos nosso plano há pouco e queremos uma boa rede.',
+      };
+      const resumeLegacy = body.sample === 'legacy_resume';
+      const sample = resumeLegacy ? 'Tenho MEI' : typeof body.sample === 'string' ? samples[body.sample] : undefined;
+      if (!sample) return new Response(JSON.stringify({ error: 'Cenário de teste inválido.' }), { status: 400, headers: jsonHeaders });
+      const now = new Date().toISOString();
+      const messages = [{ id: 'preview-input', role: 'lead' as const, content: sample, messageAt: now, receivedAt: now }];
+      const oldMessages = [
+        ['ai', 'O plano seria para quem?'], ['lead', 'Para mim e minha esposa'], ['ai', 'Quais são as idades?'], ['lead', '35 e 33 anos'],
+        ['ai', 'Em que cidade vocês moram?'], ['lead', 'Niterói'], ['ai', 'Vocês têm CNPJ ou MEI?'],
+      ].map(([role, content], index) => ({ id: `preview-old-${index}`, role: role as 'ai' | 'lead', content,
+        messageAt: new Date(Date.parse(now) - (20 - index) * 1000).toISOString(), receivedAt: new Date(Date.parse(now) - (20 - index) * 1000).toISOString() }));
+      const prior = resumeLegacy ? restoreV2State({ qualification: { lives: { countStatus: 'known', count: 2, items: [
+        { id: 'b1', label: 'cliente', ageStatus: 'known', age: 36 }, { id: 'b2', label: 'esposa', ageStatus: 'known', age: 34 },
+      ] }, location: { cityStatus: 'known', city: 'Rio de Janeiro', state: 'RJ' } } }, {}, now) : initialState();
+      const turn = await runV2Turn({ messages: resumeLegacy ? [...oldMessages, ...messages] : messages,
+        previous: prior, now, configVersion: 0, advisorName: V2_ADVISOR_NAME, styleLibrary: V2_STYLE_LIBRARY, allowSplitReplies: true,
+        generate: async (request) => (await generateTextForFeature({ supabaseAdmin, featureKey: 'autonomous.reply', task: 'autonomous_attendance',
+          edgeFunction: 'ai-autonomous-reply-worker:preview', runtimeModelProfile: V2_MODEL_PROFILE, systemPrompt: request.systemPrompt,
+          userPrompt: request.userPrompt, maxTokens: request.stage === 'interpret' ? 3200 : 500, temperature: 0,
+          maxAttempts: 2, maxProviderRequestsPerAttempt: 1, retrySameResolvedModel: true, attemptTimeoutMs: 20000,
+          validateOutput: (text) => { try { request.validate(text); return { valid: true }; }
+            catch { return { valid: false, stopReason: 'invalid_output', message: 'Corrija o formato JSON e as evidências.' }; } },
+        })).text,
+      });
+      return new Response(JSON.stringify({ testOnly: true, deploymentVersion: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE,
+        messages: turn.text.split(/\n\s*\n/), decision: turn.decision, styleTrace: turn.styleTrace,
+        qualification: { ages: confirmed(turn.state, 'beneficiaries')?.map((person) => person.age), city: confirmed(turn.state, 'city'),
+          companyPresence: confirmed(turn.state, 'companyPresence') } }), { status: 200, headers: jsonHeaders });
+    }
     const requestedChatId = typeof body.chatId === 'string' && body.chatId.trim() ? body.chatId.trim() : null;
     let nowIso = new Date().toISOString();
     console.log('[ai-autonomous-reply-worker] run iniciado', {
@@ -540,10 +596,11 @@ Deno.serve(async (req: Request) => {
       const jobStartedAt = Date.now();
       let deliveryAttemptStarted = false;
       let failureLeadId: string | null = job.lead_id;
+      let failureSourceId: string | null = null;
       try {
         const { data: chat, error: chatError } = await supabaseAdmin
           .from('comm_whatsapp_chats')
-          .select('id, autonomous_attendance_status, lead_id, deleted_at')
+          .select('id, autonomous_attendance_status, lead_id, deleted_at, created_at, phone_digits')
           .eq('id', job.chat_id)
           .maybeSingle();
         if (chatError) throw new Error(`Erro ao carregar chat: ${chatError.message}`);
@@ -579,7 +636,7 @@ Deno.serve(async (req: Request) => {
         const [historyResult, styleMessagesResult, quickReplies, leadResult] = await Promise.all([
           supabaseAdmin
             .from('comm_whatsapp_messages')
-            .select('id, direction, message_type, delivery_status, text_content, message_at, created_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name')
+            .select('id, direction, message_type, delivery_status, text_content, message_at, created_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name, metadata')
             .eq('chat_id', chat.id)
             .neq('delivery_status', 'failed')
             .neq('direction', 'system')
@@ -600,7 +657,7 @@ Deno.serve(async (req: Request) => {
           fetchQuickReplies(supabaseAdmin),
           supabaseAdmin
             .from('leads')
-            .select('nome_completo')
+            .select('nome_completo, cidade, estado, operadora_atual, created_at')
             .eq('id', leadId)
             .maybeSingle(),
         ]);
@@ -677,6 +734,7 @@ Deno.serve(async (req: Request) => {
         if (!promptInboundMessageId) {
           throw new Error('Nao foi possivel identificar a mensagem recebida que embasou a resposta autonoma.');
         }
+        failureSourceId = promptInboundMessageId;
 
         const correlationId = `${job.id}:${promptInboundMessageId}`;
         const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
@@ -688,128 +746,60 @@ Deno.serve(async (req: Request) => {
           styleRows: styleMessages.length,
           quickReplies: quickReplies.length,
         });
-        const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
-        const { systemPrompt, trace } = await composeAutonomousPrompt({
-          supabaseAdmin, config: autonomousConfig,
-          styleMessages: styleMessagesResult.error ? [] : styleMessagesResult.data as AutonomousStyleMessage[],
-          quickReplies,
-        });
-        await recordAutonomousAttendanceEvent({
-          supabaseAdmin, chatId: chat.id, leadId, eventType: 'prompt_composed', correlationId,
-          metadata: trace,
-        }).catch((error) => console.warn('[autonomous-prompt] trace persistence failed', String(error)));
-        const leadFirstName = getReliableLeadFirstName(leadResult.data?.nome_completo);
         const previousMemory = await supabaseAdmin.from('ai_autonomous_qualification_states')
           .select('state').eq('chat_id', chat.id).eq('lead_id', leadId).maybeSingle();
         if (previousMemory.error) throw new Error('Erro ao ler memoria do atendimento.');
-        const conversationMemory = deriveAutonomousConversationMemory(recentHistoryRows.map((row) => ({
-          id: row.id, messageAt: row.message_at, role: row.direction === 'inbound' ? 'lead' : 'ai', content: getMessageContent(row),
-        })), getNowIso(), promptInboundMessageId, previousMemory.data?.state);
+        const paused = Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_PAUSED') === 'true';
+        const priorMemory = previousMemory.data?.state;
+        const legacyStarted = isRecord(priorMemory) && !priorMemory.attendanceV2 && typeof priorMemory.source_message_id === 'string';
+        const rolloutEnabled = !paused && inV2Rollout({ leadId, leadCreatedAt: leadResult.data?.created_at,
+          chatCreatedAt: chat.created_at, phone: chat.phone_digits, rollout: V2_ROLLOUT, legacyStarted,
+          hasV2State: isRecord(priorMemory) && isRecord(priorMemory.attendanceV2),
+          messageReceivedAt: recentHistoryRows.find((row) => row.id === promptInboundMessageId)?.created_at });
+        const allowlist = paused ? '' : [Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_CHAT_IDS') ?? '', rolloutEnabled ? chat.id : ''].filter(Boolean).join(',');
+        const promptRows = [...recentHistoryRows];
+        if (v2Enabled(chat.id, allowlist) && legacyStarted) {
+          const present = new Set(promptRows.map((row) => row.id));
+          const missing = legacyEvidenceMessageIds(priorMemory).filter((id) => !present.has(id));
+          if (missing.length) {
+            const restored = await supabaseAdmin.from('comm_whatsapp_messages')
+              .select('id, direction, message_type, delivery_status, text_content, message_at, created_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name, metadata')
+              .eq('chat_id', chat.id).in('id', missing).neq('delivery_status', 'failed').neq('direction', 'system');
+            if (restored.error) throw new Error('Erro ao recuperar evidências do atendimento anterior.');
+            promptRows.push(...((restored.data ?? []) as AutonomousHistoryMessageRow[]).filter((row) => Boolean(getMessageContent(row))));
+            promptRows.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+          }
+          await recordAutonomousAttendanceEvent({ supabaseAdmin, chatId: chat.id, leadId, eventType: 'v2_legacy_bootstrap', correlationId,
+            decision: { historyRows: promptRows.length, restoredEvidenceRows: promptRows.length - recentHistoryRows.length } });
+        }
+        const promptMessages = groupV2ReplyMessages(promptRows.map((row) => {
+          const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
+          const key = typeof metadata.idempotency_key === 'string' ? metadata.idempotency_key : '';
+          return { id: row.id, messageAt: row.message_at, receivedAt: row.created_at,
+            role: row.direction === 'inbound' ? 'lead' as const : 'ai' as const, content: getMessageContent(row),
+            deliveryGroup: /^autonomous:[a-f0-9-]{36}:[a-f0-9-]{36}:\d+$/.test(key) ? key.replace(/:\d+$/, '') : undefined };
+        })).map(({ id, messageAt, receivedAt, role, content }) => ({ id, messageAt, receivedAt, role, content }));
+        const turn = await generateAttendanceTurn({
+          client: supabaseAdmin, chatId: chat.id, leadId, sourceId: promptInboundMessageId,
+          previousMemory: previousMemory.data?.state, lead: leadResult.data ?? {},
+          messages: promptMessages,
+          styleMessages: styleMessagesResult.error ? [] : styleMessagesResult.data as AutonomousStyleMessage[], quickReplies,
+          allowlist,
+          advisorName: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_ADVISOR_NAME') || V2_ADVISOR_NAME,
+          deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true },
+          record: (eventType, decision) => recordAutonomousAttendanceEvent({
+            supabaseAdmin, chatId: chat.id, leadId, eventType, correlationId, decision,
+          }),
+        });
+        const { messages, handoffCode } = turn;
         const savedMemory = await callAutonomousRpc(supabaseAdmin, 'save_ai_autonomous_turn_memory', {
           p_chat_id: chat.id, p_lead_id: leadId, p_job_id: job.id,
-          p_source_message_id: promptInboundMessageId, p_state: conversationMemory,
+          p_source_message_id: promptInboundMessageId, p_state: turn.memory,
         });
         if (savedMemory.error) throw new Error('Erro ao registrar memoria do atendimento.');
         if (savedMemory.data !== true) {
           await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
           continue;
-        }
-        const userPrompt = buildAutonomousAttendanceUserPrompt(history, {
-          conversationMemory,
-          isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
-          leadFirstName: leadFirstName ?? undefined,
-        });
-
-        const result = await generateTextForFeature({
-          supabaseAdmin,
-          featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
-          task: 'autonomous_attendance',
-          systemPrompt,
-          userPrompt,
-          temperature: autonomousConfig.temperature,
-          maxTokens: autonomousConfig.maxOutputTokens,
-          edgeFunction: 'ai-autonomous-reply-worker',
-          leadId,
-          chatId: chat.id,
-          messageId: promptInboundMessageId,
-          maxAttempts: 2,
-          maxProviderRequestsPerAttempt: 1,
-          retrySameResolvedModel: true,
-          attemptTimeoutMs: 30_000,
-          validateOutput: (text) => validateAutonomousReplyOutput(text, history),
-          buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-        });
-        const generatedReplyText = result.text;
-
-        const parsedReply = splitGeneratedReply(generatedReplyText, false);
-        const messages = [...parsedReply.messages];
-        let handoffCode = parsedReply.handoffCode;
-
-        // Se o modelo retornou apenas a tag de handoff sem mensagem visível,
-        // regenera uma única vez pedindo explicitamente a mensagem final.
-        if (messages.length === 0 && handoffCode) {
-          console.warn('[ai-autonomous-reply-worker] resposta tag-only, regenerando com instrução explícita', {
-            jobId: job.id,
-            chatId: chat.id,
-            handoffCode,
-          });
-          const retryUserPrompt = [
-            userPrompt,
-            '\n--- INSTRUÇÃO IMPORTANTE ---',
-            'Você DEVE escrever a mensagem visível para o lead ANTES da tag de handoff.',
-            'NÃO envie apenas a tag. Escreva a mensagem de despedida/closure e inclua a tag ao final.',
-          ].join('\n');
-          const retryResult = await generateTextForFeature({
-            attemptTimeoutMs: 30_000,
-            supabaseAdmin,
-            featureKey: AI_FEATURES.AUTONOMOUS_REPLY,
-            task: 'autonomous_attendance',
-            systemPrompt,
-            userPrompt: retryUserPrompt,
-            temperature: autonomousConfig.temperature,
-            maxTokens: autonomousConfig.maxOutputTokens,
-            edgeFunction: 'ai-autonomous-reply-worker',
-            leadId,
-            chatId: chat.id,
-            messageId: promptInboundMessageId,
-            maxAttempts: 2,
-            maxProviderRequestsPerAttempt: 1,
-            retrySameResolvedModel: true,
-            validateOutput: (text) => validateAutonomousReplyOutput(text, history),
-            buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-          });
-          const retryParsed = splitGeneratedReply(retryResult.text, false);
-          if (retryParsed.messages.length > 0) {
-            messages.push(...retryParsed.messages);
-            handoffCode = retryParsed.handoffCode ?? handoffCode;
-          } else {
-            // Retry falhou — registrar erro mas NÃO deixar conversa presa em active
-            console.error('[ai-autonomous-reply-worker] retry tag-only falhou, aplicando handoff seguro', {
-              jobId: job.id,
-              chatId: chat.id,
-            });
-            const current = await callAutonomousRpc(supabaseAdmin, 'ai_autonomous_turn_is_current', {
-              p_chat_id: chat.id, p_job_id: job.id, p_source_message_id: promptInboundMessageId,
-            });
-            if (current.error) throw new Error('Erro ao validar encerramento do turno.');
-            if (current.data !== true) {
-              await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
-              continue;
-            }
-            // Aplicar handoff mesmo sem mensagem visível para não deixar a conversa presa
-            await completeAutonomousAttendanceHandoff({
-              supabaseAdmin,
-              chatId: chat.id,
-              leadId,
-              handoffCode,
-            });
-            await supabaseAdmin
-              .from('ai_autonomous_reply_jobs')
-              .update({ status: 'completed', last_error: 'retry tag-only sem mensagem visível — handoff seguro aplicado' })
-              .eq('id', job.id);
-            processed += 1;
-            continue;
-          }
         }
 
         if (messages.length === 0) throw new Error('A IA nao retornou uma resposta valida.');
@@ -832,8 +822,8 @@ Deno.serve(async (req: Request) => {
             messageCount: messages.length,
             visibleMessageLengths: messages.map((message) => message.length),
           },
-          metadata: { source: 'ai-autonomous-reply-worker', generationDurationMs: result.durationMs,
-            retryCount: result.retryCount, estimatedCostUsd: result.estimatedCostUsd,
+          metadata: { source: 'ai-autonomous-reply-worker', generationDurationMs: turn.durationMs,
+            retryCount: turn.retryCount, estimatedCostUsd: turn.estimatedCostUsd,
             queueDelayMs: Math.max(0, jobStartedAt - Date.parse(job.scheduled_at)) },
         }).catch((error) => {
           console.warn('[ai-autonomous-reply-worker] falha ao registrar resposta gerada', {
@@ -992,6 +982,16 @@ Deno.serve(async (req: Request) => {
         }
         if (replyWasDiscarded) continue;
 
+        const sentMemory = await callAutonomousRpc(supabaseAdmin, 'save_ai_autonomous_turn_memory', {
+          p_chat_id: chat.id, p_lead_id: leadId, p_job_id: job.id,
+          p_source_message_id: promptInboundMessageId, p_state: turn.memoryAfterSend,
+        });
+        if (sentMemory.error) throw new Error('Erro ao registrar continuidade após envio.');
+        if (sentMemory.data !== true) {
+          await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+          continue;
+        }
+
         if (handoffCode) {
           const current = await callAutonomousRpc(supabaseAdmin, 'ai_autonomous_turn_is_current', {
             p_chat_id: chat.id, p_job_id: job.id, p_source_message_id: promptInboundMessageId,
@@ -1001,12 +1001,17 @@ Deno.serve(async (req: Request) => {
             await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
             continue;
           }
-          await completeAutonomousAttendanceHandoff({
+          const handedOff = await completeAutonomousAttendanceHandoff({
             supabaseAdmin,
             chatId: chat.id,
             leadId,
             handoffCode,
+            jobId: job.id, sourceId: promptInboundMessageId,
           });
+          if (!handedOff) {
+            await cancelStaleAutonomousReplyJob({ supabaseAdmin, jobId: job.id, chatId: chat.id, promptInboundMessageId });
+            continue;
+          }
           await recordAutonomousAttendanceEvent({
             supabaseAdmin,
             chatId: chat.id,
@@ -1073,11 +1078,13 @@ Deno.serve(async (req: Request) => {
             .update({ status: 'failed', last_error: message })
             .eq('id', job.id).eq('status', 'processing').select('id').maybeSingle();
           if (failedJob.error) throw new Error('Erro ao registrar falha do atendimento.');
-          if (failureAction === 'handoff' && failureLeadId && failedJob.data) {
+          if (failureAction === 'handoff' && failureLeadId && failureSourceId && failedJob.data) {
             try {
-              await completeAutonomousAttendanceHandoff({
+              const handedOff = await completeAutonomousAttendanceHandoff({
                 supabaseAdmin, chatId: job.chat_id, leadId: failureLeadId, handoffCode: 'PRECISA_HUMANO',
+                jobId: job.id, sourceId: failureSourceId,
               });
+              if (!handedOff) continue;
               await recordAutonomousAttendanceEvent({
                 supabaseAdmin, chatId: job.chat_id, leadId: failureLeadId,
                 eventType: 'handoff_completed', correlationId: job.id,

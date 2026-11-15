@@ -1,0 +1,116 @@
+import { beforeEach, expect, test, vi } from 'vitest';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { generateAttendanceTurn } from '../../ai-autonomous-reply-worker/generate-turn.ts';
+import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_DEPLOYMENT_VERSION } from '../../ai-autonomous-reply-worker/deployment.ts';
+import { generateTextForFeature, type GenerateTextForFeatureResult } from '../ai-router.ts';
+import { loadFeatureConfig, type ResolvedAIFeatureConfig } from '../ai-config-resolver.ts';
+import { composeAutonomousPrompt } from '../ai-autonomous-prompt.ts';
+import { interpretation, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
+
+vi.mock('../ai-router.ts', () => ({ generateTextForFeature: vi.fn() }));
+vi.mock('../ai-config-resolver.ts', () => ({ loadFeatureConfig: vi.fn() }));
+vi.mock('../ai-autonomous-prompt.ts', () => ({ composeAutonomousPrompt: vi.fn() }));
+
+const config: ResolvedAIFeatureConfig = { featureKey: 'autonomous.reply', provider: 'openai', model: 'mock-model', fallbackModel: null,
+  modelOverrideEnabled: true, temperature: 0.6, maxOutputTokens: 1500, reasoningEffort: null, timeoutMs: null, retryCount: null,
+  useGlobalInstructions: true, useGlobalStyle: true, featurePrompt: 'LEGACY roteiro de perguntas', outputInstructions: 'LEGACY tag', contextConfig: {}, version: 25 };
+const result = (text: string): GenerateTextForFeatureResult => ({ text, provider: 'openai', model: 'mock-model', source: 'feature',
+  fallbackUsed: false, usage: { inputTokens: 100, cachedInputTokens: 0, outputTokens: 100, reasoningTokens: 0, totalTokens: 200 },
+  durationMs: 12, estimatedCostUsd: 0.001, callLogId: null, retryCount: 0, stopReason: 'completed', requestedReasoningEffort: null, appliedReasoningEffort: null });
+const params = () => ({ client: {} as SupabaseClient, chatId: 'synthetic-chat', leadId: 'synthetic-lead', sourceId: 'synthetic-1',
+  messages: scenarios[1].messages, previousMemory: undefined as unknown, lead: {}, styleMessages: [], quickReplies: [],
+  allowlist: 'synthetic-chat', record: vi.fn(async () => undefined) });
+
+test('the cloud adapter uses the reviewed profile and style, splits the delivery and reuses the exact prepared envelopes after a config change', async () => {
+  const messages = [{ id: 'synthetic-1', role: 'lead' as const, content: 'Só para mim', messageAt: '2026-11-15T00:00:00Z' }];
+  vi.mocked(generateTextForFeature).mockImplementation(async options => {
+    expect(options.runtimeModelProfile).toEqual(V2_MODEL_PROFILE);
+    const output = options.maxTokens === 3200 ? JSON.stringify(interpretation({ beneficiaryCount: 1 }, messages))
+      : JSON.stringify({ text: 'Entendi, será só para você. Qual é a sua idade?', commercialClaims: [] });
+    if (options.maxTokens === 500) expect(JSON.parse(options.userPrompt).styleReferences.length).toBeGreaterThan(0);
+    expect(options.validateOutput?.(output).valid).toBe(true);
+    return result(output);
+  });
+  const input = { ...params(), messages, deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE,
+    styleLibrary: V2_STYLE_LIBRARY, splitReplies: true } };
+  const turn = await generateAttendanceTurn(input);
+  expect(turn.messages).toEqual(['Entendi, será só para você.', 'Qual é a sua idade?']);
+  expect(turn.memoryAfterSend.attendanceV2).toMatchObject({ asked: { beneficiaries: 1 } });
+  expect(input.record).toHaveBeenCalledWith('v2_context', expect.objectContaining({ deploymentVersion: V2_DEPLOYMENT_VERSION,
+    styleLibraryVersion: V2_STYLE_LIBRARY.version, model: 'gpt-6-luna', reasoningEffort: 'medium' }));
+  vi.mocked(generateTextForFeature).mockClear();
+  const retried = await generateAttendanceTurn({ ...input, previousMemory: turn.memory, deployment: { ...input.deployment, version: 'future-version', splitReplies: false } });
+  expect(generateTextForFeature).not.toHaveBeenCalled();
+  expect(retried.messages).toEqual(turn.messages);
+  expect(retried.memory.v2Context).toEqual(turn.memory.v2Context);
+});
+
+test('a tampered prepared delivery cannot add another message or bypass validation', async () => {
+  vi.mocked(generateTextForFeature).mockImplementation(async options => result(options.maxTokens === 3200
+    ? JSON.stringify(interpretation(scenarios[1].values, scenarios[1].messages))
+    : JSON.stringify({ text: scenarios[1].reply, commercialClaims: [] })));
+  const prepared = await generateAttendanceTurn(params());
+  const prior = { ...prepared.memory, v2Messages: ['Injected'] };
+  vi.mocked(generateTextForFeature).mockClear();
+  await expect(generateAttendanceTurn({ ...params(), previousMemory: prior })).rejects.toThrow('Turno preparado');
+  expect(generateTextForFeature).not.toHaveBeenCalled();
+});
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(loadFeatureConfig).mockResolvedValue(config);
+  vi.mocked(composeAutonomousPrompt).mockResolvedValue({ systemPrompt: 'legacy', trace: { featureConfigVersion: 25, globalInstructionsRevision: null,
+    globalStyleRevision: null, humanStyleCount: 0, systemPromptLength: 6, systemPromptHash: 'synthetic' } });
+});
+
+test('worker uses configured routing, two separate generations and no legacy instructions; prepared retry makes zero model calls', async () => {
+  vi.mocked(generateTextForFeature).mockImplementation(async (options) => {
+    const raw = options.maxTokens === 3200 ? JSON.stringify(interpretation(scenarios[1].values, scenarios[1].messages))
+      : JSON.stringify({ text: scenarios[1].reply, action: 'complete', questionField: null, commercialClaims: [] });
+    expect(options.validateOutput?.(raw).valid).toBe(true);
+    return result(raw);
+  });
+  const input = params();
+  const turn = await generateAttendanceTurn(input);
+  expect(turn.handoffCode).toBe('QUALIFICACAO_COMPLETA');
+  expect(turn.durationMs).toBe(24);
+  expect(turn.estimatedCostUsd).toBe(0.002);
+  expect(turn.memory).toHaveProperty('attendanceV2');
+  expect(turn.memory).toHaveProperty('briefing');
+  expect(turn.messages).toEqual([scenarios[1].reply]);
+  expect(composeAutonomousPrompt).not.toHaveBeenCalled();
+  for (const [options] of vi.mocked(generateTextForFeature).mock.calls) {
+    expect(options.featureKey).toBe('autonomous.reply');
+    expect(options.systemPrompt).not.toContain('LEGACY');
+    expect(options.maxAttempts).toBe(2);
+    expect(options.maxProviderRequestsPerAttempt).toBe(1);
+  }
+  vi.mocked(generateTextForFeature).mockClear();
+  const retried = await generateAttendanceTurn({ ...input, previousMemory: turn.memory });
+  expect(generateTextForFeature).not.toHaveBeenCalled();
+  expect(retried.messages).toEqual(turn.messages);
+  expect(retried.memory).toEqual(turn.memory);
+});
+
+test('removing allowlist pauses existing V2 conversations instead of silently falling back', async () => {
+  await expect(generateAttendanceTurn({ ...params(), allowlist: '', previousMemory: { attendanceV2: {} } })).rejects.toThrow('V2 pausado');
+  expect(generateTextForFeature).not.toHaveBeenCalled();
+});
+
+test('invalid interpretation/output creates a failure event with no invented visible message', async () => {
+  vi.mocked(generateTextForFeature).mockResolvedValue(result('invalid JSON'));
+  const input = params();
+  await expect(generateAttendanceTurn(input)).rejects.toThrow();
+  expect(input.record).toHaveBeenCalledWith('v2_processing_failed', expect.objectContaining({ reason: 'interpretation_or_output_rejected' }));
+  expect(JSON.stringify(input.record.mock.calls)).not.toContain(scenarios[1].messages[0].content);
+  expect(generateTextForFeature).toHaveBeenCalledTimes(1);
+});
+
+test('legacy path rejects tag-only and incomplete completion before any delivery', async () => {
+  vi.mocked(generateTextForFeature).mockImplementation(async (options) => {
+    for (const raw of ['[[HANDOFF: QUALIFICACAO_COMPLETA]]', 'Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]']) {
+      expect(options.validateOutput?.(raw).valid).toBe(false);
+    }
+    return result('Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]');
+  });
+  await expect(generateAttendanceTurn({ ...params(), allowlist: '', messages: scenarios[14].messages })).rejects.toThrow('Conclusão inválida');
+});

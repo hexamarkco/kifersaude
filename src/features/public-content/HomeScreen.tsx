@@ -1,37 +1,48 @@
 import { useEffect, useRef } from "react";
 import PublicSeo from "../../components/public/PublicSeo";
-import { PublicShell, TextLink } from "../../design-system";
+import { ArrowUpRight } from "lucide-react";
+import { Button, PublicShell, Text, TextLink } from "../../design-system";
 import PublicHomeHeader from "./components/PublicHomeHeader";
 import HomeAudience from "./components/home/HomeAudience";
 import { HomeFaq, HomeWhatsApp } from "./components/home/HomeContact";
 import HomeFooter from "./components/home/HomeFooter";
-import { HomeHero, HomeTrust } from "./components/home/HomeIntro";
+import { HomeHero } from "./components/home/HomeIntro";
+import HomePartners from "./components/home/HomePartners";
 import {
   HomeAbout,
   HomeProcess,
-  HomeTestimonials,
+  HomeClarity,
 } from "./components/home/HomeJourney";
 import HomeQuoteForm from "./components/home/HomeQuoteForm";
-import HomePhotoMasks from "./components/home/HomePhotoMasks";
 import { homeFaqs, homePhotos, type ContractKind } from "./domain/homeContent";
 import { useHomeQuote } from "./hooks/useHomeQuote";
 import { useHomeMotion } from "./hooks/useHomeMotion";
+
+const scrollToSection = (id: string, initial = false) => {
+  const aliases: Record<string, string> = {
+    "prova-social": "operadoras",
+    faq: "duvidas",
+    "quem-somos": "sobre",
+    "fale-agora": "conversa",
+    depoimentos: "clareza",
+  };
+  const resolvedId = aliases[id] ?? id;
+  const section = document.getElementById(resolvedId);
+  if (!section) return;
+  window.history.replaceState(null, "", `#${resolvedId}`);
+  section.scrollIntoView({
+    behavior:
+      initial || window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    block: "start",
+  });
+};
 
 export default function HomeScreen() {
   const quote = useHomeQuote();
   const motionAnchor = useRef<HTMLElement>(null);
   useHomeMotion(motionAnchor);
-  const scrollToSection = (id: string) => {
-    const section = document.getElementById(id);
-    if (!section) return;
-    window.history.replaceState(null, "", `#${id}`);
-    section.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    });
-  };
   const requestQuote = (kind?: ContractKind) => {
     if (kind) quote.update("tipoContratacao", kind);
     scrollToSection("cotacao");
@@ -46,11 +57,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const id = window.location.hash.slice(1);
     if (!id) return;
-    const frame = requestAnimationFrame(() =>
-      document
-        .getElementById(id)
-        ?.scrollIntoView({ behavior: "auto", block: "start" }),
-    );
+    const frame = requestAnimationFrame(() => scrollToSection(id, true));
     return () => cancelAnimationFrame(frame);
   }, []);
 
@@ -64,8 +71,7 @@ export default function HomeScreen() {
         imageAlt="Luíza Kifer no escritório da Kifer Saúde"
         faqItems={homeFaqs}
       />
-      <PublicShell width="full" className="kifer-home">
-        <HomePhotoMasks />
+      <PublicShell width="full" className="kifer-landing">
         <TextLink href="#conteudo-principal" className="home-skip-link">
           Pular para o conteúdo
         </TextLink>
@@ -73,18 +79,28 @@ export default function HomeScreen() {
           onNavigate={scrollToSection}
           onRequestQuote={() => requestQuote()}
         />
-        <main id="conteudo-principal" ref={motionAnchor}>
+        <main id="conteudo-principal" ref={motionAnchor} tabIndex={-1}>
           <HomeHero onQuote={() => requestQuote()} />
-          <HomeTrust />
+          <HomePartners onQuote={() => requestQuote()} />
           <HomeAudience onQuote={requestQuote} />
-          <HomeProcess />
-          <HomeTestimonials />
+          <HomeClarity />
+          <HomeProcess onQuote={() => requestQuote()} />
           <HomeAbout />
           <HomeFaq />
           <HomeQuoteForm quote={quote} />
           <HomeWhatsApp />
         </main>
         <HomeFooter onQuote={requestQuote} />
+        <div className="mobile-cta">
+          <Text>
+            <strong>Seu plano começa aqui.</strong>Cotação gratuita, sem
+            compromisso.
+          </Text>
+          <Button className="button" onClick={() => requestQuote()}>
+            Quero uma cotação
+            <ArrowUpRight aria-hidden="true" />
+          </Button>
+        </div>
       </PublicShell>
     </>
   );

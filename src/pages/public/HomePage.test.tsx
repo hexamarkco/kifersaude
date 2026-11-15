@@ -49,10 +49,13 @@ function setup() {
 }
 
 function field(container: HTMLElement, id: string, value: string) {
-  const input = container.querySelector<HTMLInputElement>(`#${id}`)!;
+  const control = container.querySelector<HTMLElement>(`#${id}`)!;
+  const input = control instanceof HTMLButtonElement
+    ? container.querySelector('select')!
+    : control as HTMLInputElement;
   act(() => {
     Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
+      input instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype,
       "value",
     )!.set!.call(input, value);
     Simulate.change(input, {
@@ -121,39 +124,33 @@ test("preserva dados em erro e impede submissão com faixas etárias inconsisten
   }
 });
 
-test("troca o painel de perfil, leva a seleção ao formulário e expande o FAQ com relações acessíveis", () => {
+test("leva o perfil escolhido ao formulário e expande o FAQ com relações acessíveis", () => {
   const view = setup();
   try {
-    const mei = view.container.querySelector<HTMLInputElement>(
-      'input[name="audience-profile"][value="MEI"]',
-    )!;
-    act(() => mei.click());
-    const panel = view.container.querySelector(`#${mei.getAttribute("aria-controls")}`)!;
+    const panel = Array.from(view.container.querySelectorAll<HTMLElement>('#para-quem article'))
+      .find((item) => item.textContent?.includes('Seu trabalho cresce.'))!;
     assert.ok(panel.textContent?.includes("Seu trabalho cresce."));
-    assert.equal(panel.getAttribute("aria-hidden"), "false");
-    assert.equal(panel.getAttribute("aria-labelledby"), "audience-label-MEI");
-    act(() => panel.querySelector<HTMLButtonElement>("button")!.click());
+    act(() => panel.querySelector<HTMLAnchorElement>('a[href="#cotacao"]')!.click());
     assert.equal(
       view.container.querySelector<HTMLInputElement>(
         'input[name="quote-contract-type"][value="MEI"]',
       )?.checked,
       true,
     );
-    const faq =
-      view.container.querySelector<HTMLButtonElement>("#faq-trigger-0")!;
-    act(() => faq.click());
-    assert.equal(faq.getAttribute("aria-expanded"), "true");
+    const faq = () => view.container.querySelector<HTMLButtonElement>("#faq-trigger-1")!;
+    act(() => faq().click());
+    assert.equal(faq().getAttribute("aria-expanded"), "true");
     assert.equal(
       view.container.querySelector<HTMLElement>(
-        `#${faq.getAttribute("aria-controls")}`,
-      )?.getAttribute("aria-hidden"),
-      "false",
+        `#${faq().getAttribute("aria-controls")}`,
+      )?.hidden,
+      false,
     );
-    act(() => faq.click());
-    assert.equal(faq.getAttribute("aria-expanded"), "false");
+    act(() => faq().click());
+    assert.equal(faq().getAttribute("aria-expanded"), "false");
     assert.equal(
-      view.container.querySelector(`#${faq.getAttribute("aria-controls")}`)?.getAttribute("aria-hidden"),
-      "true",
+      view.container.querySelector<HTMLElement>(`#${faq().getAttribute("aria-controls")}`)?.hidden,
+      true,
     );
   } finally {
     view.unmount();

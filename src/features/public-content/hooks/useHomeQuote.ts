@@ -25,7 +25,7 @@ const initialValues: QuoteValues = {
   telefone: "",
   cidade: "",
   tipoContratacao: "PF",
-  numeroVidas: "",
+  numeroVidas: "1",
   idadeTitular: "",
 };
 type QuoteFeedback = {

@@ -1,0 +1,403 @@
+/* DS primitives in the approved editorial composition. */
+.painel-theme.kifer-ds.kifer-landing {
+  --brand-primary: var(--landing-action);
+  --brand-primary-hover: var(--landing-action-hover);
+  --brand-primary-active: var(--landing-action-hover);
+  --bg-surface: var(--landing-surface);
+  --border-strong: var(--landing-border);
+  --text-primary: var(--landing-ink);
+  --text-secondary: var(--landing-muted);
+  --text-muted: var(--landing-muted);
+  --control-height-lg: 48px;
+  --control-font-lg: 12px;
+  --control-padding-lg: 14px;
+  --control-icon-lg: 16px;
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+}
+.painel-theme.kifer-ds.kifer-landing .kds-public-shell-inner {
+  width: 100%;
+  max-width: none;
+}
+.painel-theme.kifer-ds.kifer-landing p {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: inherit;
+}
+.painel-theme.kifer-ds.kifer-landing h1,
+.painel-theme.kifer-ds.kifer-landing h2,
+.painel-theme.kifer-ds.kifer-landing h3 {
+  color: inherit;
+}
+.painel-theme.kifer-ds.kifer-landing main > section {
+  scroll-margin-top: 110px;
+}
+.painel-theme.kifer-ds.kifer-landing .button {
+  height: auto;
+  letter-spacing: normal;
+}
+.painel-theme.kifer-ds.kifer-landing .button .kds-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+}
+.painel-theme.kifer-ds.kifer-landing .text-link {
+  letter-spacing: normal;
+}
+.painel-theme.kifer-ds.kifer-landing .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.painel-theme.kifer-ds.kifer-landing .header-toggle {
+  display: none;
+}
+.painel-theme.kifer-ds.kifer-landing .header-brand {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.painel-theme.kifer-ds.kifer-landing .home-skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 12px 18px;
+  background: var(--landing-surface);
+  color: var(--landing-ink);
+  border-radius: var(--radius-control);
+  transform: translateY(-160%);
+}
+.painel-theme.kifer-ds.kifer-landing .home-skip-link:focus {
+  transform: none;
+}
+.painel-theme.kifer-ds.kifer-landing .clarity-mark,
+.painel-theme.kifer-ds.kifer-landing .contact-mark {
+  color: var(--landing-surface);
+}
+.painel-theme.kifer-ds.kifer-landing .steps {
+  list-style: none;
+  padding: 0;
+}
+.painel-theme.kifer-ds.kifer-landing .footer h2 {
+  color: var(--landing-surface);
+  font: 500 12px/1.5 var(--font-sans);
+  letter-spacing: normal;
+  margin: 0 0 20px;
+}
+.painel-theme.kifer-ds.kifer-landing .footer p {
+  color: inherit;
+}
+.painel-theme.kifer-ds.kifer-landing .footer .brand-ks {
+  color: var(--landing-action);
+}
+.painel-theme.kifer-ds.kifer-landing .footer .brand-name {
+  color: var(--landing-surface);
+}
+.painel-theme.kifer-ds.kifer-landing .faq-list .faq-item {
+  border-bottom: 1px solid var(--landing-border);
+}
+.painel-theme.kifer-ds.kifer-landing .faq-trigger {
+  padding: 24px 0;
+  min-height: 0;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--landing-ink);
+  font: 500 15px/1.6 var(--font-sans);
+  white-space: normal;
+  text-align: left;
+}
+.painel-theme.kifer-ds.kifer-landing .faq-trigger .kds-button-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+.painel-theme.kifer-ds.kifer-landing .faq-trigger svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  transition: transform 200ms ease;
+}
+.painel-theme.kifer-ds.kifer-landing .faq-trigger[aria-expanded="true"] svg {
+  transform: rotate(45deg);
+}
+.painel-theme.kifer-ds.kifer-landing .faq-trigger:hover {
+  color: var(--landing-action);
+  background: transparent;
+}
+.painel-theme.kifer-ds.kifer-landing .faq-answer p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--landing-muted);
+  padding: 0 32px 24px 0;
+}
+.painel-theme.kifer-ds.kifer-landing fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.painel-theme.kifer-ds.kifer-landing .fields {
+  align-items: start;
+}
+.painel-theme.kifer-ds.kifer-landing .full {
+  grid-column: 1 / -1;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-fieldset {
+  width: 100%;
+  margin: 0;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-fieldset legend {
+  margin: 0 0 12px;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: 8px;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio {
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 8px;
+  border: 1px solid var(--landing-border);
+  border-radius: var(--radius-control);
+  color: var(--landing-muted);
+  background: transparent;
+  cursor: pointer;
+  justify-content: center;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio-indicator {
+  display: none;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio-content {
+  min-width: 0;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio-label > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector svg {
+  width: 14px;
+  height: 14px;
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio-checked {
+  border-color: var(--landing-action);
+  background: var(--brand-primary-soft);
+  color: var(--landing-action-hover);
+}
+.painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio:focus-within {
+  outline: 2px solid var(--landing-action);
+  outline-offset: 3px;
+}
+.painel-theme.kifer-ds.kifer-landing .field {
+  gap: 0;
+}
+.painel-theme.kifer-ds.kifer-landing .field .kds-field-copy {
+  margin-bottom: 8px;
+}
+.painel-theme.kifer-ds.kifer-landing .field label {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--landing-ink);
+}
+.painel-theme.kifer-ds.kifer-landing .field .kds-input,
+.painel-theme.kifer-ds.kifer-landing .field .kds-select {
+  font: 400 12px/1.4 var(--font-sans);
+  height: 48px;
+  min-height: 48px;
+  padding: 0 14px;
+  background: var(--landing-surface);
+  color: var(--landing-ink);
+}
+.painel-theme.kifer-ds.kifer-landing .field .kds-input[aria-invalid="true"],
+.painel-theme.kifer-ds.kifer-landing .field .kds-select[aria-invalid="true"] {
+  border-color: var(--danger-text);
+}
+.painel-theme.kifer-ds.kifer-landing .field select.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+.painel-theme.kifer-ds.kifer-landing .landing-city-trigger {
+  display: block;
+  width: 100%;
+}
+.painel-theme.kifer-ds.kifer-landing .home-age-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.painel-theme.kifer-ds.kifer-landing .home-age-heading p {
+  font-size: 12px;
+}
+.painel-theme.kifer-ds.kifer-landing .home-age-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.painel-theme.kifer-ds.kifer-landing .home-honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.painel-theme.kifer-ds.kifer-landing .home-form-feedback {
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 20px;
+}
+.painel-theme.kifer-ds.kifer-landing .home-form-feedback[role="alert"] {
+  color: var(--danger-text);
+}
+.painel-theme.kifer-ds.kifer-landing .home-form-feedback[role="status"] {
+  color: var(--success-text);
+}
+.painel-theme.kifer-ds.kifer-landing .home-form-feedback a {
+  display: inline-flex;
+  margin-top: 8px;
+}
+.painel-theme.kifer-ds.kifer-landing .logo-crop {
+  width: var(--logo-width);
+  height: var(--logo-height);
+}
+.painel-theme.kifer-ds.kifer-landing .logo-crop img {
+  width: var(--logo-image-width);
+  height: var(--logo-image-height);
+  left: var(--logo-left);
+  top: var(--logo-top);
+}
+.painel-theme.kifer-ds.kifer-landing .logo-notredame {
+  mask-image: url("/images/operators/notredame-saude.svg");
+  -webkit-mask-image: url("/images/operators/notredame-saude.svg");
+}
+.painel-theme.kifer-ds.kifer-landing .logo-motion-toggle .kds-button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.painel-theme.kifer-ds.kifer-landing
+  .logo-motion-toggle
+  .kds-button-content
+  svg {
+  width: 13px;
+  height: 13px;
+}
+.modal-theme-host.painel-theme.kifer-ds.landing-city-options {
+  padding: 4px;
+  width: min(20rem, calc(100vw - 1rem));
+}
+.landing-city-results {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.landing-city-options .kds-dropdown-option {
+  display: flex;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.landing-city-options .landing-city-hint {
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+@media (max-width: 850px) {
+  .painel-theme.kifer-ds.kifer-landing .header nav {
+    display: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header-toggle {
+    display: block;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .wrap {
+    gap: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    margin-left: 0;
+  }
+}
+@media (max-width: 600px) {
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    padding-inline: 10px;
+    font-size: 9px;
+    gap: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button svg {
+    width: 12px;
+    height: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header-actions {
+    gap: 2px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header-toggle .kds-button {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-selector {
+    gap: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-selector .kds-radio {
+    padding: 10px 4px;
+  }
+  .painel-theme.kifer-ds.kifer-landing
+    .profile-selector
+    .kds-radio-label
+    > span {
+    font-size: 9px;
+    gap: 5px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-selector svg {
+    width: 12px;
+    height: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-trigger {
+    font-size: 13px;
+    padding-block: 21px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-answer p {
+    font-size: 13px;
+    padding-right: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field .kds-input,
+  .painel-theme.kifer-ds.kifer-landing .field .kds-select {
+    font-size: 11px;
+    padding-inline: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .home-age-grid {
+    gap: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field label {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .painel-theme.kifer-ds.kifer-landing .faq-trigger svg {
+    transition: none;
+  }
+}
+@media (max-width: 360px) {
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    display: none;
+  }
+}

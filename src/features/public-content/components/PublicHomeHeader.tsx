@@ -1,9 +1,18 @@
-import { BrandWordmark, TextLink } from '../../../design-system';
-import { useEffect, useId, useRef, useState, type MouseEvent } from 'react';
-import { Menu } from 'lucide-react';
-import { homeNavigation } from '../domain/homeContent';
+import { TextLink } from "../../../design-system";
+import { useEffect, useId, useRef, useState, type MouseEvent } from "react";
+import { ArrowUpRight, Menu } from "lucide-react";
+import { homeNavigation } from "../domain/homeContent";
+import HomeBrand from "./home/HomeBrand";
 
-import { Button, DialogTitle, Drawer, DrawerBody, DrawerFooter, DrawerHeader, IconButton } from '../../../design-system';
+import {
+  Button,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
+  IconButton,
+} from "../../../design-system";
 
 const navigationItems = homeNavigation;
 
@@ -12,7 +21,10 @@ type PublicHomeHeaderProps = {
   onRequestQuote: () => void;
 };
 
-export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicHomeHeaderProps) {
+export default function PublicHomeHeader({
+  onNavigate,
+  onRequestQuote,
+}: PublicHomeHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
   const afterMenuClose = useRef<(() => void) | null>(null);
@@ -26,12 +38,12 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
   }, [menuOpen]);
 
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 1024px)');
+    const desktop = window.matchMedia("(min-width: 851px)");
     const closeOnDesktop = () => {
       if (desktop.matches) setMenuOpen(false);
     };
-    desktop.addEventListener('change', closeOnDesktop);
-    return () => desktop.removeEventListener('change', closeOnDesktop);
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
   }, []);
 
   const closeMenuAndRun = (action: () => void) => {
@@ -50,30 +62,41 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
 
   return (
     <>
-      <header className="kds-public-header">
-        <div className="kds-public-header-inner">
+      <header className="header" id="topo">
+        <div className="wrap">
           <TextLink
             href="#topo"
-            onClick={(event) => navigate(event, 'topo')}
+            onClick={(event) => navigate(event, "topo")}
             aria-label="Kifer Saúde, início"
-            className="kds-public-header-brand"
+            className="header-brand"
           >
-            <BrandWordmark />
+            <HomeBrand />
           </TextLink>
 
-          <nav aria-label="Navegação principal" className="kds-public-header-navigation">
+          <nav aria-label="Navegação principal">
             {navigationItems.map(({ section, label }) => (
-              <TextLink key={section} href={`#${section}`} onClick={(event) => navigate(event, section)}>
+              <TextLink
+                key={section}
+                href={`#${section}`}
+                onClick={(event) => navigate(event, section)}
+              >
                 {label}
               </TextLink>
             ))}
           </nav>
 
-          <div className="kds-public-header-actions">
-            <Button type="button" variant="primary" size="lg" onClick={requestQuote}>
-              Cotação grátis
+          <div className="header-actions">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              className="button"
+              onClick={requestQuote}
+            >
+              Quero uma cotação
+              <ArrowUpRight aria-hidden="true" />
             </Button>
-            <div className="kds-public-header-toggle">
+            <div className="header-toggle">
               <IconButton
                 type="button"
                 variant="ghost"
@@ -91,21 +114,41 @@ export default function PublicHomeHeader({ onNavigate, onRequestQuote }: PublicH
         </div>
       </header>
 
-      <Drawer id={menuId} open={menuOpen} onOpenChange={setMenuOpen} side="right" size="sm" className="home-mobile-drawer">
+      <Drawer
+        id={menuId}
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        side="right"
+        size="sm"
+        className="home-mobile-drawer"
+      >
         <DrawerHeader onClose={() => setMenuOpen(false)}>
           <DialogTitle>Menu</DialogTitle>
         </DrawerHeader>
         <DrawerBody>
-          <nav aria-label="Navegação móvel" className="kds-public-mobile-navigation">
+          <nav
+            aria-label="Navegação móvel"
+            className="kds-public-mobile-navigation"
+          >
             {navigationItems.map(({ section, label }) => (
-              <TextLink key={section} href={`#${section}`} onClick={(event) => navigate(event, section)}>
+              <TextLink
+                key={section}
+                href={`#${section}`}
+                onClick={(event) => navigate(event, section)}
+              >
                 {label}
               </TextLink>
             ))}
           </nav>
         </DrawerBody>
         <DrawerFooter>
-          <Button type="button" variant="primary" size="lg" fullWidth onClick={requestQuote}>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={requestQuote}
+          >
             Cotação grátis
           </Button>
         </DrawerFooter>

@@ -11,16 +11,18 @@ const workerSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/ai-autonomous-reply-worker/index.ts'),
   'utf8',
 );
+const generatorSource = readFileSync(resolve(process.cwd(), 'supabase/functions/ai-autonomous-reply-worker/generate-turn.ts'), 'utf8');
 const webhookSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/comm-whatsapp-webhook/index.ts'),
   'utf8',
 );
 
-test('historico completo orienta a qualificacao e o parser nao decide o proximo turno', () => {
+test('worker delegates interpretation and legacy prompt assembly to the attendance boundary', () => {
   assert.match(migrationSource, /ai_autonomous_qualification_states/);
   assert.match(migrationSource, /upsert_ai_autonomous_qualification_state/);
-  assert.match(workerSource, /buildAutonomousAttendanceUserPrompt/);
-  assert.match(workerSource, /buildAutonomousAttendanceUserPrompt\(history/);
+  assert.match(workerSource, /generateAttendanceTurn/);
+  assert.match(generatorSource, /buildAutonomousAttendanceUserPrompt\(history/);
+  assert.match(generatorSource, /runV2Turn/);
   assert.doesNotMatch(workerSource, /extractAutonomousQualificationState/);
   assert.doesNotMatch(workerSource, /persistQualificationState/);
   assert.doesNotMatch(workerSource, /qualification_decision/);

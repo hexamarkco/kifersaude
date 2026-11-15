@@ -1,121 +1,117 @@
-import { MessageCircle, Quote, Users } from "lucide-react";
-import { Heading, Image, Text } from "../../../../design-system";
+import { ArrowUpRight, FileSearch, HeartHandshake, Users } from "lucide-react";
+import { TextLink, Heading, Text, Image } from "../../../../design-system";
+import PublicBrandMark from "../../../../components/public/PublicBrandMark";
 import {
-  homeAboutBenefits,
+  buildHomeWhatsAppUrl,
   homePhotos,
   homeSteps,
 } from "../../domain/homeContent";
 
-export function HomeProcess() {
+export function HomeClarity() {
+  const points = [
+    [
+      "A rede que você realmente usa.",
+      "Hospitais, laboratórios e locais de atendimento avaliados para a sua rotina.",
+    ],
+    [
+      "Os custos, sem entrelinhas.",
+      "Mensalidade, coparticipação e condições da proposta explicadas antes da decisão.",
+    ],
+    [
+      "O cuidado continua depois.",
+      "Orientação com a documentação e acompanhamento até a ativação do seu plano.",
+    ],
+  ];
   return (
-    <section
-      id="como-funciona"
-      className="home-section home-process"
-      aria-labelledby="process-title"
-    >
-      <div className="home-container">
-        <div className="home-section-intro">
-          <Text className="home-eyebrow">Como funciona</Text>
-          <Heading id="process-title" family="display" className="home-title">
-            Em poucos passos, você encontra
-            <br /> o <em>plano ideal.</em>
+    <section className="clarity" id="clareza" aria-labelledby="clarity-title">
+      <PublicBrandMark className="clarity-mark" />
+      <div className="wrap">
+        <div>
+          <Text className="eyebrow">É sobre escolher com confiança</Text>
+          <Heading family="display" level={2} id="clarity-title">
+            Você não precisa
+            <br />
+            entender tudo.
+            <br />
+            <span>
+              Precisa de alguém
+              <br />
+              que explique bem.
+            </span>
           </Heading>
-          <Text className="home-lead">
-            A Kifer simplifica sua escolha. Você fala o que precisa, a gente
-            compara
-            <br /> as melhores opções e te acompanha até o seu plano estar
-            ativo.
+          <Text className="lead">
+            Preço é importante. Entender o que você está contratando também. A
+            gente coloca os detalhes na mesa, sem complicar a conversa.
           </Text>
         </div>
-        <div className="home-process-line">
-          <svg
-            viewBox="0 0 1200 100"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <path d="M0 50C110 130 190-30 300 50S490-30 600 50S790-30 900 50S1090-30 1200 50" />
-            <circle cx="150" cy="50" r="6" />
-            <circle cx="450" cy="50" r="6" />
-            <circle cx="750" cy="50" r="6" />
-            <circle cx="1050" cy="50" r="6" />
-          </svg>
-          <ol>
-            {homeSteps.map(({ title, text, icon: Icon }, index) => (
-              <li key={title}>
-                <div className="home-process-icon">
-                  <span className="home-icon">
-                    <Icon aria-hidden="true" />
-                  </span>
-                  <span className="home-process-number">0{index + 1}</span>
-                </div>
-                <Heading level={3} family="display">
+        <div>
+          {points.map(([title, text], index) => (
+            <div className="clarity-item" key={title}>
+              <span className="n">0{index + 1}</span>
+              <div>
+                <Heading family="display" level={3}>
                   {title}
                 </Heading>
                 <Text>{text}</Text>
-              </li>
-            ))}
-          </ol>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-export function HomeTestimonials() {
-  // Supplied reference portraits are reserved until real testimonials are approved.
-  // Keep the reference's main + secondary composition without attributing invented stories.
+export function HomeProcess({ onQuote }: { onQuote: () => void }) {
   return (
     <section
-      id="depoimentos"
-      className="home-section home-testimonials"
-      aria-labelledby="testimonials-title"
+      className="section process"
+      id="como-funciona"
+      aria-labelledby="process-title"
     >
-      <div className="home-container">
-        <div className="home-section-intro">
-          <Text className="home-eyebrow">Depoimentos</Text>
-          <Heading
-            id="testimonials-title"
-            family="display"
-            className="home-title"
-          >
-            Cada escolha tem uma história.
-          </Heading>
-          <Text className="home-lead">
-            Um espaço para as experiências de quem conta com a Kifer Saúde.
+      <div className="wrap">
+        <div className="section-head">
+          <div>
+            <Text className="eyebrow">Como funciona</Text>
+            <Heading family="display" level={2} id="process-title">
+              Do primeiro oi
+              <br />
+              ao plano na sua vida.
+            </Heading>
+          </div>
+          <Text className="lead">
+            Quatro etapas, uma conversa de cada vez. Você sabe o que acontece e
+            qual é o próximo passo.
           </Text>
         </div>
-        <div className="home-testimonial-layout">
-          <div className="home-testimonial-main">
-            <div className="home-testimonial-portrait" aria-hidden="true">
-              <Users />
-              <span />
-            </div>
-            <div className="home-testimonial-empty">
-              <Quote aria-hidden="true" />
-              <Heading level={3} family="display">
-                Sua confiança merece
-                <br /> histórias de verdade.
-              </Heading>
-              <Text>Ainda não há depoimentos disponíveis nesta página.</Text>
-              <div className="home-testimonial-rule" />
-            </div>
-          </div>
-          <div className="home-testimonial-secondary" aria-hidden="true">
-            <div>
-              <span className="home-icon">
-                <MessageCircle />
-              </span>
-              <Quote />
-              <span className="home-empty-lines" />
-            </div>
-            <div>
-              <span className="home-icon">
-                <Users />
-              </span>
-              <Quote />
-              <span className="home-empty-lines" />
-            </div>
-          </div>
+        <ol className="steps">
+          {homeSteps.map(({ title, text }, index) => (
+            <li className="step" key={title}>
+              <div className="step-top">
+                <span>0{index + 1}</span>
+              </div>
+              <div>
+                <Heading family="display" level={3}>
+                  {title}
+                </Heading>
+                <Text>{text}</Text>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="process-cta">
+          Pronto para dar o primeiro passo?
+          <TextLink
+            className="text-link"
+            href="#cotacao"
+            onClick={(event) => {
+              event.preventDefault();
+              onQuote();
+            }}
+          >
+            Pedir uma cotação
+            <ArrowUpRight aria-hidden="true" />
+          </TextLink>
         </div>
       </div>
     </section>
@@ -124,56 +120,58 @@ export function HomeTestimonials() {
 
 export function HomeAbout() {
   return (
-    <section
-      id="quem-somos"
-      className="home-about"
-      aria-labelledby="about-title"
-    >
-      <div className="home-about-photo">
-        <span aria-hidden="true" />
-        <Image
-          src={homePhotos.luizaAbout}
-          alt="Luíza Kifer, corretora independente de planos de saúde"
-          width={1448}
-          height={1086}
-          loading="lazy"
-        />
-        <svg className="home-about-curve" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
-          <path className="home-about-line-desktop" d="M0 620C170 610 170 910 390 950S780 960 1000 1000M730 0C780 110 880 130 940 105" />
-          <path className="home-about-line-mobile" d="M0 640C160 680 165 935 650 980C820 995 930 975 1000 915M690 0C760 145 900 160 1000 130" />
-        </svg>
-      </div>
-      <div className="home-about-copy">
-        <Text className="home-eyebrow home-eyebrow-tail">Sobre a Luíza</Text>
-        <Heading id="about-title" family="display" className="home-title">
-          Mais do que planos,
-          <br /> <em>pessoas em primeiro lugar.</em>
-        </Heading>
-        <Text className="home-lead">
-          Oi, eu sou a Luíza, corretora independente de planos de saúde no Rio
-          de Janeiro. Trabalho com diferentes operadoras e oriento cada cliente
-          com a mesma atenção que dedicaria à minha família.
-        </Text>
-        <Text className="home-lead">
-          Meu trabalho é te orientar na comparação de custos, rede credenciada e
-          regras de contratação, com linguagem simples e sem pressão. Da cotação
-          à ativação, você conta com acompanhamento para escolher com mais
-          segurança.
-        </Text>
-        <ul className="home-about-benefits">
-          {homeAboutBenefits.map(({ title, text, icon: Icon }) => (
-            <li key={title}>
-              <span className="home-icon">
-                <Icon aria-hidden="true" />
-              </span>
-              <Heading level={3}>{title}</Heading>
-              <Text>{text}</Text>
-            </li>
-          ))}
-        </ul>
-        <div className="home-about-name">
-          <strong>Luíza Kifer</strong>
-          <Text className="home-eyebrow">Especialista em planos de saúde</Text>
+    <section className="about" id="sobre" aria-labelledby="about-title">
+      <div className="wrap about-grid">
+        <div className="about-photo">
+          <Image
+            src={homePhotos.luizaAbout}
+            alt="Luíza Kifer à mesa de trabalho"
+            width="1448"
+            height="1086"
+            loading="lazy"
+          />
+          <div className="about-photo-caption">
+            <strong>Luíza Kifer</strong>
+            <span>Sua corretora de planos de saúde.</span>
+          </div>
+        </div>
+        <div>
+          <Text className="eyebrow">Prazer, Kifer Saúde</Text>
+          <Heading family="display" level={2} id="about-title">
+            Uma escolha importante merece um atendimento próximo.
+          </Heading>
+          <Text className="lead">
+            Por trás de cada cotação, tem uma pessoa, uma família ou uma equipe.
+            Nosso trabalho começa por entender essa história — e continua na
+            orientação para cada decisão.
+          </Text>
+          <Text className="about-name">Sou a Luíza Kifer.</Text>
+          <Text className="about-role">
+            Clareza para escolher. Cuidado para acompanhar.
+          </Text>
+          <div className="about-values">
+            <div>
+              <Users aria-hidden="true" />
+              Sua rotina antes da proposta.
+            </div>
+            <div>
+              <FileSearch aria-hidden="true" />
+              Cada detalhe explicado com calma.
+            </div>
+            <div>
+              <HeartHandshake aria-hidden="true" />
+              Suporte do começo à ativação.
+            </div>
+          </div>
+          <TextLink
+            className="text-link"
+            href={buildHomeWhatsAppUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Vamos conversar?
+            <ArrowUpRight aria-hidden="true" />
+          </TextLink>
         </div>
       </div>
     </section>

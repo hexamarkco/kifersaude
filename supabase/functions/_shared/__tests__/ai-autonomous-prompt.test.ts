@@ -85,10 +85,12 @@ describe('autonomous prompt assembly', () => {
     expect(changed.trace.systemPromptHash).not.toBe(first.trace.systemPromptHash);
   });
 
-  test('production and both sandboxes use the same composer and attributed references', () => {
+  test('legacy production and sandboxes share the composer; the worker delegates generation', () => {
     for (const name of ['ai-autonomous-reply-worker', 'ai-sandbox-chat', 'ai-sandbox-run-scenario']) {
       const source = readFileSync(resolve('supabase/functions', name, 'index.ts'), 'utf8');
-      expect(source).toContain('composeAutonomousPrompt({');
+      const generator = name === 'ai-autonomous-reply-worker'
+        ? readFileSync(resolve('supabase/functions', name, 'generate-turn.ts'), 'utf8') : source;
+      expect(generator).toContain('composeAutonomousPrompt({');
       expect(source).toContain(".not('created_by', 'is', null)");
       expect(source).not.toContain('fetchSimilarSituations');
       expect(source).not.toContain('const systemPrompt = [');

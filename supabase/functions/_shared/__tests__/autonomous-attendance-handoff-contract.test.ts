@@ -70,7 +70,8 @@ test('the worker discards an answer if the customer writes again while the model
 });
 
 test('the worker retries through the model when output validation rejects a response', () => {
-  assert.match(workerSource, /buildAutonomousValidationRetryInstruction/);
-  assert.match(workerSource, /validateOutput: \(text\) => validateAutonomousReplyOutput\(text, history\)/);
+  const generatorSource = readFileSync(resolve(process.cwd(), 'supabase/functions/ai-autonomous-reply-worker/generate-turn.ts'), 'utf8');
+  assert.match(generatorSource, /buildAutonomousValidationRetryInstruction/);
+  assert.match(generatorSource, /validateAutonomousReplyOutput\(text, history\)/);
   assert.doesNotMatch(workerSource, /buildAutonomousValidationFallback/);
 });

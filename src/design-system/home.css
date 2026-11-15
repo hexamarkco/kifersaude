@@ -1,846 +1,3202 @@
-/* Public editorial compositions. All color/interaction tokens belong to Terracota CRM.
-   Poppins is shared by the homepage and the operational interface. */
-.painel-theme.kifer-ds.kifer-home {
-  --font-sans: 'Poppins', sans-serif;
-  --home-gutter: 5.2%;
-  --home-width: 84rem;
-  --home-space: clamp(3rem, 4vw, 5rem);
-  --home-body: clamp(1rem, 1.1vw, 1.125rem);
-  --home-motion-entry: 560ms;
-  --home-motion-profile: 280ms;
-  --home-motion-micro: 220ms;
-  --home-motion-stagger: 60ms;
-  --home-motion-distance: 18px;
-  --home-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --home-ink: var(--text-primary);
-  --home-paper: var(--bg-canvas-subtle);
-  --home-soft: color-mix(in srgb, var(--brand-primary) 9%, var(--home-paper));
-  --home-footer: color-mix(in srgb, var(--brand-primary-active) 78%, var(--text-primary));
-  --type-body: 400 1rem / 1.6 var(--font-sans);
-  --type-body-lg: 400 1.125rem / 1.6 var(--font-sans);
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  background: var(--home-paper);
-  font-family: var(--font-sans);
+/* Approved Kifer landing composition. Scoped to the public homepage. */
+.painel-theme.kifer-ds.kifer-landing {
+  --landing-canvas: #f7f4ef;
+  --landing-surface: #fffdfa;
+  --landing-ink: #28211d;
+  --landing-muted: #756b63;
+  --landing-border: #e6dfd6;
+  --landing-action: #c64c26;
+  --landing-action-hover: #a53b1b;
+  --landing-sand: #ece4d7;
+  --landing-inverse: #2a211c;
+  --landing-radius: 16px;
+  --landing-font-body: "Poppins", sans-serif;
+  --landing-font-display: "Sora", sans-serif;
+  color-scheme: light;
+  font-family: var(--landing-font-body);
+  color: var(--landing-ink);
+  background: var(--landing-canvas);
 }
-.kifer-home *, .kifer-home *::before, .kifer-home *::after { box-sizing: border-box; }
-.kifer-home main, .kifer-home section, .kifer-home footer, .kifer-home fieldset { min-width: 0; }
-.kifer-home section { scroll-margin-top: 6.5rem; }
-.kifer-home fieldset { margin: 0; padding: 0; border: 0; }
-.kifer-home ul, .kifer-home ol { list-style: none; padding: 0; margin: 0; }
-.kifer-home em { color: var(--brand-primary); font-style: normal; }
-.kifer-home .home-container { width: calc(100% - var(--home-gutter) * 2); max-width: var(--home-width); margin-inline: auto; }
-.kifer-home .home-section { padding-block: var(--home-space); }
-.kifer-home .home-title { margin-block: var(--space-4) var(--space-5); font: 500 clamp(2rem, 3.1vw, 3.5rem) / 1.12 var(--font-display); letter-spacing: -0.045em; text-wrap: balance; }
-.kifer-home .home-lead { font-size: var(--home-body); line-height: 1.55; }
-.kifer-home .home-eyebrow { display: flex; align-items: center; gap: var(--space-4); color: var(--brand-primary-active); font-size: clamp(0.6875rem, 0.95vw, 0.9375rem); font-weight: 500; letter-spacing: 0.23em; line-height: 1.7; text-transform: uppercase; }
-.kifer-home .home-eyebrow-line::before, .kifer-home .home-eyebrow-tail::after { content: ''; display: block; width: 3rem; height: 1px; background: var(--brand-primary-border); flex-shrink: 0; }
-.kifer-home .home-eyebrow-tail::after { width: 4.5rem; }
-.kifer-home .home-section-intro { text-align: center; max-width: 64rem; margin: 0 auto var(--space-8); }
-.kifer-home .home-section-intro > .home-eyebrow { justify-content: center; }
-.kifer-home .home-icon { display: inline-flex; width: 4rem; height: 4rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 50%; background: var(--home-soft); color: var(--brand-primary); }
-.kifer-home .home-icon svg { width: 1.9rem; height: 1.9rem; stroke-width: 1.65; }
-.kifer-home .kds-button-primary { box-shadow: none; }
-.kifer-home :is(a, button, input):focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 4px; }
-.kifer-home .home-skip-link { position: fixed; top: var(--space-2); left: var(--space-4); z-index: 100; padding: var(--space-3); background: var(--home-paper); transform: translateY(-160%); }
-.kifer-home .home-skip-link:focus { transform: none; }
 
-/* 01 — Header and opening composition */
-.kifer-home .kds-public-header { position: sticky; top: 0; background: var(--home-paper); }
-.kifer-home .kds-public-header-inner { width: calc(100% - var(--home-gutter) * 2); max-width: var(--home-width); min-height: 4.5rem; padding: var(--space-2) 0; gap: var(--space-4); }
-.kifer-home .kds-public-header-brand { min-width: 10.5rem; }
-.kifer-home .kds-public-header-brand .kds-workspace-brand > span { font-size: 2.3rem; }
-.kifer-home .kds-public-header-brand .kds-workspace-brand > span > span { font-size: 1.9rem; font-weight: 400; }
-.kifer-home .kds-public-header-actions > .kds-button { --control-height-lg: 2.75rem; --control-font-lg: 0.875rem; }
-.kifer-home .kds-public-header-navigation { gap: clamp(0.125rem, 1.1vw, 1.5rem); }
-.kifer-home .kds-public-header-navigation a { padding-inline: var(--space-2); font-size: clamp(0.8125rem, 1.05vw, 1rem); }
-.painel-theme.kifer-ds .home-mobile-drawer { --font-sans: 'Poppins', sans-serif; --type-body: 400 1rem / 1.6 var(--font-sans); font-family: var(--font-sans); }
-.kifer-home .home-hero { position: relative; isolation: isolate; overflow: clip; }
-.kifer-home .home-hero-grid { position: relative; min-height: clamp(32rem, calc(100svh - 8rem), 44rem); display: grid; grid-template-columns: 56% 44%; align-items: center; }
-.kifer-home .home-hero-copy { position: relative; z-index: 2; padding-block: clamp(2rem, 3vw, 3rem); }
-.kifer-home .home-hero-title { font: 500 clamp(2.75rem, min(4.7vw, 8.5svh), 5rem) / 1.04 var(--font-display); letter-spacing: -0.055em; margin-block: var(--space-6) var(--space-5); }
-.kifer-home .home-hero-title em { font-style: italic; font-weight: 500; }
-.kifer-home .home-hero-line { display: block; }
-.kifer-home .home-hero-description { max-width: 36rem; }
-.kifer-home .home-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-6); --control-height-lg: 3rem; --control-padding-lg: 1.25rem; }
-.kifer-home .home-hero-actions .kds-button { font-size: clamp(0.875rem, 1vw, 1rem); white-space: normal; }
-.kifer-home .home-hero-actions .kds-button-secondary { color: var(--brand-primary-active); border-color: var(--accent-copper); background: var(--home-paper); }
-.kifer-home .home-hero-benefits { display: grid; grid-template-columns: 0.85fr 1fr 1.2fr; max-width: 36rem; margin-top: var(--space-5); }
-.kifer-home .home-hero-benefits li { padding-inline: var(--space-6); display: flex; align-items: flex-start; flex-direction: column; gap: var(--space-2); font-size: clamp(0.8125rem, 1.05vw, 1.0625rem); color: var(--text-secondary); line-height: 1.35; }
-.kifer-home .home-hero-benefits li:first-child { padding-left: var(--space-4); }
-.kifer-home .home-hero-benefits li + li { border-left: 1px solid var(--brand-primary-border); }
-.kifer-home .home-hero-benefits .home-icon { width: 2.75rem; height: 2.75rem; }
-.kifer-home .home-hero-benefits .home-icon svg { width: 1.5rem; height: 1.5rem; }
-.kifer-home .home-support-link { display: inline-flex; align-items: center; font-size: 0.75rem; gap: var(--space-1); margin-top: var(--space-5); color: var(--text-secondary); }
-.kifer-home .home-support-link svg { width: 0.875rem; height: 0.875rem; }
-.kifer-home .home-portrait-label { position: absolute; bottom: 8%; right: 6%; z-index: 2; display: flex; flex-direction: column; gap: var(--space-1); border-radius: var(--radius-xl); padding: var(--space-4) var(--space-6); background: var(--home-paper); color: var(--text-primary); box-shadow: var(--shadow-card); font-size: 0.8125rem; }
-.kifer-home .home-portrait-label strong { font-size: 1.125rem; font-weight: 600; }
-.kifer-home .home-hero-wave { position: absolute; bottom: 0; left: 0; width: 59%; height: 8rem; color: var(--brand-primary-border); pointer-events: none; z-index: -1; }
-.kifer-home .home-hero-wave path:first-child { opacity: 0.23; }
-
-/* 02 — Editorial trust column and numbered vertical explanation */
-.kifer-home .home-trust { padding-bottom: var(--space-12); }
-.kifer-home .home-trust-grid { display: grid; grid-template-columns: 1.04fr 1fr; gap: 7%; align-items: start; }
-.kifer-home .home-trust .home-title { font-size: clamp(2rem, 3.1vw, 3.5rem); }
-.kifer-home .home-trust-photo-row { display: flex; align-items: center; gap: 4%; margin-top: var(--space-8); }
-.kifer-home .home-trust-note { font: italic 400 clamp(1rem, 1.4vw, 1.5rem) / 1.3 var(--font-display); color: var(--accent-copper-active); }
-.kifer-home .home-trust-note span { display: block; height: 1px; width: 3rem; margin-top: var(--space-5); background: var(--accent-copper); }
-.kifer-home .home-trust-list { display: grid; gap: var(--space-8); padding-top: var(--space-3); }
-.kifer-home .home-trust-list li { display: grid; grid-template-columns: 4rem 1fr; gap: var(--space-6); position: relative; }
-.kifer-home .home-trust-list .home-icon { height: 4rem; width: 4rem; }
-.kifer-home .home-trust-list .home-icon svg { height: 2rem; width: 2rem; }
-.kifer-home .home-trust-list li:not(:last-child)::after { content: ''; position: absolute; top: 4.5rem; bottom: -1.5rem; left: 2rem; width: 1px; background: var(--border-strong); }
-.kifer-home .home-step-number { display: flex; align-items: center; gap: var(--space-5); color: var(--brand-primary-active); font-size: 0.8125rem; letter-spacing: 0.2em; }
-.kifer-home .home-step-number span { width: 3rem; height: 1px; background: var(--brand-primary-border); }
-.kifer-home .home-trust-list h3 { font: 500 clamp(1.375rem, 1.7vw, 1.875rem) / 1.25 var(--font-display); letter-spacing: -0.04em; margin: var(--space-1) 0 var(--space-3); }
-.kifer-home .home-trust-list h3 + .kds-text { font-size: clamp(0.9375rem, 1vw, 1.0625rem); line-height: 1.6; }
-.kifer-home .home-partner-heading { margin-top: var(--space-10); display: flex; align-items: center; gap: var(--space-5); }
-.kifer-home .home-partner-heading .kds-text { color: var(--brand-primary-active); text-transform: uppercase; font-size: 0.625rem; letter-spacing: 0.22em; }
-.kifer-home .home-partner-heading > span { flex: 1; height: 1px; background: var(--brand-primary-border); }
-.kifer-home .home-partner-heading .kds-text:last-child { opacity: 0.7; }
-.kifer-home .home-partner-logos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: var(--space-6); align-items: center; }
-.kifer-home .home-partner-logos li + li { border-left: 1px solid var(--border-strong); }
-.kifer-home .home-partner-logos a { display: flex; min-height: 4rem; justify-content: center; align-items: center; padding-inline: var(--space-8); }
-.kifer-home .home-partner-logos img { width: 9.5rem; max-width: 100%; height: auto; max-height: 3.75rem; object-fit: contain; filter: grayscale(1); opacity: 0.58; transition: filter 180ms, opacity 180ms; }
-.kifer-home .home-partner-logos a:hover img { filter: none; opacity: 1; }
-
-/* 03 — One shared panel, three accessible profile choices */
-.kifer-home .home-audience { padding-block: clamp(2.5rem, 3vw, 3.5rem); }
-.kifer-home .home-audience .home-section-intro .home-title { font-size: clamp(2rem, 2.7vw, 3.25rem); }
-.kifer-home .home-audience-layout { display: grid; grid-template-columns: 21.5% minmax(0, 1fr); gap: var(--space-4); }
-.kifer-home .home-audience-selector { --home-profile-index: 0; --home-selector-pad: var(--space-3); --home-selector-gap: 0px; position: relative; border: 1px solid var(--border-default); border-radius: var(--radius-xl); padding: var(--space-3); background: var(--home-paper); }
-.kifer-home .home-audience-selector .kds-radio-group { height: 100%; gap: 0; }
-.kifer-home .home-audience-selector .kds-radio { flex: 1; display: flex; align-items: center; position: relative; padding: var(--space-5); border-radius: var(--radius-lg); transition: background 180ms; }
-.kifer-home .home-audience-selector .kds-radio + .kds-radio { border-top: 1px solid var(--border-subtle); }
-.kifer-home .home-audience-selector .kds-radio-indicator { position: absolute; width: 0; height: 0; overflow: hidden; border: 0; }
-.kifer-home .home-audience-selector .kds-radio-checked { background: var(--brand-primary-muted); }
-.kifer-home .home-audience-selector[data-profile='MEI'] { --home-profile-index: 1; }
-.kifer-home .home-audience-selector[data-profile='CNPJ'] { --home-profile-index: 2; }
-.kifer-home .home-audience-selector::before { content: ''; pointer-events: none; position: absolute; z-index: 2; left: 0; top: calc(var(--home-selector-pad) * 2); width: var(--space-1); height: calc((100% - var(--home-selector-pad) * 2 - 2px) / 3 - var(--home-selector-pad) * 2); background: var(--brand-primary); border-radius: var(--radius-sm); transform: translateY(calc(var(--home-profile-index) * (100% + var(--home-selector-pad) * 2))); transition: transform var(--home-motion-profile) var(--home-motion-ease); }
-.kifer-home .home-audience-selector .kds-radio:has(:focus-visible) { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
-.kifer-home .home-audience-option { display: flex; flex-direction: column; gap: var(--space-3); color: var(--text-secondary); font-size: clamp(0.8125rem, 1.1vw, 1.125rem); font-weight: 400; }
-.kifer-home .home-audience-option strong { color: var(--brand-primary-active); font-size: 0.9375rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
-.kifer-home .home-audience-option .home-icon { margin-bottom: var(--space-1); }
-.kifer-home .home-audience-arrow { position: absolute; right: var(--space-4); top: 50%; width: 1.2rem; height: 1.2rem; }
-.kifer-home .kds-radio-checked .home-audience-arrow { color: var(--brand-primary); }
-/* Inactive slides reserve their content size; shared rows keep every profile aligned. */
-.kifer-home .home-audience-slides { display: grid; grid-template-rows: repeat(5, auto); min-width: 0; }
-.kifer-home .home-audience-panel { grid-area: 1 / 1 / -1 / -1; position: relative; display: grid; grid-template-columns: minmax(0, 53fr) minmax(0, 47fr); grid-template-rows: subgrid; border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--bg-surface); overflow: clip; min-height: 30rem; }
-.kifer-home .home-audience-panel[aria-hidden="true"] { visibility: hidden; pointer-events: none; }
-.kifer-home .home-audience-copy { grid-column: 1; grid-row: 1 / span 5; display: grid; grid-template-rows: subgrid; position: relative; z-index: 1; padding: clamp(1.5rem, 2.1vw, 2.5rem); padding-right: var(--space-4); }
-.kifer-home .home-audience-title { font: 500 clamp(1.75rem, 2.5vw, 2.75rem) / 1.15 var(--font-display); letter-spacing: -0.04em; margin-block: var(--space-5) var(--space-4); }
-.kifer-home .home-audience-copy > .home-lead { font-size: clamp(0.9375rem, 1.1vw, 1.0625rem); }
-.kifer-home .home-profile-benefits { display: grid; gap: var(--space-1); margin-block: var(--space-4) var(--space-5); }
-.kifer-home .home-profile-benefits li { display: flex; align-items: center; gap: var(--space-4); color: var(--text-secondary); font-size: clamp(0.8125rem, 1.1vw, 1.0625rem); }
-.kifer-home .home-profile-benefits .home-icon { width: 2.4rem; height: 2.4rem; }
-.kifer-home .home-profile-benefits svg { width: 1.3rem; height: 1.3rem; }
-.kifer-home .home-audience-copy .kds-button { align-self: stretch; justify-self: start; white-space: normal; --control-height-lg: 3rem; }
-
-/* 04 — Four stages joined by a curved dotted path */
-.kifer-home .home-process { position: relative; }
-.kifer-home .home-process .home-section-intro { margin-bottom: var(--space-10); }
-.kifer-home .home-process-line { position: relative; }
-.kifer-home .home-process-line > svg { position: absolute; top: 1rem; left: 10%; width: 80%; height: 4rem; fill: var(--brand-primary-border); stroke: var(--brand-primary-border); stroke-width: 2; }
-.kifer-home .home-process-line > svg path { fill: none; stroke-dasharray: 7 6; }
-.kifer-home .home-process-line ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-12); position: relative; }
-.kifer-home .home-process-line li { text-align: center; }
-.kifer-home .home-process-icon { display: inline-flex; position: relative; margin-bottom: var(--space-4); }
-.kifer-home .home-process-icon .home-icon { width: 5.5rem; height: 5.5rem; background: var(--brand-primary-soft); }
-.kifer-home .home-process-icon .home-icon svg { width: 2.75rem; height: 2.75rem; stroke-width: 1.4; }
-.kifer-home .home-process-number { display: flex; justify-content: center; align-items: center; position: absolute; left: -0.5rem; top: -0.5rem; width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--brand-primary); color: var(--text-on-brand); font-size: 1.125rem; font-weight: 600; }
-.kifer-home .home-process-line h3 { font: 500 clamp(1.5rem, 2vw, 2.2rem) / 1.25 var(--font-display); letter-spacing: -0.035em; max-width: 15ch; margin-inline: auto; }
-.kifer-home .home-process-line li > .kds-text { margin-top: var(--space-4); font-size: clamp(0.9375rem, 1.2vw, 1.25rem); line-height: 1.6; }
-
-/* 05 — Main and secondary spaces, held until authorized stories exist */
-.kifer-home .home-testimonials .home-title { font-size: clamp(2rem, 3vw, 3.5rem); }
-.kifer-home .home-testimonial-layout { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--space-8); }
-.kifer-home .home-testimonial-main { display: grid; grid-template-columns: 38% 62%; border: 1px solid var(--border-default); border-radius: var(--radius-xl); min-height: 24rem; }
-.kifer-home .home-testimonial-portrait { position: relative; border-radius: 4rem var(--radius-xl) 4rem var(--radius-xl); background: var(--home-soft); display: flex; align-items: center; justify-content: center; margin: var(--space-3); color: var(--brand-primary-border); overflow: hidden; }
-.kifer-home .home-testimonial-portrait > svg { width: 60%; height: auto; stroke-width: 0.8; }
-.kifer-home .home-testimonial-empty { display: flex; flex-direction: column; justify-content: center; gap: var(--space-6); padding: var(--space-8); }
-.kifer-home .home-testimonial-empty > svg { color: var(--brand-primary); width: 3.25rem; height: 3.25rem; fill: var(--brand-primary); stroke-width: 1; }
-.kifer-home .home-testimonial-empty h3 { font: 500 clamp(1.6rem, 2.3vw, 2.625rem) / 1.25 var(--font-display); letter-spacing: -0.035em; }
-.kifer-home .home-testimonial-rule { width: 3rem; height: 2px; background: var(--brand-primary); }
-.kifer-home .home-testimonial-secondary { display: grid; }
-.kifer-home .home-testimonial-secondary > div { display: grid; grid-template-columns: 6.5rem 1fr; align-content: center; gap: var(--space-3) var(--space-6); padding: var(--space-6); }
-.kifer-home .home-testimonial-secondary > div + div { border-top: 1px solid var(--border-default); }
-.kifer-home .home-testimonial-secondary .home-icon { width: 6rem; height: 6rem; grid-row: span 2; color: var(--brand-primary-border); }
-.kifer-home .home-testimonial-secondary > div > svg { color: var(--brand-primary-border); width: 2rem; height: 2rem; }
-.kifer-home .home-empty-lines { display: block; height: 2.75rem; border-block: 1px solid var(--border-default); position: relative; }
-.kifer-home .home-empty-lines::after { content: ''; position: absolute; left: 0; right: 15%; top: 50%; height: 1px; background: var(--border-default); }
-
-/* 06 — Official portrait and personal introduction */
-.kifer-home .home-about { position: relative; display: grid; grid-template-columns: 46% 54%; min-height: 39rem; overflow: clip; }
-.kifer-home .home-about-copy { padding: clamp(2rem, 3vw, 4rem) max(9%, calc((100vw - var(--home-width)) / 2)) clamp(2rem, 3vw, 4rem) 10%; }
-.kifer-home .home-about .home-title { font-size: clamp(2rem, 2.7vw, 3rem); }
-.kifer-home .home-about .home-lead { font-size: clamp(0.9375rem, 1.1vw, 1.0625rem); line-height: 1.55; }
-.kifer-home .home-about .home-lead + .home-lead { margin-top: var(--space-5); }
-.kifer-home .home-about-benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); margin-top: var(--space-8); }
-.kifer-home .home-about-benefits .home-icon { width: 3.6rem; height: 3.6rem; }
-.kifer-home .home-about-benefits h3 { font: 500 0.75rem / 1.45 var(--font-sans); letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-primary-active); margin-block: var(--space-4) var(--space-3); }
-.kifer-home .home-about-benefits .kds-text { font-size: 0.8125rem; line-height: 1.5; }
-.kifer-home .home-about-name { margin-top: var(--space-8); text-align: center; }
-.kifer-home .home-about-name strong { font: italic 400 2.5rem / 1.3 var(--font-display); color: var(--brand-primary); }
-.kifer-home .home-about-name .home-eyebrow { justify-content: center; margin-top: var(--space-2); font-size: 0.6875rem; }
-
-/* 07 — FAQ, real answers and actual accessible buttons */
-.kifer-home .home-faq { overflow: clip; }
-.kifer-home .home-faq-layout { display: grid; grid-template-columns: 34% 61%; gap: 5%; align-items: start; }
-.kifer-home .home-faq-copy { padding-top: var(--space-5); }
-.kifer-home .home-faq .home-title { font-size: clamp(2.5rem, 3.8vw, 4rem); }
-.kifer-home .home-faq-art {
-  width: min(41vw, 42.75rem);
-  margin-top: var(--space-8);
-  margin-left: min(-5.2vw, calc((var(--home-width) - 100vw) / 2));
-  margin-bottom: calc(-1 * var(--home-space));
+.painel-theme.kifer-ds.kifer-landing * {
+  box-sizing: border-box;
 }
-.kifer-home .home-faq-art svg {
+
+.painel-theme.kifer-ds.kifer-landing {
+  scroll-behavior: smooth;
+  scroll-padding-top: 30px;
+}
+
+.painel-theme.kifer-ds.kifer-landing {
+  margin: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing button,
+.painel-theme.kifer-ds.kifer-landing input,
+.painel-theme.kifer-ds.kifer-landing select {
+  font: inherit;
+}
+
+.painel-theme.kifer-ds.kifer-landing button,
+.painel-theme.kifer-ds.kifer-landing a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.painel-theme.kifer-ds.kifer-landing button {
+  cursor: pointer;
+}
+
+.painel-theme.kifer-ds.kifer-landing a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing img {
   display: block;
   width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.painel-theme.kifer-ds.kifer-landing svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  stroke-width: 1.6;
+}
+
+.painel-theme.kifer-ds.kifer-landing p,
+.painel-theme.kifer-ds.kifer-landing h1,
+.painel-theme.kifer-ds.kifer-landing h2,
+.painel-theme.kifer-ds.kifer-landing h3,
+.painel-theme.kifer-ds.kifer-landing ul {
+  margin: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing button:focus-visible,
+.painel-theme.kifer-ds.kifer-landing a:focus-visible,
+.painel-theme.kifer-ds.kifer-landing input:focus-visible,
+.painel-theme.kifer-ds.kifer-landing select:focus-visible,
+.painel-theme.kifer-ds.kifer-landing summary:focus-visible {
+  outline: 3px solid #c64c2670;
+  outline-offset: 4px;
+}
+
+.painel-theme.kifer-ds.kifer-landing ul {
+  padding: 0;
+  list-style: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .wrap {
+  width: min(1200px, calc(100% - 96px));
+  margin-inline: auto;
+}
+
+.painel-theme.kifer-ds.kifer-landing .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--landing-action);
+  margin-bottom: 22px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .eyebrow:before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+}
+
+.painel-theme.kifer-ds.kifer-landing h1,
+.painel-theme.kifer-ds.kifer-landing h2,
+.painel-theme.kifer-ds.kifer-landing h3 {
+  font-family: var(--landing-font-display);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+}
+
+.painel-theme.kifer-ds.kifer-landing h2 {
+  font-size: 43px;
+  line-height: 1.17;
+}
+
+.painel-theme.kifer-ds.kifer-landing h3 {
+  font-size: 24px;
+  line-height: 1.28;
+  letter-spacing: -0.04em;
+}
+
+.painel-theme.kifer-ds.kifer-landing .lead {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--landing-muted);
+}
+
+.painel-theme.kifer-ds.kifer-landing .button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 13px 22px;
+  background: var(--landing-action);
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--landing-action);
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.painel-theme.kifer-ds.kifer-landing .button:hover {
+  background: var(--landing-action-hover);
+}
+
+.painel-theme.kifer-ds.kifer-landing .button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .button.quiet {
+  background: transparent;
+  color: var(--landing-ink);
+  border-color: var(--landing-border);
+}
+
+.painel-theme.kifer-ds.kifer-landing .button.white {
+  background: var(--landing-surface);
+  border-color: var(--landing-surface);
+  color: var(--landing-action-hover);
+}
+
+.painel-theme.kifer-ds.kifer-landing .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.painel-theme.kifer-ds.kifer-landing .text-link svg {
+  width: 17px;
+  height: 17px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--landing-font-display);
+  letter-spacing: -2.1px;
+  line-height: 1;
+  font-size: 35px;
+  font-weight: 800;
+}
+
+.painel-theme.kifer-ds.kifer-landing .wordmark span {
+  font-family: var(--landing-font-body);
+  font-size: 24px;
+  letter-spacing: -1.6px;
+  font-weight: 400;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header {
+  border-bottom: 1px solid var(--landing-border);
+}
+
+.painel-theme.kifer-ds.kifer-landing .header .wrap {
+  height: 91px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header nav {
+  display: flex;
+  gap: 29px;
+  margin-left: auto;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header nav a {
+  font-size: 11px;
+  color: #5b514a;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header .button {
+  margin-left: 21px;
+  min-height: 42px;
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .menu-toggle {
+  display: none;
+  background: transparent;
+  border: 0;
+  padding: 8px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero {
+  padding: 64px 0 46px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 58px;
+  align-items: center;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero .eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  margin-bottom: 26px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero h1 {
+  font-size: 59px;
+  line-height: 1.105;
+  font-weight: 500;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero h1 em {
+  font-style: normal;
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+  margin-top: 25px;
+  font-family: var(--landing-font-display);
+  font-size: 16px;
+  letter-spacing: -0.03em;
+  line-height: 1.6;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero .lead {
+  max-width: 420px;
+  margin-top: 17px;
+  font-size: 12px;
+  line-height: 1.85;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-top: 29px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-actions .text-link {
+  font-size: 10px;
+  gap: 9px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--landing-muted);
+  margin-top: 18px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-note svg {
+  width: 13px;
+  height: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-photo {
+  position: relative;
+  min-width: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-photo .photo {
+  height: 532px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--landing-sand);
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-photo .photo img {
+  object-position: 64% 50%;
+}
+
+.painel-theme.kifer-ds.kifer-landing .photo-top {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  background: #fffdfae8;
+  border-radius: 6px;
+  padding: 9px 12px;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.painel-theme.kifer-ds.kifer-landing .photo-top span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .photo-bottom {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: #fffdfaef;
+  border-radius: 9px;
+  backdrop-filter: blur(12px);
+}
+
+.painel-theme.kifer-ds.kifer-landing .photo-bottom strong {
+  display: block;
+  font-family: var(--landing-font-display);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.03em;
+}
+
+.painel-theme.kifer-ds.kifer-landing .photo-bottom small {
+  display: block;
+  font-size: 9px;
+  color: var(--landing-muted);
+  margin-top: 4px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .photo-bottom .circle {
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--landing-sand);
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-features {
+  border-top: 1px solid var(--landing-border);
+  margin-top: 48px;
+  padding-top: 26px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-features > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  font-size: 11px;
+  color: #635951;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-features svg {
+  color: var(--landing-action);
+  width: 17px;
+  height: 17px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .partners {
+  padding: 34px 0 37px;
+  background: var(--landing-surface);
+  border-block: 1px solid var(--landing-border);
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-line {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-copy {
+  flex: none;
+  max-width: 185px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--landing-muted);
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-copy strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--landing-ink);
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 39px;
+  align-items: center;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos img {
+  width: 100%;
+  height: 35px;
+  object-fit: contain;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos a:nth-child(1) img {
+  height: 29px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos a:nth-child(4) img {
+  height: 40px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .section {
+  padding: 98px 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 68px;
+  margin-bottom: 40px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .section-head > div:first-child {
+  max-width: 600px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .section-head > .lead {
+  max-width: 290px;
+  font-size: 12px;
+  line-height: 1.9;
+  padding-bottom: 3px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 23px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--landing-border);
+  background: var(--landing-surface);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-img {
+  height: 204px;
+  position: relative;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-img img {
+  object-position: center 38%;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-img .number {
+  position: absolute;
+  left: 17px;
+  top: 16px;
+  border: 1px solid #ffffff80;
+  color: white;
+  font-size: 11px;
+  font-family: var(--landing-font-display);
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: #28211d25;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-body {
+  padding: 28px 27px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-label {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--landing-action);
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile h3 {
+  font-size: 24px;
+  max-width: 260px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile .lead {
+  font-size: 11px;
+  line-height: 1.9;
+  margin-top: 14px;
+  min-height: 64px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile ul {
+  margin-top: 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 10px;
+  color: #665b52;
+  line-height: 1.7;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile li svg {
+  height: 13px;
+  width: 13px;
+  margin-top: 2px;
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile .text-link {
+  justify-content: space-between;
+  border-top: 1px solid var(--landing-border);
+  padding-top: 22px;
+  margin-top: 27px;
+  font-size: 11px;
+  color: var(--landing-action-hover);
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity {
+  position: relative;
+  background: var(--landing-inverse);
+  color: #f9f5ef;
+  padding: 82px 0;
+  overflow: hidden;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity .wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 100px;
+  position: relative;
+  z-index: 1;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity h2 {
+  font-size: 44px;
+  max-width: 460px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity h2 span {
+  color: #e4b59b;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity .eyebrow {
+  color: #d3a88a;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity .lead {
+  color: #c1b4a8;
+  font-size: 12px;
+  max-width: 360px;
+  margin-top: 24px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 20px;
+  border-bottom: 1px solid #ffffff1c;
+  padding: 24px 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item:first-child {
+  padding-top: 4px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item .n {
+  font-family: var(--landing-font-display);
+  font-size: 11px;
+  color: #c4987e;
+  margin-top: 5px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item h3 {
+  font-size: 20px;
+  letter-spacing: -0.035em;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item p {
+  font-size: 11px;
+  color: #bfb0a4;
+  line-height: 1.85;
+  margin-top: 8px;
+  max-width: 345px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-mark {
+  position: absolute;
+  left: 7%;
+  top: 50%;
+  width: 500px;
   height: auto;
-  translate: -16.37% 0;
-}
-.kifer-home .home-faq-art-bubble {
-  fill: color-mix(in srgb, var(--brand-primary-border) 62%, var(--brand-primary-muted));
-}
-.kifer-home .home-faq-list { display: grid; gap: var(--space-3); }
-.kifer-home .home-faq-layout > *, .kifer-home .home-faq-list > * { min-width: 0; }
-.kifer-home .home-faq-item { border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--bg-surface) 40%, transparent); }
-.kifer-home .home-faq-trigger.kds-button { display: grid; grid-template-columns: 3rem minmax(0, 1fr) 1.5rem; align-items: center; gap: var(--space-5); height: auto; min-height: 5rem; padding: var(--space-4) var(--space-5); border-radius: var(--radius-xl); white-space: normal; text-align: left; font: 500 clamp(1.125rem, 1.5vw, 1.5rem) / 1.3 var(--font-display); letter-spacing: -0.025em; color: var(--text-primary); }
-.kifer-home .home-faq-trigger .home-icon { width: 3rem; height: 3rem; }
-.kifer-home .home-faq-trigger .kds-button-content > span:nth-child(2) { min-width: 0; overflow-wrap: break-word; }
-.kifer-home .home-faq-trigger .kds-control-icon { color: var(--brand-primary); justify-self: end; transition: transform 180ms; }
-.kifer-home .home-faq-item.is-open .home-faq-trigger .kds-control-icon { transform: rotate(180deg); }
-.kifer-home .home-faq-answer { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows var(--home-motion-micro) var(--home-motion-ease), opacity var(--home-motion-micro), visibility 0s var(--home-motion-micro); }
-.kifer-home .home-faq-answer > [role='region'] { min-height: 0; overflow: hidden; }
-.kifer-home .home-faq-item.is-open .home-faq-answer { grid-template-rows: 1fr; opacity: 1; visibility: visible; transition-delay: 0s; }
-.kifer-home .home-faq-item [role='region'] > .kds-text { padding: var(--space-4) var(--space-6) var(--space-6) calc(3rem + var(--space-10)); font-size: 1rem; }
-
-/* 08 — Editorial quote and preserved production form */
-.kifer-home .home-quote { position: relative; isolation: isolate; overflow: clip; }
-.kifer-home .home-quote-layout { display: grid; grid-template-columns: 1.12fr 1fr; gap: 5%; align-items: start; }
-.kifer-home .home-quote-copy { padding-top: var(--space-3); }
-.kifer-home .home-quote-copy .home-title { font-size: clamp(2.25rem, 3.4vw, 4rem); margin-block: var(--space-5) var(--space-6); }
-.kifer-home .home-quote-copy .home-title em { font-style: italic; }
-.kifer-home .home-quote-benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); margin-top: var(--space-12); }
-.kifer-home .home-quote-benefits li + li { border-left: 1px solid var(--border-default); padding-left: var(--space-6); }
-.kifer-home .home-quote-benefits .home-icon { margin-bottom: var(--space-4); }
-.kifer-home .home-quote-benefits h3 { font: 500 1rem / 1.45 var(--font-sans); margin-bottom: var(--space-3); }
-.kifer-home .home-quote-benefits .kds-text { font-size: 0.9375rem; }
-.kifer-home .home-quote-form { position: relative; background: var(--bg-canvas-subtle); padding: clamp(1.5rem, 2.3vw, 3rem); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
-.kifer-home .home-quote-form > h3 { font: 500 clamp(1.5rem, 1.9vw, 2.2rem) / 1.25 var(--font-display); letter-spacing: -0.04em; margin-block: var(--space-2); }
-.kifer-home .home-quote-form > h3 + .kds-text { font-size: 0.9375rem; }
-.kifer-home .home-quote-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5) var(--space-4); margin-top: var(--space-6); }
-.kifer-home .home-quote-full { grid-column: 1 / -1; }
-.kifer-home .home-quote-fields .kds-field-label, .kifer-home .home-quote-fields .kds-field-label-row, .kifer-home .home-quote-fields .kds-text { font-size: 0.8125rem; font-weight: 400; }
-.kifer-home .home-quote-fields .kds-input { font-family: var(--font-sans); font-size: 0.875rem; background: transparent; }
-.kifer-home .home-quote-fields .kds-field-label-row { min-height: 1.5rem; }
-.kifer-home .home-quote-profiles.kds-radio-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
-.kifer-home .home-quote-profiles .kds-radio { position: relative; min-width: 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-3); gap: var(--space-3); min-height: 5.5rem; }
-.kifer-home .home-quote-profiles .kds-radio-checked { border-color: var(--brand-primary); background: var(--brand-primary-muted); }
-.kifer-home .home-quote-profiles .kds-radio-label > span { display: flex; flex-direction: column; gap: var(--space-1); }
-.kifer-home .home-quote-profiles .kds-radio-label svg { width: 1.3rem; height: 1.3rem; color: var(--text-secondary); margin-bottom: var(--space-1); }
-.kifer-home .home-quote-profiles .kds-radio-label strong { font-size: 0.75rem; font-weight: 500; }
-.kifer-home .home-quote-profiles .kds-radio-label small { font-size: 0.625rem; color: var(--text-secondary); font-weight: 400; line-height: 1.45; }
-.kifer-home .home-quote-profiles .kds-radio-indicator { background: var(--bg-surface); }
-.kifer-home .home-quote-profiles .kds-radio-checked .kds-radio-indicator { border-color: var(--text-primary); }
-.kifer-home .home-quote-profiles .kds-radio-checked .kds-radio-indicator::after { background: var(--text-primary); }
-.kifer-home .home-age-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); }
-.kifer-home .home-age-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
-.kifer-home .home-city { position: relative; }
-.kifer-home .home-city-options { position: absolute; inset: 100% 0 auto; z-index: 5; margin-top: var(--space-1); padding: var(--space-1); border-radius: var(--radius-md); background: var(--bg-surface); box-shadow: var(--shadow-popover); }
-.kifer-home .home-city-options .kds-button { justify-content: flex-start; white-space: normal; }
-.kifer-home .home-city-options [aria-selected='true'] { background: var(--brand-primary-soft); }
-.kifer-home .home-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.kifer-home .home-quote-form .home-quote-submit.kds-button { gap: var(--space-2); white-space: nowrap; }
-.kifer-home .home-quote-submit .kds-button-content { white-space: nowrap; }
-.kifer-home .home-quote-submit svg { flex-shrink: 0; }
-.kifer-home .home-quote-privacy { display: flex; align-items: flex-start; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); }
-.kifer-home .home-quote-privacy-icon { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border-radius: var(--radius-md); color: var(--brand-primary); background: var(--brand-primary-muted); }
-.kifer-home .home-quote-privacy-icon svg { width: 1rem; height: 1rem; }
-.kifer-home .home-quote-privacy-copy { min-width: 0; }
-.kifer-home .home-quote-reassurance { margin: 0; font: var(--type-body-sm); font-weight: var(--font-weight-medium); }
-.kifer-home .home-quote-privacy-notice { margin: var(--space-1) 0 0; color: var(--text-muted); font: var(--type-caption); line-height: 1.65; text-align: left; }
-.kifer-home .home-quote-privacy-notice a { display: inline; }
-.kifer-home .home-form-feedback { margin-top: var(--space-4); font-size: 0.875rem; }
-
-/* 09 — Responsive HTML smartphone, illustrative conversation, official photo */
-.kifer-home .home-whatsapp { overflow: clip; position: relative; }
-.kifer-home .home-whatsapp-layout { display: grid; grid-template-columns: 42% 58%; min-height: 38rem; align-items: center; }
-.kifer-home .home-whatsapp-copy { padding-block: var(--home-space); position: relative; z-index: 2; }
-.kifer-home .home-whatsapp .home-title { font-size: clamp(2.25rem, 3.3vw, 3.75rem); }
-.kifer-home .home-whatsapp-benefits { display: grid; gap: var(--space-5); margin-block: var(--space-6) var(--space-8); }
-.kifer-home .home-whatsapp-benefits li { display: flex; align-items: center; gap: var(--space-5); }
-.kifer-home .home-whatsapp-benefits h3 { font: 500 1.125rem / 1.3 var(--font-sans); }
-.kifer-home .home-whatsapp-benefits .kds-text { font-size: 0.9375rem; margin-top: var(--space-1); }
-.kifer-home .home-whatsapp-copy > .kds-button { width: 100%; justify-content: center; gap: var(--space-4); --control-height-lg: 3rem; --control-font-lg: 1rem; }
-.kifer-home .home-whatsapp-free { font-size: 0.875rem; text-align: center; margin-top: var(--space-4); }
-.kifer-home .home-phone { position: relative; margin: var(--space-6) 0; z-index: 1; left: 7%; flex-shrink: 0; width: clamp(16rem, 20vw, 20rem); padding: 0.6rem; border: 2px solid var(--text-secondary); border-radius: 3.5rem; background: var(--text-primary); box-shadow: var(--shadow-modal); }
-.kifer-home .home-phone-screen { border-radius: 2.8rem; background: var(--bg-canvas); overflow: hidden; }
-.kifer-home .home-phone-status { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.2rem 0.7rem; gap: var(--space-3); color: var(--text-primary); font-size: 0.75rem; font-weight: 600; }
-.kifer-home .home-phone-status > i { border-radius: var(--radius-full); height: 1.8rem; width: 36%; background: var(--text-primary); }
-.kifer-home .home-phone-status > span:last-child { display: flex; gap: var(--space-1); }
-.kifer-home .home-phone-status svg { width: 0.875rem; height: 0.875rem; }
-.kifer-home .home-phone-header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-2); color: var(--text-primary); }
-.kifer-home .home-phone-header > svg { width: 1rem; height: 1rem; flex-shrink: 0; }
-.kifer-home .home-phone-header > div:nth-of-type(2) { flex: 1; }
-.kifer-home .home-phone-header strong { font-size: 0.75rem; font-weight: 500; display: block; }
-.kifer-home .home-phone-header span { font-size: 0.5625rem; color: var(--text-secondary); display: block; }
-.kifer-home .home-phone-avatar { display: flex; align-items: center; justify-content: center; background: var(--brand-primary); height: 2.1rem; width: 2.1rem; border-radius: 50%; overflow: hidden; }
-.kifer-home .home-phone-avatar .kds-workspace-brand { color: var(--text-on-brand); }
-.kifer-home .home-phone-avatar .kds-workspace-brand > span { font-size: 0.875rem; letter-spacing: -0.07em; color: var(--text-on-brand); }
-.kifer-home .home-phone-avatar .kds-workspace-brand > span > span { display: none; }
-.kifer-home .home-phone-conversation { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); background: var(--bg-hover); }
-.kifer-home .home-message { align-self: flex-start; width: 88%; border-radius: var(--radius-lg); border-top-left-radius: 0; background: var(--bg-surface); padding: var(--space-2); font-size: 0.75rem; line-height: 1.5; color: var(--text-primary); box-shadow: 0 1px 0 var(--border-default); }
-.kifer-home .home-message-out { align-self: flex-end; width: 85%; background: var(--success-soft); border-top-left-radius: var(--radius-lg); border-top-right-radius: 0; }
-.kifer-home .home-message-out svg { width: 1rem; height: 1rem; color: var(--text-secondary); display: block; margin-left: auto; }
-.kifer-home .home-message-out:nth-last-child(2) { width: auto; min-width: 5rem; }
-.kifer-home .home-phone-input { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); color: var(--text-muted); }
-.kifer-home .home-phone-input > span { flex: 1; border-radius: var(--radius-full); background: var(--bg-surface); padding: var(--space-2) var(--space-3); font-size: 0.75rem; }
-.kifer-home .home-phone-input svg { width: 1.25rem; height: 1.25rem; }
-.kifer-home .home-phone-home { width: 35%; height: var(--space-1); margin: var(--space-2) auto; border-radius: var(--radius-full); background: var(--text-primary); }
-
-/* 10 — Deep terracotta footer with only official channels */
-.kifer-home .home-footer { position: relative; overflow: clip; background: var(--home-footer); color: var(--text-on-brand); }
-.kifer-home .home-footer::before, .kifer-home .home-footer::after { content: ''; pointer-events: none; position: absolute; border-radius: 45% 25% 60% 40%; }
-.kifer-home .home-footer::before { left: -10rem; top: -12rem; width: 24rem; height: 20rem; background: color-mix(in srgb, var(--brand-primary) 22%, transparent); transform: rotate(-24deg); }
-.kifer-home .home-footer::after { right: -18%; bottom: -34%; width: 35rem; height: 50rem; border: 6rem solid color-mix(in srgb, var(--brand-primary) 16%, transparent); transform: rotate(38deg); }
-.kifer-home .home-footer-grid, .kifer-home .home-footer-bottom { position: relative; z-index: 1; }
-.kifer-home .home-footer :is(.kds-heading, .kds-text, .kds-text-link, .kds-workspace-brand) { color: inherit; }
-.kifer-home .home-footer-grid { display: grid; grid-template-columns: 1.5fr 0.7fr 1fr 1.15fr; gap: 5%; padding-block: var(--space-16); }
-.kifer-home .home-footer > .home-container, .kifer-home .home-footer-bottom > .home-container { max-width: 100rem; }
-.kifer-home .home-footer-brand .kds-workspace-brand > span,
-.kifer-home .home-footer-brand .kds-workspace-brand > span > span { color: var(--text-on-brand); }
-.kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: clamp(3rem, 4vw, 4rem); }
-.kifer-home .home-footer-brand .kds-workspace-brand > span > span { font-size: 0.73em; font-weight: 400; }
-.kifer-home .home-footer-tagline { font-size: clamp(1.25rem, 1.65vw, 1.75rem); line-height: 1.45; margin-block: var(--space-8) var(--space-5); }
-.kifer-home .home-footer-brand > .kds-text:last-of-type { font-size: 1rem; max-width: 23rem; opacity: 0.9; }
-.kifer-home .home-footer h2 { font: 500 0.875rem / 1.5 var(--font-sans); letter-spacing: 0.19em; text-transform: uppercase; margin-bottom: var(--space-4); }
-.kifer-home .home-footer h2::after { content: ''; display: block; margin-top: var(--space-3); width: var(--space-8); height: 2px; background: var(--accent-copper); }
-.kifer-home .home-footer nav ul { display: grid; gap: var(--space-2); }
-.kifer-home .home-footer nav a { font-size: 1rem; line-height: 1.5; min-height: var(--space-8); display: inline-flex; align-items: center; }
-.kifer-home .home-footer a:hover { text-decoration: underline; text-underline-offset: var(--space-1); }
-.kifer-home .home-footer a:focus-visible { outline-color: var(--text-on-brand); }
-.kifer-home .home-footer-useful { margin-top: var(--space-6); }
-.kifer-home .home-footer-benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); margin-top: var(--space-10); }
-.kifer-home .home-footer-benefits li { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; font-size: 0.8125rem; line-height: 1.5; }
-.kifer-home .home-footer .home-icon { background: color-mix(in srgb, var(--brand-primary) 75%, transparent); color: var(--text-on-brand); width: 3.25rem; height: 3.25rem; }
-.kifer-home .home-footer .home-icon svg { width: 1.6rem; height: 1.6rem; }
-.kifer-home .home-footer-contact > .kds-text { font-size: 0.9375rem; }
-.kifer-home .home-footer-contact > ul { margin-top: var(--space-6); display: grid; gap: var(--space-4); }
-.kifer-home .home-footer-contact li { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
-.kifer-home .home-footer-contact li > div { min-width: 0; }
-.kifer-home .home-footer-contact li .kds-text { font-size: 0.8125rem; opacity: 0.85; }
-.kifer-home .home-footer-contact li a { display: inline-block; font-size: 0.9375rem; font-weight: 600; overflow-wrap: anywhere; line-height: 1.5; }
-.kifer-home .home-footer-contact li .home-footer-contact-note { font-size: .75rem; margin-top: var(--space-1); }
-.kifer-home .home-footer-social { padding-top: var(--space-6); margin-top: var(--space-6); border-top: 1px solid color-mix(in srgb, var(--text-on-brand) 15%, transparent); }
-.kifer-home .home-footer-social a { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-full); background: color-mix(in srgb, var(--brand-primary) 75%, transparent); }
-.kifer-home .home-footer-social h2 { margin-bottom: var(--space-3); }
-.kifer-home .home-footer-bottom { border-top: 1px solid color-mix(in srgb, var(--text-on-brand) 15%, transparent); padding-block: var(--space-8); }
-.kifer-home .home-footer-bottom > div { display: flex; justify-content: space-between; align-items: center; gap: var(--space-8); }
-.kifer-home .home-footer-bottom .kds-text, .kifer-home .home-footer-bottom a { font-size: 0.75rem; }
-.kifer-home .home-footer-bottom a { display: inline-flex; align-items: center; min-height: 2.75rem; }
-.kifer-home .home-footer-bottom > div > div { display: flex; align-items: center; gap: var(--space-4); }
-.kifer-home .home-footer-bottom > div > div::before { content: ''; width: 1px; height: var(--space-6); margin-right: var(--space-4); background: color-mix(in srgb, var(--text-on-brand) 45%, transparent); }
-
-/* Carry the paper surface through the editorial sections. Let large decorative
-   backgrounds taper before the following section instead of ending on a seam. */
-.kifer-home main { background: var(--home-paper); }
-.kifer-home .home-hero { background: var(--home-paper); }
-.kifer-home .home-faq-art {
-  mask-image: url('/images/home/section-finish-mask.svg');
-  mask-size: 100% 100%;
+  opacity: 0.035;
+  fill: #fff;
+  transform: translateY(-50%) rotate(-30deg);
+  transform-origin: center;
+  pointer-events: none;
 }
 
-/* Motion never supplies resting visibility: the page also works without observers or animations. */
-.kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button,
-.kifer-home .home-partner-logos a,
-.kifer-home .home-footer-social a { transition: transform var(--home-motion-micro) var(--home-motion-ease), background-color var(--home-motion-micro), border-color var(--home-motion-micro), box-shadow var(--home-motion-micro); }
-.kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button:focus-visible,
-.kifer-home .home-partner-logos a:focus-visible,
-.kifer-home .home-footer-social a:focus-visible { transform: translateY(-2px); }
-@media (hover: hover) {
-  .kifer-home :is(.home-hero-actions, .home-audience-copy, .home-whatsapp-copy) > .kds-button:hover,
-  .kifer-home .home-partner-logos a:hover,
-  .kifer-home .home-footer-social a:hover { transform: translateY(-2px); }
+.painel-theme.kifer-ds.kifer-landing .process {
+  background: var(--landing-surface);
 }
-.kifer-home .home-quote-fields :is(.kds-input, .kds-radio) { transition: border-color var(--home-motion-micro), background-color var(--home-motion-micro), box-shadow var(--home-motion-micro); }
-.kifer-home .home-quote-fields .kds-input:focus-visible { box-shadow: 0 0 0 3px var(--brand-primary-muted); }
-.kifer-home .home-quote-form[aria-busy='true'] .kds-button-primary { opacity: 0.8; }
-.kifer-home :is(.home-form-feedback, .home-quote-fields .kds-field-error) { animation: home-motion-feedback var(--home-motion-micro) var(--home-motion-ease); }
-.kifer-home .home-trust.home-motion-entering .home-trust-list li::after,
-.kifer-home .home-process.home-motion-entering .home-process-line li::after { transform-origin: center top; animation: home-motion-line-y var(--home-motion-entry) var(--home-motion-ease) backwards; }
-.kifer-home .home-trust.home-motion-entering .home-trust-list li:nth-child(2)::after,
-.kifer-home .home-process.home-motion-entering .home-process-line li:nth-child(2)::after { animation-delay: var(--home-motion-stagger); }
-.kifer-home .home-process.home-motion-entering .home-process-line li:nth-child(3)::after { animation-delay: calc(var(--home-motion-stagger) * 2); }
-.kifer-home .home-footer.home-motion-entering h2::after { transform-origin: left center; animation: home-motion-line-x var(--home-motion-entry) var(--home-motion-ease); }
-@keyframes home-motion-line-y { from { transform: scaleY(0); opacity: 0.3; } to { transform: scaleY(1); opacity: 1; } }
-@keyframes home-motion-line-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes home-motion-feedback { from { opacity: 0.5; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
-@media (min-width: 1024px) {
-  .kifer-home .home-about::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 -1px;
-    height: clamp(1rem, 2vw, 2rem);
-    border-radius: 70% 100% 0 0;
-    background: var(--home-paper);
-    pointer-events: none;
+.painel-theme.kifer-ds.kifer-landing .process .section-head h2 {
+  max-width: 600px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .step-top {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin-bottom: 22px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .step-top span {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  background: #f5ede4;
+  border: 1px solid var(--landing-border);
+  border-radius: 8px;
+  font-family: var(--landing-font-display);
+  font-size: 12px;
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .step-top:after {
+  content: "";
+  height: 1px;
+  background: var(--landing-border);
+  flex: 1;
+}
+
+.painel-theme.kifer-ds.kifer-landing .step h3 {
+  font-size: 19px;
+  letter-spacing: -0.035em;
+  line-height: 1.4;
+  min-height: 54px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .step p {
+  font-size: 11px;
+  line-height: 1.9;
+  color: var(--landing-muted);
+  margin-top: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .process-cta {
+  padding-top: 35px;
+  margin-top: 39px;
+  border-top: 1px solid var(--landing-border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  font-size: 11px;
+  color: var(--landing-muted);
+}
+
+.painel-theme.kifer-ds.kifer-landing .process-cta .text-link {
+  color: var(--landing-action);
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about {
+  padding: 104px 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 100px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-photo {
+  height: 532px;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-photo img {
+  object-position: 46% 50%;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-photo-caption {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  right: 22px;
+  border-top: 1px solid #ffffff65;
+  color: white;
+  padding-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-photo-caption strong {
+  font-family: var(--landing-font-display);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about h2 {
+  font-size: 41px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about .lead {
+  font-size: 12px;
+  margin-top: 24px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-name {
+  font-family: var(--landing-font-display);
+  font-size: 17px;
+  letter-spacing: -0.03em;
+  margin-top: 26px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-role {
+  font-size: 10px;
+  color: var(--landing-action);
+  margin-top: 6px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-values {
+  display: grid;
+  gap: 16px;
+  margin: 27px 0 30px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-values > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #62564b;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-values svg {
+  width: 16px;
+  height: 16px;
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .about .text-link {
+  color: var(--landing-action);
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq {
+  background: var(--landing-surface);
+  border-block: 1px solid var(--landing-border);
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.42fr;
+  gap: 85px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq h2 {
+  max-width: 360px;
+  font-size: 42px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq .lead {
+  max-width: 320px;
+  font-size: 12px;
+  margin-top: 21px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq .text-link {
+  margin-top: 29px;
+  color: var(--landing-action);
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list {
+  border-top: 1px solid var(--landing-border);
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list details {
+  border-bottom: 1px solid var(--landing-border);
+  padding: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+  align-items: center;
+  cursor: pointer;
+  padding: 23px 0;
+  list-style: none;
+  font-family: var(--landing-font-display);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list summary svg {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.2s;
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list details[open] summary svg {
+  transform: rotate(45deg);
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list details p {
+  font-size: 11px;
+  color: var(--landing-muted);
+  line-height: 1.95;
+  padding: 0 25px 23px 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote {
+  background: #eee5d9;
+  padding: 100px 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 100px;
+  align-items: start;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote h2 {
+  font-size: 43px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote .lead {
+  font-size: 12px;
+  margin-top: 24px;
+  max-width: 365px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-benefits {
+  display: grid;
+  gap: 17px;
+  margin-top: 29px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-benefits > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-benefits svg {
+  width: 16px;
+  height: 16px;
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-photo {
+  height: 224px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 38px;
+  max-width: 400px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-photo img {
+  object-position: center 36%;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-photo-note {
+  font-size: 9px;
+  color: #776b5e;
+  margin-top: 12px;
+  max-width: 360px;
+  line-height: 1.9;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-card {
+  background: var(--landing-surface);
+  border-radius: 16px;
+  padding: 32px;
+  border: 1px solid #e0d6c9;
+  box-shadow: 0 14px 36px -32px #36201360;
+}
+
+.painel-theme.kifer-ds.kifer-landing .form-top {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--landing-action);
+  margin-bottom: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-card h3 {
+  font-size: 23px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-card > p {
+  font-size: 10px;
+  color: var(--landing-muted);
+  margin-top: 11px;
+  line-height: 1.8;
+}
+
+.painel-theme.kifer-ds.kifer-landing .form-label {
+  font-size: 10px;
+  font-weight: 500;
+  display: block;
+  margin: 22px 0 9px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-option {
+  border: 1px solid var(--landing-border);
+  border-radius: 8px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 6px;
+  font-size: 9px;
+  color: var(--landing-muted);
+  min-width: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-option svg {
+  width: 14px;
+  height: 14px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-option[aria-pressed="true"] {
+  color: var(--landing-action-hover);
+  border-color: var(--landing-action);
+  background: #f9eee5;
+}
+
+.painel-theme.kifer-ds.kifer-landing .fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 17px 14px;
+  margin-top: 21px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field {
+  min-width: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field.full {
+  grid-column: 1/-1;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field input,
+.painel-theme.kifer-ds.kifer-landing .field select {
+  width: 100%;
+  height: 45px;
+  font-size: 10px;
+  padding: 0 13px;
+  border: 1px solid #ded4ca;
+  border-radius: 6px;
+  color: #746b63;
+  background: transparent;
+  outline-offset: 2px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field input::placeholder {
+  color: #9a8e83;
+  opacity: 1;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-card .button {
+  width: 100%;
+  margin-top: 23px;
+  font-size: 11px;
+  min-height: 47px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 8px;
+  line-height: 1.9;
+  color: #82756a;
+}
+
+.painel-theme.kifer-ds.kifer-landing .privacy-note svg {
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .privacy-note a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact {
+  padding: 74px 0;
+  background: var(--landing-surface);
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 60px;
+  background: var(--landing-action);
+  color: white;
+  padding: 46px 58px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-copy {
+  z-index: 1;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact .eyebrow {
+  color: #f3d6c5;
+  margin-bottom: 16px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact h2 {
+  font-size: 37px;
+  line-height: 1.2;
+  max-width: 540px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact p {
+  font-size: 11px;
+  color: #f4d7c6;
+  line-height: 1.8;
+  max-width: 410px;
+  margin-top: 17px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-action {
+  position: relative;
+  z-index: 1;
+  max-width: 290px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+  font-size: 11px;
+  width: 100%;
+  gap: 16px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: #f7e1d1;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-person img {
+  height: 33px;
+  width: 33px;
+  border-radius: 50%;
+  border: 2px solid #ffffff60;
+  object-position: center 33%;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-person strong {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: white;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-mark {
+  position: absolute;
+  width: 400px;
+  height: auto;
+  fill: #fff;
+  opacity: 0.035;
+  right: 250px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-30deg);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer {
+  background: var(--landing-inverse);
+  color: #f3eade;
+  padding: 67px 0 25px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 68px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .wordmark {
+  font-size: 34px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .wordmark span {
+  font-size: 23px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-brand > p {
+  font-size: 12px;
+  line-height: 1.85;
+  color: #c4b4a5;
+  margin-top: 23px;
+  max-width: 240px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer h3 {
+  font-family: var(--landing-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin: 7px 0 20px;
+  color: #f5eadd;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer li {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #baaa9c;
+  margin-top: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-contact p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: #baaa9c;
+  margin: 10px 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-social {
+  display: inline-flex;
+  gap: 15px;
+  color: #d1b8a2;
+  margin-top: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-social svg {
+  width: 17px;
+  height: 17px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-bottom {
+  margin-top: 49px;
+  padding-top: 21px;
+  border-top: 1px solid #ffffff15;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 8px;
+  color: #a39080;
+  line-height: 1.9;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-bottom > div {
+  display: flex;
+  gap: 24px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .mobile-cta {
+  display: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .prototype-only {
+  display: block;
+}
+
+.painel-theme.kifer-ds.kifer-landing .desktop-only {
+  display: block;
+}
+
+@media (min-width: 1600px) {
+  .painel-theme.kifer-ds.kifer-landing .wrap {
+    width: min(1280px, calc(100% - 144px));
   }
-  .painel-theme.kifer-ds.kifer-home {
-    --home-space: clamp(2.75rem, 3.35vw, 4rem);
-    --home-body: clamp(1rem, 1.05vw, 1.0625rem);
+  .painel-theme.kifer-ds.kifer-landing .hero h1 {
+    font-size: 65px;
   }
-  .kifer-home :is(.home-trust, .home-process, .home-testimonials, .home-quote-copy, .home-whatsapp) .home-title {
-    font-size: clamp(2rem, 2.85vw, 3rem);
+  .painel-theme.kifer-ds.kifer-landing .hero-photo .photo {
+    height: 580px;
   }
-  .kifer-home .home-faq .home-title { font-size: clamp(2.5rem, 3.3vw, 3.5rem); }
-  .kifer-home .home-process-line li > .kds-text { font-size: clamp(.9375rem, 1.05vw, 1.0625rem); }
-  .kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: clamp(2.75rem, 3.25vw, 3.5rem); }
-  .kifer-home .home-footer-tagline { font-size: clamp(1.125rem, 1.4vw, 1.5rem); }
+  .painel-theme.kifer-ds.kifer-landing .hero-grid {
+    gap: 72px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .lead {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-img {
+    height: 225px;
+  }
 }
-@media (max-width: 1199.98px) {
-  .painel-theme.kifer-ds.kifer-home { --home-gutter: 4%; --home-body: 1rem; }
-  .kifer-home .kds-public-header-brand { min-width: 8rem; }
-  .kifer-home .kds-public-header-brand .kds-workspace-brand > span { font-size: 2.2rem; }
-  .kifer-home .kds-public-header-brand .kds-workspace-brand > span > span { font-size: 1.8rem; }
-  .kifer-home .kds-public-header-inner { gap: var(--space-2); }
-  .kifer-home .kds-public-header-navigation a { padding-inline: var(--space-1); }
-  .kifer-home .home-hero-grid { grid-template-columns: 60% 40%; }
-  .kifer-home .home-hero-actions { gap: var(--space-3); --control-padding-lg: 1rem; --control-height-lg: 3rem; }
-  .kifer-home .home-hero-description { max-width: 29rem; }
-  .kifer-home .home-hero-benefits { max-width: 30rem; }
-  .kifer-home .home-hero-benefits li { padding-inline: var(--space-4); }
-  .kifer-home .home-trust-grid { gap: 5%; }
-  .kifer-home .home-trust-list { gap: var(--space-8); }
-  .kifer-home .home-trust-list li { grid-template-columns: 4rem 1fr; gap: var(--space-5); }
-  .kifer-home .home-trust-list .home-icon { width: 4rem; height: 4rem; }
-  .kifer-home .home-trust-list li:not(:last-child)::after { left: 2rem; top: 4.5rem; bottom: -1.5rem; }
-  .kifer-home .home-trust-photo-row { gap: var(--space-4); }
-  .kifer-home .home-trust-note { font-size: 1rem; }
-  .kifer-home .home-audience-selector .kds-radio { padding: var(--space-4); }
-  .kifer-home .home-audience-option { font-size: 0.875rem; }
-  .kifer-home .home-audience-option strong { font-size: 0.8125rem; }
-  .kifer-home .home-audience-panel { min-height: 30rem; grid-template-columns: minmax(0, 56fr) minmax(0, 44fr); }
-  .kifer-home .home-audience-copy { padding: var(--space-6); padding-right: var(--space-4); }
-  .kifer-home .home-audience-copy .kds-button { font-size: 0.8125rem; }
-  .kifer-home .home-process-line ol { gap: var(--space-6); }
-  .kifer-home .home-about { min-height: 38rem; grid-template-columns: 43% 57%; }
-  .kifer-home .home-about-copy { padding: var(--space-12) 7%; }
-  .kifer-home .home-about-benefits { gap: var(--space-4); }
-  .kifer-home .home-faq-trigger.kds-button { gap: var(--space-5); padding: var(--space-4); font-size: 1.25rem; }
-  .kifer-home .home-faq-item [role='region'] > .kds-text { padding-left: calc(3rem + var(--space-4) + var(--space-5)); }
-  .kifer-home .home-quote-layout { grid-template-columns: 1fr 1.1fr; gap: var(--space-8); }
-  .kifer-home .home-quote-benefits { gap: var(--space-4); }
-  .kifer-home .home-quote-benefits li + li { padding-left: var(--space-4); }
-  .kifer-home .home-quote-benefits h3 { font-size: 0.875rem; }
-  .kifer-home .home-quote-benefits .kds-text { font-size: 0.8125rem; }
-  .kifer-home .home-quote-profiles .kds-radio { padding: var(--space-2); gap: var(--space-2); }
-  .kifer-home .home-footer-grid { gap: 4%; grid-template-columns: 1.3fr 0.8fr 0.9fr 1.2fr; }
-  .kifer-home .home-footer nav a { font-size: 0.875rem; }
-  .kifer-home .home-footer-contact li { gap: var(--space-2); }
-  .kifer-home .home-footer-contact li a { font-size: 0.8125rem; }
+
+@media (max-width: 1100px) {
+  .painel-theme.kifer-ds.kifer-landing .wrap {
+    width: calc(100% - 64px);
+  }
+  .painel-theme.kifer-ds.kifer-landing .header nav {
+    gap: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    margin-left: 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-grid {
+    gap: 30px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero h1 {
+    font-size: 48px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions {
+    flex-wrap: wrap;
+    gap: 17px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-photo .photo {
+    height: 510px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section {
+    padding: 80px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section-head {
+    gap: 35px;
+  }
+  .painel-theme.kifer-ds.kifer-landing h2 {
+    font-size: 37px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-body {
+    padding: 24px 22px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile h3 {
+    font-size: 21px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity .wrap {
+    gap: 60px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-grid {
+    gap: 60px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about h2,
+  .painel-theme.kifer-ds.kifer-landing .faq h2,
+  .painel-theme.kifer-ds.kifer-landing .quote h2 {
+    font-size: 36px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-grid {
+    gap: 50px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-grid {
+    gap: 36px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-banner {
+    padding: 42px;
+    gap: 35px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact h2 {
+    font-size: 31px;
+  }
 }
-@media (max-width: 1023.98px) {
-  .kifer-home .home-hero-grid { grid-template-columns: 64% 36%; }
-  .kifer-home .home-hero-copy { padding-top: var(--space-8); }
-  .kifer-home .home-hero-description { max-width: 26rem; }
-  .kifer-home .home-hero-actions { flex-wrap: wrap; max-width: 24rem; }
-  .kifer-home .home-hero-benefits { max-width: 27rem; }
-  .kifer-home .home-trust .home-title { font-size: 2.5rem; }
-  .kifer-home .home-trust-photo-row { display: block; }
-  .kifer-home .home-trust-note { display: none; }
-  .kifer-home .home-trust-list li { grid-template-columns: 3rem 1fr; gap: var(--space-4); }
-  .kifer-home .home-trust-list .home-icon { width: 3rem; height: 3rem; }
-  .kifer-home .home-trust-list .home-icon svg { width: 1.75rem; height: 1.75rem; }
-  .kifer-home .home-trust-list li:not(:last-child)::after { top: 3.5rem; left: 1.5rem; }
-  .kifer-home .home-trust-list h3 { font-size: 1.5rem; }
-  .kifer-home .home-partner-logos a { padding-inline: var(--space-5); }
-  .kifer-home .home-audience-layout { grid-template-columns: minmax(0, 1fr); }
-  .kifer-home .home-audience-selector { --home-selector-pad: var(--space-2); --home-selector-gap: var(--space-2); padding: var(--space-2); }
-  .kifer-home .home-audience-selector::before { top: auto; bottom: var(--space-1); left: var(--home-selector-pad); width: calc((100% - var(--home-selector-pad) * 2 - var(--home-selector-gap) * 2 - 2px) / 3); height: var(--space-1); transform: translateX(calc(var(--home-profile-index) * (100% + var(--home-selector-gap)))); }
-  .kifer-home .home-audience-selector .kds-radio-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
-  .kifer-home .home-audience-selector .kds-radio { border: 0; padding: var(--space-4); justify-content: center; }
-  .kifer-home .home-audience-selector .kds-radio + .kds-radio { border: 0; }
-  .kifer-home .home-audience-arrow { display: none; }
-  .kifer-home .home-audience-option { flex-direction: row; align-items: center; gap: var(--space-2); }
-  .kifer-home .home-audience-option > span:not(.home-icon) { display: none; }
-  .kifer-home .home-audience-option .home-icon { width: 2rem; height: 2rem; margin: 0; }
-  .kifer-home .home-audience-option .home-icon svg { width: 1.3rem; height: 1.3rem; }
-  .kifer-home .home-audience-option strong { font-size: 0.75rem; letter-spacing: 0.05em; }
-  .kifer-home .home-audience-panel { min-height: 28rem; grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); }
-  .kifer-home .home-process-line ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); }
-  .kifer-home .home-process-line > svg { display: none; }
-  .kifer-home .home-testimonial-layout { grid-template-columns: 1fr; }
-  .kifer-home .home-testimonial-main { min-height: 22rem; }
-  .kifer-home .home-testimonial-secondary { grid-template-columns: 1fr 1fr; }
-  .kifer-home .home-testimonial-secondary > div + div { border-top: 0; border-left: 1px solid var(--border-default); }
-  .kifer-home .home-testimonial-secondary .home-icon { width: 4rem; height: 4rem; }
-  .kifer-home .home-testimonial-secondary > div { grid-template-columns: 4rem 1fr; padding: var(--space-4); }
-  .kifer-home .home-about { grid-template-columns: 40% 60%; }
-  .kifer-home .home-about-copy { padding: var(--space-10) 6%; }
-  .kifer-home .home-about .home-title { font-size: 2.4rem; }
-  .kifer-home .home-about-benefits { grid-template-columns: 1fr; gap: var(--space-5); }
-  .kifer-home .home-about-benefits li { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: var(--space-1) var(--space-4); }
-  .kifer-home .home-about-benefits .home-icon { grid-row: span 2; width: 3rem; height: 3rem; }
-  .kifer-home .home-about-benefits h3 { letter-spacing: 0.08em; font-size: 0.75rem; margin: 0; }
-  .kifer-home .home-faq-layout { grid-template-columns: 34% 61%; }
-  .kifer-home .home-faq .home-title { font-size: 2.8rem; }
-  .kifer-home .home-faq-trigger.kds-button { grid-template-columns: 3rem minmax(0, 1fr) 1rem; gap: var(--space-4); font-size: 1.15rem; }
-  .kifer-home .home-faq-trigger .home-icon { width: 3rem; height: 3rem; }
-  .kifer-home .home-faq-item [role='region'] > .kds-text { padding-inline: var(--space-5); }
-  .kifer-home .home-quote-layout { grid-template-columns: 1fr; gap: var(--space-10); }
-  .kifer-home .home-quote-copy { max-width: 40rem; }
-  .kifer-home .home-quote-copy .home-title { font-size: clamp(2.25rem, 4vw, 3rem); }
-  .kifer-home .home-quote-benefits { margin-top: var(--space-8); }
-  .kifer-home .home-quote-form { max-width: 44rem; width: 100%; justify-self: center; padding: var(--space-8); }
-  .kifer-home .home-quote-form > h3 { font-size: 2rem; }
-  .kifer-home .home-whatsapp-layout { grid-template-columns: 45% 55%; }
-  .kifer-home .home-whatsapp .home-title { font-size: 2.8rem; }
-  .kifer-home .home-whatsapp-copy > .kds-button { --control-font-lg: 1rem; gap: var(--space-3); }
-  .kifer-home .home-whatsapp-benefits h3 { font-size: 1rem; }
-  .kifer-home .home-whatsapp-benefits .home-icon { height: 3rem; width: 3rem; }
-  .kifer-home .home-whatsapp-benefits { gap: var(--space-4); }
-  .kifer-home .home-whatsapp-benefits li { gap: var(--space-3); }
-  .kifer-home .home-phone { width: 16.5rem; left: auto; margin: 0 auto var(--space-6); }
-  .kifer-home .home-footer-grid { grid-template-columns: 1.2fr 1fr; gap: var(--space-12); }
-  .kifer-home .home-footer-brand { grid-row: span 2; }
-  .kifer-home .home-footer-contact { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) var(--space-8); }
-  .kifer-home .home-footer-contact > h2 { grid-column: 1 / -1; margin-bottom: 0; }
-  .kifer-home .home-footer-contact > .kds-text { grid-column: 1; }
-  .kifer-home .home-footer-contact > ul { grid-column: 2; grid-row: 2 / 4; margin: 0; }
-  .kifer-home .home-footer-contact .home-footer-social { grid-column: 1; }
-}
-/* Short desktop viewports include notebooks and Windows display scaling. */
-@media (min-width: 640px) and (max-height: 800px) {
-  .painel-theme.kifer-ds.kifer-home { --home-space: clamp(2.5rem, 3.5vw, 3.5rem); }
-  .kifer-home .kds-public-header-inner { min-height: 4rem; }
-  .kifer-home .home-hero-copy { padding-block: var(--space-6); }
-  .kifer-home .home-hero-title { margin-block: var(--space-4); }
-  .kifer-home .home-hero-actions { margin-top: var(--space-5); --control-height-lg: 2.75rem; }
-  .kifer-home .home-hero-benefits { margin-top: var(--space-4); }
-  .kifer-home .home-hero-benefits .home-icon { width: 2.25rem; height: 2.25rem; }
-  .kifer-home .home-support-link { margin-top: var(--space-3); }
-  .kifer-home .home-section-intro { margin-bottom: var(--space-6); }
-}
-@media (max-width: 639.98px) {
-  .painel-theme.kifer-ds.kifer-home { --home-gutter: 6%; --home-space: 3.75rem; --home-body: 1rem; --home-motion-entry: 420ms; --home-motion-profile: 180ms; --home-motion-stagger: 35ms; --home-motion-distance: 8px; }
-  .kifer-home section { scroll-margin-top: 5.5rem; }
-  .kifer-home .kds-public-header-inner { min-height: 4.5rem; }
-  .kifer-home .kds-public-header-brand { min-width: 0; }
-  .kifer-home .kds-public-header-brand .kds-workspace-brand > span { font-size: clamp(1.5rem, 7.5vw, 1.85rem); }
-  .kifer-home .kds-public-header-brand .kds-workspace-brand > span > span { font-size: clamp(1.25rem, 6.1vw, 1.5rem); }
-  .kifer-home .kds-public-header-actions { gap: var(--space-1); }
-  .kifer-home .kds-public-header-actions > .kds-button { --control-height-lg: 2.75rem; --control-font-lg: 0.75rem; --control-padding-lg: 0.7rem; }
-  .kifer-home .home-title { font-size: clamp(2rem, 8.5vw, 3rem); }
-  .kifer-home .home-eyebrow { font-size: 0.625rem; letter-spacing: 0.19em; gap: var(--space-3); }
-  .kifer-home .home-eyebrow-line::before { width: var(--space-6); }
-  .kifer-home .home-section-intro { margin-bottom: var(--space-8); }
-  .kifer-home .home-section-intro br { display: none; }
-  .kifer-home .home-hero-grid { display: flex; flex-direction: column; min-height: 0; }
-  .kifer-home .home-hero-copy { padding-block: var(--space-8) var(--space-5); width: 100%; }
-  .kifer-home .home-hero-title { font-size: clamp(2.25rem, 10vw, 3.5rem); margin-block: var(--space-5); }
-  .kifer-home .home-hero-description { max-width: 100%; font-size: 0.9375rem; }
-  .kifer-home .home-hero-actions { display: grid; max-width: none; margin-top: var(--space-6); gap: var(--space-3); --control-height-lg: 3.25rem; }
-  .kifer-home .home-hero-actions .kds-button { font-size: 0.875rem; }
-  .kifer-home .home-hero-benefits { max-width: none; margin-top: var(--space-6); grid-template-columns: 1fr 1.1fr 1.25fr; }
-  .kifer-home .home-hero-benefits li, .kifer-home .home-hero-benefits li:first-child { padding-inline: var(--space-2); font-size: 0.6875rem; }
-  .kifer-home .home-hero-benefits .home-icon { width: 2.5rem; height: 2.5rem; }
-  .kifer-home .home-hero-benefits .home-icon svg { width: 1.4rem; height: 1.4rem; }
-  .kifer-home .home-support-link { font-size: 0.6875rem; }
-  .kifer-home .home-hero-wave { display: none; }
-  .kifer-home .home-trust-grid { display: flex; flex-direction: column; gap: var(--space-10); }
-  .kifer-home .home-trust .home-title { font-size: clamp(2rem, 8.5vw, 2.5rem); }
-  .kifer-home .home-trust .home-title br { display: none; }
-  .kifer-home .home-trust-photo-row { display: flex; gap: var(--space-4); margin-top: var(--space-6); }
-  .kifer-home .home-trust-note { display: block; font-size: 0.9375rem; }
-  .kifer-home .home-trust-list { gap: var(--space-8); }
-  .kifer-home .home-trust-list li { grid-template-columns: 3.5rem 1fr; gap: var(--space-5); }
-  .kifer-home .home-trust-list .home-icon { width: 3.5rem; height: 3.5rem; }
-  .kifer-home .home-trust-list li:not(:last-child)::after { left: 1.75rem; top: 4rem; }
-  .kifer-home .home-trust-list h3 { font-size: 1.6rem; margin-bottom: var(--space-3); }
-  .kifer-home .home-partner-heading { margin-top: var(--space-8); gap: var(--space-3); }
-  .kifer-home .home-partner-heading .kds-text:last-child { display: none; }
-  .kifer-home .home-partner-logos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5) 0; }
-  .kifer-home .home-partner-logos li:nth-child(4) { border-left: 0; }
-  .kifer-home .home-partner-logos a { padding-inline: var(--space-4); min-height: 3rem; }
-  .kifer-home .home-partner-logos img { max-height: 3rem; }
-  .kifer-home .home-audience .home-section-intro .home-title { font-size: 2.15rem; }
-  .kifer-home .home-audience-selector { --home-selector-pad: var(--space-1); --home-selector-gap: var(--space-1); padding: var(--space-1); }
-  .kifer-home .home-audience-selector .kds-radio-group { gap: var(--space-1); }
-  .kifer-home .home-audience-selector .kds-radio { padding: var(--space-3) var(--space-1); min-height: 3.5rem; }
-  .kifer-home .home-audience-option { flex-direction: column; gap: var(--space-1); }
-  .kifer-home .home-audience-option strong { font-size: 0.75rem; letter-spacing: 0.02em; text-align: center; }
-  .kifer-home .home-audience-slides { grid-template-rows: repeat(5, auto) 20rem; }
-  .kifer-home .home-audience-panel { grid-template-columns: minmax(0, 1fr); min-height: 0; }
-  .kifer-home .home-audience-copy { padding: var(--space-6) var(--space-5); width: 100%; }
-  .kifer-home .home-audience-title { font-size: clamp(1.75rem, 7.5vw, 2.1rem); margin-block: var(--space-4); }
-  .kifer-home .home-profile-benefits { margin-block: var(--space-5); gap: var(--space-3); }
-  .kifer-home .home-profile-benefits li { font-size: 0.8125rem; gap: var(--space-3); }
-  .kifer-home .home-profile-benefits .home-icon { width: 2.25rem; height: 2.25rem; }
-  .kifer-home .home-audience-copy .kds-button { width: 100%; --control-padding-lg: 0.75rem; font-size: 0.8125rem; }
-  .kifer-home .home-process .home-section-intro { margin-bottom: var(--space-10); }
-  .kifer-home .home-process-line ol { grid-template-columns: 1fr; gap: var(--space-8); }
-  .kifer-home .home-process-line li { display: grid; grid-template-columns: 5rem minmax(0, 1fr); text-align: left; column-gap: var(--space-5); position: relative; }
-  .kifer-home .home-process-line li:not(:last-child)::after { content: ''; position: absolute; left: 2.5rem; top: 6rem; bottom: -1rem; width: 1px; border-left: 1px dashed var(--brand-primary-border); }
-  .kifer-home .home-process-icon { grid-row: span 2; margin-top: var(--space-1); }
-  .kifer-home .home-process-icon .home-icon { width: 5rem; height: 5rem; }
-  .kifer-home .home-process-icon .home-icon svg { width: 2.5rem; height: 2.5rem; }
-  .kifer-home .home-process-number { width: 2rem; height: 2rem; font-size: 0.875rem; left: -0.3rem; }
-  .kifer-home .home-process-line h3 { font-size: clamp(1.25rem, 5.5vw, 1.55rem); max-width: none; margin: 0; }
-  .kifer-home .home-process-line li > .kds-text { font-size: 0.875rem; margin-top: var(--space-3); }
-  .kifer-home .home-testimonial-main { grid-template-columns: 1fr; min-height: 0; }
-  .kifer-home .home-testimonial-portrait { height: 10rem; margin: var(--space-3); border-radius: 3rem var(--radius-xl); }
-  .kifer-home .home-testimonial-portrait > svg { height: 5rem; width: 5rem; }
-  .kifer-home .home-testimonial-empty { padding: var(--space-6); gap: var(--space-4); }
-  .kifer-home .home-testimonial-empty h3 { font-size: 2rem; }
-  .kifer-home .home-testimonial-secondary { display: none; }
-  .kifer-home .home-about { display: flex; flex-direction: column; min-height: 0; }
-  .kifer-home .home-about-copy { padding: var(--space-10) 6%; }
-  .kifer-home .home-about .home-title { font-size: clamp(2rem, 8.5vw, 2.5rem); }
-  .kifer-home .home-about-benefits { grid-template-columns: 1fr; gap: var(--space-6); }
-  .kifer-home .home-about-benefits li { display: grid; grid-template-columns: 3.5rem 1fr; gap: var(--space-1) var(--space-4); }
-  .kifer-home .home-about-benefits .home-icon { grid-row: span 2; width: 3.5rem; height: 3.5rem; }
-  .kifer-home .home-about-benefits h3 { margin: 0 0 var(--space-1); letter-spacing: 0.1em; font-size: 0.75rem; }
-  .kifer-home .home-about-benefits .kds-text { font-size: 0.875rem; }
-  .kifer-home .home-about-name { margin-top: var(--space-8); }
-  .kifer-home .home-faq-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
-  .kifer-home .home-faq .home-title { font-size: clamp(2rem, 8.5vw, 2.5rem); }
-  .kifer-home .home-faq .home-title br { display: none; }
-  .kifer-home .home-faq-art { display: none; }
-  .kifer-home .home-faq-trigger.kds-button { grid-template-columns: 2.5rem minmax(0, 1fr) 1rem; gap: var(--space-3); min-height: 5.5rem; padding: var(--space-4) var(--space-3); font-size: 1.15rem; }
-  .kifer-home .home-faq-trigger .home-icon { width: 2.5rem; height: 2.5rem; }
-  .kifer-home .home-faq-trigger .home-icon svg { width: 1.4rem; height: 1.4rem; }
-  .kifer-home .home-faq-item [role='region'] > .kds-text { font-size: 0.875rem; padding: var(--space-4) var(--space-5) var(--space-5); }
-  .kifer-home .home-quote-copy .home-title { font-size: clamp(2.4rem, 9.8vw, 3.4rem); }
-  .kifer-home .home-quote-copy .home-title br { display: none; }
-  .kifer-home .home-quote-benefits { grid-template-columns: 1fr; gap: var(--space-5); }
-  .kifer-home .home-quote-benefits li { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: var(--space-1) var(--space-4); }
-  .kifer-home .home-quote-benefits li + li { padding: 0; border: 0; }
-  .kifer-home .home-quote-benefits .home-icon { width: 3rem; height: 3rem; grid-row: span 2; margin: 0; }
-  .kifer-home .home-quote-benefits h3 { font-size: 0.9375rem; margin: 0; }
-  .kifer-home .home-quote-benefits .kds-text { font-size: 0.8125rem; }
-  .kifer-home .home-quote-form { padding: var(--space-6) var(--space-4); }
-  .kifer-home .home-quote-form > h3 { font-size: 1.75rem; }
-  .kifer-home .home-quote-form > h3 + .kds-text { font-size: 0.875rem; }
-  .kifer-home .home-quote-fields { grid-template-columns: 1fr; gap: var(--space-5); }
-  .kifer-home .home-quote-profiles { gap: var(--space-1); }
-  .kifer-home .home-quote-profiles .kds-radio { flex-direction: column; padding: var(--space-2); }
-  .kifer-home .home-quote-profiles .kds-radio-label strong { font-size: 0.6875rem; }
-  .kifer-home .home-quote-profiles .kds-radio-label small { font-size: 0.5625rem; }
-  .kifer-home .home-age-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kifer-home .home-quote-form .kds-button-primary { white-space: normal; --control-padding-lg: 0.75rem; --control-font-lg: 0.875rem; }
-  .kifer-home .home-quote-privacy { align-items: flex-start; }
-  .kifer-home .home-whatsapp-layout { display: flex; flex-direction: column; }
-  .kifer-home .home-whatsapp-copy { padding-block: var(--space-10); }
-  .kifer-home .home-whatsapp .home-title { font-size: clamp(2rem, 8.5vw, 2.5rem); }
-  .kifer-home .home-whatsapp-benefits li { gap: var(--space-4); }
-  .kifer-home .home-whatsapp-copy > .kds-button { --control-font-lg: 1.125rem; }
-  .kifer-home .home-phone { width: clamp(14.25rem, 66vw, 18rem); left: auto; margin: 0 auto var(--space-6); border-radius: 2.5rem; padding: 0.4rem; }
-  .kifer-home .home-phone-screen { border-radius: 2.05rem; }
-  .kifer-home .home-phone-conversation { gap: var(--space-2); padding: var(--space-3) var(--space-2); }
-  .kifer-home .home-message { font-size: 0.6875rem; padding: var(--space-2); }
-  .kifer-home .home-phone-status { padding: var(--space-3) var(--space-4) var(--space-2); }
-  .kifer-home .home-phone-status > i { height: 1.4rem; }
-  .kifer-home .home-phone-header { gap: var(--space-1); }
-  .kifer-home .home-phone-header > svg:nth-last-child(3), .kifer-home .home-phone-header > svg:last-child { display: none; }
-  .kifer-home .home-footer-grid { grid-template-columns: 1fr; gap: var(--space-8); max-width: 30rem; padding-block: var(--space-10); }
-  .kifer-home .home-footer-brand { grid-column: 1 / -1; grid-row: auto; }
-  .kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: 3.75rem; }
-  .kifer-home .home-footer-tagline { font-size: 1.5rem; margin-top: var(--space-6); }
-  .kifer-home .home-footer-brand > .kds-text:last-of-type { max-width: none; font-size: 0.9375rem; }
-  .kifer-home .home-footer-benefits { gap: var(--space-4); margin-top: var(--space-6); }
-  .kifer-home .home-footer h2 { font-size: 0.6875rem; letter-spacing: 0.12em; margin-bottom: var(--space-4); }
-  .kifer-home .home-footer nav a { font-size: 0.8125rem; min-height: 2.75rem; }
-  .kifer-home .home-footer nav ul { gap: var(--space-1); }
-  .kifer-home .home-footer-useful { margin-top: var(--space-8); }
-  .kifer-home .home-footer-contact { display: block; }
-  .kifer-home .home-footer-contact > ul { margin-top: var(--space-6); gap: var(--space-4); }
-  .kifer-home .home-footer-contact li { gap: var(--space-4); }
-  .kifer-home .home-footer-contact li a { font-size: 0.9375rem; }
-  .kifer-home .home-footer-contact > .kds-text { margin-top: var(--space-5); }
-  .kifer-home .home-footer-social { margin-top: var(--space-6); }
-  .kifer-home .home-footer-bottom > div { flex-direction: column; align-items: flex-start; gap: var(--space-5); }
-  .kifer-home .home-footer-bottom > div > div::before { display: none; }
-  .kifer-home .home-footer-bottom .kds-text { font-size: 0.6875rem; }
-}
-/* Mobile reference compositions. The approved tablet and desktop rules stay above. */
-@media (max-width: 639.98px) {
-  .painel-theme.kifer-ds.kifer-home { --home-gutter: clamp(1.25rem, 7.5vw, 2rem); --home-space: 3rem; --home-body: 0.9375rem; }
-  .kifer-home section { scroll-margin-top: 4.75rem; }
-  .kifer-home .kds-public-header-inner { min-height: 3.75rem; gap: var(--space-3); }
-  .kifer-home .kds-public-header-actions > .kds-button { display: none; }
-  .kifer-home .kds-public-header-toggle .kds-icon-button { color: var(--brand-primary); }
-  .kifer-home .home-title { font-size: clamp(1.875rem, 8.6vw, 2.375rem); }
-  .kifer-home .home-eyebrow { font-size: 0.625rem; letter-spacing: 0.19em; }
-  .kifer-home .home-lead { font-size: 0.9375rem; line-height: 1.6; }
-  .kifer-home .home-section-intro { margin-bottom: var(--space-6); }
 
-  /* 01: the photograph separates the introduction from the three benefits. */
-  .kifer-home .home-hero-grid { align-items: stretch; padding-bottom: var(--space-6); }
-  .kifer-home .home-hero-copy { display: contents; }
-  .kifer-home .home-hero-copy > .home-eyebrow { order: 0; margin-top: var(--space-6); max-width: none; }
-  .kifer-home .home-hero-title { order: 1; font-size: clamp(2.125rem, 10vw, 2.75rem); margin-block: var(--space-4); }
-  .kifer-home .home-hero-description { order: 2; }
-  .kifer-home .home-hero-actions { order: 3; gap: var(--space-2); margin-top: var(--space-5); --control-height-lg: 3rem; }
-  .kifer-home .home-hero-actions .kds-button { width: 100%; font-size: clamp(0.8125rem, 3.65vw, 1rem); }
-  .kifer-home .home-hero-benefits { order: 5; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--space-5); }
-  .kifer-home .home-hero-benefits li, .kifer-home .home-hero-benefits li:first-child { align-items: center; padding-inline: var(--space-1); text-align: center; font-size: clamp(0.625rem, 2.8vw, 0.75rem); }
-  .kifer-home .home-support-link { order: 6; align-self: center; margin-top: var(--space-5); }
-  .kifer-home .home-hero-wave { display: block; width: 100%; height: 6rem; }
-
-  /* 02: editorial image, vertical explanation, then a balanced operator grid. */
-  .kifer-home .home-trust-grid { gap: var(--space-6); }
-  .kifer-home .home-trust-photo-row { align-items: center; gap: var(--space-3); }
-  .kifer-home .home-trust-note { flex: 1; min-width: 0; font-size: clamp(0.8125rem, 3.2vw, 0.9375rem); line-height: 1.35; }
-  .kifer-home .home-trust-list { gap: var(--space-6); }
-  .kifer-home .home-trust-list li { grid-template-columns: 3rem minmax(0, 1fr); gap: var(--space-4); }
-  .kifer-home .home-trust-list .home-icon { width: 3rem; height: 3rem; }
-  .kifer-home .home-trust-list li:not(:last-child)::after { top: 3.5rem; left: 1.5rem; bottom: -1rem; }
-  .kifer-home .home-trust-list h3 { font-size: 1.5rem; margin-bottom: var(--space-2); }
-  .kifer-home .home-partner-heading { flex-wrap: wrap; }
-  .kifer-home .home-partner-heading .kds-text:last-child { display: block; flex-basis: 100%; font-size: 0.5625rem; }
-  .kifer-home .home-partner-logos { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2); }
-  .kifer-home .home-partner-logos li, .kifer-home .home-partner-logos li:nth-child(4) { grid-column: span 2; min-width: 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); }
-  .kifer-home .home-partner-logos li:nth-last-child(2):nth-child(3n + 1), .kifer-home .home-partner-logos li:last-child:nth-child(3n + 2) { grid-column: span 3; }
-  .kifer-home .home-partner-logos a { min-height: 3.75rem; padding: var(--space-2); }
-  .kifer-home .home-partner-logos img { width: 5.25rem; max-width: 100%; max-height: 2.25rem; }
-  .kifer-home .home-partner-logos img[alt='Amil'] { width: 85%; max-width: 4.5rem; }
-
-  /* 03: one horizontal selector and one shared, stable editorial panel. */
-  .kifer-home .home-audience { overflow: hidden; overflow: clip; }
-  .kifer-home .home-audience-layout { gap: var(--space-6); }
-  .kifer-home .home-audience-selector { padding: var(--space-1); border-radius: var(--radius-xl); }
-  .kifer-home .home-audience-selector .kds-radio { min-height: 4.5rem; padding-block: var(--space-2); }
-  .kifer-home .home-audience-option strong { font-size: clamp(0.625rem, 2.8vw, 0.75rem); letter-spacing: 0.06em; }
-  .kifer-home .home-audience-slides { grid-template-rows: auto; }
-  .kifer-home .home-audience-panel { grid-area: 1 / 1; grid-template-rows: minmax(0, 1fr) clamp(13rem, 65vw, 17.5rem); overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .kifer-home .home-audience-copy { grid-row: 1; display: flex; flex-direction: column; padding: 0; }
-  .kifer-home .home-audience-copy > * { flex-shrink: 0; }
-  .kifer-home .home-audience-title { font-size: clamp(1.875rem, 8.5vw, 2.375rem); margin-block: var(--space-4); }
-  .kifer-home .home-profile-benefits { gap: var(--space-3); }
-  .kifer-home .home-profile-benefits li { font-size: 0.875rem; }
-  .kifer-home .home-audience-copy > .kds-button { min-height: 3rem; font-size: clamp(0.75rem, 3.25vw, 0.9375rem); margin-top: auto; margin-bottom: var(--space-6); }
-
-  /* 04 and 05: connected steps and the approved testimonial empty state. */
-  .kifer-home .home-process-line ol { gap: var(--space-8); }
-  .kifer-home .home-process-line li { grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: var(--space-4); }
-  .kifer-home .home-process-icon .home-icon { width: 4.5rem; height: 4.5rem; }
-  .kifer-home .home-process-line li:not(:last-child)::after { left: 1.75rem; top: 5rem; bottom: -1.5rem; width: 1rem; border-radius: 50%; }
-  .kifer-home .home-process-line h3 { font-size: clamp(1.25rem, 5.5vw, 1.625rem); }
-  .kifer-home .home-process-line li > .kds-text { margin-top: var(--space-2); }
-  .kifer-home .home-testimonials .home-title { font: 600 clamp(1.625rem, 7.2vw, 2rem) / 1.2 var(--font-sans); }
-  .kifer-home .home-testimonial-portrait { height: 11rem; border-radius: 2.5rem var(--radius-xl); }
-  .kifer-home .home-testimonial-empty { padding: var(--space-5); }
-  .kifer-home .home-testimonial-empty h3 { font-size: 1.75rem; }
-  .kifer-home .home-testimonial-secondary { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
-  .kifer-home .home-testimonial-secondary > div, .kifer-home .home-testimonial-secondary > div + div { border: 1px solid var(--border-default); border-radius: var(--radius-xl); padding: var(--space-4); }
-
-  /* 06: approved portrait, then three concise columns of differentiators. */
-  .kifer-home .home-about-copy { padding: var(--space-8) var(--home-gutter) var(--space-10); }
-  .kifer-home .home-about-benefits { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
-  .kifer-home .home-about-benefits li { display: flex; flex-direction: column; gap: var(--space-2); }
-  .kifer-home .home-about-benefits .home-icon { width: 2.75rem; height: 2.75rem; }
-  .kifer-home .home-about-benefits h3 { font-size: 0.625rem; letter-spacing: 0.08em; line-height: 1.5; overflow-wrap: anywhere; }
-  .painel-theme.kifer-ds.kifer-home .home-about-benefits .kds-heading { font-size: 0.625rem; line-height: 1.5; }
-  .kifer-home .home-about-benefits .kds-text { font-size: 0.75rem; line-height: 1.55; }
-  .kifer-home .home-about-name strong { font-size: 2.5rem; }
-  .kifer-home .home-about-name .home-eyebrow { font-size: 0.5625rem; letter-spacing: 0.13em; }
-
-  /* 07: accordion first; the decorative conversation sits below it. */
-  .kifer-home .home-faq-layout { display: flex; flex-direction: column; gap: 0; }
-  .kifer-home .home-faq-copy { display: contents; }
-  .kifer-home .home-faq-copy > .home-eyebrow { order: 0; }
-  .kifer-home .home-faq-copy > .home-title { order: 1; }
-  .kifer-home .home-faq-copy > .home-lead { order: 2; margin-bottom: var(--space-6); }
-  .kifer-home .home-faq-list { order: 3; width: 100%; }
-  .kifer-home .home-faq-trigger.kds-button { min-height: 4.75rem; padding: var(--space-3); gap: var(--space-3); font-size: 1.125rem; }
-  .kifer-home .home-faq-art {
+@media (max-width: 850px) {
+  .painel-theme.kifer-ds.kifer-landing .header .wrap {
+    height: 78px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header nav {
+    display: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero {
+    padding-top: 44px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero h1 {
+    font-size: 38px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .eyebrow {
+    font-size: 7px;
+    gap: 7px;
+    letter-spacing: 0.08em;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-grid {
+    gap: 24px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .lead {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .button {
+    font-size: 10px;
+    padding-inline: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .text-link {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-photo .photo {
+    height: 460px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-top {
+    left: 12px;
+    top: 12px;
+    padding: 7px 9px;
+    font-size: 7px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    padding: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom strong {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom small {
+    font-size: 7px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features {
+    gap: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features > div {
+    font-size: 9px;
+    gap: 8px;
+    line-height: 1.8;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-line {
     display: block;
-    order: 4;
-    align-self: center;
-    width: min(94vw, 30rem);
-    height: min(45vw, 14.4rem);
-    flex: none;
-    margin: var(--space-2) 0 calc(-1 * var(--home-space));
-    overflow: clip;
   }
-  .kifer-home .home-faq-art svg { translate: none; }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy {
+    max-width: none;
+    text-align: center;
+    font-size: 10px;
+    margin-bottom: 27px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy strong {
+    display: inline;
+    margin-right: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos {
+    gap: 28px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos img {
+    height: 28px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section-head {
+    display: block;
+    margin-bottom: 31px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section-head > .lead {
+    max-width: 440px;
+    margin-top: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profiles {
+    gap: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-img {
+    height: 160px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-body {
+    padding: 22px 17px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile h3 {
+    font-size: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .lead {
+    font-size: 10px;
+    min-height: 97px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile li {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile ul {
+    gap: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .text-link {
+    font-size: 9px;
+    gap: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity .wrap {
+    gap: 38px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity h2 {
+    font-size: 34px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item h3 {
+    font-size: 17px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item p {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .steps {
+    gap: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step h3 {
+    font-size: 16px;
+    min-height: 67px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step p {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-grid {
+    gap: 35px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-photo {
+    height: 515px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about h2 {
+    font-size: 30px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about .lead {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-name {
+    font-size: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-values > div {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-photo-caption {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 8px;
+    left: 16px;
+    right: 16px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-grid {
+    gap: 40px;
+    grid-template-columns: 1fr 1.2fr;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq h2 {
+    font-size: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-list summary {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-grid {
+    gap: 32px;
+    grid-template-columns: 0.8fr 1.2fr;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote h2 {
+    font-size: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card {
+    padding: 25px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card h3 {
+    font-size: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option {
+    font-size: 8px;
+    gap: 4px;
+    padding-inline: 4px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option svg {
+    width: 11px;
+    height: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-photo {
+    height: 220px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-benefits > div {
+    font-size: 10px;
+    line-height: 1.7;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-banner {
+    gap: 35px;
+    grid-template-columns: 1fr;
+    padding: 38px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action {
+    display: flex;
+    max-width: none;
+    gap: 25px;
+    align-items: center;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+    width: auto;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-person {
+    margin: 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-grid {
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 35px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-contact {
+    grid-column: 2/4;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-brand {
+    grid-row: span 2;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-bottom {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
 
-  /* 08: contextual photograph, actual form, then the supporting benefits. */
-  .kifer-home .home-quote { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-5) var(--space-3); padding-inline: var(--home-gutter); }
-  .kifer-home .home-quote-layout { display: contents; }
-  .kifer-home .home-quote-copy { display: contents; }
-  .kifer-home .home-quote-copy > .home-eyebrow { order: 0; position: relative; grid-column: 1; grid-row: 1; }
-  .kifer-home .home-quote-copy > .home-title { order: 1; grid-column: 1; grid-row: 2; max-width: none; font-size: clamp(1.75rem, 7.9vw, 2.125rem); margin: 0; }
-  .kifer-home .home-quote-copy > .home-title br { display: none; }
-  .kifer-home .home-quote-copy > .home-title em { font-style: italic; }
-  .kifer-home .home-quote-copy > .home-lead { order: 2; grid-column: 1 / -1; grid-row: 3; margin: 0; }
-  .kifer-home .home-quote-form { order: 3; grid-column: 1 / -1; grid-row: 4; padding: var(--space-5); border-radius: var(--radius-xl); }
-  .kifer-home .home-quote-form > h3 { font-size: 1.75rem; }
-  .kifer-home .home-quote-fields .kds-input { font-size: 1rem; min-height: 3rem; }
-  .kifer-home .home-quote-profiles .kds-radio { min-height: 6rem; }
-  .kifer-home .home-quote-benefits { order: 4; grid-column: 1 / -1; grid-row: 5; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
-  .kifer-home .home-quote-benefits li { display: block; }
-  .kifer-home .home-quote-benefits li + li { border-left: 1px solid var(--border-default); padding-left: var(--space-3); }
-  .kifer-home .home-quote-benefits .home-icon { width: 2.5rem; height: 2.5rem; margin-bottom: var(--space-3); }
-  .kifer-home .home-quote-benefits h3 { font-size: 0.75rem; line-height: 1.5; }
-  .painel-theme.kifer-ds.kifer-home .home-quote-benefits .kds-heading { font-size: 0.75rem; line-height: 1.5; }
-  .kifer-home .home-quote-benefits .kds-text { font-size: 0.6875rem; line-height: 1.6; }
+@media (max-width: 600px) {
+  .painel-theme.kifer-ds.kifer-landing .wrap {
+    width: calc(100% - 40px);
+  }
+  .painel-theme.kifer-ds.kifer-landing .wordmark {
+    font-size: 29px;
+    letter-spacing: -1.8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .wordmark span {
+    font-size: 20px;
+    letter-spacing: -1.4px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .wrap {
+    height: 74px;
+    gap: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    font-size: 9px;
+    min-height: 35px;
+    padding: 8px 11px;
+    gap: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button svg {
+    width: 13px;
+    height: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero {
+    padding: 35px 0 30px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    align-items: stretch;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .eyebrow {
+    font-size: 8px;
+    letter-spacing: 0.075em;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .eyebrow:before {
+    width: 17px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero h1 {
+    font-size: 40px;
+    letter-spacing: -0.06em;
+    max-width: 390px;
+    line-height: 1.13;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+    font-size: 14px;
+    line-height: 1.65;
+    margin-top: 20px;
+    max-width: 320px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .lead {
+    font-size: 11px;
+    line-height: 1.9;
+    max-width: 350px;
+    margin-top: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .button {
+    font-size: 11px;
+    min-height: 47px;
+    padding: 13px 17px;
+    justify-content: space-between;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .text-link {
+    font-size: 10px;
+    justify-content: center;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-note {
+    margin-top: 17px;
+    font-size: 9px;
+    justify-content: center;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-photo .photo {
+    height: 338px;
+    border-radius: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-photo .photo img {
+    object-position: 62% 50%;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-top {
+    font-size: 8px;
+    top: 14px;
+    left: 14px;
+    padding: 8px 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom {
+    padding: 14px 15px;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom strong {
+    font-size: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom small {
+    font-size: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 29px;
+    padding-top: 25px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features > div {
+    justify-content: flex-start;
+    font-size: 10px;
+    gap: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features svg {
+    width: 16px;
+    height: 16px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partners {
+    padding: 27px 0 30px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy {
+    font-size: 9px;
+    line-height: 1.8;
+    max-width: 220px;
+    margin-inline: auto;
+    margin-bottom: 25px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy strong {
+    display: block;
+    font-size: 11px;
+    margin: 0 0 3px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px 24px;
+    max-width: 340px;
+    margin: auto;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos img {
+    height: 26px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos a:nth-child(1) img {
+    height: 22px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos a:nth-child(4) img {
+    height: 29px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos a:nth-child(5) img {
+    height: 26px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section {
+    padding: 58px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .eyebrow {
+    font-size: 8px;
+    margin-bottom: 18px;
+    letter-spacing: 0.13em;
+  }
+  .painel-theme.kifer-ds.kifer-landing h2 {
+    font-size: 31px;
+    letter-spacing: -0.055em;
+    line-height: 1.2;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section-head {
+    margin-bottom: 28px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section-head > .lead {
+    font-size: 11px;
+    line-height: 1.9;
+    margin-top: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profiles {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile {
+    border-radius: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-img {
+    height: 211px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-body {
+    padding: 25px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-label {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile h3 {
+    font-size: 25px;
+    max-width: 290px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .lead {
+    font-size: 11px;
+    min-height: 0;
+    margin-top: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile ul {
+    margin-top: 20px;
+    gap: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile li {
+    font-size: 10px;
+    line-height: 1.7;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .text-link {
+    font-size: 11px;
+    margin-top: 24px;
+    padding-top: 19px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity {
+    padding: 55px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity .wrap {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity h2 {
+    font-size: 33px;
+    max-width: 350px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity .lead {
+    font-size: 11px;
+    margin-top: 19px;
+    max-width: 340px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item {
+    grid-template-columns: 22px 1fr;
+    gap: 14px;
+    padding: 22px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item h3 {
+    font-size: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item p {
+    font-size: 10px;
+    line-height: 1.9;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item .n {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-mark {
+    left: -100px;
+    top: 35%;
+    width: 430px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .steps {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-top: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step {
+    display: grid;
+    grid-template-columns: 39px 1fr;
+    gap: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step-top {
+    margin: 0;
+    display: block;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step-top span {
+    width: 37px;
+    height: 37px;
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step-top:after {
+    display: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step h3 {
+    font-size: 19px;
+    min-height: 0;
+    line-height: 1.4;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step p {
+    font-size: 10px;
+    line-height: 1.95;
+    max-width: 290px;
+    margin-top: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .process-cta {
+    padding-top: 24px;
+    margin-top: 31px;
+    flex-direction: column;
+    gap: 13px;
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .process-cta .text-link {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about {
+    padding: 60px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
+    align-items: stretch;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-photo {
+    height: 350px;
+    border-radius: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-photo img {
+    object-position: 42% 50%;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-photo-caption {
+    left: 19px;
+    right: 19px;
+    bottom: 19px;
+    flex-direction: row;
+    align-items: center;
+    font-size: 8px;
+    gap: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-photo-caption strong {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about h2 {
+    font-size: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about .lead {
+    font-size: 11px;
+    margin-top: 21px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-name {
+    font-size: 17px;
+    margin-top: 24px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-role {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-values {
+    margin-top: 24px;
+    gap: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-values > div {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about .text-link {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-grid {
+    display: block;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq h2 {
+    font-size: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq .lead {
+    font-size: 11px;
+    margin-top: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq .text-link {
+    font-size: 10px;
+    margin-top: 23px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-list {
+    margin-top: 35px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-list summary {
+    font-size: 13px;
+    gap: 25px;
+    padding: 21px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-list details p {
+    font-size: 10px;
+    line-height: 1.9;
+    padding-bottom: 22px;
+    padding-right: 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote {
+    padding: 56px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote h2 {
+    font-size: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote .lead {
+    font-size: 11px;
+    margin-top: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-benefits {
+    margin-top: 24px;
+    gap: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-benefits > div {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-photo {
+    height: 193px;
+    max-width: none;
+    margin-top: 27px;
+    border-radius: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-photo-note {
+    font-size: 8px;
+    line-height: 1.8;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card {
+    width: 100%;
+    padding: 24px 19px;
+    border-radius: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .form-top {
+    font-size: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card h3 {
+    font-size: 23px;
+    line-height: 1.25;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card > p {
+    font-size: 10px;
+    margin-top: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .form-label {
+    font-size: 10px;
+    margin-top: 23px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-selector {
+    gap: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option {
+    font-size: 8px;
+    gap: 5px;
+    padding: 13px 4px;
+    min-height: 43px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option svg {
+    height: 12px;
+    width: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .fields {
+    gap: 18px 12px;
+    margin-top: 22px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field label {
+    font-size: 9px;
+    line-height: 1.5;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field input,
+  .painel-theme.kifer-ds.kifer-landing .field select {
+    font-size: 9px;
+    height: 46px;
+    padding-inline: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card .button {
+    font-size: 10px;
+    gap: 12px;
+    margin-top: 23px;
+    min-height: 48px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .privacy-note {
+    font-size: 8px;
+    line-height: 1.9;
+    margin-top: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact {
+    padding: 38px 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-banner {
+    padding: 29px 25px;
+    gap: 29px;
+    border-radius: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact .eyebrow {
+    font-size: 7px;
+    margin-bottom: 17px;
+    color: #fae8dc;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact h2 {
+    font-size: 29px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact p {
+    font-size: 10px;
+    line-height: 1.9;
+    margin-top: 17px;
+    color: #fae8dc;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action {
+    display: block;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+    font-size: 10px;
+    width: 100%;
+    min-height: 46px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-person {
+    margin-top: 18px;
+    font-size: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-person strong {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-mark {
+    right: -85px;
+    top: 48%;
+    width: 330px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer {
+    padding: 45px 0 31px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px 29px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-brand {
+    grid-column: 1/-1;
+    grid-row: auto;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer .wordmark {
+    font-size: 34px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-brand > p {
+    font-size: 11px;
+    max-width: 260px;
+    line-height: 1.9;
+    margin-top: 21px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer h3 {
+    font-size: 10px;
+    margin: 0 0 17px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer li {
+    font-size: 10px;
+    margin-top: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-contact {
+    grid-column: 1/-1;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-contact p {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-bottom {
+    margin-top: 31px;
+    padding-top: 20px;
+    font-size: 8px;
+    gap: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-bottom > div {
+    display: block;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-bottom a {
+    display: block;
+    margin-top: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .desktop-only {
+    display: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    background: #fffdfaf5;
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--landing-border);
+    padding: 12px 20px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta p {
+    font-size: 9px;
+    color: var(--landing-muted);
+    line-height: 1.7;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta strong {
+    font-size: 10px;
+    display: block;
+    color: var(--landing-ink);
+    font-weight: 500;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta .button {
+    min-height: 39px;
+    font-size: 9px;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta .button svg {
+    height: 14px;
+    width: 14px;
+  }
+}
 
-  /* 09: the illustrative conversation and the current portrait share a scene. */
-  .kifer-home .home-whatsapp-copy { padding-top: var(--home-space); }
-  .kifer-home .home-whatsapp .home-title { font: 600 clamp(1.875rem, 8.4vw, 2.5rem) / 1.15 var(--font-sans); letter-spacing: -0.045em; }
-  .kifer-home .home-whatsapp-copy > .kds-button { --control-font-lg: 1rem; min-height: 3rem; }
-  .kifer-home .home-phone { --home-phone-width: clamp(10.5rem, 53vw, 15rem); grid-area: 1 / 1; align-self: start; justify-self: start; z-index: 2; margin: 0; border-radius: 2rem; }
-  .kifer-home .home-phone-screen { border-radius: 1.6rem; }
+@media (max-width: 350px) {
+  .painel-theme.kifer-ds.kifer-landing .wrap {
+    width: calc(100% - 32px);
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero h1 {
+    font-size: 35px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .eyebrow {
+    font-size: 6.8px;
+    letter-spacing: 0.06em;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-photo .photo {
+    height: 300px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom {
+    padding: 13px 12px;
+    left: 12px;
+    right: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom strong {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom small {
+    font-size: 7px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    font-size: 8px;
+    padding-inline: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .wordmark {
+    font-size: 27px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .wordmark span {
+    font-size: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing h2,
+  .painel-theme.kifer-ds.kifer-landing .about h2,
+  .painel-theme.kifer-ds.kifer-landing .faq h2,
+  .painel-theme.kifer-ds.kifer-landing .quote h2 {
+    font-size: 29px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-body {
+    padding: 22px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile h3 {
+    font-size: 23px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card {
+    padding: 24px 16px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option {
+    font-size: 7px;
+    gap: 3px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-banner {
+    padding: 28px 21px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact h2 {
+    font-size: 26px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta {
+    padding-inline: 16px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta p {
+    font-size: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta strong {
+    font-size: 9px;
+  }
+}
 
-  /* 10: vertical groups with compact, readable navigation. */
-  .kifer-home .home-footer-grid { display: flex; flex-direction: column; gap: var(--space-6); padding-block: var(--space-8); }
-  .kifer-home .home-footer-brand .kds-workspace-brand > span { font-size: 3rem; }
-  .kifer-home .home-footer-tagline { font-size: 1.25rem; line-height: 1.4; margin-top: var(--space-4); }
-  .kifer-home .home-footer-brand > .kds-text:last-of-type { font-size: 0.875rem; line-height: 1.6; }
-  .kifer-home .home-footer-benefits { margin-top: var(--space-5); gap: var(--space-3); }
-  .kifer-home .home-footer h2 { margin-bottom: var(--space-3); font-size: 0.75rem; }
-  .kifer-home .home-footer nav a { min-height: 2rem; font-size: 0.875rem; }
-  .kifer-home .home-footer nav ul { gap: var(--space-1); }
-  .kifer-home .home-footer-useful { margin-top: var(--space-6); }
-  .kifer-home .home-footer-contact > ul { margin-top: var(--space-4); }
-  .kifer-home .home-footer-social { margin-top: var(--space-5); }
-  .kifer-home .home-footer-bottom > div { gap: var(--space-4); padding-block: var(--space-5); }
+/* Final reading scale: the prototype is reviewed at actual browser size. */
+
+.painel-theme.kifer-ds.kifer-landing .profile:last-child .profile-img img {
+  object-position: center 15%;
 }
-@media (max-width: 429.98px) {
-  .kifer-home .home-about-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kifer-home .home-about-benefits li:last-child { grid-column: 1 / -1; max-width: 11rem; justify-self: center; }
+
+.painel-theme.kifer-ds.kifer-landing .header nav a {
+  font-size: 12px;
 }
-@media (max-width: 374.98px) {
-  .kifer-home .home-message:nth-child(2) { display: none; }
-  .kifer-home .home-quote-form { padding: var(--space-4); }
-  .kifer-home .home-quote-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kifer-home .home-quote-benefits li:last-child { grid-column: 1 / -1; max-width: 11rem; justify-self: center; border: 0; padding: var(--space-3) 0 0; }
+
+.painel-theme.kifer-ds.kifer-landing .header .button {
+  font-size: 12px;
 }
-/* A chat viewport must not let its history resize the illustrated phone, including touch landscape. */
-@media (max-width: 639.98px), (max-width: 1023.98px) and (max-height: 500px) and (hover: none) and (pointer: coarse) {
-  .kifer-home .home-phone { width: var(--home-phone-width, 15rem); height: calc(var(--home-phone-width, 15rem) * 2.1); overflow: hidden; }
-  .kifer-home .home-phone-screen { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-  .kifer-home :is(.home-phone-status, .home-phone-header, .home-phone-input, .home-phone-home, .home-message) { flex-shrink: 0; }
-  .kifer-home .home-phone-status { padding: var(--space-2) var(--space-2) var(--space-1); }
-  .kifer-home .home-phone-status > i { width: 35%; height: 1.4rem; }
-  .kifer-home .home-phone-header { gap: var(--space-1); padding: var(--space-2); }
-  .kifer-home .home-phone-avatar { display: none; }
-  .kifer-home .home-phone-header > svg { width: 0.875rem; }
-  .kifer-home .home-phone-header > svg:nth-last-child(3), .kifer-home .home-phone-header > svg:last-child { display: none; }
-  .kifer-home .home-phone-header strong { font-size: 0.625rem; }
-  .kifer-home .home-phone-header span { font-size: 0.5rem; }
-  .kifer-home .home-phone-conversation { flex: 1; min-height: 0; justify-content: flex-end; overflow: hidden; gap: var(--space-1); padding: var(--space-2) var(--space-1); }
-  .kifer-home .home-message { font-size: 0.625rem; padding: var(--space-1) var(--space-2); line-height: 1.4; }
-  .kifer-home .home-message:first-child { display: none; }
-  .kifer-home .home-message-out svg { width: 0.75rem; height: 0.75rem; }
-  .kifer-home .home-phone-input { padding: var(--space-2); gap: var(--space-1); }
-  .kifer-home .home-phone-input > span { min-width: 0; font-size: 0.625rem; }
-  .kifer-home .home-phone-home { margin-block: var(--space-1); }
+
+.painel-theme.kifer-ds.kifer-landing .button {
+  font-size: 13px;
 }
+
+.painel-theme.kifer-ds.kifer-landing .text-link {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+  font-size: 18px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero .lead {
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-actions .text-link {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-note {
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .hero-features > div {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-copy {
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-copy strong {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .section-head > .lead {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile .lead {
+  font-size: 13px;
+  min-height: 76px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile li {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile .text-link {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity .lead {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .clarity-item p {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .step p {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .process-cta,
+.painel-theme.kifer-ds.kifer-landing .process-cta .text-link {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about .lead {
+  font-size: 14px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-values > div {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about .text-link {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .about-role {
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq .lead {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq .text-link {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list summary {
+  font-size: 15px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list details p {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote .lead {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-benefits > div {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-photo-note {
+  font-size: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .form-top {
+  font-size: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-card > p {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .form-label,
+.painel-theme.kifer-ds.kifer-landing .field label {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-option {
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field input,
+.painel-theme.kifer-ds.kifer-landing .field select {
+  font-size: 12px;
+  height: 48px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .quote-card .button {
+  font-size: 13px;
+  min-height: 49px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .privacy-note {
+  font-size: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact p {
+  font-size: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-person {
+  font-size: 10px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .contact-person strong {
+  font-size: 11px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer h3 {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer li,
+.painel-theme.kifer-ds.kifer-landing .footer-contact p {
+  font-size: 12px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer-bottom {
+  font-size: 10px;
+}
+
+@media (max-width: 850px) and (min-width: 601px) {
+  .painel-theme.kifer-ds.kifer-landing .hero h1 {
+    font-size: 37px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+    font-size: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .lead {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .button {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .text-link {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features > div {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .lead {
+    font-size: 11px;
+    min-height: 111px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile li {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .text-link {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step p {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about .lead {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-values > div {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item p {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-benefits > div {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .form-label,
+  .painel-theme.kifer-ds.kifer-landing .field label {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field input,
+  .painel-theme.kifer-ds.kifer-landing .field select {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .eyebrow {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-subtitle {
+    font-size: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero .lead {
+    font-size: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .button {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-actions .text-link {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-note {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-top {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .photo-bottom small {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .hero-features > div {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .section-head > .lead {
+    font-size: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .lead {
+    font-size: 14px;
+    min-height: 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile li {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile .text-link {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity .lead {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .clarity-item p {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .step p {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .process-cta {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .painel-theme.kifer-ds.kifer-landing .process-cta .text-link {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about .lead {
+    font-size: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-values > div {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about .text-link {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .about-role {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq .lead {
+    font-size: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq .text-link {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-list summary {
+    font-size: 15px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .faq-list details p {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote .lead {
+    font-size: 14px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-benefits > div {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-photo-note {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card > p {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .form-top {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .form-label {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option {
+    font-size: 10px;
+    min-height: 47px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field label {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .field input,
+  .painel-theme.kifer-ds.kifer-landing .field select {
+    font-size: 12px;
+    height: 48px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .quote-card .button {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .privacy-note {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact .eyebrow {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact p {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+    font-size: 11px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-person {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-person strong {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-brand > p {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer h3 {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer li,
+  .painel-theme.kifer-ds.kifer-landing .footer-contact p {
+    font-size: 12px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer-bottom {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta p {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta strong {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta .button {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 350px) {
+  .painel-theme.kifer-ds.kifer-landing .hero .eyebrow {
+    font-size: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .header .button {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile-option svg {
+    display: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .contact-action > .button {
+    font-size: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta .button {
+    font-size: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta p {
+    font-size: 8px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .mobile-cta strong {
+    font-size: 9px;
+  }
+}
+
+/* Official KS identity, shared with PublicBrandMark. */
+
+.painel-theme.kifer-ds.kifer-landing .brand-ks {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  color: var(--landing-action);
+  line-height: 1;
+}
+
+.painel-theme.kifer-ds.kifer-landing .brand-ks .ks-logo {
+  display: block;
+  width: 58px;
+  height: auto;
+  fill: currentColor;
+  stroke: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .brand-ks .brand-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-family: var(--landing-font-display);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--landing-ink);
+}
+
+.painel-theme.kifer-ds.kifer-landing .brand-name strong {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.painel-theme.kifer-ds.kifer-landing .brand-name small {
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.025em;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .brand-ks {
+  gap: 16px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .brand-ks .ks-logo {
+  width: 76px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .brand-name {
+  color: var(--landing-surface);
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .brand-name strong {
+  font-size: 29px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer .brand-name small {
+  font-size: 20px;
+}
+
+@media (max-width: 700px) {
+  .painel-theme.kifer-ds.kifer-landing .brand-ks {
+    gap: 9px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .brand-ks .ks-logo {
+    width: 44px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .brand-name strong {
+    font-size: 19px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .brand-name small {
+    font-size: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .brand-ks .brand-name {
+    gap: 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer .brand-ks .ks-logo {
+    width: 68px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer .brand-name strong {
+    font-size: 27px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .footer .brand-name small {
+    font-size: 18px;
+  }
+}
+
+.painel-theme.kifer-ds.kifer-landing .partners {
+  padding-block: 27px;
+  background: var(--landing-surface);
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-carousel {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos {
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  flex: 1;
+  padding-block: 8px;
+  mask-image: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: operator-marquee 42s linear infinite;
+  will-change: transform;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-group {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos .logo-item {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 180px;
+  height: 86px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-item:focus-visible {
+  outline-offset: -6px;
+  background: #f3eee7;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-crop {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logos .logo-crop img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-medsenior {
+  overflow: visible;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-notredame {
+  background: #001453;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-notredame img {
+  opacity: 0;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-motion-toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--landing-border);
+  border-radius: 50%;
+  color: var(--landing-muted);
+  background: transparent;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-motion-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+.painel-theme.kifer-ds.kifer-landing .logo-motion-toggle:hover {
+  border-color: var(--landing-action);
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .partner-carousel:hover .logo-track,
+.painel-theme.kifer-ds.kifer-landing .logos:focus-within .logo-track,
+.painel-theme.kifer-ds.kifer-landing .partner-carousel.is-paused .logo-track {
+  animation-play-state: paused;
+}
+
+@keyframes operator-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 850px) {
+  .painel-theme.kifer-ds.kifer-landing .partner-line {
+    display: block;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-carousel {
+    width: 100%;
+    gap: 10px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy {
+    margin-bottom: 13px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos .logo-item {
+    width: 180px;
+    height: 86px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logo-track {
+    animation-duration: 44s;
+  }
+}
+
+@media (max-width: 600px) {
+  .painel-theme.kifer-ds.kifer-landing .partners {
+    padding-block: 26px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .partner-copy {
+    max-width: 250px;
+    margin-bottom: 18px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos .logo-item {
+    width: 180px;
+    height: 86px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logo-motion-toggle {
+    width: 32px;
+    height: 32px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos {
+    mask-image: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .kifer-home *, .kifer-home *::before, .kifer-home *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+  .painel-theme.kifer-ds.kifer-landing .logo-track {
+    animation: none;
+    transform: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logo-group[aria-hidden="true"] {
+    display: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logos {
+    overflow-x: auto;
+    mask-image: none;
+    padding-bottom: 6px;
+  }
+  .painel-theme.kifer-ds.kifer-landing .logo-motion-toggle {
+    display: none;
+  }
+}
+
+.painel-theme.kifer-ds.kifer-landing .header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #f7f4eff2;
+  backdrop-filter: blur(14px);
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header.is-scrolled {
+  background: #fffdfaf5;
+  box-shadow: 0 8px 24px -20px #38271c65;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  right: 0;
+  height: 2px;
+  background: var(--landing-action);
+  transform: scaleX(var(--page-progress, 0));
+  transform-origin: left;
+  pointer-events: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header nav a {
+  position: relative;
+  transition: color 0.2s;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header nav a:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 1px;
+  background: var(--landing-action);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .header nav a:hover,
+.painel-theme.kifer-ds.kifer-landing .header nav a[aria-current="location"] {
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .header nav a:hover:after,
+.painel-theme.kifer-ds.kifer-landing
+  .header
+  nav
+  a[aria-current="location"]:after {
+  transform: scaleX(1);
+}
+
+.painel-theme.kifer-ds.kifer-landing .button {
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px -12px #6c2b1b80;
+}
+
+.painel-theme.kifer-ds.kifer-landing .button:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .button svg,
+.painel-theme.kifer-ds.kifer-landing .text-link svg {
+  transition: transform 0.25s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .button:hover svg,
+.painel-theme.kifer-ds.kifer-landing .text-link:hover svg {
+  transform: translate(2px, -2px);
+}
+
+.painel-theme.kifer-ds.kifer-landing .text-link {
+  transition: color 0.2s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile {
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile:hover {
+  transform: translateY(-4px);
+  border-color: #dcbba6;
+  box-shadow: 0 14px 28px -25px #36201375;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-img,
+.painel-theme.kifer-ds.kifer-landing .photo,
+.painel-theme.kifer-ds.kifer-landing .about-photo,
+.painel-theme.kifer-ds.kifer-landing .quote-photo {
+  overflow: hidden;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-img img,
+.painel-theme.kifer-ds.kifer-landing .photo img,
+.painel-theme.kifer-ds.kifer-landing .about-photo img,
+.painel-theme.kifer-ds.kifer-landing .quote-photo img {
+  transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile:hover .profile-img img,
+.painel-theme.kifer-ds.kifer-landing .photo:hover img,
+.painel-theme.kifer-ds.kifer-landing .about-photo:hover img,
+.painel-theme.kifer-ds.kifer-landing .quote-photo:hover img {
+  transform: scale(1.025);
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-option {
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .profile-option:hover {
+  border-color: #d7ad93;
+  background: #f7eee6;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field input,
+.painel-theme.kifer-ds.kifer-landing .field select {
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .field input:focus,
+.painel-theme.kifer-ds.kifer-landing .field select:focus {
+  border-color: var(--landing-action);
+  background: #fffdfa;
+  box-shadow: 0 0 0 3px #c64c2610;
+  outline: none;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list summary {
+  transition: color 0.2s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .faq-list summary:hover {
+  color: var(--landing-action);
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer a:not(.wordmark) {
+  transition: color 0.2s ease;
+}
+
+.painel-theme.kifer-ds.kifer-landing .footer a:not(.wordmark):hover {
+  color: #fff5e9;
+}
+
+.painel-theme.kifer-ds.kifer-landing .reveal-pending {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+@media (hover: none) {
+  .painel-theme.kifer-ds.kifer-landing .button:hover,
+  .painel-theme.kifer-ds.kifer-landing .profile:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile:hover .profile-img img,
+  .painel-theme.kifer-ds.kifer-landing .photo:hover img,
+  .painel-theme.kifer-ds.kifer-landing .about-photo:hover img,
+  .painel-theme.kifer-ds.kifer-landing .quote-photo:hover img {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .painel-theme.kifer-ds.kifer-landing {
+    scroll-behavior: auto;
+  }
+  .painel-theme.kifer-ds.kifer-landing .reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing *,
+  .painel-theme.kifer-ds.kifer-landing *:before,
+  .painel-theme.kifer-ds.kifer-landing *:after {
+    transition: none !important;
+  }
+  .painel-theme.kifer-ds.kifer-landing .button:hover,
+  .painel-theme.kifer-ds.kifer-landing .profile:hover {
+    transform: none;
+  }
+  .painel-theme.kifer-ds.kifer-landing .profile:hover .profile-img img,
+  .painel-theme.kifer-ds.kifer-landing .photo:hover img,
+  .painel-theme.kifer-ds.kifer-landing .about-photo:hover img,
+  .painel-theme.kifer-ds.kifer-landing .quote-photo:hover img {
+    transform: none;
+  }
 }

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { loadEnv, type Plugin } from 'vite';
 import path from 'node:path';
@@ -145,6 +145,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     test: {
+      // Node's native test suites run through their dedicated scripts.
+      exclude: [...configDefaults.exclude, 'scripts/**/*.test.mjs', 'local-artifacts/**', 'output/**'],
       environment: 'jsdom',
       setupFiles: './src/setupTests.ts',
       globals: true,

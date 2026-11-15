@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
+    "test:autonomous-v2": "node scripts/evaluate-autonomous-v2.mjs",
     "audit:design-system": "node scripts/audit-design-system.mjs",
     "audit:visual": "node scripts/audit-visual-hardcodes.mjs",
     "secrets:check": "node scripts/check-secrets.mjs",

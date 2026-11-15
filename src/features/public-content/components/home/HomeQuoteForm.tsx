@@ -1,24 +1,23 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
 import {
-  ChevronRight,
+  ArrowUpRight,
+  CheckCheck,
+  HeartHandshake,
   LockKeyhole,
-  MapPin,
-  Phone,
-  UserRound,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Button,
   Field,
-  FieldLabel,
   Heading,
   Image,
   Input,
   LinkButton,
   Radio,
   RadioGroup,
+  Select,
   Text,
+  TextLink,
 } from "../../../../design-system";
-import { fetchCitiesByState } from "../../../../lib/brasilLocations";
 import { formatPhoneInput } from "../../../../lib/inputFormatters";
 import {
   AGE_RANGES,
@@ -26,131 +25,12 @@ import {
   formatAgeRangeLabel,
   homeAudiences,
   homePhotos,
-  homeQuoteBenefits,
   type ContractKind,
 } from "../../domain/homeContent";
 import type { useHomeQuote } from "../../hooks/useHomeQuote";
-import PrivacyNotice from "../PrivacyNotice";
+import HomeCityAutocomplete from "./HomeCityAutocomplete";
 
 type Quote = ReturnType<typeof useHomeQuote>;
-type CityProps = {
-  id?: string;
-  value: string;
-  onChange: (city: string) => void;
-  "aria-invalid"?: boolean;
-  "aria-describedby"?: string;
-  required?: boolean;
-  disabled?: boolean;
-};
-
-function CityAutocomplete({
-  id = "quote-city",
-  value,
-  onChange,
-  ...props
-}: CityProps) {
-  const [cities, setCities] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(0);
-  useEffect(() => {
-    let active = true;
-    fetchCitiesByState("RJ")
-      .then((list) => {
-        if (active) setCities(list);
-      })
-      .catch(() => {
-        /* Free text remains available. */
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  const query = value.trim().toLocaleLowerCase("pt-BR");
-  const matches =
-    query.length >= 2
-      ? cities
-          .filter((city) => city.toLocaleLowerCase("pt-BR").includes(query))
-          .slice(0, 6)
-      : [];
-  const visible = open && matches.length > 0;
-  const choose = (city: string) => {
-    onChange(city);
-    setOpen(false);
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!visible) return;
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      setHighlighted(
-        (current) =>
-          (current + (event.key === "ArrowDown" ? 1 : matches.length - 1)) %
-          matches.length,
-      );
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      choose(matches[highlighted]);
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setOpen(false);
-    }
-  };
-  return (
-    <div className="home-city">
-      <Input
-        {...props}
-        id={id}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setOpen(true);
-          setHighlighted(0);
-        }}
-        size="lg"
-        leftIcon={MapPin}
-        placeholder="Digite sua cidade"
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={visible}
-        aria-autocomplete="list"
-        aria-controls={visible ? `${id}-list` : undefined}
-        aria-activedescendant={
-          visible ? `${id}-option-${highlighted}` : undefined
-        }
-        onKeyDown={onKeyDown}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-      />
-      {visible && (
-        <div
-          id={`${id}-list`}
-          role="listbox"
-          aria-label="Cidades do Rio de Janeiro"
-          className="home-city-options"
-        >
-          {matches.map((city, index) => (
-            <Button
-              id={`${id}-option-${index}`}
-              key={city}
-              type="button"
-              role="option"
-              aria-selected={highlighted === index}
-              tabIndex={-1}
-              variant="ghost"
-              fullWidth
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setHighlighted(index)}
-              onClick={() => choose(city)}
-            >
-              {city}
-            </Button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function HomeQuoteForm({ quote }: { quote: Quote }) {
   const {
@@ -168,137 +48,166 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
     feedback?.kind === "error" && feedback.field === id
       ? feedback.message
       : undefined;
+  const manyLives = totalLives !== 1 && totalLives !== 2;
   return (
-    <section
-      id="cotacao"
-      className="home-section home-quote"
-      aria-labelledby="quote-title"
-    >
-      <div className="home-container home-quote-layout">
-        <div className="home-quote-copy">
-          <Text className="home-eyebrow">Cotação</Text>
-          <Heading id="quote-title" family="display" className="home-title">
-            Encontre o <em>plano ideal</em>
-            <br /> para você, sua família
-            <br /> ou sua empresa.
+    <section className="quote" id="cotacao" aria-labelledby="quote-title">
+      <div className="wrap quote-grid">
+        <div>
+          <Text className="eyebrow">Seu próximo passo</Text>
+          <Heading family="display" id="quote-title">
+            Vamos encontrar
+            <br />o plano que faz
+            <br />
+            sentido para você?
           </Heading>
-          <Text className="home-lead">
-            Compare operadoras, receba uma proposta personalizada e conte com o
-            suporte da Kifer em todo o processo. É gratuito e sem compromisso.
+          <Text className="lead">
+            Conte um pouco do que precisa. Nossa equipe prepara as opções para
+            você comparar, com orientação e sem compromisso.
           </Text>
-          <div className="home-quote-photo" aria-hidden="true">
+          <div className="quote-benefits">
+            <div>
+              <ShieldCheck aria-hidden="true" />
+              Condições verificadas para o seu perfil.
+            </div>
+            <div>
+              <HeartHandshake aria-hidden="true" />
+              Atendimento próximo em cada etapa.
+            </div>
+            <div>
+              <CheckCheck aria-hidden="true" />
+              Cotação gratuita e sem pressão.
+            </div>
+          </div>
+          <div className="quote-photo">
             <Image
               src={homePhotos.quote}
-              alt=""
+              alt="Família reunida em casa"
               width={1448}
               height={1086}
               loading="lazy"
             />
           </div>
-          <ul className="home-quote-benefits">
-            {homeQuoteBenefits.map(({ title, text, icon: Icon }) => (
-              <li key={title}>
-                <span className="home-icon">
-                  <Icon aria-hidden="true" />
-                </span>
-                <Heading level={3}>{title}</Heading>
-                <Text>{text}</Text>
-              </li>
-            ))}
-          </ul>
+          <Text className="quote-photo-note">
+            O melhor ponto de partida é conhecer a sua rotina.
+            <br />A escolha vem depois, com todas as informações.
+          </Text>
         </div>
         <form
-          className="home-quote-form"
+          className="quote-card"
           onSubmit={onSubmit}
           aria-label="Solicite sua cotação"
           aria-busy={submitting}
+          noValidate
         >
-          <Text className="home-eyebrow">Solicite sua cotação</Text>
-          <Heading level={3} family="display">
-            Vamos encontrar o plano certo para você?
+          <Text className="form-top">Solicite sua cotação</Text>
+          <Heading family="display" level={3}>
+            Primeiro, vamos conhecer você.
           </Heading>
           <Text>
-            Preencha os dados e receba uma proposta personalizada da nossa
-            equipe, sem compromisso.
+            Preencha os dados abaixo para receber uma proposta personalizada.
           </Text>
-          <fieldset disabled={submitting} className="home-quote-fields">
+          <fieldset disabled={submitting} className="fields">
             <legend className="sr-only">Dados para a cotação</legend>
-            <div className="home-quote-full">
-              <FieldLabel id="quote-profile-label">
-                Qual é o seu perfil? *
-              </FieldLabel>
+            <fieldset className="profile-fieldset full">
+              <legend className="form-label">Qual é o seu perfil?</legend>
               <RadioGroup
-                aria-labelledby="quote-profile-label"
+                className="profile-selector"
                 name="quote-contract-type"
+                aria-label="Perfil da cotação"
                 value={values.tipoContratacao}
                 onValueChange={(value) =>
                   update("tipoContratacao", value as ContractKind)
                 }
                 orientation="horizontal"
-                className="home-quote-profiles"
+                disabled={submitting}
               >
                 {homeAudiences.map(({ kind, label, icon: Icon }) => (
                   <Radio
                     key={kind}
                     value={kind}
-                    aria-labelledby={`quote-profile-${kind}`}
                     label={
                       <span>
                         <Icon aria-hidden="true" />
-                        <strong id={`quote-profile-${kind}`}>{label}</strong>
-                        <small>
-                          {kind === "PF"
-                            ? "Eu ou minha família"
-                            : kind === "MEI"
-                              ? "Com CNPJ ativo"
-                              : "Para o seu time"}
-                        </small>
+                        {label}
                       </span>
                     }
                   />
                 ))}
               </RadioGroup>
-            </div>
+            </fieldset>
             <Field
               label="Quantas pessoas?"
               required
               error={error("quote-lives")}
+              className="field"
             >
-              <Input
+              <Select
                 id="quote-lives"
-                type="number"
-                min="1"
-                max="99"
-                step="1"
-                inputMode="numeric"
                 size="lg"
-                placeholder="Ex.: 1, 2 ou 3"
-                value={values.numeroVidas}
-                onChange={(event) => update("numeroVidas", event.target.value)}
+                value={manyLives ? "many" : values.numeroVidas}
+                onChange={(event) =>
+                  update(
+                    "numeroVidas",
+                    event.target.value === "many" ? "3" : event.target.value,
+                  )
+                }
+                options={[
+                  { value: "1", label: "1 pessoa" },
+                  { value: "2", label: "2 pessoas" },
+                  { value: "many", label: "3 ou mais pessoas" },
+                ]}
               />
             </Field>
-            <Field label="Em qual cidade?" required error={error("quote-city")}>
-              <CityAutocomplete
+            <Field
+              label="Em qual cidade?"
+              required
+              error={error("quote-city")}
+              className="field"
+            >
+              <HomeCityAutocomplete
                 id="quote-city"
                 value={values.cidade}
                 onChange={(city) => update("cidade", city)}
+                disabled={submitting}
               />
             </Field>
+            {manyLives && (
+              <Field
+                label="Total de pessoas"
+                required
+                className="field full"
+                hint="Informe de 3 a 99 pessoas."
+              >
+                <Input
+                  id="quote-total-lives"
+                  type="number"
+                  size="lg"
+                  min="3"
+                  max="99"
+                  step="1"
+                  inputMode="numeric"
+                  value={values.numeroVidas}
+                  onChange={(event) =>
+                    update("numeroVidas", event.target.value)
+                  }
+                />
+              </Field>
+            )}
             {totalLives === 1 && (
               <Field
-                label="Idade da pessoa"
+                label="Qual a idade de quem vai participar?"
                 required
                 error={error("quote-age")}
-                className="home-quote-full"
+                className="field full"
               >
                 <Input
                   id="quote-age"
                   type="number"
+                  size="lg"
                   min="0"
                   max="120"
                   step="1"
                   inputMode="numeric"
-                  size="lg"
                   placeholder="Informe a idade"
                   value={values.idadeTitular}
                   onChange={(event) =>
@@ -308,7 +217,7 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
               </Field>
             )}
             {totalLives > 1 && (
-              <div className="home-quote-full home-age-ranges">
+              <div className="full home-age-ranges">
                 <div className="home-age-heading">
                   <Text weight="medium">Pessoas por faixa etária *</Text>
                   <Text role="status">
@@ -321,6 +230,7 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
                       key={range}
                       label={formatAgeRangeLabel(range)}
                       error={index === 0 ? error("quote-range-0") : undefined}
+                      className="field"
                     >
                       <Input
                         id={`quote-range-${index}`}
@@ -341,28 +251,32 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
               </div>
             )}
             <Field
-              label="Seu nome completo"
+              label="Como podemos chamar você?"
               required
               error={error("quote-name")}
+              className="field full"
             >
               <Input
                 id="quote-name"
+                size="lg"
                 type="text"
                 autoComplete="name"
-                size="lg"
-                leftIcon={UserRound}
-                placeholder="Digite seu nome"
+                placeholder="Seu nome completo"
                 value={values.nome}
                 onChange={(event) => update("nome", event.target.value)}
               />
             </Field>
-            <Field label="Seu WhatsApp" required error={error("quote-phone")}>
+            <Field
+              label="Seu WhatsApp"
+              required
+              error={error("quote-phone")}
+              className="field full"
+            >
               <Input
                 id="quote-phone"
+                size="lg"
                 type="tel"
                 autoComplete="tel-national"
-                size="lg"
-                leftIcon={Phone}
                 placeholder="(21) 99999-9999"
                 value={values.telefone}
                 onChange={(event) =>
@@ -371,10 +285,10 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
               />
             </Field>
             <div className="home-honeypot" aria-hidden="true">
-              <FieldLabel htmlFor="quote-website">Website</FieldLabel>
               <Input
-                id="quote-website"
                 name="website"
+                id="quote-website"
+                aria-label="Website"
                 type="text"
                 tabIndex={-1}
                 autoComplete="off"
@@ -383,12 +297,12 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
             <Button
               type="submit"
               size="lg"
-              loading={submitting}
               fullWidth
-              className="home-quote-full home-quote-submit"
+              className="button full"
+              loading={submitting}
             >
-              {submitting ? 'Enviando...' : 'Receber minha cotação'}
-              <ChevronRight className="kds-control-icon" aria-hidden="true" />
+              {submitting ? "Enviando…" : "Receber minha cotação"}
+              <ArrowUpRight aria-hidden="true" />
             </Button>
           </fieldset>
           {feedback && (
@@ -409,26 +323,32 @@ export default function HomeQuoteForm({ quote }: { quote: Quote }) {
                 </LinkButton>
               )}
               {feedback.kind === "error" && !feedback.field && (
-                <>
-                  {" "}
-                  <LinkButton
-                    href={buildHomeWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="text"
-                  >
-                    Falar no WhatsApp
-                  </LinkButton>
-                </>
+                <LinkButton
+                  href={buildHomeWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="text"
+                >
+                  Falar no WhatsApp
+                </LinkButton>
               )}
             </Text>
           )}
-          <div className="home-quote-privacy">
-            <span className="home-quote-privacy-icon" aria-hidden="true"><LockKeyhole /></span>
-            <div className="home-quote-privacy-copy">
-              <Text className="home-quote-reassurance">Seus dados são usados para atender sua solicitação.</Text>
-              <PrivacyNotice className="home-quote-privacy-notice" newTabHint="screen-reader" />
-            </div>
+          <div className="privacy-note">
+            <LockKeyhole aria-hidden="true" />
+            <Text>
+              Ao enviar, você solicita contato para uma cotação. Saiba como
+              usamos seus dados na{" "}
+              <TextLink
+                href="/politica-de-privacidade"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Política de Privacidade
+                <span className="sr-only"> (abre em nova aba)</span>
+              </TextLink>
+              .
+            </Text>
           </div>
         </form>
       </div>

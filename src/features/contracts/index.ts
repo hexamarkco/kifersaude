@@ -1,4 +1,5 @@
 export type * from './domain/types';
+export { consultarEmpresaPorCNPJ, type ReceitaEmpresaData } from './data/companyRegistryRepository';
 export type {
   ContractHolderImportPayload,
   ContractHolderImportResult,

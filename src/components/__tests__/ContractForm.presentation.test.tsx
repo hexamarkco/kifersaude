@@ -91,3 +91,50 @@ test('the full-page contract form applies an individual JSON import without savi
     page.unmount();
   }
 });
+
+function getFieldInput(container: HTMLElement, label: string): HTMLInputElement {
+  const field = [...container.querySelectorAll('.kds-field')].find(
+    (element) => element.querySelector('label')?.textContent === label,
+  );
+  const input = field?.querySelector('input');
+  assert.ok(input, `Campo não encontrado: ${label}`);
+  return input;
+}
+
+function changeInput(input: HTMLInputElement, value: string): void {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+test('cadastro de contrato preenche a empresa pela alternativa após bloqueio da primeira fonte', async () => {
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = async (input) => {
+    urls.push(String(input));
+    if (urls.length === 1) throw new TypeError('Failed to fetch');
+    return new Response(JSON.stringify({
+      razao_social: 'EMPRESA TESTE LTDA',
+      estabelecimento: {
+        nome_fantasia: 'EMPRESA TESTE', tipo_logradouro: 'RUA', logradouro: 'EXEMPLO',
+        numero: '10', bairro: 'CENTRO', cidade: { nome: 'NITERÓI' }, estado: { sigla: 'RJ' }, cep: '24020000',
+      },
+    }));
+  };
+  let saves = 0;
+  const page = render(<ContractForm presentation="page" contract={null} onClose={() => undefined} onSave={() => { saves += 1; }} />);
+  try {
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { changeInput(getFieldInput(page.container, 'Modalidade *'), 'PME'); });
+    await act(async () => { changeInput(getFieldInput(page.container, 'CNPJ (Receita)'), '00000000000191'); });
+    assert.equal(getFieldInput(page.container, 'Razão Social').value, 'EMPRESA TESTE LTDA');
+    assert.equal(getFieldInput(page.container, 'Nome Fantasia').value, 'EMPRESA TESTE');
+    const address = page.container.querySelector<HTMLTextAreaElement>('textarea[placeholder="Preenchido automaticamente pela consulta do CNPJ"]');
+    assert.equal(address?.value, 'RUA EXEMPLO, 10, CENTRO, NITERÓI - RJ, CEP: 24020000');
+    assert.equal(urls.length, 2);
+    assert.equal(saves, 0);
+    assert.ok(page.container.querySelector('button[aria-label="Buscar CNPJ na Receita"]'));
+  } finally {
+    page.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});

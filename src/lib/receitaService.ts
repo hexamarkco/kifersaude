@@ -12,17 +12,7 @@ export type ReceitaPessoaData = {
   estado?: string;
 };
 
-export type ReceitaEmpresaData = {
-  razao_social?: string;
-  nome_fantasia?: string;
-  cep?: string;
-  endereco?: string;
-  numero?: string;
-  complemento?: string;
-  bairro?: string;
-  cidade?: string;
-  estado?: string;
-};
+export { consultarEmpresaPorCNPJ, type ReceitaEmpresaData } from '../features/contracts/data/companyRegistryRepository';
 
 const RECEITA_API_BASE_URL = import.meta.env.VITE_RECEITA_API_BASE_URL || 'https://brasilapi.com.br/api';
 
@@ -88,28 +78,5 @@ export const consultarPessoaPorCPF = async (
     bairro: data.bairro,
     cidade: data.municipio || data.cidade || data.city,
     estado: data.uf || data.estado || data.state,
-  };
-};
-
-export const consultarEmpresaPorCNPJ = async (cnpj: string): Promise<ReceitaEmpresaData> => {
-  const cleanCnpj = sanitizeDocument(cnpj);
-
-  if (cleanCnpj.length !== 14) {
-    throw new Error('CNPJ inválido');
-  }
-
-  const url = `${RECEITA_API_BASE_URL}/cnpj/v1/${cleanCnpj}`;
-  const data = await fetchFromReceita<ReceitaResponseMap>(url, 'Não foi possível consultar CNPJ na Receita');
-
-  return {
-    razao_social: data.razao_social || data.nome,
-    nome_fantasia: data.nome_fantasia,
-    cep: data.cep,
-    endereco: data.logradouro || data.endereco,
-    numero: data.numero,
-    complemento: data.complemento,
-    bairro: data.bairro,
-    cidade: data.municipio || data.cidade,
-    estado: data.uf || data.estado,
   };
 };

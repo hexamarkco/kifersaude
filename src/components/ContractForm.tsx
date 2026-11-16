@@ -9,6 +9,7 @@ import {
   ContractBonusConfiguration,
   ContractCommissionInstallment,
   convertLeadAfterContractCreation,
+  consultarEmpresaPorCNPJ,
   deleteContractValueAdjustment,
   listContractConversionLeads,
   listContractValueAdjustments,
@@ -86,7 +87,6 @@ import {
   formatCurrencyInput,
   parseFormattedNumber,
 } from "../lib/inputFormatters";
-import { consultarEmpresaPorCNPJ } from "../lib/receitaService";
 
 type CommissionInstallment = {
   valor: string;
@@ -787,6 +787,7 @@ export default function ContractForm({
     const normalizedCnpj = formData.cnpj.replace(/\D/g, "");
     if (normalizedCnpj.length !== 14) {
       setCnpjLoading(false);
+      setCnpjLookupError("Informe os 14 dígitos do CNPJ para consultar.");
       return;
     }
 

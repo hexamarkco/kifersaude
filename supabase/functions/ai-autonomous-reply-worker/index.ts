@@ -3,7 +3,7 @@ import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_share
 import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
 import { generateAttendanceTurn } from './generate-turn.ts';
 import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_ROLLOUT, V2_STYLE_LIBRARY } from './deployment.ts';
-import { groupV2ReplyMessages, inV2Rollout } from './domain/rollout.ts';
+import { groupV2ReplyMessages, selectAutonomousEngine } from './domain/rollout.ts';
 import { confirmed, initialState, isRecord } from './domain/state.ts';
 import { legacyEvidenceMessageIds, restoreV2State, runV2Turn, v2Enabled } from './domain/turn.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
@@ -752,11 +752,20 @@ Deno.serve(async (req: Request) => {
         const paused = Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_PAUSED') === 'true';
         const priorMemory = previousMemory.data?.state;
         const legacyStarted = isRecord(priorMemory) && !priorMemory.attendanceV2 && typeof priorMemory.source_message_id === 'string';
-        const rolloutEnabled = !paused && inV2Rollout({ leadId, leadCreatedAt: leadResult.data?.created_at,
+        const engine = selectAutonomousEngine({ leadId, leadCreatedAt: leadResult.data?.created_at,
           chatCreatedAt: chat.created_at, phone: chat.phone_digits, rollout: V2_ROLLOUT, legacyStarted,
           hasV2State: isRecord(priorMemory) && isRecord(priorMemory.attendanceV2),
+          paused, allowlisted: v2Enabled(chat.id, Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_CHAT_IDS')),
           messageReceivedAt: recentHistoryRows.find((row) => row.id === promptInboundMessageId)?.created_at });
-        const allowlist = paused ? '' : [Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_CHAT_IDS') ?? '', rolloutEnabled ? chat.id : ''].filter(Boolean).join(',');
+        if (engine === 'wait') {
+          const reason = paused ? 'v2_paused' : 'v2_waiting_fresh_inbound';
+          await supabaseAdmin.from('ai_autonomous_reply_jobs')
+            .update({ status: 'cancelled', last_error: reason }).eq('id', job.id);
+          await recordAutonomousAttendanceEvent({ supabaseAdmin, chatId: chat.id, leadId, eventType: 'reply_cancelled',
+            correlationId, decision: { engine: 'v2', reason, deploymentVersion: V2_DEPLOYMENT_VERSION } });
+          continue;
+        }
+        const allowlist = engine === 'v2' ? chat.id : '';
         const promptRows = [...recentHistoryRows];
         if (v2Enabled(chat.id, allowlist) && legacyStarted) {
           const present = new Set(promptRows.map((row) => row.id));

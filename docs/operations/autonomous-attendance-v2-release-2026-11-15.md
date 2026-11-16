@@ -1,8 +1,22 @@
 # Publicação da V2 em 15/11/2026
 
+## Estado atual — substituição integral autorizada
+
+Em 15/11/2026 às 21h19 de Brasília, o worker foi publicado na versão **156**, configuração **kifer-v2-2026-11-15.3**, substituindo o motor antigo em **100% dos atendimentos autônomos, sem filtro de DDD**. O DDD 21 foi um recorte dos testes, não uma restrição comercial. A saúde autenticada confirmou `ready: true`, `paused: false`, `percentage: 100`, `ddd: null` e `includeExisting: true`.
+
+Conversas antigas com atendimento autônomo ativo continuam pela V2 quando o lead enviar uma nova mensagem. O corte de entrada é `2026-11-16T00:15:45Z`, equivalente a 15/11 às 21h15min45s de Brasília. Estados V2 já existentes continuam preservados. A publicação não desperta o histórico, não inicia chats nem ativa conversas assumidas por humano ou desativadas. Qualquer região pode entrar; permissões de contato, identidade canônica e bloqueios de envio continuam obrigatórios.
+
+Uma pausa ou uma mensagem anterior ao corte impede geração, sem retorno automático ao motor antigo. O job é cancelado com motivo interno e permanece possível retomar com nova mensagem quando a operação estiver liberada. O comando de pausa abaixo continua sendo o rollback operacional seguro. O modelo e os exemplos de estilo não foram alterados.
+
+Passaram **169 testes V2 e quatro testes nativos de estilo**, incluindo três regressões novas para abrangência nacional, continuidade legada e bloqueio de fallback ao motor antigo. Também passaram 11 testes de contratos, typecheck, lint focado e Deno do worker. O código remoto foi comparado ao pacote publicado. Evidência de saúde somente leitura em `local-artifacts/autonomous-v2-cloud/probe-v156-1794788388828.json`; hash remoto `5a703f8d7bb967ae1ff21b9ab338b6fef36310234bea8114db7a78b8cb44ad9d`. Nenhuma migration ou configuração de campanha mudou nesta ampliação, e nenhum WhatsApp foi disparado manualmente.
+
+## Registro do piloto inicial
+
+As seções abaixo preservam a implantação e as verificações anteriores à liberação integral descrita acima.
+
 Estado confirmado em 15/11/2026 às 20h28 de Brasília. A V2 está publicada no projeto Supabase `eaxvvhamkmovkoqssahj`, na função `ai-autonomous-reply-worker`, versão de infraestrutura **155**, versão de configuração **kifer-v2-2026-11-15.2**. O endpoint autenticado de saúde retornou `ready: true` e `paused: false`.
 
-## Abrangência atual
+## Abrangência inicial
 
 - Piloto de **10% dos leads novos DDD 21**, atribuído de forma estável pelo ID do lead.
 - Corte de criação de lead e chat em **15/11/2026 às 20h11min38s de Brasília**, equivalente a `2026-11-15T23:11:38Z`.

@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { inV2Rollout, groupV2ReplyMessages } from '../../ai-autonomous-reply-worker/domain/rollout.ts';
+import { inV2Rollout, groupV2ReplyMessages, selectAutonomousEngine } from '../../ai-autonomous-reply-worker/domain/rollout.ts';
 import { resolveRuntimeModelProfile } from '../ai-router.ts';
-import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY } from '../../ai-autonomous-reply-worker/deployment.ts';
+import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_ROLLOUT } from '../../ai-autonomous-reply-worker/deployment.ts';
 const start = '2026-11-15T20:00:00Z';
 const input = { leadId: 'new-lead', leadCreatedAt: start, chatCreatedAt: start, phone: '5521999999999',
   rollout: { enabledAt: start, percentage: 100, ddd: '21' } };
@@ -45,6 +45,32 @@ test('grouping restores split turns for the cooldown without crossing inbound or
   ]);
   expect(rows[0].content).toBe('Entendi o contexto.');
   expect(groupV2ReplyMessages(rows.slice(1, 3))[0].content).toBe('Qual é a idade?');
+});
+
+test('the published replacement covers every region and legacy chat on the next inbound', () => {
+  expect(V2_ROLLOUT).toMatchObject({ percentage: 100, ddd: null, includeExisting: true });
+  for (const phone of ['5521999999999', '5511999999999', '5531999999999', '5581999999999', '5548999999999', '+351912345678', null]) {
+    expect(selectAutonomousEngine({ ...input, phone, leadCreatedAt: '2020-01-01T00:00:00Z',
+      chatCreatedAt: '2020-01-01T00:00:00Z', legacyStarted: true, rollout: V2_ROLLOUT,
+      paused: false, messageReceivedAt: V2_ROLLOUT.enabledAt! })).toBe('v2');
+  }
+});
+
+test('full replacement pauses or waits for a new inbound without invoking the legacy engine', () => {
+  const global = { ...input, rollout: V2_ROLLOUT, paused: false, legacyStarted: true,
+    messageReceivedAt: V2_ROLLOUT.enabledAt! };
+  expect(selectAutonomousEngine(global)).toBe('v2');
+  expect(selectAutonomousEngine({ ...global, paused: true, allowlisted: true })).toBe('wait');
+  expect(selectAutonomousEngine({ ...global, messageReceivedAt: start })).toBe('wait');
+  expect(selectAutonomousEngine({ ...global, messageReceivedAt: undefined })).toBe('wait');
+  expect(selectAutonomousEngine({ ...global, hasV2State: true, messageReceivedAt: undefined })).toBe('v2');
+  expect(selectAutonomousEngine({ ...global, hasV2State: true, paused: true })).toBe('wait');
+});
+
+test('the former limited pilot retains its explicit legacy routing outside the cohort', () => {
+  expect(selectAutonomousEngine({ ...input, paused: false, phone: '5511999999999' })).toBe('legacy');
+  expect(selectAutonomousEngine({ ...input, paused: false, phone: '5511999999999', allowlisted: true })).toBe('v2');
+  expect(selectAutonomousEngine({ ...input, paused: true, hasV2State: true })).toBe('wait');
 });
 test('the cloud candidate pins the same model and reviewed style version as the local bench', () => {
   expect(V2_MODEL_PROFILE).toMatchObject({ model: 'gpt-6-luna', reasoningEffort: 'medium' });

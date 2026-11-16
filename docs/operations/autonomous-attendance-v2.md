@@ -1,6 +1,6 @@
 # Atendimento autônomo V2 — auditoria e projeto local
 
-Atualização de 15/11/2026: a V2 foi publicada no Supabase e o piloto está liberado para 10% dos leads novos DDD 21. A continuidade de conversas legadas foi implementada e testada, com habilitação ampla ainda pendente de escolha do usuário. O estado atual, versões, evidências e rollback estão em [Publicação de 15/11/2026](autonomous-attendance-v2-release-2026-11-15.md). As seções de auditoria e validação local abaixo preservam o registro das etapas anteriores.
+Atualização de 15/11/2026 às 21h19: a V2 substitui o motor antigo em 100% dos atendimentos autônomos, sem filtro de DDD, conforme autorização do usuário. Conversas antigas ativas continuam na próxima mensagem do lead; chats desativados ou assumidos por humano permanecem preservados. Worker 156, configuração `kifer-v2-2026-11-15.3`. O estado atual, versões, evidências e rollback estão em [Publicação de 15/11/2026](autonomous-attendance-v2-release-2026-11-15.md). As seções de auditoria e validação local abaixo preservam o registro das etapas anteriores.
 
 ## Escopo e evidência
 

@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { generateAttendanceTurn } from '../../ai-autonomous-reply-worker/generate-turn.ts';
-import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_DEPLOYMENT_VERSION } from '../../ai-autonomous-reply-worker/deployment.ts';
+import { generateAttendanceTurn } from '../autonomous-attendance-v2/generate-turn.ts';
+import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_DEPLOYMENT_VERSION } from '../autonomous-attendance-v2/deployment.ts';
 import { generateTextForFeature, type GenerateTextForFeatureResult } from '../ai-router.ts';
 import { loadFeatureConfig, type ResolvedAIFeatureConfig } from '../ai-config-resolver.ts';
 import { composeAutonomousPrompt } from '../ai-autonomous-prompt.ts';
@@ -94,6 +94,23 @@ test('worker uses configured routing, two separate generations and no legacy ins
 test('removing allowlist pauses existing V2 conversations instead of silently falling back', async () => {
   await expect(generateAttendanceTurn({ ...params(), allowlist: '', previousMemory: { attendanceV2: {} } })).rejects.toThrow('V2 pausado');
   expect(generateTextForFeature).not.toHaveBeenCalled();
+});
+
+test('sandbox invokes the same V2 stages and profile without referencing real lead, chat or message IDs in telemetry', async () => {
+  vi.mocked(generateTextForFeature).mockImplementation(async options => {
+    expect(options.edgeFunction).toBe('ai-sandbox-chat');
+    expect(options).not.toHaveProperty('leadId');
+    expect(options).not.toHaveProperty('chatId');
+    expect(options).not.toHaveProperty('messageId');
+    expect(options.runtimeModelProfile).toEqual(V2_MODEL_PROFILE);
+    return result(options.maxTokens === 3200 ? JSON.stringify(interpretation(scenarios[1].values, scenarios[1].messages))
+      : JSON.stringify({ text: scenarios[1].reply, commercialClaims: [] }));
+  });
+  const turn = await generateAttendanceTurn({ ...params(), sandbox: true,
+    deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true } });
+  expect(turn.handoffCode).toBe('QUALIFICACAO_COMPLETA');
+  expect(turn.memoryAfterSend).toHaveProperty('attendanceV2');
+  expect(composeAutonomousPrompt).not.toHaveBeenCalled();
 });
 
 test('invalid interpretation/output creates a failure event with no invented visible message', async () => {

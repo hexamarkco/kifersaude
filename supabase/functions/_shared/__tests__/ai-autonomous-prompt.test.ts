@@ -85,13 +85,13 @@ describe('autonomous prompt assembly', () => {
     expect(changed.trace.systemPromptHash).not.toBe(first.trace.systemPromptHash);
   });
 
-  test('legacy production and sandboxes share the composer; the worker delegates generation', () => {
-    for (const name of ['ai-autonomous-reply-worker', 'ai-sandbox-chat', 'ai-sandbox-run-scenario']) {
+  test('production and manual sandbox delegate to the same V2 implementation; legacy generation keeps its composer', () => {
+    const shared = readFileSync(resolve('supabase/functions/_shared/autonomous-attendance-v2/generate-turn.ts'), 'utf8');
+    expect(shared).toContain('composeAutonomousPrompt({');
+    expect(shared).toContain('runV2Turn({');
+    for (const name of ['ai-autonomous-reply-worker', 'ai-sandbox-chat']) {
       const source = readFileSync(resolve('supabase/functions', name, 'index.ts'), 'utf8');
-      const generator = name === 'ai-autonomous-reply-worker'
-        ? readFileSync(resolve('supabase/functions', name, 'generate-turn.ts'), 'utf8') : source;
-      expect(generator).toContain('composeAutonomousPrompt({');
-      expect(source).toContain(".not('created_by', 'is', null)");
+      expect(source).toContain(name === 'ai-autonomous-reply-worker' ? 'generateAttendanceTurn({' : 'generateSandboxReply({');
       expect(source).not.toContain('fetchSimilarSituations');
       expect(source).not.toContain('const systemPrompt = [');
     }

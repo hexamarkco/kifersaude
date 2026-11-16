@@ -61,6 +61,7 @@ type GenerateOpeningResult = {
   provider: string | null;
   model: string | null;
   alreadyHandedOff: boolean;
+  skipped: boolean;
 };
 
 const buildTitleFromMessage = (message: string): string => {
@@ -190,7 +191,7 @@ export const aiSandboxChatService = {
 
   async generateReply(conversationId: string): Promise<GenerateReplyResult | null> {
     const result = await callGenerate({ conversationId });
-    if (result.alreadyHandedOff) {
+    if (result.alreadyHandedOff || result.skipped) {
       return null;
     }
 
@@ -249,6 +250,7 @@ async function callGenerate(body: { conversationId: string; leadName?: string; s
     provider?: string | null;
     model?: string | null;
     alreadyHandedOff?: boolean;
+    skipped?: boolean;
     error?: string;
   };
 
@@ -263,5 +265,6 @@ async function callGenerate(body: { conversationId: string; leadName?: string; s
     provider: payload.provider ?? null,
     model: payload.model ?? null,
     alreadyHandedOff: payload.alreadyHandedOff === true,
+    skipped: payload.skipped === true,
   };
 }

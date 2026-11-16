@@ -1,5 +1,5 @@
-import type { Interpretation, Values, V2Message } from '../../../ai-autonomous-reply-worker/domain/state.ts';
-import type { Decision } from '../../../ai-autonomous-reply-worker/domain/decision.ts';
+import type { Interpretation, Values, V2Message } from '../../autonomous-attendance-v2/domain/state.ts';
+import type { Decision } from '../../autonomous-attendance-v2/domain/decision.ts';
 
 export const date = '2026-11-14T12:00:00.000Z';
 export const message = (content: string, index = 1): V2Message => ({ id: `synthetic-${index}`, role: 'lead', content,

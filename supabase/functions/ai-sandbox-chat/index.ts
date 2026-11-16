@@ -1,245 +1,44 @@
-import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
-import { generateTextForFeature } from '../_shared/ai-router.ts';
-import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
-import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
-import { buildSandboxApproachMessages } from '../_shared/auto-contact-approach.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
-import {
-  buildAutonomousAttendanceUserPrompt,
-  buildAutonomousValidationRetryInstruction,
-  buildOpeningUserPrompt,
-  fetchQuickReplies,
-  getReliableLeadFirstName,
-  splitGeneratedReply,
-  validateAutonomousReplyOutput,
-  type AutonomousMessageRow,
-} from '../_shared/ai-autonomous-helpers.ts';
+import { generateSandboxReply } from '../_shared/ai-sandbox-attendance.ts';
 
-declare const Deno: {
-  env: {
-    get: (key: string) => string | undefined;
-  };
-  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
-};
-
-type RequestBody = {
-  conversationId?: string;
-  leadName?: string;
-  startWithApproach?: boolean;
-};
-
+declare const Deno: { env: { get: (key: string) => string | undefined };
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void };
+type RequestBody = { conversationId?: string; leadName?: string; startWithApproach?: boolean };
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
-const SANDBOX_HISTORY_LIMIT = 100;
-
-const createAdminClient = () => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceRoleKey) throw new Error('Credenciais do Supabase não configuradas.');
-  return createClient(supabaseUrl, serviceRoleKey);
-};
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Método não permitido' }), { status: 405, headers: jsonHeaders });
-  }
-
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Método não permitido' }), { status: 405, headers: jsonHeaders });
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabaseAdmin = createAdminClient();
-
+    if (!supabaseUrl || !serviceRoleKey) throw new Error('Credenciais do Supabase não configuradas.');
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
     const serviceActor = await resolveMcpServiceActor(req, supabaseAdmin, serviceRoleKey);
     if (serviceActor.isServiceRole) {
-      if (!serviceActor.actorId || !serviceActor.authorized) {
-        return new Response(JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
-      }
+      if (!serviceActor.actorId || !serviceActor.authorized) return new Response(
+        JSON.stringify({ error: 'A conexão interna MCP exige um administrador ativo.' }), { status: 403, headers: jsonHeaders });
     } else {
-      const authResult = await authorizeDashboardUser({ req, supabaseUrl, supabaseAnonKey, supabaseAdmin });
-      if (!authResult.authorized) {
-        return new Response(JSON.stringify(authResult.body), { status: authResult.status, headers: jsonHeaders });
-      }
+      const auth = await authorizeDashboardUser({ req, supabaseUrl, supabaseAnonKey, supabaseAdmin });
+      if (!auth.authorized) return new Response(JSON.stringify(auth.body), { status: auth.status, headers: jsonHeaders });
     }
-
-    const body = (await req.json().catch(() => ({}))) as RequestBody;
+    const body = await req.json().catch(() => ({})) as RequestBody;
     const conversationId = toTrimmedString(body.conversationId);
-    const leadName = toTrimmedString(body.leadName).slice(0, 120);
-
-    if (!conversationId) {
-      return new Response(JSON.stringify({ error: 'Conversa obrigatória.' }), { status: 400, headers: jsonHeaders });
-    }
-
-    const { data: existing, error: existingError } = await supabaseAdmin
-      .from('ai_sandbox_conversations')
-      .select('id')
-      .eq('id', conversationId)
-      .maybeSingle();
-    if (existingError) throw new Error(`Erro ao carregar conversa: ${existingError.message}`);
-    if (!existing) {
-      return new Response(JSON.stringify({ error: 'Conversa não encontrada.' }), { status: 404, headers: jsonHeaders });
-    }
-
-    // ---- Load full sandbox history + real style examples in parallel ----
-
-    const [historyResult, styleMessagesResult, quickReplies] = await Promise.all([
-      supabaseAdmin
-        .from('ai_sandbox_messages')
-        .select('role, content, handoff_reason, handoff_code')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
-        .limit(SANDBOX_HISTORY_LIMIT),
-      supabaseAdmin
-        .from('comm_whatsapp_messages')
-        .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, created_by, metadata')
-        .not('created_by', 'is', null)
-        .eq('direction', 'outbound')
-        .eq('message_type', 'text')
-        .neq('delivery_status', 'failed')
-        .not('text_content', 'is', null)
-        .order('message_at', { ascending: false })
-        .limit(120),
-      fetchQuickReplies(supabaseAdmin),
-    ]);
-
-    if (historyResult.error) throw new Error(`Erro ao carregar historico: ${historyResult.error.message}`);
-
-    const history = (historyResult.data ?? []) as (AutonomousMessageRow & { handoff_reason: string | null; handoff_code: string | null })[];
-    const isOpeningMode = history.length === 0;
-    // Depois do handoff, a Luiza (IA) nao responde mais nessa conversa —
-    // mesmo que o lead mande agradecimento ou qualquer outra mensagem. A
-    // partir daqui e atendimento humano.
-    const alreadyHandedOff = history.some((row) => row.role === 'ai' && Boolean(row.handoff_code));
-    if (alreadyHandedOff) {
-      return new Response(JSON.stringify({
-        success: true,
-        conversationId,
-        messages: [],
-        handoffCode: null,
-        handoffReason: null,
-        alreadyHandedOff: true,
-      }), { status: 200, headers: jsonHeaders });
-    }
-
-    if (isOpeningMode && body.startWithApproach === true) {
-      const { data: integration, error: integrationError } = await supabaseAdmin
-        .from('integration_settings')
-        .select('settings')
-        .eq('slug', 'whatsapp_auto_contact')
-        .maybeSingle();
-      if (integrationError) throw new Error(`Erro ao carregar a abordagem configurada: ${integrationError.message}`);
-
-      const approachMessages = buildSandboxApproachMessages(integration?.settings, leadName);
-      const responseStartedAt = Date.now();
-      const rowsToInsert = approachMessages.map((content, index) => ({
-        conversation_id: conversationId,
-        role: 'ai' as const,
-        content,
-        handoff_reason: null,
-        handoff_code: null,
-        provider: null,
-        model: null,
-        created_at: new Date(responseStartedAt + index).toISOString(),
-      }));
-
-      const { error: insertApproachError } = await supabaseAdmin
-        .from('ai_sandbox_messages')
-        .insert(rowsToInsert);
-      if (insertApproachError) throw new Error(`Erro ao salvar a abordagem: ${insertApproachError.message}`);
-
-      await supabaseAdmin
-        .from('ai_sandbox_conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', conversationId);
-
-      return new Response(JSON.stringify({
-        success: true,
-        conversationId,
-        messages: approachMessages,
-        handoffCode: null,
-        handoffReason: null,
-        provider: null,
-        model: null,
-      }), { status: 200, headers: jsonHeaders });
-    }
-
-    if (!isOpeningMode && history[history.length - 1].role !== 'lead') {
-      return new Response(JSON.stringify({ error: 'A última mensagem já foi respondida.' }), { status: 400, headers: jsonHeaders });
-    }
-
-    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
-    const { systemPrompt } = await composeAutonomousPrompt({
-      supabaseAdmin, config: autonomousConfig,
-      styleMessages: styleMessagesResult.error ? [] : (styleMessagesResult.data ?? []) as AutonomousStyleMessage[],
-      quickReplies,
-    });
-    const leadFirstName = getReliableLeadFirstName(leadName);
-    const userPrompt = isOpeningMode
-      ? buildOpeningUserPrompt(leadName)
-      : buildAutonomousAttendanceUserPrompt(history, {
-          isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
-          leadFirstName: leadFirstName ?? undefined,
-        });
-
-    const result = await generateTextForFeature({
-      supabaseAdmin,
-      featureKey: 'autonomous.reply',
-      task: 'autonomous_attendance',
-      systemPrompt,
-      userPrompt,
-      temperature: autonomousConfig.temperature,
-      maxTokens: autonomousConfig.maxOutputTokens,
-      edgeFunction: 'ai-sandbox-chat',
-      maxAttempts: 2,
-      maxProviderRequestsPerAttempt: 1,
-      retrySameResolvedModel: true,
-      validateOutput: (text) => validateAutonomousReplyOutput(text, history),
-      buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-    });
-
-    const { messages: finalMessages, handoffCode, handoffNote } = splitGeneratedReply(result.text, isOpeningMode);
-    if (finalMessages.length === 0) throw new Error('A IA não retornou uma resposta válida.');
-
-    const responseStartedAt = Date.now();
-    const rowsToInsert = finalMessages.map((content, index) => ({
-      conversation_id: conversationId,
-      role: 'ai' as const,
-      content,
-      handoff_reason: index === finalMessages.length - 1 ? handoffNote : null,
-      handoff_code: index === finalMessages.length - 1 ? handoffCode : null,
-      provider: result.provider,
-      model: result.model,
-      created_at: new Date(responseStartedAt + index).toISOString(),
-    }));
-
-    const { error: insertAiError } = await supabaseAdmin
-      .from('ai_sandbox_messages')
-      .insert(rowsToInsert);
-    if (insertAiError) throw new Error(`Erro ao salvar resposta da IA: ${insertAiError.message}`);
-
-    await supabaseAdmin
-      .from('ai_sandbox_conversations')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', conversationId);
-
-    return new Response(JSON.stringify({
-      success: true,
-      conversationId,
-      messages: finalMessages,
-      handoffCode,
-      handoffReason: handoffNote,
-      provider: result.provider,
-      model: result.model,
-      fallbackUsed: result.fallbackUsed,
-    }), { status: 200, headers: jsonHeaders });
+    if (!conversationId) return new Response(JSON.stringify({ error: 'Conversa obrigatória.' }), { status: 400, headers: jsonHeaders });
+    const existing = await supabaseAdmin.from('ai_sandbox_conversations').select('id').eq('id', conversationId).maybeSingle();
+    if (existing.error) throw new Error('Erro ao carregar conversa de teste.');
+    if (!existing.data) return new Response(JSON.stringify({ error: 'Conversa não encontrada.' }), { status: 404, headers: jsonHeaders });
+    const result = await generateSandboxReply({ client: supabaseAdmin, conversationId,
+      leadName: toTrimmedString(body.leadName).slice(0, 120), startWithApproach: body.startWithApproach === true,
+      advisorName: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_ADVISOR_NAME') });
+    return new Response(JSON.stringify(result), { status: 200, headers: jsonHeaders });
   } catch (error) {
-    console.error('[ai-sandbox-chat] erro inesperado', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Não foi possível gerar a resposta.' }),
-      { status: 500, headers: jsonHeaders },
-    );
+    console.error('[ai-sandbox-chat] falha ao processar conversa de teste');
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Não foi possível gerar a resposta.' }),
+      { status: 500, headers: jsonHeaders });
   }
 });

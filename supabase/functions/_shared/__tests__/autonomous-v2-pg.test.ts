@@ -2,8 +2,8 @@
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { mergeInterpretation, initialState, type V2State } from '../../ai-autonomous-reply-worker/domain/state.ts';
-import { decide, requirements } from '../../ai-autonomous-reply-worker/domain/decision.ts';
+import { mergeInterpretation, initialState, type V2State } from '../autonomous-attendance-v2/domain/state.ts';
+import { decide, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { date, interpretation, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
 
 let db: PGlite;
@@ -42,9 +42,14 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/20261115024410_autonomous_v2_optional_qualification_fields.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/20261115123308_autonomous_v2_city_neighborhood_question.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/20261115124035_autonomous_v2_qualification_only_handoff.sql', 'utf8'));
+  await db.exec(`CREATE TABLE ai_sandbox_conversations(id uuid primary key, updated_at timestamptz default now());
+    CREATE TABLE ai_sandbox_messages(id uuid primary key default gen_random_uuid(), conversation_id uuid references ai_sandbox_conversations,
+      role text, content text, created_at timestamptz default now(), handoff_code text, handoff_reason text, provider text, model text);`);
+  await db.exec(readFileSync('supabase/migrations/20261116003815_sandbox_autonomous_v2_memory.sql', 'utf8'));
 }, 30_000);
 afterAll(async () => { await db?.close(); });
 beforeEach(async () => {
+  await db.exec('TRUNCATE ai_sandbox_messages, ai_sandbox_conversations');
   await db.exec(`TRUNCATE comm_whatsapp_chats,comm_whatsapp_messages,ai_autonomous_reply_jobs,ai_autonomous_reply_locks,
     ai_autonomous_reply_delivery_keys,ai_autonomous_qualification_states,leads,lead_status_config;
     INSERT INTO comm_whatsapp_chats VALUES('${chat}','${lead}',null,'active',now());
@@ -189,4 +194,53 @@ test('internal validators and handoff remain restricted to service role', async 
   for (const fn of ['ai_autonomous_qualification_can_complete(jsonb)', 'complete_ai_autonomous_attendance_handoff(uuid,uuid,text)', 'complete_ai_autonomous_turn_handoff(uuid,uuid,text,uuid,uuid)']) {
     for (const role of ['anon', 'authenticated']) expect((await db.query<{ ok: boolean }>('select has_function_privilege($1,$2,$3) ok', [role, fn, 'execute'])).rows[0].ok).toBe(false);
   }
+});
+
+const sandboxSetup = async () => {
+  await db.query('INSERT INTO ai_sandbox_conversations(id) VALUES($1)', [chat]);
+  await db.query("INSERT INTO ai_sandbox_messages(id,conversation_id,role,content,created_at) VALUES($1,$2,'lead','Texto sintético',now()-interval '1 minute')", [source, chat]);
+};
+const sandboxCommit = async (state: unknown, messages: unknown, expected: unknown = {}) =>
+  (await db.query<{ status: string }>('SELECT commit_ai_sandbox_turn($1,$2,$3,$4,$5) status', [chat, source, expected, state, messages])).rows[0].status;
+
+test('sandbox atomically saves split replies and memory exactly once, without touching real lead state', async () => {
+  await sandboxSetup();
+  const before = await db.query('SELECT * FROM ai_autonomous_qualification_states');
+  const memory = { source_message_id: source, attendanceV2: scenarioState(1) };
+  expect(await sandboxCommit(memory, [{ content: 'Entendi, será só para você.' }, { content: 'Qual é a sua idade?' }])).toBe('saved');
+  expect(await sandboxCommit(memory, [{ content: 'Resposta duplicada' }])).toBe('duplicate');
+  expect((await db.query("SELECT content FROM ai_sandbox_messages WHERE role='ai' ORDER BY created_at")).rows)
+    .toEqual([{ content: 'Entendi, será só para você.' }, { content: 'Qual é a sua idade?' }]);
+  expect((await db.query('SELECT attendance_state FROM ai_sandbox_conversations')).rows[0]).toEqual({ attendance_state: memory });
+  expect((await db.query('SELECT * FROM ai_autonomous_qualification_states')).rows).toEqual(before.rows);
+});
+
+test('a new inbound or changed sandbox memory discards a stale generation without publishing a reply', async () => {
+  await sandboxSetup();
+  await db.query("INSERT INTO ai_sandbox_messages(id,conversation_id,role,content) VALUES($1,$2,'lead','Outra mensagem')", [newer, chat]);
+  expect(await sandboxCommit({ source_message_id: source }, [{ content: 'Desatualizada' }])).toBe('stale');
+  expect(await sandboxCommit({ source_message_id: source }, [{ content: 'Desatualizada' }], { otherVersion: true })).toBe('stale');
+  expect((await db.query("SELECT count(*)::int n FROM ai_sandbox_messages WHERE role='ai'")).rows[0].n).toBe(0);
+  expect((await db.query('SELECT attendance_state FROM ai_sandbox_conversations')).rows[0].attendance_state).toEqual({});
+});
+
+test('sandbox completion is checked against actual required facts and rolls back every bubble on rejection', async () => {
+  await sandboxSetup();
+  const memory = { source_message_id: source, attendanceV2: initialState(), v2Decision: { handoffCode: 'QUALIFICACAO_COMPLETA' } };
+  await expect(sandboxCommit(memory, [{ content: 'Primeira bolha' }, { content: 'Concluído', handoff_code: 'QUALIFICACAO_COMPLETA' }])).rejects.toThrow('incompleta');
+  expect((await db.query("SELECT count(*)::int n FROM ai_sandbox_messages WHERE role='ai'")).rows[0].n).toBe(0);
+  const completed = { ...memory, attendanceV2: scenarioState(1) };
+  expect(await sandboxCommit(completed, [{ content: 'Já tenho as informações para seguir com a sua cotação.', handoff_code: 'QUALIFICACAO_COMPLETA' }])).toBe('saved');
+  expect(await sandboxCommit(completed, [{ content: 'Não deve responder depois do encerramento' }])).toBe('handed_off');
+});
+
+test('sandbox commit is restricted to service role and concurrent openings cannot duplicate the approach', async () => {
+  for (const role of ['anon', 'authenticated']) expect((await db.query<{ ok: boolean }>(
+    "SELECT has_function_privilege($1,'commit_ai_sandbox_turn(uuid,uuid,jsonb,jsonb,jsonb)','execute') ok", [role])).rows[0].ok).toBe(false);
+  await db.query('INSERT INTO ai_sandbox_conversations(id) VALUES($1)', [chat]);
+  const args = [chat, null, {}, {}, [{ content: 'Abordagem configurada' }]];
+  const query = 'SELECT commit_ai_sandbox_turn($1,$2,$3,$4,$5) status';
+  expect((await db.query<{ status: string }>(query, args)).rows[0].status).toBe('saved');
+  expect((await db.query<{ status: string }>(query, args)).rows[0].status).toBe('stale');
+  expect((await db.query('SELECT count(*)::int n FROM ai_sandbox_messages')).rows[0].n).toBe(1);
 });

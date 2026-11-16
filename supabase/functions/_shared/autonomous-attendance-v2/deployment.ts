@@ -1,4 +1,4 @@
-import type { RuntimeModelProfile } from '../_shared/ai-router.ts';
+import type { RuntimeModelProfile } from '../ai-router.ts';
 import type { V2Rollout } from './domain/rollout.ts';
 import { readStyleLibrary } from './domain/style.ts';
 

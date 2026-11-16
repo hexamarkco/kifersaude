@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { inV2Rollout, groupV2ReplyMessages, selectAutonomousEngine } from '../../ai-autonomous-reply-worker/domain/rollout.ts';
+import { inV2Rollout, groupV2ReplyMessages, selectAutonomousEngine } from '../autonomous-attendance-v2/domain/rollout.ts';
 import { resolveRuntimeModelProfile } from '../ai-router.ts';
-import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_ROLLOUT } from '../../ai-autonomous-reply-worker/deployment.ts';
+import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_ROLLOUT } from '../autonomous-attendance-v2/deployment.ts';
 const start = '2026-11-15T20:00:00Z';
 const input = { leadId: 'new-lead', leadCreatedAt: start, chatCreatedAt: start, phone: '5521999999999',
   rollout: { enabledAt: start, percentage: 100, ddd: '21' } };

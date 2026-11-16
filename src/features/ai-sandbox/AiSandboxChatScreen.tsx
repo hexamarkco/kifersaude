@@ -368,7 +368,7 @@ export default function AiSandboxChatScreen() {
     setGeneratingReply(true);
     try {
       const generated = await aiSandboxChatService.generateReply(conversationId);
-      if (generated === null) return; // conversa ja foi encaminhada — IA nao responde mais
+      if (generated === null) return; // Encerramento ou geração descartada porque chegaram mensagens novas.
 
       if (activeConversationIdRef.current !== conversationId) return;
 

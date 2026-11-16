@@ -11,7 +11,7 @@ const workerSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/ai-autonomous-reply-worker/index.ts'),
   'utf8',
 );
-const generatorSource = readFileSync(resolve(process.cwd(), 'supabase/functions/ai-autonomous-reply-worker/generate-turn.ts'), 'utf8');
+const generatorSource = readFileSync(resolve(process.cwd(), 'supabase/functions/_shared/autonomous-attendance-v2/generate-turn.ts'), 'utf8');
 const webhookSource = readFileSync(
   resolve(process.cwd(), 'supabase/functions/comm-whatsapp-webhook/index.ts'),
   'utf8',

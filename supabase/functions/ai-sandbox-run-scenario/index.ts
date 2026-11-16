@@ -1,20 +1,12 @@
-import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
+import { generateSandboxReply } from '../_shared/ai-sandbox-attendance.ts';
 import { buildJudgePrompt } from './judge-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
-import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
-import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
 import {
   AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-  buildAutonomousAttendanceUserPrompt,
-  buildAutonomousValidationRetryInstruction,
-  buildOpeningUserPrompt,
-  fetchQuickReplies,
-  getReliableLeadFirstName,
-  splitGeneratedReply,
   validateAutonomousReplyOutput,
   type HandoffCode,
   type AutonomousMessageRow,
@@ -140,23 +132,7 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'leadPersonaPrompt obrigatorio.' }), { status: 400, headers: jsonHeaders });
     }
 
-    const { data: styleMessagesData, error: styleError } = await supabaseAdmin
-      .from('comm_whatsapp_messages')
-      .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, created_by, metadata')
-      .not('created_by', 'is', null)
-      .eq('direction', 'outbound')
-      .eq('message_type', 'text')
-      .neq('delivery_status', 'failed')
-      .not('text_content', 'is', null)
-      .order('message_at', { ascending: false })
-      .limit(120);
-
-    const styleMessages = (styleError ? [] : styleMessagesData ?? []) as AutonomousStyleMessage[];
-    const quickReplies = await fetchQuickReplies(supabaseAdmin);
     const leadSystemPrompt = buildLeadSystemPrompt(leadPersonaPrompt);
-
-    // Load autonomous.reply config — the single source of truth for the attendant agent
-    const autonomousConfig = await loadFeatureConfig(supabaseAdmin, AI_FEATURES.AUTONOMOUS_REPLY);
 
     let conversationId = requestedConversationId;
     if (conversationId) {
@@ -184,7 +160,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const history: AutonomousMessageRow[] = [];
-    const leadFirstName = getReliableLeadFirstName(leadName);
     let handoffTriggered = false;
     let finalHandoffCode: HandoffCode | null = null;
     let lastProvider: string | null = null;
@@ -203,48 +178,23 @@ Deno.serve(async (req: Request) => {
       for (const row of rows) history.push({ role: row.role, content: row.content });
     };
 
-    // Recalcula a cada turno com base na ultima mensagem do lead — busca
-    // situacoes reais parecidas no historico do WhatsApp (pg_trgm) para
-    // embasar a resposta em casos reais, alem das mensagens rapidas.
-    const buildAttendantSystemPrompt = async (): Promise<string> => (
-      await composeAutonomousPrompt({ supabaseAdmin, config: autonomousConfig, styleMessages, quickReplies })
-    ).systemPrompt;
-
-    // ---- Abertura ----
+    // Both manual chat and automated scenarios use the shared production V2 and sandbox-only persistence.
+    const respond = async (startWithApproach = false) => {
+      const reply = await generateSandboxReply({ client: supabaseAdmin, conversationId, leadName, startWithApproach,
+        advisorName: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_ADVISOR_NAME') });
+      if (reply.alreadyHandedOff) throw new Error('Esta simulação já foi encerrada. Inicie uma nova.');
+      if (reply.skipped) throw new Error('O cenário recebeu outra mensagem durante a geração. Inicie uma nova simulação.');
+      for (const content of reply.messages) history.push({ role: 'ai', content });
+      lastProvider = reply.provider;
+      lastModel = reply.model;
+      if (reply.handoffCode) {
+        handoffTriggered = true;
+        finalHandoffCode = reply.handoffCode;
+      }
+    };
 
     if (startMode === 'ai_opens') {
-      const result = await generateTextForFeature({
-        supabaseAdmin,
-        featureKey: 'autonomous.reply',
-        task: 'autonomous_attendance',
-        systemPrompt: await buildAttendantSystemPrompt(),
-        userPrompt: buildOpeningUserPrompt(leadName),
-        temperature: autonomousConfig.temperature,
-        maxTokens: autonomousConfig.maxOutputTokens,
-        edgeFunction: 'ai-sandbox-run-scenario',
-        maxAttempts: 2,
-        maxProviderRequestsPerAttempt: 1,
-        retrySameResolvedModel: true,
-        validateOutput: (text) => validateAutonomousReplyOutput(text, history),
-        buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-      });
-      const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, true);
-      lastProvider = result.provider;
-      lastModel = result.model;
-      if (messages.length > 0) {
-        await persist(messages.map((content, index) => ({
-          role: 'ai' as const,
-          content,
-          handoff_reason: index === messages.length - 1 ? handoffNote : null,
-          handoff_code: index === messages.length - 1 ? handoffCode : null,
-          provider: result.provider,
-          model: result.model,
-        })));
-        if (handoffCode) {
-          handoffTriggered = true;
-          finalHandoffCode = handoffCode;
-        }
-      }
+      await respond(true);
     } else if (firstLeadMessage) {
       await persist([{ role: 'lead', content: firstLeadMessage, handoff_reason: null, handoff_code: null, provider: null, model: null }]);
     }
@@ -270,41 +220,7 @@ Deno.serve(async (req: Request) => {
         await persist([{ role: 'lead', content: leadText, handoff_reason: null, handoff_code: null, provider: null, model: null }]);
       }
 
-      // Turno do atendente
-      const result = await generateTextForFeature({
-        supabaseAdmin,
-        featureKey: 'autonomous.reply',
-        task: 'autonomous_attendance',
-        systemPrompt: await buildAttendantSystemPrompt(),
-        userPrompt: buildAutonomousAttendanceUserPrompt(history, {
-          isFirstLeadReplyAfterApproach: history.filter((row) => row.role === 'lead').length === 1,
-          leadFirstName: leadFirstName ?? undefined,
-        }),
-        temperature: autonomousConfig.temperature,
-        maxTokens: autonomousConfig.maxOutputTokens,
-        edgeFunction: 'ai-sandbox-run-scenario',
-        maxAttempts: 2,
-        maxProviderRequestsPerAttempt: 1,
-        retrySameResolvedModel: true,
-        validateOutput: (text) => validateAutonomousReplyOutput(text, history),
-        buildValidationRetryInstruction: buildAutonomousValidationRetryInstruction,
-      });
-      lastProvider = result.provider;
-      lastModel = result.model;
-      const { messages, handoffCode, handoffNote } = splitGeneratedReply(result.text, false);
-      if (messages.length === 0) break;
-      await persist(messages.map((content, index) => ({
-        role: 'ai' as const,
-        content,
-        handoff_reason: index === messages.length - 1 ? handoffNote : null,
-        handoff_code: index === messages.length - 1 ? handoffCode : null,
-        provider: result.provider,
-        model: result.model,
-      })));
-      if (handoffCode) {
-        handoffTriggered = true;
-        finalHandoffCode = handoffCode;
-      }
+      await respond();
 
       turn += 1;
     }
@@ -317,8 +233,9 @@ Deno.serve(async (req: Request) => {
     // ---- Avaliacao (juiz) ----
 
     const judgePlaybook = [
-      autonomousConfig.featurePrompt,
-      autonomousConfig.outputInstructions,
+      'Avalie a qualificação inicial V2, sem exigir análise de produtos ou elegibilidade.',
+      'Obrigatórios são quantidade de pessoas, idades, cidade e presença ou ausência de CNPJ/MEI; bairro nas capitais. Plano atual, objetivo e número do CNPJ são opcionais e não devem ser cobrados repetidamente.',
+      'Qualificação concluída é distinta de proposta e venda; pedido humano e intervenção do sistema têm motivos diferentes.',
       AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
     ]
       .filter(Boolean)

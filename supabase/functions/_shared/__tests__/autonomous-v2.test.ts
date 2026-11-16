@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { assertDecision, decide, decisionTrace, internalBriefing, requirements } from '../../ai-autonomous-reply-worker/domain/decision.ts';
-import { confirmed, initialState, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages, type Interpretation, type V2State } from '../../ai-autonomous-reply-worker/domain/state.ts';
-import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, runV2Turn, stateAfterSend, v2Enabled, validateWrittenReply } from '../../ai-autonomous-reply-worker/domain/turn.ts';
+import { assertDecision, decide, decisionTrace, internalBriefing, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
+import { confirmed, initialState, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages, type Interpretation, type V2State } from '../autonomous-attendance-v2/domain/state.ts';
+import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, runV2Turn, stateAfterSend, v2Enabled, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
 import { extractAutonomousQualificationState } from '../ai-autonomous-qualification.ts';
 import { validateAutonomousReplyOutput } from '../ai-autonomous-helpers.ts';
 import { date, interpretation, message, scenarios } from './fixtures/autonomous-v2-scenarios.ts';

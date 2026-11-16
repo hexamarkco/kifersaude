@@ -14,6 +14,7 @@ const child = spawn(process.execPath, [resolve('node_modules/vitest/vitest.mjs')
   'supabase/functions/_shared/__tests__/autonomous-v2-rollout.test.ts',
   'supabase/functions/_shared/__tests__/autonomous-v2-worker.test.ts',
   'supabase/functions/_shared/__tests__/autonomous-v2-pg.test.ts',
+  'supabase/functions/_shared/__tests__/ai-sandbox-attendance.test.ts',
   'src/features/communication/whatsapp/components/__tests__/WhatsAppAttendanceBriefing.test.tsx',
   '--reporter=default', '--reporter=json', `--outputFile=${resolve(outputDir, 'tests.json')}`], {
   stdio: 'inherit', env: { ...process.env, AUTONOMOUS_V2_REPORT_PATH: resolve(outputDir, 'commercial-simulations.json') },

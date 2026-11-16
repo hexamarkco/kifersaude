@@ -1,6 +1,6 @@
 # Atendimento autônomo V2 — auditoria e projeto local
 
-Atualização de 15/11/2026 às 21h19: a V2 substitui o motor antigo em 100% dos atendimentos autônomos, sem filtro de DDD, conforme autorização do usuário. Conversas antigas ativas continuam na próxima mensagem do lead; chats desativados ou assumidos por humano permanecem preservados. Worker 156, configuração `kifer-v2-2026-11-15.3`. O estado atual, versões, evidências e rollback estão em [Publicação de 15/11/2026](autonomous-attendance-v2-release-2026-11-15.md). As seções de auditoria e validação local abaixo preservam o registro das etapas anteriores.
+Atualização de 16/11/2026: a V2 atende 100% dos atendimentos autônomos, sem filtro de DDD, e o `/chat` já compartilha o mesmo motor, modelo e estilo, com memória e mensagens de teste isoladas. Worker 157, configuração `kifer-v2-2026-11-15.3`. Conversas antigas ativas continuam na próxima mensagem do lead; chats desativados ou assumidos por humano permanecem preservados. Detalhes atuais em [Chat de testes com a V2](autonomous-attendance-v2-sandbox-2026-11-16.md) e histórico de ativação em [Publicação de 15/11/2026](autonomous-attendance-v2-release-2026-11-15.md). As seções de auditoria e validação local abaixo preservam o registro das etapas anteriores.
 
 ## Escopo e evidência
 
@@ -37,7 +37,7 @@ As etapas de validação, métricas, limitações e rollout estão registradas a
 
 | Fronteira | Arquivos e comportamento |
 | --- | --- |
-| Estado e evidência | `ai-autonomous-reply-worker/domain/state.ts`: valida JSON e snapshots; mantém fatos por campo, origem, evidência e atualização. Confirmação não regride por desconhecimento. Correções conservam evidências. Pessoas têm IDs estáveis, idades iguais são preservadas e retirada de beneficiário exige instrução explícita com IDs. Cursor considera chegada persistida, não só horário declarado da mensagem. |
+| Estado e evidência | `_shared/autonomous-attendance-v2/domain/state.ts`: valida JSON e snapshots; mantém fatos por campo, origem, evidência e atualização. Confirmação não regride por desconhecimento. Correções conservam evidências. Pessoas têm IDs estáveis, idades iguais são preservadas e retirada de beneficiário exige instrução explícita com IDs. Cursor considera chegada persistida, não só horário declarado da mensagem. |
 | Decisão | `domain/decision.ts`: calcula obrigatoriedade, limita insistência e separa conclusão, esclarecimento, orientação e transferência antecipada. Sugestão semântica escolhe somente entre pendências reais. Recusa só muda para `Perdido` quando há evidência explícita e inequívoca de recusa da cotação; ambiguidade vai para humano. |
 | Interpretação e redação | `domain/turn.ts`: duas chamadas independentes, contratos validados e nenhuma tag textual executável. O redator recebe ação já definida. Não recebe o roteiro antigo nem os exemplos com identidade fixa. Mensagens de cliente e CRM são dados, não instruções. |
 | Integração | `generate-turn.ts`: conserva configuração de provider/modelo do roteador e eventos existentes. V2 tem até duas tentativas por etapa, limite de 20 s por tentativa e uma requisição física por tentativa. As duas etapas somam no máximo quatro requisições de texto; transcrição tem seu próprio orçamento. Snapshot preparado permite retomar falha anterior à reserva sem gerar texto diferente. |

@@ -1,11 +1,11 @@
 import { createWhatsAppDispatch, readWhatsAppTransport } from '../_shared/comm-whatsapp/transport.ts';
 import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_shared/ai-autonomous-reply-failure.ts';
 import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
-import { generateAttendanceTurn } from './generate-turn.ts';
-import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_ROLLOUT, V2_STYLE_LIBRARY } from './deployment.ts';
-import { groupV2ReplyMessages, selectAutonomousEngine } from './domain/rollout.ts';
-import { confirmed, initialState, isRecord } from './domain/state.ts';
-import { legacyEvidenceMessageIds, restoreV2State, runV2Turn, v2Enabled } from './domain/turn.ts';
+import { generateAttendanceTurn } from '../_shared/autonomous-attendance-v2/generate-turn.ts';
+import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_ROLLOUT, V2_STYLE_LIBRARY } from '../_shared/autonomous-attendance-v2/deployment.ts';
+import { groupV2ReplyMessages, selectAutonomousEngine } from '../_shared/autonomous-attendance-v2/domain/rollout.ts';
+import { confirmed, initialState, isRecord } from '../_shared/autonomous-attendance-v2/domain/state.ts';
+import { legacyEvidenceMessageIds, restoreV2State, runV2Turn, v2Enabled } from '../_shared/autonomous-attendance-v2/domain/turn.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import type { AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';

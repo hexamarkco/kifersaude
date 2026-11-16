@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest';
-import { readStyleLibrary, selectStyleExamples } from '../../ai-autonomous-reply-worker/domain/style.ts';
-import { decide } from '../../ai-autonomous-reply-worker/domain/decision.ts';
-import { initialState, mergeInterpretation, type Interpretation } from '../../ai-autonomous-reply-worker/domain/state.ts';
-import { runV2Turn } from '../../ai-autonomous-reply-worker/domain/turn.ts';
+import { readStyleLibrary, selectStyleExamples } from '../autonomous-attendance-v2/domain/style.ts';
+import { decide } from '../autonomous-attendance-v2/domain/decision.ts';
+import { initialState, mergeInterpretation, type Interpretation } from '../autonomous-attendance-v2/domain/state.ts';
+import { runV2Turn } from '../autonomous-attendance-v2/domain/turn.ts';
 import { date, interpretation, message } from './fixtures/autonomous-v2-scenarios.ts';
 
 const empty: Interpretation = { observations: [], humanRequested: false, quoteDeclined: false, irritated: false, question: null, suggestedField: null, signals: [] };

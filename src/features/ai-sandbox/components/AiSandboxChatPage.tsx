@@ -165,8 +165,8 @@ export function AiSandboxChatPage({
       <div className="kds-ai-chat-layout">
         <CrmCard
           className="kds-ai-chat-card"
-          title="Simulação de atendimento"
-          subtitle={activeConversation?.title ?? 'Converse como lead para testar o fluxo configurado.'}
+          title="Simulação do atendimento V2"
+          subtitle={activeConversation?.title ?? 'Converse como lead com o mesmo atendimento do WhatsApp, sem enviar mensagens reais.'}
           subtitlePlacement="visible"
           actions={messages.length > 0 ? (
             <>
@@ -300,7 +300,7 @@ export function AiSandboxChatPage({
                 <Text className="kds-ai-context-label">Uso</Text>
                 <Text className="kds-ai-context-value">Mensagens não são enviadas a clientes.</Text>
               </div>
-              <Badge tone="success" size="sm">Simulação</Badge>
+              <Badge tone="success" size="sm">V2 · Simulação</Badge>
             </div>
           </div>
 

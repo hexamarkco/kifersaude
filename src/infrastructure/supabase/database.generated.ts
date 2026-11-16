@@ -703,6 +703,7 @@ export type Database = {
       }
       ai_sandbox_conversations: {
         Row: {
+          attendance_state: Json
           created_at: string
           created_by: string | null
           id: string
@@ -711,6 +712,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attendance_state?: Json
           created_at?: string
           created_by?: string | null
           id?: string
@@ -719,6 +721,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attendance_state?: Json
           created_at?: string
           created_by?: string | null
           id?: string
@@ -8065,6 +8068,10 @@ export type Database = {
           old_status: string
         }[]
       }
+      ai_autonomous_qualification_can_complete: {
+        Args: { p_state: Json }
+        Returns: boolean
+      }
       ai_autonomous_turn_is_current: {
         Args: {
           p_chat_id: string
@@ -9615,8 +9622,32 @@ export type Database = {
         }
         Returns: boolean
       }
+      commit_ai_sandbox_turn: {
+        Args: {
+          p_conversation_id: string
+          p_expected_state: Json
+          p_messages: Json
+          p_source_message_id: string
+          p_state: Json
+        }
+        Returns: string
+      }
       complete_ai_autonomous_attendance_handoff: {
         Args: { p_chat_id: string; p_handoff_code: string; p_lead_id: string }
+        Returns: {
+          chat_id: string
+          lead_status_id: string
+          status_applied: boolean
+        }[]
+      }
+      complete_ai_autonomous_turn_handoff: {
+        Args: {
+          p_chat_id: string
+          p_handoff_code: string
+          p_job_id: string
+          p_lead_id: string
+          p_source_message_id: string
+        }
         Returns: {
           chat_id: string
           lead_status_id: string

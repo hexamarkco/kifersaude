@@ -1,11 +1,11 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { loadFeatureConfig } from '../_shared/ai-config-resolver.ts';
-import { AI_FEATURES } from '../_shared/ai-feature-registry.ts';
-import { generateTextForFeature, type RuntimeModelProfile } from '../_shared/ai-router.ts';
-import { deriveAutonomousConversationMemory } from '../_shared/ai-autonomous-memory.ts';
-import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
+import { loadFeatureConfig } from '../ai-config-resolver.ts';
+import { AI_FEATURES } from '../ai-feature-registry.ts';
+import { generateTextForFeature, type RuntimeModelProfile } from '../ai-router.ts';
+import { deriveAutonomousConversationMemory } from '../ai-autonomous-memory.ts';
+import { composeAutonomousPrompt, type AutonomousStyleMessage } from '../ai-autonomous-prompt.ts';
 import { buildAutonomousAttendanceUserPrompt, buildAutonomousValidationRetryInstruction, getReliableLeadFirstName,
-  splitGeneratedReply, validateAutonomousReplyOutput, type QuickReplyRef, type HandoffCode } from '../_shared/ai-autonomous-helpers.ts';
+  splitGeneratedReply, validateAutonomousReplyOutput, type QuickReplyRef, type HandoffCode } from '../ai-autonomous-helpers.ts';
 import { decisionTrace } from './domain/decision.ts';
 import { isRecord, type V2Message } from './domain/state.ts';
 import { restoreV2State, resumePreparedTurn, runV2Turn, stateAfterSend, v2Enabled, type V2Turn } from './domain/turn.ts';
@@ -14,7 +14,7 @@ import type { StyleLibrary } from './domain/style.ts';
 export async function generateAttendanceTurn(params: {
   client: SupabaseClient; chatId: string; leadId: string; sourceId: string; messages: V2Message[];
   previousMemory: unknown; lead: { nome_completo?: string | null; cidade?: string | null; estado?: string | null; operadora_atual?: string | null };
-  styleMessages: AutonomousStyleMessage[]; quickReplies: QuickReplyRef[]; allowlist?: string; advisorName?: string;
+  styleMessages: AutonomousStyleMessage[]; quickReplies: QuickReplyRef[]; allowlist?: string; advisorName?: string; sandbox?: boolean;
   deployment?: { version: string; modelProfile: RuntimeModelProfile; styleLibrary: StyleLibrary; splitReplies: boolean };
   record: (eventType: string, decision: Record<string, unknown>) => Promise<void>;
 }) {
@@ -22,7 +22,8 @@ export async function generateAttendanceTurn(params: {
   const enabled = v2Enabled(params.chatId, params.allowlist);
   if (!enabled && isRecord(params.previousMemory) && params.previousMemory.attendanceV2) throw new Error('Atendimento V2 pausado. Exige revisão humana.');
   const base = { supabaseAdmin: params.client, featureKey: AI_FEATURES.AUTONOMOUS_REPLY, task: 'autonomous_attendance' as const,
-    edgeFunction: 'ai-autonomous-reply-worker', leadId: params.leadId, chatId: params.chatId, messageId: params.sourceId,
+    edgeFunction: params.sandbox ? 'ai-sandbox-chat' : 'ai-autonomous-reply-worker',
+    ...(params.sandbox ? {} : { leadId: params.leadId, chatId: params.chatId, messageId: params.sourceId }),
     maxAttempts: 2, maxProviderRequestsPerAttempt: 1, retrySameResolvedModel: true, attemptTimeoutMs: 30_000 };
   let durationMs = 0;
   let retryCount = 0;

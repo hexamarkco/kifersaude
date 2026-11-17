@@ -640,7 +640,8 @@ Deno.serve(async (req: Request) => {
             .eq('chat_id', chat.id)
             .neq('delivery_status', 'failed')
             .neq('direction', 'system')
-            .order('message_at', { ascending: false })
+            // Process in persistence order: provider timestamps have second-level
+            // precision and can predate a just-sent AI reply (Edna case).
             .order('created_at', { ascending: false })
             .order('id', { ascending: false })
             .limit(CONVERSATION_HISTORY_LIMIT),

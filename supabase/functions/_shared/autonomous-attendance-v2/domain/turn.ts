@@ -46,6 +46,7 @@ Campos e tipos ${JSON.stringify(FIELDS)}. Intenções ${INTENTS.join(', ')}.
 intent é o objetivo principal, goal é a descrição concreta do que deseja resolver. Preserve manter operadora, mudar modalidade e reduzir custos como objetivos distintos.
 Pedir uma cotação não responde à expectativa do cliente. Preencha goal quando houver uma necessidade concreta, como economia, rede ou atendimento desejado.
 beneficiaryCount é inteiro. beneficiaries é uma lista de {id,label,age}, age inteiro ou null. Use IDs estáveis da memória.
+Respostas informais devem ser interpretadas pelo contexto da última pergunta. Se perguntou a idade do titular e ele respondeu apenas `5.3` ou `5,3`, isso pode representar 53 anos em tom de brincadeira, não uma idade decimal nem uma dúvida incompreensível. Considere a idade quando o contexto for inequívoco; se houver dúvida real, confirme com naturalidade e sem ignorar informações já dadas. Expressões como `cinquentinha` e `trintou` também dependem do contexto; não invente uma idade exata quando for aproximada.
 Duas vidas de 80 anos são duas pessoas distintas, cada uma com idade 80. Parentes mencionados no plano atual não entram automaticamente na nova cotação.
 Ao corrigir idade/composição preserve todas as outras pessoas confirmadas e use correction true. Para retirar alguém explicitamente da cotação, inclua removedBeneficiaryIds com seus IDs. Nunca remova pessoas por omissão. Não atribua idade sem evidência.
 companyPresence e hasCurrentPlan são yes/no, companyType mei/cnpj somente da empresa que o cliente possui. Tenho MEI confirma companyPresence yes e companyType mei; querer usar MEI não confirma possuir. Operadora do plano atual confirma hasCurrentPlan yes. currentModality pf/company/collective, targetModality pf/mei/company/collective.
@@ -144,6 +145,36 @@ export function restoreV2State(memory: unknown, seed: Partial<Pick<Values, 'city
   return state;
 }
 
+/**
+ * Resolve compact two-digit ages written playfully as "5.3" or "5,3".
+ * This is only safe for a standalone reply to an explicit question about the
+ * single beneficiary's age; preserve the original message as evidence.
+ */
+export function normalizeContextualAgeAnswer(
+  interpretation: Interpretation, fresh: readonly V2Message[], lastAi: V2Message | undefined, previous: V2State,
+): Interpretation {
+  if (fresh.length !== 1 || fresh[0].role !== 'lead' || !lastAi) return interpretation;
+  const message = fresh[0];
+  const compact = message.content.trim().match(/^([2-9])[.,]([0-9])$/);
+  const asksOwnAge = /\b(?:quantos anos (?:você|voce) tem|qual (?:é )?(?:a )?sua idade|me (?:diz|fala|informa) (?:a )?sua idade)\b/i
+    .test(lastAi.content);
+  if (!compact || !asksOwnAge || confirmed(previous, 'beneficiaryCount') !== 1) return interpretation;
+  const known = confirmed(previous, 'beneficiaries');
+  if (known !== null && (!Array.isArray(known) || known.length !== 1)) return interpretation;
+  const person = Array.isArray(known) ? known[0] : { id: 'self', label: 'titular', age: null };
+  if (person.age !== null) return interpretation;
+  const age = Number(`${compact[1]}${compact[2]}`);
+  return {
+    ...interpretation,
+    observations: [
+      ...interpretation.observations.filter((observation) =>
+        observation.messageId !== message.id || !['beneficiaries', 'beneficiaryCount'].includes(observation.field)),
+      { field: 'beneficiaries', value: [{ ...person, age }], status: 'confirmed',
+        correction: false, messageId: message.id, quote: message.content.trim() },
+    ],
+  };
+}
+
 export async function runV2Turn(params: {
   messages: readonly V2Message[]; previous: V2State; now: string; configVersion: number; advisorName?: string; generate: Generator;
   styleLibrary?: StyleLibrary; allowSplitReplies?: boolean;
@@ -160,7 +191,7 @@ export async function runV2Turn(params: {
   };
   const raw = await params.generate({ stage: 'interpret', systemPrompt: INTERPRETER_PROMPT, userPrompt: JSON.stringify(request),
     validate: (candidate) => { parseInterpretation(candidate, fresh); } });
-  const interpretation: Interpretation = parseInterpretation(raw, fresh);
+  const interpretation: Interpretation = normalizeContextualAgeAnswer(parseInterpretation(raw, fresh), fresh, lastAi, previous);
   const state = mergeInterpretation(previous, interpretation, fresh, params.now);
   const decision = decide(state, interpretation);
   assertDecision(state, decision);

@@ -486,7 +486,7 @@ Deno.serve(async (req: Request) => {
         generate: async (request) => (await generateTextForFeature({ supabaseAdmin, featureKey: 'autonomous.reply', task: 'autonomous_attendance',
           edgeFunction: 'ai-autonomous-reply-worker:preview', runtimeModelProfile: V2_MODEL_PROFILE, systemPrompt: request.systemPrompt,
           userPrompt: request.userPrompt, maxTokens: request.stage === 'interpret' ? 3200 : 500, temperature: 0,
-          maxAttempts: 2, maxProviderRequestsPerAttempt: 1, retrySameResolvedModel: true, attemptTimeoutMs: 20000,
+          maxAttempts: 2, maxProviderRequestsPerAttempt: 1, retrySameResolvedModel: true, attemptTimeoutMs: 60000,
           validateOutput: (text) => { try { request.validate(text); return { valid: true }; }
             catch { return { valid: false, stopReason: 'invalid_output', message: 'Corrija o formato JSON e as evidências.' }; } },
         })).text,

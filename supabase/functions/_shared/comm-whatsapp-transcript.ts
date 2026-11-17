@@ -18,6 +18,9 @@ export type MessageRow = {
   message_at: string;
   media_caption: string | null;
   transcription_text: string | null;
+  media_id?: string | null;
+  media_url?: string | null;
+  metadata?: unknown;
 };
 
 export type LeadRow = {
@@ -64,26 +67,70 @@ export const collapseConsecutiveDuplicateTranscriptLines = (lines: string[]): st
   lines.filter((line, index) => index === 0 || line !== lines[index - 1])
 );
 
+// Keep this server-side map in sync with the Inbox's messagePresentation.ts
+// and messageVisibility.ts. Tests compare server decisions with Inbox decisions.
+const NON_CONVERSATIONAL_MESSAGE_TYPES = new Set([
+  'receipt', 'ack', 'status', 'notification', 'reaction', 'protocol', 'system',
+  'call', 'pin', 'story',
+]);
+const HIDDEN_TECHNICAL_MARKERS = new Set([
+  '[album]', '[mensagem]', '[mensagem sem texto]', '[mensagem sem conteudo]',
+  '[payload invalido]', '[acao]', '[action]', '[reacao]', '[reaction]',
+  '[atualizacao de midia]', '[media update]', '[voto em enquete]',
+]);
+const VISIBLE_SUMMARY_MARKERS = new Set([
+  '[imagem]', '[video]', '[documento]', '[audio]', '[link]', '[localizacao]',
+  '[sticker]', '[contato]', '[enquete]', '[quiz]', '[pergunta]', '[evento]',
+  '[produto]', '[catalogo]', '[convite]', '[newsletter]', '[convite admin]',
+  '[sistema]', '[chamada]', '[fixada]', '[status]', '[resposta]', '[lista]',
+  '[botoes]', '[mensagem interativa]',
+]);
+
+const normalizeTechnicalMarker = (value: string) => value.trim().toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+const isTechnicalMarker = (value: string): boolean => {
+  const normalized = normalizeTechnicalMarker(value);
+  return HIDDEN_TECHNICAL_MARKERS.has(normalized)
+    || (/^\[[^\]]+\]$/.test(value.trim()) && !VISIBLE_SUMMARY_MARKERS.has(normalized));
+};
+
+/** Match the Inbox's technical-message visibility rules before invoking AI. */
+export const isTechnicalWhatsAppEvent = (message: MessageRow): boolean => {
+  const kind = message.message_type.trim().toLowerCase();
+  if (message.direction === 'system' || NON_CONVERSATIONAL_MESSAGE_TYPES.has(kind)) return true;
+  if (message.direction === 'outbound' && ['failed', 'deleted'].includes(message.delivery_status.trim().toLowerCase())) return true;
+  const text = normalizeTranscriptText(toTrimmedString(message.text_content));
+  const caption = normalizeTranscriptText(toTrimmedString(message.media_caption));
+  const transcription = normalizeTranscriptText(toTrimmedString(message.transcription_text));
+
+  // The Inbox hides a bare action marker, even when the webhook calls it inbound.
+  // A substantive action reply (e.g. selected button title) remains conversational.
+  if (kind === 'action') return !text || isTechnicalMarker(text);
+  if (!text || !isTechnicalMarker(text)) return false;
+  const hasRenderableMedia = Boolean(message.media_id || message.media_url);
+  const hasVisibleCaption = Boolean(caption && !isTechnicalMarker(caption));
+  // Quoted/preview metadata alone does not constitute a new client utterance.
+  return !hasRenderableMedia && !hasVisibleCaption && !transcription;
+};
+
 export const getMessageContent = (message: MessageRow) => {
-  if (message.direction === 'system') return '';
-  if (message.direction === 'outbound' && message.delivery_status.trim().toLowerCase() === 'failed') return '';
+  if (isTechnicalWhatsAppEvent(message)) return '';
   const text = normalizeTranscriptText(toTrimmedString(message.text_content));
   const caption = normalizeTranscriptText(toTrimmedString(message.media_caption));
   const transcription = normalizeTranscriptText(toTrimmedString(message.transcription_text));
   const kind = message.message_type.trim().toLowerCase();
-  if (['receipt', 'ack', 'status', 'notification', 'reaction', 'protocol'].includes(kind)) return '';
-  // Eventos auxiliares da Whapi podem ter direction=inbound. O rotulo
-  // de auditoria nao e uma fala do cliente, mesmo num job de catch-up.
-  if (kind === 'unknown' && text.toLowerCase() === '[mensagem]' && !caption && !transcription) return '';
-  if (kind === 'text') return text;
-  if (kind === 'image') return caption ? `[Imagem] ${caption}` : '[Imagem]';
-  if (kind === 'video' || kind === 'gif' || kind === 'short') return caption ? `[Video] ${caption}` : '[Video]';
-  if (kind === 'document') return caption ? `[Documento] ${caption}` : '[Documento]';
+  if (kind === 'text' || kind === 'action') return text;
+  if (kind === 'image') return caption ? '[Imagem] ' + caption : '[Imagem]';
+  if (kind === 'video' || kind === 'gif' || kind === 'short') return caption ? '[Video] ' + caption : '[Video]';
+  if (kind === 'document') return caption ? '[Documento] ' + caption : '[Documento]';
   if (kind === 'audio' || kind === 'voice') return transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER;
-  if (caption) return caption;
-  if (text) return text;
+  if (caption && !isTechnicalMarker(caption)) return caption;
+  if (text && !isTechnicalMarker(text)) return text;
   if (transcription) return transcription;
-  return kind === 'unknown' ? '' : `[${kind || 'mensagem sem texto'}]`;
+  if (message.media_id || message.media_url) return '[Mídia]';
+  // Rich media can be useful even without extracted text; generic audit
+  // placeholders must not be confused with a customer message.
+  return kind === 'unknown' ? '' : '[' + (kind || 'mensagem sem texto') + ']';
 };
 
 export const buildTranscriptLine = (message: MessageRow, contactLabel: string, timeZone: string) => {

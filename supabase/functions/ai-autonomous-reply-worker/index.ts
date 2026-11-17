@@ -29,7 +29,7 @@ import {
   type CommWhatsAppCanonicalChatRoute,
 } from '../_shared/comm-whatsapp.ts';
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
-import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
+import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale, orderAutonomousConversationalMessages } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
   fetchQuickReplies,
   type HandoffCode,
@@ -640,7 +640,8 @@ Deno.serve(async (req: Request) => {
             .eq('chat_id', chat.id)
             .neq('delivery_status', 'failed')
             .neq('direction', 'system')
-            .order('message_at', { ascending: false })
+            // Process in persistence order: provider timestamps have second-level
+            // precision and can predate a just-sent AI reply (Edna case).
             .order('created_at', { ascending: false })
             .order('id', { ascending: false })
             .limit(CONVERSATION_HISTORY_LIMIT),
@@ -676,7 +677,7 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        const recentHistoryRows = [...fetchedHistoryRows].reverse();
+        const recentHistoryRows = orderAutonomousConversationalMessages(fetchedHistoryRows);
         const history: AutonomousMessageRow[] = recentHistoryRows
           .map((row) => ({
             role: row.direction === 'inbound' ? ('lead' as const) : ('ai' as const),

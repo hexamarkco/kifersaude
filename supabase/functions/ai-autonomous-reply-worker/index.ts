@@ -29,7 +29,7 @@ import {
   type CommWhatsAppCanonicalChatRoute,
 } from '../_shared/comm-whatsapp.ts';
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
-import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale } from '../_shared/ai-autonomous-reply-staleness.ts';
+import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale, orderAutonomousConversationalMessages } from '../_shared/ai-autonomous-reply-staleness.ts';
 import {
   fetchQuickReplies,
   type HandoffCode,
@@ -677,7 +677,7 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        const recentHistoryRows = [...fetchedHistoryRows].reverse();
+        const recentHistoryRows = orderAutonomousConversationalMessages(fetchedHistoryRows);
         const history: AutonomousMessageRow[] = recentHistoryRows
           .map((row) => ({
             role: row.direction === 'inbound' ? ('lead' as const) : ('ai' as const),

@@ -93,11 +93,6 @@ const isTechnicalMarker = (value: string): boolean => {
   return HIDDEN_TECHNICAL_MARKERS.has(normalized)
     || (/^\[[^\]]+\]$/.test(value.trim()) && !VISIBLE_SUMMARY_MARKERS.has(normalized));
 };
-const hasStructuredPreview = (value: unknown): boolean => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const metadata = value as Record<string, unknown>;
-  return ['quote', 'contact_card', 'link_preview'].some((key) => Boolean(metadata[key]));
-};
 
 /** Match the Inbox's technical-message visibility rules before invoking AI. */
 export const isTechnicalWhatsAppEvent = (message: MessageRow): boolean => {
@@ -114,7 +109,8 @@ export const isTechnicalWhatsAppEvent = (message: MessageRow): boolean => {
   if (!text || !isTechnicalMarker(text)) return false;
   const hasRenderableMedia = Boolean(message.media_id || message.media_url);
   const hasVisibleCaption = Boolean(caption && !isTechnicalMarker(caption));
-  return !hasRenderableMedia && !hasVisibleCaption && !transcription && !hasStructuredPreview(message.metadata);
+  // Quoted/preview metadata alone does not constitute a new client utterance.
+  return !hasRenderableMedia && !hasVisibleCaption && !transcription;
 };
 
 export const getMessageContent = (message: MessageRow) => {
@@ -131,6 +127,7 @@ export const getMessageContent = (message: MessageRow) => {
   if (caption && !isTechnicalMarker(caption)) return caption;
   if (text && !isTechnicalMarker(text)) return text;
   if (transcription) return transcription;
+  if (message.media_id || message.media_url) return '[Mídia]';
   // Rich media can be useful even without extracted text; generic audit
   // placeholders must not be confused with a customer message.
   return kind === 'unknown' ? '' : '[' + (kind || 'mensagem sem texto') + ']';

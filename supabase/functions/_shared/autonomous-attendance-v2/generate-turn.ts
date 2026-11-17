@@ -65,7 +65,11 @@ export async function generateAttendanceTurn(params: {
         },
       });
     } catch (error) {
-      await params.record('v2_processing_failed', { engine: 'v2', configVersion: config.version, stage: failedStage, reason: 'interpretation_or_output_rejected' });
+      const details = error instanceof Error ? error.message : '';
+      const reason = /(?:timeout|tempo limite|timed out|abort(?:ed)?)/i.test(details)
+        ? 'provider_timeout' : /(?:json|saída|saida|interpreta|observa|contrato|formato|invalid|rejeitad)/i.test(details)
+        ? 'interpretation_or_output_rejected' : 'v2_generation_failed';
+      await params.record('v2_processing_failed', { engine: 'v2', configVersion: config.version, stage: failedStage, reason });
       throw error;
     }
     await params.record('v2_decision', decisionTrace(v2.state, v2.decision, generationConfigVersion));

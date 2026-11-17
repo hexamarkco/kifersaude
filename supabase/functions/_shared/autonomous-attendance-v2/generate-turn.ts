@@ -48,7 +48,7 @@ export async function generateAttendanceTurn(params: {
         generate: async (request) => {
           failedStage = request.stage;
           const result = await generateTextForFeature({ ...base, systemPrompt: request.systemPrompt, userPrompt: request.userPrompt,
-            attemptTimeoutMs: 20_000,
+            attemptTimeoutMs: 60_000,
             temperature: request.stage === 'interpret' ? 0 : config.temperature,
             maxTokens: request.stage === 'interpret' ? 3200 : 500,
             runtimeModelProfile: params.deployment?.modelProfile,

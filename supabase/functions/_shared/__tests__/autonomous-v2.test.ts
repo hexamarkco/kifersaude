@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { assertDecision, decide, decisionTrace, internalBriefing, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages, type Interpretation, type V2State } from '../autonomous-attendance-v2/domain/state.ts';
-import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, runV2Turn, stateAfterSend, v2Enabled, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
+import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, normalizeContextualAgeAnswer, runV2Turn, stateAfterSend, v2Enabled, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
 import { extractAutonomousQualificationState } from '../ai-autonomous-qualification.ts';
 import { validateAutonomousReplyOutput } from '../ai-autonomous-helpers.ts';
 import { date, interpretation, message, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
@@ -22,6 +22,50 @@ test('a split reply is one qualification turn and the single-question and commer
   for (const text of ['Qual é sua idade?\n\nEm que cidade mora?', 'O plano será aceito.\n\nQual é a sua idade?']) {
     expect(() => validateWrittenReply(JSON.stringify({ text, commercialClaims: [] }), turn.state, turn.decision)).toThrow();
   }
+});
+
+test.each(['5.3', '5,3', '3.4'])('interprets informal age %s in reply to an explicit personal age question', async (answer) => {
+  const first = [message('Só para mim', 1)];
+  const previous = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'self', label: 'titular', age: null }],
+  }, first), first, date);
+  const prompt = { ...message('Entendi! Me fala, quantos anos você tem?', 2), role: 'ai' as const };
+  const reply = message(answer, 3);
+  const uncertain: Interpretation = { ...empty, observations: [
+    { field: 'beneficiaries', value: null, status: 'uncertain', correction: false, messageId: reply.id, quote: answer },
+  ] };
+  const expectedAge = Number(answer.replace(/[.,]/, ''));
+  const normalized = normalizeContextualAgeAnswer(uncertain, [reply], prompt, previous);
+  expect(normalized.observations).toContainEqual({
+    field: 'beneficiaries', value: [{ id: 'self', label: 'titular', age: expectedAge }],
+    status: 'confirmed', correction: false, messageId: reply.id, quote: answer,
+  });
+  const next = mergeInterpretation(previous, normalized, [reply], date);
+  expect(confirmed(next, 'beneficiaries')).toEqual([{ id: 'self', label: 'titular', age: expectedAge }]);
+  expect(next.facts.beneficiaries?.evidence.at(-1)).toMatchObject({ messageId: reply.id, quote: answer });
+
+  const turn = await runV2Turn({ messages: [prompt, reply], previous, now: date, configVersion: 1,
+    generate: async request => request.stage === 'interpret' ? JSON.stringify(uncertain)
+      : JSON.stringify({ text: 'Você mora em qual cidade?', commercialClaims: [] }),
+  });
+  expect(confirmed(turn.state, 'beneficiaries')).toEqual([{ id: 'self', label: 'titular', age: expectedAge }]);
+  expect(turn.decision.field).not.toBe('beneficiaries');
+});
+
+test('does not treat an arbitrary decimal or different context as a confirmed age', () => {
+  const previous = mergeInterpretation(initialState(), interpretation({ beneficiaryCount: 1 }, [message('Só eu', 1)]),
+    [message('Só eu', 1)], date);
+  const ageQuestion = { ...message('Quantos anos você tem?', 2), role: 'ai' as const };
+  const priceQuestion = { ...message('Quanto você paga no plano?', 2), role: 'ai' as const };
+  for (const [text, question] of [
+    ['5.3', priceQuestion], ['5.3 mil', ageQuestion], ['5.30', ageQuestion], ['1.5', ageQuestion],
+  ] as const) {
+    const reply = message(text, 3);
+    expect(normalizeContextualAgeAnswer(empty, [reply], question, previous)).toBe(empty);
+  }
+  const multiple = mergeInterpretation(initialState(), interpretation({ beneficiaryCount: 2 }, [message('Duas vidas', 1)]),
+    [message('Duas vidas', 1)], date);
+  expect(normalizeContextualAgeAnswer(empty, [message('5.3', 3)], ageQuestion, multiple)).toBe(empty);
 });
 
 test('the next two reply opportunities stay in a single bubble after a split; extra parts collapse without losing text', async () => {

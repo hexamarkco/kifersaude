@@ -3,8 +3,6 @@ import { writeFileSync } from 'node:fs';
 import { assertDecision, decide, decisionTrace, internalBriefing, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages, type Interpretation, type V2State } from '../autonomous-attendance-v2/domain/state.ts';
 import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, normalizeContextualAgeAnswer, runV2Turn, stateAfterSend, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
-import { extractAutonomousQualificationState } from '../ai-autonomous-qualification.ts';
-import { validateAutonomousReplyOutput } from '../ai-autonomous-helpers.ts';
 import { date, interpretation, message, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
 
 const empty: Interpretation = { observations: [], humanRequested: false, quoteDeclined: false, irritated: false, question: null, suggestedField: null, signals: [] };
@@ -478,10 +476,7 @@ describe('V2 — regressão comercial com intérprete e redator simulados', () =
       return JSON.stringify({ text: scenario.reply, action: decision.action, questionField: decision.field, commercialClaims: [] });
     });
     const turn = await runV2Turn({ messages: scenario.messages, previous: initialState(), now: date, configVersion: 25, generate });
-    const legacy = extractAutonomousQualificationState(scenario.messages, date);
     simulationRows.push({ id: scenario.id, name: scenario.name,
-      baseline: { ages: legacy.lives.items.map((life) => life.age), pending: legacy.missingRequiredFields, projectionStatus: legacy.status,
-        incompleteTagAcceptedByOldValidator: validateAutonomousReplyOutput('Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]', scenario.messages).valid },
       v2: { ...decisionTrace(turn.state, turn.decision, 25), ages: confirmed(turn.state, 'beneficiaries')?.map((life) => life.age), text: turn.text,
         invalidCompleteHandoff: turn.decision.handoffCode === 'QUALIFICACAO_COMPLETA' && requirements(turn.state).length > 0 } });
     expect(turn.decision.action).toBe(scenario.action);
@@ -499,15 +494,6 @@ describe('V2 — regressão comercial com intérprete e redator simulados', () =
       expect(turn.decision).toMatchObject({ action: 'ask', field: 'companyNumber', reason: 'optional_information', handoffCode: null });
     }
   });
-});
-
-test('characterizes the original extractor losing an equal age and the original validator accepting an incomplete tag', () => {
-  const history = [{ role: 'lead' as const, content: 'É para mim e minha esposa, duas vidas de 80 anos. Rio de Janeiro. Tenho Leve Saúde e quero mudar de pessoa física para MEI.' }];
-  const baseline = extractAutonomousQualificationState(history, date);
-  expect(baseline.lives.items.map((life) => life.age)).toEqual([80, null]);
-  expect(baseline.company.hasCnpjOrMei).toBe('no');
-  expect(baseline.missingRequiredFields).toContain('ages');
-  expect(validateAutonomousReplyOutput('Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]', history).valid).toBe(true);
 });
 
 test('model suggestions cannot complete, reopen known fields or ask optional generic questions', () => {

@@ -236,7 +236,14 @@ export function mergeInterpretation(previous: V2State, interpretation: Interpret
     if (field === 'beneficiaries' && status === 'confirmed' && Array.isArray(old?.value)
       && old.evidence.some((item) => item.source === 'conversation')) {
       const prior = old.value as Beneficiary[];
-      const incoming = value as Beneficiary[];
+      const incoming = (value as Beneficiary[]).map((life) => {
+        if (prior.some((known) => known.id === life.id) || life.age === null) return life;
+        // A role supplied later ("eu tenho 54") can identify an already counted,
+        // unnamed person. Never collapse different people sharing one age.
+        const matches = prior.filter((known) => known.age === life.age &&
+          /^(?:pessoa\s*\d+|familiar|membro\s*\d+)$/i.test(known.label.trim()));
+        return matches.length === 1 ? { ...life, id: matches[0].id } : life;
+      });
       const removed = correction ? observation.removedBeneficiaryIds ?? [] : [];
       if (removed.some((id) => !prior.some((life) => life.id === id) || incoming.some((life) => life.id === id))) throw new Error('Remoção de beneficiário inválida.');
       const conflict = !correction && incoming.some((life) => prior.some((known) => known.id === life.id && known.age !== null && life.age !== null && known.age !== life.age));

@@ -51,7 +51,7 @@ test('a clear request for an individual plan is not reinterpreted as unknown fam
 test('protects explicit age lists when the interpreter silently drops a number or miscounts', () => {
   for (const text of ['32/54/59', '44 59 70 idades', '54,52,29,27', '80/80']) {
     const fresh = [message(text, 2)];
-    const expected = text.replace(/ idades$/, '').split(/[\/, ]+/).map(Number);
+    const expected = text.replace(/ idades$/, '').split(/[\x2f, ]+/).map(Number);
     const extraction = interpretation({
       beneficiaryCount: expected.length - 1,
       beneficiaries: expected.slice(0, -1).map((age, i) =>

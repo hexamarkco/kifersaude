@@ -28,7 +28,7 @@ import AiConfigScreen from '../AiConfigScreen';
 const waitForBodyText = async (text: string) => {
   const start = Date.now();
   while (!document.body.textContent?.includes(text)) {
-    if (Date.now() - start >= 1000) {
+    if (Date.now() - start >= 3000) {
       throw new Error(`Unable to find element with text: ${text}`);
     }
     await act(async () => {

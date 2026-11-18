@@ -182,6 +182,28 @@ export function normalizeContextualAgeAnswer(
  * positional identities and literal evidence. The state reconciler handles
  * previously persisted aggregate placeholders separately.
  */
+/** One-person intent is explicit even when the interpreter fails to extract it. */
+export function preserveSoloBeneficiary(interpretation: Interpretation, fresh: readonly V2Message[], previous: V2State): Interpretation {
+  const item = fresh.findLast((message) => message.role === 'lead'
+    && /(?:s[oó]\s*(?:para|pra)\s+mim|somente\s*(?:para|pra)\s+mim|apenas\s*(?:eu|para mim))\s*[.!?]*$/i.test(message.content.trim()));
+  if (!item) return interpretation;
+  const knownCount = confirmed(previous, 'beneficiaryCount');
+  if (knownCount !== null && knownCount !== 1) return interpretation;
+  const hasCount = interpretation.observations.some((observation) =>
+    observation.field === 'beneficiaryCount' && observation.status === 'confirmed' && observation.value === 1);
+  if (hasCount) return interpretation;
+  const observations = interpretation.observations.filter((observation) =>
+    observation.messageId !== item.id || observation.field !== 'beneficiaryCount');
+  observations.push({ field: 'beneficiaryCount', value: 1, status: 'confirmed', correction: false,
+    messageId: item.id, quote: item.content });
+  if (!confirmed(previous, 'beneficiaries') && !observations.some((observation) =>
+    observation.field === 'beneficiaries' && observation.status === 'confirmed')) {
+    observations.push({ field: 'beneficiaries', value: [{ id: 'self', label: 'titular', age: null }],
+      status: 'confirmed', correction: false, messageId: item.id, quote: item.content });
+  }
+  return { ...interpretation, observations };
+}
+
 export function preserveExplicitAgeList(interpretation: Interpretation, fresh: readonly V2Message[], previous: V2State): Interpretation {
   if (fresh.length !== 1 || fresh[0].role !== 'lead') return interpretation;
   const message = fresh[0];
@@ -267,7 +289,8 @@ export async function runV2Turn(params: {
   const raw = await params.generate({ stage: 'interpret', systemPrompt: INTERPRETER_PROMPT, userPrompt: JSON.stringify(request),
     validate: (candidate) => { parseInterpretation(candidate, fresh); } });
   const interpretation = prioritizeProductQuestion(preserveExplicitAgeList(
-    normalizeContextualAgeAnswer(parseInterpretation(raw, fresh), fresh, lastAi, previous), fresh, previous), fresh);
+    preserveSoloBeneficiary(normalizeContextualAgeAnswer(parseInterpretation(raw, fresh), fresh, lastAi, previous), fresh, previous),
+    fresh, previous), fresh);
   const state = mergeInterpretation(previous, interpretation, fresh, params.now);
   const decision = decide(state, interpretation, { customerAlreadyAssisted: isAlreadyAssistedResponse(fresh) });
   assertDecision(state, decision);

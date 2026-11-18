@@ -56,7 +56,7 @@ Desejar contratar por MEI não confirma possuir MEI. Unknown não é no. Não in
 Correção explícita, inclusive mudança de objetivo, exige correction true. Sem certeza use uncertain. Resposta curta deve ser ligada à última pergunta enviada.
 question é null ou {text,topic}, topic general/waiting_period/eligibility/price/network. Dúvidas de produto serão respondidas pela corretora depois da coleta; não significam pedido de humano nem interrompem a qualificação.
 Pedir cotação ou dizer que o plano ficou caro é um objetivo comercial, não uma pergunta técnica nem um pedido de atendimento humano. humanRequested só é true quando o cliente pede explicitamente uma pessoa.
-humanRequested, quoteDeclined e irritated são booleanos. quoteDeclined só indica recusa explícita da cotação, nunca negação de um campo ou desejo de manter a operadora. signals é lista de {messageId,quote} literal comprovando pergunta, recusa, pedido humano ou irritação.
+humanRequested, quoteDeclined e irritated são booleanos. Frases como ja resolvi, ja consegui ou nao preciso mais podem encerrar a busca do cliente; não reabra a qualificação e não invente motivo, contratação ou recusa. quoteDeclined só indica recusa explícita da cotação, nunca negação de um campo ou desejo de manter a operadora. signals é lista de {messageId,quote} literal comprovando pergunta, recusa, pedido humano ou irritação.
 suggestedField é null ou o campo pendente de maior valor comercial. Não sugira perguntas já respondidas. Não invente regras universais de MEI.`;
 
 export function validateWrittenReply(raw: string, state: V2State, decision: Decision, advisorName?: string): string {
@@ -255,6 +255,25 @@ export function isAlreadyAssistedResponse(messages: readonly V2Message[]): boole
   });
 }
 
+/**
+ * A finished search is not a new qualification opportunity or an unambiguous
+ * refusal to contract. End the bot's turn without changing the lead to Perdido.
+ * Match explicit whole-purpose closure, not a document or step being resolved.
+ * Read all freshly grouped messages so a follow-up request wins over closure.
+ */
+export function isResolvedNeedResponse(messages: readonly V2Message[]): boolean {
+  const text = messages.filter((message) => message.role === 'lead').map((message) => message.content)
+    .join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!text) return false;
+  const closure = /\b(?:ja\s+(?:resolvi|consegui)\b(?=\s*(?:$|[.,!?;:]|obrigad[oa]\b|valeu\b))|ja\s+(?:resolvi|consegui)\s+(?:isso|tudo|o\s+que\s+precisava|o\s+(?:meu\s+)?plano|uma?\s+(?:outro\s+)?plano|a\s+cotacao|uma\s+proposta|a\s+(?:questao|situacao)|contratar\s+um\s+plano)\b|(?:consegui|fechei|encontrei)\s+(?:um|outro)\s+plano\b|(?:ja\s+)?(?:esta|ta|ficou|foi)\s+(?:tudo\s+)?resolvid[oa]\b|nao\s+preciso\s+mais\b(?=\s*(?:$|[.,!?;:]|obrigad[oa]\b))|nao\s+preciso\s+mais\s+(?:de\s+(?:cotacao|orcamento|plano|atendimento|ajuda)|da\s+cotacao|do\s+plano)\b|resolvi\s+com\s+(?:outro|outra)\s+corretor(?:a)?\b)/.exec(text);
+  if (!closure) return false;
+  const rest = text.slice(closure.index + closure[0].length);
+  // A new request can come in the same message or in the next WhatsApp bubble.
+  if (/\?/.test(rest) || /\b(?:mas|porem|so\s+que|agora|ainda|e)\b.{0,90}\b(?:quero|preciso|gostaria|queria|cotacao|orcamento|plano|duvida|pergunta|ajuda|continuar|interessad[oa])\b/.test(rest)
+    || /\b(?:quero|preciso|gostaria|queria|me\s+envi[ae]|me\s+manda)\b.{0,70}\b(?:cotacao|orcamento|plano|ajuda|valor|preco|saber)\b/.test(rest)) return false;
+  return true;
+}
+
 export function prioritizeProductQuestion(interpretation: Interpretation, fresh: readonly V2Message[]): Interpretation {
   const item = fresh.findLast((message) => message.role === 'lead' && message.content.trim());
   if (!item) return interpretation;
@@ -287,7 +306,8 @@ export async function runV2Turn(params: {
     preserveSoloBeneficiary(normalizeContextualAgeAnswer(parseInterpretation(raw, fresh), fresh, lastAi, previous), fresh, previous),
     fresh, previous), fresh);
   const state = mergeInterpretation(previous, interpretation, fresh, params.now);
-  const decision = decide(state, interpretation, { customerAlreadyAssisted: isAlreadyAssistedResponse(fresh) });
+  const decision = decide(state, interpretation, { customerAlreadyAssisted: isAlreadyAssistedResponse(fresh),
+    customerNeedResolved: isResolvedNeedResponse(fresh) });
   assertDecision(state, decision);
   const briefing = internalBriefing(state, decision);
   const styleReferences = selectStyleExamples(params.styleLibrary, decision, confirmed(state, 'beneficiaryCount'),
@@ -315,7 +335,7 @@ Se o motivo for essential_information_needed ou previous_question_unresolved, ex
 Não use travessão, meia-risca, dois-pontos, tags ou detalhes internos. Não narre o questionário.
 Nunca garanta preço, aceitação, rede, migração ou carência. Não faça análise de elegibilidade nem pesquisa ou recomendação de planos.
 Se o cliente perguntar sobre produto, diga brevemente em primeira pessoa que precisa conferir essa condição antes de orientar e faça apenas a pergunta de coleta autorizada, se houver. Ter MEI, pedir melhor rede ou um hospital são dados da qualificação, não um problema nem motivo de encerramento antecipado.
-Se transferir, explique brevemente que será necessário conferir o caso com mais atenção, sem prometer resultado e sem dizer qualificação completa. Se o motivo for customer_already_assisted, agradeça por avisar, encerre com educação e não faça perguntas nem insista em cotação. Se o cliente pediu uma pessoa, confirme que alguém dará continuidade.
+Se transferir, explique brevemente que será necessário conferir o caso com mais atenção, sem prometer resultado e sem dizer qualificação completa. Se o motivo for customer_already_assisted, agradeça por avisar, encerre com educação e não faça perguntas nem insista em cotação. Se o motivo for customer_need_resolved, reconheça que a pessoa já resolveu sua busca, agradeça por avisar e encerre com delicadeza. Não faça perguntas, não insista nem diga que a cotação foi recusada ou o lead foi perdido. Se o cliente pediu uma pessoa, confirme que alguém dará continuidade.
 Se o motivo for essential_information_unavailable ou question_attempts_exhausted, explique que precisa desse dado para seguir e que vai conferir como ajudar a obtê-lo; não sugira que fará a cotação sem ele.
 Se o motivo for customer_declined_quotation, respeite a decisão, encerre cordialmente e deixe a porta aberta sem insistir. Se for child_requires_adult_holder, explique de forma simples que criança com menos de 12 anos precisa entrar como dependente de um adulto titular e que o caso seguirá para avaliação, sem afirmar que somente menores podem contratar. Se for age_twelve_needs_review, multiple_minor_contract_needs_review ou minor_individual_region_not_verified, informe apenas que precisa conferir as regras daquela contratação, sem negar a possibilidade de plano individual para adolescentes nem aplicar automaticamente regras do RJ a outras regiões. Para uma única pessoa de 13 a 17 anos residente no RJ, prossiga com a coleta sem declarar aceitação garantida por operadora.
 Se complete, encerre a coleta em primeira pessoa com Já tenho as informações para seguir com a sua cotação. Se o cliente não tiver o CNPJ agora, pode dizer Tudo bem, não precisa ter o CNPJ agora. Já tenho as informações para seguir com a sua cotação. Para outros dados opcionais, acolha conforme o que ele disse, sem inventar uma recusa nem insistir. Não anuncie troca de corretora ou equipe. Não prometa pesquisar, comparar, montar ou enviar cotação; não afirme aprovação de produto, proposta emitida ou venda.

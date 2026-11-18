@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { decide, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, readState, type Interpretation } from '../autonomous-attendance-v2/domain/state.ts';
-import { isAlreadyAssistedResponse, preserveExplicitAgeList, preserveSoloBeneficiary, prioritizeProductQuestion, runV2Turn } from '../autonomous-attendance-v2/domain/turn.ts';
+import { isAlreadyAssistedResponse, isResolvedNeedResponse, preserveExplicitAgeList, preserveSoloBeneficiary, prioritizeProductQuestion, runV2Turn, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
 import { date, interpretation, message } from './fixtures/autonomous-v2-scenarios.ts';
 
 const noInterpretation: Interpretation = {
@@ -108,6 +108,64 @@ test('courteous already-assisted reply stops bot questions without marking the q
     action: 'handoff', reason: 'customer_already_assisted', handoffCode: 'PRECISA_HUMANO',
   });
   expect(turn.text).not.toContain('?');
+});
+
+test.each([
+  'Bom dia. Ja resolvi',
+  'Já resolvi, obrigada!',
+  'Já resolvi tudo',
+  'Já consegui, valeu',
+  'Já consegui um plano',
+  'Já consegui o que precisava',
+  'Não preciso mais',
+  'Não preciso mais de cotação',
+  'Já está tudo resolvido',
+  'Resolvi com outra corretora',
+])('resolved need stops qualification: %s', (text) => {
+  expect(isResolvedNeedResponse([message(text, 1)])).toBe(true);
+  expect(decide(initialState(), noInterpretation, { customerNeedResolved: true })).toMatchObject({
+    action: 'handoff', reason: 'customer_need_resolved', handoffCode: 'PRECISA_HUMANO',
+  });
+});
+
+test.each([
+  'Já resolvi o boleto, mas quero cotar.',
+  'Já consegui meu CNPJ e quero contratar.',
+  'Não preciso mais do boleto, quero uma cotação.',
+  'Já resolvi, mas preciso de uma cotação para minha mãe.',
+  'Já consegui o que precisava, agora quero um plano para minha filha.',
+  'Não preciso mais de cotação, mas tenho uma dúvida sobre a rede.',
+  'Ainda não consegui resolver.',
+  'Já resolvi. Pode me passar o valor de outro plano?',
+])('a partial resolution or new question does not end the bot: %s', (text) => {
+  expect(isResolvedNeedResponse([message(text, 1)])).toBe(false);
+});
+
+test('multiple inbound bubbles are read together before deciding whether the need ended', () => {
+  expect(isResolvedNeedResponse([message('Bom dia. Ja resolvi', 1), message('Obrigada!', 2)])).toBe(true);
+  expect(isResolvedNeedResponse([message('Já resolvi', 1), message('Mas quero cotar pra minha mãe', 2)])).toBe(false);
+  expect(isResolvedNeedResponse([message('Já resolvi', 1), message('Me passa o valor de outro plano?', 2)])).toBe(false);
+});
+
+test('Rose Mary: V2 acknowledges that the need was resolved without questions or changing the sales status', async () => {
+  const fresh = [message('Bom dia. Ja resolvi', 1)];
+  const extracted = interpretation({ goal: 'A busca por plano já foi resolvida.' }, fresh);
+  const turn = await runV2Turn({
+    messages: fresh, previous: initialState(), now: date, configVersion: 24,
+    generate: async (request) => request.stage === 'interpret' ? JSON.stringify(extracted)
+      : JSON.stringify({ text: 'Que bom que você conseguiu resolver! Obrigada por avisar. Fico à disposição.', commercialClaims: [] }),
+  });
+  expect(turn.decision).toMatchObject({
+    action: 'handoff', field: null, reason: 'customer_need_resolved', handoffCode: 'PRECISA_HUMANO',
+  });
+  expect(turn.text).not.toContain('?');
+  expect(turn.briefing.handoffCode).toBe('PRECISA_HUMANO');
+  expect(() => validateWrittenReply(JSON.stringify({
+    text: 'O plano seria só pra você ou para alguém da família?', commercialClaims: [],
+  }), turn.state, turn.decision)).toThrow('Pergunta incompatível');
+  expect(decide(turn.state, { ...noInterpretation, quoteDeclined: true,
+    signals: [{ messageId: fresh[0].id, quote: fresh[0].content }] },
+  { customerNeedResolved: true }).handoffCode).toBe('PRECISA_HUMANO');
 });
 
 test('a quotation containing only children goes to a broker for eligibility review', () => {

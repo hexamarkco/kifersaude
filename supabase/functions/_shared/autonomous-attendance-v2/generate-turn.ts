@@ -2,7 +2,6 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { loadFeatureConfig } from '../ai-config-resolver.ts';
 import { AI_FEATURES } from '../ai-feature-registry.ts';
 import { generateTextForFeature, type RuntimeModelProfile } from '../ai-router.ts';
-import type { HandoffCode } from '../ai-autonomous-helpers.ts';
 import { decisionTrace } from './domain/decision.ts';
 import { isRecord, type V2Message } from './domain/state.ts';
 import { restoreV2State, resumePreparedTurn, runV2Turn, stateAfterSend, type V2Turn } from './domain/turn.ts';
@@ -24,9 +23,7 @@ export async function generateAttendanceTurn(params: {
   let retryCount = 0;
   let estimatedCostUsd: number | null = 0;
   let v2: V2Turn;
-  let memory: Record<string, unknown>;
   let messages: string[];
-  let handoffCode: HandoffCode | null;
   let generationConfigVersion = config.version;
   let failedStage: 'interpret' | 'write' = 'interpret';
   let reusedPreparedTurn = false;
@@ -82,11 +79,11 @@ export async function generateAttendanceTurn(params: {
     }
     messages = [...storedMessages];
   } else messages = params.deployment?.splitReplies ? v2.text.split(/\n\s*\n/).map((text) => text.trim()).filter(Boolean) : [v2.text];
-  memory = { ...(isRecord(params.previousMemory) ? params.previousMemory : {}), schemaVersion: 2,
+  const memory: Record<string, unknown> = { ...(isRecord(params.previousMemory) ? params.previousMemory : {}), schemaVersion: 2,
     source_message_id: params.sourceId, source_message_at: params.messages.find((message) => message.id === params.sourceId)?.messageAt,
     attendanceV2: v2.state, briefing: v2.briefing, v2Decision: v2.decision, v2Reply: v2.text, v2ConfigVersion: generationConfigVersion,
     v2Messages: messages, ...(v2Context ? { v2Context } : {}) };
-  handoffCode = v2.decision.handoffCode;
+  const handoffCode = v2.decision.handoffCode;
   return { memory, messages, handoffCode, durationMs, retryCount, estimatedCostUsd,
     memoryAfterSend: { ...memory, attendanceV2: stateAfterSend(v2) } };
 }

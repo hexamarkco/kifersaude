@@ -49,9 +49,19 @@ export function decide(state: V2State, interpretation: Interpretation, options: 
   if (interpretation.irritated) return make('handoff', 'conversation_friction');
   const lives = confirmed(state, 'beneficiaries');
   const declaredCount = confirmed(state, 'beneficiaryCount');
-  // Only minors on a quotation require a broker's review of contracting rules.
+  // For under-12s, an adult must be the policyholder and the child a dependent.
+  // Individual plans for ages 13-17 are confirmed only in RJ. Do not extrapolate
+  // to other states, to age 12, or to a group of minors on a single contract.
   if (lives?.length && lives.length === declaredCount && lives.every((life) => life.age !== null && life.age < 18)) {
-    return make('handoff', 'only_minor_beneficiaries');
+    if (lives.some((life) => life.age! < 12)) return make('handoff', 'child_requires_adult_holder');
+    if (lives.some((life) => life.age === 12)) return make('handoff', 'age_twelve_needs_review');
+    if (declaredCount !== 1) return make('handoff', 'multiple_minor_contract_needs_review');
+    const residenceState = confirmed(state, 'state');
+    if (residenceState !== 'RJ' && (residenceState !== null || confirmed(state, 'city') !== null)) {
+      return make('handoff', 'minor_individual_region_not_verified');
+    }
+    // When residence is still unknown, collect city before checking eligibility.
+    // A single 13-17-year-old in confirmed RJ follows ordinary qualification.
   }
   const productQuestion = interpretation.question !== null && interpretation.question.topic !== 'general';
   if (state.facts.state?.status === 'conflict') return (state.asked.city ?? 0) >= 2

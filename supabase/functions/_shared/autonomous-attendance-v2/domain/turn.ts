@@ -206,8 +206,8 @@ export function preserveExplicitAgeList(interpretation: Interpretation, fresh: r
   if (fresh.length !== 1 || fresh[0].role !== 'lead') return interpretation;
   const message = fresh[0];
   const text = message.content.trim();
-  if (!/^(?:\d{1,3}[\s,;\/]+){1,7}\d{1,3}(?:\s+idades?)?$/i.test(text)) return interpretation;
-  const ages = text.replace(/\s+idades?$/i, '').split(/[\s,;\/]+/).map(Number);
+  if (!/^(?:\d{1,3}[\s,;\x2f]+){1,7}\d{1,3}(?:\s+idades?)?$/i.test(text)) return interpretation;
+  const ages = text.replace(/\s+idades?$/i, '').split(/[\s,;\x2f]+/).map(Number);
   if (ages.length < 2 || ages.some((age) => !Number.isInteger(age) || age > 120)) return interpretation;
   const count = confirmed(previous, 'beneficiaryCount');
   if (count !== null && count !== ages.length) return interpretation;

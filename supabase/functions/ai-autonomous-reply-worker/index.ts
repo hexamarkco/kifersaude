@@ -3,7 +3,7 @@ import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_share
 import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
 import { generateAttendanceTurn } from '../_shared/autonomous-attendance-v2/generate-turn.ts';
 import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_STYLE_LIBRARY } from '../_shared/autonomous-attendance-v2/deployment.ts';
-import { groupV2ReplyMessages } from '../_shared/autonomous-attendance-v2/domain/rollout.ts';
+import { groupV2ReplyMessages } from '../_shared/autonomous-attendance-v2/domain/reply-messages.ts';
 import { confirmed, initialState, isRecord } from '../_shared/autonomous-attendance-v2/domain/state.ts';
 import { legacyEvidenceMessageIds, restoreV2State, runV2Turn } from '../_shared/autonomous-attendance-v2/domain/turn.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';

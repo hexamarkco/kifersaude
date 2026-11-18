@@ -3,7 +3,7 @@ import { buildSandboxApproachMessages } from './auto-contact-approach.ts';
 import { generateAttendanceTurn } from './autonomous-attendance-v2/generate-turn.ts';
 import { V2_ADVISOR_NAME, V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_STYLE_LIBRARY } from './autonomous-attendance-v2/deployment.ts';
 import { isRecord, type V2Message } from './autonomous-attendance-v2/domain/state.ts';
-import { groupV2ReplyMessages } from './autonomous-attendance-v2/domain/rollout.ts';
+import { groupV2ReplyMessages } from './autonomous-attendance-v2/domain/reply-messages.ts';
 import type { HandoffCode } from './autonomous-attendance-v2/domain/types.ts';
 
 type SandboxMessage = { id: string; role: 'ai' | 'lead'; content: string; created_at: string; handoff_code: string | null };

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { assertDecision, decide, decisionTrace, internalBriefing, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages, type Interpretation, type V2State } from '../autonomous-attendance-v2/domain/state.ts';
-import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, normalizeContextualAgeAnswer, runV2Turn, stateAfterSend, v2Enabled, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
+import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, normalizeContextualAgeAnswer, runV2Turn, stateAfterSend, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
 import { extractAutonomousQualificationState } from '../ai-autonomous-qualification.ts';
 import { validateAutonomousReplyOutput } from '../ai-autonomous-helpers.ts';
 import { date, interpretation, message, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
@@ -693,9 +693,6 @@ test('prepared retries reuse the approved turn; telemetry has no PII or quote', 
   expect(resumePreparedTurn(memory, 'source')?.decision).toEqual(decision);
   expect(resumePreparedTurn(memory, 'other')).toBeNull();
   expect(JSON.stringify(decisionTrace(state, decision, 25))).not.toMatch(/Rio de Janeiro|35|synthetic|quote/);
-  expect(v2Enabled('chat', undefined)).toBe(false);
-  expect(v2Enabled('chat', '*')).toBe(false);
-  expect(v2Enabled('chat', 'other, chat')).toBe(true);
 });
 test('only an explicit quotation refusal can mark a loss; ambiguous refusal preserves the commercial status', () => {
   expect(decide(full(), { ...empty, quoteDeclined: true, signals: [{ messageId: 'x', quote: 'Não quero cotação' }] }))

@@ -28,12 +28,15 @@ function optionalQuestions(state: V2State): Field[] {
   return fields.filter((field) => !state.facts[field] && (state.asked[field] ?? 0) === 0);
 }
 
-export function decide(state: V2State, interpretation: Interpretation): Decision {
+export function decide(state: V2State, interpretation: Interpretation, options: { customerAlreadyAssisted?: boolean } = {}): Decision {
   const missing = requirements(state);
   const make = (action: Decision['action'], reason: string, field: Field | null = null): Decision => ({
     action, field: action === 'ask' || action === 'clarify' ? field : null, reason, missing,
     handoffCode: action === 'complete' ? 'QUALIFICACAO_COMPLETA' : action === 'handoff' ? 'PRECISA_HUMANO' : null,
   });
+  // A courteous "I'm already talking to someone" ends the bot's questioning,
+  // but must not mark the lead as Perdido or invent a quotation refusal.
+  if (options.customerAlreadyAssisted) return make('handoff', 'customer_already_assisted');
   if (interpretation.humanRequested) return make('handoff', 'customer_requested_human');
   if (interpretation.quoteDeclined) {
     // Only unambiguous refusal evidence may mark a commercial loss. Ambiguity goes to a person.
@@ -44,6 +47,12 @@ export function decide(state: V2State, interpretation: Interpretation): Decision
     if (explicit || !optionalFieldRefusal) return { ...make('handoff', explicit ? 'customer_declined_quotation' : 'refusal_needs_review'), handoffCode: explicit ? 'RECUSOU_COTACAO' : 'PRECISA_HUMANO' };
   }
   if (interpretation.irritated) return make('handoff', 'conversation_friction');
+  const lives = confirmed(state, 'beneficiaries');
+  const declaredCount = confirmed(state, 'beneficiaryCount');
+  // Only minors on a quotation require a broker's review of contracting rules.
+  if (lives?.length && lives.length === declaredCount && lives.every((life) => life.age !== null && life.age < 18)) {
+    return make('handoff', 'only_minor_beneficiaries');
+  }
   const productQuestion = interpretation.question !== null && interpretation.question.topic !== 'general';
   if (state.facts.state?.status === 'conflict') return (state.asked.city ?? 0) >= 2
     ? make('handoff', 'unresolved_conflict') : make('clarify', 'conflicting_evidence', 'city');

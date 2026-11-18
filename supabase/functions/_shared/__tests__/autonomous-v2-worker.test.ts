@@ -122,6 +122,16 @@ test('invalid interpretation/output creates a failure event with no invented vis
   expect(generateTextForFeature).toHaveBeenCalledTimes(1);
 });
 
+test('provider timeout has a distinct sanitized operational failure reason', async () => {
+  vi.mocked(generateTextForFeature).mockRejectedValueOnce(new Error('Tempo limite do provider excedido após 20000ms.'));
+  const input = params();
+  await expect(generateAttendanceTurn(input)).rejects.toThrow('Tempo limite');
+  expect(input.record).toHaveBeenCalledWith('v2_processing_failed', expect.objectContaining({
+    stage: 'interpret', reason: 'provider_timeout',
+  }));
+  expect(JSON.stringify(input.record.mock.calls)).not.toContain(scenarios[1].messages[0].content);
+});
+
 test('legacy path rejects tag-only and incomplete completion before any delivery', async () => {
   vi.mocked(generateTextForFeature).mockImplementation(async (options) => {
     for (const raw of ['[[HANDOFF: QUALIFICACAO_COMPLETA]]', 'Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]']) {

@@ -1,0 +1,31 @@
+name: Autonomous V2 regression verification (temporary)
+on:
+  push:
+    branches:
+      - fix/autonomous-qualification-2026-11-17
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Autonomous V2 tests
+        run: npm test -- supabase/functions/_shared/__tests__/autonomous-v2-2026-11-17-regressions.test.ts supabase/functions/_shared/__tests__/autonomous-v2.test.ts supabase/functions/_shared/__tests__/autonomous-v2-worker.test.ts supabase/functions/_shared/__tests__/autonomous-v2-style.test.ts
+      - name: TypeScript verification
+        id: typecheck
+        continue-on-error: true
+        run: npm run typecheck
+      - name: Lint verification
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+      - name: Fail on unsuccessful checks
+        if: ${{ steps.typecheck.outcome == 'failure' || steps.lint.outcome == 'failure' }}
+        run: exit 1

@@ -98,6 +98,29 @@ function repairEmptyConflicts(state: V2State): V2State {
   }
   return state;
 }
+/**
+ * A plural/aggregate placeholder is not another person. Keep all evidence, but
+ * discard the placeholder only when exactly the declared number of *identified,
+ * aged* people already exists. Never remove an unnamed person just to make the
+ * counter fit, and never deduplicate equal ages (twins are separate lives).
+ */
+function repairAggregateBeneficiaries(state: V2State): V2State {
+  const expected = confirmed(state, 'beneficiaryCount');
+  const lives = confirmed(state, 'beneficiaries');
+  if (!expected || !lives || lives.length <= expected) return state;
+  const isAggregate = (life: Beneficiary): boolean => {
+    if (life.age !== null) return false;
+    const label = `${life.id} ${life.label}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return /(?:^|[^a-z])(?:familia|family|filhos|filhas|dependentes|beneficiarios|pessoas|membros|grupo|unspecified)(?:$|[^a-z])/.test(label);
+  };
+  const identified = lives.filter((life) => !isAggregate(life));
+  if (identified.length !== expected || identified.some((life) => life.age === null)) return state;
+  if (lives.length - identified.length !== lives.filter(isAggregate).length) return state;
+  const fact = state.facts.beneficiaries!;
+  state.facts.beneficiaries = { ...fact, value: identified };
+  return state;
+}
+
 function restoreRelatedAnswers(state: V2State): V2State {
   for (const [source, target] of IMPLIED_ANSWERS) {
     const fact = state.facts[source];
@@ -126,7 +149,7 @@ export function readState(value: unknown): V2State | null {
   if (value.cursor !== null && (!isRecord(value.cursor) || !text(value.cursor.id)
     || typeof value.cursor.receivedAt !== 'string' || !Number.isFinite(Date.parse(value.cursor.receivedAt)))) throw new Error('Cursor V2 inválido.');
   if (!Object.entries(value.asked).every(([field, count]) => FIELDS.includes(field as Field) && Number.isInteger(count) && Number(count) >= 0)) throw new Error('Perguntas V2 inválidas.');
-  return resolveResidence(restoreRelatedAnswers(repairEmptyConflicts({ ...structuredClone(value), policyVersion: '2026-11-15.2' } as V2State)));
+  return resolveResidence(repairAggregateBeneficiaries(restoreRelatedAnswers(repairEmptyConflicts({ ...structuredClone(value), policyVersion: '2026-11-15.2' } as V2State))));
 }
 
 /** A uniquely identified capital supplies its UF with the city's evidence, never a guessed DDD. */
@@ -213,7 +236,14 @@ export function mergeInterpretation(previous: V2State, interpretation: Interpret
     if (field === 'beneficiaries' && status === 'confirmed' && Array.isArray(old?.value)
       && old.evidence.some((item) => item.source === 'conversation')) {
       const prior = old.value as Beneficiary[];
-      const incoming = value as Beneficiary[];
+      const incoming = (value as Beneficiary[]).map((life) => {
+        if (prior.some((known) => known.id === life.id) || life.age === null) return life;
+        // A role supplied later ("eu tenho 54") can identify an already counted,
+        // unnamed person. Never collapse different people sharing one age.
+        const matches = prior.filter((known) => known.age === life.age &&
+          /^(?:pessoa\s*\d+|familiar|membro\s*\d+)$/i.test(known.label.trim()));
+        return matches.length === 1 ? { ...life, id: matches[0].id } : life;
+      });
       const removed = correction ? observation.removedBeneficiaryIds ?? [] : [];
       if (removed.some((id) => !prior.some((life) => life.id === id) || incoming.some((life) => life.id === id))) throw new Error('Remoção de beneficiário inválida.');
       const conflict = !correction && incoming.some((life) => prior.some((known) => known.id === life.id && known.age !== null && life.age !== null && known.age !== life.age));
@@ -248,6 +278,7 @@ export function mergeInterpretation(previous: V2State, interpretation: Interpret
       }
     }
   }
+  repairAggregateBeneficiaries(state);
   resolveResidence(restoreRelatedAnswers(state), observations.some((item) => item.field === 'city' && item.status === 'confirmed' && item.correction));
   const latest = messages.filter((message) => message.role === 'lead').sort((a, b) =>
     compareArrival(a.receivedAt ?? a.messageAt, a.id, b.receivedAt ?? b.messageAt, b.id)).at(-1);

@@ -1,0 +1,46 @@
+name: Quality gate repair verification
+on:
+  push:
+    branches:
+      - fix/quality-gates-2026-11-18
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        id: typescript
+        continue-on-error: true
+        run: npm run typecheck
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+      - name: Focused tests
+        id: focused
+        continue-on-error: true
+        run: >-
+          npm test --
+          supabase/functions/_shared/__tests__/campaign-admission-safety-contract.test.ts
+          supabase/functions/_shared/__tests__/meta-ads-pg.test.ts
+          src/features/config/users/__tests__/UsersScreen.test.tsx
+          src/features/config/ai/__tests__/AiConfigScreen.test.tsx
+          src/features/config/ai/components/__tests__/FeatureEditorDrawer.test.tsx
+          src/features/config/ai/components/__tests__/GlobalConfigSection.test.tsx
+          src/features/config/integrations/api-docs/__tests__/ApiDocsScreen.test.tsx
+          src/features/communication/whatsapp/domain/__tests__/inboxChatCollection.test.ts
+      - name: Full unit suite
+        id: suite
+        continue-on-error: true
+        run: npm test
+      - name: Check results
+        if: ${{ steps.typescript.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.focused.outcome == 'failure' || steps.suite.outcome == 'failure' }}
+        run: exit 1

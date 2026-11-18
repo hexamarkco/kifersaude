@@ -116,7 +116,7 @@ test('campaign media is restricted to the campaign bucket, MIME allowlist and on
 });
 
 test('orphaned media dispatch recovery restores its media type, file and caption in the inbox', () => {
-  assert.match(worker, /\.select\('message_text,media_url,media_type,media_filename'\)/);
+  assert.match(worker, /\.select\('message_text,media_url,media_type,media_filename,variant_label'\)/);
   assert.match(worker, /extractWhapiMediaMeta\(match\)/);
   assert.match(worker, /messageType: isMediaMessage \? String\(stepDef\?\.media_type \|\| 'document'\) : 'text'/);
   assert.match(worker, /mediaCaption: recoveredCaption/);

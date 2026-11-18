@@ -22,3 +22,5 @@ jobs:
         run: npm run lint
       - name: V2 focused tests
         run: npm test -- supabase/functions/_shared/__tests__/autonomous-v2-worker.test.ts supabase/functions/_shared/__tests__/autonomous-v2-message-grouping.test.ts supabase/functions/_shared/__tests__/autonomous-v2-2026-11-17-regressions.test.ts supabase/functions/_shared/__tests__/autonomous-v2.test.ts supabase/functions/_shared/__tests__/ai-sandbox-attendance.test.ts supabase/functions/_shared/__tests__/autonomous-attendance-rebuild-contract.test.ts supabase/functions/_shared/__tests__/autonomous-attendance-handoff-contract.test.ts
+      - name: V2 offline evaluation with Postgres regression
+        run: npm run test:autonomous-v2

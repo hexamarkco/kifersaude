@@ -139,7 +139,7 @@ test('a general question about operators can be answered without a product promi
     messages: msgs, previous: initialState(), now: date, configVersion: 24,
     generate: async (request) => {
       if (request.stage === 'interpret') return JSON.stringify(general);
-      expect(request.systemPrompt).toContain('Trabalhamos');
+      expect(request.systemPrompt).toContain('trabalhamos com diferentes operadoras');
       return JSON.stringify({ text: 'Trabalho com diferentes operadoras. As opções variam conforme a região e modalidade.',
         commercialClaims: [] });
     },

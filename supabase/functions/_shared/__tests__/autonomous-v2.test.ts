@@ -274,7 +274,10 @@ test('city-only confirmation is permitted only for a specific facility, not inve
   const text = 'Vocês moram em Belo Horizonte mesmo?';
   expect(validateWrittenReply(JSON.stringify({ text, commercialClaims: [] }), state, decision)).toBe(text);
   expect(confirmed(state, 'city')).toBeNull();
-  const ordinary = initialState();
+  const ordinary = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'holder', label: 'titular', age: 45 }],
+  }, messages), messages, date);
+  expect(decide(ordinary, empty)).toMatchObject({ action: 'ask', field: 'city' });
   expect(() => validateWrittenReply(JSON.stringify({ text, commercialClaims: [] }), ordinary,
     decide(ordinary, empty))).toThrow();
 });

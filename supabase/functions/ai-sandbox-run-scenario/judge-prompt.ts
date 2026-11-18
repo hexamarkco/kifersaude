@@ -1,4 +1,4 @@
-import type { AutonomousMessageRow, HandoffCode } from '../_shared/ai-autonomous-helpers.ts';
+import type { AutonomousMessageRow, HandoffCode } from '../_shared/autonomous-attendance-v2/domain/types.ts';
 
 export const buildJudgePrompt = (
   playbookText: string,

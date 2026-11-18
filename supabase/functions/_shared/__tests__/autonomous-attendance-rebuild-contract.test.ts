@@ -17,12 +17,13 @@ const webhookSource = readFileSync(
   'utf8',
 );
 
-test('worker delegates interpretation and legacy prompt assembly to the attendance boundary', () => {
+test('worker delegates generation exclusively to the V2 attendance boundary', () => {
   assert.match(migrationSource, /ai_autonomous_qualification_states/);
   assert.match(migrationSource, /upsert_ai_autonomous_qualification_state/);
   assert.match(workerSource, /generateAttendanceTurn/);
-  assert.match(generatorSource, /buildAutonomousAttendanceUserPrompt\(history/);
+  assert.doesNotMatch(generatorSource, /buildAutonomousAttendanceUserPrompt|composeAutonomousPrompt|deriveAutonomousConversationMemory/);
   assert.match(generatorSource, /runV2Turn/);
+  assert.doesNotMatch(workerSource, /selectAutonomousEngine|V2_ROLLOUT|AUTONOMOUS_ATTENDANCE_V2_CHAT_IDS/);
   assert.doesNotMatch(workerSource, /extractAutonomousQualificationState/);
   assert.doesNotMatch(workerSource, /persistQualificationState/);
   assert.doesNotMatch(workerSource, /qualification_decision/);

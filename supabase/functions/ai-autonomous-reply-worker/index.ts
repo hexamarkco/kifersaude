@@ -29,7 +29,7 @@ import {
 } from '../_shared/comm-whatsapp.ts';
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale, orderAutonomousConversationalMessages } from '../_shared/ai-autonomous-reply-staleness.ts';
-import { type HandoffCode, type AutonomousMessageRow } from '../_shared/ai-autonomous-helpers.ts';
+import type { HandoffCode, AutonomousMessageRow } from '../_shared/autonomous-attendance-v2/domain/types.ts';
 
 declare const Deno: {
   env: {
@@ -118,7 +118,6 @@ async function cancelStaleAutonomousReplyJob(params: {
 const HANDOFF_STATUS_TARGET: Record<HandoffCode, string | null> = {
   QUALIFICACAO_COMPLETA: 'Aguardando cotação',
   RECUSOU_COTACAO: 'Perdido',
-  FORA_DE_ESCOPO: null,
   PRECISA_HUMANO: null,
 };
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { decide, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, readState, type Interpretation } from '../autonomous-attendance-v2/domain/state.ts';
-import { isAlreadyAssistedResponse, preserveExplicitAgeList, prioritizeProductQuestion, runV2Turn } from '../autonomous-attendance-v2/domain/turn.ts';
+import { isAlreadyAssistedResponse, preserveExplicitAgeList, preserveSoloBeneficiary, prioritizeProductQuestion, runV2Turn } from '../autonomous-attendance-v2/domain/turn.ts';
 import { date, interpretation, message } from './fixtures/autonomous-v2-scenarios.ts';
 
 const noInterpretation: Interpretation = {
@@ -37,6 +37,15 @@ test('new individually aged children replace the old collective placeholder with
   }, nextMessage), nextMessage, date);
   expect(ages(next)).toEqual([6, 11]);
   expect(requirements(next)).not.toContain('beneficiaries');
+});
+
+test('a clear request for an individual plan is not reinterpreted as unknown family size', () => {
+  const fresh = [message('Boa tarde gostaria de saber como funciona, só pra mim', 1)];
+  const extracted = preserveSoloBeneficiary(noInterpretation, fresh, initialState());
+  const state = mergeInterpretation(initialState(), extracted, fresh, date);
+  expect(confirmed(state, 'beneficiaryCount')).toBe(1);
+  expect(ages(state)).toEqual([null]);
+  expect(decide(state, extracted)).toMatchObject({ action: 'ask', field: 'beneficiaries' });
 });
 
 test('protects explicit age lists when the interpreter silently drops a number or miscounts', () => {

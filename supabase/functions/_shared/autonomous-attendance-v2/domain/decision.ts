@@ -8,11 +8,11 @@ export type Decision = { action: 'ask' | 'clarify' | 'answer' | 'handoff' | 'com
  * A named hospital, maternity hospital, clinic or lab is already a concrete
  * network target. In that case, the customer's residence city is still needed
  * for quotations, but a capital-city neighborhood is not a prerequisite.
- * Only confirmed client preferences qualify; generic "hospitals nearby" do not.
+ * Only confirmed client goals/preferences qualify; generic "hospitals nearby" do not.
  */
 export function hasNamedCareFacility(state: V2State): boolean {
-  const preferences = confirmed(state, 'preferences') ?? [];
-  return preferences.some((preference) => {
+  const descriptions = [...(confirmed(state, 'preferences') ?? []), confirmed(state, 'goal') ?? ''];
+  return descriptions.some((preference) => {
     const namedFacility = /(?:^|\s)(?:[Hh]ospital|[Mm]aternidade|[Ll]aborat[oó]rio|[Cc]l[ií]nica)\s+(?!(?:perto|pr[oó]xim[oa]|bom|boa|qualquer|credenciad[oa]|barat[oa])\b)[A-ZÀ-Ý][\p{L}-]{2,}/u;
     const namedPreference = /(?:^|\s)(?:[Ii]ncluir|[Ii]nclua|[Tt]er|[Tt]enha|[Aa]tenda|[Aa]tendimento\s+(?:no|na)|[Cc]ubra|[Rr]ede\s+(?:do|da))\s+(?:(?:o|a|no|na|do|da|um|uma)\s+)?[A-ZÀ-Ý][\p{L}-]{2,}\s+[A-ZÀ-Ý][\p{L}-]{2,}/u;
     return namedFacility.test(preference) || namedPreference.test(preference);

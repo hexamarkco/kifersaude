@@ -22,7 +22,11 @@ BEGIN
     'receipts',COALESCE((SELECT jsonb_agg(to_jsonb(t)) FROM (
       SELECT leadgen_id,status,received_at,last_error_code FROM public.meta_lead_receipts WHERE status='dead' ORDER BY received_at DESC LIMIT 50) t),'[]'::jsonb),
     'history',COALESCE((SELECT jsonb_agg(to_jsonb(t) ORDER BY (t.id)::bigint DESC) FROM (
-      SELECT id::text,direction,entity_id,attempt,outcome,error_code,created_at FROM public.meta_integration_attempts ORDER BY id DESC LIMIT 50) t),'[]'::jsonb),
+      SELECT id::text,direction,entity_id,attempt,outcome,error_code,created_at FROM (
+        SELECT id,direction,entity_id,attempt,outcome,error_code,created_at,
+          row_number() OVER (ORDER BY id DESC) AS page_position
+        FROM public.meta_integration_attempts
+      ) ranked WHERE page_position <= 50) t),'[]'::jsonb),
     'attributions',COALESCE((SELECT jsonb_agg(to_jsonb(t)) FROM (
       SELECT a.id,a.lead_id,(SELECT nome_completo FROM public.leads WHERE id=a.lead_id) AS lead_name,
         a.leadgen_id,a.campaign_id,a.campaign_name,a.adset_id,a.adset_name,a.ad_id,a.ad_name,a.form_id,

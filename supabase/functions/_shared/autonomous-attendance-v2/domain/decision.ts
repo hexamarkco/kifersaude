@@ -4,9 +4,24 @@ import { capitalState } from './location.ts';
 export type Decision = { action: 'ask' | 'clarify' | 'answer' | 'handoff' | 'complete'; field: Field | null;
   reason: string; missing: Field[]; handoffCode: 'QUALIFICACAO_COMPLETA' | 'PRECISA_HUMANO' | 'RECUSOU_COTACAO' | null };
 
+/**
+ * A named hospital, maternity hospital, clinic or lab is already a concrete
+ * network target. In that case, the customer's residence city is still needed
+ * for quotations, but a capital-city neighborhood is not a prerequisite.
+ * Only confirmed client preferences qualify; generic "hospitals nearby" do not.
+ */
+export function hasNamedCareFacility(state: V2State): boolean {
+  const preferences = confirmed(state, 'preferences') ?? [];
+  return preferences.some((preference) => {
+    const namedFacility = /(?:^|\\s)(?:Hospital|Maternidade|Laborat[oó]rio|Cl[ií]nica)\\s+(?!(?:perto|pr[oó]xim[oa]|bom|boa|qualquer|credenciad[oa]|barat[oa])\\b)[A-ZÀ-Ý][\\p{L}-]{2,}/u;
+    const namedPreference = /(?:^|\\s)(?:[Ii]ncluir|[Ii]nclua|[Tt]er|[Tt]enha|[Aa]tenda|[Aa]tendimento\\s+(?:no|na)|[Cc]ubra|[Rr]ede\\s+(?:do|da))\\s+(?:(?:o|a|no|na|do|da|um|uma)\\s+)?[A-ZÀ-Ý][\\p{L}-]{2,}\\s+[A-ZÀ-Ý][\\p{L}-]{2,}/u;
+    return namedFacility.test(preference) || namedPreference.test(preference);
+  });
+}
+
 export function requirements(state: V2State): Field[] {
   const required: Field[] = ['beneficiaryCount', 'beneficiaries', 'city', 'companyPresence'];
-  if (capitalState(confirmed(state, 'city') ?? '')) required.push('neighborhood');
+  if (capitalState(confirmed(state, 'city') ?? '') && !hasNamedCareFacility(state)) required.push('neighborhood');
   const lives = confirmed(state, 'beneficiaries');
   if (!lives?.length || lives.some((life) => life.age === null) || lives.length !== confirmed(state, 'beneficiaryCount')) {
     // A confirmed list with missing ages is still incomplete.

@@ -20,12 +20,20 @@ vi.mock('../../../design-system/components/RichTextEditor', async () => {
   ) };
 });
 
+const waitForBlogLoaded = async (container: HTMLElement) => {
+  const started = Date.now();
+  while (!container.textContent?.includes('Orientação para escolher um plano')) {
+    if (Date.now() - started > 3000) throw new Error('Artigo da fixture não foi carregado.');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
+};
+
 test('previews the selected article read-only without publishing, saving or opening a missing route', async () => {
   const originalOpen = window.open;
   window.open = () => { calls.open += 1; return null; };
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const preview = view.container.querySelector<HTMLButtonElement>('button[aria-label="Visualizar"]');
     assert.ok(preview);
     act(() => preview.click());
@@ -48,7 +56,7 @@ test('previews the selected article read-only without publishing, saving or open
 test('filters articles by publication status without changing the totals', async () => {
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const filter = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Todos os status'));
     assert.ok(filter);
     act(() => filter.click());
@@ -64,7 +72,7 @@ test('filters articles by publication status without changing the totals', async
 test('uses the content management hierarchy and shared filter bar', async () => {
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     assert.ok(Array.from(view.container.querySelectorAll('h1')).some(heading => heading.textContent === 'Gestão de conteúdo'));
     assert.ok(view.container.querySelector('.kds-blog-filter-bar.kds-op-toolbar'));
     assert.ok(view.container.querySelector('.kds-toolbar-search input[aria-label="Buscar artigos"]'));
@@ -75,7 +83,7 @@ test('uses the content management hierarchy and shared filter bar', async () => 
 test('opens the article preview from the compact collection menu', async () => {
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
     assert.ok(menuButton);
     act(() => menuButton.click());
@@ -91,7 +99,7 @@ test('opens the article preview from the compact collection menu', async () => {
 test('identifies the article in the deletion confirmation and cancels without deleting', async () => {
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
     assert.ok(menuButton);
     act(() => menuButton.click());
@@ -112,7 +120,7 @@ test('identifies the article in the deletion confirmation and cancels without de
 test('opens the article editor and returns without saving', async () => {
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const create = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Novo post'));
     assert.ok(create);
     act(() => create.click());
@@ -140,7 +148,7 @@ test('locks the editor during save and returns to the list after success', async
   saveControl.pending = new Promise<void>(resolve => { resolveSave = resolve; });
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const menu = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
     assert.ok(menu);
     act(() => menu.click());
@@ -166,7 +174,7 @@ test('keeps article data and enables retry when saving fails', async () => {
   saveControl.fail = true;
   const view = render(<BlogTabScreen />);
   try {
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    await waitForBlogLoaded(view.container);
     const menu = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
     assert.ok(menu);
     act(() => menu.click());

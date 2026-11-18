@@ -40,7 +40,7 @@ jobs:
       - name: Full unit suite
         id: suite
         continue-on-error: true
-        run: npm test
+        run: npm test -- --maxWorkers=4 --minWorkers=1
       - name: Check results
         if: ${{ steps.typescript.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.focused.outcome == 'failure' || steps.suite.outcome == 'failure' }}
         run: exit 1

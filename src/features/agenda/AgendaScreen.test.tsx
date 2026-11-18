@@ -50,12 +50,20 @@ const button = (label: string) => {
   return element!;
 };
 
+const waitForAgenda = async (ready: () => boolean) => {
+  const start = Date.now();
+  while (!ready()) {
+    if (Date.now() - start > 3000) throw new Error('Agenda não carregou os controles esperados.');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
+};
+
 test('concluir na Agenda abre o modal real e permite agendar um próximo lembrete pendente', async () => {
   resetMocks();
   mocks.reminders = [pendingReminder()];
   const view = render(<AgendaScreen />);
   try {
-    await act(async () => {});
+    await waitForAgenda(() => Boolean(document.querySelector('button[aria-label="Marcar como lido"]')));
     await act(async () => { button('Marcar como lido').click(); });
     assert.equal(mocks.update.mock.calls[0]?.[0], 'reminder-1');
     const patch = mocks.update.mock.calls[0]?.[1] as { lido: boolean; concluido_em: string };
@@ -79,7 +87,7 @@ test('conclusão em lote usa uma única data e não agenda outro lembrete automa
   mocks.reminders = [pendingReminder('r1'), pendingReminder('r2'), { ...pendingReminder('legacy'), lido: true }];
   const view = render(<AgendaScreen />);
   try {
-    await act(async () => {});
+    await waitForAgenda(() => Boolean(document.querySelector('button[aria-label="Marcar itens filtrados como lidos"]')));
     await act(async () => { button('Marcar itens filtrados como lidos').click(); });
     assert.deepEqual(mocks.updateBatch.mock.calls[0]?.[0], ['r1', 'r2']);
     const patch = mocks.updateBatch.mock.calls[0]?.[1] as { lido: boolean; concluido_em: string };
@@ -94,10 +102,11 @@ test('reabrir um encerrado histórico limpa a conclusão sem abrir o modal de pr
   mocks.reminders = [{ ...pendingReminder('legacy'), lido: true }];
   const view = render(<AgendaScreen />);
   try {
-    await act(async () => {});
+    await waitForAgenda(() => Array.from(document.querySelectorAll('button')).some((item) => item.textContent?.includes('Concluídos')));
     const completedTab = Array.from(document.querySelectorAll('button')).find((item) => item.textContent?.includes('Concluídos'));
     assert.ok(completedTab);
     await act(async () => { completedTab!.click(); });
+    await waitForAgenda(() => Boolean(document.querySelector('button[aria-label="Marcar como não lido"]')));
     await act(async () => { button('Marcar como não lido').click(); });
     assert.deepEqual(mocks.update.mock.calls, [['legacy', { lido: false, concluido_em: null }]]);
     assert.ok(!document.body.textContent?.includes('Deseja marcar um próximo lembrete para este lead?'));
@@ -110,7 +119,7 @@ test('não renderiza um badge de prioridade vazio em lembretes sem prioridade ca
   mocks.reminders = [{ ...pendingReminder(), prioridade: '', tipo: 'follow_up' }];
   const view = render(<AgendaScreen />);
   try {
-    await act(async () => {});
+    await waitForAgenda(() => Boolean(document.body.textContent?.includes('Follow-up')));
     const emptyBadges = Array.from(document.querySelectorAll('.kds-badge-sm'))
       .filter((badge) => !badge.textContent?.trim());
     assert.deepEqual(emptyBadges, []);

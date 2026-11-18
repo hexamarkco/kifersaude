@@ -115,9 +115,11 @@ const renderCampaignsWithEditRequest = (campaign: CommWhatsAppCampaign) => rende
 );
 
 const settleCampaignLoading = async () => {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+  const started = Date.now();
+  while (!document.body.textContent?.includes('Campanha 1') && !document.body.textContent?.includes('Editar disparo')) {
+    if (Date.now() - started > 3000) throw new Error('Lista ou editor de campanhas não carregou.');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
 };
 
 const setupMocks = () => {

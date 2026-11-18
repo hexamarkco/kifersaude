@@ -155,6 +155,7 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
     </MemoryRouter>,
   );
   await waitForText('Campanha de teste');
+  await waitForText('Status do disparo');
   assert.ok(document.body.textContent?.includes('Status do disparo'));
   assert.ok(document.body.textContent?.includes('Público selecionado'));
   assert.ok(document.body.textContent?.includes('Destinatários'));

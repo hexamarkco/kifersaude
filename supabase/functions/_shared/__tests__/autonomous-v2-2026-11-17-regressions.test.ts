@@ -117,8 +117,63 @@ test('a quotation containing only children goes to a broker for eligibility revi
       { id: 'b', label: 'filho', age: 11 }], city: 'Bocaiúva do Sul', companyPresence: 'no',
   }, msgs), msgs, date);
   expect(decide(state, noInterpretation)).toMatchObject({
-    action: 'handoff', reason: 'only_minor_beneficiaries', handoffCode: 'PRECISA_HUMANO',
+    action: 'handoff', reason: 'child_requires_adult_holder', handoffCode: 'PRECISA_HUMANO',
   });
+});
+
+test.each([
+  { age: 11, city: 'Rio de Janeiro', state: 'RJ', reason: 'child_requires_adult_holder' },
+  { age: 12, city: 'Rio de Janeiro', state: 'RJ', reason: 'age_twelve_needs_review' },
+  { age: 16, city: 'São Paulo', state: 'SP', reason: 'minor_individual_region_not_verified' },
+  { age: 16, city: 'Niterói', state: null, reason: 'minor_individual_region_not_verified' },
+])('does not invent individual minor eligibility at age $age in $city ($state)', ({ age, city, state, reason }) => {
+  const msgs = [message('Tenho ' + age + ' anos em ' + city, 1)];
+  const data = {
+    beneficiaryCount: 1, beneficiaries: [{ id: 'minor', label: 'beneficiário', age }],
+    city, companyPresence: 'no', ...(state ? { state } : {}),
+  };
+  const stateV2 = mergeInterpretation(initialState(), interpretation(data, msgs), msgs, date);
+  expect(decide(stateV2, noInterpretation)).toMatchObject({
+    action: 'handoff', reason, handoffCode: 'PRECISA_HUMANO',
+  });
+});
+
+test.each([13, 15, 17])('a single %i-year-old in confirmed RJ continues ordinary qualification', (age) => {
+  const msgs = [message('Tenho ' + age + ' anos em Niterói RJ', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'teen', label: 'titular', age }],
+    city: 'Niterói', state: 'RJ', companyPresence: 'no',
+  }, msgs), msgs, date);
+  expect(requirements(state)).toEqual([]);
+  expect(decide(state, noInterpretation)).toMatchObject({ action: 'ask', reason: 'optional_information' });
+});
+
+test('single 13-17-year-old with unknown residence is asked for city before geographic review', () => {
+  const msgs = [message('Só eu com 15 anos', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'teen', label: 'titular', age: 15 }], companyPresence: 'no',
+  }, msgs), msgs, date);
+  expect(decide(state, noInterpretation)).toMatchObject({ action: 'ask', field: 'city' });
+});
+
+test('multiple minor lives in RJ go to a broker rather than assuming an individual contract', () => {
+  const msgs = [message('Só meus dois filhos de 15 e 17 em Niterói RJ', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 2, beneficiaries: [{ id: 'a', label: 'filho', age: 15 },
+      { id: 'b', label: 'filho', age: 17 }], city: 'Niterói', state: 'RJ', companyPresence: 'no',
+  }, msgs), msgs, date);
+  expect(decide(state, noInterpretation)).toMatchObject({
+    action: 'handoff', reason: 'multiple_minor_contract_needs_review',
+  });
+});
+
+test('a child under 12 accompanied by an adult is not blocked by the minor-only rule', () => {
+  const msgs = [message('Eu e meu filho, 35 e 10 anos, em Niterói RJ', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 2, beneficiaries: [{ id: 'adult', label: 'titular', age: 35 },
+      { id: 'child', label: 'filho', age: 10 }], city: 'Niterói', state: 'RJ', companyPresence: 'no',
+  }, msgs), msgs, date);
+  expect(decide(state, noInterpretation)).toMatchObject({ action: 'ask', reason: 'optional_information' });
 });
 
 test('a concrete price or coverage request bypasses optional questionnaire fields when essentials are known', () => {

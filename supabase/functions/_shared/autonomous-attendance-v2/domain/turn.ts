@@ -175,13 +175,6 @@ export function normalizeContextualAgeAnswer(
   };
 }
 
-/**
- * Catch malformed model extraction of a compact, explicit age list.
- * Only whole-message numeric lists count; no CNPJ, dates or mixed sentences.
- * When the interpreter lost one of the ages, reconstruct the full list with
- * positional identities and literal evidence. The state reconciler handles
- * previously persisted aggregate placeholders separately.
- */
 /** One-person intent is explicit even when the interpreter fails to extract it. */
 export function preserveSoloBeneficiary(interpretation: Interpretation, fresh: readonly V2Message[], previous: V2State): Interpretation {
   const item = fresh.findLast((message) => message.role === 'lead'
@@ -204,6 +197,11 @@ export function preserveSoloBeneficiary(interpretation: Interpretation, fresh: r
   return { ...interpretation, observations };
 }
 
+/**
+ * Recover a full, explicit numeric age list when model extraction omits an age.
+ * Restrict to whole-message lists (not CNPJs, dates or prose); preserve
+ * repeated ages because equal ages may belong to different people.
+ */
 export function preserveExplicitAgeList(interpretation: Interpretation, fresh: readonly V2Message[], previous: V2State): Interpretation {
   if (fresh.length !== 1 || fresh[0].role !== 'lead') return interpretation;
   const message = fresh[0];

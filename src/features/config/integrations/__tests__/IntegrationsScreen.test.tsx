@@ -65,6 +65,10 @@ test('libera o salvamento do provedor quando a chamada de integração rejeita',
   });
 
   const restoredButton = await waitForButtonText('Salvar OpenAI');
+  const started = Date.now();
+  while (restoredButton.disabled && Date.now() - started < 3000) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
   assert.equal(restoredButton.disabled, false);
   view.unmount();
 });

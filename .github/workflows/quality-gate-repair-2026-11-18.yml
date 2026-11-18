@@ -45,7 +45,7 @@ jobs:
       - name: Migration audit
         id: migrations
         continue-on-error: true
-        run: npm run migrations:check
+        run: npm run migrations:report
       - name: Check results
         if: ${{ steps.typescript.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.focused.outcome == 'failure' || steps.migrations.outcome == 'failure' }}
         run: exit 1

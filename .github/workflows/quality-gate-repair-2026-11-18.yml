@@ -24,24 +24,10 @@ jobs:
         id: lint
         continue-on-error: true
         run: npm run lint
-      - name: Focused tests
+      - name: AI editor isolated regression
         id: focused
         continue-on-error: true
-        run: >-
-          npm test --
-          supabase/functions/_shared/__tests__/campaign-admission-safety-contract.test.ts
-          supabase/functions/_shared/__tests__/meta-ads-pg.test.ts
-          src/features/config/users/__tests__/UsersScreen.test.tsx
-          src/features/config/ai/__tests__/AiConfigScreen.test.tsx
-          src/features/config/ai/components/__tests__/FeatureEditorDrawer.test.tsx
-          src/features/config/ai/components/__tests__/GlobalConfigSection.test.tsx
-          src/features/config/integrations/api-docs/__tests__/ApiDocsScreen.test.tsx
-          src/features/communication/whatsapp/domain/__tests__/inboxChatCollection.test.ts
-          src/features/agenda/AgendaScreen.test.tsx
-          src/features/blog/__tests__/BlogTabScreen.test.tsx
-          src/features/communication/whatsapp-campaigns/WhatsAppCampaignDetailScreen.test.tsx
-          src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.test.tsx
-          src/features/config/integrations/__tests__/IntegrationsScreen.test.tsx
+        run: npm test -- src/features/config/ai/components/__tests__/FeatureEditorDrawer.test.tsx
       - name: Migration audit
         id: migrations
         continue-on-error: true

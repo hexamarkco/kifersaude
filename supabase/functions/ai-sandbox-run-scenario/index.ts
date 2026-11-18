@@ -5,12 +5,8 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { resolveMcpServiceActor } from '../_shared/mcp-internal-actor.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
 import { corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
-import {
-  AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
-  validateAutonomousReplyOutput,
-  type HandoffCode,
-  type AutonomousMessageRow,
-} from '../_shared/ai-autonomous-helpers.ts';
+import { V2_QUALITY_GUIDELINES, collectV2DeterministicViolations } from '../_shared/autonomous-attendance-v2/domain/quality.ts';
+import type { HandoffCode, AutonomousMessageRow } from '../_shared/autonomous-attendance-v2/domain/types.ts';
 
 declare const Deno: {
   env: {
@@ -79,17 +75,6 @@ const parseVerdict = (raw: string): { passed: boolean | null; violations: string
   }
 };
 
-const collectDeterministicViolations = (history: AutonomousMessageRow[]): string[] => {
-  const violations: string[] = [];
-  history.forEach((row, index) => {
-    if (row.role !== 'ai') return;
-    const validation = validateAutonomousReplyOutput(row.content, history.slice(0, index));
-    if (!validation.valid && validation.message) {
-      violations.push(`Regra objetiva: ${validation.message}`);
-    }
-  });
-  return [...new Set(violations)];
-};
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -236,7 +221,7 @@ Deno.serve(async (req: Request) => {
       'Avalie a qualificação inicial V2, sem exigir análise de produtos ou elegibilidade.',
       'Obrigatórios são quantidade de pessoas, idades, cidade e presença ou ausência de CNPJ/MEI; bairro nas capitais. Plano atual, objetivo e número do CNPJ são opcionais e não devem ser cobrados repetidamente.',
       'Qualificação concluída é distinta de proposta e venda; pedido humano e intervenção do sistema têm motivos diferentes.',
-      AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS,
+      V2_QUALITY_GUIDELINES,
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -252,7 +237,7 @@ Deno.serve(async (req: Request) => {
       edgeFunction: 'ai-sandbox-run-scenario',
     });
     const modelVerdict = parseVerdict(judgeResult.text);
-    const deterministicViolations = collectDeterministicViolations(history);
+    const deterministicViolations = collectV2DeterministicViolations(history);
     const verdict = {
       ...modelVerdict,
       passed: deterministicViolations.length > 0 ? false : modelVerdict.passed,

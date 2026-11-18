@@ -16,9 +16,6 @@ export function formatReplyBlocks(text: string, allowSplit: boolean): string {
   return pause && pause[1].length >= 25 && !pause[1].includes('?') && pause[2].includes('?')
     ? `${pause[1]}\n\n${pause[2]}` : flat;
 }
-export const v2Enabled = (chatId: string, allowlist: string | undefined): boolean =>
-  (allowlist ?? '').split(',').map((item) => item.trim()).filter(Boolean).includes(chatId);
-
 export function resumePreparedTurn(memory: unknown, sourceId: string, advisorName?: string): V2Turn | null {
   if (!isRecord(memory) || memory.source_message_id !== sourceId || !memory.attendanceV2) return null;
   const state = readState(memory.attendanceV2);

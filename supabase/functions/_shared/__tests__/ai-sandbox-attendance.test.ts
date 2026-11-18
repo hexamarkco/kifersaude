@@ -47,7 +47,7 @@ test('fragmented client messages and persistent memory reach the exact productio
   const args = vi.mocked(generateAttendanceTurn).mock.calls[0][0];
   expect(args.previousMemory).toEqual(memory);
   expect(args.messages.map(m => m.content)).toEqual(['Só para mim', 'Entendi, será só para você.\n\nQual é a sua idade?', '35', 'tenho MEI']);
-  expect(args).toMatchObject({ sandbox: true, sourceId: 'last', allowlist: 'test',
+  expect(args).toMatchObject({ sandbox: true, sourceId: 'last',
     deployment: { modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true } });
   expect(f.rpc.mock.calls[0]).toEqual(['commit_ai_sandbox_turn', expect.objectContaining({
     p_expected_state: memory, p_source_message_id: 'last',

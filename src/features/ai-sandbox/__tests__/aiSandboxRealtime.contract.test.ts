@@ -31,7 +31,7 @@ test('scenario judge persists actionable playbook improvements for the UI', () =
   assert.match(scenarioSource, /playbook_improvements/);
   assert.match(scenarioSource, /playbookImprovements: verdict\.playbookImprovements/);
   assert.match(scenarioSource, /const judgePlaybook = \[/);
-  assert.match(scenarioSource, /AUTONOMOUS_CONVERSATION_QUALITY_GUARDRAILS/);
+  assert.match(scenarioSource, /V2_QUALITY_GUIDELINES/);
   assert.match(scenarioSource, /collectDeterministicViolations/);
   assert.match(scenarioSource, /deterministicViolations\.length > 0 \? false/);
   assert.match(pageSource, /Sugestões para o playbook/);

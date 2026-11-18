@@ -1,5 +1,8 @@
 # Atendimento autônomo V2 — auditoria e projeto local
 
+> **Estado atual após refatoração de 18/11/2026:** o atendimento é **exclusivamente V2**, para clientes de qualquer DDD. O filtro DDD 21 solicitado era apenas para selecionar exemplos humanos de estilo, não para definir elegibilidade de atendimento. O motor V1, fallback e mecanismo de rollout por percentual/DDD foram removidos do código. Leitura de memórias históricas segue para preservar continuidade. Os parágrafos abaixo são registros históricos da implantação e podem descrever etapas anteriores, não a configuração atual.
+
+
 Atualização de 16/11/2026: a V2 atende 100% dos atendimentos autônomos, sem filtro de DDD, e o `/chat` já compartilha o mesmo motor, modelo e estilo, com memória e mensagens de teste isoladas. Worker 157, configuração `kifer-v2-2026-11-15.3`. Conversas antigas ativas continuam na próxima mensagem do lead; chats desativados ou assumidos por humano permanecem preservados. Detalhes atuais em [Chat de testes com a V2](autonomous-attendance-v2-sandbox-2026-11-16.md) e histórico de ativação em [Publicação de 15/11/2026](autonomous-attendance-v2-release-2026-11-15.md). As seções de auditoria e validação local abaixo preservam o registro das etapas anteriores.
 
 ## Escopo e evidência

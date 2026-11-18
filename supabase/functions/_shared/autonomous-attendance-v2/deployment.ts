@@ -1,14 +1,9 @@
 import type { RuntimeModelProfile } from '../ai-router.ts';
-import type { V2Rollout } from './domain/rollout.ts';
 import { readStyleLibrary } from './domain/style.ts';
 
 export const V2_DEPLOYMENT_VERSION = 'kifer-v2-2026-11-15.3';
 export const V2_MODEL_PROFILE: RuntimeModelProfile = { version: V2_DEPLOYMENT_VERSION, model: 'gpt-6-luna', reasoningEffort: 'medium' };
 export const V2_ADVISOR_NAME = 'Luiza Kifer';
-// Full replacement authorized by the operator. A null DDD means no geographic filter.
-// Existing conversations enter on a fresh inbound; publishing does not awaken historical chats.
-export const V2_ROLLOUT: V2Rollout = { enabledAt: '2026-11-16T00:15:45Z', percentage: 100, ddd: null, includeExisting: true };
-
 export const V2_STYLE_LIBRARY = readStyleLibrary({
   "version": "kifer-human-546c3e1ad04e",
   "examples": [

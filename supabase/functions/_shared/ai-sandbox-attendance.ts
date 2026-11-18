@@ -3,8 +3,8 @@ import { buildSandboxApproachMessages } from './auto-contact-approach.ts';
 import { generateAttendanceTurn } from './autonomous-attendance-v2/generate-turn.ts';
 import { V2_ADVISOR_NAME, V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_STYLE_LIBRARY } from './autonomous-attendance-v2/deployment.ts';
 import { isRecord, type V2Message } from './autonomous-attendance-v2/domain/state.ts';
-import { groupV2ReplyMessages } from './autonomous-attendance-v2/domain/rollout.ts';
-import type { HandoffCode } from './ai-autonomous-helpers.ts';
+import { groupV2ReplyMessages } from './autonomous-attendance-v2/domain/reply-messages.ts';
+import type { HandoffCode } from './autonomous-attendance-v2/domain/types.ts';
 
 type SandboxMessage = { id: string; role: 'ai' | 'lead'; content: string; created_at: string; handoff_code: string | null };
 export async function generateSandboxReply(params: {
@@ -49,8 +49,7 @@ export async function generateSandboxReply(params: {
         deliveryGroup: row.role === 'ai' ? deliveryGroup : undefined };
     }));
     const turn = await generateAttendanceTurn({ client, chatId: conversationId, leadId: conversationId, sourceId: latest.id,
-      messages: promptMessages, previousMemory, lead: { nome_completo: params.leadName }, styleMessages: [], quickReplies: [],
-      allowlist: conversationId, advisorName: params.advisorName || V2_ADVISOR_NAME, sandbox: true,
+      messages: promptMessages, previousMemory, lead: { nome_completo: params.leadName }, advisorName: params.advisorName || V2_ADVISOR_NAME, sandbox: true,
       deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true },
       record: async () => { /* Test state is stored only in ai_sandbox_conversations, never in real attendance events. */ },
     });

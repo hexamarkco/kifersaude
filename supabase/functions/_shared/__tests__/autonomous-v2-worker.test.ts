@@ -4,12 +4,10 @@ import { generateAttendanceTurn } from '../autonomous-attendance-v2/generate-tur
 import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY, V2_DEPLOYMENT_VERSION } from '../autonomous-attendance-v2/deployment.ts';
 import { generateTextForFeature, type GenerateTextForFeatureResult } from '../ai-router.ts';
 import { loadFeatureConfig, type ResolvedAIFeatureConfig } from '../ai-config-resolver.ts';
-import { composeAutonomousPrompt } from '../ai-autonomous-prompt.ts';
 import { interpretation, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
 
 vi.mock('../ai-router.ts', () => ({ generateTextForFeature: vi.fn() }));
 vi.mock('../ai-config-resolver.ts', () => ({ loadFeatureConfig: vi.fn() }));
-vi.mock('../ai-autonomous-prompt.ts', () => ({ composeAutonomousPrompt: vi.fn() }));
 
 const config: ResolvedAIFeatureConfig = { featureKey: 'autonomous.reply', provider: 'openai', model: 'mock-model', fallbackModel: null,
   modelOverrideEnabled: true, temperature: 0.6, maxOutputTokens: 1500, reasoningEffort: null, timeoutMs: null, retryCount: null,
@@ -18,8 +16,7 @@ const result = (text: string): GenerateTextForFeatureResult => ({ text, provider
   fallbackUsed: false, usage: { inputTokens: 100, cachedInputTokens: 0, outputTokens: 100, reasoningTokens: 0, totalTokens: 200 },
   durationMs: 12, estimatedCostUsd: 0.001, callLogId: null, retryCount: 0, stopReason: 'completed', requestedReasoningEffort: null, appliedReasoningEffort: null });
 const params = () => ({ client: {} as SupabaseClient, chatId: 'synthetic-chat', leadId: 'synthetic-lead', sourceId: 'synthetic-1',
-  messages: scenarios[1].messages, previousMemory: undefined as unknown, lead: {}, styleMessages: [], quickReplies: [],
-  allowlist: 'synthetic-chat', record: vi.fn(async () => undefined) });
+  messages: scenarios[1].messages, previousMemory: undefined as unknown, lead: {}, record: vi.fn(async () => undefined) });
 
 test('the cloud adapter uses the reviewed profile and style, splits the delivery and reuses the exact prepared envelopes after a config change', async () => {
   const messages = [{ id: 'synthetic-1', role: 'lead' as const, content: 'Só para mim', messageAt: '2026-11-15T00:00:00Z' }];
@@ -58,8 +55,6 @@ test('a tampered prepared delivery cannot add another message or bypass validati
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(loadFeatureConfig).mockResolvedValue(config);
-  vi.mocked(composeAutonomousPrompt).mockResolvedValue({ systemPrompt: 'legacy', trace: { featureConfigVersion: 25, globalInstructionsRevision: null,
-    globalStyleRevision: null, humanStyleCount: 0, systemPromptLength: 6, systemPromptHash: 'synthetic' } });
 });
 
 test('worker uses configured routing, two separate generations and no legacy instructions; prepared retry makes zero model calls', async () => {
@@ -77,7 +72,6 @@ test('worker uses configured routing, two separate generations and no legacy ins
   expect(turn.memory).toHaveProperty('attendanceV2');
   expect(turn.memory).toHaveProperty('briefing');
   expect(turn.messages).toEqual([scenarios[1].reply]);
-  expect(composeAutonomousPrompt).not.toHaveBeenCalled();
   for (const [options] of vi.mocked(generateTextForFeature).mock.calls) {
     expect(options.featureKey).toBe('autonomous.reply');
     expect(options.systemPrompt).not.toContain('LEGACY');
@@ -91,9 +85,14 @@ test('worker uses configured routing, two separate generations and no legacy ins
   expect(retried.memory).toEqual(turn.memory);
 });
 
-test('removing allowlist pauses existing V2 conversations instead of silently falling back', async () => {
-  await expect(generateAttendanceTurn({ ...params(), allowlist: '', previousMemory: { attendanceV2: {} } })).rejects.toThrow('V2 pausado');
-  expect(generateTextForFeature).not.toHaveBeenCalled();
+test('all conversations use V2 regardless of their DDD or an allowlist', async () => {
+  vi.mocked(generateTextForFeature).mockImplementation(async options => result(options.maxTokens === 3200
+    ? JSON.stringify(interpretation(scenarios[1].values, scenarios[1].messages))
+    : JSON.stringify({ text: scenarios[1].reply, commercialClaims: [] })));
+  const turn = await generateAttendanceTurn({ ...params(), chatId: 'different-region' });
+  expect(turn.memory).toHaveProperty('attendanceV2');
+  expect(turn.handoffCode).toBe('QUALIFICACAO_COMPLETA');
+  expect(generateTextForFeature).toHaveBeenCalledTimes(2);
 });
 
 test('sandbox invokes the same V2 stages and profile without referencing real lead, chat or message IDs in telemetry', async () => {
@@ -110,7 +109,6 @@ test('sandbox invokes the same V2 stages and profile without referencing real le
     deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true } });
   expect(turn.handoffCode).toBe('QUALIFICACAO_COMPLETA');
   expect(turn.memoryAfterSend).toHaveProperty('attendanceV2');
-  expect(composeAutonomousPrompt).not.toHaveBeenCalled();
 });
 
 test('invalid interpretation/output creates a failure event with no invented visible message', async () => {
@@ -132,12 +130,3 @@ test('provider timeout has a distinct sanitized operational failure reason', asy
   expect(JSON.stringify(input.record.mock.calls)).not.toContain(scenarios[1].messages[0].content);
 });
 
-test('legacy path rejects tag-only and incomplete completion before any delivery', async () => {
-  vi.mocked(generateTextForFeature).mockImplementation(async (options) => {
-    for (const raw of ['[[HANDOFF: QUALIFICACAO_COMPLETA]]', 'Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]']) {
-      expect(options.validateOutput?.(raw).valid).toBe(false);
-    }
-    return result('Vou preparar a cotação. [[HANDOFF: QUALIFICACAO_COMPLETA]]');
-  });
-  await expect(generateAttendanceTurn({ ...params(), allowlist: '', messages: scenarios[14].messages })).rejects.toThrow('Conclusão inválida');
-});

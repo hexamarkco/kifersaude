@@ -1,4 +1,4 @@
-import { assertDecision, decide, internalBriefing, type Decision } from './decision.ts';
+import { assertDecision, decide, hasNamedCareFacility, internalBriefing, type Decision } from './decision.ts';
 import { confirmed, FIELDS, INTENTS, isRecord, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages,
   validValue, type Field, type Interpretation, type V2Message, type V2State, type Values } from './state.ts';
 import { selectStyleExamples, type StyleLibrary, type StyleTrace } from './style.ts';
@@ -80,8 +80,15 @@ export function validateWrittenReply(raw: string, state: V2State, decision: Deci
   if (questions && decision.field !== 'currentOperator' && decision.field !== 'previousOperator' && confirmed(state, 'currentOperator')
     && /qual[^?]*operadora/.test(normalized)) throw new Error('Pergunta de operadora já respondida.');
   const askedText = normalized.split(/[.!]/).find((sentence) => sentence.includes('?')) ?? '';
-  if (questions && /(?:qual|que)\s+estado|\buf\b|cidade\s+e\s+estado/.test(askedText)) throw new Error('Pergunte cidade e bairro, sem pedir estado.');
-  if (questions && decision.field === 'city' && (!/\bcidade\b/.test(askedText) || !/\bbairro\b|\bregiao\b/.test(askedText))) throw new Error('A pergunta de localização deve pedir cidade e bairro.');
+  if (questions && /(?:qual|que)\s+estado|\buf\b|cidade\s+e\s+estado/.test(askedText)) throw new Error('Não peça estado ou UF quando perguntar residência.');
+  if (questions && decision.field === 'city') {
+    if (hasNamedCareFacility(state)) {
+      if (!/\bcidade\b|\b(?:mora|moram|reside|residem|sao)\b\s+(?:em|de)\b/.test(askedText)
+        || /\bbairro\b|\bregiao\b/.test(askedText)) throw new Error('Com hospital definido, pergunte somente a cidade de residência.');
+    } else if (!/\bcidade\b/.test(askedText) || !/\bbairro\b|\bregiao\b/.test(askedText)) {
+      throw new Error('A pergunta de localização deve pedir cidade e bairro.');
+    }
+  }
   if (questions && decision.field === 'neighborhood' && !/\bbairro\b|\bregiao\b/.test(askedText)) throw new Error('A pergunta precisa esclarecer o bairro de residência.');
   if (questions && decision.field !== 'city' && confirmed(state, 'city') && /(?:qual|que)\s+cidade|onde\s+(?:mora|reside|vai usar)/.test(askedText)) throw new Error('Pergunta de cidade já respondida.');
   if (questions && decision.field !== 'companyPresence' && decision.field !== 'companyType' && confirmed(state, 'companyPresence')

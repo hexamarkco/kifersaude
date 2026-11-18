@@ -46,7 +46,7 @@ test.each(['5.3', '5,3', '3.4'])('interprets informal age %s in reply to an expl
 
   const turn = await runV2Turn({ messages: [prompt, reply], previous, now: date, configVersion: 1,
     generate: async request => request.stage === 'interpret' ? JSON.stringify(uncertain)
-      : JSON.stringify({ text: 'Você mora em qual cidade?', commercialClaims: [] }),
+      : JSON.stringify({ text: 'Em que cidade e bairro você mora?', commercialClaims: [] }),
   });
   expect(confirmed(turn.state, 'beneficiaries')).toEqual([{ id: 'self', label: 'titular', age: expectedAge }]);
   expect(turn.decision.field).not.toBe('beneficiaries');

@@ -2,12 +2,11 @@ import { createWhatsAppDispatch, readWhatsAppTransport } from '../_shared/comm-w
 import { getAutonomousFailureAction, getAutonomousRetryDelayMs } from '../_shared/ai-autonomous-reply-failure.ts';
 import { getAiProviderFailure } from '../_shared/ai-provider-http.ts';
 import { generateAttendanceTurn } from '../_shared/autonomous-attendance-v2/generate-turn.ts';
-import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_ROLLOUT, V2_STYLE_LIBRARY } from '../_shared/autonomous-attendance-v2/deployment.ts';
-import { groupV2ReplyMessages, selectAutonomousEngine } from '../_shared/autonomous-attendance-v2/domain/rollout.ts';
+import { V2_DEPLOYMENT_VERSION, V2_MODEL_PROFILE, V2_ADVISOR_NAME, V2_STYLE_LIBRARY } from '../_shared/autonomous-attendance-v2/deployment.ts';
+import { groupV2ReplyMessages } from '../_shared/autonomous-attendance-v2/domain/rollout.ts';
 import { confirmed, initialState, isRecord } from '../_shared/autonomous-attendance-v2/domain/state.ts';
-import { legacyEvidenceMessageIds, restoreV2State, runV2Turn, v2Enabled } from '../_shared/autonomous-attendance-v2/domain/turn.ts';
+import { legacyEvidenceMessageIds, restoreV2State, runV2Turn } from '../_shared/autonomous-attendance-v2/domain/turn.ts';
 import { generateTextForFeature } from '../_shared/ai-router.ts';
-import type { AutonomousStyleMessage } from '../_shared/ai-autonomous-prompt.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { assertContactPermissionForSend } from '../_shared/contact-permissions.ts';
@@ -30,11 +29,7 @@ import {
 } from '../_shared/comm-whatsapp.ts';
 import { getMessageContent, type MessageRow } from '../_shared/comm-whatsapp-transcript.ts';
 import { getLatestAutonomousInboundMessageId, isAutonomousReplyStale, orderAutonomousConversationalMessages } from '../_shared/ai-autonomous-reply-staleness.ts';
-import {
-  fetchQuickReplies,
-  type HandoffCode,
-  type AutonomousMessageRow,
-} from '../_shared/ai-autonomous-helpers.ts';
+import { type HandoffCode, type AutonomousMessageRow } from '../_shared/ai-autonomous-helpers.ts';
 
 declare const Deno: {
   env: {
@@ -458,7 +453,7 @@ Deno.serve(async (req: Request) => {
         && !guard.error && guard.data === false;
       return new Response(JSON.stringify({ ready, deploymentVersion: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE,
         styleLibraryVersion: V2_STYLE_LIBRARY.version, styleExampleCount: V2_STYLE_LIBRARY.examples.length,
-        rollout: V2_ROLLOUT, paused: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_PAUSED') === 'true' }),
+        engine: 'v2', paused: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_PAUSED') === 'true' }),
         { status: ready ? 200 : 503, headers: jsonHeaders });
     }
     if (body.action === 'preview') {
@@ -633,7 +628,7 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const [historyResult, styleMessagesResult, quickReplies, leadResult] = await Promise.all([
+        const [historyResult, leadResult] = await Promise.all([
           supabaseAdmin
             .from('comm_whatsapp_messages')
             .select('id, direction, message_type, delivery_status, text_content, message_at, created_at, media_caption, transcription_text, transcription_status, transcription_error, media_id, media_url, media_mime_type, media_file_name, metadata')
@@ -645,17 +640,6 @@ Deno.serve(async (req: Request) => {
             .order('created_at', { ascending: false })
             .order('id', { ascending: false })
             .limit(CONVERSATION_HISTORY_LIMIT),
-          supabaseAdmin
-            .from('comm_whatsapp_messages')
-            .select('id, direction, message_type, delivery_status, text_content, message_at, media_caption, transcription_text, created_by, metadata')
-            .not('created_by', 'is', null)
-            .eq('direction', 'outbound')
-            .eq('message_type', 'text')
-            .neq('delivery_status', 'failed')
-            .not('text_content', 'is', null)
-            .order('message_at', { ascending: false })
-            .limit(120),
-          fetchQuickReplies(supabaseAdmin),
           supabaseAdmin
             .from('leads')
             .select('nome_completo, cidade, estado, operadora_atual, created_at')
@@ -738,14 +722,11 @@ Deno.serve(async (req: Request) => {
         failureSourceId = promptInboundMessageId;
 
         const correlationId = `${job.id}:${promptInboundMessageId}`;
-        const styleMessages = (styleMessagesResult.data ?? []) as MessageRow[];
         console.log('[ai-autonomous-reply-worker] contexto pronto para gerar resposta', {
           jobId: job.id,
           chatId: chat.id,
           leadId,
           historyRows: history.length,
-          styleRows: styleMessages.length,
-          quickReplies: quickReplies.length,
         });
         const previousMemory = await supabaseAdmin.from('ai_autonomous_qualification_states')
           .select('state').eq('chat_id', chat.id).eq('lead_id', leadId).maybeSingle();
@@ -753,22 +734,17 @@ Deno.serve(async (req: Request) => {
         const paused = Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_PAUSED') === 'true';
         const priorMemory = previousMemory.data?.state;
         const legacyStarted = isRecord(priorMemory) && !priorMemory.attendanceV2 && typeof priorMemory.source_message_id === 'string';
-        const engine = selectAutonomousEngine({ leadId, leadCreatedAt: leadResult.data?.created_at,
-          chatCreatedAt: chat.created_at, phone: chat.phone_digits, rollout: V2_ROLLOUT, legacyStarted,
-          hasV2State: isRecord(priorMemory) && isRecord(priorMemory.attendanceV2),
-          paused, allowlisted: v2Enabled(chat.id, Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_CHAT_IDS')),
-          messageReceivedAt: recentHistoryRows.find((row) => row.id === promptInboundMessageId)?.created_at });
-        if (engine === 'wait') {
-          const reason = paused ? 'v2_paused' : 'v2_waiting_fresh_inbound';
+        // The only executable attendance engine is V2. Pausing never invokes V1.
+        if (paused) {
+          const reason = 'v2_paused';
           await supabaseAdmin.from('ai_autonomous_reply_jobs')
             .update({ status: 'cancelled', last_error: reason }).eq('id', job.id);
           await recordAutonomousAttendanceEvent({ supabaseAdmin, chatId: chat.id, leadId, eventType: 'reply_cancelled',
             correlationId, decision: { engine: 'v2', reason, deploymentVersion: V2_DEPLOYMENT_VERSION } });
           continue;
         }
-        const allowlist = engine === 'v2' ? chat.id : '';
         const promptRows = [...recentHistoryRows];
-        if (v2Enabled(chat.id, allowlist) && legacyStarted) {
+        if (legacyStarted) {
           const present = new Set(promptRows.map((row) => row.id));
           const missing = legacyEvidenceMessageIds(priorMemory).filter((id) => !present.has(id));
           if (missing.length) {
@@ -793,8 +769,6 @@ Deno.serve(async (req: Request) => {
           client: supabaseAdmin, chatId: chat.id, leadId, sourceId: promptInboundMessageId,
           previousMemory: previousMemory.data?.state, lead: leadResult.data ?? {},
           messages: promptMessages,
-          styleMessages: styleMessagesResult.error ? [] : styleMessagesResult.data as AutonomousStyleMessage[], quickReplies,
-          allowlist,
           advisorName: Deno.env.get('AUTONOMOUS_ATTENDANCE_V2_ADVISOR_NAME') || V2_ADVISOR_NAME,
           deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true },
           record: (eventType, decision) => recordAutonomousAttendanceEvent({

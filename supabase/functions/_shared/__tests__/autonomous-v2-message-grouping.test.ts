@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { groupV2ReplyMessages } from '../autonomous-attendance-v2/domain/rollout.ts';
+import { groupV2ReplyMessages } from '../autonomous-attendance-v2/domain/reply-messages.ts';
 import { resolveRuntimeModelProfile } from '../ai-router.ts';
 import { V2_MODEL_PROFILE, V2_STYLE_LIBRARY } from '../autonomous-attendance-v2/deployment.ts';
 

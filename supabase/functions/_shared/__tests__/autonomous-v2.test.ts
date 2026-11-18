@@ -266,6 +266,7 @@ test.each([
 test('city-only confirmation is permitted only for a specific facility, not invented from DDD', () => {
   const messages = [message('Preciso do Hospital Exemplo da região', 1)];
   const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'holder', label: 'titular', age: 45 }],
     goal: 'Quero atendimento no Hospital Exemplo.', preferences: ['Hospital Exemplo obrigatório'],
   }, messages), messages, date);
   const decision = decide(state, empty);

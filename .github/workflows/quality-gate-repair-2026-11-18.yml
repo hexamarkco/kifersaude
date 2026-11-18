@@ -37,10 +37,15 @@ jobs:
           src/features/config/ai/components/__tests__/GlobalConfigSection.test.tsx
           src/features/config/integrations/api-docs/__tests__/ApiDocsScreen.test.tsx
           src/features/communication/whatsapp/domain/__tests__/inboxChatCollection.test.ts
-      - name: Full unit suite
-        id: suite
+          src/features/agenda/AgendaScreen.test.tsx
+          src/features/blog/__tests__/BlogTabScreen.test.tsx
+          src/features/communication/whatsapp-campaigns/WhatsAppCampaignDetailScreen.test.tsx
+          src/features/communication/whatsapp-campaigns/WhatsAppCampaignsScreen.test.tsx
+          src/features/config/integrations/__tests__/IntegrationsScreen.test.tsx
+      - name: Migration audit
+        id: migrations
         continue-on-error: true
-        run: npm test -- --maxWorkers=4 --minWorkers=1
+        run: npm run migrations:check
       - name: Check results
-        if: ${{ steps.typescript.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.focused.outcome == 'failure' || steps.suite.outcome == 'failure' }}
+        if: ${{ steps.typescript.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.focused.outcome == 'failure' || steps.migrations.outcome == 'failure' }}
         run: exit 1

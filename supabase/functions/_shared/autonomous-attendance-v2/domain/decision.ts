@@ -28,7 +28,7 @@ function optionalQuestions(state: V2State): Field[] {
   return fields.filter((field) => !state.facts[field] && (state.asked[field] ?? 0) === 0);
 }
 
-export function decide(state: V2State, interpretation: Interpretation, options: { customerAlreadyAssisted?: boolean } = {}): Decision {
+export function decide(state: V2State, interpretation: Interpretation, options: { customerAlreadyAssisted?: boolean; customerNeedResolved?: boolean } = {}): Decision {
   const missing = requirements(state);
   const make = (action: Decision['action'], reason: string, field: Field | null = null): Decision => ({
     action, field: action === 'ask' || action === 'clarify' ? field : null, reason, missing,
@@ -37,6 +37,8 @@ export function decide(state: V2State, interpretation: Interpretation, options: 
   // A courteous "I'm already talking to someone" ends the bot's questioning,
   // but must not mark the lead as Perdido or invent a quotation refusal.
   if (options.customerAlreadyAssisted) return make('handoff', 'customer_already_assisted');
+  // A resolved need ends the automated conversation, but is not proof of a lost sale.
+  if (options.customerNeedResolved) return make('handoff', 'customer_need_resolved');
   if (interpretation.humanRequested) return make('handoff', 'customer_requested_human');
   if (interpretation.quoteDeclined) {
     // Only unambiguous refusal evidence may mark a commercial loss. Ambiguity goes to a person.

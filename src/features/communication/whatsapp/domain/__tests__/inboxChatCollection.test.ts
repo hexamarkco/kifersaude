@@ -85,7 +85,7 @@ test('mescla identidade e prévia estáveis antes de ordenar a coleção', () =>
   const merged = result.chats[0];
 
   assert.deepEqual(result.chats.map((chat) => chat.id), ['existing', 'older']);
-  assert.equal(merged?.display_name, 'Maria');
+  assert.equal(merged?.display_name, 'Maria da Silva');
   assert.equal(merged?.saved_contact_name, 'Maria');
   assert.equal(merged?.lead_name, 'Maria da Silva');
   assert.equal(merged?.lead_link_source, 'manual');

@@ -77,11 +77,19 @@ const setInputValue = async (input: HTMLInputElement, value: string) => {
   });
 };
 
+const waitForUsersReady = async (view: { container: HTMLElement }) => {
+  const started = Date.now();
+  while (!view.container.querySelector('input[placeholder="Buscar por usuário, e-mail ou perfil"]')) {
+    if (Date.now() - started > 3000) throw new Error('Lista de usuários não ficou disponível.');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
+  }
+};
+
 test('remove o cabeçalho duplicado e mantém busca e contagem de usuários', async () => {
   reset();
   const view = render(<UsersScreen createDialogOpen={false} onCreateDialogOpenChange={() => {}} />);
   try {
-    await act(async () => {});
+    await waitForUsersReady(view);
     assert.equal(view.container.querySelectorAll('h2').length, 0);
     assert.equal(view.container.querySelector('[role="status"]')?.textContent, '2 usuários');
 
@@ -101,7 +109,7 @@ test('distingue uma busca sem resultados de uma lista realmente vazia', async ()
   reset();
   const view = render(<UsersScreen createDialogOpen={false} onCreateDialogOpenChange={() => {}} />);
   try {
-    await act(async () => {});
+    await waitForUsersReady(view);
     const search = view.container.querySelector<HTMLInputElement>('input[placeholder="Buscar por usuário, e-mail ou perfil"]');
     assert.ok(search);
     await setInputValue(search, 'consulta-inexistente');
@@ -117,7 +125,7 @@ test('abrir e cancelar os formulários não cria nem altera usuários', async ()
   reset();
   const view = render(<UsersScreenHarness />);
   try {
-    await act(async () => {});
+    await waitForUsersReady(view);
 
     const createButton = [...view.container.querySelectorAll('button')].find((button) => button.textContent?.includes('Novo usuário'));
     assert.ok(createButton);

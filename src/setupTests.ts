@@ -1,5 +1,9 @@
 import { vi } from 'vitest';
 
+// Offline-only defaults: tests must never require production Supabase credentials.
+vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321');
+vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-only-anon-key');
+
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 if (typeof window !== 'undefined') {

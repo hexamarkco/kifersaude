@@ -1,0 +1,37 @@
+name: Quality gate repair verification
+on:
+  push:
+    branches:
+      - fix/quality-gates-2026-11-18
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        id: typescript
+        continue-on-error: true
+        run: npm run typecheck
+      - name: Lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+      - name: AI editor isolated regression
+        id: focused
+        continue-on-error: true
+        run: npm test -- src/features/config/ai/components/__tests__/FeatureEditorDrawer.test.tsx
+      - name: Migration audit
+        id: migrations
+        continue-on-error: true
+        run: npm run migrations:report
+      - name: Check results
+        if: ${{ steps.typescript.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.focused.outcome == 'failure' || steps.migrations.outcome == 'failure' }}
+        run: exit 1

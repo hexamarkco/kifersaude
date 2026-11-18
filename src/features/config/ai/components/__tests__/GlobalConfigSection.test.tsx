@@ -46,6 +46,10 @@ test("mostra o erro de salvamento junto ao campo sem cobrir as ações", async (
   const alert = view.container.querySelector('[role="alert"]');
   assert.ok(alert);
   assert.match(alert.textContent ?? "", /Ação de gravação bloqueada/);
+  const started = Date.now();
+  while (saveButton.disabled && Date.now() - started < 3000) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
   assert.equal(saveButton.disabled, false);
   view.unmount();
 });

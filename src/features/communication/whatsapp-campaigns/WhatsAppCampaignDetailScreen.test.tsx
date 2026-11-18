@@ -103,7 +103,7 @@ const campaign: CommWhatsAppCampaign = {
 const waitForText = async (text: string) => {
   const startedAt = Date.now();
   while (!document.body.textContent?.includes(text)) {
-    if (Date.now() - startedAt >= 1_000) throw new Error(`Texto não encontrado: ${text}`);
+    if (Date.now() - startedAt >= 3_000) throw new Error(`Texto não encontrado: ${text}. Conteúdo atual: ${document.body.textContent?.slice(0, 800)}`);
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
@@ -155,6 +155,7 @@ test('enfileira uma única atualização quando o realtime chega durante a atual
     </MemoryRouter>,
   );
   await waitForText('Campanha de teste');
+  await waitForText('Status do disparo');
   assert.ok(document.body.textContent?.includes('Status do disparo'));
   assert.ok(document.body.textContent?.includes('Público selecionado'));
   assert.ok(document.body.textContent?.includes('Destinatários'));

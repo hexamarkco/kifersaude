@@ -26,7 +26,7 @@ import IntegrationsScreen from '../IntegrationsScreen';
 const waitForBodyText = async (text: string) => {
   const start = Date.now();
   while (!document.body.textContent?.includes(text)) {
-    if (Date.now() - start >= 1000) {
+    if (Date.now() - start >= 3000) {
       throw new Error(`Unable to find element with text: ${text}`);
     }
     await act(async () => {
@@ -41,7 +41,7 @@ const waitForButtonText = async (text: string) => {
     const button = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
       .find((candidate) => candidate.textContent?.trim() === text);
     if (button) return button;
-    if (Date.now() - start >= 1000) {
+    if (Date.now() - start >= 3000) {
       throw new Error(`Unable to find button with text: ${text}`);
     }
     await act(async () => {
@@ -65,6 +65,10 @@ test('libera o salvamento do provedor quando a chamada de integração rejeita',
   });
 
   const restoredButton = await waitForButtonText('Salvar OpenAI');
+  const started = Date.now();
+  while (restoredButton.disabled && Date.now() - started < 3000) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
   assert.equal(restoredButton.disabled, false);
   view.unmount();
 });

@@ -49,6 +49,7 @@ beforeAll(async () => {
   await db.exec(readFileSync(resolve('supabase/migrations/20261024011732_meta_lead_ads_crm_pipeline.sql'),'utf8'));
   await db.exec(readFileSync(resolve('supabase/migrations/20261024022700_meta_lead_validation_probe.sql'),'utf8'));
   await db.exec(readFileSync(resolve('supabase/migrations/20261112230739_meta_commercial_review_modalities.sql'),'utf8'));
+  await db.exec(readFileSync(resolve('supabase/migrations/20261118003000_meta_ads_snapshot_history_stable_order.sql'),'utf8'));
   expect(await value<string>(`SELECT settings->>'pageAccessToken' AS value FROM integration_settings`)).toBeNull();
   expect(await value<boolean>(`SELECT (settings->>'enabled')::boolean AS value FROM integration_settings`)).toBe(false);
   await db.exec(`REVOKE ALL ON public.opportunities,public.opportunity_leads FROM service_role;
@@ -401,6 +402,7 @@ it('searches attribution by contact or exact Meta ID and paginates the complete 
     SELECT 'inbound','999999999999999999',n,'started' FROM generate_series(1,55) n;`);
   const snapshot=await scalar<{ history: { id: string }[] }>('meta_ads_snapshot',[admin,metaLead]);
   expect(snapshot.history).toHaveLength(50);
+  expect(snapshot.history.map(entry => Number(entry.id))).toEqual([...snapshot.history.map(entry => Number(entry.id))].sort((a,b) => b-a));
   const older=await scalar<{ id: string }[]>('meta_ads_history',[admin,snapshot.history.at(-1)!.id]);
   expect(older).toHaveLength(5);
   expect(new Set([...snapshot.history,...older].map((entry) => entry.id)).size).toBe(55);

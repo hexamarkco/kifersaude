@@ -16,6 +16,7 @@ declare module 'vitest' {
     getTimerCount: () => number;
     spyOn: (object: object, method: string) => MockSpy;
     restoreAllMocks: () => void;
+    stubEnv: (name: string, value: string | boolean | undefined) => void;
   };
 }
 

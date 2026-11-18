@@ -49,8 +49,7 @@ export async function generateSandboxReply(params: {
         deliveryGroup: row.role === 'ai' ? deliveryGroup : undefined };
     }));
     const turn = await generateAttendanceTurn({ client, chatId: conversationId, leadId: conversationId, sourceId: latest.id,
-      messages: promptMessages, previousMemory, lead: { nome_completo: params.leadName }, styleMessages: [], quickReplies: [],
-      allowlist: conversationId, advisorName: params.advisorName || V2_ADVISOR_NAME, sandbox: true,
+      messages: promptMessages, previousMemory, lead: { nome_completo: params.leadName }, advisorName: params.advisorName || V2_ADVISOR_NAME, sandbox: true,
       deployment: { version: V2_DEPLOYMENT_VERSION, modelProfile: V2_MODEL_PROFILE, styleLibrary: V2_STYLE_LIBRARY, splitReplies: true },
       record: async () => { /* Test state is stored only in ai_sandbox_conversations, never in real attendance events. */ },
     });

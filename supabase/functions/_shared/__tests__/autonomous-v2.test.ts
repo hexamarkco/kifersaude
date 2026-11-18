@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test, vi } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { assertDecision, decide, decisionTrace, internalBriefing, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
+import { assertDecision, decide, decisionTrace, hasNamedCareFacility, internalBriefing, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, parseInterpretation, readState, seedState, unseenMessages, type Interpretation, type V2State } from '../autonomous-attendance-v2/domain/state.ts';
 import { formatReplyBlocks, legacyEvidenceMessageIds, restoreV2State, resumePreparedTurn, normalizeContextualAgeAnswer, runV2Turn, stateAfterSend, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
 import { date, interpretation, message, scenarios } from './fixtures/autonomous-v2-scenarios.ts';
@@ -207,6 +207,98 @@ test('location question asks city and neighborhood, never a separate state quest
   state.facts.city = { ...full().facts.city!, value: 'Duque de Caxias' };
   expect(requirements(state)).toEqual([]);
   expect(decide(state, empty).action).toBe('complete');
+});
+
+
+test('a named hospital makes capital neighborhood optional while preserving residence city and CNPJ questions', () => {
+  const audio = [message('Somos duas pessoas, 55 e 24 anos. Preciso de plano com Mater Dei da Contorno e de Santo Agostinho.', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 2, beneficiaries: [{ id: 'mother', label: 'titular', age: 55 },
+      { id: 'daughter', label: 'filha', age: 24 }],
+    goal: 'Ter um plano que inclua o Mater Dei da Contorno e do Santo Agostinho.',
+    preferences: ['Incluir Mater Dei da Contorno e do Santo Agostinho, não Betim.'],
+  }, audio), audio, date);
+  expect(hasNamedCareFacility(state)).toBe(true);
+  expect(confirmed(state, 'city')).toBeNull();
+  expect(requirements(state)).toContain('city');
+  const decision = decide(state, empty);
+  expect(decision).toMatchObject({ action: 'ask', field: 'city' });
+  const cityOnly = 'Vocês moram em qual cidade?';
+  expect(validateWrittenReply(JSON.stringify({ text: cityOnly, commercialClaims: [] }), state, decision)).toBe(cityOnly);
+  for (const text of ['Em que cidade e bairro vocês moram?', 'Em que bairro vocês moram?']) {
+    expect(() => validateWrittenReply(JSON.stringify({ text, commercialClaims: [] }), state, decision)).toThrow();
+  }
+  const residence = [message('Belo Horizonte', 2)];
+  const updated = mergeInterpretation(state, interpretation({ city: 'Belo Horizonte' }, residence), residence, date);
+  expect(confirmed(updated, 'state')).toBe('MG');
+  expect(confirmed(updated, 'neighborhood')).toBeNull();
+  expect(requirements(updated)).toEqual(['companyPresence']);
+  expect(decide(updated, empty)).toMatchObject({ action: 'ask', field: 'companyPresence' });
+  const answered = [message('Não tenho MEI nem CNPJ', 3)];
+  const ready = mergeInterpretation(updated, interpretation({ companyPresence: 'no' }, answered), answered, date);
+  expect(requirements(ready)).toEqual([]);
+});
+
+test('named hospital can be captured as a confirmed goal even if the model omitted preferences', () => {
+  const messages = [message('Preciso que inclua o Mater Dei', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({ goal: 'Quero que inclua o Mater Dei.' }, messages), messages, date);
+  expect(hasNamedCareFacility(state)).toBe(true);
+  expect(requirements(state)).not.toContain('neighborhood');
+});
+
+test.each([
+  'Hospitais próximos de casa',
+  'Hospital bom perto de casa',
+  'Rede credenciada ampla',
+  'Quero hospitais e laboratórios próximos',
+])('generic network preference still requires neighborhood in capitals: %s', (preference) => {
+  const messages = [message(preference, 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    city: 'Belo Horizonte', goal: preference, preferences: [preference],
+  }, messages), messages, date);
+  expect(hasNamedCareFacility(state)).toBe(false);
+  expect(requirements(state)).toContain('neighborhood');
+  expect(decide(state, { ...empty, suggestedField: 'companyPresence' })).toMatchObject({
+    action: 'ask', field: 'neighborhood',
+  });
+});
+
+test('city-only confirmation is permitted only for a specific facility, not invented from DDD', () => {
+  const messages = [message('Preciso do Hospital Exemplo da região', 1)];
+  const state = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'holder', label: 'titular', age: 45 }],
+    goal: 'Quero atendimento no Hospital Exemplo.', preferences: ['Hospital Exemplo obrigatório'],
+  }, messages), messages, date);
+  const decision = decide(state, empty);
+  expect(decision).toMatchObject({ action: 'ask', field: 'city' });
+  const text = 'Vocês moram em Belo Horizonte mesmo?';
+  expect(validateWrittenReply(JSON.stringify({ text, commercialClaims: [] }), state, decision)).toBe(text);
+  expect(confirmed(state, 'city')).toBeNull();
+  const ordinary = mergeInterpretation(initialState(), interpretation({
+    beneficiaryCount: 1, beneficiaries: [{ id: 'holder', label: 'titular', age: 45 }],
+  }, messages), messages, date);
+  expect(decide(ordinary, empty)).toMatchObject({ action: 'ask', field: 'city' });
+  expect(() => validateWrittenReply(JSON.stringify({ text, commercialClaims: [] }), ordinary,
+    decide(ordinary, empty))).toThrow();
+});
+
+test('V2 writing instructions preserve the facility but do not request an unnecessary neighborhood', async () => {
+  const messages = [message('Eu 55, filha 24. Exijo atendimento no Mater Dei Contorno.', 1)];
+  const parsed = interpretation({
+    beneficiaryCount: 2, beneficiaries: [{ id: 'a', label: 'titular', age: 55 }, { id: 'b', label: 'filha', age: 24 }],
+    preferences: ['Atendimento no Mater Dei Contorno'],
+  }, messages);
+  const turn = await runV2Turn({
+    messages, previous: initialState(), now: date, configVersion: 24,
+    generate: async request => {
+      if (request.stage === 'interpret') return JSON.stringify(parsed);
+      expect(request.systemPrompt).toContain('pergunte SOMENTE a cidade de residência');
+      expect(request.systemPrompt).toContain('não repita todos os nomes');
+      return JSON.stringify({ text: 'Vocês moram em qual cidade?', commercialClaims: [] });
+    },
+  });
+  expect(turn.decision).toMatchObject({ action: 'ask', field: 'city' });
+  expect(turn.text).toBe('Vocês moram em qual cidade?');
 });
 
 test('contradictory geography is clarified through city/bairro and corrected without asking state', () => {

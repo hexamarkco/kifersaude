@@ -114,6 +114,10 @@ test('cancela a espera sem indicar que uma operação no servidor foi desfeita',
   assert.ok(document.querySelectorAll<HTMLButtonElement>('.kds-api-endpoint')[0].disabled);
   await act(async () => { button('Cancelar espera').click(); });
   assert.ok(document.body.textContent?.includes('Uma operação já recebida pelo servidor pode continuar'));
+  const started = Date.now();
+  while (button('Executar chamada').disabled && Date.now() - started < 3000) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 16)); });
+  }
   assert.equal(button('Executar chamada').disabled, false);
 }));
 

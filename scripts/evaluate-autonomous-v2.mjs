@@ -11,7 +11,7 @@ if (styleChecks.status !== 0) process.exit(styleChecks.status ?? 1);
 const child = spawn(process.execPath, [resolve('node_modules/vitest/vitest.mjs'), 'run',
   'supabase/functions/_shared/__tests__/autonomous-v2.test.ts',
   'supabase/functions/_shared/__tests__/autonomous-v2-style.test.ts',
-  'supabase/functions/_shared/__tests__/autonomous-v2-rollout.test.ts',
+  'supabase/functions/_shared/__tests__/autonomous-v2-message-grouping.test.ts',
   'supabase/functions/_shared/__tests__/autonomous-v2-worker.test.ts',
   'supabase/functions/_shared/__tests__/autonomous-v2-pg.test.ts',
   'supabase/functions/_shared/__tests__/ai-sandbox-attendance.test.ts',

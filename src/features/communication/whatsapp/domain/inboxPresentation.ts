@@ -154,11 +154,18 @@ const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
 
 export const createPendingAttachmentFromFile = (file: File): InboxPendingAttachment => {
   const kind = inferAttachmentKind(file);
+  const isPdf = kind === 'document' && (file.type.toLowerCase() === 'application/pdf' || /\.pdf$/i.test(file.name));
+  const canPreview = kind === 'image' || kind === 'video' || isPdf;
+  // Use the PDF MIME type for the local viewer even when the browser omits the uploaded file's type.
+  const previewFile = isPdf && file.type.toLowerCase() !== 'application/pdf'
+    ? new Blob([file], { type: 'application/pdf' })
+    : file;
+
   return {
     id: createPendingAttachmentId(),
     file,
     kind,
-    previewUrl: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
+    previewUrl: canPreview ? URL.createObjectURL(previewFile) : null,
   };
 };
 

@@ -123,3 +123,33 @@ test('remove as referências de estado quando não há sugestões abertas', () =
 
   unmount();
 });
+
+test('exibe PDF na prévia e remove anexo pelo X sobre o ícone', () => {
+  const props = createComposerProps();
+  const pdf = {
+    id: 'pdf-1',
+    file: new File(['%PDF-1.4'], 'proposta.pdf', { type: 'application/pdf' }),
+    kind: 'document' as const,
+    previewUrl: 'blob:pdf-preview',
+  };
+  let removedId: string | undefined;
+  props.documentComposerAttachments = [pdf];
+  props.selectedDocumentComposerAttachment = pdf;
+  props.handleClearAttachment = (id) => { removedId = id; };
+
+  const { container, unmount } = render(<WhatsAppComposer {...props} />);
+
+  try {
+    const preview = container.querySelector('iframe.whatsapp-inbox-document-composer-pdf');
+    assert.ok(preview);
+    assert.equal(preview.getAttribute('src'), 'blob:pdf-preview#toolbar=1&navpanes=0');
+
+    const remove = container.querySelector<HTMLButtonElement>('button[aria-label="Remover documento proposta.pdf"]');
+    assert.ok(remove);
+    assert.ok(remove.className.includes('absolute left-2.5'));
+    remove.click();
+    assert.equal(removedId, 'pdf-1');
+  } finally {
+    unmount();
+  }
+});

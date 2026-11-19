@@ -329,14 +329,14 @@ export function WhatsAppComposer({
                               const extension = attachment.file.name.split('.').pop()?.toUpperCase() || 'DOC';
                               const selected = attachment.id === selectedDocumentComposerAttachment.id;
                               return (
-                                <div key={attachment.id} className={`whatsapp-inbox-document-composer-item relative flex h-14 min-w-[12rem] max-w-[16rem] shrink-0 items-center gap-2 overflow-hidden rounded-xl border px-2.5 transition ${selected ? 'is-selected' : ''}`}>
+                                <div key={attachment.id} className={`whatsapp-inbox-document-composer-item group relative flex h-14 min-w-[12rem] max-w-[16rem] shrink-0 items-center overflow-hidden rounded-xl border px-2.5 transition ${selected ? 'is-selected' : ''}`}>
                                   <Button variant="ghost"
                                     type="button"
                                     onClick={() => setSelectedDocumentComposerAttachmentId(attachment.id)}
-                                    className="flex min-w-0 flex-1 items-center text-left"
-                                    aria-label="Selecionar documento"
+                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                    aria-label={`Selecionar documento ${attachment.file.name}`}
                                   >
-                                    <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 items-center justify-center rounded-full border px-1 text-[10px] font-bold tracking-[0.08em]">
+                                    <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border px-1 text-[10px] font-bold tracking-[0.08em]">
                                       {extension.slice(0, 4)}
                                     </span>
                                     <span className="min-w-0">
@@ -347,10 +347,11 @@ export function WhatsAppComposer({
                                   <IconButton variant="ghost" size="sm"
                                     type="button"
                                     onClick={() => handleClearAttachment(attachment.id)}
-                                    className="inline-flex shrink-0 items-center justify-center transition"
-                                    aria-label="Remover documento"
+                                    className="absolute left-2.5 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[var(--text-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                                    aria-label={`Remover documento ${attachment.file.name}`}
+                                    title="Remover documento"
                                   >
-                                    <X className="" />
+                                    <X className="h-4 w-4" />
                                   </IconButton>
                                 </div>
                               );

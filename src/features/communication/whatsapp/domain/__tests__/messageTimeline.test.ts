@@ -90,13 +90,19 @@ test('keeps provider-confirmed status chronology even with mixed second and mill
 });
 
 test('follows confirmed delivery progression when provider timestamps arrive out of order', () => {
-  const events: MessageDeliveryStatusEvent[] = [
-    { status: 'read', at: '2026-11-19T22:47:27.000Z', error: null },
-    { status: 'delivered', at: '2026-11-19T22:47:29.000Z', error: null },
-    { status: 'pending', at: '2026-11-19T20:51:51.370Z', error: null },
-  ];
+  const message = createMessage({
+    delivery_status: 'read',
+    status_updated_at: '2026-11-19T22:47:27.000Z',
+    metadata: {
+      delivery_status_history: [
+        { status: 'read', at: '2026-11-19T22:47:27.000Z' },
+        { status: 'delivered', at: '2026-11-19T22:47:29.000Z' },
+        { status: 'pending', at: '2026-11-19T20:51:51.370Z' },
+      ],
+    },
+  });
 
-  assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
+  assert.deepEqual(getMessageDeliveryTimeline(message).map((event) => event.status), [
     'pending', 'delivered', 'read',
   ]);
 });
@@ -123,7 +129,12 @@ test('preserves error chronology when a later delivered event supersedes a failu
     { status: 'failed', at: '2026-11-19T20:52:15.000Z', error: 'Falha temporária' },
     { status: 'pending', at: '2026-11-19T20:51:51.000Z', error: null },
   ];
-  assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
+  const message = createMessage({
+    delivery_status: 'delivered',
+    status_updated_at: '2026-11-19T20:52:20.000Z',
+    metadata: { delivery_status_history: events },
+  });
+  assert.deepEqual(getMessageDeliveryTimeline(message).map((event) => event.status), [
     'pending', 'failed', 'delivered',
   ]);
 });

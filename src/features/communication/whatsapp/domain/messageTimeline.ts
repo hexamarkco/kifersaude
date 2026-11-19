@@ -50,23 +50,17 @@ const deliveryProgressionStatuses = new Set([
   'read', 'seen', 'viewed', 'played',
 ]);
 
-/** Order confirmed delivery milestones causally; preserve timestamps as received. */
+/** Sort raw event timestamps for chronological uses; tied times follow delivery progression. */
 export const compareMessageDeliveryStatusEvents = (
   left: MessageDeliveryStatusEvent,
   right: MessageDeliveryStatusEvent,
 ) => {
-  const leftStatus = left.status.trim().toLowerCase();
-  const rightStatus = right.status.trim().toLowerCase();
-  if (deliveryProgressionStatuses.has(leftStatus) && deliveryProgressionStatuses.has(rightStatus)) {
-    const progression = (deliveryStatusOrder[leftStatus] ?? 10) - (deliveryStatusOrder[rightStatus] ?? 10);
-    if (progression !== 0) return progression;
-  }
-
   const leftAt = getMessageTimestampMs(left.at);
   const rightAt = getMessageTimestampMs(right.at);
   if (leftAt !== null && rightAt !== null && leftAt !== rightAt) return leftAt - rightAt;
 
-  return (deliveryStatusOrder[leftStatus] ?? 10) - (deliveryStatusOrder[rightStatus] ?? 10);
+  return (deliveryStatusOrder[left.status.trim().toLowerCase()] ?? 10)
+    - (deliveryStatusOrder[right.status.trim().toLowerCase()] ?? 10);
 };
 
 /** Build the details timeline only from recorded events and the persisted current status. */
@@ -82,7 +76,23 @@ export const getMessageDeliveryTimeline = (message: CommWhatsAppMessage): Messag
     });
   }
 
-  return events.sort(compareMessageDeliveryStatusEvents);
+  // Sort by the original timestamps, then normalize only confirmed delivery
+  // milestones. This also keeps failures/deletions in their chronological slots
+  // without a non-transitive comparator or invented provider timestamps.
+  events.sort(compareMessageDeliveryStatusEvents);
+  const progressionIndexes = events.flatMap((event, index) => (
+    deliveryProgressionStatuses.has(event.status) ? [index] : []
+  ));
+  const progressionEvents = progressionIndexes
+    .map((index) => events[index])
+    .sort((left, right) => (
+      (deliveryStatusOrder[left.status] ?? 10) - (deliveryStatusOrder[right.status] ?? 10)
+      || compareMessageDeliveryStatusEvents(left, right)
+    ));
+  progressionIndexes.forEach((index, position) => {
+    events[index] = progressionEvents[position];
+  });
+  return events;
 };
 
 export const getComparableMessageTimestampMs = (

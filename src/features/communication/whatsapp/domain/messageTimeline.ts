@@ -1,6 +1,6 @@
 import { getDateKey, SAO_PAULO_TIMEZONE } from '../../../../lib/dateUtils';
 import { mergeCommWhatsAppMessages } from '../messageStatus';
-import { getMessageClientOrderAt, type MessageDeliveryStatusEvent } from './messageMetadata';
+import { getMessageClientOrderAt, getMessageDeliveryStatusHistory, type MessageDeliveryStatusEvent } from './messageMetadata';
 import { getMessageSearchPreviewText, normalizeInboxSearch } from './messagePresentation';
 import type { CommWhatsAppMessage } from './types';
 
@@ -42,17 +42,47 @@ const deliveryStatusOrder: Record<string, number> = {
   deleted: 9,
 };
 
-/** Sort status events by time, resolving identical timestamps by delivery progression. */
+// Provider timestamps sometimes have second precision while local timestamps have milliseconds.
+// For confirmed delivery milestones, the causal progression wins over clock precision.
+// Error/deletion events retain their actual chronology.
+const deliveryProgressionStatuses = new Set([
+  'pending', 'queued', 'sending', 'sent', 'received', 'delivered',
+  'read', 'seen', 'viewed', 'played',
+]);
+
+/** Order confirmed delivery milestones causally; preserve timestamps as received. */
 export const compareMessageDeliveryStatusEvents = (
   left: MessageDeliveryStatusEvent,
   right: MessageDeliveryStatusEvent,
 ) => {
+  const leftStatus = left.status.trim().toLowerCase();
+  const rightStatus = right.status.trim().toLowerCase();
+  if (deliveryProgressionStatuses.has(leftStatus) && deliveryProgressionStatuses.has(rightStatus)) {
+    const progression = (deliveryStatusOrder[leftStatus] ?? 10) - (deliveryStatusOrder[rightStatus] ?? 10);
+    if (progression !== 0) return progression;
+  }
+
   const leftAt = getMessageTimestampMs(left.at);
   const rightAt = getMessageTimestampMs(right.at);
   if (leftAt !== null && rightAt !== null && leftAt !== rightAt) return leftAt - rightAt;
 
-  return (deliveryStatusOrder[left.status.trim().toLowerCase()] ?? 10)
-    - (deliveryStatusOrder[right.status.trim().toLowerCase()] ?? 10);
+  return (deliveryStatusOrder[leftStatus] ?? 10) - (deliveryStatusOrder[rightStatus] ?? 10);
+};
+
+/** Build the details timeline only from recorded events and the persisted current status. */
+export const getMessageDeliveryTimeline = (message: CommWhatsAppMessage): MessageDeliveryStatusEvent[] => {
+  const events = [...getMessageDeliveryStatusHistory(message)];
+  const currentStatus = message.delivery_status.trim().toLowerCase();
+
+  if (currentStatus && message.status_updated_at && !events.some((event) => event.status === currentStatus)) {
+    events.push({
+      status: currentStatus,
+      at: message.status_updated_at,
+      error: message.error_message ?? null,
+    });
+  }
+
+  return events.sort(compareMessageDeliveryStatusEvents);
 };
 
 export const getComparableMessageTimestampMs = (

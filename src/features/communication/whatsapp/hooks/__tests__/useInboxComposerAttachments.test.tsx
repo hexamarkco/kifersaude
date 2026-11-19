@@ -128,6 +128,38 @@ test('colar imagem normaliza nomes ausentes e revoga o preview removido', () => 
   }
 });
 
+test('PDFs têm prévia local, outros documentos não e a URL é revogada ao remover', () => {
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  const createdMimeTypes: string[] = [];
+  const revokedUrls: string[] = [];
+  URL.createObjectURL = (blob) => {
+    createdMimeTypes.push(blob.type);
+    return `blob:pdf-preview-${createdMimeTypes.length}`;
+  };
+  URL.revokeObjectURL = (url) => { revokedUrls.push(url); };
+  const harness = createHarness();
+
+  try {
+    const pdfWithoutMime = new File(['%PDF-1.4'], 'proposta.PDF', { type: '' });
+    const spreadsheet = new File(['dados'], 'rede.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const event = { target: { files: [pdfWithoutMime, spreadsheet], value: 'selecionado' } };
+
+    act(() => harness.state.handleAttachmentInputChange(event as never));
+    const [pdf, otherDocument] = harness.state.documentComposerAttachments;
+    assert.equal(pdf?.previewUrl, 'blob:pdf-preview-1');
+    assert.equal(otherDocument?.previewUrl, null);
+    assert.deepEqual(createdMimeTypes, ['application/pdf']);
+
+    act(() => harness.state.handleClearAttachment(pdf.id));
+    assert.deepEqual(revokedUrls, ['blob:pdf-preview-1']);
+  } finally {
+    harness.view.unmount();
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+  }
+});
+
 test('drag aninhado só fecha o indicador no último leave e o drop carrega os arquivos', () => {
   const harness = createHarness();
   const firstFile = new File(['1'], 'um.pdf', { type: 'application/pdf' });

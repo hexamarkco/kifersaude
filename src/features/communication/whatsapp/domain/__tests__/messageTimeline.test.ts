@@ -9,6 +9,7 @@ import {
   dedupeObviousDuplicateMessages,
   findMessageByIdOrExternalId,
   formatMessageDaySeparatorLabel,
+  getMessageDeliveryTimeline,
   getMessageDayKey,
   getMessageTimestampMs,
   mergeMessages,
@@ -64,6 +65,66 @@ test('keeps actual delivery timestamps ahead of status tie-break order', () => {
   assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
     'pending',
     'delivered',
+  ]);
+});
+
+test('keeps provider-confirmed status chronology even with mixed second and millisecond precision', () => {
+  // Real regression: delivered webhook has second precision, pending has milliseconds.
+  const message = createMessage({
+    delivery_status: 'read',
+    message_at: '2026-11-19T20:51:51.370Z',
+    status_updated_at: '2026-11-19T22:47:29.000Z',
+    metadata: {
+      delivery_status_history: [
+        { status: 'pending', at: '2026-11-19T20:51:51.370Z' },
+        { status: 'delivered', at: '2026-11-19T20:51:51.000Z' },
+        { status: 'read', at: '2026-11-19T22:47:29.000Z' },
+      ],
+    },
+  });
+
+  const timeline = getMessageDeliveryTimeline(message);
+  assert.deepEqual(timeline.map((event) => event.status), ['pending', 'delivered', 'read']);
+  assert.equal(timeline[1]?.at, '2026-11-19T20:51:51.000Z');
+  assert.equal(timeline.some((event) => event.status === 'sent'), false);
+});
+
+test('follows confirmed delivery progression when provider timestamps arrive out of order', () => {
+  const events: MessageDeliveryStatusEvent[] = [
+    { status: 'read', at: '2026-11-19T22:47:27.000Z', error: null },
+    { status: 'delivered', at: '2026-11-19T22:47:29.000Z', error: null },
+    { status: 'pending', at: '2026-11-19T20:51:51.370Z', error: null },
+  ];
+
+  assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
+    'pending', 'delivered', 'read',
+  ]);
+});
+
+test('uses the persisted sent status when confirmed, but does not invent missing milestones', () => {
+  const sent = createMessage({
+    delivery_status: 'sent',
+    status_updated_at: '2026-11-19T20:51:52.000Z',
+    metadata: {},
+  });
+  assert.deepEqual(getMessageDeliveryTimeline(sent).map((event) => event.status), ['sent']);
+
+  const delivered = createMessage({
+    delivery_status: 'delivered',
+    status_updated_at: '2026-11-19T20:51:53.000Z',
+    metadata: { delivery_status_history: [{ status: 'pending', at: '2026-11-19T20:51:51.000Z' }] },
+  });
+  assert.deepEqual(getMessageDeliveryTimeline(delivered).map((event) => event.status), ['pending', 'delivered']);
+});
+
+test('preserves error chronology when a later delivered event supersedes a failure', () => {
+  const events: MessageDeliveryStatusEvent[] = [
+    { status: 'delivered', at: '2026-11-19T20:52:20.000Z', error: null },
+    { status: 'failed', at: '2026-11-19T20:52:15.000Z', error: 'Falha temporária' },
+    { status: 'pending', at: '2026-11-19T20:51:51.000Z', error: null },
+  ];
+  assert.deepEqual(events.sort(compareMessageDeliveryStatusEvents).map((event) => event.status), [
+    'pending', 'failed', 'delivered',
   ]);
 });
 

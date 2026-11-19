@@ -146,7 +146,7 @@ test('exibe PDF na prévia e remove anexo pelo X sobre o ícone', () => {
 
     const remove = container.querySelector<HTMLButtonElement>('button[aria-label="Remover documento proposta.pdf"]');
     assert.ok(remove);
-    assert.ok(remove.className.includes('absolute left-2.5'));
+    assert.ok(remove.className.includes('absolute left-3'));
     remove.click();
     assert.equal(removedId, 'pdf-1');
   } finally {

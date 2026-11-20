@@ -1,7 +1,7 @@
 import { Heading, Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, MessageCircle, Pin, Smartphone, Trash2, WifiOff } from 'lucide-react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
   Alert,
@@ -133,6 +133,8 @@ const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', '
 
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
+  // Esta rota é uma prévia isolada da apresentação. Todos os hooks e serviços permanecem os do Inbox real.
+  const mobilePrototype = useLocation().pathname.endsWith('/inbox-mobile');
   const [searchParams, setSearchParams] = useSearchParams();
   const { role } = useAuth();
   const { leadStatuses, options, getRoleModulePermission } = useConfig();
@@ -2046,9 +2048,20 @@ export default function WhatsAppInboxScreen() {
 
   return (
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
-    <div className={`comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0 ${selectedChat ? 'is-conversation-open' : ''}`}>
+    <div className={`comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0 ${selectedChat ? 'is-conversation-open' : ''} ${mobilePrototype ? 'is-mobile-prototype' : ''}`}>
       <div className="flex h-full min-h-0 flex-col gap-0">
         <Heading level={1} className="sr-only">WhatsApp Inbox</Heading>
+        {mobilePrototype ? (
+          <div className="whatsapp-mobile-prototype-ribbon" role="note" aria-label="Versão experimental do WhatsApp">
+            <span className="whatsapp-mobile-prototype-ribbon-label">
+              <Smartphone className="kds-control-icon" aria-hidden="true" />
+              <span>Prévia mobile <small>Dados reais do CRM</small></span>
+            </span>
+            <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/painel/inbox')}>
+              Inbox atual
+            </Button>
+          </div>
+        ) : null}
         {operationalBanner && (
           <section role="status" className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} flex shrink-0 items-start gap-2.5 border-b`}>
             <operationalBanner.icon className="mt-0.5 h-4 w-4 shrink-0" />
@@ -2061,6 +2074,7 @@ export default function WhatsAppInboxScreen() {
 
         <section aria-label="Área de atendimento" className={`kds-inbox-workspace-grid grid min-h-0 flex-1 ${contactContextPanelOpen && selectedChat && !selectedChat.is_group ? 'is-contact-panel-open' : ''}`}>
         <WhatsAppInboxSidebar
+          mobilePrototype={mobilePrototype}
           leadStatuses={leadStatuses}
           archivedSectionOpen={archivedSectionOpen}
           archivedChatsCount={archivedChatsCountValue}
@@ -2114,6 +2128,9 @@ export default function WhatsAppInboxScreen() {
         />
 
         <WhatsAppInboxConversationPane
+          mobilePrototype={mobilePrototype}
+          onOpenAgenda={canViewAgenda ? () => setWhatsAppAgendaOpen(true) : undefined}
+          onOpenScheduleMessage={() => setScheduleMessageModalOpen(true)}
           conversation={conversationView}
           isDraggingFilesOverThread={isDraggingFilesOverThread}
           onDragEnter={handleThreadDragEnter}

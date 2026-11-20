@@ -92,6 +92,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
               <Route path="agenda" element={<FinanceiroAgendaTab />} />
               <Route path="inbox" element={<WhatsAppInboxWrapper />} />
+              <Route path="inbox-mobile" element={<WhatsAppInboxWrapper />} />
               <Route path="disparos" element={<WhatsAppCampaignsWrapper />} />
               <Route path="disparos/:campaignId" element={<WhatsAppCampaignDetailWrapper />} />
               <Route path="tarefas" element={<Navigate to="/painel/agenda" replace />} />

@@ -7,6 +7,7 @@ import { WhatsAppChatMessageSearch } from './WhatsAppChatMessageSearch';
 import { WhatsAppComposer } from './WhatsAppComposer';
 import { WhatsAppMessageThread } from './WhatsAppMessageThread';
 import { WhatsAppThreadHeader } from './WhatsAppThreadHeader';
+import { WhatsAppInboxMobileShortcuts } from './WhatsAppInboxMobileShortcuts';
 
 type ThreadHeaderProps = Omit<ComponentProps<typeof WhatsAppThreadHeader>, 'selectedChat'>;
 type MessageThreadProps = Omit<ComponentProps<typeof WhatsAppMessageThread>, 'selectedChat'>;
@@ -22,6 +23,9 @@ export type WhatsAppInboxConversationView = {
 };
 
 type WhatsAppInboxConversationPaneProps = {
+  mobilePrototype?: boolean;
+  onOpenAgenda?: () => void;
+  onOpenScheduleMessage?: () => void;
   conversation: WhatsAppInboxConversationView | null;
   isDraggingFilesOverThread: boolean;
   onDragEnter: DragEventHandler<HTMLDivElement>;
@@ -31,6 +35,9 @@ type WhatsAppInboxConversationPaneProps = {
 };
 
 export const WhatsAppInboxConversationPane = ({
+  mobilePrototype = false,
+  onOpenAgenda,
+  onOpenScheduleMessage,
   conversation,
   isDraggingFilesOverThread,
   onDragEnter,
@@ -53,6 +60,17 @@ export const WhatsAppInboxConversationPane = ({
     {conversation ? (
       <>
         <WhatsAppThreadHeader selectedChat={conversation.selectedChat} {...conversation.header} />
+        {mobilePrototype ? (
+          <WhatsAppInboxMobileShortcuts
+            isGroup={conversation.selectedChat.is_group}
+            followUpDisabledReason={conversation.header.followUpGenerationDisabledReason}
+            onOpenContact={conversation.header.onToggleContactContextPanel}
+            onOpenAgenda={onOpenAgenda}
+            onOpenScheduleMessage={onOpenScheduleMessage}
+            onOpenScheduledMessages={conversation.header.onOpenScheduledMessages}
+            onOpenFollowUp={conversation.header.onOpenFollowUp}
+          />
+        ) : null}
         {conversation.messageSearch ? <WhatsAppChatMessageSearch {...conversation.messageSearch} /> : null}
         <WhatsAppMessageThread selectedChat={conversation.selectedChat} {...conversation.thread} />
         {conversation.removedAttachment ? (

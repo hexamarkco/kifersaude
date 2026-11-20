@@ -1,0 +1,171 @@
+/* Prévia do Inbox mobile: usa exclusivamente tokens semânticos já existentes.
+   O Inbox de produção continua com a apresentação original. */
+.painel-theme.kifer-ds .whatsapp-inbox-shell.is-mobile-prototype {
+  --inbox-history-gutter: var(--space-3);
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+  border-inline: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* O mockup no desktop mantém sempre a experiência de uma tela estreita. */
+.whatsapp-inbox-shell.is-mobile-prototype .kds-inbox-workspace-grid {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-thread.has-selection,
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-sidebar:not(.has-selection) {
+  display: flex;
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-sidebar.has-selection,
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-thread:not(.has-selection),
+.whatsapp-inbox-shell.is-mobile-prototype .kds-inbox-workspace-grid.is-contact-panel-open > :is(.whatsapp-inbox-sidebar, .whatsapp-inbox-thread) {
+  display: none;
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .kds-inbox-workspace-grid.is-contact-panel-open {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.whatsapp-mobile-prototype-ribbon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--control-height-md);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+
+.whatsapp-mobile-prototype-ribbon-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+  font: var(--type-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.whatsapp-mobile-prototype-ribbon-label > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.whatsapp-mobile-prototype-ribbon-label small {
+  color: var(--text-secondary);
+  font: var(--type-caption);
+  font-weight: var(--font-weight-regular);
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-sidebar-header {
+  padding: var(--space-4) var(--space-3) var(--space-3);
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-sidebar-title > span {
+  font: var(--type-heading-3);
+}
+
+.whatsapp-mobile-prototype-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-inset);
+}
+
+.whatsapp-mobile-prototype-tabs .kds-button {
+  min-width: 0;
+  min-height: var(--control-height-md);
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.whatsapp-mobile-prototype-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-5);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font: var(--type-caption);
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-sidebar-tools {
+  gap: var(--space-2);
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-sidebar-scroll {
+  padding: 0;
+  scrollbar-gutter: auto;
+}
+
+.painel-theme.kifer-ds .whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-chat-card {
+  margin: 0;
+  border: 0;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.painel-theme.kifer-ds .whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-chat-card.is-active {
+  background: var(--app-surface-selected);
+  box-shadow: none;
+}
+
+.whatsapp-mobile-prototype-shortcuts {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.whatsapp-mobile-prototype-shortcuts .kds-button {
+  flex: 0 0 auto;
+  min-height: var(--control-height-md);
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-thread-header {
+  padding-inline: var(--space-2);
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-thread-identity {
+  min-width: 0;
+}
+
+.whatsapp-inbox-shell.is-mobile-prototype .whatsapp-inbox-composer-area {
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds .whatsapp-inbox-shell.is-mobile-prototype {
+    max-width: none;
+    border-inline: 0;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-mobile-prototype-shortcuts { scroll-behavior: auto; }
+}

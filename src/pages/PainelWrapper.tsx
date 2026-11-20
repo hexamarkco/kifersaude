@@ -33,6 +33,7 @@ const ROUTE_TAB_MAP: Record<string, string> = {
   'comissoes': 'financeiro-comissoes',
   'agenda': 'agenda',
   'inbox': 'whatsapp-inbox',
+  'inbox-mobile': 'whatsapp-inbox',
   'disparos': 'whatsapp-campaigns',
   'tarefas': 'agenda',
   'lembretes': 'agenda',

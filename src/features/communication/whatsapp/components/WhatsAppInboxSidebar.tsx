@@ -25,6 +25,7 @@ type PointerAnchor = {
 };
 
 type WhatsAppInboxSidebarProps = {
+  mobilePrototype?: boolean;
   leadStatuses: LeadStatusConfig[];
   archivedSectionOpen: boolean;
   archivedChatsCount: number;
@@ -73,6 +74,7 @@ type WhatsAppInboxSidebarProps = {
 };
 
 export function WhatsAppInboxSidebar({
+  mobilePrototype = false,
   leadStatuses,
   archivedSectionOpen,
   archivedChatsCount,
@@ -151,11 +153,11 @@ export function WhatsAppInboxSidebar({
       <header className="whatsapp-inbox-sidebar-header shrink-0">
         <div className="flex flex-col gap-3">
           <div className="whatsapp-inbox-sidebar-title flex items-center justify-between gap-2">
-            <span>WhatsApp Inbox</span>
+            <span>{mobilePrototype ? 'Conversas' : 'WhatsApp Inbox'}</span>
             {onStartChat ? (
               <Button variant="primary" size="sm" className="shrink-0" onClick={onStartChat}>
                 <Plus className="kds-control-icon" aria-hidden="true" />
-                Nova conversa
+                {mobilePrototype ? 'Nova' : 'Nova conversa'}
               </Button>
             ) : null}
           </div>
@@ -166,6 +168,32 @@ export function WhatsAppInboxSidebar({
             placeholder="Buscar por nome ou telefone"
             className="whatsapp-inbox-search-input"
           />
+
+          {mobilePrototype ? (
+            <div className="whatsapp-mobile-prototype-tabs" role="group" aria-label="Tipo de conversa">
+              <Button
+                type="button"
+                variant={!archivedSectionOpen ? 'soft' : 'ghost'}
+                size="sm"
+                onClick={() => onSwitchArchivedSection(false)}
+                aria-pressed={!archivedSectionOpen}
+              >
+                <MessageCircle className="kds-control-icon" aria-hidden="true" />
+                Ativas
+              </Button>
+              <Button
+                type="button"
+                variant={archivedSectionOpen ? 'soft' : 'ghost'}
+                size="sm"
+                onClick={() => onSwitchArchivedSection(true)}
+                aria-pressed={archivedSectionOpen}
+              >
+                <Archive className="kds-control-icon" aria-hidden="true" />
+                Arquivadas
+                {archivedChatsCount > 0 ? <span className="whatsapp-mobile-prototype-count">{archivedChatsCount}</span> : null}
+              </Button>
+            </div>
+          ) : null}
 
           <div className="whatsapp-inbox-sidebar-tools">
             <div className="flex items-center gap-2">
@@ -184,7 +212,7 @@ export function WhatsAppInboxSidebar({
               </Button>
             </div>
             <ButtonGroup className="whatsapp-inbox-action-group shrink-0" role="group" aria-label="Ações das conversas">
-              <IconButton
+              {!mobilePrototype ? <IconButton
                 variant={archivedSectionOpen ? 'soft' : 'ghost'}
                 className="relative shrink-0"
                 size="md"
@@ -201,7 +229,7 @@ export function WhatsAppInboxSidebar({
                     </span>
                   ) : null}
                 </span>
-              </IconButton>
+              </IconButton> : null}
               <IconButton
                 variant="ghost"
                 className="shrink-0"

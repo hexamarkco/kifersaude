@@ -195,3 +195,66 @@ test(`does not embed a map for invalid coordinates: ${JSON.stringify(location)}`
   assert.ok(!markup.includes('href='));
 });
 }
+
+
+test('exibe PDF como card compacto sem iframe, mantendo nome, tamanho e ações', () => {
+  mediaState.mediaUrl = 'https://example.test/contrato.pdf';
+  mediaState.loading = false;
+  mediaState.error = null;
+  const message: CommWhatsAppMessage = {
+    id: 'pdf-1', chat_id: 'chat-1', channel_id: 'channel-1', external_message_id: 'pdf-external-1',
+    direction: 'inbound', message_type: 'document', delivery_status: 'received', text_content: null,
+    media_id: 'pdf-media-1', media_file_name: 'Contrato.pdf', media_mime_type: 'application/pdf', media_size_bytes: 2048,
+    message_at: '2026-10-01T12:00:00Z', created_at: '2026-10-01T12:00:00Z', metadata: {},
+  };
+  const view = render(<WhatsAppMessageBody
+    message={message} onOpenImage={vi.fn()} onOpenQuotedMessage={vi.fn()} onTranscribe={vi.fn()}
+    onSelectInteractiveReply={vi.fn()} onOpenSharedContactChat={vi.fn()} onSaveSharedContact={vi.fn()}
+    sharedContactActionKey={null} transcribing={false} mediaSending={false} mediaSendingProgress={null}
+  />);
+  try {
+    assert.equal(view.container.querySelector('iframe'), null);
+    assert.equal(view.container.querySelector('.whatsapp-inbox-document-preview'), null);
+    assert.ok(view.container.textContent?.includes('Contrato.pdf'));
+    assert.ok(view.container.textContent?.includes('2 KB'));
+    assert.ok(view.container.textContent?.includes('PDF'));
+    assert.equal(view.container.querySelectorAll('a[href="https://example.test/contrato.pdf"]').length, 2);
+  } finally {
+    view.unmount();
+    mediaState.mediaUrl = null;
+  }
+});
+
+test('exibe PDF sem preview com opção de tentar novamente quando arquivo falha', () => {
+  mediaState.mediaUrl = null;
+  mediaState.loading = false;
+  mediaState.error = 'Arquivo indisponível no momento.';
+  mediaState.retryable = true;
+  mediaState.retryCalls = 0;
+  const message: CommWhatsAppMessage = {
+    id: 'pdf-2', chat_id: 'chat-1', channel_id: 'channel-1', external_message_id: 'pdf-external-2',
+    direction: 'inbound', message_type: 'document', delivery_status: 'received', text_content: null,
+    media_id: 'pdf-media-2', media_file_name: 'Proposta.pdf', media_mime_type: 'application/pdf', media_size_bytes: 1024,
+    message_at: '2026-10-01T12:00:00Z', created_at: '2026-10-01T12:00:00Z', metadata: {},
+  };
+  const view = render(<WhatsAppMessageBody
+    message={message} onOpenImage={vi.fn()} onOpenQuotedMessage={vi.fn()} onTranscribe={vi.fn()}
+    onSelectInteractiveReply={vi.fn()} onOpenSharedContactChat={vi.fn()} onSaveSharedContact={vi.fn()}
+    sharedContactActionKey={null} transcribing={false} mediaSending={false} mediaSendingProgress={null}
+  />);
+  try {
+    assert.equal(view.container.querySelector('iframe'), null);
+    assert.equal(view.container.querySelector('.whatsapp-inbox-document-preview'), null);
+    assert.ok(view.container.textContent?.includes('Proposta.pdf'));
+    assert.ok(view.container.textContent?.includes('Arquivo indisponível no momento.'));
+    const retryButton = Array.from(view.container.querySelectorAll('button'))
+      .find((button) => button.textContent?.trim() === 'Tentar novamente');
+    assert.ok(retryButton);
+    act(() => retryButton.click());
+    assert.equal(mediaState.retryCalls, 1);
+  } finally {
+    view.unmount();
+    mediaState.error = null;
+    mediaState.retryable = true;
+  }
+});

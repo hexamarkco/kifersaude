@@ -755,32 +755,15 @@ export function WhatsAppMessageBody({
       const pdfBubbleWidth = getVisualMediaBubbleWidth(message);
       const pdfCard = (
         <div className={cx(
-          'whatsapp-inbox-document-card overflow-hidden',
+          'whatsapp-inbox-document-card max-w-full overflow-hidden',
           pdfBubbleWidth,
           caption ? 'border-0 rounded-t-[var(--kds-radius-lg)]' : 'rounded-2xl border',
         )}>
-          <div className="whatsapp-inbox-document-preview relative h-36 overflow-hidden bg-[var(--bg-inset)]">
-            {mediaUrl ? (
-              <iframe
-                src={`${mediaUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                title={`Prévia de ${pdfFileName}`}
-                className="pointer-events-none h-full w-full border-0 bg-[var(--bg-surface)]"
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-[var(--text-muted)]">
-                <FileText className="h-8 w-8 text-[var(--danger-text)]" />
-                <LoadingState compact active={loading} label={'Carregando prévia...'} fallback={() => <span>{error || 'Prévia indisponível'}</span>} />
-              </div>
-            )}
-            <span className="absolute left-3 top-3 inline-flex items-center rounded-md bg-[var(--danger-text)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-on-brand)] shadow-sm">
-              PDF
-            </span>
-            <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
-          </div>
-          <div className="border-t border-[var(--border-subtle)] px-3 py-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[10px] font-bold tracking-[0.08em] text-[var(--danger-text)]">
-                PDF
+          <div className="relative px-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)]" aria-hidden="true">
+                <FileText className="h-5 w-5" />
+                <span className="text-[9px] font-bold tracking-[0.08em]">PDF</span>
               </div>
               <div className="min-w-0 flex-1">
                 <Text className="truncate text-sm font-semibold text-[var(--text-primary)]" title={pdfFileName}>{pdfFileName}</Text>
@@ -807,6 +790,7 @@ export function WhatsAppMessageBody({
                 </>
               )}
             </div>
+            <MediaSendingOverlay active={mediaSending} progress={mediaSendingProgress} onCancel={onCancelMediaUpload} />
           </div>
         </div>
       );

@@ -806,7 +806,8 @@ export default function WhatsAppCampaignsScreen() {
 
   const insertVariableSuggestion = (suggestionKey: string) => {
     if (!variableAutocomplete) return;
-    const { stageIndex, messageIndex, variantLabel } = variableAutocomplete;
+    const { stageIndex, messageIndex } = variableAutocomplete;
+    const variantLabel = variableAutocomplete.variantLabel ?? 'A';
     const stage = stages[stageIndex];
     const currentMessage = (variantLabel === 'A' ? stage?.messages : stage?.variantMessages?.[variantLabel])?.[messageIndex];
     if (!currentMessage) return;

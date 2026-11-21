@@ -134,7 +134,7 @@ test('PDFs têm prévia local, outros documentos não e a URL é revogada ao rem
   const createdMimeTypes: string[] = [];
   const revokedUrls: string[] = [];
   URL.createObjectURL = (blob) => {
-    createdMimeTypes.push(blob.type);
+    createdMimeTypes.push(blob instanceof Blob ? blob.type : '');
     return `blob:pdf-preview-${createdMimeTypes.length}`;
   };
   URL.revokeObjectURL = (url) => { revokedUrls.push(url); };

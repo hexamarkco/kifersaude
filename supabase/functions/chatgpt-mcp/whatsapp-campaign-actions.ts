@@ -1,6 +1,7 @@
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import type { McpToolDescriptor } from './mcp-discovery.ts';
 import { resolveCommWhatsAppCampaignMessage } from '../_shared/comm-whatsapp-campaign-template.ts';
+import { campaignCopyLabels, normalizeMcpCampaignStages, resolveCampaignCopySteps } from './campaign-sequence-v2.ts';
 
 type JsonRecord = Record<string, unknown>;
 type CampaignWriteResult = JsonRecord;
@@ -40,6 +41,10 @@ export const MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES = [
   'kifer_list_whatsapp_campaign_contacts',
   'kifer_get_whatsapp_campaign_contact',
   'kifer_get_whatsapp_campaign_metrics',
+  'kifer_list_whatsapp_campaign_events',
+  'kifer_get_whatsapp_campaign_worker_health',
+  'kifer_list_whatsapp_campaign_templates',
+  'kifer_get_whatsapp_campaign_template',
 ] as const;
 
 export const MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES = [
@@ -64,13 +69,41 @@ const CAMPAIGN_STEP_SCHEMA = {
     stage_index: { type: 'integer', minimum: 0, maximum: 29 },
     step_kind: { type: 'string', enum: ['message', 'status_change'] },
     status_to_set: { type: 'string', maxLength: 160 },
-    variant_label: { type: 'string', enum: ['ANY', 'A', 'B'] },
+    variant_label: { type: 'string', pattern: '^(ANY|[A-Z])$' },
     delay_amount: { type: 'integer', minimum: 0, maximum: 31622400 },
     delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] },
     media_storage_path: { type: ['string', 'null'], maxLength: 512, description: 'Caminho relativo de um objeto existente no bucket whatsapp-campaign-media. Nunca informe URL.' },
   },
 };
 
+const CAMPAIGN_VARIATION_MESSAGE_SCHEMA = {
+  oneOf: [
+    { type: 'string', minLength: 1, maxLength: 4096 },
+    {
+      type: 'object', required: ['message'], additionalProperties: false,
+      properties: {
+        message: { type: 'string', minLength: 1, maxLength: 4096 },
+        media_storage_path: { type: ['string', 'null'], maxLength: 512 },
+      },
+    },
+  ],
+};
+const CAMPAIGN_STAGES_SCHEMA = {
+  type: 'array', minItems: 1, maxItems: 30,
+  items: {
+    type: 'object', required: ['variations'], additionalProperties: false,
+    properties: {
+      delay_amount: { type: 'integer', minimum: 0, maximum: 31622400, default: 0 },
+      delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'], default: 'minutes' },
+      split_by_line_breaks: { type: 'boolean', default: false, description: 'Cada linha não vazia vira um balão diferente.' },
+      variations: {
+        type: 'object', minProperties: 2, maxProperties: 26,
+        propertyNames: { pattern: '^[A-Z]$' },
+        additionalProperties: { type: 'array', minItems: 1, maxItems: 30, items: CAMPAIGN_VARIATION_MESSAGE_SCHEMA },
+      },
+    },
+  },
+};
 const CAMPAIGN_COMMON_PROPERTIES = {
   objective: { type: 'string', maxLength: 500 },
   scheduled_at: { type: 'string', format: 'date-time' },
@@ -84,7 +117,8 @@ const CAMPAIGN_COMMON_PROPERTIES = {
   allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } },
   stop_on_reply: { type: 'boolean', default: true },
   validate_whatsapp_numbers: { type: 'boolean', default: false },
-  steps: { type: 'array', minItems: 1, maxItems: 30, items: CAMPAIGN_STEP_SCHEMA },
+  steps: { type: 'array', minItems: 1, maxItems: 240, items: CAMPAIGN_STEP_SCHEMA, description: 'Contrato legado de etapas físicas. Não combinar com stages.' },
+  stages: { ...CAMPAIGN_STAGES_SCHEMA, description: 'Cada variação A/B/C... contém lista independente de balões por etapa, com espera configurável. Não combinar com steps.' },
   audience_config: { type: 'object', additionalProperties: true },
 };
 
@@ -104,7 +138,7 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
   {
     name: 'kifer_preview_whatsapp_campaign',
     description: 'Renderiza exemplos de uma campanha sem enviar mensagens. Usa a mesma interpolação determinística do worker; sem nome, não inventa um nome nem produz saudações como "Oi, !".',
-    inputSchema: { type: 'object', required: ['campaign_id'], additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' }, samples: { type: 'array', maxItems: 5, items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string', maxLength: 160 }, phone: { type: 'string', maxLength: 160 }, status: { type: 'string', maxLength: 160 }, responsavel: { type: 'string', maxLength: 160 } } } } } },
+    inputSchema: { type: 'object', required: ['campaign_id'], additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' }, variant: { type: 'string', pattern: '^[A-Z]$', description: 'Variação específica a pré-visualizar; padrão A.' }, samples: { type: 'array', maxItems: 5, items: { type: 'object', additionalProperties: false, properties: { name: { type: 'string', maxLength: 160 }, phone: { type: 'string', maxLength: 160 }, status: { type: 'string', maxLength: 160 }, responsavel: { type: 'string', maxLength: 160 } } } } } },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -126,14 +160,43 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: 'kifer_list_whatsapp_campaign_events',
+    description: 'Lista a cronologia de eventos técnicos de uma campanha sem payload bruto, telefone ou conteúdo de mensagens.',
+    inputSchema: { type: 'object', required: ['campaign_id'], additionalProperties: false, properties: {
+      campaign_id: { type: 'string', format: 'uuid' },
+      event_type: { type: 'string', maxLength: 160 },
+      page: { type: 'integer', minimum: 1, default: 1 },
+      page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+    } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_get_whatsapp_campaign_worker_health',
+    description: 'Consulta as últimas execuções do worker de Disparos, contadores e falhas sem revelar dados pessoais nem detalhes sensíveis de erro.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_list_whatsapp_campaign_templates',
+    description: 'Lista metadados dos modelos de campanha salvos no editor de Disparos; não retorna os textos de clientes.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_get_whatsapp_campaign_template',
+    description: 'Consulta um modelo de campanha com etapas e variações de mensagens para reutilização, sem acessar outros recursos.',
+    inputSchema: { type: 'object', required: ['template_id'], additionalProperties: false, properties: { template_id: { type: 'string', format: 'uuid' } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
     name: 'kifer_create_whatsapp_campaign',
-    description: 'Cria uma campanha real no Disparos WhatsApp. Pode configurar o intervalo entre contatos e entre balões; começa em draft (ou paused explicitamente), nunca envia e não cria leads; use importação e depois ativação explícita.',
-    inputSchema: { type: 'object', required: ['name', 'message', 'client_request_id'], additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto da primeira mensagem. Variáveis oficiais: {{nome}}, {{primeiro_nome}}, {{telefone}}, {{status}}, {{responsavel}}, {{saudacao}}, {{saudacao_titulo}}, {{saudacao_capitalizada}}.' }, status: { type: 'string', enum: ['draft', 'paused'], default: 'draft' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, ...CAMPAIGN_COMMON_PROPERTIES } },
+    description: 'Cria rascunho de campanha. Prefira stages com variations A/B/C... e mensagens independentes. Nenhum disparo ou lead é criado; importação e ativação exigem ferramentas separadas.',
+    inputSchema: { type: 'object', required: ['name', 'client_request_id'], additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096, description: 'Texto da primeira mensagem. Variáveis oficiais: {{nome}}, {{primeiro_nome}}, {{telefone}}, {{status}}, {{responsavel}}, {{saudacao}}, {{saudacao_titulo}}, {{saudacao_capitalizada}}.' }, status: { type: 'string', enum: ['draft', 'paused'], default: 'draft' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, ...CAMPAIGN_COMMON_PROPERTIES } },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
     name: 'kifer_update_whatsapp_campaign',
-    description: 'Atualiza uma campanha ainda editável, inclusive os intervalos entre contatos e balões, usando expected_updated_at para evitar sobrescrever alterações da UI. A validação e as etapas seguem o contrato do Disparos WhatsApp.',
+    description: 'Edita campanha não processada usando expected_updated_at. stages substitui completamente as variações e balões da sequência; demais opções são preservadas quando omitidas.',
     inputSchema: { type: 'object', required: ['campaign_id', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' }, expected_updated_at: { type: 'string', format: 'date-time' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, name: { type: 'string', minLength: 1, maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096 }, ...CAMPAIGN_COMMON_PROPERTIES } },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
   },
@@ -262,8 +325,9 @@ const isSafeCampaignMediaPath = (value: string): boolean => {
 };
 
 const normalizeCampaignSteps = (value: unknown): JsonRecord[] | null => {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 30) return null;
+  if (!Array.isArray(value) || value.length < 1 || value.length > 240) return null;
   const normalized: JsonRecord[] = [];
+  const keys = new Set<string>();
   for (const item of value) {
     if (!isRecord(item) || 'media_url' in item || 'media_type' in item || 'media_filename' in item) return null;
     const message = text(item.message);
@@ -285,7 +349,7 @@ const normalizeCampaignSteps = (value: unknown): JsonRecord[] | null => {
       step.status_to_set = status;
     }
     if (item.variant_label !== undefined) {
-      if (item.variant_label !== 'ANY' && item.variant_label !== 'A' && item.variant_label !== 'B') return null;
+      if (item.variant_label !== 'ANY' && !/^[A-Z]$/.test(String(item.variant_label))) return null;
       step.variant_label = item.variant_label;
     }
     if (item.delay_amount !== undefined) {
@@ -299,6 +363,11 @@ const normalizeCampaignSteps = (value: unknown): JsonRecord[] | null => {
     if (item.media_storage_path !== undefined) {
       if (item.media_storage_path !== null && (typeof item.media_storage_path !== 'string' || !isSafeCampaignMediaPath(item.media_storage_path))) return null;
       step.media_storage_path = item.media_storage_path;
+    }
+    if (item.step_index !== undefined) {
+      const key = String(item.step_index) + ':' + String(step.variant_label ?? 'ANY');
+      if (keys.has(key)) return null;
+      keys.add(key);
     }
     normalized.push(step);
   }
@@ -496,7 +565,16 @@ const getCampaign = async (supabase: SupabaseClient, args: JsonRecord): Promise<
   if (stepError || statusError) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar as etapas e métricas atuais da campanha.');
   const metrics = metricsFromTargetStatusCounts(statusCounts);
   const campaign = publicCampaign(loaded.campaign, metrics);
-  return { success: true, campaign, steps: (steps ?? []).map(safeCampaignStep), metrics };
+  const physicalSteps = (steps ?? []).filter(isRecord);
+  const variants = campaignCopyLabels(physicalSteps);
+  const independent = isRecord(loaded.campaign.audience_config) && loaded.campaign.audience_config.variant_sequences_v2 === true;
+  return {
+    success: true, campaign, steps: (steps ?? []).map(safeCampaignStep), metrics,
+    available_variants: variants,
+    copy_sequences: Object.fromEntries(variants.map((label) => [
+      label, resolveCampaignCopySteps(physicalSteps, label, independent).map(safeCampaignStep),
+    ])),
+  };
 };
 
 const countBlockedCampaignTargets = async (supabase: SupabaseClient, campaignId: string): Promise<number | null> => {
@@ -597,10 +675,28 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
   const persistedMessageSteps = (steps ?? []).filter(isRecord).filter((step) => (
     step.step_kind === 'message' && (text(step.message_text) || text(step.media_url))
   ));
+  const campaignConfig = isRecord(loaded.campaign.audience_config) ? loaded.campaign.audience_config : {};
+  const availableVariants = campaignCopyLabels(persistedMessageSteps);
+  const selectedVariant = text(args.variant) || availableVariants[0] || 'A';
+  if (!availableVariants.includes(selectedVariant)) {
+    return errorResult('INVALID_VARIANT', 'A variação solicitada não existe nesta campanha.');
+  }
+  const independent = campaignConfig.variant_sequences_v2 === true;
+  const selectedSteps = resolveCampaignCopySteps(persistedMessageSteps, selectedVariant, independent);
   const messageSteps = persistedMessageSteps.length > 0
-    ? persistedMessageSteps
+    ? selectedSteps
     : text(loaded.campaign.message_text) ? [{ message_text: loaded.campaign.message_text }] : [];
-  const variables = [...new Set(messageSteps.flatMap((step) => {
+  const copySequences = Object.fromEntries(availableVariants.map((label) => [
+    label, resolveCampaignCopySteps(persistedMessageSteps, label, independent).map((step) => ({
+      step_index: Number(step.step_index ?? 0),
+      stage_index: Number(step.stage_index ?? 0),
+      variant: text(step.variant_label) || 'ANY',
+      message_text: text(step.message_text) || null,
+      media_attached: Boolean(text(step.media_url)),
+      media_type: text(step.media_type) || null,
+    })),
+  ]));
+  const variables = [...new Set((persistedMessageSteps.length ? persistedMessageSteps : messageSteps).flatMap((step) => {
     const matches = text(step.message_text).matchAll(/{{\s*([a-zA-Z0-9_]+)\s*}}/g);
     return Array.from(matches, (match) => match[1]);
   }))].sort();
@@ -614,7 +710,6 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
   if (statusCountsResult.error || readinessResult.error) {
     return errorResult('INTERNAL_ERROR', 'Não foi possível confirmar a elegibilidade e os contadores atuais da campanha.');
   }
-  const campaignConfig = isRecord(loaded.campaign.audience_config) ? loaded.campaign.audience_config : {};
   const metrics = metricsFromTargetStatusCounts(statusCountsResult.data);
   const rawReadiness = Array.isArray(readinessResult.data) ? readinessResult.data[0] : readinessResult.data;
   if (!isRecord(rawReadiness) || typeof rawReadiness.ready !== 'boolean') {
@@ -623,7 +718,7 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
   const reasonCodes = Array.isArray(rawReadiness.reason_codes)
     ? rawReadiness.reason_codes.filter((value): value is string => typeof value === 'string')
     : [];
-  const promotionImageReady = hasRequiredPromotionImage(loaded.campaign, campaignConfig, messageSteps.filter(isRecord));
+  const promotionImageReady = hasRequiredPromotionImage(loaded.campaign, campaignConfig, persistedMessageSteps);
   const checks = {
     has_contacts: metrics.total > 0,
     has_message: messageSteps.length > 0,
@@ -682,6 +777,9 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
       pending_marketing_targets: Number(rawReadiness.pending_targets ?? 0),
     },
     message_sequence: messageSequence,
+    selected_variant: selectedVariant,
+    available_variants: availableVariants,
+    copy_sequences: copySequences,
     fallback_without_name: render({ name: '', phone: '', status: '', responsavel: '' }),
     examples: samples.map((sample) => ({
       name: text(sample.name) || null,
@@ -734,6 +832,55 @@ const getCampaignMetrics = async (supabase: SupabaseClient, args: JsonRecord): P
   };
 };
 
+const listCampaignEvents = async (supabase: SupabaseClient, args: JsonRecord): Promise<JsonRecord> => {
+  const campaignId = text(args.campaign_id);
+  if (!safeUuid(campaignId)) return errorResult('INVALID_INPUT', 'campaign_id inválido.');
+  const { page, pageSize, from } = pageParams(args);
+  let query = supabase.from('comm_whatsapp_campaign_events')
+    .select('id,campaign_id,target_id,event_type,created_at', { count: 'exact' })
+    .eq('campaign_id', campaignId);
+  if (text(args.event_type)) query = query.eq('event_type', text(args.event_type));
+  const { data, error, count } = await query.order('created_at', { ascending: false })
+    .range(from, from + pageSize - 1);
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar os eventos da campanha.');
+  return { success: true, campaign_id: campaignId, page, page_size: pageSize, total: count ?? 0, events: data ?? [] };
+};
+
+const getCampaignWorkerHealth = async (supabase: SupabaseClient, args: JsonRecord): Promise<JsonRecord> => {
+  const campaignId = text(args.campaign_id);
+  if (campaignId && !safeUuid(campaignId)) return errorResult('INVALID_INPUT', 'campaign_id inválido.');
+  let query = supabase.from('comm_whatsapp_campaign_worker_runs')
+    .select('id,action,source,status,campaign_id,processed,sent,failed,stopped,duration_ms,started_at,finished_at')
+    .order('started_at', { ascending: false }).limit(12);
+  if (campaignId) query = query.eq('campaign_id', campaignId);
+  const { data, error } = await query;
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o estado do worker.');
+  const runs = data ?? [];
+  return { success: true, campaign_id: campaignId || null, latest_run: runs[0] ?? null,
+    latest_success: runs.find((run) => run.status === 'success') ?? null,
+    latest_failure: runs.find((run) => run.status === 'failed') ?? null, recent_runs: runs };
+};
+
+const listCampaignTemplates = async (supabase: SupabaseClient, args: JsonRecord): Promise<JsonRecord> => {
+  const { page, pageSize, from } = pageParams(args);
+  const { data, count, error } = await supabase.from('comm_whatsapp_campaign_templates')
+    .select('id,name,created_at,updated_at', { count: 'exact' })
+    .order('created_at', { ascending: false }).range(from, from + pageSize - 1);
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível listar os modelos de campanhas.');
+  return { success: true, page, page_size: pageSize, total: count ?? 0, templates: data ?? [] };
+};
+
+const getCampaignTemplate = async (supabase: SupabaseClient, args: JsonRecord): Promise<JsonRecord> => {
+  const templateId = text(args.template_id);
+  if (!safeUuid(templateId)) return errorResult('INVALID_INPUT', 'template_id inválido.');
+  const { data, error } = await supabase.from('comm_whatsapp_campaign_templates')
+    .select('id,name,steps,created_at,updated_at')
+    .eq('id', templateId).maybeSingle();
+  if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o modelo da campanha.');
+  if (!data) return errorResult('TEMPLATE_NOT_FOUND', 'Modelo não encontrado.');
+  return { success: true, template: { ...data, stages: safeAudienceConfig(data.steps), steps: undefined } };
+};
+
 export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: JsonRecord }): Promise<JsonRecord | null> {
   const { supabase, toolName, arguments: args } = params;
   if (toolName === 'kifer_list_whatsapp_campaigns') return listCampaigns(supabase, args);
@@ -742,6 +889,10 @@ export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: S
   if (toolName === 'kifer_list_whatsapp_campaign_contacts') return listCampaignContacts(supabase, args);
   if (toolName === 'kifer_get_whatsapp_campaign_contact') return getCampaignContact(supabase, args);
   if (toolName === 'kifer_get_whatsapp_campaign_metrics') return getCampaignMetrics(supabase, args);
+  if (toolName === 'kifer_list_whatsapp_campaign_events') return listCampaignEvents(supabase, args);
+  if (toolName === 'kifer_get_whatsapp_campaign_worker_health') return getCampaignWorkerHealth(supabase, args);
+  if (toolName === 'kifer_list_whatsapp_campaign_templates') return listCampaignTemplates(supabase, args);
+  if (toolName === 'kifer_get_whatsapp_campaign_template') return getCampaignTemplate(supabase, args);
   return null;
 }
 
@@ -755,6 +906,18 @@ const campaignPatch = (args: JsonRecord): JsonRecord => {
 
 const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
   const patch = campaignPatch(args);
+  if ('stages' in args) {
+    if ('steps' in args) return null;
+    const converted = normalizeMcpCampaignStages(args.stages);
+    if (!converted.ok) return null;
+    patch.steps = converted.steps;
+    patch.message = converted.firstMessage;
+    patch.audience_config = {
+      ...(isRecord(patch.audience_config) ? patch.audience_config : {}),
+      variant_sequences_v2: true,
+      copy_distribution: 'balanced',
+    };
+  }
   if ('inter_message_interval_seconds' in args) {
     const seconds = args.inter_message_interval_seconds;
     if ('inter_message_interval_minutes' in args
@@ -810,6 +973,15 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
   if (toolName === 'kifer_update_whatsapp_campaign') {
     const payload = safeCampaignPatch(args);
     if (!payload) return errorResult('INVALID_INPUT', 'steps ou cadência contém valor, atraso ou caminho de mídia inválido.');
+    // Não perder filtros, fonte e regras ao editar apenas a sequência ou cadência.
+    if (isRecord(payload.audience_config)) {
+      const loaded = await getCampaignRecord(supabase, campaignId);
+      if (!loaded.campaign) return loaded.error ?? errorResult('CAMPAIGN_NOT_FOUND', 'Campanha não encontrada.');
+      payload.audience_config = {
+        ...(isRecord(loaded.campaign.audience_config) ? loaded.campaign.audience_config : {}),
+        ...payload.audience_config,
+      };
+    }
     result = await rpcMutation({ supabase, actorId, operation: 'update', campaignId, expectedUpdatedAt, clientRequestId: requestId, payload });
     if (isRecord(result.campaign)) result.campaign = publicCampaign(result.campaign);
     return result;

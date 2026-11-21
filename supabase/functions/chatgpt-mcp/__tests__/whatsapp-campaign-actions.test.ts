@@ -175,7 +175,7 @@ describe('MCP WhatsApp campaign actions', () => {
 
   it('declares the complete campaign surface without follow-up-flow aliases', () => {
     const names = MCP_WHATSAPP_CAMPAIGN_TOOLS.map(({ name }) => name);
-    expect(names).toHaveLength(15);
+    expect(names).toHaveLength(19);
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual(expect.arrayContaining([
       ...MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES,
@@ -425,4 +425,49 @@ describe('MCP WhatsApp campaign actions', () => {
     expect(result).toMatchObject({ success: true, replayed: true });
     expect(invoke).not.toHaveBeenCalled();
   });
+  it('cria rascunho com copies independentes e follow-up em dias pelo novo formato', async () => {
+    const { client, rpc, invoke } = makeSupabase({ success: true, campaign: { id: campaignId, status: 'draft' } });
+    const result = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client,
+      toolName: 'kifer_create_whatsapp_campaign',
+      actorId,
+      arguments: {
+        name: 'Teste de variações',
+        client_request_id: 'campaign:sequence-v2:1',
+        stages: [
+          { variations: { A: ['Oi A', 'Mensagem A2'], B: ['Oi B'], C: ['Oi C'] } },
+          { delay_amount: 3, delay_unit: 'days', variations: { A: ['Retorno A'], B: ['Retorno B'], C: ['Retorno C'] } },
+        ],
+      },
+    });
+    expect(result).toMatchObject({ success: true });
+    const payload = rpc.mock.calls.find(([name]) => name === 'mcp_comm_whatsapp_campaign_mutation')?.[1]?.p_payload;
+    expect(payload).toMatchObject({
+      message: 'Oi A',
+      audience_config: { variant_sequences_v2: true, copy_distribution: 'balanced' },
+    });
+    expect(payload.steps.map((row: { step_index: number; variant_label: string; message: string }) =>
+      [row.step_index, row.variant_label, row.message])).toEqual([
+      [0, 'A', 'Oi A'], [0, 'B', 'Oi B'], [0, 'C', 'Oi C'],
+      [1, 'A', 'Mensagem A2'],
+      [2, 'A', 'Retorno A'], [2, 'B', 'Retorno B'], [2, 'C', 'Retorno C'],
+    ]);
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('recusa misturar steps legados com stages v2 e letras inválidas', async () => {
+    const { client, rpc } = makeSupabase();
+    const result = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client,
+      toolName: 'kifer_create_whatsapp_campaign',
+      actorId,
+      arguments: {
+        name: 'Inválido', client_request_id: 'campaign:sequence-v2:invalid',
+        steps: [{ message: 'A' }], stages: [{ variations: { A: ['A'], C: ['C'] } }],
+      },
+    });
+    expect(result).toMatchObject({ success: false, error_code: 'INVALID_INPUT' });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
 });

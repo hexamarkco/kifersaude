@@ -6,7 +6,8 @@ on:
       - 'supabase/functions/chatgpt-mcp/**'
       - 'supabase/migrations/*mcp_campaign*'
       - 'supabase/migrations/*mcp_verified_chat*'
-      - 'src/features/communication/whatsapp-campaigns/commWhatsAppCampaignService.ts'
+      - 'src/features/communication/whatsapp-campaigns/**'
+      - 'src/features/communication/whatsapp/hooks/__tests__/useInboxComposerAttachments.test.tsx'
       - '.github/workflows/mcp-parity-regression.yml'
   workflow_dispatch:
 permissions:
@@ -23,8 +24,12 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Typescript
+        id: typecheck
+        continue-on-error: true
         run: npm run typecheck
       - name: MCP and campaign regression tests
+        id: tests
+        continue-on-error: true
         run: >
           npm test --
           supabase/functions/chatgpt-mcp/__tests__/campaign-coverage-actions.test.ts
@@ -32,6 +37,8 @@ jobs:
           supabase/functions/chatgpt-mcp/__tests__/whatsapp-campaign-actions.test.ts
           src/features/communication/whatsapp-campaigns/commWhatsAppCampaignService.test.ts
       - name: Focused lint
+        id: lint
+        continue-on-error: true
         run: >
           npx eslint
           supabase/functions/chatgpt-mcp/campaign-coverage-actions.ts
@@ -39,3 +46,6 @@ jobs:
           supabase/functions/chatgpt-mcp/write-actions.ts
           supabase/functions/chatgpt-mcp/index.ts
           supabase/functions/chatgpt-mcp/whatsapp-campaign-actions.ts
+      - name: Require all checks
+        if: ${{ steps.typecheck.outcome == 'failure' || steps.tests.outcome == 'failure' || steps.lint.outcome == 'failure' }}
+        run: exit 1

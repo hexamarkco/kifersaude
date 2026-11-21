@@ -79,6 +79,8 @@ export type CommWhatsAppCampaignStageDraft = {
   delayAmount: number;
   delayUnit: CommWhatsAppCampaignDelayUnit;
   messages: CommWhatsAppCampaignMessageDraft[];
+  /** Mensagens completas de cada variação B..Z; cada item vira um balão separado. */
+  variantMessages?: Record<string, CommWhatsAppCampaignMessageDraft[]>;
   /** Usado somente quando kind === 'status_change'. */
   statusToSet?: string;
 };
@@ -660,6 +662,10 @@ export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignSt
   const rows: CampaignStepInsertRow[] = [];
   let stepIndex = 0;
   const firstCopy = stages[0]?.kind === 'message' ? stages[0].messages[0] : null;
+  const firstStage = stages[0]?.kind === 'message' ? stages[0] : null;
+  const independentVariantLabels = abTestEnabled
+    ? Object.keys(firstStage?.variantMessages ?? {}).filter((label) => /^[B-Z]$/.test(label)).sort()
+    : [];
   const activeExtraLabels = new Set(Object.entries(firstCopy?.variantCopies ?? {})
     .filter(([label, value]) => /^[C-Z]$/.test(label) && value.trim().length > 0)
     .map(([label]) => label));
@@ -687,6 +693,48 @@ export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignSt
         variant_label: 'ANY',
       });
       stepIndex += 1;
+      return;
+    }
+
+    if (independentVariantLabels.length > 0) {
+      // A lista de cada variação é independente: A pode ter quatro balões e B dois.
+      // Um índice sem mensagem daquela versão fica sem linha física; nunca herda
+      // acidentalmente um balão de A no worker das campanhas variant_sequences_v2.
+      const lists: Array<[string, CommWhatsAppCampaignMessageDraft[]]> = [
+        ['A', stage.messages],
+        ...independentVariantLabels.map((label): [string, CommWhatsAppCampaignMessageDraft[]] => (
+          [label, stage.variantMessages?.[label] ?? stage.messages]
+        )),
+      ];
+      const maxMessages = Math.max(...lists.map(([, messages]) => messages.length));
+      let firstPhysicalStep = true;
+      for (let messageIndex = 0; messageIndex < maxMessages; messageIndex += 1) {
+        const delayAmount = resolveDelay(firstPhysicalStep, stage);
+        let hasMessage = false;
+        for (const [label, messages] of lists) {
+          const message = messages[messageIndex];
+          if (!message?.messageText.trim() && !message?.mediaUrl) continue;
+          rows.push({
+            campaign_id: campaignId,
+            step_index: stepIndex,
+            stage_index: stageIndex,
+            step_kind: 'message',
+            status_to_set: null,
+            message_text: message.messageText.trim(),
+            delay_amount: delayAmount,
+            delay_unit: stage.delayUnit,
+            media_url: message.mediaUrl || null,
+            media_type: message.mediaUrl ? message.mediaType || null : null,
+            media_filename: message.mediaUrl ? message.mediaFilename || null : null,
+            variant_label: label,
+          });
+          hasMessage = true;
+        }
+        if (hasMessage) {
+          stepIndex += 1;
+          firstPhysicalStep = false;
+        }
+      }
       return;
     }
 

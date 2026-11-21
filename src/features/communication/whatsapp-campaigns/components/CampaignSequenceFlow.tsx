@@ -71,7 +71,7 @@ function StageNode({ data }: NodeProps<StageNodeData>) {
         {(data.attachmentCount > 0 || data.alternativeCount > 1) && (
           <span className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[color:var(--panel-text-muted)]">
             {data.attachmentCount > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" aria-hidden="true" />{data.attachmentCount} anexo(s)</span>}
-            {data.alternativeCount > 1 && <span>{data.alternativeCount} copies da mensagem inicial</span>}
+            {data.alternativeCount > 1 && <span>{data.alternativeCount} variações independentes</span>}
           </span>
         )}
         <span className="mt-3 block text-xs font-medium text-[color:var(--panel-accent-strong)]">{data.active ? 'Em edição' : 'Selecionar para editar'}</span>
@@ -127,13 +127,13 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
         position: { x: STAGE_START_X + index * STAGE_SPACING, y: 80 },
         focusable: false,
         data: {
-          title: `${index + 1}. ${stage.kind === 'message' ? `Enviar ${stage.messages.length} mensagem(ns)` : 'Mudar status'}`,
+          title: `${index + 1}. ${stage.kind === 'message' ? (abTestEnabled ? `Enviar mensagens · ${stage.messages.length} na copy A` : `Enviar ${stage.messages.length} mensagem(ns)`) : 'Mudar status'}`,
           description: stage.kind === 'status_change' ? (statusLabel ? `Novo status: ${statusLabel}` : 'Escolha o novo status do contato.') : firstMessage?.messageText || 'Escreva a mensagem ou anexe um arquivo.',
           waitLabel: describeWait(stage, index),
           kind: stage.kind,
           attachmentCount: stage.kind === 'message' ? stage.messages.filter((message) => message.mediaUrl).length : 0,
-          alternativeCount: index === 0 && stage.kind === 'message' && abTestEnabled
-            ? 2 + Object.keys(stage.messages[0]?.variantCopies ?? {}).length
+          alternativeCount: stage.kind === 'message' && abTestEnabled
+            ? 1 + Object.keys(stages[0]?.variantMessages ?? {}).length
             : 1,
           active: index === activeIndex,
           onSelect: () => selectStage(index),

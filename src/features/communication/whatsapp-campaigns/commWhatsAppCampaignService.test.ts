@@ -151,3 +151,43 @@ test('baloes sem override continuam compartilhados entre as copies', () => {
   }], true);
   assert.deepEqual(rows.filter((row) => row.step_index === 1).map((row) => row.variant_label), ['ANY']);
 });
+
+test('cada variação tem sua própria quantidade de balões, sem completar com mensagens de A', () => {
+  const stages = [
+    {
+      kind: 'message' as const, delayAmount: 0, delayUnit: 'minutes' as const,
+      messages: [{ messageText: 'A 1' }, { messageText: 'A 2' }, { messageText: 'A 3' }],
+      variantMessages: {
+        B: [{ messageText: 'B 1' }, { messageText: 'B 2' }],
+        C: [{ messageText: 'C 1' }],
+      },
+    },
+    {
+      kind: 'message' as const, delayAmount: 3, delayUnit: 'days' as const,
+      messages: [{ messageText: 'A follow-up' }],
+      variantMessages: { B: [{ messageText: 'B follow-up 1' }, { messageText: 'B follow-up 2' }], C: [{ messageText: 'C follow-up' }] },
+    },
+  ];
+  const rows = buildStepRows('independent', stages, true);
+  assert.deepEqual(rows.map((row) => [row.step_index, row.variant_label, row.message_text]), [
+    [0, 'A', 'A 1'], [0, 'B', 'B 1'], [0, 'C', 'C 1'],
+    [1, 'A', 'A 2'], [1, 'B', 'B 2'],
+    [2, 'A', 'A 3'],
+    [3, 'A', 'A follow-up'], [3, 'B', 'B follow-up 1'], [3, 'C', 'C follow-up'],
+    [4, 'B', 'B follow-up 2'],
+  ]);
+  assert.deepEqual(rows.filter((row) => row.step_index === 3).map((row) => row.delay_amount), [3, 3, 3]);
+  assert.equal(rows.find((row) => row.step_index === 4)?.delay_amount, 0);
+  assert.deepEqual(buildStepRows('without-variations', stages, false).map((row) => row.variant_label), ['ANY', 'ANY', 'ANY', 'ANY']);
+});
+
+test('mídia por variação é um balão próprio sem misturar os anexos da copy A', () => {
+  const rows = buildStepRows('media', [{
+    kind: 'message', delayAmount: 0, delayUnit: 'minutes',
+    messages: [{ messageText: 'A', mediaUrl: '/media/a', mediaType: 'image' }],
+    variantMessages: { B: [{ messageText: '', mediaUrl: '/media/b', mediaType: 'document' }] },
+  }], true);
+  assert.deepEqual(rows.map((row) => [row.variant_label, row.media_url, row.media_type]), [
+    ['A', '/media/a', 'image'], ['B', '/media/b', 'document'],
+  ]);
+});

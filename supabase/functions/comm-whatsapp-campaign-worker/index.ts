@@ -1439,18 +1439,20 @@ async function getCachedCampaignSteps(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   campaign: CampaignRow,
   cache: Map<string, CampaignStepRow[]>,
+  variant: string | null = null,
 ) {
-  const cached = cache.get(campaign.id);
+  const cacheKey = `${campaign.id}:${variant ?? 'A'}`;
+  const cached = cache.get(cacheKey);
   if (cached) return cached;
-  const steps = await getCampaignSteps(supabaseAdmin, campaign);
-  cache.set(campaign.id, steps);
+  const steps = await getCampaignSteps(supabaseAdmin, campaign, variant);
+  cache.set(cacheKey, steps);
   return steps;
 }
 
 async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId?: string) {
   let query = supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,lead_id,chat_id,phone_digits,sent_at,responded_at,status,current_step_index')
+    .select('id,campaign_id,lead_id,chat_id,phone_digits,sent_at,responded_at,status,current_step_index,ab_variant')
     .in('status', ['sent', 'scheduled'])
     .not('sent_at', 'is', null)
     // Alvos já respondidos não precisam voltar para a reconciliação.
@@ -1491,7 +1493,7 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
 
     const campaign = campaignById.get(target.campaign_id) ?? await getCampaign(supabaseAdmin, target.campaign_id);
     campaignById.set(target.campaign_id, campaign);
-    const steps = stopOnReply ? await getCachedCampaignSteps(supabaseAdmin, campaign, stepsByCampaignId) : [];
+    const steps = stopOnReply ? await getCachedCampaignSteps(supabaseAdmin, campaign, stepsByCampaignId, target.ab_variant) : [];
     const currentStepIndex = Math.max(Number(target.current_step_index) || 0, 0);
     const currentStep = steps.find((item) => item.step_index === currentStepIndex) ?? null;
     const shouldStop = stopOnReply && shouldStopSequenceBeforeStep(
@@ -2949,6 +2951,22 @@ async function getCampaignSteps(
       media_filename: null,
       variant_label: 'ANY',
     }];
+  }
+
+  // No editor de variações independentes, a ausência de um balão para B/C
+  // significa que aquela variação TERMINOU a sua lista, nunca que deve
+  // herdar o balão A da mesma posição. Campanhas legadas mantêm o fallback.
+  if (campaign.audience_config?.variant_sequences_v2 === true) {
+    const activeVariant = variant && /^[A-Z]$/.test(variant) ? variant : 'A';
+    const byIndex = new Map<number, CampaignStepRow>();
+    for (const step of rows) {
+      if (step.variant_label === 'ANY' && !byIndex.has(step.step_index)) {
+        byIndex.set(step.step_index, step);
+      } else if (step.variant_label === activeVariant) {
+        byIndex.set(step.step_index, step);
+      }
+    }
+    return Array.from(byIndex.values()).sort((a, b) => a.step_index - b.step_index);
   }
 
   // A copy especifica (A..Z) sobrepoe a etapa inicial compartilhada.

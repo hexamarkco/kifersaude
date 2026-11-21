@@ -1,0 +1,41 @@
+name: MCP parity regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/chatgpt-mcp/**'
+      - 'supabase/migrations/*mcp_campaign*'
+      - 'supabase/migrations/*mcp_verified_chat*'
+      - 'src/features/communication/whatsapp-campaigns/commWhatsAppCampaignService.ts'
+      - '.github/workflows/mcp-parity-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Typescript
+        run: npm run typecheck
+      - name: MCP and campaign regression tests
+        run: >
+          npm test --
+          supabase/functions/chatgpt-mcp/__tests__/campaign-coverage-actions.test.ts
+          supabase/functions/chatgpt-mcp/__tests__/campaign-sequence-v2.test.ts
+          supabase/functions/chatgpt-mcp/__tests__/whatsapp-campaign-actions.test.ts
+          src/features/communication/whatsapp-campaigns/commWhatsAppCampaignService.test.ts
+      - name: Focused lint
+        run: >
+          npx eslint
+          supabase/functions/chatgpt-mcp/campaign-coverage-actions.ts
+          supabase/functions/chatgpt-mcp/flow-template-actions.ts
+          supabase/functions/chatgpt-mcp/write-actions.ts
+          supabase/functions/chatgpt-mcp/index.ts
+          supabase/functions/chatgpt-mcp/whatsapp-campaign-actions.ts

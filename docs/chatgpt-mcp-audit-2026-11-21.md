@@ -60,3 +60,35 @@ A criação continua em **rascunho**. Importação de contatos e ativação são
 - Testes unitários adicionados para 3 copies com comprimentos diferentes, separação por quebras de linha, delays e ausência de herança acidental.
 - Migração SQL versionada e aplicada. **Nenhum contato/campanha foi criado, ativado ou disparado para testar**.
 - Revisar status das verificações automáticas após push; deploy da Edge Function MCP deve ser conferido separadamente, pois Vercel atualiza apenas o frontend.
+
+## Complemento implementado em 21/11/2026
+
+Os itens identificados como parciais/indisponíveis no módulo Disparos e Fluxos passaram a ter ferramentas MCP especializadas.
+
+### Novas ações
+
+| Área | Leituras | Escritas |
+|---|---|---|
+| Modelos de Disparos | `kifer_list_whatsapp_campaign_templates`, `kifer_get_whatsapp_campaign_template` (anteriores) | `kifer_create_whatsapp_campaign_template`, `kifer_update_whatsapp_campaign_template`, `kifer_archive_whatsapp_campaign_template` |
+| Testes de Disparos | `kifer_get_whatsapp_campaign_test_status` | `kifer_send_whatsapp_campaign_test` com `confirm_send=true` e chave idempotente |
+| Mensagens de campanhas | `kifer_get_whatsapp_campaign_contact_history` (balões, etapa, status, eventos sanitizados) | Nenhuma ação de envio em lote adicionada |
+| Modelos de Fluxos | `kifer_list_followup_message_templates`, `kifer_get_followup_message_template` | `kifer_create_followup_message_template`, `kifer_update_followup_message_template` (texto, CAS) |
+| Variações de Fluxos | `kifer_get_followup_flow` retorna `message_variations` e `settings_updated_at` | `kifer_update_followup_step_variations` e `message_variations` na criação de etapas |
+| Inbox/identidades | `kifer_find_duplicate_whatsapp_chats` | `kifer_reconcile_verified_whatsapp_lid` somente com prova bidirecional verificada |
+
+### Proteções importantes
+
+- As campanhas, os leads, os disparos e os fluxos existentes não foram usados como massa de teste. Nenhuma mensagem real foi disparada.
+- Novos modelos de Disparos são arquivados logicamente; o editor foi ajustado para ocultar arquivados e preservar os registros.
+- A chave de teste fica registrada em `mcp_whatsapp_campaign_test_requests` com hashes do telefone e payload; uma chamada repetida não reenvia. O envio exige operador identificado, opt-out verificado no worker e `confirm_send=true`.
+- Fluxos exigem versão `integration_settings.updated_at` e bloqueiam edição de variações quando existirem jobs `pending/processing`. Cópias de IA ou template preservam o formato da interface.
+- Mesclagens genéricas por nome ou semelhança de telefone **não são disponibilizadas**. Apenas a ponte de reconciliação LID + WA-ID verificada nos dois sentidos, com CAS dos dois chats, ausência de conflitos e função existente com histórico e auditoria preservados. Sem prova, somente diagnóstico.
+- Modelos de Fluxos oferecidos pelo MCP para criação/edição são texto. Mídias já existentes não são descartadas ao mudar somente o nome. Upload de novas mídias para essa biblioteca e alterações genéricas de grafos que poderiam comprometer os jobs ficam fora do escopo de escrita segura.
+- Todos os tools novos são nomes fechados, com OAuth admin (`kifer.read` ou `kifer.write` conforme ação), auditoria por operação e validações locais/servidor.
+
+### Implantação e verificação
+
+- Migrações aplicadas: `20261121165307_mcp_campaign_template_test_ledger_20261121` e `20261121170111_mcp_verified_chat_merge_20261121`.
+- Testes de regressão adicionados, além da verificação de TypeScript e lint segmentado no workflow `.github/workflows/mcp-parity-regression.yml`.
+- Um deploy do Vercel não atualiza automaticamente o Supabase MCP. Conferir a versão Edge Function `chatgpt-mcp` em cada publicação.
+- A ferramenta de mesclagem de chats **não** foi chamada em produção. Para todas as operações de escrita reais ainda é necessário pedido explícito com escopo e identificadores corretos.

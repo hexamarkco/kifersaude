@@ -27,6 +27,8 @@ import { executeMcpInboxAction, MCP_INBOX_WRITE_TOOL_NAMES } from './inbox-actio
 import { executeMcpIdentityConflictResolution, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { executeMcpWhatsAppMediaReadAction } from './media-read-action.ts';
 import { executeMcpWhatsAppCampaignWriteAction, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
+import { executeMcpCampaignExtendedWrite, MCP_CAMPAIGN_EXT_WRITE_NAMES } from './campaign-coverage-actions.ts';
+import { executeMcpFlowTemplateWrite, MCP_FLOW_TEMPLATE_WRITE_NAMES } from './flow-template-actions.ts';
 import { executeMcpPublicContentAction, MCP_PUBLIC_CONTENT_WRITE_TOOL_NAMES } from './public-content-actions.ts';
 import { executeMcpAnalyticsWriteAction, MCP_ANALYTICS_WRITE_TOOL_NAMES } from './analytics-actions.ts';
 import { executeMcpConfigAdminWriteAction, MCP_CONFIG_ADMIN_WRITE_TOOL_NAMES } from './config-admin-actions.ts';
@@ -287,14 +289,43 @@ const normalizeFlowMessageItems = (
   return { items };
 };
 
+const normalizeFlowVariations = (
+  value: unknown, templateIds: Set<string>,
+): { variations?: Record<string,unknown>[]; error?: McpWriteResult } => {
+  if(!Array.isArray(value) || value.length>20) {
+    return {error:errorResult('INVALID_INPUT','Variações devem ser uma lista de até 20 alternativas.')};
+  }
+  const ids=new Set<string>();
+  const variations:Record<string,unknown>[]=[];
+  for(const item of value){
+    if(!isRecord(item) || Object.keys(item).some((key)=>!['id','messages'].includes(key))) {
+      return {error:errorResult('INVALID_INPUT','Cada variação exige id e messages, sem campos adicionais.')};
+    }
+    const id=text(item.id);
+    if(!/^[a-zA-Z0-9_-]{1,128}$/.test(id) || id==='primary' || ids.has(id)) {
+      return {error:errorResult('INVALID_INPUT','IDs de variações inválidos ou repetidos.')};
+    }
+    ids.add(id);
+    const normalized=normalizeFlowMessageItems(item.messages,templateIds);
+    if(normalized.error || !normalized.items) return {error:normalized.error ?? errorResult('INVALID_INPUT','Mensagens inválidas.')};
+    variations.push({id,messages:normalized.items});
+  }
+  return {variations};
+};
+
 const flowMessageItemView = (item: unknown): Record<string, unknown> | null => {
   if (!isRecord(item)) return null;
-  if (typeof item.templateId === 'string' && text(item.templateId)) return { type: 'template' };
+  if (typeof item.templateId === 'string' && text(item.templateId)) return { type: 'template', template_id: text(item.templateId) };
   if (isRecord(item.custom) && text(item.custom.type) === 'text' && text(item.custom.text)) {
     return { type: 'custom', text: text(item.custom.text).slice(0, MAX_MESSAGE_LENGTH) };
   }
   if (isRecord(item.ai) && text(item.ai.instruction)) {
     return { type: 'ai', instruction: text(item.ai.instruction).slice(0, MAX_AI_INSTRUCTION_LENGTH) };
+  }
+  if (isRecord(item.custom) && ['image','video','audio','document'].includes(text(item.custom.type))) {
+    return { type: 'custom', content_type: text(item.custom.type),
+      media_attached: Boolean(text(item.custom.mediaUrl)), filename: text(item.custom.filename)||null,
+      caption: text(item.custom.caption).slice(0,MAX_MESSAGE_LENGTH) };
   }
   return null;
 };
@@ -317,6 +348,12 @@ const flowView = (flow: Record<string, unknown>) => {
       delay_unit: text(step.delayUnit),
       enabled: step.enabled !== false,
       ...(text(step.actionType) === 'send_message' ? {
+        message_variations: Array.isArray(step.messageVariations)
+          ? step.messageVariations.filter(isRecord).map((variation) => ({
+              id: text(variation.id),
+              message_items: Array.isArray(variation.messages) ? variation.messages.map(flowMessageItemView).filter(Boolean) : [],
+            }))
+          : [],
         ...(() => {
           const objectItems = Array.isArray(step.messages)
             ? step.messages.map(flowMessageItemView).filter((item): item is Record<string, unknown> => Boolean(item))
@@ -2271,7 +2308,7 @@ async function resolveStepActionConfiguration(
   const config = isRecord(value) ? value : {};
   if (actionType === 'send_message') {
     const allowedKeys = new Set([
-      'message', 'messages', 'message_items', 'message_source', 'messageSource', 'template_id', 'templateId', 'ai_instruction', 'aiInstruction',
+      'message', 'messages', 'message_items', 'message_variations', 'message_source', 'messageSource', 'template_id', 'templateId', 'ai_instruction', 'aiInstruction',
     ]);
     if (Object.keys(config).some((key) => !allowedKeys.has(key))) {
       return { error: errorResult('NOT_ALLOWED', 'send_message aceita somente message, messages, message_source, template_id ou ai_instruction.') };
@@ -2282,13 +2319,21 @@ async function resolveStepActionConfiguration(
       if (config.messages !== undefined && config.message_items !== undefined) {
         return { error: errorResult('INVALID_INPUT', 'Informe somente messages ou message_items.') };
       }
-      if (Object.keys(config).some((key) => key !== 'messages' && key !== 'message_items')) {
+      if (Object.keys(config).some((key) => key !== 'messages' && key !== 'message_items' && key !== 'message_variations')) {
         return { error: errorResult('INVALID_INPUT', 'Uma lista de mensagens não pode ser combinada com os atalhos de origem.') };
       }
       const normalized = normalizeFlowMessageItems(listValue, templateIds);
-      return normalized.error ? { error: normalized.error } : { configuration: { messages: normalized.items } };
+      if (normalized.error || !normalized.items) return {error:normalized.error ?? errorResult('INVALID_INPUT','Mensagens inválidas.')};
+      const variants = config.message_variations === undefined
+        ? {variations: [] as Record<string,unknown>[]} : normalizeFlowVariations(config.message_variations,templateIds);
+      return variants.error ? {error:variants.error}
+        : {configuration: {messages:normalized.items, ...(config.message_variations!==undefined ? {messageVariations:variants.variations}: {})}};
+
     }
 
+    if(config.message_variations!==undefined) return {
+      error:errorResult('INVALID_INPUT','Para adicionar variações, informe também messages como lista principal.')
+    };
     const rawSource = config.message_source ?? config.messageSource;
     const source = text(rawSource);
     const templateId = text(config.template_id ?? config.templateId);
@@ -2415,6 +2460,38 @@ async function loadFollowUpStepMessageContext(
   if (stepIndex < 0) return { error: errorResult('NOT_FOUND', 'Etapa não encontrada.') };
   if (text(steps[stepIndex].actionType) !== 'send_message') return { error: errorResult('NOT_ALLOWED', 'Somente etapas send_message podem ter mensagens alteradas.') };
   return { integration, settings, flowIndex, stepIndex };
+}
+
+async function updateFollowUpStepVariations(supabase: SupabaseClient, params:Record<string,unknown>):Promise<McpWriteResult> {
+  const flowId=text(params.flow_id),stepId=text(params.step_id);
+  const expected=text(params.expected_updated_at);
+  if(!flowId||!stepId||!Number.isFinite(Date.parse(expected))) return errorResult('INVALID_INPUT','Informe IDs e expected_updated_at.');
+  const context=await loadFollowUpStepMessageContext(supabase,flowId,stepId);
+  if(context.error || !context.integration || !context.settings || context.flowIndex===undefined || context.stepIndex===undefined)
+    return context.error ?? errorResult('NOT_FOUND','Etapa não encontrada.');
+  if(text(context.integration.updated_at)!==expected)
+    return errorResult('STALE_WRITE','O fluxo foi alterado. Consulte novamente antes de salvar.');
+  const normalized=normalizeFlowVariations(params.variations,templateIdsFromSettings(context.settings));
+  if(normalized.error || !normalized.variations) return normalized.error ?? errorResult('INVALID_INPUT','Variações inválidas.');
+  const {count,error:jobsError}=await supabase.from('auto_contact_flow_jobs')
+    .select('id',{count:'exact',head:true}).eq('flow_id',flowId).in('status',['pending','processing']);
+  if(jobsError)return errorResult('INTERNAL_ERROR','Não foi possível conferir a fila do fluxo.');
+  if((count??0)>0)return errorResult('CONFLICT','O fluxo tem jobs pendentes ou em processamento. Pause a fila antes de editar as variações.');
+  const flow=flowRecord(context.settings.flows?.[context.flowIndex]);
+  const steps=flow&&Array.isArray(flow.steps)?flow.steps.filter(isRecord).map((step)=>({...step})):[];
+  const step=steps[context.stepIndex];
+  if(!flow||!step||text(step.actionType)!=='send_message')return errorResult('NOT_ALLOWED','Etapa inválida.');
+  step.messageVariations=normalized.variations;
+  const flows=[...(context.settings.flows??[])];flows[context.flowIndex]={...flow,steps};
+  const {data,error}=await supabase.from('integration_settings')
+    .update({settings:{...context.settings,flows},updated_at:new Date().toISOString()})
+    .eq('id',context.integration.id).eq('updated_at',expected)
+    .select('id,updated_at').maybeSingle();
+  if(error)return errorResult('INTERNAL_ERROR','Falha ao atualizar as variações.');
+  if(!data)return errorResult('STALE_WRITE','A configuração mudou durante a edição.');
+  const nextStep=flowView(flows[context.flowIndex] as Record<string,unknown>).steps[context.stepIndex];
+  return {success:true,flow_id:flowId,step_id:stepId,variation_count:normalized.variations.length,
+    message_variations:nextStep.message_variations,settings_updated_at:data.updated_at};
 }
 
 async function updateFollowUpStepMessages(supabase: SupabaseClient, params: Record<string, unknown>): Promise<McpWriteResult> {
@@ -2900,7 +2977,7 @@ export async function executeMcpCommercialReadAction(params: { supabase: Supabas
       const view = flowView(flow);
       return { ...view, ...(isList && args.include_steps === false ? { steps: [], steps_count: view.steps.length, steps_included: false } : {}), pending_jobs: count ?? 0 };
     }));
-    return isList ? { success: true, page, page_size: pageSize, total: flows.length, has_more: from + selected.length < flows.length, flows: summarized } : { success: true, flow: summarized[0] };
+    return isList ? { success: true, page, page_size: pageSize, total: flows.length, has_more: from + selected.length < flows.length, flows: summarized, settings_updated_at: integration?.updated_at ?? null } : { success: true, flow: summarized[0], settings_updated_at: integration?.updated_at ?? null };
   }
   if (toolName === 'kifer_list_lead_statuses') {
     const { data, error } = await supabase.from('lead_status_config').select('id,nome,cor,ordem,ativo,padrao').eq('ativo', true).order('ordem', { ascending: true });
@@ -2990,6 +3067,14 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
       actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
       result = await executeMcpWhatsAppCampaignWriteAction({ supabase, toolName, arguments: args, actorId: actor.actorId }) as McpWriteResult;
     }
+    else if ((MCP_CAMPAIGN_EXT_WRITE_NAMES as readonly string[]).includes(toolName)) {
+      actionType = toolName.replace(/^kifer_/, '').replaceAll('_', '-');
+      result = await executeMcpCampaignExtendedWrite({ supabase, toolName, arguments: args, actorId: actor.actorId }) as McpWriteResult;
+    }
+    else if ((MCP_FLOW_TEMPLATE_WRITE_NAMES as readonly string[]).includes(toolName)) {
+      actionType = 'followup-message-template-edit';
+      result = await executeMcpFlowTemplateWrite({supabase,toolName,args,actorId:actor.actorId}) as McpWriteResult;
+    }
     else if (toolName === 'kifer_send_whatsapp_message') { actionType = 'whatsapp_send'; result = await sendWhatsAppMessage(supabase, args, actor); }
     else if (toolName === 'kifer_send_whatsapp_media') { actionType = 'whatsapp_media_send'; result = await sendWhatsAppMedia(supabase, args, actor); }
     else if (toolName === 'kifer_get_or_create_whatsapp_chat') { actionType = 'whatsapp_chat_get_or_create'; result = await getOrCreateWhatsAppChat(supabase, args, actor); }
@@ -3061,6 +3146,7 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
     else if (toolName === 'kifer_create_followup_step') { actionType = 'followup_step_create'; result = await createFollowUpStep(supabase, args); }
     else if (toolName === 'kifer_update_followup_step_message') { actionType = 'followup_step_message_update'; result = await updateFollowUpStepMessage(supabase, args); }
     else if (toolName === 'kifer_update_followup_step_messages') { actionType = 'followup_step_messages_update'; result = await updateFollowUpStepMessages(supabase, args); }
+    else if (toolName === 'kifer_update_followup_step_variations') { actionType = 'followup_step_variations_update'; result = await updateFollowUpStepVariations(supabase, args); }
     else if (toolName === 'kifer_delete_followup_step') { actionType = 'followup_step_delete'; result = await mutateFollowUpSteps(supabase, args, 'delete'); }
     else if (toolName === 'kifer_reorder_followup_steps') { actionType = 'followup_step_reorder'; result = await mutateFollowUpSteps(supabase, args, 'reorder'); }
     else if (toolName === 'kifer_clone_followup_flow') { actionType = 'followup_flow_clone'; result = await cloneFollowUpFlow(supabase, args); }
@@ -3096,11 +3182,14 @@ export async function executeMcpWriteAction(params: { supabase: SupabaseClient; 
       });
     }
   } else {
-    const isCampaignAction = (MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName);
+    const isCampaignAction = (MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName) || (MCP_CAMPAIGN_EXT_WRITE_NAMES as readonly string[]).includes(toolName) || (MCP_FLOW_TEMPLATE_WRITE_NAMES as readonly string[]).includes(toolName);
     const auditRequest = isCampaignAction
       ? {
           campaign_id: safeUuid(args.campaign_id) ? text(args.campaign_id) : null,
           target_id: safeUuid(args.target_id) ? text(args.target_id) : null,
+          template_id: safeUuid(args.template_id) ? text(args.template_id) : null,
+          variant: text(args.variant) || null,
+          step_index: typeof args.step_index === 'number' ? args.step_index : null,
           client_request_id: safeRequestId(args.client_request_id) ? text(args.client_request_id) : null,
           contact_count: Array.isArray(args.contacts) ? args.contacts.length : undefined,
           expected_updated_at: text(args.expected_updated_at) || null,

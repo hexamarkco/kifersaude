@@ -1446,6 +1446,7 @@ export const commWhatsAppCampaignService = {
     const { data, error } = await supabase
       .from('comm_whatsapp_campaign_templates')
       .select(CAMPAIGN_TEMPLATE_SELECT)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -1476,8 +1477,9 @@ export const commWhatsAppCampaignService = {
   async deleteTemplate(templateId: string): Promise<void> {
     const { error } = await supabase
       .from('comm_whatsapp_campaign_templates')
-      .delete()
-      .eq('id', templateId);
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', templateId)
+      .is('archived_at', null);
 
     if (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel remover o modelo.'));

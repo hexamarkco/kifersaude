@@ -179,7 +179,7 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
   {
     name: 'kifer_list_whatsapp_campaign_templates',
     description: 'Lista metadados dos modelos de campanha salvos no editor de Disparos; não retorna os textos de clientes.',
-    inputSchema: { type: 'object', additionalProperties: false, properties: { page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 } } },
+    inputSchema: { type: 'object', additionalProperties: false, properties: { page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 }, include_archived: {type:'boolean',default:false} } },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -863,9 +863,10 @@ const getCampaignWorkerHealth = async (supabase: SupabaseClient, args: JsonRecor
 
 const listCampaignTemplates = async (supabase: SupabaseClient, args: JsonRecord): Promise<JsonRecord> => {
   const { page, pageSize, from } = pageParams(args);
-  const { data, count, error } = await supabase.from('comm_whatsapp_campaign_templates')
-    .select('id,name,created_at,updated_at', { count: 'exact' })
-    .order('created_at', { ascending: false }).range(from, from + pageSize - 1);
+  let query = supabase.from('comm_whatsapp_campaign_templates')
+    .select('id,name,created_at,updated_at,archived_at', { count: 'exact' });
+  if (args.include_archived !== true) query = query.is('archived_at', null);
+  const { data, count, error } = await query.order('created_at', { ascending: false }).range(from, from + pageSize - 1);
   if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível listar os modelos de campanhas.');
   return { success: true, page, page_size: pageSize, total: count ?? 0, templates: data ?? [] };
 };
@@ -874,7 +875,7 @@ const getCampaignTemplate = async (supabase: SupabaseClient, args: JsonRecord): 
   const templateId = text(args.template_id);
   if (!safeUuid(templateId)) return errorResult('INVALID_INPUT', 'template_id inválido.');
   const { data, error } = await supabase.from('comm_whatsapp_campaign_templates')
-    .select('id,name,steps,created_at,updated_at')
+    .select('id,name,steps,created_at,updated_at,archived_at')
     .eq('id', templateId).maybeSingle();
   if (error) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar o modelo da campanha.');
   if (!data) return errorResult('TEMPLATE_NOT_FOUND', 'Modelo não encontrado.');

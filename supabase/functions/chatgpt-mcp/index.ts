@@ -25,6 +25,8 @@ import { executeMcpWhatsAppQuickReplyReadAction, MCP_WHATSAPP_QUICK_REPLY_READ_T
 import { executeMcpTrackingConfigReadAction, MCP_TRACKING_CONFIG_READ_TOOL_NAMES, MCP_TRACKING_CONFIG_TOOLS, MCP_TRACKING_CONFIG_WRITE_TOOL_NAMES } from './tracking-config-actions.ts';
 import { MCP_IDENTITY_CONFLICT_TOOLS, MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES } from './identity-conflict-actions.ts';
 import { campaignReadAuditSummary, executeMcpWhatsAppCampaignReadAction, MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES, MCP_WHATSAPP_CAMPAIGN_TOOLS, MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES } from './whatsapp-campaign-actions.ts';
+import { executeMcpCampaignExtendedRead, MCP_CAMPAIGN_EXT_READ_NAMES, MCP_CAMPAIGN_EXT_TOOLS, MCP_CAMPAIGN_EXT_WRITE_NAMES } from './campaign-coverage-actions.ts';
+import { executeMcpFlowTemplateRead, MCP_FLOW_TEMPLATE_READ_NAMES, MCP_FLOW_TEMPLATE_TOOLS, MCP_FLOW_TEMPLATE_WRITE_NAMES } from './flow-template-actions.ts';
 import { mcpAdminAuthorizationError, mcpWriteAuthorizationError } from './authorization.ts';
 import { toMcpToolResult } from './tool-result.ts';
 import { getMcpConnectionAccess, getMcpDiscoverableTools, getMcpToolScopeError, MCP_CONNECTION_ACCESS_TOOL, MCP_FULL_ACCESS_SCOPES } from './oauth-tool-access.ts';
@@ -446,11 +448,23 @@ const FLOW_MESSAGE_ITEMS_SCHEMA = {
   items: FLOW_MESSAGE_ITEM_SCHEMA,
 } as const;
 
+const FLOW_MESSAGE_VARIATIONS_SCHEMA = {
+  type: 'array', minItems: 0, maxItems: 20,
+  items: {
+    type: 'object', required: ['id','messages'], additionalProperties: false,
+    properties: {
+      id: { type: 'string', minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' },
+      messages: FLOW_MESSAGE_ITEMS_SCHEMA,
+    },
+  },
+} as const;
+
 const commercialTools = [
   { name: 'kifer_bulk_cancel_automation_jobs', description: 'Cancela logicamente até 100 jobs pendentes que correspondam a filtros fechados. Nunca exclui histórico. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, status: { type: 'string', maxLength: 32 }, step_id: { type: 'string', maxLength: 160 }, scheduled_before: { type: 'string', format: 'date-time' }, scheduled_after: { type: 'string', format: 'date-time' }, observacao: { type: 'string', maxLength: 4000 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_create_followup_flow', description: 'Cria um fluxo comercial de follow-up vazio, com gatilho e janela operacional fechados. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['nome', 'ativo', 'trigger_type', 'trigger_statuses', 'trigger_duration_hours', 'start_hour', 'end_hour', 'allowed_weekdays', 'daily_send_limit'], additionalProperties: false, properties: { nome: { type: 'string', minLength: 1, maxLength: 160 }, ativo: { type: 'boolean' }, trigger_type: { type: 'string', enum: ['lead_created', 'status_changed', 'status_duration', 'inactivity_duration'] }, trigger_statuses: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 160 } }, trigger_duration_hours: { type: 'integer', minimum: 0, maximum: 8760 }, start_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, end_hour: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, allowed_weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 0, maximum: 6 } }, daily_send_limit: { type: ['integer', 'null'], minimum: 1, maximum: 1000 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
-  { name: 'kifer_create_followup_step', description: 'Adiciona uma etapa comercial segura a um fluxo existente. Em send_message, aceita texto customizado, um template ou messages com itens ordenados de template, custom e IA; a instrução IA é obrigatória e a geração ocorre somente no envio. Altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'ordem', 'action_type', 'delay_value', 'delay_unit', 'enabled', 'action_config'], additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, ordem: { type: 'integer', minimum: 0, maximum: 100 }, action_type: { type: 'string', enum: ['send_message', 'update_status', 'create_task', 'activate_autonomous_service'] }, delay_value: { type: 'integer', minimum: 0, maximum: 3650 }, delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] }, enabled: { type: 'boolean' }, action_config: { type: 'object', additionalProperties: false, properties: { message: { type: 'string', maxLength: 4096, description: 'Atalho para uma mensagem customizada.' }, messages: FLOW_MESSAGE_ITEMS_SCHEMA, message_source: { type: 'string', enum: ['template', 'custom', 'ai'] }, template_id: { type: 'string', minLength: 1, maxLength: 160 }, ai_instruction: { type: 'string', minLength: 1, maxLength: 4000 }, status: { type: 'string', maxLength: 160 }, title: { type: 'string', maxLength: 160 }, description: { type: 'string', maxLength: 4000 }, priority: { type: 'string', enum: ['baixa', 'normal', 'alta'] }, due_hours: { type: 'integer', minimum: 0, maximum: 8760 } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_create_followup_step', description: 'Adiciona uma etapa comercial segura a um fluxo existente. Em send_message, aceita texto customizado, um template ou messages com itens ordenados de template, custom e IA; a instrução IA é obrigatória e a geração ocorre somente no envio. Altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'ordem', 'action_type', 'delay_value', 'delay_unit', 'enabled', 'action_config'], additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, ordem: { type: 'integer', minimum: 0, maximum: 100 }, action_type: { type: 'string', enum: ['send_message', 'update_status', 'create_task', 'activate_autonomous_service'] }, delay_value: { type: 'integer', minimum: 0, maximum: 3650 }, delay_unit: { type: 'string', enum: ['seconds', 'minutes', 'hours', 'days'] }, enabled: { type: 'boolean' }, action_config: { type: 'object', additionalProperties: false, properties: { message: { type: 'string', maxLength: 4096, description: 'Atalho para uma mensagem customizada.' }, messages: FLOW_MESSAGE_ITEMS_SCHEMA, message_variations: FLOW_MESSAGE_VARIATIONS_SCHEMA, message_source: { type: 'string', enum: ['template', 'custom', 'ai'] }, template_id: { type: 'string', minLength: 1, maxLength: 160 }, ai_instruction: { type: 'string', minLength: 1, maxLength: 4000 }, status: { type: 'string', maxLength: 160 }, title: { type: 'string', maxLength: 160 }, description: { type: 'string', maxLength: 4000 }, priority: { type: 'string', enum: ['baixa', 'normal', 'alta'] }, due_hours: { type: 'integer', minimum: 0, maximum: 8760 } } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_update_followup_step_message', description: 'Altera uma única mensagem de uma etapa send_message existente. Por padrão troca o texto customizado; use message_source=template com template_id ou message_source=ai com ai_instruction para alterar a origem. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_id'], additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, step_id: { type: 'string', maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096 }, message_source: { type: 'string', enum: ['template', 'custom', 'ai'] }, template_id: { type: 'string', minLength: 1, maxLength: 160 }, ai_instruction: { type: 'string', minLength: 1, maxLength: 4000 } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: 'kifer_update_followup_step_variations', description: 'Substitui todas as variações alternativas de uma etapa de Fluxos; preserva a lista principal. Exige expected_updated_at da configuração e bloqueia alterações com jobs pendentes/processando. Cada variação contém balões separados de texto, template ou IA. Não envia mensagens.', inputSchema: { type:'object', required:['flow_id','step_id','expected_updated_at','variations'], additionalProperties:false, properties: { flow_id:{type:'string',minLength:1,maxLength:160}, step_id:{type:'string',minLength:1,maxLength:160}, expected_updated_at:{type:'string',format:'date-time'}, variations:FLOW_MESSAGE_VARIATIONS_SCHEMA } }, annotations: { readOnlyHint:false, destructiveHint:false,openWorldHint:false } },
   { name: 'kifer_update_followup_step_messages', description: 'Substitui a lista completa e ordenada de mensagens de uma etapa send_message. Aceita itens template, custom e IA; não envia mensagens nem gera IA nesta operação. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_id', 'messages'], additionalProperties: false, properties: { flow_id: { type: 'string', maxLength: 160 }, step_id: { type: 'string', maxLength: 160 }, messages: FLOW_MESSAGE_ITEMS_SCHEMA } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
   { name: 'kifer_delete_followup_step', description: 'Remove uma etapa de um fluxo de follow-up. Bloqueia a operação quando há jobs pendentes ou em processamento para o fluxo. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_id'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 }, step_id: { type: 'string', minLength: 1, maxLength: 160 } } }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false } },
   { name: 'kifer_reorder_followup_steps', description: 'Reordena todas as etapas existentes de um fluxo. step_ids deve incluir cada etapa exatamente uma vez; bloqueia a operação com jobs pendentes ou em processamento. Use somente mediante pedido explícito; altera dados reais.', inputSchema: { type: 'object', required: ['flow_id', 'step_ids'], additionalProperties: false, properties: { flow_id: { type: 'string', minLength: 1, maxLength: 160 }, step_ids: { type: 'array', maxItems: 101, items: { type: 'string', minLength: 1, maxLength: 160 } } } }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
@@ -761,6 +775,8 @@ const tools = [
   ...MCP_INBOX_TOOLS,
   ...MCP_IDENTITY_CONFLICT_TOOLS,
   ...MCP_WHATSAPP_CAMPAIGN_TOOLS,
+  ...MCP_CAMPAIGN_EXT_TOOLS,
+  ...MCP_FLOW_TEMPLATE_TOOLS,
   ...MCP_PUBLIC_CONTENT_TOOLS,
   ...MCP_ANALYTICS_TOOLS,
   ...MCP_CONFIG_ADMIN_TOOLS,
@@ -799,6 +815,8 @@ const ADMIN_READ_TOOLS = new Set([
   ...MCP_CONTACT_PERMISSION_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_MEDIA_READ_TOOL_NAMES,
   ...MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES,
+  ...MCP_CAMPAIGN_EXT_READ_NAMES,
+  ...MCP_FLOW_TEMPLATE_READ_NAMES,
   ...MCP_PUBLIC_CONTENT_READ_TOOL_NAMES,
   ...MCP_ANALYTICS_READ_TOOL_NAMES,
   ...MCP_CONFIG_ADMIN_READ_TOOL_NAMES,
@@ -827,7 +845,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     'kifer_enqueue_lead_followup', 'kifer_remove_lead_from_followup', 'kifer_update_lead', 'kifer_update_reminder',
     'kifer_complete_reminder', 'kifer_cancel_reminder', 'kifer_cancel_automation_job', 'kifer_retry_automation_job',
     'kifer_bulk_cancel_automation_jobs', 'kifer_create_followup_flow', 'kifer_create_followup_step',
-    'kifer_update_followup_step_message', 'kifer_update_followup_step_messages', 'kifer_delete_followup_step', 'kifer_reorder_followup_steps', 'kifer_clone_followup_flow',
+    'kifer_update_followup_step_message', 'kifer_update_followup_step_messages', 'kifer_update_followup_step_variations', 'kifer_delete_followup_step', 'kifer_reorder_followup_steps', 'kifer_clone_followup_flow',
     'kifer_bulk_update_leads', 'kifer_bulk_assign_leads', 'kifer_bulk_update_lead_status', 'kifer_bulk_archive_leads', 'kifer_bulk_enqueue_followup',
     'kifer_update_contract_status', 'kifer_cancel_contract',
     ...MCP_OPPORTUNITY_WRITE_TOOL_NAMES,
@@ -839,6 +857,8 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     ...MCP_INBOX_WRITE_TOOL_NAMES,
     ...MCP_IDENTITY_CONFLICT_WRITE_TOOL_NAMES,
     ...MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES,
+    ...MCP_CAMPAIGN_EXT_WRITE_NAMES,
+    ...MCP_FLOW_TEMPLATE_WRITE_NAMES,
     ...MCP_PUBLIC_CONTENT_WRITE_TOOL_NAMES,
     ...MCP_ANALYTICS_WRITE_TOOL_NAMES,
     ...MCP_CONFIG_ADMIN_WRITE_TOOL_NAMES,
@@ -885,6 +905,27 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
       requestSummary: campaignReadAuditSummary(args),
     });
     return toToolResult(campaignRead);
+  }
+  const expandedRead = await executeMcpCampaignExtendedRead({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
+  if (expandedRead) {
+    await writeAuditLog({
+      supabase, toolName: name, actor,
+      resourceName: name === 'kifer_find_duplicate_whatsapp_chats' ? 'comm_whatsapp_chats' : 'comm_whatsapp_campaigns',
+      requestSummary: {
+        campaign_id: typeof args.campaign_id === 'string' ? args.campaign_id : null,
+        target_id: typeof args.target_id === 'string' ? args.target_id : null,
+        argument_keys: Object.keys(args).sort(),
+      },
+    });
+    return toToolResult(expandedRead);
+  }
+  const flowTemplateRead = await executeMcpFlowTemplateRead({ supabase, toolName: name, args });
+  if (flowTemplateRead) {
+    await writeAuditLog({ supabase, toolName: name, actor,
+      resourceName: 'integration_settings',
+      requestSummary: { argument_keys: Object.keys(args).sort(), template_id: typeof args.template_id === 'string' ? args.template_id : null },
+    });
+    return toToolResult(flowTemplateRead);
   }
   const publicContentResult = await executeMcpPublicContentAction({
     supabase,

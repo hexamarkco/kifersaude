@@ -22,7 +22,13 @@ const makeSupabase = (
     error: null,
   }));
   const invoke = vi.fn().mockResolvedValue({ data: { success: true, status: 'queued', campaignId }, error: null });
-  return { client: { rpc, functions: { invoke } } as never, rpc, invoke };
+  const query = {
+    select: () => query,
+    eq: () => query,
+    maybeSingle: async () => ({ data: { id: campaignId, status: 'draft', audience_config: {} }, error: null }),
+  };
+  const from = vi.fn(() => query);
+  return { client: { rpc, from, functions: { invoke } } as never, rpc, invoke };
 };
 
 describe('MCP WhatsApp campaign actions', () => {

@@ -46,7 +46,7 @@ describe('MCP campaign variation sequences v2', () => {
   });
 
   it('rejeita letras não contíguas, duplicidade de posições e sequências longas', () => {
-    expect(normalizeMcpCampaignStages([{ variations: { A: ['a'], C: ['c'] } }]).toMatchObject({ ok: false });
+    expect(normalizeMcpCampaignStages([{ variations: { A: ['a'], C: ['c'] } }])).toMatchObject({ ok: false });
     expect(normalizeMcpCampaignStages([{ variations: { A: ['a'], B: ['b'] } }, { variations: { A: ['a'] } }])).toMatchObject({ ok: false });
     expect(normalizeMcpCampaignStages([{ variations: { A: new Array(30).fill('x'), B: new Array(30).fill('y') } }, { variations: { A: ['a'], B: ['b'] } }])).toMatchObject({ ok: false });
     expect(normalizeMcpCampaignStages([{ variations: { A: [''], B: ['b'] } }])).toMatchObject({ ok: false });

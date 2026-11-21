@@ -8,6 +8,11 @@ export default function HomePhotoMasks() {
         <clipPath id="home-photo-hero" clipPathUnits="objectBoundingBox">
           <path d="M.3 0H1V1H0C.04 .82 .21 .65 .2 .43C.19 .23 .22 .1 .3 0Z" />
         </clipPath>
+        {/* The desktop reference has a long continuous photographic edge,
+            not the tighter S-curve used by the older intermediate layout. */}
+        <clipPath id="home-photo-hero-desktop" clipPathUnits="objectBoundingBox">
+          <path d="M.18 0H1V1H0C.018 .84 .042 .71 .058 .59C.08 .43 .05 .28 .107 .16C.131 .102 .152 .053 .18 0Z" />
+        </clipPath>
         <clipPath id="home-photo-hero-mobile" clipPathUnits="objectBoundingBox">
           <path d="M.5 0H1V1H0V.64C.025 .39 .16 .06 .5 0Z" />
         </clipPath>

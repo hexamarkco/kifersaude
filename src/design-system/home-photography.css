@@ -22,6 +22,24 @@
 .kifer-home .home-hero-art span { position: absolute; top: 25%; right: 26%; width: 34vw; height: 65vw; border-radius: 50%; background: var(--home-soft); transform: rotate(35deg); }
 .kifer-home .home-hero-art span + span { top: -55%; right: -10%; background: var(--brand-primary-muted); }
 
+/* Desktop-only refinement against the approved 1672px composition:
+   a broad, continuous left curve; no kink at the shoulder or lower third.
+   The narrower/tablet and mobile silhouettes remain unchanged. */
+@media (min-width: 1200px) {
+  .kifer-home .home-hero-portrait {
+    --hero-focus: 66% 47%;
+    --hero-scale: 1.28;
+    --hero-origin: 100% 32%;
+    width: 61%;
+  }
+  .kifer-home .home-hero-portrait::before,
+  .kifer-home .home-hero-photo-mask {
+    clip-path: url(#home-photo-hero-desktop);
+  }
+  /* The approved hero artwork has no name badge over the photograph. */
+  .kifer-home .home-hero-portrait .home-portrait-label { display: none; }
+}
+
 /* 02 — The flat baseline and unequal upper arcs belong to this photo only. */
 .kifer-home .home-trust-photo { --trust-focus: 44% 0%; position: relative; isolation: isolate; width: 74%; flex-shrink: 0; aspect-ratio: 1.85; }
 .kifer-home .home-trust-photo::before { content: ''; position: absolute; width: 44%; height: 85%; left: -7%; top: -7%; background: var(--home-soft); border-radius: 50%; z-index: -1; }
@@ -76,7 +94,7 @@
 .kifer-home .home-whatsapp-visual .home-phone { left: 0; }
 
 @media (min-width: 1920px) {
-  .kifer-home .home-hero-portrait { width: calc(59% + (100vw - var(--home-width)) / 2 - 5.2vw); }
+  .kifer-home .home-hero-portrait { width: calc(61% + (100vw - var(--home-width)) / 2 - 5.2vw); }
 }
 @media (min-width: 640px) and (max-width: 1199.98px) {
   .kifer-home .home-hero-portrait { --hero-focus: 66% 42%; width: 53%; }

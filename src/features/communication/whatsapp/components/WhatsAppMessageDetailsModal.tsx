@@ -6,8 +6,8 @@ import { AlertCircle, Check, CheckCheck, Clock3, Info, Volume2 } from 'lucide-re
 import { Dialog, DialogBody, DialogDescription } from '../../../../design-system';
 import { formatDateTimeFullBR } from '../../../../lib/dateUtils';
 import { cx } from '../../../../lib/cx';
-import { getMessageDeliveryStatusHistory, type MessageDeliveryStatusEvent } from '../domain/messageMetadata';
-import { compareMessageDeliveryStatusEvents, formatMessageTime } from '../domain/messageTimeline';
+import type { MessageDeliveryStatusEvent } from '../domain/messageMetadata';
+import { formatMessageTime, getMessageDeliveryTimeline } from '../domain/messageTimeline';
 import type { CommWhatsAppMessage } from '../domain/types';
 
 type WhatsAppMessageDetailsModalProps = {
@@ -56,33 +56,12 @@ const formatMessageType = (value: string) => {
   return labels[normalized] ?? (normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : 'Mensagem');
 };
 
-const buildTimeline = (message: CommWhatsAppMessage): TimelineEvent[] => {
-  const history = getMessageDeliveryStatusHistory(message);
-  const events = history.length > 0 ? [...history] : [];
-  const currentStatus = message.delivery_status.trim().toLowerCase();
-  const hasSentEvent = events.some((event) => event.status === 'sent');
-
-  if (!hasSentEvent && message.message_at && !['pending', 'queued', 'sending'].includes(currentStatus)) {
-    events.unshift({ status: 'sent', at: message.message_at, error: null });
-  }
-
-  const hasCurrentStatusEvent = events.some((event) => event.status === currentStatus);
-  if (
-    currentStatus
-    && !hasCurrentStatusEvent
-    && currentStatus !== 'sent'
-    && message.status_updated_at
-  ) {
-    events.push({ status: currentStatus, at: message.status_updated_at, error: message.error_message ?? null });
-  }
-
-  return events
-    .sort(compareMessageDeliveryStatusEvents)
-    .map((event) => ({
-      ...event,
-      ...getStatusPresentation(event.status, message.message_type.trim().toLowerCase()),
-    }));
-};
+const buildTimeline = (message: CommWhatsAppMessage): TimelineEvent[] => (
+  getMessageDeliveryTimeline(message).map((event) => ({
+    ...event,
+    ...getStatusPresentation(event.status, message.message_type.trim().toLowerCase()),
+  }))
+);
 
 export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsAppMessageDetailsModalProps) {
   const timeline = useMemo(() => (message ? buildTimeline(message) : []), [message]);

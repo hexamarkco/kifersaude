@@ -1120,6 +1120,34 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
+  const handleQuickPriorityChange = async (campaign: CommWhatsAppCampaign, priority: 1 | 2 | 3) => {
+    if (campaign.dispatch_priority === priority || campaignActionId) return;
+    setCampaignActionId(campaign.id);
+    try {
+      await commWhatsAppCampaignService.updatePriority(campaign, priority);
+      setCampaigns((items) => items.map((item) => item.id === campaign.id
+        ? { ...item, dispatch_priority: priority } : item));
+      toast.success('Prioridade atualizada, sem pausar o disparo.');
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível alterar a prioridade.');
+      await loadCampaigns();
+    } finally {
+      setCampaignActionId(null);
+    }
+  };
+
+  const campaignPrioritySelect = (campaign: CommWhatsAppCampaign) => (
+    <Select value={campaign.dispatch_priority ?? 1}
+      aria-label={`Prioridade de ${campaign.name}`}
+      disabled={campaignActionId === campaign.id}
+      onChange={(event) => void handleQuickPriorityChange(campaign, Number(event.target.value) as 1 | 2 | 3)}>
+      <option value={1}>Normal · 1x</option>
+      <option value={2}>Alta · 2x</option>
+      <option value={3}>Máxima · 3x</option>
+    </Select>
+  );
+
   const getCampaignActions = (campaign: CommWhatsAppCampaign) => [
     {
       label: 'Ver detalhes',
@@ -1944,6 +1972,7 @@ export default function WhatsAppCampaignsScreen() {
                     <TableHead>Público</TableHead>
                     <TableHead>Enviadas</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Prioridade</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead align="right">Ações</TableHead>
                   </TableRow>
@@ -1971,6 +2000,7 @@ export default function WhatsAppCampaignsScreen() {
                         <span className="text-xs text-[color:var(--panel-text-muted)]">{campaign.responded_targets.toLocaleString('pt-BR')} respostas</span>
                       </TableCell>
                       <TableCell><Badge tone={statusTones[campaign.status]} size="sm">{statusLabels[campaign.status]}</Badge></TableCell>
+                      <TableCell>{campaignPrioritySelect(campaign)}</TableCell>
                       <TableCell>
                         <span className="block text-[color:var(--panel-text)]">{formatCampaignDate(campaign.scheduled_at ?? campaign.created_at)}</span>
                         <span className="text-xs text-[color:var(--panel-text-muted)]">{campaign.scheduled_at ? 'Envio agendado' : 'Criada'}</span>
@@ -2012,6 +2042,10 @@ export default function WhatsAppCampaignsScreen() {
                       <span className="block text-xs text-[color:var(--panel-text-muted)]">Enviadas</span>
                       <span className="font-medium text-[color:var(--panel-text)]">{campaign.sent_targets.toLocaleString('pt-BR')} enviados</span>
                       <span className="block text-xs text-[color:var(--panel-text-muted)]">{campaign.responded_targets.toLocaleString('pt-BR')} respostas</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="block text-xs text-[color:var(--panel-text-muted)]">Prioridade no rodízio</span>
+                      {campaignPrioritySelect(campaign)}
                     </div>
                     <div className="col-span-2">
                       <span className="block text-xs text-[color:var(--panel-text-muted)]">{campaign.scheduled_at ? 'Envio agendado' : 'Criada'}</span>

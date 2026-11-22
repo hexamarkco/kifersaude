@@ -894,6 +894,17 @@ export const commWhatsAppCampaignService = {
     ]);
   },
 
+  async updatePriority(campaign: CommWhatsAppCampaign, priority: 1 | 2 | 3): Promise<void> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .update({ dispatch_priority: priority })
+      .eq('id', campaign.id)
+      .eq('updated_at', campaign.updated_at)
+      .select('id');
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível mudar a prioridade.'));
+    if (!data?.length) throw new Error('A campanha foi alterada por outra pessoa. Atualize a lista e tente novamente.');
+  },
+
   async getGlobalStatus(): Promise<CampaignGlobalStatus> {
     const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_global_status');
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível consultar a cota global.'));

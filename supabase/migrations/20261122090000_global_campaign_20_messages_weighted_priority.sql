@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS public.comm_whatsapp_campaign_global_settings (
 );
 INSERT INTO public.comm_whatsapp_campaign_global_settings(channel_key,daily_message_limit)
 VALUES ('whatsapp',20)
-ON CONFLICT(channel_key) DO UPDATE
-SET daily_message_limit=20, updated_at=now();
+ON CONFLICT(channel_key) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.comm_whatsapp_campaign_global_message_reservations (
   reservation_key text PRIMARY KEY,

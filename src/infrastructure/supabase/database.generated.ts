@@ -2156,6 +2156,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           daily_send_limit: number | null
+          dispatch_priority: number
           failed_targets: number
           id: string
           inter_message_interval_minutes: number
@@ -2197,6 +2198,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           daily_send_limit?: number | null
+          dispatch_priority?: number
           failed_targets?: number
           id?: string
           inter_message_interval_minutes?: number
@@ -2238,6 +2240,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           daily_send_limit?: number | null
+          dispatch_priority?: number
           failed_targets?: number
           id?: string
           inter_message_interval_minutes?: number
@@ -7622,6 +7625,19 @@ export type Database = {
       }
     }
     Functions: {
+      get_comm_whatsapp_campaign_global_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          daily_message_limit: number
+          reserved_messages_24h: number
+          remaining_messages: number
+          next_available_at: string | null
+        }[]
+      }
+      set_comm_whatsapp_campaign_global_limit: {
+        Args: { p_limit: number }
+        Returns: undefined
+      }
       _assert_contact_permission_admin: {
         Args: { p_actor_user_id: string }
         Returns: undefined

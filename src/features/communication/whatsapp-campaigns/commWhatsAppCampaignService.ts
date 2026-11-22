@@ -19,6 +19,7 @@ export type CommWhatsAppCampaign = {
   scheduled_at: string | null;
   pacing_per_minute: number;
   daily_send_limit: number | null;
+  dispatch_priority: 1 | 2 | 3;
   contact_interval_minutes: number | null;
   inter_message_interval_minutes: number;
   send_window_start: string | null;
@@ -157,6 +158,7 @@ export type CreateCampaignInput = {
   scheduledAt?: string | null;
   pacingPerMinute: number;
   dailySendLimit?: number | null;
+  dispatchPriority?: 1 | 2 | 3;
   contactIntervalMinutes?: number | null;
   interMessageIntervalSeconds: number;
   sendWindowStart?: string | null;
@@ -180,6 +182,13 @@ export type CommWhatsAppCampaignTemplate = {
   stages: CommWhatsAppCampaignStageDraft[];
   created_at: string;
   updated_at: string;
+};
+
+export type CampaignGlobalStatus = {
+  daily_message_limit: number;
+  reserved_messages_24h: number;
+  remaining_messages: number;
+  next_available_at: string | null;
 };
 
 export type CampaignStats = {
@@ -288,6 +297,7 @@ const CAMPAIGN_SELECT = [
   'scheduled_at',
   'pacing_per_minute',
   'daily_send_limit',
+  'dispatch_priority',
   'contact_interval_minutes',
   'inter_message_interval_minutes',
   'send_window_start',
@@ -884,6 +894,20 @@ export const commWhatsAppCampaignService = {
     ]);
   },
 
+  async getGlobalStatus(): Promise<CampaignGlobalStatus> {
+    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_global_status');
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível consultar a cota global.'));
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('Cota global de campanhas indisponível.');
+    return row as CampaignGlobalStatus;
+  },
+
+  async setGlobalLimit(limit: number): Promise<void> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 10000) throw new Error('Limite global inválido.');
+    const { error } = await supabase.rpc('set_comm_whatsapp_campaign_global_limit', { p_limit: limit });
+    if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível atualizar a cota global.'));
+  },
+
   async getStats(): Promise<CampaignStats> {
     const [total, drafts, scheduled, active, aiSuggestionsPending] = await Promise.all([
       getCount('comm_whatsapp_campaigns'),
@@ -1097,6 +1121,7 @@ export const commWhatsAppCampaignService = {
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
         daily_send_limit: input.dailySendLimit ?? null,
+        dispatch_priority: input.dispatchPriority ?? 1,
         contact_interval_minutes: input.contactIntervalMinutes ?? null,
         inter_message_interval_minutes: input.interMessageIntervalSeconds / 60,
         send_window_start: input.sendWindowStart || null,
@@ -1187,6 +1212,7 @@ export const commWhatsAppCampaignService = {
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
         daily_send_limit: input.dailySendLimit ?? null,
+        dispatch_priority: input.dispatchPriority ?? 1,
         contact_interval_minutes: input.contactIntervalMinutes ?? null,
         inter_message_interval_minutes: input.interMessageIntervalSeconds / 60,
         send_window_start: input.sendWindowStart || null,

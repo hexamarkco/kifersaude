@@ -53,6 +53,7 @@ import {
   computeContactIntervalMinutes,
   formatContactInterval,
   type CampaignStats,
+  type CampaignGlobalStatus,
   type CommWhatsAppAiIntentSuggestion,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
@@ -287,6 +288,9 @@ export default function WhatsAppCampaignsScreen() {
   const [campaignsPerPage, setCampaignsPerPage] = useState(10);
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
+  const [globalQuota, setGlobalQuota] = useState<CampaignGlobalStatus | null>(null);
+  const [globalLimitDraft, setGlobalLimitDraft] = useState(20);
+  const [savingGlobalLimit, setSavingGlobalLimit] = useState(false);
   const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
   const [workerHealthAvailable, setWorkerHealthAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -318,6 +322,7 @@ export default function WhatsAppCampaignsScreen() {
   const [sendWindowEnd, setSendWindowEnd] = useState('');
   const [activeWeekdays, setActiveWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
+  const [dispatchPriority, setDispatchPriority] = useState<1 | 2 | 3>(1);
   const [contactIntervalMinutes, setContactIntervalMinutes] = useState<number | null>(null);
   const [interMessageIntervalSeconds, setInterMessageIntervalSeconds] = useState(0);
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
@@ -411,16 +416,21 @@ export default function WhatsAppCampaignsScreen() {
         commWhatsAppCampaignService.listPendingAiSuggestions(),
         commWhatsAppCampaignService.getWorkerHealth(),
         commWhatsAppCampaignService.listTemplates(),
+        commWhatsAppCampaignService.getGlobalStatus(),
       ]);
       if (requestId !== campaignListRequestIdRef.current) return;
 
-      const [campaignsResult, statsResult, suggestionsResult, workerHealthResult, templatesResult] = results;
+      const [campaignsResult, statsResult, suggestionsResult, workerHealthResult, templatesResult, globalStatusResult] = results;
       if (campaignsResult.status === 'fulfilled') setCampaigns(campaignsResult.value);
       if (statsResult.status === 'fulfilled') setStats(statsResult.value);
       if (suggestionsResult.status === 'fulfilled') setAiSuggestions(suggestionsResult.value);
       if (workerHealthResult.status === 'fulfilled') setWorkerHealth(workerHealthResult.value);
       setWorkerHealthAvailable(workerHealthResult.status === 'fulfilled');
       if (templatesResult.status === 'fulfilled') setTemplates(templatesResult.value);
+      if (globalStatusResult.status === 'fulfilled') {
+        setGlobalQuota(globalStatusResult.value);
+        setGlobalLimitDraft(globalStatusResult.value.daily_message_limit);
+      }
 
       const failedResults = results.filter((result) => result.status === 'rejected');
       if (failedResults.length > 0) {
@@ -456,6 +466,21 @@ export default function WhatsAppCampaignsScreen() {
     };
   }, [loadCampaigns]);
 
+  const handleSaveGlobalLimit = async () => {
+    if (savingGlobalLimit) return;
+    setSavingGlobalLimit(true);
+    try {
+      await commWhatsAppCampaignService.setGlobalLimit(globalLimitDraft);
+      const updated = await commWhatsAppCampaignService.getGlobalStatus();
+      setGlobalQuota(updated);
+      toast.success('Limite global atualizado.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o limite.');
+    } finally {
+      setSavingGlobalLimit(false);
+    }
+  };
+
   const handleCsvFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -490,6 +515,7 @@ export default function WhatsAppCampaignsScreen() {
     setSendWindowEnd('');
     setActiveWeekdays([1, 2, 3, 4, 5]);
     setDailySendLimit(null);
+    setDispatchPriority(1);
     setContactIntervalMinutes(null);
     setInterMessageIntervalSeconds(0);
     setPacingPerMinute(12);
@@ -603,6 +629,7 @@ export default function WhatsAppCampaignsScreen() {
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
       setActiveWeekdays(campaign.active_weekdays?.length ? campaign.active_weekdays : [0, 1, 2, 3, 4, 5, 6]);
       setDailySendLimit(campaign.daily_send_limit ?? null);
+      setDispatchPriority(campaign.dispatch_priority ?? 1);
       setContactIntervalMinutes(campaign.contact_interval_minutes ?? null);
       setInterMessageIntervalSeconds(Math.round((campaign.inter_message_interval_minutes ?? 0) * 60));
       setPacingPerMinute(campaign.pacing_per_minute || 12);
@@ -757,6 +784,7 @@ export default function WhatsAppCampaignsScreen() {
         // calculado no banco pela configuracao, publico elegivel e janela.
         pacingPerMinute,
         dailySendLimit,
+        dispatchPriority,
         contactIntervalMinutes,
         interMessageIntervalSeconds,
         sendWindowStart: sendWindowStart || null,
@@ -1577,6 +1605,13 @@ export default function WhatsAppCampaignsScreen() {
             <Field label={<FieldLabel text="Intervalo entre contatos (minutos)" hint="Deixe vazio para distribuir automaticamente os contatos elegíveis pela janela do dia. Um valor definido vira o intervalo mínimo entre novos contatos; o limite diário continua valendo." />}>
               <Input type="number" min={1} max={1440} value={contactIntervalMinutes ?? ''} placeholder="Automático pela janela" aria-describedby="campaign-contact-cadence" onChange={(event) => { const value = Number(event.target.value); setContactIntervalMinutes(event.target.value.trim() && Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 1440) : null); }} />
             </Field>
+            <Field label={<FieldLabel text="Prioridade no rodízio" hint="Normal usa peso 1, Alta peso 2 e Máxima peso 3. Mais prioridade aumenta a participação da campanha sem ultrapassar o limite global de mensagens." />}>
+              <Select value={dispatchPriority} onChange={(event) => setDispatchPriority(Number(event.target.value) as 1 | 2 | 3)}>
+                <option value={1}>Normal · peso 1</option>
+                <option value={2}>Alta · peso 2</option>
+                <option value={3}>Máxima · peso 3</option>
+              </Select>
+            </Field>
             <Field label={<FieldLabel text="Novos contatos por 24h" hint="Teto móvel de pessoas que iniciam a campanha em qualquer período de 24 horas. Cada pessoa conta uma vez; as mensagens seguintes do mesmo contato não consomem novas vagas." />}>
               <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
@@ -1644,6 +1679,33 @@ export default function WhatsAppCampaignsScreen() {
         <KpiCard padding="sm" title="Agendadas" value={loading ? '—' : stats.scheduled} trend="Com horário de envio" className="h-full" />
         <KpiCard padding="sm" title="Ativas ou pausadas" value={loading ? '—' : stats.active} trend="Na fila, em execução ou pausadas" className="h-full" />
       </div>
+
+      <Surface padding="sm" className="space-y-3" aria-label="Cota global de disparos do WhatsApp">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <Heading level={2} className="text-base font-semibold">Limite global de mensagens</Heading>
+            <Text className="text-xs text-[color:var(--panel-text-muted)]">
+              Compartilhado entre todas as campanhas em janela móvel de 24 horas. Conta balões da sequência e follow-ups; não substitui o limite individual de novos contatos.
+            </Text>
+          </div>
+          {globalQuota && <Badge tone="neutral">{globalQuota.remaining_messages} restantes</Badge>}
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Máximo de mensagens / 24h" className="min-w-[10rem]">
+            <Input type="number" min={1} max={10000} value={globalLimitDraft}
+              onChange={(event) => setGlobalLimitDraft(Math.min(10000, Math.max(1, Number(event.target.value) || 1)))} />
+          </Field>
+          <Button variant="secondary" disabled={!globalQuota || globalLimitDraft === globalQuota.daily_message_limit} loading={savingGlobalLimit} onClick={() => void handleSaveGlobalLimit()}>
+            Salvar limite
+          </Button>
+          <Text className="text-sm text-[color:var(--panel-text-soft)]">
+            {globalQuota ? `${globalQuota.reserved_messages_24h} de ${globalQuota.daily_message_limit} mensagens reservadas nas últimas 24h` : 'Cota indisponível'}
+          </Text>
+        </div>
+        {globalQuota?.next_available_at && <Text className="text-xs text-[color:var(--panel-text-muted)]">
+          Próxima liberação prevista: {new Date(globalQuota.next_available_at).toLocaleString('pt-BR')}
+        </Text>}
+      </Surface>
 
       <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
 

@@ -36,6 +36,7 @@ import {
   LoadingState,
   Pagination,
   RecordActions,
+  SearchInput,
   SectionHeader,
   Table,
   TableBody,
@@ -2039,11 +2040,9 @@ export default function WhatsAppCampaignsScreen() {
 
         <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3" aria-label="Filtros das campanhas">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative min-w-0 flex-1 lg:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--panel-text-muted)]" aria-hidden="true" />
-              <Input
-                type="search"
-                className="w-full pl-9"
+            <div className="min-w-0 flex-1 lg:max-w-sm">
+              <SearchInput
+                className="w-full"
                 placeholder="Buscar campanha pelo nome"
                 aria-label="Buscar campanha pelo nome"
                 value={campaignSearch}

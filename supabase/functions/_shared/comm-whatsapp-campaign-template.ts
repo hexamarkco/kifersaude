@@ -40,7 +40,7 @@ export const resolveCommWhatsAppCampaignMessage = (
   const rawLives = context.historicalLives;
   const lives = (typeof rawLives === 'number' && Number.isSafeInteger(rawLives))
     ? rawLives
-    : (typeof rawLives === 'string' && /^\\d{1,3}$/.test(rawLives.trim()))
+    : (typeof rawLives === 'string' && /^\d{1,3}$/.test(rawLives.trim()))
       ? Number(rawLives.trim())
       : null;
   const historicalContext = lives !== null && lives >= 1 && lives <= 999

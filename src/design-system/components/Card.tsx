@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 import InfoTooltip from './InfoTooltip';
+import { useDesignSystemAppearance } from '../appearanceContext';
 import {
   panelCardBaseClass,
   panelCardPaddingClasses,
@@ -76,7 +77,7 @@ export function CrmCard({
   eyebrow,
   title,
   subtitle,
-  subtitlePlacement = 'tooltip',
+  subtitlePlacement,
   icon,
   iconTone = 'terracotta',
   actions,
@@ -85,6 +86,10 @@ export function CrmCard({
   className,
   ...props
 }: CrmCardProps) {
+  // The prototype displays supporting copy below card headings in the workspace.
+  // Public/non-workspace cards retain the explicit tooltip behavior by default.
+  const appearance = useDesignSystemAppearance();
+  const resolvedSubtitlePlacement = subtitlePlacement ?? (appearance?.workspace ? 'visible' : 'tooltip');
   return (
     <Card kind={kind} className={cx('space-y-5', className)} {...props}>
       {(eyebrow || title || subtitle || icon || actions) && (
@@ -96,17 +101,17 @@ export function CrmCard({
               {title && (
                 <div className="kds-card-title-row mt-1">
                   <h3 className="kds-card-title">{title}</h3>
-                  {subtitle && subtitlePlacement === 'tooltip' && (
+                  {subtitle && resolvedSubtitlePlacement === 'tooltip' && (
                     <InfoTooltip content={subtitle} label="Informações sobre este cartão" />
                   )}
                 </div>
               )}
-              {!title && subtitle && subtitlePlacement === 'tooltip' && (
+              {!title && subtitle && resolvedSubtitlePlacement === 'tooltip' && (
                 <div className="mt-1">
                   <InfoTooltip content={subtitle} label="Informações sobre este cartão" />
                 </div>
               )}
-              {subtitle && subtitlePlacement === 'visible' && <p className="kds-card-subtitle mt-1">{subtitle}</p>}
+              {subtitle && resolvedSubtitlePlacement === 'visible' && <p className="kds-card-subtitle mt-1">{subtitle}</p>}
             </div>
           </div>
           {actions && <div className="kds-card-actions">{actions}</div>}

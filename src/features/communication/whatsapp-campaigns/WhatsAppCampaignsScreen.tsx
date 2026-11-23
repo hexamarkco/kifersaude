@@ -1,7 +1,7 @@
 import { ButtonGroup, Heading, Text, FieldLabel as DsFieldLabel } from '../../../design-system';
 import { FileInput } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, Pencil, PlayCircle, Plus, Repeat2, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, BookmarkPlus, ChevronDown, ChevronUp, Eye, FileSpreadsheet, Filter, FlaskConical, FolderOpen, ImageIcon, Info, Pencil, PlayCircle, Plus, Repeat2, Search, Send, ShieldCheck, TestTube2, Trash2, Upload, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
@@ -30,6 +30,7 @@ import {
   Textarea,
   Tooltip,
   FilterMultiSelect,
+  FilterSelect,
   EmptyState,
   KpiCard,
   LoadingState,
@@ -209,6 +210,17 @@ const audienceSourceLabels: Record<CommWhatsAppCampaignAudienceSource, string> =
   mixed: 'CRM e lista manual',
 };
 
+const campaignAudienceOptions = (Object.entries(audienceSourceLabels) as Array<[CommWhatsAppCampaignAudienceSource, string]>)
+  .map(([value, label]) => ({ value, label }));
+
+const campaignStatusOptions = (Object.entries(statusLabels) as Array<[CommWhatsAppCampaign['status'], string]>)
+  .map(([value, label]) => ({ value, label }));
+
+const normalizeCampaignQuery = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLocaleLowerCase('pt-BR');
+
 const formatCampaignDate = (value: string | null) => {
   if (!value) return 'Data não definida';
   const date = new Date(value);
@@ -286,6 +298,9 @@ export default function WhatsAppCampaignsScreen() {
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
   const [currentCampaignPage, setCurrentCampaignPage] = useState(1);
   const [campaignsPerPage, setCampaignsPerPage] = useState(10);
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [campaignAudienceFilter, setCampaignAudienceFilter] = useState<CommWhatsAppCampaignAudienceSource | ''>('');
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState<CommWhatsAppCampaign['status'] | ''>('');
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
   const [globalQuota, setGlobalQuota] = useState<CampaignGlobalStatus | null>(null);
@@ -365,10 +380,25 @@ export default function WhatsAppCampaignsScreen() {
     () => stages.flatMap((stage) => (stage.kind === 'message' ? stage.messages : [])),
     [stages],
   );
-  const campaignTotalPages = Math.max(1, Math.ceil(campaigns.length / campaignsPerPage));
+  const filteredCampaigns = useMemo(() => {
+    const search = normalizeCampaignQuery(campaignSearch.trim());
+    return campaigns.filter((campaign) => (
+      (!search || normalizeCampaignQuery(campaign.name).includes(search))
+      && (!campaignAudienceFilter || campaign.audience_source === campaignAudienceFilter)
+      && (!campaignStatusFilter || campaign.status === campaignStatusFilter)
+    ));
+  }, [campaigns, campaignSearch, campaignAudienceFilter, campaignStatusFilter]);
+  const hasCampaignFilters = Boolean(campaignSearch.trim() || campaignAudienceFilter || campaignStatusFilter);
+  const clearCampaignFilters = () => {
+    setCampaignSearch('');
+    setCampaignAudienceFilter('');
+    setCampaignStatusFilter('');
+    setCurrentCampaignPage(1);
+  };
+  const campaignTotalPages = Math.max(1, Math.ceil(filteredCampaigns.length / campaignsPerPage));
   const paginatedCampaigns = useMemo(
-    () => campaigns.slice((currentCampaignPage - 1) * campaignsPerPage, currentCampaignPage * campaignsPerPage),
-    [campaigns, campaignsPerPage, currentCampaignPage],
+    () => filteredCampaigns.slice((currentCampaignPage - 1) * campaignsPerPage, currentCampaignPage * campaignsPerPage),
+    [filteredCampaigns, campaignsPerPage, currentCampaignPage],
   );
 
   useEffect(() => {
@@ -1137,16 +1167,28 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
-  const campaignPrioritySelect = (campaign: CommWhatsAppCampaign) => (
-    <Select value={campaign.dispatch_priority ?? 1}
-      aria-label={`Prioridade de ${campaign.name}`}
-      disabled={campaignActionId === campaign.id}
-      onChange={(event) => void handleQuickPriorityChange(campaign, Number(event.target.value) as 1 | 2 | 3)}>
-      <option value={1}>Normal · 1x</option>
-      <option value={2}>Alta · 2x</option>
-      <option value={3}>Máxima · 3x</option>
-    </Select>
-  );
+  const campaignPriorityBadge = (campaign: CommWhatsAppCampaign) => {
+    const priority = campaign.dispatch_priority ?? 1;
+    const nextPriority: 1 | 2 | 3 = priority === 3 ? 1 : priority === 2 ? 3 : 2;
+    const label = priority === 3 ? 'Máxima' : priority === 2 ? 'Alta' : 'Normal';
+    const nextLabel = nextPriority === 3 ? 'Máxima' : nextPriority === 2 ? 'Alta' : 'Normal';
+
+    return (
+      <button
+        type="button"
+        className="inline-flex items-center rounded-full text-left transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-accent-strong)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+        aria-label={'Prioridade ' + label + ' de ' + campaign.name + '. Alterar para ' + nextLabel}
+        title={'Clique para alterar a prioridade para ' + nextLabel}
+        disabled={Boolean(campaignActionId)}
+        onClick={() => void handleQuickPriorityChange(campaign, nextPriority)}
+      >
+        <Badge tone={priority === 3 ? 'accent' : priority === 2 ? 'warning' : 'neutral'} size="sm" className="gap-1.5 px-2.5 py-1">
+          {label}
+          <Repeat2 className="h-3 w-3 opacity-70" aria-hidden="true" />
+        </Badge>
+      </button>
+    );
+  };
 
   const getCampaignActions = (campaign: CommWhatsAppCampaign) => [
     {
@@ -1708,31 +1750,100 @@ export default function WhatsAppCampaignsScreen() {
         <KpiCard padding="sm" title="Ativas ou pausadas" value={loading ? '—' : stats.active} trend="Na fila, em execução ou pausadas" className="h-full" />
       </div>
 
-      <Surface padding="sm" className="space-y-3" aria-label="Cota global de disparos do WhatsApp">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <Heading level={2} className="text-base font-semibold">Limite global de mensagens</Heading>
-            <Text className="text-xs text-[color:var(--panel-text-muted)]">
-              Compartilhado entre todas as campanhas em janela móvel de 24 horas. Conta balões da sequência e follow-ups; não substitui o limite individual de novos contatos.
-            </Text>
+      <Surface padding="sm" className="overflow-hidden" aria-label="Cota global de disparos do WhatsApp">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)] lg:gap-5">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-accent-soft)] text-[color:var(--panel-accent-strong)]">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <Heading level={2} className="text-base font-semibold">Limite global de mensagens</Heading>
+                <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
+                  Um único teto para todas as campanhas, calculado em uma janela móvel de 24 horas.
+                </Text>
+              </div>
+            </div>
+
+            <div className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] px-4 py-3.5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <Text className="text-xs font-medium text-[color:var(--panel-text-muted)]">Mensagens reservadas nas últimas 24h</Text>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-semibold tabular-nums text-[color:var(--panel-text)]">
+                      {globalQuota ? globalQuota.reserved_messages_24h.toLocaleString('pt-BR') : '—'}
+                    </span>
+                    <span className="text-sm tabular-nums text-[color:var(--panel-text-muted)]">
+                      / {globalQuota ? globalQuota.daily_message_limit.toLocaleString('pt-BR') : '—'}
+                    </span>
+                  </div>
+                </div>
+                {globalQuota && (
+                  <Badge tone={globalQuota.remaining_messages > 0 ? 'success' : 'warning'} size="sm">
+                    {globalQuota.remaining_messages.toLocaleString('pt-BR')} disponíveis
+                  </Badge>
+                )}
+              </div>
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-[color:var(--panel-border-subtle)]"
+                role="progressbar"
+                aria-label="Consumo do limite global em 24 horas"
+                aria-valuemin={0}
+                aria-valuemax={globalQuota?.daily_message_limit ?? 100}
+                aria-valuenow={globalQuota ? Math.min(globalQuota.reserved_messages_24h, globalQuota.daily_message_limit) : 0}
+              >
+                <div
+                  className="h-full rounded-full bg-[color:var(--panel-accent-strong)] transition-[width]"
+                  style={{ width: globalQuota ? Math.min(100, (globalQuota.reserved_messages_24h / Math.max(1, globalQuota.daily_message_limit)) * 100) + '%' : '0%' }}
+                />
+              </div>
+              <Text className="mt-3 text-xs text-[color:var(--panel-text-muted)]">
+                Inclui cada mensagem da sequência e de acompanhamento. Não altera os limites individuais de contatos.
+              </Text>
+            </div>
+            {globalQuota?.next_available_at && (
+              <Text className="text-xs text-[color:var(--panel-text-muted)]">
+                Próxima liberação prevista: {new Date(globalQuota.next_available_at).toLocaleString('pt-BR')}
+              </Text>
+            )}
           </div>
-          {globalQuota && <Badge tone="neutral">{globalQuota.remaining_messages} restantes</Badge>}
+
+          <div className="flex flex-col justify-between gap-4 rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+            <div>
+              <Heading level={3} className="text-sm font-semibold">Configurar teto</Heading>
+              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
+                Ajuste a quantidade máxima de mensagens compartilhadas entre os disparos.
+              </Text>
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <Field label="Mensagens por 24h" className="min-w-0 flex-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10000}
+                    value={globalLimitDraft}
+                    onChange={(event) => setGlobalLimitDraft(Math.min(10000, Math.max(1, Number(event.target.value) || 1)))}
+                  />
+                </Field>
+                <Button
+                  variant="secondary"
+                  className="w-full shrink-0 sm:w-auto"
+                  disabled={!globalQuota || globalLimitDraft === globalQuota.daily_message_limit}
+                  loading={savingGlobalLimit}
+                  onClick={() => void handleSaveGlobalLimit()}
+                >
+                  Salvar
+                </Button>
+              </div>
+              {globalQuota && globalLimitDraft !== globalQuota.daily_message_limit && (
+                <Text className="text-xs text-[color:var(--panel-text-muted)]">
+                  O novo teto só entra em vigor ao salvar.
+                </Text>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Máximo de mensagens / 24h" className="min-w-[10rem]">
-            <Input type="number" min={1} max={10000} value={globalLimitDraft}
-              onChange={(event) => setGlobalLimitDraft(Math.min(10000, Math.max(1, Number(event.target.value) || 1)))} />
-          </Field>
-          <Button variant="secondary" disabled={!globalQuota || globalLimitDraft === globalQuota.daily_message_limit} loading={savingGlobalLimit} onClick={() => void handleSaveGlobalLimit()}>
-            Salvar limite
-          </Button>
-          <Text className="text-sm text-[color:var(--panel-text-soft)]">
-            {globalQuota ? `${globalQuota.reserved_messages_24h} de ${globalQuota.daily_message_limit} mensagens reservadas nas últimas 24h` : 'Cota indisponível'}
-          </Text>
-        </div>
-        {globalQuota?.next_available_at && <Text className="text-xs text-[color:var(--panel-text-muted)]">
-          Próxima liberação prevista: {new Date(globalQuota.next_available_at).toLocaleString('pt-BR')}
-        </Text>}
       </Surface>
 
       <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
@@ -1924,6 +2035,60 @@ export default function WhatsAppCampaignsScreen() {
           description="Acompanhe o público, os envios e o status de cada disparo."
         />
 
+        <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3" aria-label="Filtros das campanhas">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1 lg:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--panel-text-muted)]" aria-hidden="true" />
+              <Input
+                type="search"
+                className="w-full pl-9"
+                placeholder="Buscar campanha pelo nome"
+                aria-label="Buscar campanha pelo nome"
+                value={campaignSearch}
+                onChange={(event) => {
+                  setCampaignSearch(event.target.value);
+                  setCurrentCampaignPage(1);
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterSelect
+                icon={Users}
+                size="sm"
+                placeholder="Todos os públicos"
+                options={campaignAudienceOptions}
+                value={campaignAudienceFilter}
+                onChange={(value) => {
+                  setCampaignAudienceFilter(value as CommWhatsAppCampaignAudienceSource | '');
+                  setCurrentCampaignPage(1);
+                }}
+              />
+              <FilterSelect
+                icon={Filter}
+                size="sm"
+                placeholder="Todos os status"
+                options={campaignStatusOptions}
+                value={campaignStatusFilter}
+                onChange={(value) => {
+                  setCampaignStatusFilter(value as CommWhatsAppCampaign['status'] | '');
+                  setCurrentCampaignPage(1);
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Text className="text-xs text-[color:var(--panel-text-muted)]">
+              {filteredCampaigns.length.toLocaleString('pt-BR')} de {campaigns.length.toLocaleString('pt-BR')} campanhas
+            </Text>
+            {hasCampaignFilters && (
+              <Button type="button" variant="text" size="sm" onClick={clearCampaignFilters}>
+                <X className="kds-control-icon" aria-hidden="true" />
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        </div>
+
         {loadError && campaigns.length > 0 ? (
           <Alert
             tone="warning"
@@ -1958,13 +2123,21 @@ export default function WhatsAppCampaignsScreen() {
             description="Crie o primeiro rascunho para validar o público e as mensagens."
             action={<Button onClick={openNewCampaignModal}><Plus className="kds-control-icon" />Novo disparo</Button>}
           />
+        ) : filteredCampaigns.length === 0 ? (
+          <EmptyState
+            className="rounded-[var(--kds-radius-lg)]"
+            icon={<Search aria-hidden="true" />}
+            title="Nenhuma campanha encontrada."
+            description="Tente outro nome, público ou status."
+            action={<Button type="button" variant="secondary" onClick={clearCampaignFilters}>Limpar filtros</Button>}
+          />
         ) : (
           <>
             <div className="hidden xl:block">
               <Table
                 size="sm"
                 aria-label="Campanhas recentes"
-                columnWidths={['31%', '17%', '17%', '13%', '12%', '10%']}
+                columnWidths={['26%', '15%', '15%', '12%', '12%', '12%', '8%']}
               >
                 <TableHeader>
                   <TableRow>
@@ -1999,8 +2172,8 @@ export default function WhatsAppCampaignsScreen() {
                         <span className="block font-medium text-[color:var(--panel-text)]">{campaign.sent_targets.toLocaleString('pt-BR')} enviados</span>
                         <span className="text-xs text-[color:var(--panel-text-muted)]">{campaign.responded_targets.toLocaleString('pt-BR')} respostas</span>
                       </TableCell>
-                      <TableCell><Badge tone={statusTones[campaign.status]} size="sm">{statusLabels[campaign.status]}</Badge></TableCell>
-                      <TableCell>{campaignPrioritySelect(campaign)}</TableCell>
+                      <TableCell className="align-middle"><div className="flex items-center"><Badge tone={statusTones[campaign.status]} size="sm">{statusLabels[campaign.status]}</Badge></div></TableCell>
+                      <TableCell className="align-middle"><div className="flex items-center">{campaignPriorityBadge(campaign)}</div></TableCell>
                       <TableCell>
                         <span className="block text-[color:var(--panel-text)]">{formatCampaignDate(campaign.scheduled_at ?? campaign.created_at)}</span>
                         <span className="text-xs text-[color:var(--panel-text-muted)]">{campaign.scheduled_at ? 'Envio agendado' : 'Criada'}</span>
@@ -2045,7 +2218,7 @@ export default function WhatsAppCampaignsScreen() {
                     </div>
                     <div className="col-span-2">
                       <span className="block text-xs text-[color:var(--panel-text-muted)]">Prioridade no rodízio</span>
-                      {campaignPrioritySelect(campaign)}
+                      {campaignPriorityBadge(campaign)}
                     </div>
                     <div className="col-span-2">
                       <span className="block text-xs text-[color:var(--panel-text-muted)]">{campaign.scheduled_at ? 'Envio agendado' : 'Criada'}</span>
@@ -2056,12 +2229,12 @@ export default function WhatsAppCampaignsScreen() {
               ))}
             </div>
 
-            {campaigns.length > campaignsPerPage && (
+            {filteredCampaigns.length > campaignsPerPage && (
               <Pagination
                 currentPage={currentCampaignPage}
                 totalPages={campaignTotalPages}
                 itemsPerPage={campaignsPerPage}
-                totalItems={campaigns.length}
+                totalItems={filteredCampaigns.length}
                 onPageChange={setCurrentCampaignPage}
                 onItemsPerPageChange={(itemsPerPage) => {
                   setCampaignsPerPage(itemsPerPage);

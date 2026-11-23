@@ -34,15 +34,20 @@ describe('MCP campaign variation sequences v2', () => {
       .toEqual(['C-1', 'C-retorno']);
   });
 
-  it('converte cada quebra de linha em um balão somente quando solicitado', () => {
+  it('converte quebras de linha em balões automaticamente e permite exceção explícita', () => {
     const split = normalizeMcpCampaignStages([{
-      split_by_line_breaks: true,
       variations: { A: ['Oi\n\nTudo bem?\nVamos conversar?'], B: ['Bom dia\nPodemos falar?'] },
     }]);
     expect(split.ok).toBe(true);
     if (split.ok) expect(split.steps.map((row) => row.message)).toEqual([
       'Oi', 'Bom dia', 'Tudo bem?', 'Podemos falar?', 'Vamos conversar?',
     ]);
+    const keepBlock = normalizeMcpCampaignStages([{
+      split_by_line_breaks: false,
+      variations: { A: ['Olá\\nTudo bem?'] },
+    }]);
+    expect(keepBlock.ok).toBe(true);
+    if (keepBlock.ok) expect(keepBlock.steps.map((row) => row.message)).toEqual(['Olá\\nTudo bem?']);
   });
 
   it('rejeita letras não contíguas, duplicidade de posições e sequências longas', () => {

@@ -1475,11 +1475,13 @@ html,
 .terracota-sidebar-scroll-hint:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .terracota-sidebar-scroll-hint--top {
   top: 0;
-  background: linear-gradient(to bottom, var(--bg-surface) 35%, transparent);
+  background: var(--bg-surface);
+  box-shadow: 0 .375rem .5rem -.25rem var(--bg-surface);
 }
 .terracota-sidebar-scroll-hint--bottom {
   bottom: 0;
-  background: linear-gradient(to top, var(--bg-surface) 35%, transparent);
+  background: var(--bg-surface);
+  box-shadow: 0 -.375rem .5rem -.25rem var(--bg-surface);
 }
 .terracota-nav-group + .terracota-nav-group { margin-top: var(--space-3); }
 .terracota-nav-label {

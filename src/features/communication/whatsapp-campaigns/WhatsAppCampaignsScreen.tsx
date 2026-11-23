@@ -2034,14 +2034,15 @@ export default function WhatsAppCampaignsScreen() {
 
       <Card className="space-y-4">
         <SectionHeader
-          title="Campanhas recentes"
-          description="Acompanhe o público, os envios e o status de cada disparo."
+          title="Todas as campanhas"
+          description="Consulte e filtre todos os disparos cadastrados, com público, envios e status."
         />
 
         <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3" aria-label="Filtros das campanhas">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="min-w-0 flex-1 lg:max-w-sm">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="min-w-0 sm:col-span-2 lg:col-span-1">
               <SearchInput
+                size="md"
                 className="w-full"
                 placeholder="Buscar campanha pelo nome"
                 aria-label="Buscar campanha pelo nome"
@@ -2052,10 +2053,10 @@ export default function WhatsAppCampaignsScreen() {
                 }}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-0">
               <FilterSelect
                 icon={Users}
-                size="sm"
+                size="md"
                 placeholder="Todos os públicos"
                 options={campaignAudienceOptions}
                 value={campaignAudienceFilter}
@@ -2064,9 +2065,11 @@ export default function WhatsAppCampaignsScreen() {
                   setCurrentCampaignPage(1);
                 }}
               />
+            </div>
+            <div className="min-w-0">
               <FilterSelect
                 icon={Filter}
-                size="sm"
+                size="md"
                 placeholder="Todos os status"
                 options={campaignStatusOptions}
                 value={campaignStatusFilter}
@@ -2137,7 +2140,7 @@ export default function WhatsAppCampaignsScreen() {
             <div className="hidden xl:block">
               <Table
                 size="sm"
-                aria-label="Campanhas recentes"
+                aria-label="Todas as campanhas"
                 columnWidths={['26%', '15%', '15%', '12%', '12%', '12%', '8%']}
               >
                 <TableHeader>

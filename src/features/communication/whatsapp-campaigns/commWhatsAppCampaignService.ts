@@ -669,6 +669,25 @@ type CampaignStepInsertRow = {
  * em sequencia logo depois da anterior. O primeiro passo fisico da campanha
  * nunca tem intervalo, mesmo que o estagio tenha um configurado.
  */
+
+/** Text line breaks are separate WhatsApp bubbles; blank lines are separators. */
+const splitCampaignTextBalloons = (value: string): string[] =>
+  value.split(/\r?\n/).map((part) => part.trim()).filter(Boolean);
+
+const hasMultilineCampaignText = (stages: CommWhatsAppCampaignStageDraft[]): boolean =>
+  stages.some((stage) => {
+    if (stage.kind !== 'message') return false;
+    const drafts = [
+      ...stage.messages,
+      ...Object.values(stage.variantMessages ?? {}).flat(),
+    ];
+    return drafts.some((message) =>
+      /\r?\n/.test(message.messageText)
+      || /\r?\n/.test(message.variantBMessageText ?? '')
+      || Object.values(message.variantCopies ?? {}).some((copy) => /\r?\n/.test(copy)),
+    );
+  });
+
 export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignStageDraft[], abTestEnabled: boolean): CampaignStepInsertRow[] => {
   const rows: CampaignStepInsertRow[] = [];
   let stepIndex = 0;
@@ -782,7 +801,39 @@ export const buildStepRows = (campaignId: string, stages: CommWhatsAppCampaignSt
     });
   });
 
-  return rows.filter((row) => row.step_kind === 'status_change' || row.message_text.length > 0 || row.media_url);
+  const physicalRows = rows.filter((row) => row.step_kind === 'status_change' || row.message_text.length > 0 || row.media_url);
+  // Keep A/B/C alternatives at the same physical index, even if one copy
+  // contains more paragraphs than another. No extra slot for a blank line.
+  const groupedByIndex = new Map<number, CampaignStepInsertRow[]>();
+  for (const row of physicalRows) {
+    const group = groupedByIndex.get(row.step_index) ?? [];
+    group.push(row);
+    groupedByIndex.set(row.step_index, group);
+  }
+  const expanded: CampaignStepInsertRow[] = [];
+  let physicalIndex = 0;
+  for (const group of groupedByIndex.values()) {
+    const parts = group.map((row) => ({
+      row,
+      balloons: row.step_kind === 'message' && !row.media_url
+        ? splitCampaignTextBalloons(row.message_text)
+        : [row.message_text],
+    }));
+    const positions = Math.max(...parts.map((item) => item.balloons.length));
+    for (let index = 0; index < positions; index += 1) {
+      for (const { row, balloons } of parts) {
+        if (index >= balloons.length) continue;
+        expanded.push({
+          ...row,
+          step_index: physicalIndex,
+          message_text: balloons[index],
+          delay_amount: index === 0 ? row.delay_amount : 0,
+        });
+      }
+      physicalIndex += 1;
+    }
+  }
+  return expanded;
 };
 
 export const commWhatsAppCampaignService = {
@@ -1133,7 +1184,9 @@ export const commWhatsAppCampaignService = {
         objective: input.objective?.trim() || null,
         status: 'draft',
         audience_source: input.audienceSource,
-        audience_config: input.audienceConfig,
+        audience_config: hasMultilineCampaignText(input.stages)
+          ? { ...input.audienceConfig, variant_sequences_v2: true }
+          : input.audienceConfig,
         message_text: input.messageText.trim(),
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
@@ -1224,7 +1277,9 @@ export const commWhatsAppCampaignService = {
         name: input.name.trim(),
         objective: input.objective?.trim() || null,
         audience_source: input.audienceSource,
-        audience_config: input.audienceConfig,
+        audience_config: hasMultilineCampaignText(input.stages)
+          ? { ...input.audienceConfig, variant_sequences_v2: true }
+          : input.audienceConfig,
         message_text: input.messageText.trim(),
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,

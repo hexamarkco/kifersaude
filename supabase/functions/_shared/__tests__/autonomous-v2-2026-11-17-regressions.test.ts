@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { decide, requirements } from '../autonomous-attendance-v2/domain/decision.ts';
 import { confirmed, initialState, mergeInterpretation, readState, type Interpretation } from '../autonomous-attendance-v2/domain/state.ts';
-import { isAlreadyAssistedResponse, isResolvedNeedResponse, preserveExplicitAgeList, preserveSoloBeneficiary, prioritizeProductQuestion, runV2Turn, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
+import { isAlreadyAssistedResponse, isOverlappingPreviousQuestion, isResolvedNeedResponse, preserveExplicitAgeList, preserveSoloBeneficiary, prioritizeProductQuestion, runV2Turn, validateWrittenReply } from '../autonomous-attendance-v2/domain/turn.ts';
 import { date, interpretation, message } from './fixtures/autonomous-v2-scenarios.ts';
 
 const noInterpretation: Interpretation = {
@@ -268,3 +268,69 @@ test('a general question about operators can be answered without a product promi
   });
   expect(turn.decision.action).toBe('answer');
 });
+
+test.each([
+  'Não, já adquiri!',
+  'Já adquiri um plano.',
+  'Já contratei o plano de saúde.',
+  'Já fechei um convênio médico.',
+])('Cleuza: acquisition closes the old opportunity without a new question: %s', (reply) => {
+  const priorMessage = { ...message('Cleuza, você ainda está buscando um plano de saúde?', 1), role: 'ai' as const };
+  expect(isResolvedNeedResponse([message(reply, 2)], priorMessage)).toBe(true);
+});
+
+test.each([
+  'Já adquiri meu MEI.',
+  'Já adquiri o CNPJ.',
+  'Já contratei o contador.',
+  'Já adquiri um plano, mas quero cotar para a minha mãe.',
+  'Não, já adquiri, mas gostaria de avaliar outro plano.',
+])('acquisition of something else or a new quotation does not close the conversation: %s', (reply) => {
+  const priorMessage = { ...message('Você ainda está buscando um plano de saúde?', 1), role: 'ai' as const };
+  expect(isResolvedNeedResponse([message(reply, 2)], priorMessage)).toBe(false);
+  expect(isAlreadyAssistedResponse([message(reply, 2)])).toBe(false);
+});
+
+test('bare acquisition with no plan context is not an automatic farewell', () => {
+  const unrelated = { ...message('Já conseguiu seu CNPJ?', 1), role: 'ai' as const };
+  expect(isResolvedNeedResponse([message('Não, já adquiri!', 2)], unrelated)).toBe(false);
+  expect(isResolvedNeedResponse([message('Não, já adquiri!', 2)])).toBe(false);
+});
+
+test('Cleuza: the autonomous V2 engine thanks and ends without trying to qualify again', async () => {
+  const followup = { ...message('Cleuza, passando para saber se você ainda está buscando um plano de saúde.', 1), role: 'ai' as const };
+  const reply = message('Não, já adquiri!', 2);
+  const turn = await runV2Turn({
+    messages: [followup, reply], previous: initialState(), now: date, configVersion: 24,
+    generate: async (request) => request.stage === 'interpret' ? JSON.stringify(noInterpretation)
+      : JSON.stringify({ text: 'Que bom que você já conseguiu contratar! Obrigada por avisar. Fico à disposição.', commercialClaims: [] }),
+  });
+  expect(turn.decision).toMatchObject({
+    action: 'handoff', reason: 'customer_need_resolved', handoffCode: 'PRECISA_HUMANO',
+  });
+  expect(turn.text).not.toContain('?');
+  expect(() => validateWrittenReply(JSON.stringify({
+    text: 'O plano seria só para você ou incluiria mais alguém da família?', commercialClaims: [],
+  }), turn.state, turn.decision)).toThrow('Pergunta incompatível');
+});
+
+test('Silvio: late webhook message cannot immediately trigger the same company question twice', async () => {
+  const previous = initialState();
+  previous.lastQuestion = 'companyPresence';
+  previous.asked.companyPresence = 1;
+  const outgoing = { ...message('Você ou o Silvio têm CNPJ ou MEI ativo?', 1), role: 'ai' as const,
+    messageAt: '2026-11-20T18:19:17.562Z', receivedAt: '2026-11-20T18:19:17.638Z' };
+  const incoming = { ...message('E aqui não tem nada com relação a isso então somente em Joinville ou Curitiba', 2),
+    messageAt: '2026-11-20T18:19:17.000Z', receivedAt: '2026-11-20T18:19:19.406Z' };
+  expect(isOverlappingPreviousQuestion([incoming], outgoing, previous)).toBe(true);
+  const turn = await runV2Turn({
+    messages: [outgoing, incoming], previous, now: date, configVersion: 24,
+    generate: async (request) => request.stage === 'interpret' ? JSON.stringify(noInterpretation)
+      : JSON.stringify({ text: 'Entendi, vou considerar Joinville e Curitiba na conferência da rede.', commercialClaims: [] }),
+  });
+  expect(turn.decision).toMatchObject({ action: 'answer', reason: 'acknowledge_overlapping_message', field: null });
+  expect(turn.text).not.toContain('?');
+  const actualResponse = { ...incoming, messageAt: '2026-11-20T18:19:20.000Z' };
+  expect(isOverlappingPreviousQuestion([actualResponse], outgoing, previous)).toBe(false);
+});
+

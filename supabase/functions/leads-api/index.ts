@@ -38,6 +38,7 @@ import {
   type AutoContactSchedulingSettings,
 } from './domain/scheduling.ts';
 import { resolveContinuationTriggerMessageAt } from './domain/inactivity-continuation.ts';
+import { calculateReactivationIntervalSeconds, type ReactivationFlowDemand } from './domain/reactivation-pacing.ts';
 import { resolveAutoContactFlowFinalStatus } from './domain/auto-contact-flow-finalization.ts';
 import {
   isAutoContactFlowOutputMessage,
@@ -2787,13 +2788,86 @@ const INACTIVITY_REACTIVATION_FLOW_IDS = new Set([
   'flow-inatividade-contato-inicial',
   'flow-inatividade-em-atendimento',
 ]);
-const INACTIVITY_REACTIVATION_INTERVAL_SECONDS = 20 * 60;
+/**
+ * Dynamic shared cadence:
+ * - use the actual time still available in each reactivation flow's configured window
+ * - consider its remaining daily send allowance and pending messages today
+ * - sum the rates of both flows, so they never create independent simultaneous bursts
+ * - calculate again before every NEW lead's reactivation
+ */
+async function getDynamicInactivityReactivationIntervalSeconds(
+  supabase: ReturnType<typeof createClient>,
+  settings: AutoContactFlowSettings,
+  now: Date,
+): Promise<number> {
+  const demand: ReactivationFlowDemand[] = [];
+  for (const flow of settings.flows) {
+    if (!INACTIVITY_REACTIVATION_FLOW_IDS.has(flow.id) || flow.ativo === false) continue;
+    const scheduling: AutoContactSchedulingSettings = {
+      ...settings.scheduling,
+      startHour: flow.scheduling?.startHour ?? settings.scheduling.startHour,
+      endHour: flow.scheduling?.endHour ?? settings.scheduling.endHour,
+      allowedWeekdays: flow.scheduling?.allowedWeekdays?.length
+        ? flow.scheduling.allowedWeekdays
+        : settings.scheduling.allowedWeekdays,
+      dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
+    };
+    const dailyLimit = Number(scheduling.dailySendLimit);
+    if (!Number.isSafeInteger(dailyLimit) || dailyLimit < 1) {
+      // A finite configured cap is required for these anti-spam reactivations.
+      continue;
+    }
+    if (getNextAllowedSendAt(now, scheduling).getTime() > now.getTime()) continue;
+    const zoned = toZonedDate(now, scheduling.timezone);
+    const endClock = parseHourMinute(scheduling.endHour);
+    const windowEnd = buildDateInTimeZone({
+      year: zoned.getUTCFullYear(),
+      month: zoned.getUTCMonth() + 1,
+      day: zoned.getUTCDate(),
+      hour: endClock.hour,
+      minute: endClock.minute,
+    }, scheduling.timezone);
+    const secondsLeft = Math.floor((windowEnd.getTime() - now.getTime()) / 1000);
+    if (secondsLeft < 1) continue;
+    const { start, end } = buildTimeZoneDayWindow(now, scheduling.timezone);
+    const [usedQuery, queuedQuery] = await Promise.all([
+      supabase.from('auto_contact_flow_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('flow_id', flow.id)
+        .eq('action_type', 'send_message')
+        .eq('status', 'completed')
+        .gte('updated_at', start.toISOString())
+        .lt('updated_at', end.toISOString()),
+      supabase.from('auto_contact_flow_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('flow_id', flow.id)
+        .eq('action_type', 'send_message')
+        .in('status', ['pending', 'processing'])
+        .lte('scheduled_at', windowEnd.toISOString()),
+    ]);
+    if (usedQuery.error || queuedQuery.error) {
+      throw new Error('Falha ao consultar a capacidade de reativação: '
+        + (usedQuery.error?.message || queuedQuery.error?.message || 'desconhecida'));
+    }
+    demand.push({
+      remainingWindowSeconds: secondsLeft,
+      remainingDailySends: Math.max(0, dailyLimit - (usedQuery.count ?? 0)),
+      pendingSendJobs: queuedQuery.count ?? 0,
+    });
+  }
+  const interval = calculateReactivationIntervalSeconds(demand);
+  if (interval == null) {
+    throw new Error('Nenhuma capacidade de reativação calculável na janela atual.');
+  }
+  return interval;
+}
 
 async function claimInactivityReactivationSlot(
   supabase: ReturnType<typeof createClient>,
+  intervalSeconds: number,
 ): Promise<{ allowed: boolean; nextAvailableAt: Date }> {
   const { data, error } = await supabase.rpc('claim_auto_contact_reactivation_slot', {
-    p_interval_seconds: INACTIVITY_REACTIVATION_INTERVAL_SECONDS,
+    p_interval_seconds: intervalSeconds,
   });
   if (error || !data || typeof data !== 'object') {
     throw new Error(error?.message || 'Não foi possível verificar o espaçamento das reativações.');
@@ -3112,11 +3186,35 @@ async function processFlowJobs({
           throw new Error('Conteúdo inválido para envio automático.');
         }
 
-        // Shared pacing for chat reactivation ONLY: 1 distinct lead across
-        // Contato Inicial and Atendimento every 20 minutes. A multi-bubble
-        // message step spends only one slot. Revalidation above remains intact.
+        // Only Contato Inicial/Atendimento reactivation conversations share
+        // this pace. Calculate it from available hours, remaining daily quota
+        // and pending send jobs. One group of balloons consumes one slot.
         if (INACTIVITY_REACTIVATION_FLOW_IDS.has(flow.id)) {
-          const slot = await claimInactivityReactivationSlot(supabase);
+          let slot: { allowed: boolean; nextAvailableAt: Date };
+          let intervalSeconds: number;
+          try {
+            intervalSeconds = await getDynamicInactivityReactivationIntervalSeconds(
+              supabase, settings, new Date(),
+            );
+            slot = await claimInactivityReactivationSlot(supabase, intervalSeconds);
+          } catch (error) {
+            // A temporary DB/config problem must not trigger a bulk-send
+            // fallback or permanently fail/cancel the customer's flow.
+            const retryAt = getNextAllowedSendAt(
+              new Date(Date.now() + 5 * 60_000), effectiveScheduling,
+            );
+            const problem = error instanceof Error ? error.message : String(error);
+            await supabase
+              .from('auto_contact_flow_jobs')
+              .update({
+                status: 'pending',
+                scheduled_at: retryAt.toISOString(),
+                attempts: previousAttempts,
+                last_error: 'Reativação adiada por falha no cálculo de ritmo: ' + problem,
+              })
+              .eq('id', job.id);
+            continue;
+          }
           if (!slot.allowed) {
             const nextAllowedAt = getNextAllowedSendAt(slot.nextAvailableAt, effectiveScheduling);
             await supabase
@@ -3125,7 +3223,8 @@ async function processFlowJobs({
                 status: 'pending',
                 scheduled_at: nextAllowedAt.toISOString(),
                 attempts: previousAttempts,
-                last_error: 'Aguardando espaçamento compartilhado de 20 minutos entre reativações.',
+                last_error: 'Aguardando intervalo automático entre reativações ('
+                  + Math.ceil(intervalSeconds / 60) + ' min).',
               })
               .eq('id', job.id);
             continue;

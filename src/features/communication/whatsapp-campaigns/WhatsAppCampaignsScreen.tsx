@@ -1763,7 +1763,7 @@ export default function WhatsAppCampaignsScreen() {
               <div className="min-w-0">
                 <Heading level={2} className="text-base font-semibold">Limite global de novos contatos</Heading>
                 <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
-                  Um contato conta uma vez por campanha na primeira abordagem, mesmo que já tenha participado de outra campanha. Janela móvel de 24 horas.
+                  Um contato conta uma vez por campanha. As novas abordagens são distribuídas ao longo da janela de envio, sem concentrar todas as vagas pela manhã. Janela móvel de 24 horas.
                 </Text>
               </div>
             </div>

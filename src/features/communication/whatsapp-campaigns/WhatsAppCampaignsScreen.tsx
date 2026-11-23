@@ -1174,7 +1174,9 @@ export default function WhatsAppCampaignsScreen() {
     const nextLabel = nextPriority === 3 ? 'Máxima' : nextPriority === 2 ? 'Alta' : 'Normal';
 
     return (
-      <button
+      <ActionSurface
+        variant="plain"
+        padding="none"
         type="button"
         className="inline-flex items-center rounded-full text-left transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-accent-strong)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
         aria-label={'Prioridade ' + label + ' de ' + campaign.name + '. Alterar para ' + nextLabel}
@@ -1186,7 +1188,7 @@ export default function WhatsAppCampaignsScreen() {
           {label}
           <Repeat2 className="h-3 w-3 opacity-70" aria-hidden="true" />
         </Badge>
-      </button>
+      </ActionSurface>
     );
   };
 

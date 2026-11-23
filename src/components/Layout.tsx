@@ -6,7 +6,7 @@ import {
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import {
-  Bell, Brain, BookOpen, Calendar, ChevronDown, FileText, LayoutDashboard, Link2,
+  Bell, Brain, BookOpen, Calendar, ChevronDown, ChevronsDown, ChevronsUp, FileText, LayoutDashboard, Link2,
   LogOut, MessageCircle, PanelLeftClose, PanelLeftOpen, Plug, Plus, Search, Send,
   Settings, User, Users, Wallet, Workflow, X, type LucideIcon,
 } from 'lucide-react';
@@ -98,6 +98,8 @@ export default function Layout({
   }[]>([]);
   const notificationsRequestIdRef = useRef(0);
   const sidebarRef = useRef<HTMLElement | null>(null);
+  const sidebarNavigationRef = useRef<HTMLElement | null>(null);
+  const [sidebarOverflow, setSidebarOverflow] = useState({ above: false, below: false });
   const mainRef = useRef<HTMLElement | null>(null);
   const panelContentRef = useRef<HTMLDivElement | null>(null);
   const themeSwitchFrameRef = useRef<number | null>(null);
@@ -146,6 +148,61 @@ export default function Layout({
     label,
     items: items.filter((item) => item.configTab ? allowedConfigTabs.some((tab) => tab.id === item.configTab) : canView(item.id)),
   })).filter(({ items }) => items.length > 0);
+  const sidebarNavigationKey = visibleGroups
+    .map(({ label, items }) => `${label}:${items.map((item) => item.configTab ?? item.id).join(',')}`)
+    .join('|');
+
+  const updateSidebarOverflow = useCallback(() => {
+    const navigation = sidebarNavigationRef.current;
+    if (!navigation) return;
+
+    const above = navigation.scrollTop > 2;
+    const below = navigation.scrollTop + navigation.clientHeight < navigation.scrollHeight - 2;
+    setSidebarOverflow((previous) => (
+      previous.above === above && previous.below === below ? previous : { above, below }
+    ));
+  }, []);
+
+  useEffect(() => {
+    const navigation = sidebarNavigationRef.current;
+    if (!navigation) return;
+
+    updateSidebarOverflow();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateSidebarOverflow);
+    observer?.observe(navigation);
+    Array.from(navigation.children).forEach((child) => observer?.observe(child));
+    window.addEventListener('resize', updateSidebarOverflow);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updateSidebarOverflow);
+    };
+  }, [isSidebarCollapsed, isMobileMenuOpen, sidebarNavigationKey, updateSidebarOverflow]);
+
+  useEffect(() => {
+    const navigation = sidebarNavigationRef.current;
+    const activeItem = navigation?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!navigation || !activeItem) return;
+
+    const navigationBounds = navigation.getBoundingClientRect();
+    const activeBounds = activeItem.getBoundingClientRect();
+    const clearance = 24;
+    if (activeBounds.top < navigationBounds.top + clearance) {
+      navigation.scrollTop += activeBounds.top - navigationBounds.top - clearance;
+    } else if (activeBounds.bottom > navigationBounds.bottom - clearance) {
+      navigation.scrollTop += activeBounds.bottom - navigationBounds.bottom + clearance;
+    }
+    updateSidebarOverflow();
+  }, [activeTab, currentConfigTab, isSidebarCollapsed, updateSidebarOverflow]);
+
+  const scrollSidebarNavigation = (direction: -1 | 1) => {
+    const navigation = sidebarNavigationRef.current;
+    if (!navigation) return;
+    navigation.scrollBy({
+      top: direction * Math.max(96, navigation.clientHeight * 0.65),
+      behavior: 'smooth',
+    });
+  };
   const availableConfigTabs = allowedConfigTabs.filter((tab) => getConfigAreaForTab(tab.id) === (activeTab === 'automation-hub' ? 'automation' : 'settings'));
   const selectedConfigTab = availableConfigTabs.some((tab) => tab.id === currentConfigTab) ? currentConfigTab : availableConfigTabs[0]?.id;
   const isSelected = (item: TabConfig) => item.id === activeTab && (
@@ -577,37 +634,64 @@ export default function Layout({
             : !isSidebarCollapsed && <IconButton variant="ghost" size="sm" className="terracota-sidebar-collapse-toggle" aria-label="Recolher menu" onClick={() => setIsMenuCollapsed(true)}><PanelLeftClose aria-hidden="true" /></IconButton>}
         </div>
         {!isSidebarCollapsed && <Text className="terracota-workspace-name">Nosso espaço de trabalho</Text>}
-        <nav className="terracota-sidebar-navigation" aria-label="Áreas do painel">
-          {visibleGroups.map(({ label, items }) => (
-            <div key={label} className="terracota-nav-group" role="group" aria-label={label}>
-              {!isSidebarCollapsed && <Text className="terracota-nav-label">{label}</Text>}
-              {items.map((item) => {
-                const Icon = item.icon;
-                const active = isSelected(item);
-                return <ActionSurface
-                  key={item.configTab ?? item.id}
-                  variant="plain"
-                  padding="none"
-                  className={cx('kds-sidebar-item terracota-nav-item', active && 'is-active')}
-                  aria-current={active ? 'page' : undefined}
-                  aria-label={isSidebarCollapsed ? item.label : undefined}
-                  title={isSidebarCollapsed ? item.label : undefined}
-                  onClick={() => selectDestination(item)}
-                >
-                  <Icon className="kds-control-icon" aria-hidden="true" />
-                  {!isSidebarCollapsed && <span>{item.label}</span>}
-                  {Boolean(item.badge) && renderSidebarBadge(item.badge ?? 0)}
-                </ActionSurface>;
-              })}
-            </div>
-          ))}
-        </nav>
+        <div className="terracota-sidebar-navigation-frame">
+          <nav
+            ref={sidebarNavigationRef}
+            className="terracota-sidebar-navigation"
+            aria-label="Áreas do painel"
+            onScroll={updateSidebarOverflow}
+          >
+            {visibleGroups.map(({ label, items }) => (
+              <div key={label} className="terracota-nav-group" role="group" aria-label={label}>
+                {!isSidebarCollapsed && <Text className="terracota-nav-label">{label}</Text>}
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isSelected(item);
+                  return <ActionSurface
+                    key={item.configTab ?? item.id}
+                    variant="plain"
+                    padding="none"
+                    className={cx('kds-sidebar-item terracota-nav-item', active && 'is-active')}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label={isSidebarCollapsed ? item.label : undefined}
+                    title={isSidebarCollapsed ? item.label : undefined}
+                    onClick={() => selectDestination(item)}
+                  >
+                    <Icon className="kds-control-icon" aria-hidden="true" />
+                    {!isSidebarCollapsed && <span>{item.label}</span>}
+                    {Boolean(item.badge) && renderSidebarBadge(item.badge ?? 0)}
+                  </ActionSurface>;
+                })}
+              </div>
+            ))}
+          </nav>
+          {sidebarOverflow.above && (
+            <button
+              type="button"
+              className="terracota-sidebar-scroll-hint terracota-sidebar-scroll-hint--top"
+              aria-label="Mostrar itens anteriores do menu"
+              onClick={() => scrollSidebarNavigation(-1)}
+            >
+              <ChevronsUp aria-hidden="true" />
+            </button>
+          )}
+          {sidebarOverflow.below && (
+            <button
+              type="button"
+              className="terracota-sidebar-scroll-hint terracota-sidebar-scroll-hint--bottom"
+              aria-label="Mostrar mais itens do menu"
+              onClick={() => scrollSidebarNavigation(1)}
+            >
+              <ChevronsDown aria-hidden="true" />
+            </button>
+          )}
+        </div>
         {isMobileMenuOpen && <div className="terracota-sidebar-footer">
           <Button size="sm" variant="ghost" onClick={() => { setIsMobileMenuOpen(false); setProfileOpen(true); }}><User className="kds-control-icon" aria-hidden="true" />Minha conta</Button>
           <Button size="sm" variant="ghost" onClick={() => { setIsMobileMenuOpen(false); setSignOutOpen(true); }}><LogOut className="kds-control-icon" aria-hidden="true" />Sair do painel</Button>
         </div>}
         {isSidebarCollapsed && <div className="terracota-sidebar-footer">
-          <IconButton variant="ghost" aria-label="Expandir menu" title="Expandir menu" onClick={() => setIsMenuCollapsed(false)}><PanelLeftOpen aria-hidden="true" /></IconButton>
+          <IconButton variant="ghost" className="terracota-sidebar-expand-toggle" aria-label="Expandir menu" title="Expandir menu" onClick={() => setIsMenuCollapsed(false)}><PanelLeftOpen aria-hidden="true" /></IconButton>
         </div>}
       </aside>
 

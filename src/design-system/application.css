@@ -1394,12 +1394,16 @@ html,
   width: var(--sidebar-width);
   height: 100dvh;
   padding: 1.6875rem var(--space-4) .9375rem;
+  overflow: hidden;
   border-inline-end: var(--border-width) solid var(--border-default);
   background: var(--bg-surface);
   box-shadow: none;
   transition: width 180ms ease;
 }
-.terracota-sidebar[data-collapsed='true'] { width: var(--sidebar-width-collapsed); }
+.terracota-sidebar[data-collapsed='true'] {
+  width: var(--sidebar-width-collapsed);
+  padding-inline: .625rem;
+}
 .terracota-sidebar-header {
   display: flex;
   flex: 0 0 auto;
@@ -1426,7 +1430,54 @@ html,
   background: var(--success-text);
   content: '';
 }
-.terracota-sidebar-navigation { flex: 1; min-height: 0; overflow: auto; padding-inline-end: 2px; }
+/* Only the middle navigation scrolls. Its scrollbar must not consume the narrow icon rail. */
+.terracota-sidebar-navigation-frame {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.terracota-sidebar-navigation {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-padding-block: 1.5rem;
+}
+.terracota-sidebar-navigation::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.terracota-sidebar-scroll-hint {
+  position: absolute;
+  z-index: 1;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 1.625rem;
+  padding: 0;
+  border: 0;
+  color: var(--text-subtle);
+  cursor: pointer;
+}
+.terracota-sidebar-scroll-hint svg { width: .875rem; height: .875rem; stroke-width: 1.8; }
+.terracota-sidebar-scroll-hint:hover { color: var(--text-primary); }
+.terracota-sidebar-scroll-hint:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.terracota-sidebar-scroll-hint--top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg-surface) 35%, transparent);
+}
+.terracota-sidebar-scroll-hint--bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-surface) 35%, transparent);
+}
 .terracota-nav-group + .terracota-nav-group { margin-top: var(--space-3); }
 .terracota-nav-label {
   padding-inline: var(--space-3);
@@ -1452,8 +1503,39 @@ html,
 .terracota-nav-item > .kds-control-icon { flex: none; width: 17px; height: 17px; stroke-width: 1.7; }
 .terracota-nav-item .kds-sidebar-badge { margin-inline-start: auto; }
 .terracota-sidebar[data-collapsed='true'] :is(.terracota-nav-item, .terracota-sidebar-header) { justify-content: center; }
-.terracota-sidebar[data-collapsed='true'] .terracota-nav-item .kds-sidebar-badge { position: absolute; inset: var(--space-1) 0 auto auto; }
-.terracota-sidebar-footer { display: flex; justify-content: center; padding-top: var(--space-3); border-top: var(--border-width) solid var(--border-subtle); }
+.terracota-sidebar[data-collapsed='true'] .terracota-sidebar-header {
+  min-height: 3.25rem;
+  margin-bottom: 1rem;
+  padding-inline: 0;
+}
+.terracota-sidebar[data-collapsed='true'] .terracota-nav-item {
+  width: 3rem;
+  height: 3rem;
+  min-height: 3rem;
+  margin-inline: auto;
+  padding: 0;
+  justify-content: center;
+}
+.terracota-sidebar[data-collapsed='true'] .terracota-nav-item + .terracota-nav-item { margin-top: .25rem; }
+.terracota-sidebar[data-collapsed='true'] .terracota-nav-group + .terracota-nav-group { margin-top: .625rem; }
+.terracota-sidebar[data-collapsed='true'] .terracota-nav-item > .kds-control-icon { width: 1.25rem; height: 1.25rem; }
+.terracota-sidebar[data-collapsed='true'] .terracota-nav-item .kds-sidebar-badge { position: absolute; inset: .125rem 0 auto auto; }
+.terracota-sidebar-footer {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.terracota-sidebar[data-collapsed='true'] .terracota-sidebar-expand-toggle.kds-icon-button {
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
+  min-height: 3rem;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: .75rem;
+}
 .terracota-sidebar .kds-sidebar-item { border: 0; border-radius: .5rem; box-shadow: none; }
 .terracota-sidebar .kds-action-surface:hover { background: var(--bg-hover); box-shadow: none; }
 .terracota-sidebar .kds-sidebar-item.is-active { background: var(--brand-primary-soft); color: var(--brand-primary); font-weight: 500; }

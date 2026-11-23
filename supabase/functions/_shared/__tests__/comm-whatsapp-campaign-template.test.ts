@@ -22,4 +22,23 @@ describe('campaign message renderer', () => {
   it('keeps unknown variables empty instead of leaking template syntax', () => {
     expect(resolveCommWhatsAppCampaignMessage('Olá {{campo_inexistente}}.', { greeting: 'boa noite' })).toBe('Olá.');
   });
+  it('uses the verified number of lives from the historical campaign proposal', () => {
+    const result = resolveCommWhatsAppCampaignMessage(
+      'Oi, {{primeiro_nome}}! {{contexto_historico}}',
+      { name: 'ANA DE SOUZA', historicalLives: 3, greeting: 'bom dia' },
+    );
+    expect(result).toBe('Oi, Ana! Encontrei um registro anterior de uma proposta empresarial da Amil para *3 pessoas*.');
+  });
+
+  it('never makes up a life count when the source field is missing or invalid', () => {
+    for (const historicalLives of [undefined, null, '', 'indefinido', 0, -1, 1000]) {
+      const result = resolveCommWhatsAppCampaignMessage('{{contexto_historico}}', { historicalLives });
+      expect(result).toBe('Encontrei um registro anterior de uma proposta empresarial da Amil.');
+    }
+    expect(resolveCommWhatsAppCampaignMessage('{{contexto_historico}}', { historicalLives: '2' }))
+      .toContain('para *2 pessoas*');
+    expect(resolveCommWhatsAppCampaignMessage('{{contexto_historico}}', { historicalLives: 1 }))
+      .toContain('para *1 pessoa*');
+  });
+
 });

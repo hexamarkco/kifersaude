@@ -1,0 +1,239 @@
+/*
+ * Kifer Saúde — visual parity with PAINEL-KS-PROTOTIPO (23/11/2026)
+ *
+ * Last-mile visual rules for the authenticated workspace and its portal overlays.
+ * Source of truth: PROTOTIPO-KS.html and the desktop/mobile screenshots.
+ * Scoped to kds-workspace-theme to protect public pages, authentication and
+ * isolated design-system previews. Commercial behavior is intentionally untouched.
+ */
+
+/* Tokens and type hierarchy match the reference instead of the previous CRM. */
+.painel-theme.kifer-ds.kds-workspace-theme {
+  --type-ui-title: 600 1.4375rem / 1.35 var(--font-display);
+  --type-ui-section: 600 .875rem / 1.45 var(--font-display);
+  --type-ui-heading: 600 .875rem / 1.45 var(--font-display);
+  --type-body-sm: 400 .6875rem / 1.65 var(--font-sans);
+  --type-table: 400 .625rem / 1.6 var(--font-sans);
+  --type-caption: 400 .5625rem / 1.5 var(--font-sans);
+  --type-label: 500 .6875rem / 1.6 var(--font-sans);
+  --control-height-md: 2.375rem;
+  --page-gutter: 1.875rem;
+  --radius-panel: .75rem;
+  --radius-control: .4375rem;
+  --shadow-card: none;
+}
+
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(h1, h2, h3, h4) {
+  font-family: var(--font-display);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(
+  .kds-page-title, .kds-section-title, .kds-card-title, .kds-heading
+) {
+  font-family: var(--font-display);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-page-title {
+  font: var(--type-ui-title);
+  letter-spacing: -.045em;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-page-description {
+  color: var(--text-muted);
+  font: 400 .6875rem / 1.8 var(--font-sans);
+}
+
+/* A single neutral surface treatment for legacy panels and DS components. */
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(
+  .panel-glass-panel, .panel-glass-strong, .kds-card, .kds-surface,
+  .kds-record-results, .kds-page-section
+) {
+  border-color: var(--border-default);
+  border-radius: var(--radius-panel);
+  box-shadow: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(
+  .panel-glass-panel, .panel-glass-strong
+) {
+  background: var(--bg-surface);
+  backdrop-filter: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(
+  .panel-glass-panel, .panel-glass-strong
+)::before {
+  display: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(
+  .kds-card, .kds-surface, .kds-record-results
+) {
+  background-color: var(--bg-surface);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-card :is(
+  .kds-card-title, .kds-section-title
+) {
+  font: var(--type-ui-section);
+  letter-spacing: -.025em;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-card-subtitle {
+  color: var(--text-muted);
+  font: 400 .625rem / 1.7 var(--font-sans);
+}
+
+/* Lists in the prototype use sentence-case labels, not legacy all-caps headers. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-table-wrapper {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-record-results .kds-table-wrapper {
+  border: none;
+  border-radius: inherit;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-table-header {
+  background: var(--bg-surface-muted);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-table-head {
+  height: 2.6875rem;
+  padding: .6875rem 1.125rem;
+  color: var(--text-muted);
+  background: var(--bg-surface-muted);
+  font: 500 .5625rem / 1.5 var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  vertical-align: middle;
+  border-color: var(--border-subtle);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-table-cell {
+  padding: 1rem 1.125rem;
+  color: var(--text-muted);
+  font: 400 .625rem / 1.65 var(--font-sans);
+  vertical-align: middle;
+  border-color: var(--border-subtle);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-table-sm :is(.kds-table-head, .kds-table-cell) {
+  padding-inline: 1.125rem;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-record-results .kds-table-body .kds-table-row {
+  min-height: 3.75rem;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-record-results .kds-table-sm {
+  font: var(--type-table);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-record-results .kds-table-head {
+  font: 500 .5625rem / 1.5 var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-record-results .kds-table-cell {
+  padding-block: 1rem;
+}
+
+/* Filter/toolbars remain on the page canvas, as in the reference screens. */
+.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(
+  .kds-record-filters, .kds-leads-filters
+) {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-record-filters .kds-toolbar,
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-filters .kds-toolbar {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme :is(
+  .kds-input, .kds-select, .kds-filter-trigger, .kds-button-secondary
+) {
+  border-color: var(--border-default);
+}
+.painel-theme.kifer-ds.kds-workspace-theme :is(
+  .kds-input, .kds-select, .kds-textarea
+) {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: .6875rem;
+  box-shadow: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme :is(
+  .kds-input, .kds-select, .kds-textarea, .kds-filter-trigger, .kds-button
+):focus-visible {
+  outline-color: var(--focus-ring);
+  outline-offset: 2px;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-field-label {
+  color: var(--text-secondary);
+  font: 500 .6875rem / 1.6 var(--font-sans);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-button-primary {
+  color: var(--action-primary-text);
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  box-shadow: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-button-primary:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+}
+
+/* Dialogs, drawers and popovers also live outside the page DOM in portals. */
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-modal);
+}
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-title {
+  font: 600 1.125rem / 1.45 var(--font-display);
+  letter-spacing: -.035em;
+}
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-header {
+  padding: 1.5rem 1.6875rem 1.3125rem;
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-footer {
+  padding: 1.125rem 1.6875rem;
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-body,
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-drawer-body {
+  background: var(--bg-surface);
+}
+.modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-backdrop {
+  background: var(--overlay);
+  backdrop-filter: blur(3px);
+}
+
+/* Tabs and compact status labels are quiet, flat and consistent across pages. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-tabs-list-underline > .kds-tab {
+  font: 500 .625rem / 1.6 var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-badge, .kds-op-chip) {
+  box-shadow: none;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-avatar {
+  border-radius: .5rem;
+}
+
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme {
+    --page-gutter: 1.25rem;
+    --type-ui-title: 600 1.375rem / 1.3 var(--font-display);
+    --control-height-md: 2.75rem;
+  }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-theme-host.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog {
+    max-width: calc(100vw - 1rem);
+  }
+}
+@media (max-width: 390px) {
+  .painel-theme.kifer-ds.kds-workspace-theme {
+    --page-gutter: 1rem;
+  }
+}

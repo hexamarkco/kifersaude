@@ -666,24 +666,26 @@ export default function Layout({
             ))}
           </nav>
           {sidebarOverflow.above && (
-            <button
-              type="button"
+            <IconButton
+              variant="ghost"
+              size="sm"
               className="terracota-sidebar-scroll-hint terracota-sidebar-scroll-hint--top"
               aria-label="Mostrar itens anteriores do menu"
               onClick={() => scrollSidebarNavigation(-1)}
             >
               <ChevronsUp aria-hidden="true" />
-            </button>
+            </IconButton>
           )}
           {sidebarOverflow.below && (
-            <button
-              type="button"
+            <IconButton
+              variant="ghost"
+              size="sm"
               className="terracota-sidebar-scroll-hint terracota-sidebar-scroll-hint--bottom"
               aria-label="Mostrar mais itens do menu"
               onClick={() => scrollSidebarNavigation(1)}
             >
               <ChevronsDown aria-hidden="true" />
-            </button>
+            </IconButton>
           )}
         </div>
         {isMobileMenuOpen && <div className="terracota-sidebar-footer">

@@ -1453,7 +1453,7 @@ html,
   width: 0;
   height: 0;
 }
-.terracota-sidebar-scroll-hint {
+.terracota-sidebar-scroll-hint.kds-icon-button {
   position: absolute;
   z-index: 1;
   inset-inline: 0;
@@ -1461,9 +1461,12 @@ html,
   align-items: center;
   justify-content: center;
   width: 100%;
+  min-width: 0;
   height: 1.625rem;
+  min-height: 1.625rem;
   padding: 0;
   border: 0;
+  border-radius: 0;
   color: var(--text-subtle);
   cursor: pointer;
 }

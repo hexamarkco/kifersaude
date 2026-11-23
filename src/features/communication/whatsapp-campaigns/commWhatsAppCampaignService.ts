@@ -610,7 +610,7 @@ const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: stri
   return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
 };
 
-const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel', 'saudacao', 'saudacao_titulo', 'saudacao_capitalizada']);
+const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel', 'saudacao', 'saudacao_titulo', 'saudacao_capitalizada', 'contexto_historico']);
 
 const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
   const variables = new Set<string>();
@@ -637,6 +637,7 @@ const resolveSampleMessage = (template: string, sample: { name: string; phone: s
     telefone: sample.phone || '',
     status: sample.status || '',
     responsavel: sample.responsavel || '',
+    contexto_historico: 'Encontrei um registro anterior de uma proposta empresarial da Amil.',
     saudacao: greeting,
     saudacao_titulo: formatGreetingTitle(greeting),
     saudacao_capitalizada: formatGreetingTitle(greeting),

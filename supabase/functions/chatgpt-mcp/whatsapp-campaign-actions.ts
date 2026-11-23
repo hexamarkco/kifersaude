@@ -303,7 +303,7 @@ const maskPhone = (value: unknown): string => {
 };
 const UNSAFE_CONFIG_KEY = /(?:token|secret|password|credential|authorization|api[_-]?key|content_base64|signed[_-]?url|private[_-]?key)/i;
 const UNSAFE_CONTACT_KEY = /(?:^|_)(?:phone|phone_number|phone_digits|mobile|whatsapp|email|cpf|cnpj|rg|cns|address|endereco|logradouro|cep|data_nascimento|birth_date|token|secret|password|credential|authorization|api[_-]?key|content_base64|signed[_-]?url|private[_-]?key)(?:$|_)/i;
-const KNOWN_CAMPAIGN_VARIABLES = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel', 'saudacao', 'saudacao_titulo', 'saudacao_capitalizada']);
+const KNOWN_CAMPAIGN_VARIABLES = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel', 'saudacao', 'saudacao_titulo', 'saudacao_capitalizada', 'contexto_historico']);
 const safeAudienceConfig = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(safeAudienceConfig);
   if (!isRecord(value)) return value;
@@ -700,6 +700,7 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
         phone: maskPhone(record.phone_number),
         status: text(payload.status) || undefined,
         responsavel: text(payload.responsavel) || undefined,
+        historicalLives: payload.total_vidas ?? payload.quantidade_vidas ?? undefined,
       };
     });
   }
@@ -772,6 +773,7 @@ const previewCampaign = async (supabase: SupabaseClient, args: JsonRecord): Prom
       phone: text(sample.phone),
       status: text(sample.status),
       responsible: text(sample.responsavel),
+      historicalLives: sample.historicalLives as string | number | null | undefined,
     }));
   const messageSequence = messageSteps.map((step) => ({
     step_index: Number.isInteger(step.step_index) ? step.step_index : 0,

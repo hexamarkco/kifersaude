@@ -5,6 +5,7 @@ export type CommWhatsAppCampaignMessageContext = {
   phone?: string | null;
   status?: string | null;
   responsible?: string | null;
+  historicalLives?: string | number | null;
   greeting?: string | null;
   now?: Date;
   timeZone?: string;
@@ -34,12 +35,24 @@ export const resolveCommWhatsAppCampaignMessage = (
     context.now ?? new Date(),
     context.timeZone,
   );
+  // Source data refers to a historical PROPOSAL, not confirmed current coverage.
+  // Never fabricate a life count when the import did not provide a valid value.
+  const rawLives = context.historicalLives;
+  const lives = (typeof rawLives === 'number' && Number.isSafeInteger(rawLives))
+    ? rawLives
+    : (typeof rawLives === 'string' && /^\d{1,3}$/.test(rawLives.trim()))
+      ? Number(rawLives.trim())
+      : null;
+  const historicalContext = lives !== null && lives >= 1 && lives <= 999
+    ? `Encontrei um registro anterior de uma proposta empresarial da Amil para *${lives} ${lives === 1 ? 'pessoa' : 'pessoas'}*.`
+    : 'Encontrei um registro anterior de uma proposta empresarial da Amil.';
   const replacements: Record<string, string> = {
     nome: name,
     primeiro_nome: formatFirstNameTitle(name.split(/\s+/).filter(Boolean)[0] || ''),
     telefone: context.phone?.trim() || '',
     status: context.status?.trim() || '',
     responsavel: context.responsible?.trim() || '',
+    contexto_historico: historicalContext,
     saudacao: greeting,
     saudacao_titulo: formatGreetingTitle(greeting),
     saudacao_capitalizada: formatGreetingTitle(greeting),

@@ -1,5 +1,5 @@
 import { formatGreetingTitle, getGreetingForDate } from '../../../lib/greeting';
-import { getSupabaseErrorMessage, supabase } from '../../../infrastructure/supabase';
+import { fetchAllPages, getSupabaseErrorMessage, supabase } from '../../../infrastructure/supabase';
 import type { CommWhatsAppChatIdentity } from '../whatsapp';
 import { getResponsibleDisplayName, resolveResponsibleIds, type CampaignResponsibleOption } from './domain/responsibleFilter';
 
@@ -788,17 +788,22 @@ export const commWhatsAppCampaignService = {
   normalizePhoneDigits,
 
   async listCampaigns(): Promise<CommWhatsAppCampaign[]> {
-    const { data, error } = await supabase
-      .from('comm_whatsapp_campaigns')
-      .select(CAMPAIGN_SELECT)
-      .order('created_at', { ascending: false })
-      .limit(80);
-
-    if (error) {
+    try {
+      // Percorrer todas as páginas, sem limitar a listagem aos 80 registros mais recentes.
+      // O ID desempata datas iguais e mantém a ordenação estável entre páginas.
+      const campaigns = await fetchAllPages(
+        (from, to) => supabase
+          .from('comm_whatsapp_campaigns')
+          .select(CAMPAIGN_SELECT)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to),
+        500,
+      );
+      return campaigns as unknown as CommWhatsAppCampaign[];
+    } catch (error) {
       throw new Error(await getSupabaseErrorMessage(error, 'Nao foi possivel carregar os disparos do WhatsApp.'));
     }
-
-    return (data ?? []) as unknown as CommWhatsAppCampaign[];
   },
 
   async getCampaign(campaignId: string): Promise<CommWhatsAppCampaign> {

@@ -114,6 +114,23 @@ test('copies A, B, C e D compartilham o mesmo indice de mensagem e preservam os 
   assert.equal(rows.find((row) => row.step_index === 2)?.delay_amount, 1);
 });
 
+test('cada quebra de linha vira um balão, preserva A/B e o atraso de follow-up', () => {
+  const rows = buildStepRows('newline-campaign', [
+    { kind: 'message', delayAmount: 0, delayUnit: 'minutes', messages: [{
+      messageText: 'Oi, {{primeiro_nome}}!\n\nProposta disponível.\nQuer revisar?',
+      variantBMessageText: 'Olá!\nRevisão do contrato?',
+    }] },
+    { kind: 'message', delayAmount: 3, delayUnit: 'days', messages: [{ messageText: 'Oi de novo!\nAinda tem interesse?' }] },
+  ], true);
+  assert.deepEqual(rows.map((row) => [row.step_index, row.variant_label, row.message_text, row.delay_amount]), [
+    [0, 'A', 'Oi, {{primeiro_nome}}!', 0], [0, 'B', 'Olá!', 0],
+    [1, 'A', 'Proposta disponível.', 0], [1, 'B', 'Revisão do contrato?', 0],
+    [2, 'A', 'Quer revisar?', 0],
+    [3, 'ANY', 'Oi de novo!', 3],
+    [4, 'ANY', 'Ainda tem interesse?', 0],
+  ]);
+});
+
 test('campanha sem alternancia mantém somente a copy principal; modelos A/B antigos continuam válidos', () => {
   const stages = [{
     kind: 'message' as const, delayAmount: 0, delayUnit: 'minutes' as const,

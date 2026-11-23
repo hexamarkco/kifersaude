@@ -58,7 +58,7 @@ export const normalizeMcpCampaignStages = (value: unknown): McpNormalizedCampaig
           return { ok: false, error: 'Caminho de mídia inválido.' };
         }
         const rawMessage = trim(entry.message);
-        const parts = stage.split_by_line_breaks === true && !mediaPath
+        const parts = stage.split_by_line_breaks !== false && !mediaPath
           ? rawMessage.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
           : [rawMessage];
         if (!parts.length || parts.some((part) => !part || part.length > 4096)) {

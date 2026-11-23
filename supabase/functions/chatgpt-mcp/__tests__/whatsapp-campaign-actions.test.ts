@@ -538,6 +538,47 @@ describe('MCP WhatsApp campaign actions', () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it('splits newline-separated raw campaign messages into physical steps, never one block', async () => {
+    const { client, rpc } = makeSupabase();
+    const created = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client, actorId, toolName: 'kifer_create_whatsapp_campaign',
+      arguments: { name: 'Revisão', message: 'Oi, {{primeiro_nome}}!\n\nTenho uma proposta.\nPosso explicar?',
+        client_request_id: 'multiline-raw-campaign' },
+    });
+    expect(created).toMatchObject({ success: true });
+    const payload = rpc.mock.calls.find(([name]) => name === 'mcp_comm_whatsapp_campaign_mutation')?.[1]?.p_payload;
+    expect(payload.steps.map((step: { message: string }) => step.message)).toEqual([
+      'Oi, {{primeiro_nome}}!', 'Tenho uma proposta.', 'Posso explicar?',
+    ]);
+    expect(payload.audience_config.variant_sequences_v2).toBe(true);
+    expect(payload.message).toBe('Oi, {{primeiro_nome}}!');
+  });
+
+  it('keeps A/B balloon indexes aligned when multiline variations have different lengths', async () => {
+    const { client, rpc } = makeSupabase();
+    const result = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client, actorId, toolName: 'kifer_create_whatsapp_campaign',
+      arguments: {
+        name: 'Campanha com cópias', message: 'Primeiro balão', client_request_id: 'multiline-variant',
+        steps: [
+          { step_index: 0, stage_index: 0, variant_label: 'A', message: 'A1\nA2\nA3' },
+          { step_index: 0, stage_index: 0, variant_label: 'B', message: 'B1\nB2' },
+          { step_index: 1, stage_index: 1, variant_label: 'ANY', message: 'Retorno\nDepois', delay_amount: 3, delay_unit: 'days' },
+        ],
+      },
+    });
+    expect(result).toMatchObject({ success: true });
+    const payload = rpc.mock.calls.find(([name]) => name === 'mcp_comm_whatsapp_campaign_mutation')?.[1]?.p_payload;
+    expect(payload.steps.map((row: { step_index: number; variant_label: string; message: string; delay_amount: number }) =>
+      [row.step_index, row.variant_label, row.message, row.delay_amount])).toEqual([
+      [0, 'A', 'A1', 0], [0, 'B', 'B1', 0],
+      [1, 'A', 'A2', 0], [1, 'B', 'B2', 0],
+      [2, 'A', 'A3', 0],
+      [3, 'ANY', 'Retorno', 3], [4, 'ANY', 'Depois', 0],
+    ]);
+    expect(payload.audience_config.variant_sequences_v2).toBe(true);
+  });
+
   it('advertises strict tools for global budget and weighted priority', () => {
     for (const name of ['kifer_get_whatsapp_campaign_global_status',
       'kifer_set_whatsapp_campaign_global_limit', 'kifer_set_whatsapp_campaign_priority']) {

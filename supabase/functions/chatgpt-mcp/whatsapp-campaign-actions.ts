@@ -404,6 +404,47 @@ const normalizeCampaignSteps = (value: unknown): JsonRecord[] | null => {
   }
   return normalized;
 };
+
+/** Persist one physical step per nonempty line, preserving variant and stage. */
+const expandCampaignStepBalloons = (steps: JsonRecord[]): { steps: JsonRecord[]; changed: boolean } | null => {
+  const groups = new Map<number, JsonRecord[]>();
+  steps.forEach((step, position) => {
+    const index = Number.isInteger(step.step_index) ? Number(step.step_index) : position;
+    const group = groups.get(index) ?? [];
+    group.push(step);
+    groups.set(index, group);
+  });
+  let nextIndex = 0;
+  let changed = false;
+  const expanded: JsonRecord[] = [];
+  for (const [, group] of [...groups].sort(([a], [b]) => a - b)) {
+    const parts = group.map((step) => {
+      const message = String(step.message ?? '');
+      const segments = step.step_kind !== 'status_change' && !step.media_storage_path
+        ? message.split(/\r?\n/).map((text) => text.trim()).filter(Boolean)
+        : [message];
+      if (segments.length > 1) changed = true;
+      return { step, segments };
+    });
+    const positions = Math.max(...parts.map(({ segments }) => segments.length));
+    for (let offset = 0; offset < positions; offset += 1) {
+      if (nextIndex >= 30) return null;
+      for (const { step, segments } of parts) {
+        if (offset >= segments.length) continue;
+        expanded.push({
+          ...step,
+          step_index: nextIndex,
+          message: segments[offset],
+          delay_amount: offset === 0 ? Number(step.delay_amount ?? 0) : 0,
+        });
+      }
+      nextIndex += 1;
+    }
+  }
+  if (expanded.length > 240) return null;
+  return { steps: expanded, changed };
+};
+
 const withMetrics = (campaign: JsonRecord): JsonRecord => ({
   total: Number(campaign.total_targets ?? 0),
   valid: Number(campaign.valid_targets ?? 0),
@@ -983,10 +1024,29 @@ const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
     const audienceConfig = isRecord(patch.audience_config) ? patch.audience_config : {};
     patch.audience_config = { ...audienceConfig, __mcp_campaign_pacing: pacingConfig };
   }
-  if (!Object.prototype.hasOwnProperty.call(patch, 'steps')) return patch;
+  if (!Object.prototype.hasOwnProperty.call(patch, 'steps')) {
+    const initialText = typeof patch.message === 'string' ? patch.message : '';
+    if (!/\r?\n/.test(initialText)) return patch;
+    const parts = initialText.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    if (!parts.length || parts.length > 30) return null;
+    patch.message = parts[0];
+    patch.steps = parts.map((message, step_index) => ({
+      message, step_index, stage_index: 0, variant_label: 'ANY', delay_amount: 0, delay_unit: 'minutes',
+    }));
+    patch.audience_config = { ...(isRecord(patch.audience_config) ? patch.audience_config : {}), variant_sequences_v2: true };
+    return patch;
+  }
   const steps = normalizeCampaignSteps(patch.steps);
   if (!steps) return null;
-  patch.steps = steps;
+  const expanded = expandCampaignStepBalloons(steps);
+  if (!expanded) return null;
+  patch.steps = expanded.steps;
+  if (expanded.changed) {
+    patch.audience_config = { ...(isRecord(patch.audience_config) ? patch.audience_config : {}), variant_sequences_v2: true };
+    const firstMessage = expanded.steps.find((step) =>
+      Number(step.step_index) === 0 && ['A', 'ANY'].includes(String(step.variant_label ?? 'ANY')));
+    if (firstMessage) patch.message = firstMessage.message;
+  }
   return patch;
 };
 

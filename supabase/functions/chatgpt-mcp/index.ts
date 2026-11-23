@@ -895,7 +895,7 @@ async function callTool(supabase: SupabaseClient, name: string, rawArguments: un
     const authorizationError = mcpAdminAuthorizationError(actorId);
     if (authorizationError) return toToolResult(authorizationError);
   }
-  const campaignRead = await executeMcpWhatsAppCampaignReadAction({ supabase, toolName: name, arguments: args });
+  const campaignRead = await executeMcpWhatsAppCampaignReadAction({ supabase, toolName: name, arguments: args, actorId: actorId ?? '' });
   if (campaignRead) {
     await writeAuditLog({
       supabase,

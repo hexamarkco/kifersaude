@@ -141,7 +141,7 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
   },
   {
     name: 'kifer_get_whatsapp_campaign_global_status',
-    description: 'Consulta o limite global compartilhado de mensagens por 24h, reservas usadas, saldo e próxima liberação. Conta reservas de balões e follow-ups; não envia nada.',
+    description: 'Consulta o teto global de novos contatos por campanha em 24h, saldo e próxima liberação. Um destinatário conta uma vez em cada campanha diferente. Balões, follow-ups e retries não contam.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {} },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
@@ -212,9 +212,9 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
   },
   {
     name: 'kifer_set_whatsapp_campaign_global_limit',
-    description: 'Altera o teto global de mensagens reservadas por 24h para todas as campanhas; não ativa, pausa ou envia campanhas. Exige consulta prévia e expected_updated_at da configuração para evitar disputa.',
-    inputSchema: { type: 'object', required: ['daily_message_limit', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: {
-      daily_message_limit: { type: 'integer', minimum: 1, maximum: 10000 },
+    description: 'Altera o teto global de novos contatos por campanha a cada 24h. Não conta balões extras nem follow-ups e não ativa, pausa ou envia campanhas. Requer consulta prévia e expected_updated_at.',
+    inputSchema: { type: 'object', required: ['daily_contact_limit', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: {
+      daily_contact_limit: { type: 'integer', minimum: 1, maximum: 10000 },
       expected_updated_at: { type: 'string', format: 'date-time' },
       client_request_id: { type: 'string', minLength: 1, maxLength: 128 },
     } },
@@ -1002,12 +1002,12 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
     return errorResult('EXPECTED_UPDATED_AT_REQUIRED', 'expected_updated_at é obrigatório para evitar sobrescrever alterações recentes.');
   }
   if (globalOperation) {
-    if (!Number.isInteger(args.daily_message_limit) || Number(args.daily_message_limit) < 1 || Number(args.daily_message_limit) > 10000) {
-      return errorResult('INVALID_INPUT', 'daily_message_limit deve ser um inteiro entre 1 e 10000.');
+    if (!Number.isInteger(args.daily_contact_limit) || Number(args.daily_contact_limit) < 1 || Number(args.daily_contact_limit) > 10000) {
+      return errorResult('INVALID_INPUT', 'daily_contact_limit deve ser um inteiro entre 1 e 10000.');
     }
     const { data, error } = await supabase.rpc('mcp_set_comm_whatsapp_campaign_global_limit', {
       p_actor_user_id: actorId,
-      p_limit: args.daily_message_limit,
+      p_limit: args.daily_contact_limit,
       p_expected_updated_at: expectedUpdatedAt,
       p_client_request_id: requestId,
     });

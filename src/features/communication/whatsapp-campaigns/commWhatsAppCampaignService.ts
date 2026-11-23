@@ -185,9 +185,9 @@ export type CommWhatsAppCampaignTemplate = {
 };
 
 export type CampaignGlobalStatus = {
-  daily_message_limit: number;
-  reserved_messages_24h: number;
-  remaining_messages: number;
+  daily_contact_limit: number;
+  started_contacts_24h: number;
+  remaining_contacts: number;
   next_available_at: string | null;
 };
 
@@ -911,7 +911,7 @@ export const commWhatsAppCampaignService = {
   },
 
   async getGlobalStatus(): Promise<CampaignGlobalStatus> {
-    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_global_status');
+    const { data, error } = await supabase.rpc('get_comm_whatsapp_campaign_global_contact_status');
     if (error) throw new Error(await getSupabaseErrorMessage(error, 'Não foi possível consultar a cota global.'));
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) throw new Error('Cota global de campanhas indisponível.');

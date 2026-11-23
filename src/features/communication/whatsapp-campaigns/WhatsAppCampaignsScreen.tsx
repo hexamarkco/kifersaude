@@ -460,7 +460,7 @@ export default function WhatsAppCampaignsScreen() {
       if (templatesResult.status === 'fulfilled') setTemplates(templatesResult.value);
       if (globalStatusResult.status === 'fulfilled') {
         setGlobalQuota(globalStatusResult.value);
-        setGlobalLimitDraft(globalStatusResult.value.daily_message_limit);
+        setGlobalLimitDraft(globalStatusResult.value.daily_contact_limit);
       }
 
       const failedResults = results.filter((result) => result.status === 'rejected');
@@ -1761,9 +1761,9 @@ export default function WhatsAppCampaignsScreen() {
                 <ShieldCheck className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <Heading level={2} className="text-base font-semibold">Limite global de mensagens</Heading>
+                <Heading level={2} className="text-base font-semibold">Limite global de novos contatos</Heading>
                 <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
-                  Um único teto para todas as campanhas, calculado em uma janela móvel de 24 horas.
+                  Um contato conta uma vez por campanha na primeira abordagem, mesmo que já tenha participado de outra campanha. Janela móvel de 24 horas.
                 </Text>
               </div>
             </div>
@@ -1771,19 +1771,19 @@ export default function WhatsAppCampaignsScreen() {
             <div className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] px-4 py-3.5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <Text className="text-xs font-medium text-[color:var(--panel-text-muted)]">Mensagens reservadas nas últimas 24h</Text>
+                  <Text className="text-xs font-medium text-[color:var(--panel-text-muted)]">Novos contatos iniciados nas últimas 24h</Text>
                   <div className="mt-1 flex items-baseline gap-1.5">
                     <span className="text-2xl font-semibold tabular-nums text-[color:var(--panel-text)]">
-                      {globalQuota ? globalQuota.reserved_messages_24h.toLocaleString('pt-BR') : '—'}
+                      {globalQuota ? globalQuota.started_contacts_24h.toLocaleString('pt-BR') : '—'}
                     </span>
                     <span className="text-sm tabular-nums text-[color:var(--panel-text-muted)]">
-                      / {globalQuota ? globalQuota.daily_message_limit.toLocaleString('pt-BR') : '—'}
+                      / {globalQuota ? globalQuota.daily_contact_limit.toLocaleString('pt-BR') : '—'}
                     </span>
                   </div>
                 </div>
                 {globalQuota && (
-                  <Badge tone={globalQuota.remaining_messages > 0 ? 'success' : 'warning'} size="sm">
-                    {globalQuota.remaining_messages.toLocaleString('pt-BR')} disponíveis
+                  <Badge tone={globalQuota.remaining_contacts > 0 ? 'success' : 'warning'} size="sm">
+                    {globalQuota.remaining_contacts.toLocaleString('pt-BR')} disponíveis
                   </Badge>
                 )}
               </div>
@@ -1792,16 +1792,16 @@ export default function WhatsAppCampaignsScreen() {
                 role="progressbar"
                 aria-label="Consumo do limite global em 24 horas"
                 aria-valuemin={0}
-                aria-valuemax={globalQuota?.daily_message_limit ?? 100}
-                aria-valuenow={globalQuota ? Math.min(globalQuota.reserved_messages_24h, globalQuota.daily_message_limit) : 0}
+                aria-valuemax={globalQuota?.daily_contact_limit ?? 100}
+                aria-valuenow={globalQuota ? Math.min(globalQuota.started_contacts_24h, globalQuota.daily_contact_limit) : 0}
               >
                 <div
                   className="h-full rounded-full bg-[color:var(--panel-accent-strong)] transition-[width]"
-                  style={{ width: globalQuota ? Math.min(100, (globalQuota.reserved_messages_24h / Math.max(1, globalQuota.daily_message_limit)) * 100) + '%' : '0%' }}
+                  style={{ width: globalQuota ? Math.min(100, (globalQuota.started_contacts_24h / Math.max(1, globalQuota.daily_contact_limit)) * 100) + '%' : '0%' }}
                 />
               </div>
               <Text className="mt-3 text-xs text-[color:var(--panel-text-muted)]">
-                Inclui cada mensagem da sequência e de acompanhamento. Não altera os limites individuais de contatos.
+                Balões adicionais, follow-ups e tentativas de reenvio não gastam novas vagas. Limites individuais continuam valendo.
               </Text>
             </div>
             {globalQuota?.next_available_at && (
@@ -1815,12 +1815,12 @@ export default function WhatsAppCampaignsScreen() {
             <div>
               <Heading level={3} className="text-sm font-semibold">Configurar teto</Heading>
               <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
-                Ajuste a quantidade máxima de mensagens compartilhadas entre os disparos.
+                Ajuste quantos destinatários podem ser abordados pela primeira vez em cada campanha no período.
               </Text>
             </div>
             <div className="space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <Field label="Mensagens por 24h" className="min-w-0 flex-1">
+                <Field label="Novos contatos por 24h" className="min-w-0 flex-1">
                   <Input
                     type="number"
                     min={1}
@@ -1832,14 +1832,14 @@ export default function WhatsAppCampaignsScreen() {
                 <Button
                   variant="secondary"
                   className="w-full shrink-0 sm:w-auto"
-                  disabled={!globalQuota || globalLimitDraft === globalQuota.daily_message_limit}
+                  disabled={!globalQuota || globalLimitDraft === globalQuota.daily_contact_limit}
                   loading={savingGlobalLimit}
                   onClick={() => void handleSaveGlobalLimit()}
                 >
                   Salvar
                 </Button>
               </div>
-              {globalQuota && globalLimitDraft !== globalQuota.daily_message_limit && (
+              {globalQuota && globalLimitDraft !== globalQuota.daily_contact_limit && (
                 <Text className="text-xs text-[color:var(--panel-text-muted)]">
                   O novo teto só entra em vigor ao salvar.
                 </Text>

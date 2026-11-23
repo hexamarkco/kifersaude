@@ -2780,6 +2780,36 @@ async function cancelFlowJobs({
 
 const AUTO_CONTACT_SEND_INTERVAL_SECONDS = 180;
 
+// These two flows only reactivate conversations already in the pipeline.
+// Share one conservative pacing gate across both flows, never per message
+// bubble. Lead-created outreach and autonomous AI replies are unchanged.
+const INACTIVITY_REACTIVATION_FLOW_IDS = new Set([
+  'flow-inatividade-contato-inicial',
+  'flow-inatividade-em-atendimento',
+]);
+const INACTIVITY_REACTIVATION_INTERVAL_SECONDS = 20 * 60;
+
+async function claimInactivityReactivationSlot(
+  supabase: ReturnType<typeof createClient>,
+): Promise<{ allowed: boolean; nextAvailableAt: Date }> {
+  const { data, error } = await supabase.rpc('claim_auto_contact_reactivation_slot', {
+    p_interval_seconds: INACTIVITY_REACTIVATION_INTERVAL_SECONDS,
+  });
+  if (error || !data || typeof data !== 'object') {
+    throw new Error(error?.message || 'Não foi possível verificar o espaçamento das reativações.');
+  }
+  const result = data as { allowed?: unknown; next_available_at?: unknown };
+  if (typeof result.allowed !== 'boolean' || typeof result.next_available_at !== 'string') {
+    throw new Error('Reserva de reativação retornou dados inválidos.');
+  }
+  const nextAvailableAt = new Date(result.next_available_at);
+  if (!Number.isFinite(nextAvailableAt.getTime())) {
+    throw new Error('Próximo horário da reativação é inválido.');
+  }
+  return { allowed: result.allowed, nextAvailableAt };
+}
+
+
 async function reserveAutoContactSendSlot(
   supabase: ReturnType<typeof createClient>,
 ): Promise<Date> {
@@ -3080,6 +3110,26 @@ async function processFlowJobs({
         });
         if (messagePayloads.length === 0) {
           throw new Error('Conteúdo inválido para envio automático.');
+        }
+
+        // Shared pacing for chat reactivation ONLY: 1 distinct lead across
+        // Contato Inicial and Atendimento every 20 minutes. A multi-bubble
+        // message step spends only one slot. Revalidation above remains intact.
+        if (INACTIVITY_REACTIVATION_FLOW_IDS.has(flow.id)) {
+          const slot = await claimInactivityReactivationSlot(supabase);
+          if (!slot.allowed) {
+            const nextAllowedAt = getNextAllowedSendAt(slot.nextAvailableAt, effectiveScheduling);
+            await supabase
+              .from('auto_contact_flow_jobs')
+              .update({
+                status: 'pending',
+                scheduled_at: nextAllowedAt.toISOString(),
+                attempts: previousAttempts,
+                last_error: 'Aguardando espaçamento compartilhado de 20 minutos entre reativações.',
+              })
+              .eq('id', job.id);
+            continue;
+          }
         }
 
         if (flow.triggerType === 'lead_created' || job.action_payload?.dispatch_pacing !== 'retroactive') {

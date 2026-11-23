@@ -43,7 +43,7 @@ function optionalQuestions(state: V2State): Field[] {
   return fields.filter((field) => !state.facts[field] && (state.asked[field] ?? 0) === 0);
 }
 
-export function decide(state: V2State, interpretation: Interpretation, options: { customerAlreadyAssisted?: boolean; customerNeedResolved?: boolean } = {}): Decision {
+export function decide(state: V2State, interpretation: Interpretation, options: { customerAlreadyAssisted?: boolean; customerNeedResolved?: boolean; previousQuestionOverlapped?: boolean } = {}): Decision {
   const missing = requirements(state);
   const make = (action: Decision['action'], reason: string, field: Field | null = null): Decision => ({
     action, field: action === 'ask' || action === 'clarify' ? field : null, reason, missing,
@@ -90,6 +90,11 @@ export function decide(state: V2State, interpretation: Interpretation, options: 
     ? make('handoff', 'essential_information_unavailable') : make('clarify', 'essential_information_needed', unavailable);
   if (interpretation.question && !productQuestion) return make('answer', 'general_guidance');
   if (missing.length > 0) {
+    // A late webhook must not make the bot repeat a question sent after
+    // the customer wrote that message. The next real reply can answer it.
+    if (options.previousQuestionOverlapped && state.lastQuestion && missing.includes(state.lastQuestion)) {
+      return make('answer', 'acknowledge_overlapping_message');
+    }
     // Semantics chooses priority inside backend-calculated needs, never adds arbitrary questions.
     const unasked = missing.filter((field) => (state.asked[field] ?? 0) === 0);
     const candidates = unasked.length ? unasked : missing;

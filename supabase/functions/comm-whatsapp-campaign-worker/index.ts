@@ -99,6 +99,7 @@ type TargetRow = {
   phone_digits: string;
   display_name: string | null;
   source_kind: string;
+  source_payload: Record<string, unknown> | null;
   status: string;
   current_step_index: number;
   attempts: number;
@@ -510,7 +511,7 @@ const resolveCampaignGreeting = (now = new Date()): string =>
 
 const resolveMessageText = (template: string, params: {
   lead?: LeadRow | null;
-  target?: Pick<TargetRow, 'display_name' | 'phone_number'> | null;
+  target?: Pick<TargetRow, 'display_name' | 'phone_number'> & { source_payload?: TargetRow['source_payload'] } | null;
 }) => {
   const lead = params.lead ?? null;
   const target = params.target ?? null;
@@ -519,6 +520,7 @@ const resolveMessageText = (template: string, params: {
     phone: lead?.telefone || target?.phone_number || '',
     status: lead?.status || '',
     responsible: lead?.responsavel || '',
+    historicalLives: target?.source_payload?.total_vidas ?? target?.source_payload?.quantidade_vidas ?? null,
     greeting: resolveCampaignGreeting(),
   });
 };
@@ -2694,7 +2696,7 @@ async function reconcileOrphanedStepDispatches(params: {
       // Load target to get chat_id / phone_digits
       const { data: target } = await supabaseAdmin
         .from('comm_whatsapp_campaign_targets')
-        .select('id,phone_digits,phone_number,display_name,lead_id,chat_id,ab_variant')
+        .select('id,phone_digits,phone_number,display_name,source_payload,lead_id,chat_id,ab_variant')
         .eq('id', dispatch.target_id)
         .maybeSingle();
 
@@ -2725,6 +2727,7 @@ async function reconcileOrphanedStepDispatches(params: {
       const targetContext = {
         display_name: target.display_name,
         phone_number: target.phone_number || target.phone_digits,
+        source_payload: target.source_payload,
       };
       const expectedText = stepDef?.message_text
         ? resolveMessageText(stepDef.message_text, { lead, target: targetContext }).trim()

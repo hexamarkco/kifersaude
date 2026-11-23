@@ -11,6 +11,7 @@ export type DonutChartProps = {
   strokeWidth?: number;
   onSegmentClick?: (label: string) => void;
   compact?: boolean;
+  centerLabel?: string;
 };
 
 export default function DonutChart({
@@ -19,6 +20,7 @@ export default function DonutChart({
   strokeWidth = 30,
   onSegmentClick,
   compact = false,
+  centerLabel,
 }: DonutChartProps) {
   const total = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
 
@@ -35,7 +37,8 @@ export default function DonutChart({
     return data.map((item) => {
       const percentage = (item.value / total) * 100;
       const segmentLength = (percentage / 100) * circumference;
-      const dashArray = `${segmentLength} ${circumference - segmentLength}`;
+      const gap = centerLabel && data.length > 1 ? Math.min(6, segmentLength / 2) : 0;
+      const dashArray = `${segmentLength - gap} ${circumference - segmentLength + gap}`;
 
       const angle = currentAngle;
       currentAngle += (percentage / 100) * 360;
@@ -47,7 +50,7 @@ export default function DonutChart({
         rotation: angle,
       };
     });
-  }, [circumference, data, total]);
+  }, [centerLabel, circumference, data, total]);
 
   if (total === 0) {
     return (
@@ -66,14 +69,14 @@ export default function DonutChart({
   return (
     <div className="flex flex-col items-center">
       <svg width={size} height={size} className="kds-donut-svg shrink-0">
-          <circle
+          {!centerLabel && <circle
             cx={center}
             cy={center}
             r={radius}
             fill="none"
             stroke="var(--bg-hover)"
             strokeWidth={strokeWidth}
-          />
+          />}
           {segments.map((segment, index) => (
             <circle
               key={`${segment.label}-${index}`}
@@ -90,22 +93,22 @@ export default function DonutChart({
               onClick={() => onSegmentClick?.(segment.label)}
             />
           ))}
-          <circle
+          {!centerLabel && <circle
             cx={center}
             cy={center}
             r={innerRadius}
             fill="var(--bg-inset)"
             stroke="var(--border-subtle)"
             strokeWidth="1"
-          />
+          />}
           <text
             x={center}
             y={center - 8}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize="34"
-            fontWeight="700"
-            fontFamily="var(--font-sans)"
+            fontSize={centerLabel ? 28 : 34}
+            fontWeight={centerLabel ? 600 : 700}
+            fontFamily={centerLabel ? 'var(--font-display)' : 'var(--font-sans)'}
             fill="var(--text-primary)"
             className="kds-donut-text"
           >
@@ -113,17 +116,17 @@ export default function DonutChart({
           </text>
           <text
             x={center}
-            y={center + 24}
+            y={center + (centerLabel ? 20 : 24)}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize="12"
-            fontWeight="700"
+            fontSize={centerLabel ? 9 : 12}
+            fontWeight={centerLabel ? 400 : 700}
             fontFamily="var(--font-sans)"
-            letterSpacing="0.18em"
+            letterSpacing={centerLabel ? '0' : '0.18em'}
             fill="var(--text-muted)"
             className="kds-donut-text kds-donut-text-muted"
           >
-            TOTAL
+            {centerLabel ?? 'TOTAL'}
           </text>
       </svg>
 

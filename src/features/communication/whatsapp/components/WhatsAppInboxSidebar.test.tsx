@@ -12,6 +12,7 @@ const sidebarProps = {
   onOpenScheduledMessages: noop, onOpenDashboard: noop, onStartChat: noop, canViewAgenda: true,
   allScheduledMessagesPanelOpen: false, searchDraft: '', onSearchDraftChange: noop,
   hasActiveChatFilters: false, activeChatFiltersCount: 0, onClearFilters: noop,
+  unreadOnly: false, onShowUnread: noop,
   chatRefreshError: null, chatLoadError: false, loading: false, onRetryChatLoad: noop,
   sidebarChats: [], filteredMessageSearchResults: [], search: '', searchingChats: false,
   searchingMessages: false, chatSearchError: null, messageSearchError: null, onRetrySearch: noop,
@@ -31,7 +32,7 @@ test('filters trigger registers its positioning anchor and exposes the open stat
   }
   const view = render(<Harness />);
   try {
-    const button = [...view.container.querySelectorAll('button')].find(node => node.textContent?.trim() === 'Filtros');
+    const button = [...view.container.querySelectorAll('button')].find(node => node.textContent?.trim() === 'Filtrar conversas');
     assert.ok(button);
     assert.equal(triggerRef.current, button);
     assert.equal(button.getAttribute('aria-haspopup'), 'dialog');

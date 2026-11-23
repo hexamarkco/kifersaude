@@ -4,6 +4,7 @@ export type ContractsManagerProps = {
   leadToConvert?: Lead | null;
   onConvertComplete?: () => void;
   initialOperadoraFilter?: string;
+  initialSearch?: string;
 };
 
 export type ContractHolder = {

@@ -113,11 +113,10 @@ export function DashboardTrendSection({
   return (
     <Surface padding="md" className="overflow-hidden">
       <SectionHeader
-        eyebrow="Performance comercial"
         title="Evolução mensal"
         description="Compare o ritmo de entrada, fechamento e comissão dentro dos filtros ativos."
-        action={(
-          <div className="kds-dashboard-trend-controls">
+      />
+      <div className="kds-dashboard-trend-controls">
             <SegmentedControl
               className="kds-dashboard-trend-metrics"
               ariaLabel="Métrica da evolução mensal"
@@ -136,11 +135,9 @@ export function DashboardTrendSection({
                 label: option.label,
               }))}
             />
-          </div>
-        )}
-      />
+      </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="mt-5 grid gap-4">
         <div className="kds-dashboard-trend-main">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -174,7 +171,7 @@ export function DashboardTrendSection({
           />
         </div>
 
-        <aside className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1" aria-label="Resumo da evolução mensal">
+        <aside className="kds-dashboard-trend-insights" aria-label="Resumo da evolução mensal">
           {insightCards.map((card) => {
             const Icon = card.icon;
             const ActionIcon = card.actionIcon;

@@ -79,7 +79,7 @@ vi.mock('../../../hooks/useConfirmationModal', () => ({
 
 import ContractsManagerScreen from '../ContractsManagerScreen';
 
-test('opens the bulk import dialog from the labeled secondary header action', async () => {
+test('opens the bulk import dialog from the header actions menu', async () => {
   vi.useFakeTimers();
   loadContractsMock.mockResolvedValue({
     contracts: [],
@@ -96,11 +96,12 @@ test('opens the bulk import dialog from the labeled secondary header action', as
       await Promise.resolve();
     });
     await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
-    await screen.findByText('Gestão de contratos');
-    const importButton = Array.from(view.container.querySelectorAll<HTMLButtonElement>('button'))
-      .find((button) => button.textContent?.includes('Importar em massa'));
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Cuidado que vira compromisso.');
+    const actionsButton = view.container.querySelector<HTMLButtonElement>('button[aria-label="Mais ações de contratos"]');
+    assert.ok(actionsButton);
+    await act(async () => { actionsButton.click(); });
+    const importButton = [...document.body.querySelectorAll<HTMLButtonElement>('.kds-popover button')].find((button) => button.textContent?.trim() === 'Importar em massa');
     assert.ok(importButton);
-    assert.equal(importButton.classList.contains('kds-button-secondary'), true);
 
     await act(async () => { importButton.click(); });
     assert.ok(document.body.querySelector('[role="dialog"][aria-label="Importação de contratos"]'));
@@ -167,7 +168,7 @@ test('opening a contract loads the real details drawer over the retained list', 
     );
     assert.ok(detailsDrawer);
     assert.ok(detailsDrawer.textContent?.includes('Carregando dados do contrato'));
-    assert.equal(view.container.querySelector('h1')?.textContent?.trim(), 'Gestão de contratos');
+    assert.equal(view.container.querySelector('h1')?.textContent?.trim(), 'Cuidado que vira compromisso.');
     assert.ok(view.container.textContent?.includes('Contato Demonstração'));
 
     await act(async () => {
@@ -188,7 +189,7 @@ test('opening a contract loads the real details drawer over the retained list', 
     assert.ok(loadedDrawer?.textContent?.includes('Adicionar titular'));
     assert.ok(loadedDrawer?.querySelector('.kds-contract-detail-content'));
     assert.equal(loadedDrawer?.querySelector('.kds-contract-detail-expanded'), null);
-    assert.ok(view.container.querySelector('h1')?.textContent?.trim() === 'Gestão de contratos');
+    assert.ok(view.container.querySelector('h1')?.textContent?.trim() === 'Cuidado que vira compromisso.');
   } finally {
     view.unmount();
     loadContractsMock.mockReset();

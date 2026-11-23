@@ -20,6 +20,7 @@ export { DesignSystemProvider } from './components/DesignSystemProvider';
 export type { DesignSystemProviderProps } from './components/DesignSystemProvider';
 export type { DesignSystemTheme } from './appearanceContext';
 export { PANEL_THEME_STORAGE_KEY, readPanelTheme } from './themePreference';
+export { useDesignSystemAppearance } from './appearanceContext';
 export { PageActions } from './components/PageActions';
 export type { PageAction, PageActionsProps } from './components/PageActions';
 export { ListPage, DetailPage, FormPage, FormSection, DashboardPage } from './components/PageLayouts';

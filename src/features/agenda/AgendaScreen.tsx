@@ -8,6 +8,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+import { useWorkspaceCreate } from "../../hooks/useWorkspaceCreate";
 import {
   AlertCircle,
   Bell,
@@ -82,6 +83,7 @@ import {
   IconButton,
   FilterSelect,
   SegmentedControl,
+  Tabs,
 } from "../../design-system";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
@@ -137,6 +139,7 @@ export default function AgendaScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>("todos");
+  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month');
   const [timeFilter, setTimeFilter] = useState<AgendaTimeFilter>("todos");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -169,6 +172,8 @@ export default function AgendaScreen() {
   const [reminderPendingDeletion, setReminderPendingDeletion] = useState<ReminderListItem | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const openNewTask = useCallback(() => setIsAddTaskModalOpen(true), []);
+  useWorkspaceCreate(!isAddTaskModalOpen, openNewTask);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [savingTask, setSavingTask] = useState(false);
@@ -876,16 +881,12 @@ export default function AgendaScreen() {
     setCurrentMonth(new Date(normalizedDate.getFullYear(), normalizedDate.getMonth(), 1));
   };
 
-  const goToPreviousMonth = () => {
-    const previous = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    setCurrentMonth(previous);
-    setSelectedDate(new Date(previous.getFullYear(), previous.getMonth(), 1));
-  };
-
-  const goToNextMonth = () => {
-    const next = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
-    setCurrentMonth(next);
-    setSelectedDate(new Date(next.getFullYear(), next.getMonth(), 1));
+  const moveCalendar = (direction: -1 | 1) => {
+    if (calendarView === 'week') {
+      selectDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + direction * 7));
+    } else {
+      selectDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1));
+    }
   };
 
   const goToToday = () => {
@@ -1046,7 +1047,7 @@ export default function AgendaScreen() {
   const remindersByDay = useMemo(() => {
     const map = new Map<string, ReminderListItem[]>();
 
-    filteredMonthReminders.forEach((reminder) => {
+    filteredReminders.forEach((reminder) => {
       const dateKey = getDateKey(reminder.data_lembrete);
       const items = map.get(dateKey) ?? [];
       items.push(reminder);
@@ -1055,7 +1056,7 @@ export default function AgendaScreen() {
     });
 
     return map;
-  }, [compareRemindersByDueAtThenAlphabetical, filteredMonthReminders]);
+  }, [compareRemindersByDueAtThenAlphabetical, filteredReminders]);
 
   const selectedDateKey = getDateKey(selectedDate);
 
@@ -1201,18 +1202,24 @@ export default function AgendaScreen() {
     return "kds-surface-muted";
   };
 
+  const weekStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - selectedDate.getDay());
+  const weekDates = Array.from({ length: 7 }, (_, index) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + index));
+  const weekLabel = `${weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} a ${weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`;
+  const weekRemindersCount = weekDates.reduce((sum, date) => sum + (remindersByDay.get(getDateKey(date))?.length ?? 0), 0);
+
   const renderCalendar = () => {
     const cells = [];
     const firstWeekday = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
     const totalDays = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
     const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
-    for (let index = 0; index < firstWeekday; index += 1) {
+    for (let index = 0; calendarView === 'month' && index < firstWeekday; index += 1) {
       cells.push(<div key={`empty-${index}`} className="aspect-square" />);
     }
 
-    for (let day = 1; day <= totalDays; day += 1) {
-      const cellDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const dates = calendarView === 'week' ? weekDates : Array.from({ length: totalDays }, (_, index) => new Date(currentMonth.getFullYear(), currentMonth.getMonth(), index + 1));
+    for (const cellDate of dates) {
+      const day = cellDate.getDate();
       const dayKey = getDateKey(cellDate);
       const dayReminders = remindersByDay.get(dayKey) ?? [];
       const pendingCount = dayReminders.filter((item) => !item.lido).length;
@@ -1229,7 +1236,7 @@ export default function AgendaScreen() {
 
       cells.push(
         <Button variant="ghost"
-          key={day}
+          key={dayKey}
           type="button"
           onClick={() => {
             void handleDayClick(cellDate);
@@ -1237,7 +1244,7 @@ export default function AgendaScreen() {
           disabled={Boolean(reschedulingInFlightId)}
           className={`kds-action-surface kds-calendar-day border transition-colors ${stateClass}`}
           aria-pressed={isSelected}
-          aria-label={`${day} de ${currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${formatAgendaCount(totalCount, "item", "itens")}`}
+          aria-label={`${day} de ${cellDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${formatAgendaCount(totalCount, "item", "itens")}`}
         >
           <span className="text-sm font-bold sm:text-base">{day}</span>
           {totalCount > 0 && (
@@ -1252,12 +1259,13 @@ export default function AgendaScreen() {
               {totalCount}
             </span>
           )}
+          {calendarView === 'week' && dayReminders.length > 0 && <span className="kds-agenda-week-events">{dayReminders.slice(0, 3).map((item) => <span key={item.id}>{item.titulo}</span>)}</span>}
         </Button>,
       );
     }
 
     return (
-      <div className="kds-calendar-grid grid grid-cols-7 gap-1 sm:gap-2">
+      <div className={`kds-calendar-grid grid grid-cols-7 gap-1 sm:gap-2 ${calendarView === 'week' ? 'kds-agenda-week-grid' : ''}`}>
         {weekDays.map((day) => (
           <div
             key={day}
@@ -1504,9 +1512,8 @@ export default function AgendaScreen() {
       {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." className="min-h-96" fallback={() => (
       <div className="kds-agenda-page panel-page-shell space-y-4 sm:space-y-5">
         <PageHeader
-          eyebrow="Kifer Saúde / produtividade"
-          title="Agenda e tarefas"
-          description="Organize seus compromissos e priorize os retornos comerciais."
+          title={statusFilter === 'nao-lidos' ? 'O que precisa acontecer.' : statusFilter === 'lidos' ? 'O trabalho que já foi feito.' : calendarView === 'week' ? 'Uma semana com mais clareza.' : 'Sua rotina, bem organizada.'}
+          description={statusFilter === 'nao-lidos' ? 'Priorize os retornos e mantenha o acompanhamento em dia.' : statusFilter === 'lidos' ? 'Consulte o histórico de tarefas e lembretes concluídos.' : calendarView === 'week' ? 'Atendimentos, tarefas e follow-ups distribuídos no tempo.' : 'Encontre tempo para o que merece a sua atenção.'}
           actions={(
             <div role="group" aria-label="Ações da agenda" className="kds-agenda-header-actions flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button onClick={() => setOrganizerOpen(true)} variant="secondary" size="md" aria-label="Organizar follow-ups">
@@ -1514,7 +1521,7 @@ export default function AgendaScreen() {
                 <span className="kds-agenda-organize-label-full">Organizar follow-ups</span>
                 <span className="kds-agenda-organize-label-compact">Organizar</span>
               </Button>
-              <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
+              <Button onClick={openNewTask} variant="primary" size="md">
                 <Plus className="kds-control-icon" aria-hidden="true" />
                 Nova tarefa
               </Button>
@@ -1522,8 +1529,7 @@ export default function AgendaScreen() {
           )}
         />
 
-        <div className="kds-agenda-controls-row flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <SegmentedControl
+        <Tabs
             items={[
               { id: "todos", label: "Calendário" },
               { id: "nao-lidos", label: "Pendentes", badge: pendingFilteredCount },
@@ -1533,9 +1539,10 @@ export default function AgendaScreen() {
             onChange={setStatusFilter}
             className="kds-agenda-status-switcher"
             listClassName="flex-nowrap overflow-x-auto pb-1"
-            triggerClassName="whitespace-nowrap"
-          />
+            ariaLabel="Visões da agenda"
+        />
 
+        <div className="kds-agenda-controls-row flex flex-col gap-3">
           <div className="kds-agenda-filters min-w-0 flex-1 space-y-3 xl:max-w-5xl">
             <div className="kds-agenda-search-row">
               <Input
@@ -1628,24 +1635,25 @@ export default function AgendaScreen() {
         </div>
 
         {statusFilter === "todos" ? (
-          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.42fr)_minmax(21rem,1fr)]">
+          <div className="kds-agenda-workspace-grid">
             <Surface padding="md" className="kds-agenda-calendar space-y-4">
+              <SegmentedControl items={[{ id: 'month', label: 'Mês' }, { id: 'week', label: 'Semana' }]} value={calendarView} onChange={setCalendarView} size="sm" ariaLabel="Intervalo do calendário" />
               <div className="kds-agenda-calendar-header flex items-center justify-between gap-2">
-                <IconButton className="kds-agenda-previous-month" onClick={goToPreviousMonth} variant="icon" aria-label="Mês anterior" size="md">
+                <IconButton className="kds-agenda-previous-month" onClick={() => moveCalendar(-1)} variant="icon" aria-label={calendarView === 'month' ? 'Mês anterior' : 'Semana anterior'} size="md">
                   <ChevronLeft className="kds-control-icon" />
                 </IconButton>
                 <div className="kds-agenda-calendar-heading min-w-0 flex-1 text-center">
                   <Heading level={3} className="text-base font-semibold capitalize text-[var(--text-primary)] sm:text-lg">
-                    {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                    {calendarView === 'month' ? currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) : weekLabel}
                   </Heading>
                   <Text className="kds-agenda-calendar-subtitle text-xs text-[var(--text-muted)]">
-                    {formatAgendaCount(filteredMonthReminders.length, "compromisso", "compromissos")} neste mês
+                    {calendarView === 'month' ? `${formatAgendaCount(filteredMonthReminders.length, 'compromisso', 'compromissos')} neste mês` : `${formatAgendaCount(weekRemindersCount, 'compromisso', 'compromissos')} nesta semana`}
                   </Text>
                 </div>
                 <Button onClick={goToToday} variant="secondary" size="sm" className="kds-agenda-today shrink-0">
                   Hoje
                 </Button>
-                <IconButton className="kds-agenda-next-month" onClick={goToNextMonth} variant="icon" aria-label="Próximo mês" size="md">
+                <IconButton className="kds-agenda-next-month" onClick={() => moveCalendar(1)} variant="icon" aria-label={calendarView === 'month' ? 'Próximo mês' : 'Próxima semana'} size="md">
                   <ChevronRight className="kds-control-icon" />
                 </IconButton>
               </div>
@@ -1754,7 +1762,7 @@ export default function AgendaScreen() {
                 title={statusFilter === "nao-lidos" ? "Nenhum item pendente" : "Nenhum item concluído"}
                 description="Ajuste os filtros para consultar outros itens da agenda."
                 action={statusFilter === "nao-lidos" ? (
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
+                  <Button onClick={openNewTask} variant="primary" size="md">
                     <Plus className="kds-control-icon" />
                     Nova tarefa
                   </Button>

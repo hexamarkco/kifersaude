@@ -21,6 +21,10 @@ import {
   Calendar,
   FileUp,
   Download,
+  MoreHorizontal,
+  FileCheck,
+  Heart,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
@@ -33,14 +37,17 @@ import { useContractStatus } from "./hooks/useContractStatus";
 import { useProductionOperators } from "../production";
 import {
   Badge,
+  Avatar,
   Button,
   Alert,
   ConfirmationSummary,
   EmptyState,
   Input,
-  OperationalMetricChip,
+  IconButton,
   PageHeader,
-  SectionHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Surface,
   Table,
   TableBody,
@@ -85,11 +92,13 @@ import type {
   ContractHolder,
   ContractsManagerProps,
 } from "./shared/contractsManagerTypes";
+import { useWorkspaceCreate } from "../../hooks/useWorkspaceCreate";
 
 export default function ContractsManager({
   leadToConvert,
   onConvertComplete,
   initialOperadoraFilter,
+  initialSearch,
 }: ContractsManagerProps) {
   const { role } = useAuth();
   const { options, getRoleModulePermission } = useConfig();
@@ -104,7 +113,7 @@ export default function ContractsManager({
   const [loading, setLoading] = useState(true);
   const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
   const [contractsLoadWarning, setContractsLoadWarning] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearch ?? "");
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterResponsavel, setFilterResponsavel] = useState("todos");
   const [filterOperadora, setFilterOperadora] = useState<string[]>([]);
@@ -112,11 +121,17 @@ export default function ContractsManager({
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(
     null,
   );
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const handleCreateContract = useCallback(() => {
+    setEditingContract(null);
+    setShowForm(true);
+  }, []);
+  useWorkspaceCreate(canEditContracts && !leadToConvert && !showForm, handleCreateContract);
+  useEffect(() => setSearchTerm(initialSearch ?? ""), [initialSearch]);
   const statusOptions = useMemo(
     () => (options.contract_status || []).filter((option) => option.ativo),
     [options.contract_status],
@@ -140,7 +155,7 @@ export default function ContractsManager({
     setSelectedContract((current) => current?.id === updated.id ? { ...current, ...updated } : current);
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const { sorting, sortBy } = useTableSorting<"contract" | "status" | "plan" | "monthly" | "start" | "renewal" | "owner">();
+  const { sorting, sortBy } = useTableSorting<"contract" | "status" | "plan" | "lives" | "monthly" | "start" | "renewal" | "owner">();
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const contractsRootRef = useRef<HTMLDivElement | null>(null);
   const contractsLoadRequestIdRef = useRef(0);
@@ -502,9 +517,10 @@ export default function ContractsManager({
       case "contract": return contract.codigo_contrato ?? "";
       case "status": return contract.status ?? "";
       case "plan": return `${contract.operadora ?? ""} ${contract.produto_plano ?? ""}`;
+      case "lives": return contract.vidas ?? null;
       case "monthly": return contract.mensalidade_total ?? null;
       case "start": return contract.data_inicio ?? null;
-      case "renewal": return contract.data_renovacao ?? null;
+      case "renewal": return contract.mes_reajuste ?? null;
       case "owner": return contract.responsavel ?? "";
     }
   });
@@ -512,7 +528,7 @@ export default function ContractsManager({
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    contractsRootRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
 
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
@@ -521,24 +537,18 @@ export default function ContractsManager({
   };
 
   const portfolioSummary = useMemo(() => {
-    const implementationStatuses = new Set([
-      'rascunho',
-      'em análise',
-      'documentos pendentes',
-      'proposta enviada',
-      'aguardando assinatura',
-      'emitido',
-    ]);
     return contracts.reduce(
       (summary, contract) => {
         const status = contract.status.trim().toLocaleLowerCase('pt-BR');
-        if (status === 'ativo') summary.active += 1;
-        if (implementationStatuses.has(status)) summary.implementation += 1;
+        if (status === 'ativo') {
+          summary.active += 1;
+          summary.lives += contract.vidas ?? 0;
+          summary.monthlyTotal += contract.mensalidade_total ?? 0;
+        }
         if (hasUpcomingImportantDate(contract)) summary.upcoming += 1;
-        summary.monthlyTotal += contract.mensalidade_total ?? 0;
         return summary;
       },
-      { active: 0, implementation: 0, upcoming: 0, monthlyTotal: 0 },
+      { active: 0, lives: 0, upcoming: 0, monthlyTotal: 0 },
     );
   }, [contracts]);
 
@@ -691,59 +701,58 @@ export default function ContractsManager({
         ref={contractsRootRef}
         className="kds-contracts-page panel-dashboard-immersive panel-page-shell space-y-5"
       >
-        {!showForm && <>
         <PageHeader
           className="kds-contracts-header"
-          eyebrow="Kifer Saúde / Operação comercial"
-          title="Gestão de contratos"
-          description="Gerencie clientes, vigências, titulares e dependentes em um só lugar."
-          actions={canEditContracts ? (
+          title="Cuidado que vira compromisso."
+          description="Tudo o que você precisa para acompanhar sua carteira."
+          actions={(
             <div className="kds-contracts-header-actions">
-              <Button variant="secondary" onClick={() => setShowBulkImport(true)}>
-                <FileUp className="kds-control-icon" />
-                <span>Importar em massa</span>
-              </Button>
-              <Button
-                onClick={() => {
-                  setEditingContract(null);
-                  setShowForm(true);
-                }}
-              >
+              <Popover open={headerMenuOpen} onOpenChange={setHeaderMenuOpen}>
+                <PopoverTrigger><IconButton variant="ghost" aria-label="Mais ações de contratos"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
+                <PopoverContent align="end" className="kds-workspace-action-menu">
+                  {canEditContracts && <Button variant="ghost" className="kds-popover-menu-item" onClick={() => { setHeaderMenuOpen(false); setShowBulkImport(true); }}><FileUp aria-hidden="true" />Importar em massa</Button>}
+                  <Button variant="ghost" className="kds-popover-menu-item" onClick={() => { setHeaderMenuOpen(false); handleExportContracts(); }}><Download aria-hidden="true" />Exportar contratos</Button>
+                </PopoverContent>
+              </Popover>
+              {canEditContracts && <Button onClick={handleCreateContract}>
                 <Plus className="kds-control-icon" />
                 <span>Novo contrato</span>
-              </Button>
+              </Button>}
             </div>
-          ) : undefined}
+          )}
           data-panel-animate
         />
 
-        {(!contractsLoadError || hasContractsSnapshot) && <div className="kds-kpi-grid kds-contracts-summary-grid grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Resumo da carteira de contratos">
+        {(!contractsLoadError || hasContractsSnapshot) && <div className="kds-kpi-grid kds-contracts-summary-grid kds-workspace-record-metrics" aria-label="Resumo da carteira de contratos">
           <KpiCard
-            padding="sm"
             title="Contratos ativos"
+            icon={<FileCheck aria-hidden="true" />}
             value={<span className="tabular-nums">{portfolioSummary.active}</span>}
             trend="Contratos vigentes"
             className="h-full"
           />
           <KpiCard
-            padding="sm"
-            title="Em implantação"
-            value={<span className="tabular-nums">{portfolioSummary.implementation}</span>}
-            trend="Em análise ou emissão"
-            className="h-full"
-          />
-          <KpiCard
-            padding="sm"
-            title="Próximos vencimentos"
-            value={<span className="tabular-nums">{portfolioSummary.upcoming}</span>}
-            trend="Nos próximos 30 dias"
-            className="h-full"
-          />
-          <KpiCard
-            padding="sm"
-            title="Mensalidade total"
+            title="Mensalidades da carteira"
+            icon={<Wallet aria-hidden="true" />}
+            data-tone="cyan"
             value={<span className="tabular-nums">{portfolioSummary.monthlyTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>}
-            trend="Soma dos valores informados"
+            trend="Contratos ativos"
+            className="h-full"
+          />
+          <KpiCard
+            title="Vidas protegidas"
+            icon={<Heart aria-hidden="true" />}
+            data-tone="info"
+            value={<span className="tabular-nums">{portfolioSummary.lives}</span>}
+            trend="Titulares e dependentes"
+            className="h-full"
+          />
+          <KpiCard
+            title="Acompanhamentos próximos"
+            icon={<Calendar aria-hidden="true" />}
+            data-tone="warning"
+            value={<span className="tabular-nums">{portfolioSummary.upcoming}</span>}
+            trend="Datas importantes nos próximos 30 dias"
             className="h-full"
           />
         </div>}
@@ -791,9 +800,22 @@ export default function ContractsManager({
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-contracts-toolbar-actions">
-              <Button type="button" variant="secondary" className="kds-contracts-mobile-filter-toggle" aria-controls="contracts-filter-controls" aria-expanded={mobileFiltersOpen} onClick={() => setMobileFiltersOpen((open) => !open)}>
-                <Filter className="kds-control-icon" aria-hidden="true" />
-                Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+              <FilterMultiSelect dialogClassName="kds-crm-dialog"
+                values={filterStatus}
+                onChange={setFilterStatus}
+                placeholder="Todos os status"
+                dialogTitle="Filtrar contratos por status"
+                options={statusFilterOptions}
+              />
+              <FilterMultiSelect dialogClassName="kds-crm-dialog"
+                values={filterOperadora}
+                onChange={setFilterOperadora}
+                placeholder="Todas as operadoras"
+                dialogTitle="Filtrar contratos por operadora"
+                options={operadoraOptions.map((operadora) => ({ value: operadora, label: operadora }))}
+              />
+              <Button type="button" variant={advancedFiltersOpen ? 'soft' : 'secondary'} aria-expanded={advancedFiltersOpen} aria-controls="contracts-filter-controls" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
+                <Filter className="kds-control-icon" aria-hidden="true" /> Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
               </Button>
               {hasActiveFilters && (
                 <Button
@@ -806,23 +828,11 @@ export default function ContractsManager({
                   Limpar filtros
                 </Button>
               )}
-              <Button type="button" variant="secondary" onClick={handleExportContracts} className="kds-contract-export">
-                <Download className="kds-control-icon" aria-hidden="true" />
-                Exportar
-              </Button>
             </ToolbarActions>
+            <span className="kds-workspace-result-count">{filteredContracts.length} {filteredContracts.length === 1 ? 'contrato' : 'contratos'}</span>
           </Toolbar>
 
-          <div id="contracts-filter-controls" className={`kds-contracts-filter-grid grid grid-cols-2 gap-3 xl:grid-cols-4 ${mobileFiltersOpen ? 'is-open' : ''}`}>
-            <FilterMultiSelect dialogClassName="kds-crm-dialog"
-              icon={Filter}
-              values={filterStatus}
-              onChange={setFilterStatus}
-              placeholder="Todos os status"
-              dialogTitle="Filtrar contratos por status"
-              options={statusFilterOptions}
-            />
-
+          {advancedFiltersOpen && <div id="contracts-filter-controls" className="kds-workspace-extra-filters">
             <FilterSelect
               icon={Users}
               value={filterResponsavel}
@@ -849,82 +859,36 @@ export default function ContractsManager({
                 { value: "proximos-30", label: "Próximos 30 dias" },
               ]}
             />
-            <Button
-              type="button"
-              className="kds-contracts-advanced-trigger"
-              variant={advancedFiltersOpen || filterOperadora.length > 0 ? 'soft' : 'secondary'}
-              aria-expanded={advancedFiltersOpen}
-              aria-controls="contracts-advanced-filters"
-              onClick={() => setAdvancedFiltersOpen((open) => !open)}
-            >
-              <Filter className="kds-control-icon" aria-hidden="true" />
-              Filtros avançados{filterOperadora.length > 0 ? ` · ${filterOperadora.length}` : ''}
-            </Button>
-          </div>
-          {advancedFiltersOpen && (
-            <div id="contracts-advanced-filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <FilterMultiSelect dialogClassName="kds-crm-dialog"
-                icon={FileText}
-                values={filterOperadora}
-                onChange={setFilterOperadora}
-                placeholder="Todas as operadoras"
-                dialogTitle="Filtrar contratos por operadora"
-                options={operadoraOptions.map((operadora) => ({
-                  value: operadora,
-                  label: operadora,
-                }))}
-              />
-            </div>
-          )}
+          </div>}
         </Surface>
 
         <Surface className="kds-record-results kds-contracts-results" padding="none" data-panel-animate>
-          <SectionHeader
-            eyebrow="Carteira contratual"
-            title="Contratos em acompanhamento"
-            description="Monitore vigência, reajustes, titulares e previsões financeiras sem perder o contexto do responsável comercial."
-            as="h3"
-            className="kds-record-results-header mb-4"
-            action={(
-              <div className="flex flex-wrap gap-2">
-                <OperationalMetricChip value={filteredContracts.length} label="resultados" />
-                <OperationalMetricChip value={`${currentPage}/${totalPages}`} label="páginas" />
-              </div>
-            )}
-          />
-
           <div className="kds-contracts-table-container hidden lg:block">
-            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="kds-contracts-table" columnWidths={['19%', '12%', '18%', '17%', '13%', '12%', '9%']}>
+            <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="kds-contracts-table" columnWidths={['19%', '14%', '17%', '8%', '13%', '12%', '12%', '5%']}>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead label="Contrato" sortDirection={sorting.key === "contract" ? sorting.direction : null} onSort={() => sortBy("contract")} />
                   <SortableTableHead label="Status" sortDirection={sorting.key === "status" ? sorting.direction : null} onSort={() => sortBy("status")} />
-                  <SortableTableHead label="Operadora e plano" sortDirection={sorting.key === "plan" ? sorting.direction : null} onSort={() => sortBy("plan")} />
-                  <SortableTableHead label="Financeiro" sortDirection={sorting.key === "monthly" ? sorting.direction : null} onSort={() => sortBy("monthly")} />
-                  <SortableTableHead label="Datas críticas" sortDirection={sorting.key === "renewal" ? sorting.direction : null} onSort={() => sortBy("renewal")} />
+                  <SortableTableHead label="Operadora / plano" sortDirection={sorting.key === "plan" ? sorting.direction : null} onSort={() => sortBy("plan")} />
+                  <SortableTableHead label="Vidas" sortDirection={sorting.key === "lives" ? sorting.direction : null} onSort={() => sortBy("lives")} />
+                  <SortableTableHead label="Mensalidade" sortDirection={sorting.key === "monthly" ? sorting.direction : null} onSort={() => sortBy("monthly")} />
+                  <SortableTableHead label="Reajuste" sortDirection={sorting.key === "renewal" ? sorting.direction : null} onSort={() => sortBy("renewal")} />
                   <SortableTableHead label="Responsável" sortDirection={sorting.key === "owner" ? sorting.direction : null} onSort={() => sortBy("owner")} />
-                  <TableHead align="right">Ações</TableHead>
+                  <TableHead align="right"><span className="sr-only">Ações</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredContracts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <EmptyState icon={<FileText className="h-8 w-8" />} title="Nenhum contrato encontrado" description="Tente ajustar os filtros ou adicione um novo contrato." />
                     </TableCell>
                   </TableRow>
                 )}
                 {paginatedContracts.map((contract) => {
-                  const bonusValue = getBonusValue(contract);
                   const displayName = getContractDisplayName(contract);
                   const operatorLabel = normalizeOperadoraLabel(contract.operadora) || "Sem operadora";
-                  const planLabel = [
-                    formatContractPlanLabel(contract.produto_plano),
-                    contract.modalidade ? formatContractModalityLabel(contract.modalidade) ?? contract.modalidade : null,
-                  ].filter(Boolean).join(" · ") || "Sem plano";
-                  const financialDetail = contract.comissao_prevista != null
-                    ? `Comissão: R$ ${contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}${bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}`
-                    : null;
+                  const planLabel = formatContractPlanLabel(contract.produto_plano) || "Sem plano";
                   const ownerLabel = formatContractEntityName(contract.responsavel) || "Não atribuído";
 
                   return (
@@ -936,7 +900,8 @@ export default function ContractsManager({
                         className="kds-lead-identity"
                         title={`${displayName} · ${contract.codigo_contrato}`}
                       >
-                        <span className="min-w-0"><span className="block truncate font-semibold text-[var(--text-primary)]">{displayName}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
+                        <Avatar name={displayName} tone="brand" size="sm" />
+                        <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{displayName}</span><span className="mt-0.5 block truncate text-[.5625rem] text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
                       </ActionSurface>
                     </TableCell>
                     <TableCell>
@@ -957,18 +922,18 @@ export default function ContractsManager({
                       <span className="kds-contracts-cell-secondary font-medium text-[var(--text-secondary)]" title={operatorLabel} aria-label={operatorLabel}>{operatorLabel}</span>
                       <span className="kds-contracts-cell-secondary mt-1 text-xs text-[var(--text-muted)]" title={planLabel} aria-label={planLabel}>{planLabel}</span>
                     </TableCell>
+                    <TableCell>{contract.vidas ?? '—'}</TableCell>
                     <TableCell>
                       <span className="kds-contracts-cell-secondary font-medium text-[var(--text-primary)]" title={contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}>
                         {contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}
                       </span>
-                      {financialDetail && <span className="kds-contracts-cell-secondary mt-1 text-xs text-[var(--text-muted)]" title={financialDetail} aria-label={financialDetail}>{financialDetail}</span>}
                     </TableCell>
                     <TableCell>
-                      {renderDateBadges(contract, true) ?? <span className="text-[var(--text-muted)]">Sem destaque</span>}
+                      {contract.mes_reajuste ? <span className="kds-record-date"><Calendar aria-hidden="true" />{formatDate(contract.mes_reajuste.toString(), 'monthOnly')}</span> : '—'}
                     </TableCell>
                     <TableCell><span className="kds-contracts-cell-secondary" title={ownerLabel} aria-label={ownerLabel}>{ownerLabel}</span></TableCell>
                       <TableCell align="right">
-                        <RecordActions actions={getContractActions(contract)} visibleCount={1} label={`Ações do contrato ${contract.codigo_contrato}`} />
+                        <RecordActions actions={getContractActions(contract)} visibleCount={0} label={`Ações do contrato ${contract.codigo_contrato}`} />
                       </TableCell>
                     </TableRow>
                   );
@@ -1072,10 +1037,8 @@ export default function ContractsManager({
         </Surface>
 
         </>}
-        </>}
         {showForm && (
           <ContractForm
-            presentation="page"
             key={editingContract?.id ?? leadToConvert?.id ?? "new-contract"}
             contract={editingContract}
             leadToConvert={leadToConvert}

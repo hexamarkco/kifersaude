@@ -66,7 +66,7 @@ test('busca somente contratos ativos e os campos usados no calendario financeiro
 
   assert.equal(mocks.from.mock.calls[0]?.[0], 'contracts');
   assert.deepEqual(mocks.query.select.mock.calls[0], [
-    'id, codigo_contrato, operadora, previsao_recebimento_comissao, comissao_prevista, comissao_recebimento_adiantado, comissao_parcelas, mensalidade_total, previsao_pagamento_bonificacao, bonus_por_vida_aplicado, bonus_por_vida_configuracoes, bonus_por_vida_valor, vidas, vidas_elegiveis_bonus',
+    'id, codigo_contrato, operadora, responsavel, razao_social, nome_fantasia, previsao_recebimento_comissao, comissao_prevista, comissao_recebimento_adiantado, comissao_parcelas, mensalidade_total, previsao_pagamento_bonificacao, bonus_por_vida_aplicado, bonus_por_vida_configuracoes, bonus_por_vida_valor, vidas, vidas_elegiveis_bonus',
   ]);
   assert.deepEqual(mocks.query.eq.mock.calls[0], ['status', 'Ativo']);
   assert.deepEqual(mocks.query.order.mock.calls[0], [

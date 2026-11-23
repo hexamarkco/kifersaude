@@ -686,21 +686,22 @@
 .kds-public-card { border-radius: var(--radius-panel); box-shadow: none; background: var(--bg-surface); }
 /* Login: a branded entry point, with a compact form and a dedicated mobile composition. */
 .kds-login-page {
-  --login-page-gutter: clamp(var(--space-4), 3.5vw, var(--space-12));
+  --login-page-gutter: 4vw;
+  --login-brand: #b64426;
   display: grid;
   min-height: 100svh;
   align-items: center;
   padding: var(--login-page-gutter);
-  background: var(--bg-canvas);
+  background: #f5f3ee;
 }
-.kds-login-page .kds-public-shell-inner { max-width: 88rem; }
+.kds-login-page .kds-public-shell-inner { max-width: 82.5rem; }
 .kds-login-layout {
   display: grid;
-  grid-template-columns: 1.08fr 1fr;
-  min-height: min(48rem, calc(100svh - 2 * var(--login-page-gutter)));
+  grid-template-columns: 1fr 1fr;
+  min-height: min(45.5rem, calc(100svh - 2 * var(--login-page-gutter)));
   overflow: hidden;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
+  border-radius: 1.125rem;
   background: var(--bg-surface);
   box-shadow: var(--shadow-card);
 }
@@ -712,9 +713,9 @@
   justify-content: space-between;
   isolation: isolate;
   overflow: hidden;
-  padding: clamp(var(--space-8), 4vw, var(--space-12));
-  background: var(--brand-primary);
-  color: var(--text-on-brand);
+  padding: 2.75rem 2.875rem;
+  background: var(--login-brand);
+  color: #fff;
 }
 .kds-login-brand-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); }
 .kds-login-brand-panel .kds-workspace-brand { color: inherit; }
@@ -725,38 +726,43 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
   border-radius: var(--radius-sm);
-  font: var(--type-label);
-  letter-spacing: 0.16em;
+  font: 500 .5625rem / 1.6 var(--font-sans);
+  letter-spacing: .14em;
 }
-.kds-login-brand-copy { position: relative; z-index: 1; padding-block: var(--space-12); }
-.kds-login-eyebrow { margin: 0; color: var(--text-muted); font: var(--type-label); letter-spacing: 0.12em; text-transform: uppercase; }
+.kds-login-brand-copy { position: relative; z-index: 1; flex: 1; padding-block: 3.5rem 4.0625rem; }
+.kds-login-eyebrow { margin: 0; color: var(--text-muted); font: 500 .5625rem / 2 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; }
 .kds-login-brand-copy .kds-login-eyebrow { max-width: 28ch; color: inherit; opacity: 0.8; line-height: 1.7; }
 .kds-login-brand-panel .kds-login-brand-title {
-  max-width: 10ch;
-  margin: var(--space-5) 0 var(--space-6);
+  max-width: 14ch;
+  margin: 1.6875rem 0 1.5625rem;
   color: inherit;
-  font: var(--font-weight-medium) clamp(2.75rem, 4.1vw, 4.5rem) / 1.08 var(--font-display);
-  letter-spacing: -0.035em;
+  font: 600 clamp(2.375rem, 4vw, 3.25rem) / 1.25 var(--font-display);
+  letter-spacing: -.065em;
 }
-.kds-login-brand-description { max-width: 32ch; margin: 0; color: inherit; font: var(--type-body-lg); opacity: 0.86; }
-.kds-login-brand-signature { position: relative; z-index: 1; margin: 0; padding-top: var(--space-5); border-top: 1px solid color-mix(in srgb, currentColor 28%, transparent); color: inherit; font: var(--type-caption); letter-spacing: 0.025em; }
+.kds-login-brand-description { max-width: 37ch; margin: 0; color: inherit; font: 400 .75rem / 2 var(--font-sans); opacity: .9; }
+.kds-login-brand-signature { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; padding-top: 1.3125rem; border-top: 1px solid #ffffff40; color: inherit; font: 400 .5625rem / 1.6 var(--font-sans); }
+.kds-login-brand-signature > span:last-child { opacity: .65; }
 .kds-login-brand-art { position: absolute; z-index: 0; right: -17rem; bottom: -19rem; width: 43rem; height: 43rem; border: 1px solid color-mix(in srgb, var(--text-on-brand) 24%, transparent); border-radius: 50%; pointer-events: none; }
 .kds-login-brand-art::before,
 .kds-login-brand-art::after { position: absolute; content: ''; inset: 4rem; border: inherit; border-radius: inherit; }
 .kds-login-brand-art::after { inset: 8rem; background: color-mix(in srgb, var(--text-on-brand) 4%, transparent); }
-.kds-login-form-panel { display: flex; min-width: 0; align-items: center; justify-content: center; padding: clamp(var(--space-8), 5vw, var(--space-12)); background: var(--bg-surface); }
-.kds-login-page .kds-login-card { width: 100%; max-width: 25rem; }
-.kds-login-heading { display: grid; gap: var(--space-3); margin-bottom: var(--space-8); }
-.kds-login-heading .kds-heading { margin: var(--space-1) 0 0; color: var(--text-primary); font: var(--font-weight-medium) clamp(1.875rem, 2.5vw, 2.5rem) / 1.2 var(--font-display); letter-spacing: -0.03em; }
-.kds-login-heading > .kds-text:last-child { margin: 0; color: var(--text-secondary); line-height: 1.7; }
-.kds-login-form { display: grid; gap: var(--space-5); }
-.kds-login-form .kds-input { min-height: 3.25rem; font-size: 1rem; }
+.kds-login-form-panel { --border-default: #dfe2e7; --border-subtle: #e9ebef; --action-primary-bg: var(--login-brand); --action-primary-hover: #a33b21; display: flex; min-width: 0; align-items: center; justify-content: center; padding: 4rem; background: var(--bg-surface); }
+.kds-login-page .kds-login-card { width: 100%; max-width: 22.8125rem; }
+.kds-login-heading { display: grid; gap: .75rem; margin-bottom: 2.1875rem; }
+.kds-login-heading .kds-heading { max-width: 14ch; margin: .5625rem 0 0; color: #22262e; font: 600 2.4375rem / 1.45 var(--font-display); letter-spacing: -.06em; }
+.kds-login-heading > .kds-text:last-child { margin: 0; color: #69717e; font: 400 .6875rem / 1.9 var(--font-sans); }
+.kds-login-form { display: grid; gap: 1.375rem; }
+.kds-login-form .kds-field-label { font: 500 .6875rem / 1.6 var(--font-sans); }
+.kds-login-form .kds-input { min-height: 2.75rem; height: 2.75rem; font-size: .75rem; }
 .kds-login-form .kds-input-action { right: var(--space-2); }
 .kds-login-form .kds-input-with-action { padding-right: 3.5rem; }
 .kds-login-form .kds-alert { padding: var(--space-3); }
-.kds-login-submit.kds-button { min-height: 3.25rem; margin-top: var(--space-2); }
+.kds-login-form-options { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.kds-login-form-options .kds-field-label { display: flex; align-items: center; gap: var(--space-2); font-size: .5rem; }
+.kds-login-form-options .kds-button { min-height: auto; padding: 0; color: var(--login-brand); font-size: .5rem; }
+.kds-login-submit.kds-button { min-height: 2.875rem; margin-top: .375rem; font-size: .6875rem; }
 .kds-login-submit .kds-button-content { display: flex; width: 100%; align-items: center; justify-content: center; gap: var(--space-3); }
-.kds-login-access-note { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin: var(--space-6) 0 0; padding-top: var(--space-5); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font: var(--type-caption); text-align: center; }
+.kds-login-access-note { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin: 1.6875rem 0 0; padding-top: 1.4375rem; border-top: 1px solid var(--border-subtle); color: var(--text-muted); font: 400 .5rem / 1.6 var(--font-sans); text-align: center; }
 .kds-login-access-note > svg { flex: 0 0 auto; }
 @media (max-width: 900px) {
   .kds-login-layout { grid-template-columns: 0.9fr 1fr; }

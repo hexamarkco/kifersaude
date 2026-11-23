@@ -24,16 +24,16 @@ import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
-import { Alert, Button, SectionHeader, Surface } from "../../design-system";
+import { Alert, Button, Tabs, type TabItem } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
+import { DashboardToday } from "./components/DashboardToday";
 import { DashboardAutomationCommand } from "./components/DashboardOperationsSections";
 import {
   DashboardCommercialSections,
-  DashboardDailyOverview,
   DashboardResultOverview,
 } from "./components/DashboardCommercialSections";
 import {
@@ -72,15 +72,23 @@ import {
   subscribeToDashboardLeads,
 } from "./data/dashboardRepository";
 
+const dashboardHeadings = {
+  today: undefined,
+  sales: { title: 'Resultados comerciais', description: 'Entenda como as oportunidades se transformam em contratos.' },
+  production: { title: 'Produção da equipe', description: 'Uma visão clara do trabalho e das vendas de cada pessoa.' },
+  operations: { title: 'Saúde da operação', description: 'Acompanhe as filas, o atendimento e as automações.' },
+};
+
 export default function DashboardScreen({
   onNavigateToTab,
   onCreateReminder,
 }: DashboardProps) {
-  const { isObserver } = useAuth();
+  const { isObserver, role, userProfile } = useAuth();
   const {
     leadStatuses,
     leadOrigins,
     options,
+    getRoleModulePermission,
     loading: configLoading,
   } = useConfig();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -115,7 +123,14 @@ export default function DashboardScreen({
     "leads" | "contratos" | "comissoes"
   >("leads");
   const [chartRangeInMonths, setChartRangeInMonths] = useState<6 | 12>(6);
-  const [showSupportingAnalysis, setShowSupportingAnalysis] = useState(false);
+  const [dashboardView, setDashboardView] = useState<'today' | 'sales' | 'production' | 'operations'>('today');
+  const showSupportingAnalysis = dashboardView === 'operations';
+  const dashboardViews: TabItem<typeof dashboardView>[] = [
+    { id: 'today', label: 'Hoje' },
+    { id: 'sales', label: 'Comercial' },
+    { id: 'production', label: 'Produção' },
+    { id: 'operations', label: 'Operação' },
+  ];
   const dashboardRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
   const isInitialLoadRef = useRef(true);
@@ -2270,9 +2285,10 @@ export default function DashboardScreen({
     >
       <div
         ref={dashboardRootRef}
-        className="panel-dashboard-immersive panel-page-shell space-y-6"
+        className="panel-dashboard-immersive panel-page-shell kds-dashboard-workspace space-y-6"
       >
         <DashboardHeader
+          {...dashboardHeadings[dashboardView]}
           periodFilter={periodFilter}
           customStartDate={customStartDate}
           customEndDate={customEndDate}
@@ -2303,9 +2319,30 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
-        <DashboardResultOverview analysis={dashboardCommercial} showFinancialMetrics={!isObserver} />
-        <div className="kds-dashboard-primary-grid">
-          <div className="grid grid-cols-1 gap-4" data-panel-animate>
+        <Tabs items={dashboardViews} value={dashboardView} onChange={setDashboardView} ariaLabel="Visões do painel" variant="underline" />
+        {dashboardView === 'today' && <DashboardToday
+          name={userProfile?.username}
+          analysis={dashboardCommercial}
+          funnel={donutChartData}
+          leads={filteredLeads}
+          contracts={filteredContracts}
+          activeContracts={dashboardScopedContracts.filter((contract) => contract.status === 'Ativo')}
+          period={periodFilter}
+          canViewAgenda={getRoleModulePermission(role, 'agenda').can_view}
+          canViewLeads={getRoleModulePermission(role, 'leads').can_view}
+          canViewContracts={getRoleModulePermission(role, 'contracts').can_view}
+          showFinancialMetrics={!isObserver}
+          onPeriodChange={handleDashboardPeriodFilterChange}
+          onOpenAgenda={() => onNavigateToTab?.('agenda')}
+          onOpenLeads={() => onNavigateToTab?.('leads')}
+          onOpenLead={handleNavigateToLead}
+          onOpenContract={handleNavigateToContract}
+          onOpenStage={handleLeadStatusSegmentClick}
+        />}
+        {dashboardView === 'production' && <TeamProduction onNavigateToLead={handleNavigateToLead} />}
+        {dashboardView === 'sales' && (
+          <div className="space-y-6">
+            <DashboardResultOverview analysis={dashboardCommercial} showFinancialMetrics={!isObserver} />
             <DashboardTrendSection
               selectedMetric={selectedMetric}
               chartRangeInMonths={chartRangeInMonths}
@@ -2317,38 +2354,6 @@ export default function DashboardScreen({
               onSelectedMetricChange={setSelectedMetric}
               onChartRangeChange={setChartRangeInMonths}
             />
-          </div>
-          <DashboardDailyOverview
-            analysis={dashboardCommercial}
-            showFinancialMetrics={!isObserver}
-            onNavigateToLead={handleNavigateToLead}
-            onNavigateToTab={onNavigateToTab}
-            compact
-          />
-        </div>
-        <Surface variant="muted" padding="sm" data-panel-animate>
-          <SectionHeader
-            eyebrow="Aprofundar"
-            title="Análises e operação da equipe"
-            description="Resultados detalhados, produção, distribuição, automações e calendário."
-            action={(
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                aria-expanded={showSupportingAnalysis}
-                aria-controls="dashboard-supporting-analysis"
-                onClick={() => setShowSupportingAnalysis((current) => !current)}
-              >
-                {showSupportingAnalysis ? 'Ocultar análises' : 'Abrir análises'}
-              </Button>
-            )}
-          />
-        </Surface>
-
-        {showSupportingAnalysis && (
-          <div id="dashboard-supporting-analysis" className="space-y-6">
-            <TeamProduction onNavigateToLead={handleNavigateToLead} />
             <DashboardCommercialSections
               analysis={dashboardCommercial}
               showFinancialMetrics={!isObserver}
@@ -2356,7 +2361,6 @@ export default function DashboardScreen({
               onNavigateToStatus={handleLeadStatusSegmentClick}
               onNavigateToTab={onNavigateToTab}
             />
-            <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
             <DashboardDistributionSection
               leadStatusData={leadStatusData}
               donutChartData={donutChartData}
@@ -2364,7 +2368,12 @@ export default function DashboardScreen({
               onLeadStatusSegmentClick={handleLeadStatusSegmentClick}
               onOperadoraSegmentClick={handleOperadoraSegmentClick}
             />
+          </div>
+        )}
 
+        {showSupportingAnalysis && (
+          <div id="dashboard-supporting-analysis" className="space-y-6">
+            <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
             {calendarSnapshotError && !isObserver && (
               <Alert
                 tone="warning"

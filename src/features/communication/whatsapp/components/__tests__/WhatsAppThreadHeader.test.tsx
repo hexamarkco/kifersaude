@@ -60,7 +60,7 @@ test('mantém no cabeçalho o nome, o status e o próximo lembrete', () => {
   try {
     const header = view.container.querySelector('.whatsapp-inbox-thread-header');
     assert.ok(header);
-    assert.equal(header.querySelector('.kds-avatar'), null);
+    assert.ok(header.querySelector('.kds-avatar'));
     assert.match(header.textContent ?? '', /Gisele Goulart \(cliente\)/);
     assert.match(header.textContent ?? '', /Reativação/);
     assert.match(header.textContent ?? '', /Próximo lembrete: conferir retorno sobre proposta/);

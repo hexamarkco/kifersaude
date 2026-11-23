@@ -3,4 +3,4 @@ export { normalizeFlowMessageVariations, hasIncompleteMessageVariations } from '
 export type { FlowMessageVariation } from './automation/domain/messageVariations';
 export { configService, type ConfigCategory } from './data/configService';
 export { default as ApiDocsScreen } from './integrations/api-docs/ApiDocsScreen';
-export { getConfigAreaForTab, hasConfigAreaAccess } from './shared/configTabs';
+export { getAllowedConfigTabs, getConfigAreaForTab, hasConfigAreaAccess, type ConfigTabType } from './shared/configTabs';

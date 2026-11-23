@@ -1227,7 +1227,7 @@ export default function WhatsAppCampaignsScreen() {
   if (campaignModalOpen) return (
     <section className="comm-terracotta comm-terracotta-campaigns kds-record-form kds-campaign-workspace panel-page-shell kds-detail-workspace">
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={closeCampaignModal} disabled={saving}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Disparos WhatsApp</Button>
-      <PageHeader eyebrow="Comunicação" title={editingCampaign ? 'Editar disparo' : 'Novo disparo'} description={campaignWizardSteps[wizardStep]?.description} />
+      <PageHeader title={editingCampaign ? 'Editar disparo' : 'Uma nova conversa com o seu público.'} description={campaignWizardSteps[wizardStep]?.description} />
       <Stepper currentStep={wizardStep} steps={campaignWizardSteps} />
       <Surface className="space-y-5">
           {wizardStep === 0 && (
@@ -1733,9 +1733,8 @@ export default function WhatsAppCampaignsScreen() {
   return (
     <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
       <PageHeader
-        eyebrow="Comunicação"
-        title="Disparos WhatsApp"
-        description="Crie campanhas para seus contatos, defina as mensagens e acompanhe os envios. Você também pode importar uma lista de uma planilha CSV."
+        title="Boas mensagens, para as pessoas certas."
+        description="Planeje campanhas e acompanhe cada etapa com clareza."
         actions={(
           <div className="comm-campaign-header-actions flex flex-wrap items-center gap-2 sm:justify-end">
             <Button className="w-full whitespace-nowrap sm:w-auto" onClick={openNewCampaignModal}>

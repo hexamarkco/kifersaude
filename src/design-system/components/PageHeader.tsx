@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 import InfoTooltip from './InfoTooltip';
+import { useDesignSystemAppearance } from '../appearanceContext';
 
 export type PageHeaderProps = HTMLAttributes<HTMLElement> & {
   eyebrow?: string;
@@ -25,11 +26,13 @@ export default function PageHeader({
   identity,
   status,
   appearance = 'operational',
-  descriptionPlacement = 'tooltip',
+  descriptionPlacement,
   children,
   className,
   ...props
 }: PageHeaderProps) {
+  const appearanceContext = useDesignSystemAppearance();
+  const placement = descriptionPlacement ?? (appearanceContext?.workspace ? 'visible' : 'tooltip');
   return (
     <header
       className={cx(
@@ -47,13 +50,13 @@ export default function PageHeader({
             {identity}
             <div className="kds-page-title-row">
               <h1 className="kds-page-title">{title}</h1>
-              {description && descriptionPlacement === 'tooltip' && (
+              {description && placement === 'tooltip' && (
                 <InfoTooltip content={description} label={`Informações sobre ${title}`} />
               )}
               {status}
             </div>
           </div>
-          {description && descriptionPlacement === 'visible' && <p className="kds-page-description">{description}</p>}
+          {description && placement === 'visible' && <p className="kds-page-description">{description}</p>}
         </div>
         {actions && (
           <div className="kds-page-actions kds-control-group-md w-full lg:w-auto lg:justify-end">

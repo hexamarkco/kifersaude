@@ -5,7 +5,7 @@ import { test } from 'vitest';
 
 import { WorkspaceHeader } from '../WorkspaceHeader';
 
-test('fornece a marca mobile e um acionador de navegação acessível', () => {
+test('identifica a área no cabeçalho mobile e fornece um acionador de navegação acessível', () => {
   let toggleCalls = 0;
   const props = {
     title: 'Gestão de contratos',
@@ -18,7 +18,7 @@ test('fornece a marca mobile e um acionador de navegação acessível', () => {
   };
   const view = render(<WorkspaceHeader {...props} />);
 
-  assert.ok(document.body.querySelector('[aria-label="Kifer Saúde"]'));
+  assert.equal(document.body.querySelector('.kds-workspace-mobile-title')?.textContent, props.title);
   const openButton = document.body.querySelector<HTMLButtonElement>('[aria-label="Abrir menu"]');
   assert.ok(openButton);
   assert.equal(openButton.getAttribute('aria-controls'), 'painel-navigation');

@@ -32,6 +32,11 @@ const sizeClasses: Record<DialogSize, string> = {
 let scrollLockCount = 0;
 let originalOverflow = '';
 const DialogTitleIdContext = createContext<string | undefined>(undefined);
+const isTopDialog = (dialog: HTMLDivElement | null) => {
+  if (!dialog) return false;
+  const dialogs = document.querySelectorAll('.kds-dialog[aria-modal="true"]');
+  return dialogs[dialogs.length - 1] === dialog;
+};
 const focusableSelector = [
   'a[href]:not([tabindex="-1"]):not([aria-hidden="true"])',
   'button:not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
@@ -71,7 +76,9 @@ export function Dialog({
       const content = initialFocus === 'first-content'
         ? dialog.querySelector<HTMLElement>('.kds-dialog-body')
         : null;
-      const focusTarget = content?.querySelector<HTMLElement>(focusableSelector)
+      const contentTarget = Array.from(content?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
+        .find((element) => !element.matches('.kds-info-trigger, input[type="hidden"]') && !element.closest('[hidden]'));
+      const focusTarget = contentTarget
         ?? (initialFocus === 'first-content'
           ? null
           : dialog.querySelector<HTMLElement>(focusableSelector));
@@ -89,7 +96,7 @@ export function Dialog({
   useEffect(() => {
     if (!open || !closeOnEscape) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOpenChange(false);
+      if (e.key === 'Escape' && !e.defaultPrevented && isTopDialog(dialogRef.current)) onOpenChange(false);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -102,8 +109,9 @@ export function Dialog({
       if (event.key !== 'Tab') return;
 
       const dialog = dialogRef.current;
-      if (!dialog) return;
-      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (!dialog || !isTopDialog(dialog)) return;
+      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
+        .filter((element) => !element.matches('input[type="hidden"]') && !element.closest('[hidden]'));
 
       if (focusableElements.length === 0) {
         event.preventDefault();
@@ -147,6 +155,7 @@ export function Dialog({
         'kds-dialog-overlay modal-theme-host painel-theme kifer-ds',
         isDarkThemeActive ? 'theme-dark' : 'theme-light',
         appearance && 'kds-operational',
+        appearance?.workspace && 'kds-workspace-theme',
       )}
     >
       <div

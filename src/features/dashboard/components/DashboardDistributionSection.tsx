@@ -22,6 +22,7 @@ type DashboardDistributionSectionProps = {
   operadoraChartData: DashboardChartDatum[];
   onLeadStatusSegmentClick: (label: string) => void;
   onOperadoraSegmentClick: (label: string) => void;
+  onlyLeads?: boolean;
 };
 
 export function DashboardDistributionSection({
@@ -30,6 +31,7 @@ export function DashboardDistributionSection({
   operadoraChartData,
   onLeadStatusSegmentClick,
   onOperadoraSegmentClick,
+  onlyLeads = false,
 }: DashboardDistributionSectionProps) {
   const [mobileDistribution, setMobileDistribution] = useState<'leads' | 'operadoras'>('leads');
   const renderDistributionCard = ({
@@ -117,13 +119,15 @@ export function DashboardDistributionSection({
   };
 
   const leadsCard = renderDistributionCard({
-        title: 'Distribuição de leads por status',
+        title: 'Funil de leads',
         description: 'Mapa de concentração por etapa do funil ativo.',
         emptyLabel: 'Nenhum lead ativo',
         data: donutChartData,
         total: leadStatusData.reduce((sum, item) => sum + item.count, 0),
         onSegmentClick: onLeadStatusSegmentClick,
       });
+  if (onlyLeads) return leadsCard;
+
   const operadorasCard = renderDistributionCard({
         title: 'Contratos por operadora',
         description: 'Participação das operadoras na carteira vigente.',

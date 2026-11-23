@@ -2,6 +2,7 @@ import { Heading, Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useWorkspaceCreate } from '../../../hooks/useWorkspaceCreate';
 
 import {
   Alert,
@@ -211,7 +212,7 @@ export default function WhatsAppInboxScreen() {
   const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
   const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null);
   const [chatFilesOpen, setChatFilesOpen] = useState(false);
-  const [contactContextPanelOpen, setContactContextPanelOpen] = useState(false);
+  const [contactContextPanelOpen, setContactContextPanelOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
   const [leadPanelLoading, setLeadPanelLoading] = useState(false);
   const [leadPanelError, setLeadPanelError] = useState<string | null>(null);
@@ -225,6 +226,8 @@ export default function WhatsAppInboxScreen() {
   const [leadMutationLoadingChatId, setLeadMutationLoadingChatId] = useState<string | null>(null);
   const [createLeadDraft, setCreateLeadDraft] = useState<InboxCreateLeadDraft | null>(null);
   const [startChatModalOpen, setStartChatModalOpen] = useState(false);
+  const openStartChat = useCallback(() => setStartChatModalOpen(true), []);
+  useWorkspaceCreate(!startChatModalOpen, openStartChat);
   const [scheduleMessageModalOpen, setScheduleMessageModalOpen] = useState(false);
   const [scheduledMessagesPanelOpen, setScheduledMessagesPanelOpen] = useState(false);
   const [allScheduledMessagesPanelOpen, setAllScheduledMessagesPanelOpen] = useState(false);
@@ -2072,12 +2075,17 @@ export default function WhatsAppInboxScreen() {
           onOpenAgenda={() => setWhatsAppAgendaOpen(true)}
           onOpenScheduledMessages={() => setAllScheduledMessagesPanelOpen(true)}
           onOpenDashboard={() => setWhatsAppDashboardOpen(true)}
-          onStartChat={() => setStartChatModalOpen(true)}
+          onStartChat={openStartChat}
           canViewAgenda={canViewAgenda}
           allScheduledMessagesPanelOpen={allScheduledMessagesPanelOpen}
           searchDraft={searchDraft}
           onSearchDraftChange={setSearchDraft}
           hasActiveChatFilters={hasActiveChatFilters}
+          unreadOnly={chatActivityFilter === 'unread'}
+          onShowUnread={() => {
+            if (archivedSectionOpen) handleSwitchArchivedSection(false);
+            setChatActivityFilter('unread');
+          }}
           activeChatFiltersCount={activeChatFiltersCount}
           advancedFiltersOpen={advancedFiltersOpen}
           advancedFiltersTriggerRef={advancedFiltersTriggerRef}

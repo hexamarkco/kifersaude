@@ -41,13 +41,13 @@ import {
   DateTimePicker,
   Dialog,
   DialogBody,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   Field,
   Input,
   Surface,
+  Text,
   Textarea,
   FilterSelect,
 } from '../design-system';
@@ -450,348 +450,348 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
     }
   };
 
-const formFields = (
-      <div className="kds-lead-form-grid">
-        <FormSection step="01" title="Dados de contato" description="Informações básicas para identificação e contato.">
-          <Field label="Nome completo *" htmlFor="lead-nome" className="md:col-span-2">
-            <Input
-              id="lead-nome"
-              placeholder="Nome do contato"
-              type="text"
-              required
-              value={formData.nome_completo}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, nome_completo: e.target.value }))
-              }
-            />
-          </Field>
-          <Field label="Telefone *" htmlFor="lead-telefone">
-            <Input
-              id="lead-telefone"
-              placeholder="(21) 99999-9999"
-              type="tel"
-              required
-              autoFormat="phone"
-              value={formData.telefone}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, telefone: e.target.value }))
-              }
-            />
-          </Field>
-          <Field label="E-mail" htmlFor="lead-email">
-            <Input
-              id="lead-email"
-              placeholder="contato@empresa.com"
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, email: e.target.value }))
-              }
-            />
-          </Field>
-        </FormSection>
-<FormSection step="02" title="Localização" description="Endereço e região do contato.">
-          <Field label="CEP" htmlFor="lead-cep">
-              <Input
-                id="lead-cep"
-                type="text"
-                autoFormat="cep"
-                value={formData.cep}
-                onChange={(e) => handleCepChange(e.target.value)}
-                placeholder="00000-000"
-                maxLength={9}
-                action={<IconButton variant="ghost" size="sm"
-                    type="button"
-                    loading={loadingCep}
-                    onClick={() => void handleCepSearch()}
-                    className="transition-colors"
-                    aria-label="Buscar CEP"
-                  >
-                    <Search className="" />
-                  </IconButton>}
-              />
-          </Field>
-          <Field label="Endereço" htmlFor="lead-endereco">
-            <Input
-              id="lead-endereco"
-              placeholder="Rua, avenida, número e complemento"
-              type="text"
-              value={formData.endereco}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, endereco: e.target.value }))
-              }
-            />
-          </Field>
-          <Field label="Estado">
+  const formFields = (
+    <div className="kds-lead-form-grid">
+      <FormSection title="Informações de contato">
+        <Field label="Nome completo *" htmlFor="lead-nome">
+          <Input
+            id="lead-nome"
+            placeholder="Preencha nome completo"
+            type="text"
+            required
+            value={formData.nome_completo}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, nome_completo: e.target.value }))
+            }
+          />
+        </Field>
+        <Field label="WhatsApp com DDD *" htmlFor="lead-telefone">
+          <Input
+            id="lead-telefone"
+            placeholder="Preencha WhatsApp com DDD"
+            type="tel"
+            required
+            autoFormat="phone"
+            value={formData.telefone}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, telefone: e.target.value }))
+            }
+          />
+        </Field>
+        <Field label="E-mail" htmlFor="lead-email">
+          <Input
+            id="lead-email"
+            placeholder="contato@empresa.com"
+            type="email"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, email: e.target.value }))
+            }
+          />
+        </Field>
+        <Field label="Tipo de contratação">
+          {tipoContratacaoOptions.length > 0 ? (
             <FilterSelect
-              value={formData.estado}
-              onChange={handleStateChange}
-              placeholder="Selecione o estado"
-              options={BRAZIL_STATE_OPTIONS}
+              value={formData.tipo_contratacao}
+              onChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  tipo_contratacao: value,
+                }))
+              }
+              placeholder="Definir após qualificação"
+              includePlaceholderOption
+              options={[
+                ...(!tipoContratacaoOptions.some(
+                  (option) => option.label === formData.tipo_contratacao,
+                ) && formData.tipo_contratacao
+                  ? [
+                      {
+                        value: formData.tipo_contratacao,
+                        label: formData.tipo_contratacao,
+                      },
+                    ]
+                  : []),
+                ...tipoContratacaoOptions.map((option) => ({
+                  value: option.label,
+                  label: option.label,
+                })),
+              ]}
             />
-          </Field>
-          <Field
-            label="Cidade"
-            descriptionPlacement="tooltip"
-            description={
+          ) : (
+            <Input
+              type="text"
+              value={formData.tipo_contratacao}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  tipo_contratacao: e.target.value,
+                }))
+              }
+              placeholder="Informe o tipo de contratação"
+            />
+          )}
+        </Field>
+      </FormSection>
+      <FormSection title="Localização">
+        <Field label="CEP" htmlFor="lead-cep">
+            <Input
+              id="lead-cep"
+              type="text"
+              autoFormat="cep"
+              value={formData.cep}
+              onChange={(e) => handleCepChange(e.target.value)}
+              placeholder="00000-000"
+              maxLength={9}
+              action={<IconButton variant="ghost" size="sm"
+                  type="button"
+                  loading={loadingCep}
+                  onClick={() => void handleCepSearch()}
+                  className="transition-colors"
+                  aria-label="Buscar CEP"
+                >
+                  <Search className="" />
+                </IconButton>}
+            />
+        </Field>
+        <Field
+          label="Cidade"
+          descriptionPlacement="tooltip"
+          description={
+            formData.estado
+              ? loadingCities
+                ? 'Carregando cidades...'
+                : 'Cidade filtrada pelo estado selecionado.'
+              : 'Selecione um estado para liberar as cidades.'
+          }
+        >
+          <FilterSelect
+            value={formData.cidade}
+            onChange={(value) => setFormData((prev) => ({ ...prev, cidade: value }))}
+            placeholder={
               formData.estado
                 ? loadingCities
-                  ? 'Carregando cidades...'
-                  : 'Cidade filtrada pelo estado selecionado.'
-                : 'Selecione um estado para liberar as cidades.'
+                  ? 'Carregando cidades'
+                  : 'Selecione a cidade'
+                : 'Escolha primeiro o estado'
             }
-          >
+            options={citySelectOptions}
+            loading={loadingCities}
+            disabled={!formData.estado || loadingCities || citySelectOptions.length === 0}
+          />
+        </Field>
+        <Field label="Estado">
+          <FilterSelect
+            value={formData.estado}
+            onChange={handleStateChange}
+            placeholder="Selecione o estado"
+            options={BRAZIL_STATE_OPTIONS}
+          />
+        </Field>
+        <Field label="Endereço" htmlFor="lead-endereco">
+          <Input
+            id="lead-endereco"
+            placeholder="Rua, avenida, número e complemento"
+            type="text"
+            value={formData.endereco}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, endereco: e.target.value }))
+            }
+          />
+        </Field>
+      </FormSection>
+      <FormSection title="Acompanhamento comercial">
+        <Field label="Etapa do funil *">
+          {activeLeadStatuses.length > 0 ? (
             <FilterSelect
-              value={formData.cidade}
-              onChange={(value) => setFormData((prev) => ({ ...prev, cidade: value }))}
-              placeholder={
-                formData.estado
-                  ? loadingCities
-                    ? 'Carregando cidades'
-                    : 'Selecione a cidade'
-                  : 'Escolha primeiro o estado'
-              }
-              options={citySelectOptions}
-              loading={loadingCities}
-              disabled={!formData.estado || loadingCities || citySelectOptions.length === 0}
+              value={formData.status}
+              onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+              placeholder="Status"
+              includePlaceholderOption={false}
+              options={[
+                ...(!activeLeadStatuses.some((status) => status.nome === formData.status) &&
+                formData.status
+                  ? [{ value: formData.status, label: formData.status }]
+                  : []),
+                ...activeLeadStatuses.map((status) => ({
+                  value: status.nome,
+                  label: status.nome,
+                })),
+              ]}
             />
-          </Field>
-        </FormSection>
-<FormSection step="03" title="Qualificação e origem" description="Organize o contato no funil comercial.">
-          <Field label="Origem do lead *">
-            {activeOrigins.length > 0 ? (
-              <FilterSelect
-                value={formData.origem}
-                onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
-                placeholder="Origem do lead"
-                includePlaceholderOption={false}
-                options={[
-                  ...(!activeOrigins.some((origin) => origin.nome === formData.origem) &&
-                  formData.origem
-                    ? [{ value: formData.origem, label: formData.origem }]
-                    : []),
-                  ...activeOrigins.map((origin) => ({
-                    value: origin.nome,
-                    label: origin.nome,
-                  })),
-                ]}
-              />
-            ) : (
-              <Input
-                type="text"
-                required
-                value={formData.origem}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, origem: e.target.value }))
-                }
-                placeholder="Informe a origem"
-              />
-            )}
-          </Field>
-          <Field label="Tipo de contratação">
-            {tipoContratacaoOptions.length > 0 ? (
-              <FilterSelect
-                value={formData.tipo_contratacao}
-                onChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    tipo_contratacao: value,
-                  }))
-                }
-                placeholder="Definir após qualificação"
-                includePlaceholderOption
-                options={[
-                  ...(!tipoContratacaoOptions.some(
-                    (option) => option.label === formData.tipo_contratacao,
-                  ) && formData.tipo_contratacao
-                    ? [
-                        {
-                          value: formData.tipo_contratacao,
-                          label: formData.tipo_contratacao,
-                        },
-                      ]
-                    : []),
-                  ...tipoContratacaoOptions.map((option) => ({
-                    value: option.label,
-                    label: option.label,
-                  })),
-                ]}
-              />
-            ) : (
-              <Input
-                type="text"
-                value={formData.tipo_contratacao}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    tipo_contratacao: e.target.value,
-                  }))
-                }
-                placeholder="Informe o tipo de contratação"
-              />
-            )}
-          </Field>
-          <Field label="Operadora atual" htmlFor="lead-operadora">
+          ) : (
             <Input
-              id="lead-operadora"
               type="text"
-              value={formData.operadora_atual}
+              required
+              value={formData.status}
               onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  operadora_atual: e.target.value,
-                }))
+                setFormData((prev) => ({ ...prev, status: e.target.value }))
               }
+              placeholder="Informe o status"
             />
-          </Field>
-          <Field label="Status *">
-            {activeLeadStatuses.length > 0 ? (
-              <FilterSelect
-                value={formData.status}
-                onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
-                placeholder="Status"
-                includePlaceholderOption={false}
-                options={[
-                  ...(!activeLeadStatuses.some((status) => status.nome === formData.status) &&
-                  formData.status
-                    ? [{ value: formData.status, label: formData.status }]
-                    : []),
-                  ...activeLeadStatuses.map((status) => ({
-                    value: status.nome,
-                    label: status.nome,
-                  })),
-                ]}
-              />
-            ) : (
-              <Input
-                type="text"
-                required
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, status: e.target.value }))
-                }
-                placeholder="Informe o status"
-              />
-            )}
-          </Field>
-        </FormSection>
-<FormSection step="04" title="Responsável e acompanhamento" description="Prazos, preferências de automação e contexto do atendimento.">
-          <Field label="Responsável *">
-            {responsavelOptions.length > 0 ? (
-              <FilterSelect
-                value={formData.responsavel}
-                onChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    responsavel: value,
-                  }))
-                }
-                placeholder="Responsável"
-                includePlaceholderOption={false}
-                options={[
-                  ...(!responsavelOptions.some(
-                    (option) => option.label === formData.responsavel,
-                  ) && formData.responsavel
-                    ? [{ value: formData.responsavel, label: formData.responsavel }]
-                    : []),
-                  ...responsavelOptions.map((option) => ({
-                    value: option.label,
-                    label: option.label,
-                  })),
-                ]}
-              />
-            ) : (
-              <Input
-                type="text"
-                required
-                value={formData.responsavel}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    responsavel: e.target.value,
-                  }))
-                }
-                placeholder="Informe o responsável"
-              />
-            )}
-          </Field>
-          <Field label="Data de criação">
-            <DateTimePicker
-              type="date"
-              value={formData.data_criacao}
-              showIcon={false}
-              onChange={(event) =>
-                setFormData((prev) => ({ ...prev, data_criacao: event.target.value }))
-              }
-              placeholder="Selecionar data"
-            />
-          </Field>
-          <Field
-            label="Próximo follow-up"
-            description="Ao informar data e horário, o CRM cria um lembrete vinculado a este lead."
-            descriptionPlacement="tooltip"
-          >
-            <DateTimePicker
-              type="datetime-local"
-              value={formData.proximo_retorno}
-              showIcon={false}
-              onChange={(event) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  proximo_retorno: event.target.value,
-                }))
-              }
-              placeholder="Selecionar data e hora"
-            />
-          </Field>
-          <Field
-            label="Limite diário de envios"
-            htmlFor="lead-daily-send-limit"
-            descriptionPlacement="tooltip"
-            description="Defina um limite específico para este lead ou deixe vazio para usar o limite padrão."
-          >
-            <Input
-              id="lead-daily-send-limit"
-              type="number"
-              min={1}
-              value={formData.daily_send_limit}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  daily_send_limit: e.target.value,
-                }))
-              }
-              placeholder="Sem limite"
-            />
-          </Field>
-{isNewLead && (
-            <Surface variant="muted" padding="sm" className="md:col-span-2">
-              <FieldLabel className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
-                <Checkbox
-                  checked={skipAutomationOnCreate}
-                  onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  Não disparar automações ao criar este lead (ex.: já abordado manualmente).
-                </span>
-              </FieldLabel>
-            </Surface>
           )}
-        <Field label="Observações" className="md:col-span-2">
-            <Textarea
-              value={formData.observacoes}
+        </Field>
+        <Field label="Origem *">
+          {activeOrigins.length > 0 ? (
+            <FilterSelect
+              value={formData.origem}
+              onChange={(value) => setFormData((prev) => ({ ...prev, origem: value }))}
+              placeholder="Origem do lead"
+              includePlaceholderOption={false}
+              options={[
+                ...(!activeOrigins.some((origin) => origin.nome === formData.origem) &&
+                formData.origem
+                  ? [{ value: formData.origem, label: formData.origem }]
+                  : []),
+                ...activeOrigins.map((origin) => ({
+                  value: origin.nome,
+                  label: origin.nome,
+                })),
+              ]}
+            />
+          ) : (
+            <Input
+              type="text"
+              required
+              value={formData.origem}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, origem: e.target.value }))
+              }
+              placeholder="Informe a origem"
+            />
+          )}
+        </Field>
+        <Field label="Responsável *">
+          {responsavelOptions.length > 0 ? (
+            <FilterSelect
+              value={formData.responsavel}
+              onChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  responsavel: value,
+                }))
+              }
+              placeholder="Responsável"
+              includePlaceholderOption={false}
+              options={[
+                ...(!responsavelOptions.some(
+                  (option) => option.label === formData.responsavel,
+                ) && formData.responsavel
+                  ? [{ value: formData.responsavel, label: formData.responsavel }]
+                  : []),
+                ...responsavelOptions.map((option) => ({
+                  value: option.label,
+                  label: option.label,
+                })),
+              ]}
+            />
+          ) : (
+            <Input
+              type="text"
+              required
+              value={formData.responsavel}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  observacoes: e.target.value,
+                  responsavel: e.target.value,
                 }))
               }
-              rows={3}
+              placeholder="Informe o responsável"
             />
-          </Field>
-        </FormSection>
-      </div>
+          )}
+        </Field>
+        <Field label="Operadora atual" htmlFor="lead-operadora">
+          <Input
+            id="lead-operadora"
+            type="text"
+            value={formData.operadora_atual}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                operadora_atual: e.target.value,
+              }))
+            }
+          />
+        </Field>
+        <Field label="Data de entrada">
+          <DateTimePicker
+            type="date"
+            value={formData.data_criacao}
+            showIcon={false}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, data_criacao: event.target.value }))
+            }
+            placeholder="Selecionar data"
+          />
+        </Field>
+        <Field
+          label="Próximo acompanhamento"
+          description="Ao informar data e horário, o CRM cria um lembrete vinculado a este lead."
+          descriptionPlacement="tooltip"
+        >
+          <DateTimePicker
+            type="datetime-local"
+            value={formData.proximo_retorno}
+            showIcon={false}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                proximo_retorno: event.target.value,
+              }))
+            }
+            placeholder="Selecionar data e hora"
+          />
+        </Field>
+      </FormSection>
+      <FormSection title="Preferências e observações">
+        <Field
+          label="Limite diário de envios"
+          htmlFor="lead-daily-send-limit"
+          descriptionPlacement="tooltip"
+          description="Defina um limite específico para este lead ou deixe vazio para usar o limite padrão."
+        >
+          <Input
+            id="lead-daily-send-limit"
+            type="number"
+            min={1}
+            value={formData.daily_send_limit}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                daily_send_limit: e.target.value,
+              }))
+            }
+            placeholder="Sem limite"
+          />
+        </Field>
+        {isNewLead && (
+          <Surface variant="muted" padding="sm" className="md:col-span-2">
+            <FieldLabel className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
+              <Checkbox
+                checked={skipAutomationOnCreate}
+                onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                Não disparar automações ao criar este lead (ex.: já abordado manualmente).
+              </span>
+            </FieldLabel>
+          </Surface>
+        )}
+        <Field label="Observações" className="md:col-span-2">
+          <Textarea
+            value={formData.observacoes}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                observacoes: e.target.value,
+              }))
+            }
+            rows={3}
+          />
+        </Field>
+      </FormSection>
+    </div>
   );
   const submitLabel = lead ? 'Salvar alterações' : 'Salvar lead';
   const formContent = (
@@ -840,18 +840,17 @@ const formFields = (
   );
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-lead-form-dialog kds-crm-dialog">
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} initialFocus="first-content" size="md" className="kds-lead-form-dialog kds-crm-dialog">
       <DialogHeader onClose={saving ? undefined : onClose}>
+        <Text className="kds-dialog-eyebrow">Leads</Text>
         <DialogTitle>{lead ? 'Editar lead' : 'Novo lead'}</DialogTitle>
-        <DialogDescription>
-          {lead ? 'Atualize os dados comerciais e o próximo follow-up.' : 'Registre o contato e defina o primeiro acompanhamento.'}
-        </DialogDescription>
       </DialogHeader>
       <DialogBody>
       {formContent}
       </DialogBody>
       <DialogFooter className="flex-col-reverse sm:flex-row">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+        <span className="kds-dialog-footer-note">Campos com * são obrigatórios.</span>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
         <Button type="submit" form="lead-form" loading={saving}>

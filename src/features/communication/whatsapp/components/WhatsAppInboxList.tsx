@@ -1,6 +1,6 @@
-import { Text, FieldLabel, Image, Video, LoadingState } from '../../../../design-system';
+import { Avatar, Text, FieldLabel, Image, Video, LoadingState } from '../../../../design-system';
 import { ActionSurface, IconButton } from '../../../../design-system';
-import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, ChevronDown, Clock3, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, Clock3, MoreHorizontal, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
 import { Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
@@ -117,7 +117,7 @@ export function InboxFilterChip({
       aria-pressed={active}
       variant={active ? 'soft' : 'secondary'}
       size="sm"
-      className={compact ? 'text-[11px]' : 'text-xs'}
+      className={`whatsapp-inbox-filter-chip ${compact ? 'text-[11px]' : 'text-xs'}`}
     >
       {label}
     </Button>
@@ -388,17 +388,13 @@ export function InboxChatListItem({
       }}
     >
       <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-chat-select text-left">
+        <Avatar name={displayName} tone="brand" size="sm" className="whatsapp-inbox-chat-avatar" />
         <div className="whatsapp-inbox-chat-identity flex min-w-0 items-center gap-1.5">
           <LeadFavoriteBadge favorito={favorito} />
           <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]" title={displayName}>
             {chat.is_group ? <Users className="sr-only" aria-label="Grupo" /> : null}
             {displayName}
           </Text>
-          {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
-            <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
-              <span className="min-w-0 truncate">{chat.lead_status}</span>
-            </OperationalStatusBadge>
-          ) : null}
           <span className="whatsapp-inbox-chat-flags">
             {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
             {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
@@ -425,6 +421,11 @@ export function InboxChatListItem({
             </>
           ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'} />
         </Text>
+        {!chat.is_group && chat.lead_id && chat.lead_status?.trim() ? (
+          <OperationalStatusBadge statusColor={leadStatusColor ?? 'var(--text-muted)'} className="whatsapp-inbox-chat-lead-status" title={`Status do lead: ${chat.lead_status}`} aria-label={`Status do lead: ${chat.lead_status}`}>
+            <span className="min-w-0 truncate">{chat.lead_status}</span>
+          </OperationalStatusBadge>
+        ) : null}
         <div className="whatsapp-inbox-chat-trailing">
           <span className="whatsapp-inbox-chat-meta text-xs font-medium">{formatMessageTime(chat.last_message_at)}</span>
           {hasUnreadBadge ? (
@@ -449,7 +450,7 @@ export function InboxChatListItem({
           aria-expanded={menuOpen}
           disabled={menuBusy}
         >
-          <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />
+          <MoreHorizontal className="kds-control-icon" aria-hidden="true" />
         </IconButton>
       </div>
     </div>

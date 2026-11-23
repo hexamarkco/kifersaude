@@ -47,7 +47,7 @@ export function FilterSelect({ icon, options, placeholder, value, onChange, incl
 }
 
 export type FilterMultiSelectProps = {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   options: readonly SelectOption[];
   placeholder: string;
   dialogTitle: string;

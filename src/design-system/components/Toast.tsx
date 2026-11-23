@@ -120,6 +120,7 @@ function ToastContainer({
         'kds-toast-container modal-theme-host painel-theme kifer-ds',
         isDarkThemeActive ? 'theme-dark' : 'theme-light',
         appearance && 'kds-operational',
+        appearance?.workspace && 'kds-workspace-theme',
         `kds-toast-${position}`,
       )}
       aria-live="polite"

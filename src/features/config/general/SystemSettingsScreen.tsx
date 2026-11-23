@@ -1,16 +1,20 @@
 import { useMinimumLoading, Text, Heading } from '../../../design-system';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
   BellRing,
   Clock,
-  Globe2,
+  ArrowUpRight,
+  ChevronRight,
   Info,
+  Moon,
+  Plug,
   RotateCcw,
   Save,
   Search,
   ShieldCheck,
+  Sun,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -19,14 +23,15 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { configService, type SystemSettings } from "..";
 import { toast } from "../../../lib/toast";
 import ConfigOptionManager from "./components/ConfigOptionManager";
-import { SettingsCatalogLink } from "./components/SettingsCatalogLink";
 import LeadOriginsManager from "./components/LeadOriginsManager";
 import LeadStatusManager from "./components/LeadStatusManager";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
 import { LoadingState } from '../../../design-system';
 import {
   Alert,
+  ActionSurface,
   Badge,
+  BrandWordmark,
   Button,
   Field,
   Input,
@@ -34,6 +39,7 @@ import {
   Surface,
   Switch,
   Tabs,
+  useDesignSystemAppearance,
   type TabItem,
 } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
@@ -53,6 +59,7 @@ import { useConfigParam } from "../shared/useConfigTab";
 
 export default function SystemSettingsScreen() {
   const { role } = useAuth();
+  const appearance = useDesignSystemAppearance();
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [savedSettings, setSavedSettings] = useState<SystemSettings | null>(
     null,
@@ -77,26 +84,7 @@ export default function SystemSettingsScreen() {
     ["contract_status", "contract_modalidade", "contract_abrangencia", "contract_acomodacao", "contract_carencia"] as const,
     "contract_status",
   );
-  const [, setSearchParams] = useSearchParams();
-  const navigateToConfigSection = (
-    section: SectionId,
-    detail?: { key: "leadTab" | "contractTab"; value: string; defaultValue: string },
-  ) => {
-    setSearchTerm("");
-    setSearchParams((previous) => {
-      const next = new URLSearchParams(previous);
-      next.set("section", section);
-      if (detail) {
-        if (detail.value === detail.defaultValue) {
-          next.delete(detail.key);
-        } else {
-          next.set(detail.key, detail.value);
-        }
-      }
-      return next;
-    }, { replace: true });
-  };
-  const { loading: configLoading, getRoleModulePermission, options, leadStatuses, leadOrigins } = useConfig();
+  const { loading: configLoading, getRoleModulePermission, options } = useConfig();
   const showConfigLoading = useMinimumLoading(configLoading);
   const timezoneOptions = useMemo(
     () => [
@@ -274,10 +262,6 @@ export default function SystemSettingsScreen() {
     () => !areSystemPreferencesEqual(settings, savedSettings),
     [savedSettings, settings],
   );
-  const contractOptionCount = useMemo(
-    () => CONTRACT_CONFIG_MANAGERS.reduce((count, manager) => count + (options[manager.category]?.length ?? 0), 0),
-    [options],
-  );
 
   const shouldExpandSection = (sectionId: SectionId) =>
     activeVisibleSection === sectionId;
@@ -351,22 +335,19 @@ export default function SystemSettingsScreen() {
       overlayLabel="Atualizando configurações do sistema..."
       stageClassName="min-h-[440px]"
     >
-      <div className="panel-page-shell space-y-5">
+      <div className="panel-page-shell kds-system-settings-layout">
+        <nav className="kds-system-settings-nav" aria-label="Seções das configurações gerais">
+          <Text>Organização</Text>
+          {SECTION_OVERVIEW.filter(({ id }) => id !== 'access' || canViewAccessSettings).map(({ id, title, icon: Icon }) => (
+            <ActionSurface key={id} variant="plain" padding="none" aria-current={activeVisibleSection === id ? 'page' : undefined} onClick={() => { setSearchTerm(''); setActiveSection(id); }}>
+              <Icon aria-hidden="true" /><span>{id === 'general' ? 'Preferências' : title}</span><ChevronRight aria-hidden="true" />
+            </ActionSurface>
+          ))}
+          {getRoleModulePermission(role, 'config-integrations').can_view && <Link className="kds-system-settings-integration-link" to="/painel/automacoes?tab=integrations"><Plug aria-hidden="true" /><span>Integrações</span><ArrowUpRight aria-hidden="true" /></Link>}
+        </nav>
+        <div className="kds-system-settings-content space-y-5">
         {(activeVisibleSection !== "general" || searchTerm.length > 0) && (
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            {hasVisibleSections && activeVisibleSection !== "general" && (
-              <Tabs
-                items={visibleSections.map(({ id, title }) => ({ id, label: title }))}
-                value={activeVisibleSection ?? "general"}
-                onChange={setActiveSection}
-                variant="underline"
-                className="w-full min-w-0 lg:flex-1"
-                listClassName="flex-nowrap overflow-x-auto"
-                triggerClassName="shrink-0 whitespace-nowrap"
-                ariaLabel="Seções das configurações gerais"
-              />
-            )}
-            <div className="w-full lg:max-w-md">
+          <div className="w-full lg:max-w-md">
               <Input
                 type="text"
                 value={searchTerm}
@@ -375,7 +356,6 @@ export default function SystemSettingsScreen() {
                 leftIcon={Search}
                 aria-label="Buscar nas configurações gerais"
               />
-            </div>
           </div>
         )}
 
@@ -389,31 +369,15 @@ export default function SystemSettingsScreen() {
 
         {showGeneralSection && shouldExpandSection("general") && (
           <section id="settings-section-general" className="space-y-5">
-            <div className="flex justify-end">
-              <Button
-                onClick={handleRestoreGeneralDefaults}
-                variant="secondary"
-                size="md"
-              >
-                <RotateCcw className="kds-control-icon" />
-                Restaurar padrões
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
-              <div className="space-y-5 xl:col-span-8">
               <Surface padding="md">
-                <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
-                    <Globe2 className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">Localização e formato</Heading>
-                    <Text className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Escolha a forma de exibir datas e o horário de referência do sistema.
-                    </Text>
+                <div className="kds-system-settings-heading">
+                  <div>
+                    <Heading level={3}>Identidade da organização</Heading>
+                    <Text>Informações e formatos compartilhados no painel.</Text>
                   </div>
+                  <Button onClick={handleRestoreGeneralDefaults} variant="secondary" size="sm"><RotateCcw className="kds-control-icon" aria-hidden="true" />Restaurar padrões</Button>
                 </div>
+                <div className="kds-system-settings-brand"><BrandWordmark variant="lockup" /></div>
 
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <Field label="Formato de data" hint="Usado nas datas exibidas no CRM.">
@@ -444,6 +408,19 @@ export default function SystemSettingsScreen() {
                   </Field>
                 </div>
               </Surface>
+
+              {appearance?.onThemeChange && <Surface padding="md">
+                <div className="kds-system-settings-heading"><div><Heading level={3}>Aparência e rotina</Heading><Text>Escolha como o painel aparece neste navegador.</Text></div></div>
+                <div className="kds-system-settings-theme-options" role="group" aria-label="Tema do painel">
+                  {(['light', 'dark'] as const).map((theme) => {
+                    const Icon = theme === 'light' ? Sun : Moon;
+                    return <ActionSurface key={theme} variant="plain" padding="sm" aria-pressed={appearance.theme === theme} onClick={() => appearance.onThemeChange?.(theme)}>
+                      <span className="kds-system-settings-theme-preview" data-theme={theme} aria-hidden="true"><i /><i /><i /></span>
+                      <span><Icon aria-hidden="true" />{theme === 'light' ? 'Claro' : 'Escuro'}</span>
+                    </ActionSurface>;
+                  })}
+                </div>
+              </Surface>}
 
               <Surface padding="md">
                 <div className="mb-5 flex items-start gap-3 border-b border-[var(--border-subtle)] pb-4">
@@ -577,51 +554,6 @@ export default function SystemSettingsScreen() {
                   </Field>
                 </div>
               </Surface>
-              </div>
-
-              <Surface padding="md" className="xl:col-span-4">
-                <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">Estrutura e parametrização</Heading>
-                <Text className="mt-1 text-sm text-[var(--text-secondary)]">Acesse os cadastros que alimentam os formulários e a operação do CRM.</Text>
-                <div className="mt-4 divide-y divide-[var(--border-subtle)]">
-                  {canViewAccessSettings && (
-                    <SettingsCatalogLink
-                      title="Perfis e acessos"
-                      description="Permissões por área do CRM"
-                      ariaLabel="Abrir perfis e acessos"
-                      onClick={() => navigateToConfigSection("access")}
-                    />
-                  )}
-                  <SettingsCatalogLink
-                    title="Etapas do funil"
-                    description="Nome, cor e etapa inicial dos leads"
-                    ariaLabel="Abrir etapas do funil"
-                    count={leadStatuses.length}
-                    onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "status", defaultValue: "status" })}
-                  />
-                  <SettingsCatalogLink
-                    title="Origens dos leads"
-                    description="Canais de entrada e visibilidade"
-                    ariaLabel="Abrir origens dos leads"
-                    count={leadOrigins.length}
-                    onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "origins", defaultValue: "status" })}
-                  />
-                  <SettingsCatalogLink
-                    title="Responsáveis pelos leads"
-                    description="Equipe disponível para atribuição"
-                    ariaLabel="Abrir responsáveis pelos leads"
-                    count={options.lead_responsavel?.length ?? 0}
-                    onClick={() => navigateToConfigSection("leads", { key: "leadTab", value: "manager:lead_responsavel", defaultValue: "status" })}
-                  />
-                  <SettingsCatalogLink
-                    title="Regras de contratos"
-                    description="Status, modalidade e condições"
-                    ariaLabel="Abrir configurações de contratos"
-                    count={contractOptionCount}
-                    onClick={() => navigateToConfigSection("contracts", { key: "contractTab", value: "contract_status", defaultValue: "contract_status" })}
-                  />
-                </div>
-              </Surface>
-            </div>
 
             <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -770,6 +702,7 @@ export default function SystemSettingsScreen() {
             )}
           </section>
         )}
+        </div>
       </div>
     </PanelAdaptiveLoadingFrame>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, Layers3, SlidersHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
+import { CalendarDays, Layers3, MoreHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
 
 import {
   Badge,
@@ -34,6 +34,8 @@ type OwnerOption = {
 };
 
 type DashboardHeaderProps = {
+  title?: string;
+  description?: string;
   periodFilter: DashboardPeriodFilter;
   customStartDate: string;
   customEndDate: string;
@@ -70,6 +72,8 @@ const fromDatePickerValue = (value: string) => {
 };
 
 export function DashboardHeader({
+  title = 'Um olhar sobre a operação',
+  description = 'Tudo o que precisa da sua atenção, em um só lugar.',
   periodFilter,
   customStartDate,
   customEndDate,
@@ -147,7 +151,7 @@ export function DashboardHeader({
   const filterTrigger = () => (
     <Button
       type="button"
-      variant="secondary"
+      variant="ghost"
       aria-label="Filtros avançados"
       aria-haspopup="dialog"
       aria-expanded={filtersOpen}
@@ -155,9 +159,7 @@ export function DashboardHeader({
       onClick={() => setFiltersOpen((open) => !open)}
       className="shrink-0"
     >
-      <SlidersHorizontal aria-hidden="true" />
-      <span className="hidden sm:inline">Filtros avançados</span>
-      <span className="kds-dashboard-filter-label sm:hidden">Filtros</span>
+      <MoreHorizontal aria-hidden="true" />
       {activeFilterCount > 0 && <Badge tone="info" size="sm">{activeFilterCount}</Badge>}
     </Button>
   );
@@ -165,7 +167,7 @@ export function DashboardHeader({
   const periodTrigger = (
     <Button
       type="button"
-      variant="primary"
+      variant="secondary"
       className="kds-dashboard-period-trigger"
       aria-label={`Período: ${periodLabel}`}
       aria-haspopup="dialog"
@@ -174,8 +176,7 @@ export function DashboardHeader({
       onClick={openPeriodPanel}
     >
       <CalendarDays aria-hidden="true" />
-      <span className="kds-dashboard-period-trigger-label">{periodLabel}</span>
-      <ChevronDown aria-hidden="true" />
+      <span className="kds-dashboard-period-trigger-label">Selecionar período</span>
     </Button>
   );
 
@@ -391,9 +392,10 @@ export function DashboardHeader({
   return (
     <>
       <PageHeader
-        eyebrow="Operação comercial"
-        title="Dashboard"
-        description="Veja o que pede atenção e escolha o próximo passo da operação."
+        className="kds-dashboard-page-header"
+        eyebrow={new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).format(new Date())}
+        title={title}
+        description={description}
         actions={(
           <div className="kds-dashboard-header-actions">
             {filterTrigger()}
@@ -401,7 +403,6 @@ export function DashboardHeader({
           </div>
         )}
         data-panel-animate
-        className="border-b border-[var(--border-subtle)] pb-5"
       />
       {advancedFiltersPanel}
       {periodPanel}

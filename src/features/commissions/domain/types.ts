@@ -16,4 +16,4 @@ export type CommissionContract = Pick<
   | "bonus_por_vida_valor"
   | "vidas"
   | "vidas_elegiveis_bonus"
->;
+> & Pick<Partial<Contract>, 'responsavel' | 'razao_social' | 'nome_fantasia'>;

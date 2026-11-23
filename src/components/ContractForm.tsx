@@ -76,6 +76,7 @@ import {
   PageHeader,
   FormActions,
   FormSection,
+  Stepper,
 } from "../design-system";
 import { configService } from "../features/config";
 import { useConfig } from "../contexts/ConfigContext";
@@ -92,6 +93,22 @@ type CommissionInstallment = {
   valor: string;
   data_pagamento: string;
 };
+
+const CONTRACT_STEPS = [
+  { label: 'Identificação' },
+  { label: 'Vigência e valores' },
+  { label: 'Comissão' },
+  { label: 'Vidas e bônus' },
+  { label: 'Responsáveis' },
+];
+
+const REQUIRED_CONTRACT_FIELDS = [
+  { field: 'status', label: 'status', step: 0 },
+  { field: 'modalidade', label: 'modalidade', step: 0 },
+  { field: 'operadora', label: 'operadora', step: 0 },
+  { field: 'produto_plano', label: 'produto/plano', step: 0 },
+  { field: 'responsavel', label: 'responsável', step: 4 },
+] as const;
 
 type BonusDistributionRow = {
   id: string;
@@ -292,6 +309,9 @@ export default function ContractForm({
   onClose,
   onSave,
 }: ContractFormProps) {
+  const [formStep, setFormStep] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const isStepped = presentation === 'dialog' && !contract;
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsLoadError, setLeadsLoadError] = useState(false);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -971,20 +991,14 @@ export default function ContractForm({
       const codigo = formData.codigo_contrato.trim();
 
       if (!codigo) {
+        setFormStep(0);
         toast.warning("Informe o código do contrato.");
         return;
       }
 
-      const requiredValues = [
-        { value: formData.status.trim(), label: "status" },
-        { value: formData.modalidade.trim(), label: "modalidade" },
-        { value: formData.operadora.trim(), label: "operadora" },
-        { value: formData.produto_plano.trim(), label: "produto/plano" },
-        { value: formData.responsavel.trim(), label: "responsável" },
-      ];
-
-      const missingRequired = requiredValues.find((item) => !item.value);
+      const missingRequired = REQUIRED_CONTRACT_FIELDS.find(({ field }) => !formData[field].trim());
       if (missingRequired) {
+        setFormStep(missingRequired.step);
         toast.warning(
           `Preencha o campo obrigatório: ${missingRequired.label}.`,
         );
@@ -1001,6 +1015,7 @@ export default function ContractForm({
 
       if (!formData.comissao_recebimento_adiantado) {
         if (installmentsPayload.length === 0) {
+          setFormStep(2);
           toast.warning(
             "Adicione ao menos uma parcela de comissão ou marque como adiantamento.",
           );
@@ -1012,6 +1027,7 @@ export default function ContractForm({
           (parcel) => !parcel.data_pagamento,
         );
         if (hasMissingDates) {
+          setFormStep(2);
           toast.warning(
             "Informe a data prevista de pagamento para cada parcela.",
           );
@@ -1020,6 +1036,7 @@ export default function ContractForm({
         }
 
         if (commissionExpectedValue <= 0) {
+          setFormStep(2);
           toast.warning(
             "Informe a comissão prevista antes de distribuir em parcelas.",
           );
@@ -1028,6 +1045,7 @@ export default function ContractForm({
         }
 
         if (totalInstallmentValue > commissionExpectedValue) {
+          setFormStep(2);
           toast.warning(
             "O total das parcelas não pode ultrapassar o valor total da comissão.",
           );
@@ -1038,12 +1056,14 @@ export default function ContractForm({
 
       if (formData.bonus_por_vida_aplicado) {
         if (normalizedBonusDistribution.length === 0) {
+          setFormStep(3);
           toast.warning("Adicione ao menos uma faixa de bônus por vida.");
           setSaving(false);
           return;
         }
 
         if (distributedBonusLives > vidasNumber) {
+          setFormStep(3);
           toast.warning(
             "A soma das vidas com bônus não pode ultrapassar a quantidade total de vidas.",
           );
@@ -1178,6 +1198,43 @@ export default function ContractForm({
     }
   };
 
+  const moveToStep = (step: number) => {
+    setFormStep(step);
+    requestAnimationFrame(() => {
+      formRef.current?.closest('.kds-dialog-body')?.scrollTo({ top: 0 });
+      formRef.current?.querySelector<HTMLElement>(`[data-contract-step="${step}"]`)?.focus();
+    });
+  };
+
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!isStepped) {
+      void handleSubmit(event);
+      return;
+    }
+    event.preventDefault();
+    const lastStep = formStep === CONTRACT_STEPS.length - 1;
+    const form = event.currentTarget;
+    const scope = lastStep ? form : form.querySelector(`[data-contract-step="${formStep}"]`);
+    const invalid = Array.from(scope?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select') ?? [])
+      .find((control) => control.willValidate && !control.validity.valid);
+    if (invalid) {
+      const section = invalid.closest<HTMLElement>('[data-contract-step]');
+      if (section?.dataset.contractStep) setFormStep(Number(section.dataset.contractStep));
+      requestAnimationFrame(() => invalid.reportValidity());
+      return;
+    }
+    if (lastStep) {
+      void handleSubmit(event);
+      return;
+    }
+    const missingRequired = REQUIRED_CONTRACT_FIELDS.find(({ field, step }) => step === formStep && !formData[field].trim());
+    if (missingRequired) {
+      toast.warning(`Preencha o campo obrigatório: ${missingRequired.label}.`);
+      return;
+    }
+    moveToStep(formStep + 1);
+  };
+
   if (showHolderForm && contractId) {
     const initialHolderData: Partial<ContractHolder> = {
       ...importedHolderData,
@@ -1202,11 +1259,14 @@ export default function ContractForm({
   const formContent = (<>{/* Existing production fields and validation stay in the same form. */}
         <form
           id="contract-form"
-          onSubmit={handleSubmit}
+          ref={formRef}
+          onSubmit={handleFormSubmit}
+          noValidate={isStepped}
           className="kds-form-page"
         >
           <FormSection
             step="01"
+            data-contract-step="0" hidden={isStepped && formStep !== 0} tabIndex={-1}
             descriptionPlacement="visible"
             title="Informações do Contrato"
             description="Identifique o contrato, o vínculo comercial e o plano contratado."
@@ -1463,6 +1523,7 @@ export default function ContractForm({
 
           <FormSection
             step="02"
+            data-contract-step="1" hidden={isStepped && formStep !== 1} tabIndex={-1}
             descriptionPlacement="visible"
             title="Vigência e valores"
             description="Registre as datas importantes e o valor mensal do contrato."
@@ -1662,6 +1723,7 @@ export default function ContractForm({
 
           <FormSection
             step="03"
+            data-contract-step="2" hidden={isStepped && formStep !== 2} tabIndex={-1}
             descriptionPlacement="visible"
             title="Comissão e recebimento"
             description="Confira o cálculo da comissão e defina como e quando será recebida."
@@ -2035,6 +2097,7 @@ export default function ContractForm({
 
           <FormSection
             step="04"
+            data-contract-step="3" hidden={isStepped && formStep !== 3} tabIndex={-1}
             descriptionPlacement="visible"
             title="Vidas e bonificações"
             description="Informe a quantidade de pessoas cobertas e configure os bônus aplicáveis."
@@ -2236,6 +2299,7 @@ export default function ContractForm({
 
           <FormSection
             step="05"
+            data-contract-step="4" hidden={isStepped && formStep !== 4} tabIndex={-1}
             descriptionPlacement="visible"
             title="Responsáveis e observações"
             description="Defina as pessoas responsáveis pelo relacionamento e registre notas internas."
@@ -2297,26 +2361,16 @@ export default function ContractForm({
       {formContent}
       <FormActions onCancel={onClose} submitLabel={contract ? 'Salvar alterações' : 'Continuar para titular'} loading={saving} form="contract-form" />
     </section> : <>
-      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="lg" className="kds-crm-dialog kds-contract-form-dialog">
+      <Dialog open onOpenChange={(open) => !open && !saving && onClose()} initialFocus="first-content" size={isStepped ? 'xl' : 'lg'} className="kds-crm-dialog kds-contract-form-dialog">
         <DialogHeader onClose={saving ? undefined : onClose}>
-          <DialogTitle>
-            {contract
-              ? "Editar Contrato"
-              : leadToConvert
-                ? "Converter Lead em Contrato"
-                : "Novo Contrato"}
-          </DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           {leadToConvert && (
             <DialogDescription placement="visible" className="flex items-center gap-1.5">
               <LeadFavoriteBadge favorito={leadToConvert.favorito} />
               {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
             </DialogDescription>
           )}
-          {!leadToConvert && (
-            <DialogDescription>
-              Registre os dados comerciais, financeiros e de vigencia do contrato.
-            </DialogDescription>
-          )}
+          {!leadToConvert && <DialogDescription placement="visible">Registre os dados comerciais, financeiros e de vigência do contrato.</DialogDescription>}
           <Button
             type="button"
             variant="soft"
@@ -2329,18 +2383,24 @@ export default function ContractForm({
             Importar de arquivo
           </Button>
         </DialogHeader>
+        {isStepped && (
+          <div className="kds-contract-form-steps">
+            <Stepper steps={CONTRACT_STEPS} currentStep={formStep} />
+          </div>
+        )}
         <DialogBody>{formContent}</DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
+          {isStepped && formStep > 0 && <Button type="button" variant="secondary" onClick={() => moveToStep(formStep - 1)} disabled={saving}>Voltar</Button>}
           <Button type="submit" form="contract-form" loading={saving}>
             {saving
               ? "Salvando..."
               : contract
                 ? "Salvar"
-                : "Continuar para Titular"}
+                : isStepped && formStep < CONTRACT_STEPS.length - 1 ? "Continuar" : "Continuar para titular"}
           </Button>
         </DialogFooter>
       </Dialog>

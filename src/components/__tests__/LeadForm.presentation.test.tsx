@@ -31,7 +31,7 @@ test('page presentation keeps the production fields and automation opt-out in it
   const view = render(<LeadForm presentation="page" lead={null} initialValues={{ nome_completo: 'Contato Demonstração', telefone: '5521000000000' }} onClose={() => undefined} onSave={onSave} />);
   try {
     assert.equal(view.container.querySelectorAll('fieldset').length, 4);
-    for (const label of ['Dados de contato', 'Localização', 'Qualificação e origem', 'Responsável e acompanhamento', 'Limite diário de envios', 'Observações']) assert.ok(view.container.textContent?.includes(label));
+    for (const label of ['Informações de contato', 'Localização', 'Acompanhamento comercial', 'Preferências e observações', 'Limite diário de envios', 'Observações']) assert.ok(view.container.textContent?.includes(label));
     const optOut = view.container.querySelector<HTMLInputElement>('input[type="checkbox"]');
     assert.ok(optOut);
     await act(async () => optOut.click());

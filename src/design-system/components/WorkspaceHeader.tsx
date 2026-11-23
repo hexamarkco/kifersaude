@@ -1,9 +1,8 @@
-import type { Ref } from 'react';
-import { Menu, Moon, Sun, X } from 'lucide-react';
+import type { ReactNode, Ref } from 'react';
+import { Menu, Moon, PanelTop, Sun, X } from 'lucide-react';
 import Avatar from './Avatar';
 import { IconButton } from './Button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from './Breadcrumb';
-import { BrandWordmark } from './BrandWordmark';
 
 export type WorkspaceHeaderProps = {
   title: string;
@@ -14,6 +13,11 @@ export type WorkspaceHeaderProps = {
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
   mobileMenuButtonRef?: Ref<HTMLButtonElement>;
+  searchAction?: ReactNode;
+  notificationsAction?: ReactNode;
+  createAction?: ReactNode;
+  accountAction?: ReactNode;
+  roleLabel?: string;
 };
 
 /** Persistent workspace context, separate from each page's title and actions. */
@@ -26,25 +30,14 @@ export function WorkspaceHeader({
   mobileMenuOpen,
   onToggleMobileMenu,
   mobileMenuButtonRef,
+  searchAction,
+  notificationsAction,
+  createAction,
+  accountAction,
+  roleLabel,
 }: WorkspaceHeaderProps) {
   return <header className="kds-workspace-header">
-    <div className="kds-workspace-header-desktop">
-      <Breadcrumb>
-        <BreadcrumbItem><BreadcrumbLink onClick={onNavigateHome}>Painel</BreadcrumbLink></BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem isCurrent>{title}</BreadcrumbItem>
-      </Breadcrumb>
-      <div className="kds-workspace-account">
-        <span className="kds-workspace-username">{username}</span>
-        <IconButton variant="ghost" aria-label={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'} onClick={onToggleTheme}>
-          {theme === 'light' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
-        </IconButton>
-        <Avatar name={username} size="sm" tone="brand" />
-      </div>
-    </div>
     <div className="kds-workspace-header-mobile">
-      <BrandWordmark className="kds-workspace-mobile-brand" />
-      <div className="kds-workspace-mobile-actions">
         <IconButton
           ref={mobileMenuButtonRef}
           variant="ghost"
@@ -56,8 +49,26 @@ export function WorkspaceHeader({
         >
           {mobileMenuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </IconButton>
+      <span className="kds-workspace-mobile-title">{title}</span>
+    </div>
+    <div className="kds-workspace-breadcrumb">
+      <Breadcrumb>
+        <BreadcrumbItem><BreadcrumbLink onClick={onNavigateHome}><PanelTop aria-hidden="true" /> Workspace</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem isCurrent>{title}</BreadcrumbItem>
+      </Breadcrumb>
+    </div>
+    {searchAction}
+    <div className="kds-workspace-account">
+      <IconButton variant="ghost" size="sm" className="kds-workspace-theme-toggle" aria-label={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'} onClick={onToggleTheme}>
+        {theme === 'light' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
+      </IconButton>
+      {notificationsAction}
+      {createAction}
+      {accountAction ?? <>
         <Avatar name={username} size="sm" tone="brand" />
-      </div>
+        <span className="kds-workspace-username">{username}{roleLabel && <small>{roleLabel}</small>}</span>
+      </>}
     </div>
   </header>;
 }

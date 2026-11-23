@@ -32,6 +32,7 @@ const PositionedPopover = forwardRef<HTMLDivElement, PositionedPopoverProps>(fun
   const themeScopeClassName = cx(
     'modal-theme-host painel-theme kifer-ds',
     (appearance ? appearance.theme === 'dark' : themedAncestor?.classList.contains('theme-dark')) ? 'theme-dark' : 'theme-light',
+    appearance?.workspace && 'kds-workspace-theme',
   );
 
   useEffect(() => {

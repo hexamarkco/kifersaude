@@ -1,6 +1,6 @@
 import { LeadListCard } from './components/LeadListCard';
 import { LeadDeletionSummary } from './components/LeadDeletionSummary';
-import { ActionSurface, Heading, Text, FieldLabel } from '../../design-system';
+import { ActionSurface, Avatar, Text, FieldLabel } from '../../design-system';
 import {
   startTransition,
   useDeferredValue,
@@ -107,6 +107,7 @@ import {
 } from "../../lib/leadReminderUtils";
 import { downloadXlsx } from "../../lib/xlsxExport";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
+import { useWorkspaceCreate } from "../../hooks/useWorkspaceCreate";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import { LeadStatusMutationLock } from "./shared/leadStatusMutationLock";
@@ -849,17 +850,9 @@ export default function LeadsManager({
     filterProximoRetornoFrom,
     filterProximoRetornoTo,
   ]);
-  const contentSectionTitle =
-    viewMode === "kanban"
-      ? "Pipeline comercial"
-      : "Leads em acompanhamento";
-  const contentSectionDescription =
-    viewMode === "kanban"
-      ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
-      : "Atualize o status, acompanhe prazos e acesse ações rápidas.";
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    leadsRootRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
 
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
@@ -1419,6 +1412,7 @@ export default function LeadsManager({
     setEditingLead(null);
     setShowForm(true);
   }, []);
+  useWorkspaceCreate(canEditLeads && !showForm, handleCreateLead);
 
   useEffect(() => {
     const unsubscribe = subscribeToLeadChanges(handleRealtimeLeadChange);
@@ -1620,19 +1614,6 @@ export default function LeadsManager({
     )
   ) : null;
 
-  if (showForm) return <LeadForm presentation="page"
-            lead={editingLead}
-            onClose={() => {
-              setShowForm(false);
-              setEditingLead(null);
-            }}
-            onSave={async () => {
-              setShowForm(false);
-              setEditingLead(null);
-              await loadLeads();
-            }}
-          />;
-
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
@@ -1709,14 +1690,14 @@ export default function LeadsManager({
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-leads-toolbar-actions">
-              <IconButton variant="secondary" className="kds-leads-mobile-filter-toggle" aria-label="Mostrar filtros de leads" aria-expanded={mobileFiltersOpen} aria-controls="leads-filter-controls" onClick={() => setMobileFiltersOpen(open => !open)}><Filter aria-hidden="true" /></IconButton>
+              <FilterMultiSelect dialogClassName="kds-crm-dialog" options={statusFilterOptions} placeholder="Todas as etapas" dialogTitle="Filtrar leads por status" values={filterStatus} onChange={setFilterStatus} />
+              <FilterMultiSelect dialogClassName="kds-crm-dialog" options={responsavelFilterOptions} placeholder="Toda a equipe" dialogTitle="Filtrar leads por responsável" values={filterResponsavel} onChange={setFilterResponsavel} />
+              <Button variant="secondary" aria-expanded={mobileFiltersOpen} aria-controls="leads-filter-controls" onClick={() => setMobileFiltersOpen(open => !open)}><Filter aria-hidden="true" />Filtros</Button>
               <Popover>
                 <PopoverTrigger className="inline-flex">
-                  <Button type="button" variant="secondary" size="md" className="whitespace-nowrap kds-mobile-icon-action" aria-label="Mais opções dos leads" title="Exportar e outras opções">
-                    <Download className="kds-control-icon kds-leads-desktop-icon" />
-                    <MoreHorizontal className="kds-control-icon kds-leads-mobile-icon" />
-                    <span className="kds-mobile-icon-action-label">Exportar</span>
-                  </Button>
+                  <IconButton type="button" variant="ghost" size="md" aria-label="Mais opções dos leads" title="Exportar e outras opções">
+                    <MoreHorizontal className="kds-control-icon" />
+                  </IconButton>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-56 space-y-1 p-2" aria-label="Mais opções dos leads">
                   <Button variant="ghost" type="button" onClick={handleExportCurrentPage} className="kds-popover-menu-item">Exportar página atual</Button>
@@ -1725,30 +1706,12 @@ export default function LeadsManager({
                 </PopoverContent>
               </Popover>
             </ToolbarActions>
+            <span className="kds-workspace-result-count">{filteredLeads.length} {filteredLeads.length === 1 ? 'lead' : 'leads'}</span>
           </Toolbar>
 
-          <div id="leads-filter-controls" className={`kds-leads-filter-controls space-y-4 ${mobileFiltersOpen ? 'is-open' : ''}`}>
-            <Button variant="text" className="kds-leads-mobile-filter-toggle" onClick={resetFilters}>Limpar filtros</Button>
+          {mobileFiltersOpen && <div id="leads-filter-controls" className="kds-leads-filter-controls space-y-4 is-open">
             <div className="kds-leads-filter-grid">
               {[
-                {
-                  id: "status",
-                  icon: Filter,
-                  options: statusFilterOptions,
-                  placeholder: "Todos os status",
-                  dialogTitle: "Filtrar leads por status",
-                  values: filterStatus,
-                  onChange: setFilterStatus,
-                },
-                {
-                  id: "responsavel",
-                  icon: UserCircle,
-                  options: responsavelFilterOptions,
-                  placeholder: "Todos os responsáveis",
-                  dialogTitle: "Filtrar leads por responsável",
-                  values: filterResponsavel,
-                  onChange: setFilterResponsavel,
-                },
                 {
                   id: "origem",
                   icon: MapPin,
@@ -1836,7 +1799,7 @@ export default function LeadsManager({
                 </div>
               </div>
             </div>
-          </div>
+          </div>}
         </Surface>
 
         {advancedFilterPanel}
@@ -1852,34 +1815,8 @@ export default function LeadsManager({
           </div>
         ) : (
           <Surface className="kds-record-results kds-leads-results" padding="none" data-panel-animate>
-            <div className="kds-record-results-header mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <Text className="kds-op-section-label">
-                  Carteira em foco
-                </Text>
-                <Heading level={3} className="kds-op-panel-title mt-2">
-                  {contentSectionTitle}
-                </Heading>
-                <Text className="kds-op-lead-muted mt-1 max-w-3xl text-sm">
-                  {contentSectionDescription}
-                </Text>
-              </div>
-
+            {canSelectLeads && paginatedLeads.length > 0 && <div className="kds-record-results-header lg:hidden">
               <div className="kds-leads-list-summary flex flex-wrap gap-2">
-                <Text className="kds-leads-mobile-result-count">{filteredLeads.length} leads encontrados</Text>
-                <OperationalMetricChip
-                  value={filteredLeads.length}
-                  label="resultados"
-                  className="kds-leads-list-summary-metric"
-                  title={`${filteredLeads.length} resultados`}
-                />
-                <OperationalMetricChip
-                  value={`${currentPage}/${totalPages}`}
-                  label="páginas"
-                  className="kds-leads-list-summary-metric"
-                  title={`Página ${currentPage} de ${totalPages}`}
-                />
-                {canSelectLeads && paginatedLeads.length > 0 && (
                   <FieldLabel
                     className="kds-op-chip kds-leads-select-page cursor-pointer"
                   >
@@ -1894,12 +1831,11 @@ export default function LeadsManager({
                         : "Selecionar página"}
                     </span>
                   </FieldLabel>
-                )}
                 {selectedLeadIds.length > 0 && (
                   <OperationalMetricChip value={selectedLeadIds.length} label="selecionados" active />
                 )}
               </div>
-            </div>
+            </div>}
 
             {selectedLeadIds.length > 0 && (
                 <Surface variant="muted" padding="md" className="kds-leads-bulk-panel">
@@ -2006,18 +1942,18 @@ export default function LeadsManager({
             )}
             <div className="hidden lg:block">
               <Table size="sm" stickyHeader aria-label="Carteira de leads" className="kds-leads-table" columnWidths={canSelectLeads
-                ? ['3.5%', '23.5%', '14%', '14%', '11%', '14%', '11%', '9%']
-                : ['27%', '14%', '14%', '11%', '14%', '11%', '9%']}>
+                ? ['4%', '19%', '21%', '10%', '13%', '14%', '14%', '5%']
+                : ['23%', '21%', '10%', '13%', '14%', '14%', '5%']}>
                 <TableHeader>
                   <TableRow>
-                    {canSelectLeads && <TableHead align="center" className="w-12" aria-label="Selecionar" />}
+                    {canSelectLeads && <TableHead align="center" className="w-12"><Checkbox checked={areAllPageLeadsSelected} onChange={toggleSelectAllCurrentPage} aria-label={areAllPageLeadsSelected ? 'Desselecionar página' : 'Selecionar página'} /></TableHead>}
                     <SortableTableHead label="Lead" sortDirection={sortDirectionFor("nome")} onSort={() => toggleColumnSort("nome")} />
-                    <SortableTableHead label="Status" sortDirection={sortDirectionFor("status")} onSort={() => toggleColumnSort("status")} />
-                    <SortableTableHead label="Origem e tipo" sortDirection={sortDirectionFor("origem")} onSort={() => toggleColumnSort("origem")} />
+                    <SortableTableHead label="Etapa do funil" sortDirection={sortDirectionFor("status")} onSort={() => toggleColumnSort("status")} />
+                    <TableHead>Perfil</TableHead>
+                    <SortableTableHead label="Origem" sortDirection={sortDirectionFor("origem")} onSort={() => toggleColumnSort("origem")} />
                     <SortableTableHead label="Responsável" sortDirection={sortDirectionFor("responsavel")} onSort={() => toggleColumnSort("responsavel")} />
-                    <SortableTableHead label="Próximo follow-up" sortDirection={sortDirectionFor("proximo_retorno")} onSort={() => toggleColumnSort("proximo_retorno")} />
-                    <SortableTableHead label="Criado em" sortDirection={sortDirectionFor("created_at")} onSort={() => toggleColumnSort("created_at")} />
-                    <TableHead align="right">Ações</TableHead>
+                    <SortableTableHead label="Próximo retorno" sortDirection={sortDirectionFor("proximo_retorno")} onSort={() => toggleColumnSort("proximo_retorno")} />
+                    <TableHead align="right"><span className="sr-only">Ações</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2051,16 +1987,10 @@ export default function LeadsManager({
                           </TableCell>
                         )}
                         <TableCell>
-                          <div className="flex items-start gap-1.5">
-                            <LeadFavoriteToggle
-                              leadId={lead.id}
-                              favorito={Boolean(lead.favorito)}
-                              size="sm"
-                              className="mt-0.5"
-                              onToggled={(next) => setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, favorito: next } : item)))}
-                            />
+                          <div className="flex items-center gap-1.5">
                             <ActionSurface variant="plain" padding="none" type="button" onClick={() => openLeadDetails(lead)} className="kds-lead-identity">
-                              <span className="min-w-0"><span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
+                              <Avatar name={lead.nome_completo} size="sm" tone="brand" />
+                              <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-0.5 block truncate text-[.5625rem] text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
                             </ActionSurface>
                           </div>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
@@ -2073,25 +2003,27 @@ export default function LeadsManager({
                           )}
                         </TableCell>
                         <TableCell>
-                          <span className="block font-medium text-[var(--text-secondary)]">{lead.origem || "Sem origem"}</span>
-                          <span className="mt-1 block text-xs text-[var(--text-muted)]">{lead.tipo_contratacao || "Sem tipo"}</span>
+                          <span>{lead.tipo_contratacao || "—"}</span>
                         </TableCell>
+                        <TableCell>{lead.origem || "—"}</TableCell>
                         <TableCell>{lead.responsavel || "Não atribuído"}</TableCell>
                         <TableCell>
                           {nextReminder ? (
-                            <span className="font-medium text-[var(--accent-gold-hover)]">{formatDateTimeFullBR(nextReminder)}</span>
-                          ) : <span className="text-[var(--text-muted)]">Sem follow-up</span>}
+                            <span className="kds-record-date"><Calendar aria-hidden="true" />{formatDateTimeFullBR(nextReminder)}</span>
+                          ) : <span className="text-[var(--text-muted)]">—</span>}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell align="right">
-                          <RecordActions label="Ações do lead" actions={[
+                          <div className="flex items-center justify-end gap-1">
+                            <LeadFavoriteToggle leadId={lead.id} favorito={Boolean(lead.favorito)} size="sm" onToggled={(next) => setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, favorito: next } : item))} />
+                            <RecordActions visibleCount={0} label="Ações do lead" actions={[
                             { label: 'Ver detalhes do lead', icon: Contact, onClick: () => openLeadDetails(lead) },
                             ...(canEditLeads ? [
                               { label: 'Agendar lembrete', icon: Bell, onClick: () => openReminderScheduler(lead) },
                               { label: 'Converter em contrato', icon: FileText, onClick: () => handleConvertToContract(lead) },
                               { label: 'Excluir lead', icon: Trash2, destructive: true, loading: deletingLeadIds.has(lead.id), onClick: () => handleDeleteLead(lead) },
                             ] : []),
-                          ]} />
+                            ]} />
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -2151,7 +2083,21 @@ export default function LeadsManager({
         </>}
 
         </>}
-        {selectedLead && (
+        {showForm && (
+          <LeadForm
+            lead={editingLead}
+            onClose={() => {
+              setShowForm(false);
+              setEditingLead(null);
+            }}
+            onSave={async () => {
+              setShowForm(false);
+              setEditingLead(null);
+              await loadLeads();
+            }}
+          />
+        )}
+        {selectedLead && !showForm && (
           <LeadDetails
             presentation={leadDetailsPresentation}
             onScheduleReminder={openReminderScheduler}

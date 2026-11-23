@@ -1,13 +1,16 @@
 import { useMinimumLoading, LoadingState, LoadingMonogram, Text } from '../../../../design-system';
-import { Archive, Calendar, CalendarClock, Cog, MessageCircle, Plus, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
-import type { MutableRefObject } from 'react';
+import { Archive, Calendar, CalendarClock, Cog, MessageCircle, MoreHorizontal, SquarePen, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { useState, type MutableRefObject } from 'react';
 import type { LeadStatusConfig } from '../../../leads';
 
 import {
   Alert,
   Button,
-  ButtonGroup,
+  DropdownOption,
   IconButton,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SearchInput,
 } from '../../../../design-system';
 import type { CommWhatsAppMessageSearchResult } from '../data';
@@ -47,6 +50,8 @@ type WhatsAppInboxSidebarProps = {
   advancedFiltersTriggerRef: MutableRefObject<HTMLButtonElement | null>;
   onToggleAdvancedFilters: () => void;
   onClearFilters: () => void;
+  unreadOnly: boolean;
+  onShowUnread: () => void;
   chatRefreshError: string | null;
   chatLoadError: boolean;
   loading: boolean;
@@ -95,6 +100,8 @@ export function WhatsAppInboxSidebar({
   advancedFiltersTriggerRef,
   onToggleAdvancedFilters,
   onClearFilters,
+  unreadOnly,
+  onShowUnread,
   chatRefreshError,
   chatLoadError,
   loading,
@@ -119,6 +126,11 @@ export function WhatsAppInboxSidebar({
   onOpenChatMenuFromContext,
   chatMenuTriggerRefs,
 }: WhatsAppInboxSidebarProps) {
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const selectAction = (action: () => void) => {
+    setActionsOpen(false);
+    action();
+  };
   const showChatSearch = useMinimumLoading(searchingChats && sidebarChats.length === 0);
   const showMessageSearch = useMinimumLoading(searchingMessages);
   const showArchiveLoading = useMinimumLoading(archivedSectionOpen && archivedChatsLoading && sidebarChats.length === 0);
@@ -151,89 +163,47 @@ export function WhatsAppInboxSidebar({
       <header className="whatsapp-inbox-sidebar-header shrink-0">
         <div className="flex flex-col gap-3">
           <div className="whatsapp-inbox-sidebar-title flex items-center justify-between gap-2">
-            <span>WhatsApp Inbox</span>
+            <span>Conversas <small>{sidebarChats.length}</small></span>
             {onStartChat ? (
-              <Button variant="primary" size="sm" className="shrink-0" onClick={onStartChat}>
-                <Plus className="kds-control-icon" aria-hidden="true" />
-                Nova conversa
-              </Button>
+              <IconButton variant="ghost" size="sm" aria-label="Nova conversa" title="Nova conversa" onClick={onStartChat}><SquarePen aria-hidden="true" /></IconButton>
             ) : null}
           </div>
 
           <SearchInput
             value={searchDraft}
             onChange={(event) => onSearchDraftChange(event.target.value)}
-            placeholder="Buscar por nome ou telefone"
+            placeholder="Buscar conversas"
             className="whatsapp-inbox-search-input"
           />
 
           <div className="whatsapp-inbox-sidebar-tools">
-            <div className="flex items-center gap-2">
+            <div className="whatsapp-inbox-quick-filters">
               <InboxFilterChip active={!hasActiveChatFilters} label="Todas" onClick={onClearFilters} />
+              <InboxFilterChip active={unreadOnly} label="Não lidas" onClick={onShowUnread} />
+            </div>
+            <div className="whatsapp-inbox-sidebar-actions">
               <Button
                 ref={advancedFiltersTriggerRef}
                 type="button"
                 onClick={onToggleAdvancedFilters}
                 aria-expanded={advancedFiltersOpen}
                 aria-haspopup="dialog"
-                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
+                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'text'}
                 size="sm"
               >
                 <SlidersHorizontal className="kds-control-icon" />
-                Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
+                Filtrar conversas{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
               </Button>
+              <Popover open={actionsOpen} onOpenChange={setActionsOpen}>
+                <PopoverTrigger><IconButton variant="ghost" size="sm" aria-label="Ações das conversas"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
+                <PopoverContent align="end" className="kds-workspace-action-menu" aria-label="Ações das conversas">
+                  <DropdownOption role="button" aria-pressed={archivedSectionOpen} onClick={() => selectAction(() => onSwitchArchivedSection(!archivedSectionOpen))}><Archive className="kds-control-icon" aria-hidden="true" />{archivedSectionOpen ? 'Voltar às conversas' : 'Conversas arquivadas'}{archivedChatsCount > 0 && <small>{archivedChatsCount}</small>}</DropdownOption>
+                  <DropdownOption role="button" disabled={!canViewAgenda} onClick={() => selectAction(onOpenAgenda)}><Calendar className="kds-control-icon" aria-hidden="true" />Agenda do WhatsApp</DropdownOption>
+                  <DropdownOption role="button" aria-pressed={allScheduledMessagesPanelOpen} onClick={() => selectAction(onOpenScheduledMessages)}><CalendarClock className="kds-control-icon" aria-hidden="true" />Mensagens agendadas</DropdownOption>
+                  <DropdownOption role="button" onClick={() => selectAction(onOpenDashboard)}><Cog className="kds-control-icon" aria-hidden="true" />Painel WhatsApp</DropdownOption>
+                </PopoverContent>
+              </Popover>
             </div>
-            <ButtonGroup className="whatsapp-inbox-action-group shrink-0" role="group" aria-label="Ações das conversas">
-              <IconButton
-                variant={archivedSectionOpen ? 'soft' : 'ghost'}
-                className="relative shrink-0"
-                size="md"
-                onClick={() => onSwitchArchivedSection(!archivedSectionOpen)}
-                aria-label="Chats arquivados"
-                aria-pressed={archivedSectionOpen}
-                title={archivedChatsCount > 0 ? `Chats arquivados (${archivedChatsCount})` : 'Chats arquivados'}
-              >
-                <span className="relative inline-flex">
-                  <Archive className="kds-control-icon" />
-                  {archivedChatsCount > 0 ? (
-                    <span className="kds-sidebar-badge whatsapp-inbox-count-badge" aria-label={`${archivedChatsCount} chats arquivados`}>
-                      {archivedChatsCount > 9 ? '9+' : archivedChatsCount}
-                    </span>
-                  ) : null}
-                </span>
-              </IconButton>
-              <IconButton
-                variant="ghost"
-                className="shrink-0"
-                size="md"
-                onClick={onOpenAgenda}
-                aria-label="Agenda do WhatsApp"
-                title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissão para acessar a agenda'}
-                disabled={!canViewAgenda}
-              >
-                <Calendar className="kds-control-icon" />
-              </IconButton>
-              <IconButton
-                variant={allScheduledMessagesPanelOpen ? 'soft' : 'ghost'}
-                className="shrink-0"
-                size="md"
-                onClick={onOpenScheduledMessages}
-                aria-label="Mensagens agendadas"
-                title="Mensagens agendadas"
-              >
-                <CalendarClock className="kds-control-icon" />
-              </IconButton>
-              <IconButton
-                variant="ghost"
-                className="shrink-0"
-                size="md"
-                onClick={onOpenDashboard}
-                aria-label="Painel WhatsApp"
-                title="Painel WhatsApp"
-              >
-                <Cog className="kds-control-icon" />
-              </IconButton>
-            </ButtonGroup>
           </div>
         </div>
       </header>

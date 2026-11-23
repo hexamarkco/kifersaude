@@ -1,10 +1,14 @@
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen, MoreHorizontal, Plus } from "lucide-react";
 
 import {
   Button,
+  IconButton,
   LinkButton,
   PageHeader,
-  SegmentedControl,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Tabs,
 } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
@@ -25,21 +29,16 @@ export function LeadsHeader({
   return (
     <PageHeader
       className="kds-leads-header"
-      eyebrow="Operação comercial"
-      title="Gestão de leads"
-      description="Acompanhe a carteira, priorize follow-ups e mantenha o funil em ritmo constante."
+      title={viewMode === 'kanban' ? 'Seu funil, em movimento.' : 'Cada contato, uma possibilidade.'}
+      description={viewMode === 'kanban' ? 'Visualize oportunidades, prioridades e o próximo passo.' : 'Organize as conversas e acompanhe o próximo passo de cada negociação.'}
       actions={(
         <>
-          <LinkButton
-            href="/painel/api"
-            variant="secondary"
-            size="md"
-            aria-label="Documentação de integração"
-            title="Abrir documentação para integrar outros sistemas"
-          >
-            <BookOpen className="kds-control-icon" />
-            <span className="kds-leads-action-label">Documentação de integração</span>
-          </LinkButton>
+          <Popover>
+            <PopoverTrigger><IconButton variant="ghost" aria-label="Mais ações de leads"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
+            <PopoverContent align="end" className="kds-workspace-action-menu">
+              <LinkButton href="/painel/api" variant="ghost" className="kds-popover-menu-item"><BookOpen aria-hidden="true" />Documentação de integração</LinkButton>
+            </PopoverContent>
+          </Popover>
           <Button
             type="button"
             aria-label="Novo lead"
@@ -59,14 +58,13 @@ export function LeadsHeader({
       )}
       data-panel-animate
     >
-      <SegmentedControl
-        items={VIEW_MODE_TABS}
+      <Tabs
+        items={VIEW_MODE_TABS.map(({ id }) => ({ id, label: id === 'list' ? 'Lista' : 'Funil' }))}
         value={viewMode}
         onChange={onViewModeChange}
         size="sm"
         className="kds-leads-view-tabs"
-        listClassName="max-w-full flex-nowrap overflow-x-auto"
-        triggerClassName="whitespace-nowrap px-3 md:px-4"
+        ariaLabel="Visões de leads"
       />
     </PageHeader>
   );

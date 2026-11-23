@@ -38,7 +38,7 @@ const renderWorkspace = (flows: AutoContactFlow[], onEditFlow: (flowId: string) 
   />,
 );
 
-test('mostra o resumo e disponibiliza os fluxos em tabela e cartões responsivos', () => {
+test('mostra o resumo e disponibiliza os fluxos em cartões responsivos', () => {
   const activeFlow = createFlow('ativo', { name: 'Boas-vindas' });
   const pausedFlow = createFlow('pausado', { name: 'Reativação', ativo: false, triggerType: 'inactivity_duration' });
   const view = renderWorkspace([activeFlow, pausedFlow]);
@@ -47,12 +47,9 @@ test('mostra o resumo e disponibiliza os fluxos em tabela e cartões responsivos
     assert.ok(view.container.textContent?.includes('Fluxos ativos'));
     assert.ok(view.container.textContent?.includes('2 configurados'));
     assert.ok(view.container.textContent?.includes('Mensagens hoje'));
-    assert.equal(view.container.querySelectorAll('tbody tr').length, 2);
     assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] > li').length, 2);
     assert.ok(view.container.textContent?.includes('Novo lead'));
     assert.ok(view.container.textContent?.includes('Tempo sem contato'));
-    assert.equal(view.container.querySelectorAll('table .kds-badge-success').length, 1);
-    assert.equal(view.container.querySelectorAll('table .kds-badge-warning').length, 1);
     assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] .kds-badge-success').length, 1);
     assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] .kds-badge-warning').length, 1);
   } finally {
@@ -60,7 +57,7 @@ test('mostra o resumo e disponibiliza os fluxos em tabela e cartões responsivos
   }
 });
 
-test('abre a edição do fluxo pela ação explícita da linha', () => {
+test('abre a edição do fluxo pela ação explícita do cartão', () => {
   let editedFlow: string | null = null;
   const view = renderWorkspace(
     [createFlow('principal', { name: 'Atendimento inicial' })],
@@ -82,11 +79,11 @@ test('pagina a lista sem perder os indicadores do conjunto completo', () => {
   const view = renderWorkspace(flows);
 
   try {
-    assert.equal(view.container.querySelectorAll('tbody tr').length, 10);
+    assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] > li').length, 10);
     const nextPage = view.container.querySelector<HTMLButtonElement>('button[aria-label="Próxima página"]');
     assert.ok(nextPage);
     act(() => nextPage.click());
-    assert.equal(view.container.querySelectorAll('tbody tr').length, 1);
+    assert.equal(view.container.querySelectorAll('[aria-label="Fluxos de automação em cartões"] > li').length, 1);
     assert.ok(view.container.textContent?.includes('11 configurados'));
   } finally {
     view.unmount();

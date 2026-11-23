@@ -76,9 +76,8 @@ export default function BlogEditor({
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
-        eyebrow="Conteúdo público"
-        title={editingPost ? "Editar post" : "Novo post"}
-        description="Estruture o artigo, a capa e os metadados para publicação."
+        title="Cuidado começa com informação."
+        description={editingPost ? 'Revise o conteúdo e os detalhes da publicação do seu artigo.' : 'Escreva, revise e prepare a publicação do seu artigo.'}
         actions={(
           <Button
             type="button"

@@ -818,7 +818,7 @@ function Navigation() {
           source="NavigationList · components/NavigationList.tsx"
         >
           <BrandWordmark caption="Painel" className="kds-workspace-brand-preview" />
-          <DesignSystemProvider theme={workspaceTheme}>
+          <DesignSystemProvider workspace theme={workspaceTheme}>
             <WorkspaceHeader
               title="Gestão de leads"
               username="Operador Demonstração"

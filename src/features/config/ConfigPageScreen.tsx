@@ -66,28 +66,29 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const contractTab = query.get('contractTab');
   const leadManager = LEAD_CONFIG_MANAGERS.find(item => `manager:${item.category}` === leadTab);
   const contractManager = CONTRACT_CONFIG_MANAGERS.find(item => item.category === (contractTab ?? 'contract_status'));
-  const systemTitle = section === 'access' ? 'Perfis e acessos'
-    : section === 'leads' ? (leadTab === 'origins' ? 'Origens dos leads' : leadManager?.title ?? 'Etapas do funil')
+  const systemTitle = section === 'access' ? 'O acesso certo para cada pessoa.'
+    : section === 'leads' ? (leadTab === 'origins' ? 'De onde chegam as oportunidades.' : leadManager?.title ?? 'Um funil que acompanha a sua rotina.')
     : section === 'contracts' ? (contractManager?.title ?? 'Configurações de contratos')
-    : 'Configurações gerais';
-  const title = area === 'automation' ? 'Automações, integrações e IA'
-    : activeAllowedTab === 'users' ? 'Usuários e permissões'
-    : activeAllowedTab === 'links' ? 'Links públicos'
-    : activeAllowedTab === 'forms' ? isFormEditorOpen ? 'Editor de formulários' : 'Formulários de captação' : systemTitle;
+    : 'O painel, do seu jeito.';
+  const title = area === 'automation'
+    ? activeAllowedTab === 'integrations' ? 'Tudo conectado à sua operação.' : activeAllowedTab === 'ai' ? 'Inteligência com direção.' : 'Rotinas que trabalham com você.'
+    : activeAllowedTab === 'users' ? 'As pessoas por trás do cuidado.'
+    : activeAllowedTab === 'links' ? 'Uma página com o seu jeito.'
+    : activeAllowedTab === 'forms' ? isFormEditorOpen ? 'Editor de formulários' : 'O primeiro passo da conversa.' : systemTitle;
   const description = area === 'automation'
     ? activeAllowedTab === 'integrations'
-      ? 'Conecte e acompanhe os serviços usados pelo painel.'
+      ? 'Acompanhe os serviços usados pela equipe e o que precisa de atenção.'
       : activeAllowedTab === 'ai'
-        ? 'Configure os recursos de inteligência artificial disponíveis para a equipe.'
-        : 'Organize os atendimentos automáticos e as regras que movimentam o painel.'
+        ? 'Defina como a IA apoia a sua equipe em cada tarefa.'
+        : 'Organize jornadas, mensagens e regras de acompanhamento.'
     : activeAllowedTab === 'users'
-      ? 'Gerencie as contas que podem acessar a operação.'
+      ? 'Gerencie quem participa da operação e seus perfis de acesso.'
       : activeAllowedTab === 'links'
-        ? 'Gerencie o perfil público e os links exibidos em /links.'
+        ? 'Seu perfil, seus contatos e os caminhos para começar uma conversa.'
         : activeAllowedTab === 'forms'
           ? isFormEditorOpen
             ? 'Edite os dados, as perguntas e as respostas do formulário.'
-            : 'Configure os formulários públicos que recebem novos contatos.'
+            : 'Organize os formulários que recebem novos contatos.'
           : section === 'access'
             ? 'Controle quais áreas do painel ficam disponíveis para cada perfil.'
             : section === 'leads'
@@ -96,7 +97,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
                 : leadManager?.description ?? 'Organize as etapas e os cadastros usados no acompanhamento de leads.'
               : section === 'contracts'
                 ? contractManager?.description ?? 'Organize as opções usadas no cadastro de contratos.'
-                : 'Defina como datas, sessões e notificações se comportam no painel.';
+                : 'Preferências que deixam a operação mais simples para a equipe.';
   const headerActions = activeAllowedTab === 'users' && getRoleModulePermission(role, 'config-users').can_edit
     ? <Button onClick={() => setCreateUserDialogOpen(true)}><Plus className="kds-control-icon" aria-hidden="true" />Novo usuário</Button>
     : activeAllowedTab === 'links'
@@ -118,9 +119,9 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
       {!isAutomationFlowDetail && (
         <PageHeader
-          eyebrow="Administração"
           title={title}
           description={description}
+          descriptionPlacement="visible"
           actions={headerActions}
         >
           <Tabs
@@ -136,7 +137,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
         </PageHeader>
       )}
 
-      <main className="min-w-0">
+      <div className="min-w-0">
           {activeAllowedTab === "system" && <SystemSettingsScreen />}
           {activeAllowedTab === "users" && <UsersScreen createDialogOpen={createUserDialogOpen} onCreateDialogOpenChange={setCreateUserDialogOpen} />}
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
@@ -158,7 +159,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
               onEditorOpenChange={setIsFormEditorOpen}
             />
           )}
-      </main>
+      </div>
     </div>
   );
 }

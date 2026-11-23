@@ -1,22 +1,19 @@
 import { useState } from 'react';
-import { Activity, Clock3, Edit3, Layers3, MessageSquareText, Search, Tag } from 'lucide-react';
+import { Activity, ArrowUpRight, Clock3, Layers3, MessageSquareText, Play, Search, Tag } from 'lucide-react';
 
 import type { AutoContactFlow } from '../../../../lib/autoContactService';
 import {
   Badge,
   Button,
   Card,
+  CardIcon,
+  CrmCard,
   EmptyState,
   FilterSelect,
   Input,
+  KpiCard,
   Pagination,
   SectionHeader,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Text,
 } from '../../../../design-system';
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
@@ -37,6 +34,8 @@ type AutomationFlowsWorkspaceProps = {
   availableTags: string[];
   getConditionPreview: (flow: AutoContactFlow) => string;
   onEditFlow: (flowId: string) => void;
+  onOpenTemplates?: () => void;
+  onOpenSimulation?: (flowId: string) => void;
 };
 
 const triggerLabels: Record<AutoContactFlow['triggerType'], string> = {
@@ -45,26 +44,6 @@ const triggerLabels: Record<AutoContactFlow['triggerType'], string> = {
   status_duration: 'Tempo no status',
   inactivity_duration: 'Tempo sem contato',
 };
-
-function MetricCard({ label, value, detail, icon: Icon }: {
-  label: string;
-  value: string | number;
-  detail: string;
-  icon: typeof Activity;
-}) {
-  return (
-    <Card padding="md" className="flex min-h-[7.25rem] min-w-0 flex-col justify-between gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <Text className="kds-card-subtitle">{label}</Text>
-        <Icon className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-hidden="true" />
-      </div>
-      <div>
-        <Text className="text-2xl font-semibold leading-none tabular-nums text-[var(--text-primary)]">{value}</Text>
-        <Text className="mt-2 text-xs">{detail}</Text>
-      </div>
-    </Card>
-  );
-}
 
 export default function AutomationFlowsWorkspace({
   flows,
@@ -82,6 +61,8 @@ export default function AutomationFlowsWorkspace({
   availableTags,
   getConditionPreview,
   onEditFlow,
+  onOpenTemplates,
+  onOpenSimulation,
 }: AutomationFlowsWorkspaceProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -103,14 +84,14 @@ export default function AutomationFlowsWorkspace({
 
   return (
     <div className="space-y-6">
-      <section aria-label="Resumo das automações" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <MetricCard label="Fluxos ativos" value={activeFlows} detail={`${totalFlows} configurados`} icon={Activity} />
-        <MetricCard label="Etapas configuradas" value={totalSteps} detail="Distribuídas entre os fluxos" icon={Layers3} />
-        <MetricCard label="Templates" value={totalTemplates} detail="Disponíveis para as mensagens" icon={MessageSquareText} />
-        <MetricCard label="Mensagens hoje" value={dailyCountValue} detail={dailyCountDetail} icon={Clock3} />
+      <section aria-label="Resumo das automações" className="kds-workspace-record-metrics">
+        <KpiCard title="Fluxos ativos" value={<span>{activeFlows}</span>} trend={`${totalFlows} configurados`} icon={<Activity aria-hidden="true" />} />
+        <KpiCard title="Etapas configuradas" data-tone="info" value={<span>{totalSteps}</span>} trend="Distribuídas entre os fluxos" icon={<Layers3 aria-hidden="true" />} />
+        <KpiCard title="Modelos de mensagem" data-tone="cyan" value={<span>{totalTemplates}</span>} trend="Disponíveis para as mensagens" icon={<MessageSquareText aria-hidden="true" />} />
+        <KpiCard title="Mensagens hoje" data-tone="warning" value={<span>{dailyCountValue}</span>} trend={dailyCountDetail} icon={<Clock3 aria-hidden="true" />} />
       </section>
 
-      <Card padding="md" className="space-y-5">
+      <section className="kds-automation-journeys space-y-5">
         <SectionHeader
           eyebrow="Automação comercial"
           title="Fluxos de automação"
@@ -181,14 +162,15 @@ export default function AutomationFlowsWorkspace({
               />
             ) : (
               <>
-                <ul className="grid gap-3 lg:hidden" aria-label="Fluxos de automação em cartões">
+                <ul className="kds-automation-journey-grid" aria-label="Fluxos de automação em cartões">
                   {visibleFlows.map((flow) => (
                     <li key={flow.id}>
-                      <Card padding="md" className="space-y-3">
+                      <Card padding="md" className="kds-automation-journey-card space-y-4">
+                        <CardIcon><MessageSquareText aria-hidden="true" /></CardIcon>
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <Text className="break-words font-semibold text-[var(--text-primary)]">{flow.name || 'Fluxo sem nome'}</Text>
-                            <Text className="mt-1 text-sm">{triggerLabels[flow.triggerType]}</Text>
+                            <Text className="kds-card-title">{flow.name || 'Fluxo sem nome'}</Text>
+                            <Text className="kds-card-subtitle">{triggerLabels[flow.triggerType]}</Text>
                           </div>
                           <Badge tone={flow.ativo === false ? 'warning' : 'success'} size="sm">
                             {flow.ativo === false ? 'Pausado' : 'Ativo'}
@@ -200,72 +182,18 @@ export default function AutomationFlowsWorkspace({
                             {flow.steps.length} {flow.steps.length === 1 ? 'etapa' : 'etapas'}
                           </Text>
                           <Button
-                            variant="secondary"
+                            variant="text"
                             size="sm"
                             onClick={() => onEditFlow(flow.id)}
                             aria-label={`Editar fluxo ${flow.name || 'sem nome'}`}
                           >
-                            <Edit3 className="kds-control-icon" aria-hidden="true" />
-                            Editar
+                            Ver jornada <ArrowUpRight className="kds-control-icon" aria-hidden="true" />
                           </Button>
                         </div>
                       </Card>
                     </li>
                   ))}
                 </ul>
-
-                <div className="hidden lg:block">
-                  <Table
-                    size="md"
-                    aria-label="Fluxos de automação"
-                    className="min-w-[60rem]"
-                    columnWidths={['31%', '19%', '15%', '12%', '23%']}
-                  >
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fluxo</TableHead>
-                        <TableHead>Gatilho</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead align="right">Etapas</TableHead>
-                        <TableHead align="right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visibleFlows.map((flow) => (
-                        <TableRow key={flow.id}>
-                          <TableCell>
-                            <div className="min-w-0">
-                              <Text className="truncate font-semibold text-[var(--text-primary)]">{flow.name || 'Fluxo sem nome'}</Text>
-                              <Text className="mt-1 max-w-[36rem] truncate text-xs text-[var(--text-muted)]" title={getConditionPreview(flow)}>
-                                {getConditionPreview(flow)}
-                              </Text>
-                            </div>
-                          </TableCell>
-                          <TableCell>{triggerLabels[flow.triggerType]}</TableCell>
-                          <TableCell>
-                            <Badge tone={flow.ativo === false ? 'warning' : 'success'} size="sm">
-                              {flow.ativo === false ? 'Pausado' : 'Ativo'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell align="right" className="whitespace-nowrap tabular-nums">
-                            {flow.steps.length}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => onEditFlow(flow.id)}
-                              aria-label={`Editar fluxo ${flow.name || 'sem nome'}`}
-                            >
-                              <Edit3 className="kds-control-icon" aria-hidden="true" />
-                              Editar
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
 
                 <Pagination
                   currentPage={safePage}
@@ -283,7 +211,15 @@ export default function AutomationFlowsWorkspace({
             )}
           </>
         )}
-      </Card>
+      </section>
+      {(onOpenTemplates || onOpenSimulation) && <div className="kds-automation-workspace-resources">
+        {onOpenTemplates && <CrmCard title="Mensagens com contexto" subtitle="Uma base consistente para as rotinas da equipe." subtitlePlacement="visible">
+          <Button variant="secondary" size="sm" onClick={onOpenTemplates}><MessageSquareText aria-hidden="true" />Explorar modelos</Button>
+        </CrmCard>}
+        {onOpenSimulation && visibleFlows.length > 0 && <CrmCard title="Antes de colocar no ar" subtitle="Confira cada caminho com uma simulação." subtitlePlacement="visible">
+          <Button variant="secondary" size="sm" onClick={() => onOpenSimulation(visibleFlows[0].id)}><Play aria-hidden="true" />Simular uma jornada</Button>
+        </CrmCard>}
+      </div>}
     </div>
   );
 }

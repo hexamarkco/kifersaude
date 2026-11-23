@@ -85,9 +85,8 @@ export default function BlogPostsList({
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
-        eyebrow="Kifer Saúde / Conteúdo"
-        title="Gestão de conteúdo"
-        description="Publique artigos e mantenha os conteúdos da Kifer Saúde organizados."
+        title="Conteúdo que aproxima."
+        description="Organize os artigos e as informações que você compartilha."
         actions={(
           <Button type="button" onClick={onCreatePost}>
             <Plus className="kds-control-icon" />

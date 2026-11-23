@@ -165,6 +165,22 @@
 }
 .kds-crm-dialog .kds-dialog-title { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.3; }
 .kds-crm-dialog :is(.kds-dialog-body, .kds-drawer-body) { padding: var(--space-6); background: var(--bg-canvas-subtle); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-lead-form-dialog .kds-dialog-body { padding: 1.5rem 1.6875rem; background: var(--bg-surface); }
+.kds-workspace-theme .kds-lead-form-dialog .kds-lead-form-grid {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'contact' 'location' 'qualification' 'followup';
+  gap: var(--space-5);
+}
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-section { border: 0; border-radius: 0; background: transparent; padding: 0 0 1.6875rem; border-bottom: var(--border-width) solid var(--border-subtle); }
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-section:last-child { border-bottom: 0; padding-bottom: 0; }
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-fields { gap: 1.375rem 1.25rem; }
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-section > legend { font: 600 .8125rem / 1.5 var(--font-display); letter-spacing: -.03em; }
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-fields { --control-height-md: 2.75rem; }
+.kds-workspace-theme .kds-dialog-eyebrow { color: var(--brand-primary); font: 500 .5rem / 1.6 var(--font-sans); text-transform: uppercase; letter-spacing: .15em; }
+.kds-workspace-theme .kds-dialog-footer-note { margin-inline-end: auto; color: var(--text-muted); font: var(--type-caption); }
+.kds-contract-form-steps { flex: none; padding: var(--space-3) var(--space-6); border-bottom: var(--border-width) solid var(--border-subtle); background: var(--bg-surface-muted); }
+.kds-contract-form-dialog .kds-form-section[hidden] { display: none; }
+.kds-contract-form-dialog .kds-form-section:focus { outline: none; }
 .kds-crm-dialog :is(.kds-dialog-footer, .kds-drawer-footer) { padding: var(--space-4) var(--space-6); border-top: var(--border-width) solid var(--border-subtle); background: var(--bg-surface); gap: var(--space-2); }
 .painel-theme.kifer-ds .kds-contract-details-drawer { width: min(76rem, calc(100vw - var(--space-8))); max-width: none; border-radius: var(--radius-xl) 0 0 var(--radius-xl); }
 .kds-contract-detail-nav { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: var(--space-2); padding-block: var(--space-3); margin-bottom: var(--space-4); background: var(--bg-canvas-subtle); border-bottom: var(--border-width) solid var(--border-subtle); }
@@ -226,4 +242,48 @@
   .kds-contracts-page .kds-contracts-filter-grid { grid-template-columns: minmax(0, 1fr); }
   .kds-crm-dialog .kds-dialog-title { font-size: 1.25rem; }
   .kds-contract-detail-nav { gap: var(--space-1); }
+}
+.kds-workspace-theme .kds-workspace-record-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-workspace-record-metrics > .kds-card-kpi { min-height: 9rem; padding: 1.1875rem; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-workspace-record-metrics .kds-kpi-value { font: 600 clamp(1.25rem, 2.3vw, 1.8125rem) / 1.3 var(--font-display); white-space: normal; }
+.kds-workspace-record-metrics .kds-kpi-trend { font: var(--type-caption); }
+.kds-workspace-record-metrics [data-tone='cyan'] { --stat-icon-bg: var(--cyan-soft); --stat-icon-color: var(--cyan-text); }
+.kds-workspace-record-metrics [data-tone='info'] { --stat-icon-bg: var(--info-soft); --stat-icon-color: var(--info-text); }
+.kds-workspace-record-metrics [data-tone='purple'] { --stat-icon-bg: var(--purple-soft); --stat-icon-color: var(--purple-text); }
+.kds-workspace-record-metrics [data-tone='warning'] { --stat-icon-bg: var(--warning-soft); --stat-icon-color: var(--warning-text); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-leads-filters, .kds-contracts-page .kds-record-filters) { padding: 0; border-color: transparent; background: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-leads-header, .kds-contracts-header) { padding-block: 0; }
+.kds-workspace-theme .kds-leads-view-tabs { width: 100%; }
+.kds-workspace-theme .kds-leads-view-tabs .kds-tabs-list { padding: 0; background: transparent; border-radius: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-search-toolbar, .kds-leads-search-toolbar) { justify-content: flex-start; gap: .625rem; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-search-toolbar, .kds-leads-search-toolbar) .kds-toolbar-search { max-width: 23.75rem; flex: 1 1 12.5rem; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-toolbar-actions, .kds-leads-toolbar-actions) { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-start; width: auto; gap: .625rem; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-toolbar-actions, .kds-leads-toolbar-actions) > .kds-filter-trigger { flex: none; width: auto; min-width: 8.625rem; max-width: 13rem; padding-inline: .75rem; column-gap: .5rem; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-search-toolbar, .kds-leads-search-toolbar) :is(.kds-input, .kds-filter-trigger, .kds-button) { min-height: 2.375rem; font: 500 .6875rem / 1.5 var(--font-sans); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header-actions { display: flex; width: auto; }
+.kds-workspace-theme :is(.kds-contracts-header-actions, .kds-leads-header .kds-page-actions) .kds-button-ghost { border-color: transparent; }
+.kds-workspace-result-count { flex: none; margin-inline-start: auto; color: var(--text-muted); font: 400 .625rem / 1.65 var(--font-sans); }
+.kds-workspace-extra-filters { display: flex; flex-wrap: wrap; gap: .625rem; }
+.kds-record-date { display: inline-flex; align-items: center; gap: .375rem; }
+.kds-record-date svg { flex-shrink: 0; width: .75rem; height: .75rem; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-leads-results, .kds-contracts-results) .kds-table-head { height: 2.6875rem; padding-inline: 1.125rem; font: 500 .625rem / 1.5 var(--font-sans); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-leads-results, .kds-contracts-results) .kds-table-cell { height: 4.0625rem; padding: .875rem 1.125rem; font: var(--type-body-sm); }
+.kds-workspace-theme .kds-forecast-toolbar { padding: 0; margin-block-end: 1.0625rem; }
+.kds-workspace-theme .kds-forecast-toolbar > .kds-input-shell { max-width: 23.75rem; }
+.kds-workspace-theme .kds-forecast-month { margin-inline-start: 0; border: 1px solid var(--border-strong); border-radius: var(--radius-control); background: var(--bg-surface); }
+.kds-workspace-theme .kds-forecast-month .kds-icon-button { border-color: transparent; }
+.kds-workspace-theme .kds-forecast-list { overflow: hidden; }
+.kds-workspace-theme .kds-forecast-list .kds-table { min-width: 40rem; }
+.kds-workspace-theme .kds-forecast-type-badge[data-forecast-type='comissao'] { color: var(--cyan-text); background: var(--cyan-soft); border-color: transparent; }
+.kds-workspace-theme .kds-forecast-type-badge[data-forecast-type='bonificacao'] { color: var(--purple-text); background: var(--purple-soft); border-color: transparent; }
+
+@media (max-width: 767px) {
+  .kds-workspace-theme .kds-workspace-record-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-workspace-record-metrics > .kds-card-kpi { padding: .875rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-search-toolbar, .kds-leads-search-toolbar) .kds-toolbar-search { max-width: none; }
+  .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-search-toolbar, .kds-leads-search-toolbar) .kds-toolbar-actions { display: flex; flex-wrap: wrap; }
 }

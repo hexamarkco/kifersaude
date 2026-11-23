@@ -6,7 +6,14 @@ import {
   Alert,
   BrandWordmark,
   Button,
+  Checkbox,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Field,
+  FieldLabel,
   Heading,
   IconButton,
   Input,
@@ -15,8 +22,17 @@ import {
 } from '../design-system';
 import { getSupabaseErrorMessage, isSupabaseConnectivityError } from '../infrastructure/supabase';
 
+const REMEMBERED_USERNAME = 'kifer-painel-remembered-username';
+
+function getRememberedUsername() {
+  try { return localStorage.getItem(REMEMBERED_USERNAME) ?? ''; }
+  catch { return ''; }
+}
+
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(getRememberedUsername);
+  const [rememberUsername, setRememberUsername] = useState(() => Boolean(getRememberedUsername()));
+  const [passwordHelpOpen, setPasswordHelpOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +52,10 @@ export default function LoginPage() {
       setError(isSupabaseConnectivityError(error) ? message : 'Usuário ou senha inválidos. Verifique suas credenciais e tente novamente.');
       setLoading(false);
     } else {
+      if (rememberUsername) {
+        try { localStorage.setItem(REMEMBERED_USERNAME, username.trim()); }
+        catch { /* Signing in works when browser storage is unavailable. */ }
+      }
       navigate('/painel');
     }
   };
@@ -45,7 +65,7 @@ export default function LoginPage() {
       <main className="kds-login-layout">
         <aside className="kds-login-brand-panel" aria-label="Painel Kifer Saúde">
           <div className="kds-login-brand-header">
-            <BrandWordmark />
+            <BrandWordmark variant="lockup" />
             <Text as="span" className="kds-login-brand-label">PAINEL</Text>
           </div>
 
@@ -60,15 +80,15 @@ export default function LoginPage() {
           </div>
 
           <div className="kds-login-brand-art" aria-hidden="true" />
-          <Text className="kds-login-brand-signature">Pessoas no centro. Sempre.</Text>
+          <footer className="kds-login-brand-signature"><span>Pessoas no centro. Sempre.</span><span>Kifer Saúde</span></footer>
         </aside>
 
         <section className="kds-login-form-panel" aria-labelledby="login-title">
           <div className="kds-login-card">
             <header className="kds-login-heading">
               <Text className="kds-login-eyebrow">Seu espaço de trabalho</Text>
-              <Heading family="display" level={1} id="login-title">Bem-vindo ao painel</Heading>
-              <Text size="sm">Entre com seu usuário e senha para continuar.</Text>
+              <Heading family="display" level={1} id="login-title">Bom ter você por aqui.</Heading>
+              <Text size="sm">Entre para acompanhar a operação.</Text>
             </header>
 
             <form onSubmit={handleSubmit} className="kds-login-form" aria-busy={loading}>
@@ -81,7 +101,7 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <Field label="Usuário" htmlFor="username">
+              <Field label="Usuário *" htmlFor="username">
                 <Input
                   id="username"
                   type="text"
@@ -100,7 +120,7 @@ export default function LoginPage() {
                 />
               </Field>
 
-              <Field label="Senha" htmlFor="password">
+              <Field label="Senha *" htmlFor="password">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -126,6 +146,17 @@ export default function LoginPage() {
                 />
               </Field>
 
+              <div className="kds-login-form-options">
+                <FieldLabel><Checkbox checked={rememberUsername} onChange={(event) => {
+                  setRememberUsername(event.target.checked);
+                  if (!event.target.checked) {
+                    try { localStorage.removeItem(REMEMBERED_USERNAME); }
+                    catch { /* Storage may be unavailable. */ }
+                  }
+                }} />Lembrar meu usuário</FieldLabel>
+                <Button type="button" variant="text" size="sm" onClick={() => setPasswordHelpOpen(true)}>Esqueci minha senha</Button>
+              </div>
+
               <Button
                 type="submit"
                 loading={loading}
@@ -144,6 +175,11 @@ export default function LoginPage() {
           </div>
         </section>
       </main>
+      <Dialog open={passwordHelpOpen} onOpenChange={setPasswordHelpOpen} size="sm">
+        <DialogHeader onClose={() => setPasswordHelpOpen(false)}><DialogTitle>Recuperar acesso</DialogTitle></DialogHeader>
+        <DialogBody><Text>Peça a uma pessoa administradora do painel para redefinir a senha da sua conta. Tenha seu nome de usuário em mãos.</Text></DialogBody>
+        <DialogFooter><Button type="button" onClick={() => setPasswordHelpOpen(false)}>Entendi</Button></DialogFooter>
+      </Dialog>
     </PublicShell>
   );
 }

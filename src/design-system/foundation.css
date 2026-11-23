@@ -1274,6 +1274,9 @@
   min-width: 0;
   column-gap: calc(var(--kds-control-padding) / 2);
 }
+.kds-filter-trigger:not(:has(> .kds-filter-trigger-icon)) {
+  grid-template-columns: minmax(0, 1fr) var(--kds-control-icon);
+}
 
 .kds-filter-trigger-icon,
 .kds-filter-trigger-chevron {

@@ -7,19 +7,21 @@ interface OutletContext {
   activeTab: string;
   handleTabChange: (tab: string, options?: TabNavigationOptions) => void;
   contractOperadoraFilter?: string;
+  contractSearch?: string;
   leadToConvert: Lead | null;
   onConvertComplete: () => void;
   setLeadToConvert: (lead: Lead | null) => void;
 }
 
 export default function ContractsManagerWrapper() {
-  const { leadToConvert, onConvertComplete, contractOperadoraFilter } = useOutletContext<OutletContext>();
+  const { leadToConvert, onConvertComplete, contractOperadoraFilter, contractSearch } = useOutletContext<OutletContext>();
   
   return (
     <ContractsManager
       leadToConvert={leadToConvert}
       onConvertComplete={onConvertComplete}
       initialOperadoraFilter={contractOperadoraFilter}
+      initialSearch={contractSearch}
     />
   );
 }

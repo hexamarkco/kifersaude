@@ -41,7 +41,7 @@
 
 @container inbox-shell (min-width: 56rem) {
   .kds-inbox-workspace-grid {
-    grid-template-columns: clamp(20rem, 30cqi, 34rem) minmax(0, 1fr);
+    grid-template-columns: clamp(16rem, 25cqi, 19rem) minmax(0, 1fr);
   }
 
   .kds-inbox-workspace-grid > :is(.whatsapp-inbox-sidebar, .whatsapp-inbox-thread) {
@@ -56,9 +56,9 @@
   .kds-inbox-workspace-grid.is-contact-panel-open { grid-template-columns: minmax(0, 1fr); }
 }
 
-@container inbox-shell (min-width: 72rem) {
+@container inbox-shell (min-width: 64rem) {
   .kds-inbox-workspace-grid.is-contact-panel-open {
-    grid-template-columns: clamp(19rem, 24cqi, 28rem) minmax(0, 1fr) clamp(20rem, 23cqi, 26rem);
+    grid-template-columns: clamp(16rem, 25cqi, 19rem) minmax(0, 1fr) clamp(15rem, 22cqi, 18rem);
   }
 
   .kds-inbox-workspace-grid.is-contact-panel-open > :is(.whatsapp-inbox-sidebar, .whatsapp-inbox-thread) {
@@ -109,6 +109,57 @@
   background: var(--bg-surface);
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+}
+
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-sidebar-scroll { padding: 0; }
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-card {
+  border: 0;
+  border-inline-start: 2px solid transparent;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  border-radius: 0;
+}
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-card.is-active {
+  border-inline-start-color: var(--brand-primary);
+  background: var(--brand-primary-soft);
+}
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-select { padding-inline-start: var(--space-4); }
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-messages { background: var(--bg-canvas-subtle); }
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-thread .message-bubble-outbound {
+  background: var(--brand-primary-soft);
+  border-color: var(--brand-primary-border);
+}
+.kds-workspace-theme .whatsapp-inbox-sidebar-header { padding: 1.125rem 1.1875rem .625rem; }
+.kds-workspace-theme .whatsapp-inbox-sidebar-title > span { display: flex; align-items: center; gap: .5rem; font: 600 1rem / 1.5 var(--font-display); letter-spacing: -.04em; }
+.kds-workspace-theme .whatsapp-inbox-sidebar-title small { padding: .125rem .3125rem; border-radius: .25rem; background: var(--bg-inset); color: var(--text-muted); font: var(--type-caption); letter-spacing: 0; }
+.kds-workspace-theme .whatsapp-inbox-sidebar-title .kds-icon-button,
+.kds-workspace-theme .whatsapp-inbox-sidebar-actions .kds-icon-button { border-color: transparent; }
+.kds-workspace-theme .whatsapp-inbox-search-input .kds-input { background: var(--bg-surface-muted); min-height: 2.375rem; height: 2.375rem; font: var(--type-body-sm); }
+.kds-workspace-theme .whatsapp-inbox-sidebar-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 .75rem; }
+.whatsapp-inbox-quick-filters, .whatsapp-inbox-sidebar-actions { display: flex; align-items: center; gap: .4rem; }
+.kds-workspace-theme .whatsapp-inbox-quick-filters { grid-column: 1 / -1; gap: 1.125rem; }
+.kds-workspace-theme .whatsapp-inbox-sidebar-actions { grid-column: 1 / -1; justify-content: space-between; }
+.kds-workspace-theme .whatsapp-inbox-sidebar-actions > .kds-button,
+.kds-workspace-theme .whatsapp-inbox-quick-filters .whatsapp-inbox-filter-chip { min-height: 1.75rem; padding: .25rem 0; border-color: transparent; background: transparent; color: var(--text-muted); font: 500 .625rem / 1.5 var(--font-sans); }
+.kds-workspace-theme .whatsapp-inbox-quick-filters .whatsapp-inbox-filter-chip[aria-pressed='true'] { color: var(--brand-primary); }
+.kds-workspace-theme .whatsapp-inbox-chat-row .whatsapp-inbox-chat-select { grid-template-columns: auto minmax(0, 1fr) auto; min-height: 5.5rem; gap: .375rem .6875rem; padding-block: .875rem; }
+.whatsapp-inbox-chat-avatar { grid-column: 1; grid-row: 1 / span 3; align-self: start; }
+.kds-workspace-theme .whatsapp-inbox-chat-identity { grid-column: 2; grid-row: 1; }
+.kds-workspace-theme .whatsapp-inbox-chat-identity .whatsapp-inbox-heading { font: var(--type-label); }
+.kds-workspace-theme .whatsapp-inbox-chat-preview { grid-column: 2; grid-row: 2; font: var(--type-caption); }
+.kds-workspace-theme .whatsapp-inbox-chat-select > .whatsapp-inbox-chat-trailing { grid-column: 3; grid-row: 1 / span 2; align-self: start; flex-direction: column; align-items: flex-end; }
+.kds-workspace-theme .whatsapp-inbox-chat-meta { font: var(--type-caption); }
+.kds-workspace-theme .whatsapp-inbox-chat-select > .whatsapp-inbox-chat-lead-status { grid-column: 2 / -1; justify-self: start; grid-row: 3; font-size: .5rem; }
+.kds-workspace-theme .whatsapp-inbox-unread-badge { min-height: .9375rem; min-width: .9375rem; border-radius: .3125rem; padding: 0 .25rem; font-size: .5rem; }
+.kds-workspace-theme .whatsapp-inbox-chat-actions .kds-icon-button { border-color: transparent; }
+.kds-workspace-theme .whatsapp-inbox-thread-header :is(.whatsapp-inbox-heading, .whatsapp-inbox-thread-identity .kds-heading) { font: 600 .875rem / 1.5 var(--font-display); }
+.kds-workspace-theme .whatsapp-inbox-thread .message-bubble { box-shadow: none; font: var(--type-body-sm); }
+
+@container inbox-shell (min-width: 56rem) {
+  .kds-workspace-theme .kds-inbox-workspace-grid { grid-template-columns: 18.125rem minmax(0, 1fr); }
+  .kds-workspace-theme .kds-inbox-workspace-grid.is-contact-panel-open { grid-template-columns: minmax(0, 1fr); }
+}
+@container inbox-shell (min-width: 64rem) {
+  .kds-workspace-theme .kds-inbox-workspace-grid.is-contact-panel-open { grid-template-columns: 18.125rem minmax(0, 1fr) 16.5625rem; }
 }
 
 .whatsapp-inbox-thread {

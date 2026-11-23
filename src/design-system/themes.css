@@ -311,3 +311,140 @@
   --text-muted: var(--text-secondary);
   --type-label: 500 0.8125rem / 1.4 var(--font-sans);
 }
+
+/* The workspace palette is also applied to its portals. Public surfaces keep their own palette. */
+.painel-theme.kifer-ds.kds-workspace-theme {
+  --type-ui-title: 600 1.6875rem / 1.35 var(--font-display);
+  --type-ui-section: 600 .9375rem / 1.5 var(--font-display);
+  --type-ui-heading: 600 .9375rem / 1.5 var(--font-display);
+  --type-body-sm: 400 .6875rem / 1.65 var(--font-sans);
+  --type-caption: 400 .5625rem / 1.5 var(--font-sans);
+  --type-label: 500 .6875rem / 1.6 var(--font-sans);
+  --control-height-md: 2.5rem;
+  --control-height-lg: 2.75rem;
+  --workspace-header-height: 4.5625rem;
+  --workspace-mobile-header-height: 3.875rem;
+  --sidebar-width: 14rem;
+  --sidebar-width-collapsed: 4.75rem;
+  --page-max-width: 108.125rem;
+  --page-gutter: 1.875rem;
+  --radius-control: .4375rem;
+  --radius-panel: .75rem;
+  --layout-gap: var(--space-5);
+  --dialog-width-md: 38.75rem;
+  --dialog-width-xl: 60rem;
+  --brand-primary-gradient: var(--brand-primary);
+  --brand-primary-gradient-hover: var(--brand-primary-hover);
+  --brand-primary-gradient-active: var(--brand-primary-active);
+}
+
+.painel-theme.kifer-ds.kds-workspace-theme.theme-light {
+  --bg-canvas: #f5f6f8;
+  --bg-canvas-subtle: #fafbfc;
+  --bg-surface-muted: #fafbfc;
+  --bg-inset: #f1f3f6;
+  --bg-hover: #fafbfc;
+  --bg-active: #e9edf2;
+  --bg-disabled: #eef0f3;
+  --border-subtle: #e9ebef;
+  --border-default: #e9ebef;
+  --border-strong: #dfe2e7;
+  --text-primary: #22262e;
+  --text-secondary: #525c69;
+  --text-muted: #69717e;
+  --text-subtle: #727d8a;
+  --text-disabled: #78828e;
+  --brand-primary: #c54f2e;
+  --brand-primary-active: #b44729;
+  --brand-primary-hover: #ac4225;
+  --brand-primary-soft: #fbefea;
+  --brand-primary-muted: #fbefea;
+  --success-soft: #edf7f0;
+  --success-text: #2e785b;
+  --info-soft: #eef4fc;
+  --info-text: #4a73ac;
+  --purple-soft: #f3eff9;
+  --purple-text: #7e5ca6;
+  --cyan-soft: #edf7f7;
+  --cyan-text: #35777a;
+  --warning-soft: #fff6e4;
+  --warning-text: #976b25;
+  --danger-soft: #fcf0ee;
+  --danger-text: #ba5149;
+  --focus-ring: #c54f2e33;
+  --overlay: #18202d66;
+  --action-primary-bg: var(--brand-primary);
+  --action-primary-hover: var(--brand-primary-hover);
+  --shadow-card: none;
+  --shadow-popover: 0 12px 36px -12px #17203130;
+  --shadow-modal: 0 24px 72px -16px #17203145;
+}
+
+.painel-theme.kifer-ds.kds-workspace-theme.theme-dark {
+  --tab-selected-bg: var(--bg-surface);
+  --tab-selected-text: var(--text-primary);
+  --bg-canvas: #13161b;
+  --bg-canvas-subtle: #181c23;
+  --bg-surface: #1c2027;
+  --bg-surface-muted: #20252d;
+  --bg-elevated: #252b34;
+  --bg-inset: #171b21;
+  --bg-hover: #242a33;
+  --bg-active: #303946;
+  --bg-disabled: #252c36;
+  --border-subtle: #2b323d;
+  --border-default: #2b323d;
+  --border-strong: #3b4553;
+  --text-primary: #edf0f4;
+  --text-secondary: #c1cad6;
+  --text-muted: #a6afbc;
+  --text-subtle: #97a3b4;
+  --text-disabled: #8996a6;
+  --text-inverse: #211611;
+  --brand-primary: #ed8968;
+  --brand-primary-active: #f39b7f;
+  --brand-primary-hover: #f5a389;
+  --brand-primary-soft: #352721;
+  --brand-primary-muted: #302521;
+  --brand-primary-border: #634032;
+  --focus-ring: #ed89684d;
+  --overlay: #080b116b;
+  --success-soft: #1e332b;
+  --success-border: #345247;
+  --success-text: #a3d8be;
+  --info-soft: #252f41;
+  --info-border: #3c4d69;
+  --info-text: #afc9f2;
+  --warning-soft: #3a3021;
+  --warning-border: #594b32;
+  --warning-text: #ecc887;
+  --danger-soft: #3d2826;
+  --danger-border: #653c39;
+  --danger-text: #f3aaa0;
+  --purple-soft: #30283f;
+  --purple-border: #4d3f64;
+  --purple-text: #d7c0f1;
+  --cyan-soft: #203336;
+  --cyan-border: #385255;
+  --cyan-text: #a8d8d7;
+  --shadow-card: none;
+}
+
+@media (min-width: 1500px) {
+  .painel-theme.kifer-ds.kds-workspace-theme { --page-gutter: 2.625rem; }
+}
+
+@media (max-width: 1100px) {
+  .painel-theme.kifer-ds.kds-workspace-theme { --page-gutter: 1.5rem; }
+}
+
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme {
+    --page-gutter: 1.25rem;
+    --type-ui-title: 600 1.4375rem / 1.35 var(--font-display);
+  }
+}
+
+@media (max-width: 390px) {
+  .painel-theme.kifer-ds.kds-workspace-theme { --page-gutter: 1rem; }
+}

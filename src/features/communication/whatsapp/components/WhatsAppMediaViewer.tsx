@@ -1,4 +1,4 @@
-import { LoadingState, ButtonGroup, Video, Image, Text, TextLink } from '../../../../design-system';
+import { LoadingState, ButtonGroup, Video, Image, Text, TextLink, useDesignSystemAppearance } from '../../../../design-system';
 import { ActionSurface, IconButton, Button } from '../../../../design-system';
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -64,6 +64,7 @@ export function WhatsAppMediaViewer({
   onSelect: (messageId: string) => void;
   onClose: () => void;
 }) {
+  const appearance = useDesignSystemAppearance();
   const selectedIndex = Math.max(0, messages.findIndex((message) => message.id === selectedMessageId));
   const selectedMessage = messages[selectedIndex] ?? messages[0];
   const { mediaUrl, loading, error, retryable, retry } = useResolvedMediaUrl(selectedMessage);
@@ -119,11 +120,11 @@ export function WhatsAppMediaViewer({
     return null;
   }
 
-  const isDarkThemeActive = typeof document !== 'undefined'
+  const isDarkThemeActive = appearance ? appearance.theme === 'dark' : typeof document !== 'undefined'
     && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   const viewer = (
-    <div className={`whatsapp-inbox-media-viewer comm-whatsapp-media-viewer modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'} fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]`} role="dialog" aria-modal="true">
+    <div className={`whatsapp-inbox-media-viewer comm-whatsapp-media-viewer modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'} ${appearance?.workspace ? 'kds-workspace-theme' : ''} fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]`} role="dialog" aria-modal="true">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-4 py-3">
         <div className="min-w-0 flex-1">
           <Text className="truncate text-sm font-semibold">{selectedAuthor}</Text>

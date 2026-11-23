@@ -55,6 +55,13 @@ const TAB_ROUTE_MAP: Record<string, string> = {
   'automation-hub': 'automacoes',
 };
 
+const CREATE_ROUTE_MODULES: Record<string, string> = {
+  '/painel/leads': 'leads',
+  '/painel/contratos': 'contracts',
+  '/painel/agenda': 'agenda',
+  '/painel/inbox': 'whatsapp-inbox',
+};
+
 export default function PainelWrapper() {
   const { isObserver, role } = useAuth();
   const {
@@ -66,6 +73,16 @@ export default function PainelWrapper() {
   } = useConfig();
   const navigate = useNavigate();
   const location = useLocation();
+  const workspaceParams = new URLSearchParams(location.search);
+  const workspaceSearch = workspaceParams.get('busca') || undefined;
+  const createModule = CREATE_ROUTE_MODULES[location.pathname];
+  const createPermission = createModule ? getRoleModulePermission(role, createModule) : null;
+  const createRequested = workspaceParams.get('criar') === '1' && Boolean(createPermission?.can_view && createPermission.can_edit);
+  const consumeCreateRequest = useCallback(() => {
+    const remaining = new URLSearchParams(location.search);
+    remaining.delete('criar');
+    navigate({ pathname: location.pathname, search: remaining.toString() }, { replace: true });
+  }, [location.pathname, location.search, navigate]);
   const [unreadReminders, setUnreadReminders] = useState(0);
   const [unreadInboxChats, setUnreadInboxChats] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
@@ -183,7 +200,7 @@ export default function PainelWrapper() {
     return () => {
       unsubscribeLeads();
     };
-  }, [configLoading, isObserver, isOriginVisibleToObserver]);
+  }, [configLoading, isObserver, isOriginVisibleToObserver, location.pathname]);
 
   useEffect(() => {
     if (configLoading) {
@@ -214,7 +231,7 @@ export default function PainelWrapper() {
 
     const route = TAB_ROUTE_MAP[tab];
     if (route) {
-      navigate(`/painel/${route}`);
+      navigate({ pathname: `/painel/${route}`, search: options?.search ? new URLSearchParams({ busca: options.search }).toString() : '' });
     }
 
     if (tab === 'agenda') {
@@ -304,8 +321,11 @@ export default function PainelWrapper() {
           onConvertComplete: () => setLeadToConvert(null),
           setLeadToConvert,
           leadStatusFilter,
-          leadIdFilter,
+          leadIdFilter: activeTab === 'leads' ? workspaceSearch ?? leadIdFilter : leadIdFilter,
           contractOperadoraFilter,
+          contractSearch: activeTab === 'contracts' ? workspaceSearch : undefined,
+          createRequested,
+          consumeCreateRequest,
         }} />
       </Layout>
 

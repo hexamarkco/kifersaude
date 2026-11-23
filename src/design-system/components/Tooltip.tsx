@@ -117,6 +117,7 @@ export default function Tooltip({
               'kds-floating-tooltip modal-theme-host painel-theme kifer-ds',
               `theme-${theme}`,
               appearance && 'kds-operational',
+              appearance?.workspace && 'kds-workspace-theme',
               size === 'sm' && 'kds-floating-tooltip-sm',
             )}
             style={{

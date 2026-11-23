@@ -92,6 +92,7 @@ import {
   DialogShell,
   PageHeader,
   SegmentedControl,
+  Tabs,
 } from "../../../design-system";
 
 type TemplateDraft = {
@@ -115,6 +116,7 @@ export default function AutoContactFlowSettingsScreen() {
     DEFAULT_AUTO_CONTACT_FLOWS,
   );
   const activeFlowId = searchParams.get("flowId");
+  const openFlowInTest = searchParams.get('flowView') === 'test';
   const defaultSettings = useMemo(() => normalizeAutoContactSettings(null), []);
   const [autoSendEnabled, setAutoSendEnabled] = useState(
     isAutoContactRuntimeEnabled(defaultSettings),
@@ -175,11 +177,13 @@ export default function AutoContactFlowSettingsScreen() {
   const autoSaveDraftVersionRef = useRef(0);
   const settingsLoadRequestIdRef = useRef(0);
   const dailyAutomationRequestIdRef = useRef(0);
-  const openFlowEditor = (flowId: string) => {
+  const openFlowEditor = (flowId: string, view: 'journey' | 'test' = 'journey') => {
     setSearchParams((previous) => {
       const next = new URLSearchParams(previous);
       next.set("tab", "automation");
       next.set("flowId", flowId);
+      if (view === 'test') next.set('flowView', 'test');
+      else next.delete('flowView');
       return next;
     });
   };
@@ -188,6 +192,7 @@ export default function AutoContactFlowSettingsScreen() {
       const next = new URLSearchParams(previous);
       next.set("tab", "automation");
       next.delete("flowId");
+      next.delete('flowView');
       return next;
     }, { replace: true });
   };
@@ -1587,12 +1592,12 @@ export default function AutoContactFlowSettingsScreen() {
       setFlowDetailTab("journey");
       return;
     }
-    setShowSimulation(false);
-    setSimulationStart("");
+    setShowSimulation(openFlowInTest);
+    setSimulationStart(openFlowInTest ? getLocalDateTimeValue() : '');
     setTestStepId("");
     setTagDraft("");
-    setFlowDetailTab("journey");
-  }, [activeFlowId]);
+    setFlowDetailTab(openFlowInTest ? 'test' : 'journey');
+  }, [activeFlowId, openFlowInTest]);
 
   const handleSendFlowTest = async () => {
     if (!activeFlow) return;
@@ -1809,16 +1814,17 @@ export default function AutoContactFlowSettingsScreen() {
         <div className="space-y-6">
           {!activeFlowId && (
             <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <SegmentedControl
+            <Tabs
               items={[
                 { id: "flows", label: "Fluxos" },
-                { id: "templates", label: "Templates" },
+                { id: "templates", label: "Modelos de mensagem" },
                 { id: "operation", label: "Operação" },
               ]}
               value={activeWorkspace}
               onChange={setActiveWorkspace}
               className="kds-automation-workspace-tabs w-full lg:w-auto"
               listClassName="w-full flex-nowrap overflow-x-auto lg:w-auto"
+              ariaLabel="Visões das automações"
             />
             <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
               <span role="status" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -2073,6 +2079,8 @@ export default function AutoContactFlowSettingsScreen() {
                 availableTags={availableTags}
                 getConditionPreview={getFlowConditionPreview}
                 onEditFlow={openFlowEditor}
+                onOpenTemplates={() => setActiveWorkspace('templates')}
+                onOpenSimulation={(flowId) => openFlowEditor(flowId, 'test')}
               />
             )}
             {activeFlowId && !activeFlow && !loadingFlow && (

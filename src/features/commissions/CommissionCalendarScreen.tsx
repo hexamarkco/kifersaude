@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertCircle,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  FileText,
   Gift,
+  Wallet,
 } from "lucide-react";
 
 import {
@@ -13,7 +16,6 @@ import {
   IconButton,
   KpiCard,
   OperationalMetricChip,
-  PageHeader,
   PanelAdaptiveLoadingFrame,
   SectionHeader,
   Surface,
@@ -23,6 +25,7 @@ import { listActiveCommissionContracts } from "./data/commissionRepository";
 import type { CommissionContract } from "./domain/types";
 import CommissionMonthGrid from "./components/CommissionMonthGrid";
 import CommissionSelectedDatePanel from "./components/CommissionSelectedDatePanel";
+import { CommissionForecastList } from "./components/CommissionForecastList";
 import {
   buildCommissionEvents,
   formatCommissionCurrency,
@@ -33,7 +36,7 @@ import {
   sumCommissionTotals,
 } from "./shared/commissionCalendarUtils";
 
-export default function CommissionCalendarScreen() {
+export default function CommissionCalendarScreen({ view, header }: { view: 'forecasts' | 'calendar'; header: ReactNode }) {
   const [contracts, setContracts] = useState<CommissionContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,48 +146,58 @@ export default function CommissionCalendarScreen() {
   const selectedDateLabel = selectedDate
     ? selectedDate.toLocaleDateString("pt-BR")
     : null;
+  const monthControl = (
+    <div className="kds-forecast-month">
+      <IconButton onClick={goToPreviousMonth} variant="ghost" size="sm" aria-label="Mês anterior"><ChevronLeft className="kds-control-icon" /></IconButton>
+      <Text as="span" size="sm" weight="medium" aria-live="polite">{monthLabel}</Text>
+      <IconButton onClick={goToNextMonth} variant="ghost" size="sm" aria-label="Próximo mês"><ChevronRight className="kds-control-icon" /></IconButton>
+    </div>
+  );
 
   return (
     <div className="panel-page-shell space-y-5">
-      <PageHeader
-        eyebrow="Financeiro"
-        title="Comissões e produção"
-        description="Acompanhe as previsões de comissão e bonificação no calendário financeiro."
-      />
+      {header}
 
-      <section
+      {!loading && !error && <section
         aria-label="Resumo de previsões do mês"
-        className="grid grid-cols-2 gap-3 xl:grid-cols-4"
+        className="kds-workspace-record-metrics"
       >
         <KpiCard
-          padding="sm"
           title="Comissão prevista"
+          icon={<Wallet aria-hidden="true" />}
+          trend={`Previsões de ${monthLabel}`}
           value={(
-            <span className="whitespace-nowrap text-sm min-[375px]:text-lg md:text-xl 2xl:text-2xl">
+            <span>
               {hasCommissionForecast ? formatCommissionCurrency(totals.commission) : "—"}
             </span>
           )}
         />
         <KpiCard
-          padding="sm"
           title="Bonificação prevista"
+          icon={<Gift aria-hidden="true" />}
+          data-tone="cyan"
+          trend="Conforme os contratos"
           value={(
-            <span className="whitespace-nowrap text-sm min-[375px]:text-lg md:text-xl 2xl:text-2xl">
+            <span>
               {hasBonusForecast ? formatCommissionCurrency(totals.bonus) : "—"}
             </span>
           )}
         />
         <KpiCard
-          padding="sm"
           title="Contratos com previsão"
+          icon={<FileText aria-hidden="true" />}
+          data-tone="info"
+          trend="Na competência selecionada"
           value={String(monthContractCount)}
         />
         <KpiCard
-          padding="sm"
-          title="Eventos"
+          title="Eventos previstos"
+          icon={<CalendarDays aria-hidden="true" />}
+          data-tone="purple"
+          trend="Comissões e bonificações"
           value={String(monthEvents.length)}
         />
-      </section>
+      </section>}
 
       <PanelAdaptiveLoadingFrame
         loading={loading}
@@ -203,14 +216,16 @@ export default function CommissionCalendarScreen() {
           </Alert>
         )}
 
-        <section aria-label="Calendário financeiro" className="space-y-4">
+        {!error && (view === 'forecasts' ? (
+          <CommissionForecastList events={monthEvents} monthControl={monthControl} />
+        ) : <section aria-label="Calendário financeiro" className="space-y-4">
           <SectionHeader
             as="h2"
             title="Calendário financeiro"
             description="Selecione uma data para consultar os recebimentos previstos por contrato."
           />
 
-          <div className="grid min-w-0 grid-cols-1 gap-4 2xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
+          <div className="kds-forecast-calendar">
             <Surface
               padding="md"
               className="min-w-0 space-y-4 2xl:sticky 2xl:top-4 2xl:self-start"
@@ -311,7 +326,7 @@ export default function CommissionCalendarScreen() {
               </div>
             </Surface>
           </div>
-        </section>
+        </section>)}
       </PanelAdaptiveLoadingFrame>
     </div>
   );

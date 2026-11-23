@@ -37,8 +37,7 @@ test('mantém período acessível e recolhe filtros avançados com contador de f
   try {
     await act(async () => { root.render(<DashboardHeader {...props} />); });
 
-    const findAdvancedFilterButton = () => Array.from(container.querySelectorAll('button'))
-      .find((button) => button.textContent?.includes('Filtros avançados'));
+    const findAdvancedFilterButton = () => container.querySelector<HTMLButtonElement>('button[aria-label="Filtros avançados"]');
     const advancedButton = findAdvancedFilterButton();
     assert.ok(advancedButton);
     assert.equal(advancedButton.getAttribute('aria-expanded'), 'false');

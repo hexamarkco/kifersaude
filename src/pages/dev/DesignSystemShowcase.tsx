@@ -89,6 +89,7 @@ export default function DesignSystemShowcase() {
   }, [preview, theme]);
   return (
     <DesignSystemProvider
+      workspace
       theme={theme}
       className={`ds-showcase${preview ? ' ds-preview-document' : ''}`}
     >

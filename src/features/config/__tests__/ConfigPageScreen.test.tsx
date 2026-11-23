@@ -93,25 +93,19 @@ test('cadastros e usuários permanecem na área de configurações', () => {
   } finally { view.unmount(); }
 });
 
-test('configuração de leads mostra o título da seção ativa sem repetir o cabeçalho interno', async () => {
+test('configuração de leads mostra o título e o resumo da seção ativa', () => {
   const view = renderAt('/painel/config?tab=system&section=leads', ['config-system']);
   try {
-    assert.equal(view.container.querySelector('h1')?.textContent, 'Etapas do funil');
-    const info = view.container.querySelector<HTMLButtonElement>('button[aria-label="Informações sobre Etapas do funil"]');
-    assert.ok(info);
-    await act(async () => { info.focus(); await new Promise(resolve => setTimeout(resolve, 0)); });
-    assert.equal(document.body.querySelector('[role="tooltip"]')?.textContent, 'Organize as etapas e os cadastros usados no acompanhamento de leads.');
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Um funil que acompanha a sua rotina.');
+    assert.equal(view.container.querySelector('.kds-page-description')?.textContent, 'Organize as etapas e os cadastros usados no acompanhamento de leads.');
   } finally { view.unmount(); }
 });
 
-test('configuração de origens explica o uso da lista nas informações da página', async () => {
+test('configuração de origens explica o uso da lista nas informações da página', () => {
   const view = renderAt('/painel/config?tab=system&section=leads&leadTab=origins', ['config-system']);
   try {
-    assert.equal(view.container.querySelector('h1')?.textContent, 'Origens dos leads');
-    const info = view.container.querySelector<HTMLButtonElement>('button[aria-label="Informações sobre Origens dos leads"]');
-    assert.ok(info);
-    await act(async () => { info.focus(); await new Promise(resolve => setTimeout(resolve, 0)); });
-    assert.equal(document.body.querySelector('[role="tooltip"]')?.textContent, 'Defina os canais de entrada e a visibilidade das origens para observadores.');
+    assert.equal(view.container.querySelector('h1')?.textContent, 'De onde chegam as oportunidades.');
+    assert.equal(view.container.querySelector('.kds-page-description')?.textContent, 'Defina os canais de entrada e a visibilidade das origens para observadores.');
   } finally { view.unmount(); }
 });
 
@@ -148,7 +142,7 @@ test('Links públicos mantém um único cabeçalho e centraliza a criação na a
   const view = renderAt('/painel/config?tab=links', ['config-links', 'config-system']);
   try {
     assert.equal(view.container.querySelectorAll('h1').length, 1);
-    assert.equal(view.container.querySelector('h1')?.textContent, 'Links públicos');
+    assert.equal(view.container.querySelector('h1')?.textContent, 'Uma página com o seu jeito.');
 
     const createButton = [...view.container.querySelectorAll('button')].find((button) => button.textContent?.includes('Novo link'));
     assert.ok(createButton);
@@ -165,7 +159,7 @@ test('Links públicos mantém um único cabeçalho e centraliza a criação na a
 test('Formulários centraliza o cabeçalho e a criação, sem duplicar a ação na lista', () => {
   const view = renderAt('/painel/config?tab=forms', ['config-forms', 'config-system']);
   try {
-    assert.equal(view.container.querySelector('h1')?.textContent, 'Formulários de captação');
+    assert.equal(view.container.querySelector('h1')?.textContent, 'O primeiro passo da conversa.');
     assert.equal(view.container.querySelectorAll('h1').length, 1);
     assert.equal(view.container.textContent?.includes('Formulários de captação interno'), false);
 

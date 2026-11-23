@@ -1,32 +1,16 @@
-import { Text, WorkspaceHeader, BrandWordmark, LoadingState } from '../design-system';
-import { ActionSurface, Button, IconButton } from '../design-system';
-import { DesignSystemProvider, PANEL_THEME_STORAGE_KEY, readPanelTheme } from '../design-system';
+import {
+  ActionSurface, Avatar, BrandWordmark, Button, ConfirmDialog, DesignSystemProvider, DialogTitle, Drawer,
+  DrawerBody, DrawerHeader, DropdownOption, IconButton, LoadingState, PANEL_THEME_STORAGE_KEY,
+  Popover, PopoverContent, PopoverTrigger, Text, WorkspaceHeader, readPanelTheme,
+} from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import {
-  Users,
-  FileText,
-  LayoutDashboard,
-  BellRing,
-  Moon,
-  LogOut,
-  Settings,
-  Workflow,
-  MessageCircle,
-  Sun,
-  ChevronDown,
-  Briefcase,
-  BookOpen,
-  PiggyBank,
-  DollarSign,
-  Calendar,
-  Send,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X,
-  type LucideIcon,
+  Bell, Brain, BookOpen, Calendar, ChevronDown, FileText, LayoutDashboard, Link2,
+  LogOut, MessageCircle, PanelLeftClose, PanelLeftOpen, Plug, Plus, Search, Send,
+  Settings, User, Users, Wallet, Workflow, X, type LucideIcon,
 } from 'lucide-react';
+import { WorkspaceSearch, type WorkspaceDestination } from './WorkspaceSearch';
 import {
   deduplicateBirthdayPeople,
   loadNotificationSummarySource,
@@ -40,17 +24,17 @@ import { getCommissionInstallmentSummary } from '../lib/contractCommission';
 import { cx } from '../lib/cx';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { TabNavigationOptions } from '../types/navigation';
 import { usePanelMotion } from '../hooks/usePanelMotion';
-import { hasConfigAreaAccess } from '../features/config';
+import { getAllowedConfigTabs, getConfigAreaForTab, type ConfigTabType } from '../features/config';
 
 type TabConfig = {
   id: string;
   label: string;
   icon: LucideIcon;
   badge?: number;
-  children?: TabConfig[];
+  configTab?: ConfigTabType;
 };
 
 type LayoutProps = {
@@ -77,19 +61,21 @@ export default function Layout({
   newLeadsCount = 0,
 }: LayoutProps) {
   const { signOut, role, userProfile } = useAuth();
-  const { getRoleModulePermission } = useConfig();
+  const { getRoleModulePermission, accessProfiles } = useConfig();
   const navigate = useNavigate();
-  const [expandedParent, setExpandedParent] = useState<string | null>(() => ['leads', 'contracts', 'agenda'].includes(activeTab) ? 'crm' : ['whatsapp-inbox', 'whatsapp-campaigns', 'blog'].includes(activeTab) ? 'comunicacao' : null);
+  const location = useLocation();
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem('painel.sidebar.collapsed');
     return stored === 'true';
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
-  const mobileMenuOpenedFromRef = useRef<'header' | 'more'>('header');
-  const mobileMoreTriggerRef = useRef<HTMLButtonElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [themeMode, setThemeMode] = useState(readPanelTheme);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -110,88 +96,81 @@ export default function Layout({
     contract?: NotificationContract | null;
     holderName?: string | null;
   }[]>([]);
-  const notificationsDropdownRef = useRef<HTMLDivElement | null>(null);
-  const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
   const notificationsRequestIdRef = useRef(0);
-  const menuItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const collapsedDropdownRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
   const panelContentRef = useRef<HTMLDivElement | null>(null);
   const themeSwitchFrameRef = useRef<number | null>(null);
-  const [activeDropdownTab, setActiveDropdownTab] = useState<string | null>(null);
-  const [collapsedDropdownPosition, setCollapsedDropdownPosition] = useState<{
-    left: number;
-    top: number;
-    side: 'right' | 'left';
-    caretTop: number;
-  } | null>(null);
   const {
     motionEnabled,
     enterDuration,
-    sectionStagger,
-    microDuration,
     revealDistance,
     ease,
   } = usePanelMotion();
   const isSidebarCollapsed = isMenuCollapsed && !isMobileMenuOpen;
   const sidebarOffset = isSidebarCollapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width)';
-  const currentRole = role;
-
-  const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
-
-  const crmChildren: TabConfig[] = [
-    { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount },
-    { id: 'contracts', label: 'Contratos', icon: FileText },
-    { id: 'agenda', label: 'Agenda', icon: Calendar, badge: unreadReminders },
-  ].filter(child => canView(child.id));
-
-  const comunicacaoChildren: TabConfig[] = [
-    { id: 'whatsapp-inbox', label: 'WhatsApp', icon: MessageCircle, badge: unreadInboxChats },
-    { id: 'whatsapp-campaigns', label: 'Disparos', icon: Send },
-    { id: 'blog', label: 'Blog', icon: BookOpen },
-  ].filter(child => canView(child.id));
-
-  const financeiroChildren: TabConfig[] = [
-    { id: 'financeiro-comissoes', label: 'Comissões', icon: DollarSign },
-  ].filter(child => canView(child.id));
-
-  const baseTabs: TabConfig[] = [];
-
-  if (canView('dashboard')) {
-    baseTabs.push({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard });
-  }
-
-  if (crmChildren.length > 0) {
-    baseTabs.push({ id: 'crm', label: 'CRM', icon: Briefcase, children: crmChildren });
-  }
-
-  if (comunicacaoChildren.length > 0) {
-    baseTabs.push({ id: 'comunicacao', label: 'Comunicação', icon: MessageCircle, children: comunicacaoChildren });
-  }
-
-  if (financeiroChildren.length > 0) {
-    baseTabs.push({ id: 'financeiro', label: 'Financeiro', icon: PiggyBank, children: financeiroChildren });
-  }
-
-  if (hasConfigAreaAccess(currentRole, getRoleModulePermission, 'automation')) {
-    baseTabs.push({ id: 'automation-hub', label: 'Automações e IA', icon: Workflow });
-  }
-
-  const canViewConfig = hasConfigAreaAccess(currentRole, getRoleModulePermission, 'settings');
-
-  const tabs = canViewConfig
-    ? [...baseTabs, { id: 'config', label: 'Configurações', icon: Settings }]
-    : baseTabs;
-
-  const mobileNavItems: Array<{ id: string; label: string; icon: LucideIcon }> = [
-    { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
-    { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'whatsapp-inbox', label: 'WhatsApp', icon: MessageCircle },
-    { id: 'contracts', label: 'Contratos', icon: FileText },
-  ].filter((item) => canView(item.id));
-  const mobileMoreItems = tabs
-    .flatMap((tab) => tab.children ?? [tab])
-    .filter((item) => !mobileNavItems.some((mobileItem) => mobileItem.id === item.id));
+  const canView = (moduleId: string) => getRoleModulePermission(role, moduleId).can_view;
+  const canEdit = (moduleId: string) => canView(moduleId) && getRoleModulePermission(role, moduleId).can_edit;
+  const allowedConfigTabs = getAllowedConfigTabs(role, getRoleModulePermission);
+  const currentConfigTab = new URLSearchParams(location.search).get('tab') ?? (activeTab === 'automation-hub' ? 'automation' : 'system');
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [location.pathname, currentConfigTab]);
+  const roleLabel = accessProfiles?.find((profile) => profile.slug === role)?.name
+    ?? (role === 'admin' ? 'Administrador' : role === 'observer' ? 'Observador' : undefined);
+  const groups: { label: string; items: TabConfig[] }[] = [
+    { label: 'Operação', items: [
+      { id: 'dashboard', label: 'Visão geral', icon: LayoutDashboard },
+      { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount },
+      { id: 'contracts', label: 'Contratos', icon: FileText },
+      { id: 'agenda', label: 'Agenda', icon: Calendar, badge: unreadReminders },
+      { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle, badge: unreadInboxChats },
+    ] },
+    { label: 'Gestão', items: [
+      { id: 'financeiro-comissoes', label: 'Financeiro', icon: Wallet },
+      { id: 'automation-hub', label: 'Automações', icon: Workflow, configTab: 'automation' },
+      { id: 'automation-hub', label: 'Inteligência artificial', icon: Brain, configTab: 'ai' },
+      { id: 'whatsapp-campaigns', label: 'Disparos', icon: Send },
+    ] },
+    { label: 'Conteúdo', items: [
+      { id: 'blog', label: 'Blog', icon: BookOpen },
+      { id: 'config', label: 'Formulários', icon: FileText, configTab: 'forms' },
+      { id: 'config', label: 'Página de links', icon: Link2, configTab: 'links' },
+    ] },
+    { label: 'Sistema', items: [
+      { id: 'automation-hub', label: 'Integrações', icon: Plug, configTab: 'integrations' },
+      { id: 'config', label: 'Configurações', icon: Settings, configTab: allowedConfigTabs.some((tab) => tab.id === 'system') ? 'system' : 'users' },
+    ] },
+  ];
+  const visibleGroups = groups.map(({ label, items }) => ({
+    label,
+    items: items.filter((item) => item.configTab ? allowedConfigTabs.some((tab) => tab.id === item.configTab) : canView(item.id)),
+  })).filter(({ items }) => items.length > 0);
+  const availableConfigTabs = allowedConfigTabs.filter((tab) => getConfigAreaForTab(tab.id) === (activeTab === 'automation-hub' ? 'automation' : 'settings'));
+  const selectedConfigTab = availableConfigTabs.some((tab) => tab.id === currentConfigTab) ? currentConfigTab : availableConfigTabs[0]?.id;
+  const isSelected = (item: TabConfig) => item.id === activeTab && (
+    location.pathname === '/chat' ? item.configTab === 'ai'
+      : !item.configTab || item.configTab === selectedConfigTab || (item.icon === Settings && selectedConfigTab === 'users')
+  );
+  const selectDestination = (item: TabConfig) => {
+    setIsMobileMenuOpen(false);
+    if (item.configTab) {
+      const path = item.id === 'automation-hub' ? 'automacoes' : 'config';
+      navigate('/painel/' + path + '?tab=' + item.configTab);
+    } else {
+      onTabChange(item.id);
+    }
+  };
+  const destinations: WorkspaceDestination[] = visibleGroups.flatMap(({ label, items }) => items.map((item) => ({
+    id: item.configTab ?? item.id, label: item.label, icon: item.icon, group: label,
+    onSelect: () => selectDestination(item),
+  })));
+  const creationActions = [
+    { module: 'leads', path: 'leads', label: 'Novo lead', icon: Users },
+    { module: 'contracts', path: 'contratos', label: 'Novo contrato', icon: FileText },
+    { module: 'agenda', path: 'agenda', label: 'Nova tarefa', icon: Calendar },
+    { module: 'whatsapp-inbox', path: 'inbox', label: 'Nova conversa', icon: MessageCircle },
+  ].filter(({ module }) => canEdit(module));
 
   const handleLogout = async () => {
     await signOut();
@@ -390,96 +369,6 @@ export default function Layout({
     }
   }, []);
 
-  const handleTabClick = (tab: TabConfig, triggerElement?: HTMLButtonElement | null) => {
-    if (tab.children && tab.children.length > 0) {
-      if (isSidebarCollapsed) {
-        if (activeDropdownTab === tab.id) {
-          setActiveDropdownTab(null);
-          setCollapsedDropdownPosition(null);
-          return;
-        }
-
-        setActiveDropdownTab(tab.id);
-        if (triggerElement) {
-          const triggerRect = triggerElement.getBoundingClientRect();
-          const viewportPadding = 8;
-          const sideOffset = 8;
-          const dropdownWidth = collapsedDropdownRef.current?.offsetWidth ?? 220;
-          const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 220;
-
-          let left = triggerRect.right + sideOffset;
-          let side: 'right' | 'left' = 'right';
-          if (left + dropdownWidth > window.innerWidth - viewportPadding) {
-            left = Math.max(viewportPadding, triggerRect.left - dropdownWidth - sideOffset);
-            side = 'left';
-          }
-
-          const maxTop = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
-          const top = Math.min(Math.max(viewportPadding, triggerRect.top), maxTop);
-
-          const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-          const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
-
-          setCollapsedDropdownPosition({ left, top, side, caretTop });
-        }
-      } else {
-        setExpandedParent(expandedParent === tab.id ? null : tab.id);
-      }
-    } else {
-      onTabChange(tab.id);
-      setExpandedParent(null);
-      setActiveDropdownTab(null);
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  const isParentActive = (tab: TabConfig) => {
-    if (tab.id === activeTab) return true;
-    if (tab.children) {
-      return tab.children.some(child => child.id === activeTab);
-    }
-    return false;
-  };
-
-  const getTotalBadge = (tab: TabConfig): number => {
-    if (!tab.children) return tab.badge || 0;
-    return tab.children.reduce((sum, child) => sum + (child.badge || 0), 0);
-  };
-
-  const updateCollapsedDropdownPosition = useCallback(() => {
-    if (!isSidebarCollapsed || !activeDropdownTab) {
-      setCollapsedDropdownPosition(null);
-      return;
-    }
-
-    const triggerElement = menuItemRefs.current[activeDropdownTab];
-    if (!triggerElement) {
-      setCollapsedDropdownPosition(null);
-      return;
-    }
-
-    const triggerRect = triggerElement.getBoundingClientRect();
-    const viewportPadding = 8;
-    const sideOffset = 8;
-    const dropdownWidth = collapsedDropdownRef.current?.offsetWidth ?? 220;
-    const dropdownHeight = collapsedDropdownRef.current?.offsetHeight ?? 220;
-
-    let left = triggerRect.right + sideOffset;
-    let side: 'right' | 'left' = 'right';
-    if (left + dropdownWidth > window.innerWidth - viewportPadding) {
-      left = Math.max(viewportPadding, triggerRect.left - dropdownWidth - sideOffset);
-      side = 'left';
-    }
-
-    const maxTop = Math.max(viewportPadding, window.innerHeight - dropdownHeight - viewportPadding);
-    const top = Math.min(Math.max(viewportPadding, triggerRect.top), maxTop);
-
-    const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-    const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
-
-    setCollapsedDropdownPosition({ left, top, side, caretTop });
-  }, [activeDropdownTab, isSidebarCollapsed]);
-
   useEffect(() => {
     if (!showNotificationsDropdown) {
       return;
@@ -509,94 +398,24 @@ export default function Layout({
   }, [loadNotificationsSummary, showNotificationsDropdown]);
 
   useEffect(() => {
-    if (!showNotificationsDropdown) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        notificationsDropdownRef.current &&
-        notificationsDropdownRef.current.contains(target)
-      ) {
-        return;
-      }
-      if (notificationsButtonRef.current && notificationsButtonRef.current.contains(target)) {
-        return;
-      }
-      setShowNotificationsDropdown(false);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotificationsDropdown]);
-
-  useEffect(() => {
-    if (!activeDropdownTab) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const button = menuItemRefs.current[activeDropdownTab];
-      if (button && button.contains(target)) {
-        return;
-      }
-      if (collapsedDropdownRef.current && collapsedDropdownRef.current.contains(target)) {
-        return;
-      }
-      setActiveDropdownTab(null);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [activeDropdownTab]);
-
-  useEffect(() => {
-    if (!isSidebarCollapsed) {
-      setActiveDropdownTab(null);
-      setCollapsedDropdownPosition(null);
-    }
-  }, [isSidebarCollapsed]);
-
-  useEffect(() => {
     const mobileQuery = window.matchMedia('(max-width: 767px)');
-    const closeMobileMenuOnDesktop = () => {
-      if (!mobileQuery.matches) {
-        setIsMobileMenuOpen(false);
-        setIsMobileMoreOpen(false);
-      }
+    const closeOnDesktop = () => {
+      if (!mobileQuery.matches) setIsMobileMenuOpen(false);
     };
-
-    closeMobileMenuOnDesktop();
-    mobileQuery.addEventListener('change', closeMobileMenuOnDesktop);
-
-    return () => {
-      mobileQuery.removeEventListener('change', closeMobileMenuOnDesktop);
-    };
+    mobileQuery.addEventListener('change', closeOnDesktop);
+    return () => mobileQuery.removeEventListener('change', closeOnDesktop);
   }, []);
 
   useEffect(() => {
-    if (!activeDropdownTab || !isSidebarCollapsed) {
-      setCollapsedDropdownPosition(null);
-      return;
-    }
-
-    const syncPosition = () => {
-      updateCollapsedDropdownPosition();
+    const openSearch = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      event.preventDefault();
+      setSearchOpen(true);
     };
-
-    syncPosition();
-    const rafId = window.requestAnimationFrame(syncPosition);
-    window.addEventListener('resize', syncPosition);
-    window.addEventListener('scroll', syncPosition, true);
-
-    return () => {
-      window.cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', syncPosition);
-      window.removeEventListener('scroll', syncPosition, true);
-    };
-  }, [activeDropdownTab, isSidebarCollapsed, updateCollapsedDropdownPosition]);
+    document.addEventListener('keydown', openSearch);
+    return () => document.removeEventListener('keydown', openSearch);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('painel.sidebar.collapsed', String(isMenuCollapsed));
@@ -659,119 +478,8 @@ export default function Layout({
     };
   }, [activeTab, ease, enterDuration, motionEnabled, revealDistance]);
 
-  useEffect(() => {
-    const sidebarElement = sidebarRef.current;
-    if (!sidebarElement) {
-      return;
-    }
-
-    const items = Array.from(sidebarElement.querySelectorAll<HTMLElement>('[data-sidebar-item]'));
-    if (items.length === 0) {
-      return;
-    }
-
-    if (!motionEnabled) {
-      gsap.set(items, {
-        autoAlpha: 1,
-        x: 0,
-        clearProps: 'transform,opacity,willChange',
-      });
-      return;
-    }
-
-    const context = gsap.context(() => {
-      gsap.fromTo(
-        items,
-        {
-          autoAlpha: 0,
-          x: -Math.max(6, Math.round(revealDistance * 0.55)),
-          willChange: 'transform,opacity',
-        },
-        {
-          autoAlpha: 1,
-          x: 0,
-          duration: Math.max(microDuration + 0.08, 0.24),
-          ease: 'power2.out',
-          stagger: Math.max(0.014, sectionStagger * 0.4),
-          overwrite: 'auto',
-          clearProps: 'transform,opacity,willChange',
-          force3D: true,
-        },
-      );
-    }, sidebarElement);
-
-    return () => {
-      context.revert();
-    };
-  }, [isSidebarCollapsed, microDuration, motionEnabled, revealDistance, sectionStagger, tabs.length]);
-
-  useEffect(() => {
-    if (!showNotificationsDropdown || !notificationsDropdownRef.current || !motionEnabled) {
-      return;
-    }
-
-    const animation = gsap.fromTo(
-      notificationsDropdownRef.current,
-      {
-        autoAlpha: 0,
-        y: isSidebarCollapsed ? 12 : 8,
-        scale: 0.985,
-        transformOrigin: 'left bottom',
-      },
-      {
-        autoAlpha: 1,
-        y: 0,
-        scale: 1,
-        duration: Math.max(microDuration + 0.08, 0.24),
-        ease: 'power2.out',
-        overwrite: 'auto',
-        force3D: true,
-      },
-    );
-
-    return () => {
-      animation.kill();
-    };
-  }, [isSidebarCollapsed, microDuration, motionEnabled, showNotificationsDropdown]);
-
-  useEffect(() => {
-    if (!activeDropdownTab || !motionEnabled || (isSidebarCollapsed && !collapsedDropdownPosition)) {
-      return;
-    }
-
-    const dropdown = collapsedDropdownRef.current;
-    if (!dropdown) {
-      return;
-    }
-
-    const fromX = isSidebarCollapsed && collapsedDropdownPosition?.side === 'left' ? 6 : -6;
-
-    const animation = gsap.fromTo(
-      dropdown,
-      {
-        autoAlpha: 0,
-        x: fromX,
-        y: 6,
-        scale: 0.98,
-      },
-      {
-        autoAlpha: 1,
-        x: 0,
-        y: 0,
-        scale: 1,
-        duration: microDuration,
-        ease: 'power2.out',
-        overwrite: 'auto',
-        force3D: true,
-      },
-    );
-
-    return () => {
-      animation.kill();
-    };
-  }, [activeDropdownTab, collapsedDropdownPosition, isSidebarCollapsed, microDuration, motionEnabled]);
-
-  const toggleThemeMode = () => {
+  const changeThemeMode = (nextMode: 'light' | 'dark') => {
+    if (themeMode === nextMode) return;
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       document.documentElement.classList.add('theme-switching');
 
@@ -787,131 +495,13 @@ export default function Layout({
       });
     }
 
-    setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
+    setThemeMode(nextMode);
   };
+  const toggleThemeMode = () => changeThemeMode(themeMode === 'dark' ? 'light' : 'dark');
 
-  const renderSidebarBadge = (count: number, options: { floating?: boolean; pulse?: boolean } = {}) => (
-    <span className={cx('kds-sidebar-badge', options.floating && 'absolute -right-1 -top-1', options.pulse && 'animate-pulse')}>
-      {count > 9 ? '9+' : count}
-    </span>
+  const renderSidebarBadge = (count: number) => (
+    <span className="kds-sidebar-badge">{count > 99 ? '99+' : count}</span>
   );
-
-  const renderSidebarItem = (tab: TabConfig) => {
-    const Icon = tab.icon;
-    const isActive = isParentActive(tab);
-    const isExpanded = isSidebarCollapsed ? activeDropdownTab === tab.id : expandedParent === tab.id;
-    const totalBadge = getTotalBadge(tab);
-
-    if (tab.children && tab.children.length > 0) {
-      return (
-        <div key={tab.id} className="flex flex-col relative">
-          <ActionSurface variant="plain" padding="none"
-            ref={(el) => { menuItemRefs.current[tab.id] = el; }}
-            onClick={(event) => handleTabClick(tab, event.currentTarget)}
-            data-sidebar-item
-            className={cx(
-              'kds-sidebar-item relative flex items-center text-left text-sm font-medium transition-all duration-200',
-              isActive && 'is-active',
-              isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center' : 'w-full justify-between px-3 py-2.5',
-            )}
-            title={isSidebarCollapsed ? tab.label : undefined}
-          >
-            <div className={`flex items-center transition-all duration-200 ${isSidebarCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
-              <div className="relative flex h-5 w-5 items-center justify-center">
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {totalBadge > 0 && isSidebarCollapsed && (
-                  renderSidebarBadge(totalBadge, {
-                    floating: true,
-                    pulse:
-                      Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
-                      Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
-                  })
-                )}
-              </div>
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
-            </div>
-            {!isSidebarCollapsed && (
-              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-            )}
-            {totalBadge > 0 && !isSidebarCollapsed && (
-              renderSidebarBadge(totalBadge, {
-                floating: true,
-                pulse:
-                  Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
-                  Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
-              })
-            )}
-          </ActionSurface>
-
-          {isExpanded && !isSidebarCollapsed && (
-            <div className="mt-1 space-y-1 pl-4">
-              {tab.children.map((child) => {
-                const ChildIcon = child.icon;
-                const isChildActive = activeTab === child.id;
-                return (
-                  <ActionSurface variant="plain" padding="none"
-                    key={child.id}
-                    onClick={() => {
-                      onTabChange(child.id);
-                      setExpandedParent(tab.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={cx(
-                      'kds-sidebar-item flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium transition-colors',
-                      isChildActive && 'is-active',
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <ChildIcon className="h-4 w-4" />
-                      <span>{child.label}</span>
-                    </div>
-                    {child.badge !== undefined && child.badge > 0 && (
-                      renderSidebarBadge(child.badge, {
-                        pulse:
-                          Boolean(child.id === 'agenda' && hasActiveNotification) ||
-                          Boolean((child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0),
-                      })
-                    )}
-                  </ActionSurface>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <ActionSurface variant="plain" padding="none"
-        key={tab.id}
-        onClick={() => handleTabClick(tab)}
-        data-sidebar-item
-        className={cx(
-          'kds-sidebar-item relative flex items-center text-left text-sm font-medium transition-colors',
-          isActive && 'is-active',
-          isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center' : 'w-full justify-between px-3 py-2.5',
-        )}
-        title={isSidebarCollapsed ? tab.label : undefined}
-      >
-        <div className={`flex items-center transition-all duration-200 ${isSidebarCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
-          <Icon className="h-5 w-5 flex-shrink-0" />
-          <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
-        </div>
-        {totalBadge > 0 && !isSidebarCollapsed && (
-          renderSidebarBadge(totalBadge, {
-            pulse:
-              Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
-              Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
-          })
-        )}
-      </ActionSurface>
-    );
-  };
-
-  const activeCollapsedParentTab =
-    isSidebarCollapsed && activeDropdownTab
-      ? tabs.find((tab) => tab.id === activeDropdownTab && tab.children && tab.children.length > 0)
-      : undefined;
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -919,9 +509,7 @@ export default function Layout({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const menu = sidebarRef.current;
-    const menuTrigger = mobileMenuOpenedFromRef.current === 'more'
-      ? mobileMoreTriggerRef.current
-      : mobileMenuTriggerRef.current;
+    const menuTrigger = mobileMenuTriggerRef.current;
     const focusableSelector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
     const focusable = () => Array.from(menu?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])
       .filter(item => item.getClientRects().length > 0 && getComputedStyle(item).visibility !== 'hidden');
@@ -961,7 +549,9 @@ export default function Layout({
   return (
     <DesignSystemProvider
       theme={themeMode}
-      className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell terracota-shell theme-${themeMode} relative isolate flex ${useFullBleedContent ? 'h-[100dvh] max-h-[100dvh]' : 'min-h-screen'} ${activeTab === 'whatsapp-inbox' ? 'is-whatsapp-inbox-active' : ''}`}
+      workspace
+      onThemeChange={changeThemeMode}
+      className={`kifer-panel-theme kds-app-shell terracota-shell relative isolate flex h-[100dvh] overflow-hidden ${activeTab === 'whatsapp-inbox' ? 'is-whatsapp-inbox-active' : ''}`}
     >
       {isMobileMenuOpen && (
         <ActionSurface variant="plain" padding="none"
@@ -976,352 +566,217 @@ export default function Layout({
         id="painel-navigation"
         role={isMobileMenuOpen ? 'dialog' : undefined}
         aria-modal={isMobileMenuOpen || undefined}
-        aria-label={isMobileMenuOpen ? 'Navegação completa' : undefined}
+        aria-label="Navegação principal"
         data-collapsed={isSidebarCollapsed}
-        className={`kds-sidebar terracota-sidebar fixed left-0 top-0 z-40 h-screen border-r transition-[width] duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'is-mobile-open' : ''
-        }`}
+        className={cx('kds-sidebar terracota-sidebar', isMobileMenuOpen && 'is-mobile-open')}
       >
-        <div className="flex h-full flex-col">
-          <div className={`kds-sidebar-divider terracota-sidebar-header flex h-16 items-center border-b px-4 transition-all duration-300 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isSidebarCollapsed && <BrandWordmark caption="Painel" />}
-            {isSidebarCollapsed && (
-              <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
-                <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
-              </div>
-            )}
-            {isMobileMenuOpen && <IconButton variant="ghost" aria-label="Fechar menu" onClick={() => setIsMobileMenuOpen(false)}><X aria-hidden="true" /></IconButton>}
-          </div>
-
-          <nav className={`terracota-sidebar-navigation flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isSidebarCollapsed ? 'px-1' : 'px-2'}`}>
-            <div className="space-y-1">
-              {tabs.map((tab) => renderSidebarItem(tab))}
-            </div>
-          </nav>
-
-          <div className={`kds-sidebar-divider terracota-sidebar-footer space-y-1 border-t p-2 ${isSidebarCollapsed ? 'px-1' : ''}`}>
-            <ActionSurface variant="plain" padding="none"
-              onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
-              data-sidebar-item
-              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
-                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
-              }`}
-              title={isSidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
-            >
-              {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{isSidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
-            </ActionSurface>
-            <div className="relative">
-              <ActionSurface variant="plain" padding="none"
-                ref={notificationsButtonRef}
-                onClick={() => setShowNotificationsDropdown((current) => !current)}
-                data-sidebar-item
-                className={`kds-sidebar-item relative flex items-center text-sm font-medium transition-all duration-200 ${
-                  isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
-                }`}
-                title="Notificações"
-                aria-expanded={showNotificationsDropdown}
-                aria-haspopup="true"
-              >
-                <div className="flex h-5 w-5 items-center justify-center">
-                  <BellRing className="h-5 w-5" />
-                </div>
-                {unreadReminders > 0 && (
-                  renderSidebarBadge(unreadReminders, {
-                    floating: true,
-                    pulse: Boolean(hasActiveNotification),
-                  })
-                )}
-                <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
-              </ActionSurface>
-                {showNotificationsDropdown && (
-                  <div
-                    ref={notificationsDropdownRef}
-                    className={`terracota-sidebar-popover absolute z-50 w-96 rounded-2xl border shadow-xl ${
-                      isSidebarCollapsed
-                        ? 'left-full bottom-0 ml-2 max-w-[calc(100vw-5rem)]'
-                        : 'left-0 bottom-full mb-2 max-w-[calc(100vw-1rem)]'
-                    }`}
-                  >
-                    <div className="kds-popover-section flex items-center justify-between border-b px-4 py-3">
-                      <div>
-                        <Text className="text-sm font-semibold text-[var(--text-primary)]">Central do dia</Text>
-                        <Text className="text-xs text-[var(--text-muted)]">Resumo de hoje</Text>
-                      </div>
-                      <Button variant="ghost"
-                        onClick={() => {
-                          onTabChange('agenda');
-                          setShowNotificationsDropdown(false);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className="font-semibold"
-                      >
-                        Ver tudo
-                      </Button>
-                    </div>
-
-                    {<LoadingState active={notificationsLoading} compact className="px-4 py-6" label="Carregando notificações" fallback={() => notificationsError ? (
-                      <div className="px-4 py-6 text-sm text-[var(--danger-text)]">{notificationsError}</div>
-                    ) : (
-                      <div className="max-h-[70vh] overflow-y-auto">
-                        {notificationsWarning && (
-                          <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]" role="status">
-                            {notificationsWarning}
-                          </div>
-                        )}
-                        <div className="px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lembretes do dia</Text>
-                            <span className="text-xs text-[var(--text-muted)]">{todayReminders.length}</span>
-                          </div>
-                          {todayReminders.length === 0 ? (
-                            <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum lembrete para hoje.</Text>
-                          ) : (
-                            <div className="mt-2 space-y-2">
-                              {todayReminders.slice(0, 5).map((reminder) => (
-                                <div key={reminder.id} className="kds-list-item">
-                                  <Text className="text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</Text>
-                                  <Text className="text-xs text-[var(--text-muted)]">{formatDateTimeFullBR(reminder.data_lembrete)}</Text>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="kds-popover-section border-t px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Pagamentos do dia</Text>
-                            <span className="text-xs text-[var(--text-muted)]">{todayPayments.length}</span>
-                          </div>
-                          {todayPayments.length === 0 ? (
-                            <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum pagamento previsto para hoje.</Text>
-                          ) : (
-                            <div className="mt-2 space-y-2">
-                              {todayPayments.slice(0, 5).map((payment) => (
-                                <div key={payment.id} className="kds-list-item kds-list-item-success">
-                                  <Text className="text-sm font-semibold text-[var(--text-primary)]">
-                                    {payment.type === 'comissao' ? 'Comissão' : 'Bonificação'}
-                                    {payment.installmentLabel ? ` (${payment.installmentLabel})` : ''}
-                                  </Text>
-                                  <Text className="text-xs text-[var(--text-secondary)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</Text>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="kds-popover-section border-t px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Aniversariantes</Text>
-                            <span className="text-xs text-[var(--text-muted)]">{todayBirthdays.length}</span>
-                          </div>
-                          {todayBirthdays.length === 0 ? (
-                            <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum aniversariante hoje.</Text>
-                          ) : (
-                            <div className="mt-2 space-y-2">
-                              {todayBirthdays.slice(0, 5).map((birthday) => (
-                                <div key={birthday.id} className="kds-list-item kds-list-item-warning">
-                                  <Text className="text-sm font-semibold text-[var(--text-primary)]">{birthday.name}</Text>
-                                  <Text className="text-xs text-[var(--text-secondary)]">
-                                    {birthday.role}
-                                    {birthday.holderName ? ` • Titular: ${birthday.holderName}` : ''}
-                                  </Text>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )} />}
-                  </div>
-                )}
-              </div>
-            <ActionSurface variant="plain" padding="none"
-              type="button"
-              onClick={toggleThemeMode}
-              data-sidebar-item
-              className={`kds-sidebar-item flex items-center text-sm font-medium transition-all duration-200 ${
-                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
-              }`}
-              title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-              aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            >
-              {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>
-            </ActionSurface>
-            <ActionSurface variant="plain" padding="none"
-              onClick={handleLogout}
-              data-sidebar-item
-              className={`kds-sidebar-item kds-sidebar-item-danger flex items-center text-sm font-medium transition-all duration-200 ${
-                isSidebarCollapsed ? 'mx-auto h-10 w-10 justify-center gap-0' : 'w-full gap-3 px-3 py-2.5'
-              }`}
-              title={isSidebarCollapsed ? 'Sair' : undefined}
-            >
-              <LogOut className="h-5 w-5" />
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Sair</span>
-            </ActionSurface>
-          </div>
+        <div className="terracota-sidebar-header">
+          <BrandWordmark variant={isSidebarCollapsed ? 'symbol' : 'lockup'} />
+          {isMobileMenuOpen
+            ? <IconButton variant="ghost" aria-label="Fechar menu" onClick={() => setIsMobileMenuOpen(false)}><X aria-hidden="true" /></IconButton>
+            : !isSidebarCollapsed && <IconButton variant="ghost" size="sm" className="terracota-sidebar-collapse-toggle" aria-label="Recolher menu" onClick={() => setIsMenuCollapsed(true)}><PanelLeftClose aria-hidden="true" /></IconButton>}
         </div>
+        {!isSidebarCollapsed && <Text className="terracota-workspace-name">Nosso espaço de trabalho</Text>}
+        <nav className="terracota-sidebar-navigation" aria-label="Áreas do painel">
+          {visibleGroups.map(({ label, items }) => (
+            <div key={label} className="terracota-nav-group" role="group" aria-label={label}>
+              {!isSidebarCollapsed && <Text className="terracota-nav-label">{label}</Text>}
+              {items.map((item) => {
+                const Icon = item.icon;
+                const active = isSelected(item);
+                return <ActionSurface
+                  key={item.configTab ?? item.id}
+                  variant="plain"
+                  padding="none"
+                  className={cx('kds-sidebar-item terracota-nav-item', active && 'is-active')}
+                  aria-current={active ? 'page' : undefined}
+                  aria-label={isSidebarCollapsed ? item.label : undefined}
+                  title={isSidebarCollapsed ? item.label : undefined}
+                  onClick={() => selectDestination(item)}
+                >
+                  <Icon className="kds-control-icon" aria-hidden="true" />
+                  {!isSidebarCollapsed && <span>{item.label}</span>}
+                  {Boolean(item.badge) && renderSidebarBadge(item.badge ?? 0)}
+                </ActionSurface>;
+              })}
+            </div>
+          ))}
+        </nav>
+        {isMobileMenuOpen && <div className="terracota-sidebar-footer">
+          <Button size="sm" variant="ghost" onClick={() => { setIsMobileMenuOpen(false); setProfileOpen(true); }}><User className="kds-control-icon" aria-hidden="true" />Minha conta</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setIsMobileMenuOpen(false); setSignOutOpen(true); }}><LogOut className="kds-control-icon" aria-hidden="true" />Sair do painel</Button>
+        </div>}
+        {isSidebarCollapsed && <div className="terracota-sidebar-footer">
+          <IconButton variant="ghost" aria-label="Expandir menu" title="Expandir menu" onClick={() => setIsMenuCollapsed(false)}><PanelLeftOpen aria-hidden="true" /></IconButton>
+        </div>}
       </aside>
 
-      <nav
-        className="terracota-mobile-bottom-nav"
-        aria-label="Navegação principal"
-        style={{ gridTemplateColumns: `repeat(${mobileNavItems.length + 1}, minmax(0, 1fr))` }}
-      >
-        {mobileNavItems.map((item) => {
-          const ItemIcon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <ActionSurface variant="plain" padding="none"
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setIsMobileMoreOpen(false);
-                onTabChange(item.id);
-              }}
-              className={cx('terracota-mobile-bottom-nav-item', isActive && 'is-active')}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <ItemIcon className="h-5 w-5" aria-hidden="true" />
-              <span>{item.label}</span>
-            </ActionSurface>
-          );
-        })}
-        <ActionSurface variant="plain" padding="none"
-          type="button"
-          onClick={() => setIsMobileMoreOpen((current) => !current)}
-          className={cx('terracota-mobile-bottom-nav-item', isMobileMoreOpen && 'is-active')}
-          ref={mobileMoreTriggerRef}
-          aria-label="Abrir mais opções"
-          aria-expanded={isMobileMoreOpen}
-          aria-controls="mobile-more-menu"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-          <span>Mais</span>
-        </ActionSurface>
-      </nav>
-
-      {isMobileMoreOpen && (
-        <>
-          <ActionSurface variant="plain" padding="none"
-            type="button"
-            className="terracota-mobile-more-backdrop"
-            onClick={() => setIsMobileMoreOpen(false)}
-            aria-label="Fechar mais opções"
-          />
-          <div id="mobile-more-menu" className="terracota-mobile-more-menu" role="menu" aria-label="Mais opções">
-            {mobileMoreItems.map((item) => {
-              const ItemIcon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <ActionSurface variant="plain" padding="none"
-                  key={item.id}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsMobileMoreOpen(false);
-                    onTabChange(item.id);
-                  }}
-                  className={cx('terracota-mobile-more-item', isActive && 'is-active')}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <ItemIcon className="h-4 w-4" aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="terracota-mobile-more-badge">{item.badge > 99 ? '99+' : item.badge}</span>
-                  )}
-                </ActionSurface>
-              );
-            })}
-            <ActionSurface variant="plain" padding="none" type="button" role="menuitem" className="terracota-mobile-more-item" onClick={() => { mobileMenuOpenedFromRef.current = 'more'; setIsMobileMoreOpen(false); setIsMobileMenuOpen(true); }}>
-              <Menu className="h-4 w-4" aria-hidden="true" />
-              <span>Menu completo</span>
-            </ActionSurface>
-          </div>
-        </>
-      )}
-
-      {activeCollapsedParentTab?.children && collapsedDropdownPosition && (
-        <div
-          id="collapsed-menu-dropdown"
-          ref={collapsedDropdownRef}
-          className="terracota-sidebar-popover fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-[var(--radius-2xl)] border p-1.5 shadow-2xl"
-          style={{
-            left: collapsedDropdownPosition.left,
-            top: collapsedDropdownPosition.top,
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)] ${
-              collapsedDropdownPosition.side === 'right'
-                ? '-left-1.5 border-b-0 border-r-0'
-                : '-right-1.5 border-l-0 border-t-0'
-            }`}
-            style={{ top: collapsedDropdownPosition.caretTop - 6 }}
-          />
-          <div className="space-y-0.5">
-            {activeCollapsedParentTab.children.map((child) => {
-              const ChildIcon = child.icon;
-              const isChildActive = activeTab === child.id;
-
-              return (
-                <ActionSurface variant="plain" padding="none"
-                  key={child.id}
-                  onClick={() => {
-                    onTabChange(child.id);
-                    setActiveDropdownTab(null);
-                    setCollapsedDropdownPosition(null);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={cx(
-                    'kds-sidebar-item flex w-full min-w-[156px] items-center justify-between gap-3 px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
-                    isChildActive && 'is-active',
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <ChildIcon className="h-4 w-4" />
-                    <span>{child.label}</span>
+      <Drawer open={showNotificationsDropdown} onOpenChange={setShowNotificationsDropdown} className="kds-workspace-notifications">
+        <DrawerHeader onClose={() => setShowNotificationsDropdown(false)}><DialogTitle>Central do dia</DialogTitle></DrawerHeader>
+        <DrawerBody>
+          {canView('agenda') && <div className="kds-workspace-notification-actions">
+            <Button variant="secondary" size="sm" onClick={() => { onTabChange('agenda'); setShowNotificationsDropdown(false); }}>Abrir agenda</Button>
+          </div>}
+          <LoadingState active={notificationsLoading} compact className="px-4 py-6" label="Carregando notificações" fallback={() => notificationsError ? (
+            <div className="px-4 py-6 text-sm text-[var(--danger-text)]">{notificationsError}</div>
+          ) : (
+            <div className="kds-workspace-notification-list">
+              {notificationsWarning && (
+                <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]" role="status">
+                  {notificationsWarning}
+                </div>
+              )}
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lembretes do dia</Text>
+                  <span className="text-xs text-[var(--text-muted)]">{todayReminders.length}</span>
+                </div>
+                {todayReminders.length === 0 ? (
+                  <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum lembrete para hoje.</Text>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {todayReminders.slice(0, 5).map((reminder) => (
+                      <div key={reminder.id} className="kds-list-item">
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</Text>
+                        <Text className="text-xs text-[var(--text-muted)]">{formatDateTimeFullBR(reminder.data_lembrete)}</Text>
+                      </div>
+                    ))}
                   </div>
-                  {child.badge !== undefined && child.badge > 0 && (
-                    renderSidebarBadge(child.badge, {
-                      pulse:
-                        Boolean(child.id === 'agenda' && hasActiveNotification) ||
-                        Boolean((child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0),
-                    })
-                  )}
-                </ActionSurface>
-              );
-            })}
+                )}
+              </div>
+
+              <div className="kds-popover-section border-t px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Previsões do dia</Text>
+                  <span className="text-xs text-[var(--text-muted)]">{todayPayments.length}</span>
+                </div>
+                {todayPayments.length === 0 ? (
+                  <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum pagamento previsto para hoje.</Text>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {todayPayments.slice(0, 5).map((payment) => (
+                      <div key={payment.id} className="kds-list-item kds-list-item-success">
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">
+                          {payment.type === 'comissao' ? 'Comissão' : 'Bonificação'}
+                          {payment.installmentLabel ? ` (${payment.installmentLabel})` : ''}
+                        </Text>
+                        <Text className="text-xs text-[var(--text-secondary)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="kds-popover-section border-t px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <Text className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Aniversariantes</Text>
+                  <span className="text-xs text-[var(--text-muted)]">{todayBirthdays.length}</span>
+                </div>
+                {todayBirthdays.length === 0 ? (
+                  <Text className="mt-2 text-sm text-[var(--text-muted)]">Nenhum aniversariante hoje.</Text>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {todayBirthdays.slice(0, 5).map((birthday) => (
+                      <div key={birthday.id} className="kds-list-item kds-list-item-warning">
+                        <Text className="text-sm font-semibold text-[var(--text-primary)]">{birthday.name}</Text>
+                        <Text className="text-xs text-[var(--text-secondary)]">
+                          {birthday.role}
+                          {birthday.holderName ? ` • Titular: ${birthday.holderName}` : ''}
+                        </Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )} />
+        </DrawerBody>
+      </Drawer>
+      <Drawer open={profileOpen} onOpenChange={setProfileOpen} size="sm">
+        <DrawerHeader onClose={() => setProfileOpen(false)}><DialogTitle>Minha conta</DialogTitle></DrawerHeader>
+        <DrawerBody className="kds-workspace-profile">
+          <div className="kds-workspace-profile-identity">
+            <Avatar name={userProfile?.username ?? 'Conta conectada'} tone="brand" size="lg" />
+            <div>
+              <Text tone="primary" weight="semibold">{userProfile?.username ?? 'Conta conectada'}</Text>
+              {roleLabel && <Text size="sm">{roleLabel}</Text>}
+              {userProfile?.email && <Text size="sm" tone="muted">{userProfile.email}</Text>}
+            </div>
           </div>
-        </div>
-      )}
+          <div className="kds-workspace-profile-theme">
+            <Text size="sm" weight="medium">Aparência do painel</Text>
+            <Button variant="secondary" size="sm" onClick={toggleThemeMode}>Ativar tema {themeMode === 'dark' ? 'claro' : 'escuro'}</Button>
+          </div>
+        </DrawerBody>
+      </Drawer>
+      <ConfirmDialog open={signOutOpen} onOpenChange={setSignOutOpen} onConfirm={handleLogout} closeOnConfirm title="Sair do painel?" description="Entre novamente com sua conta para retomar o trabalho." confirmLabel="Sair" />
+      <WorkspaceSearch
+        key={String(searchOpen)}
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        destinations={destinations}
+        onSearchLeads={canView('leads') ? (search) => onTabChange('leads', { search }) : undefined}
+        onSearchContracts={canView('contracts') ? (search) => onTabChange('contracts', { search }) : undefined}
+      />
 
       <div
         className={`terracota-content-shell relative z-10 flex min-h-0 min-w-0 flex-1 flex-col transition-[margin,width,max-width] duration-300 ${useFullBleedContent ? 'is-full-bleed' : ''}`}
         style={{ '--terracota-sidebar-width': sidebarOffset } as CSSProperties}
       >
-        {!useFullBleedContent && <WorkspaceHeader
-          title={headerTitle ?? tabs.flatMap(tab => tab.children ?? [tab]).find(tab => tab.id === activeTab)?.label ?? 'Painel'}
+        <WorkspaceHeader
+          title={headerTitle ?? visibleGroups.flatMap(({ items }) => items).find(isSelected)?.label ?? 'Painel'}
           username={userProfile?.username}
+          roleLabel={roleLabel}
           theme={themeMode}
           mobileMenuOpen={isMobileMenuOpen}
           mobileMenuButtonRef={mobileMenuTriggerRef}
-          onToggleMobileMenu={() => {
-            mobileMenuOpenedFromRef.current = 'header';
-            setIsMobileMenuOpen((current) => !current);
-          }}
-          onNavigateHome={() => onTabChange('dashboard')}
+          onToggleMobileMenu={() => setIsMobileMenuOpen((current) => !current)}
+          onNavigateHome={() => onTabChange(canView('dashboard') ? 'dashboard' : activeTab)}
           onToggleTheme={toggleThemeMode}
-        />}
-        <main className={`terracota-main flex min-h-0 flex-1 flex-col ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          searchAction={
+            <Button variant="secondary" size="sm" className="kds-workspace-search-trigger" aria-label="Buscar no painel" aria-keyshortcuts="Control+K Meta+K" onClick={() => setSearchOpen(true)}>
+              <Search className="kds-control-icon" aria-hidden="true" /><span>O que você procura?</span><kbd>Ctrl K</kbd>
+            </Button>
+          }
+          notificationsAction={
+            <IconButton variant="ghost" size="sm" className="kds-workspace-notification-trigger" aria-label="Notificações" onClick={() => setShowNotificationsDropdown(true)}>
+              <Bell aria-hidden="true" />{(unreadReminders > 0 || hasActiveNotification) && <i aria-hidden="true" />}
+            </IconButton>
+          }
+          createAction={creationActions.length > 0 && (
+            <Popover open={createOpen} onOpenChange={setCreateOpen}>
+              <PopoverTrigger><IconButton variant="ghost" size="sm" className="kds-workspace-create-trigger" aria-label="Criar registro" aria-expanded={createOpen}><Plus aria-hidden="true" /></IconButton></PopoverTrigger>
+              <PopoverContent align="end" className="kds-workspace-action-menu" aria-label="Criar registro">
+                {creationActions.map(({ path, label, icon: Icon }) => <DropdownOption key={path} role="button" onClick={() => {
+                  setCreateOpen(false);
+                  navigate('/painel/' + path + '?criar=1');
+                }}><Icon className="kds-control-icon" aria-hidden="true" />{label}</DropdownOption>)}
+              </PopoverContent>
+            </Popover>
+          )}
+          accountAction={
+            <Popover open={accountOpen} onOpenChange={setAccountOpen}>
+              <PopoverTrigger>
+                <Button variant="ghost" size="sm" className="kds-workspace-account-trigger" aria-label="Menu da conta" aria-expanded={accountOpen}>
+                  <Avatar name={userProfile?.username ?? 'Conta conectada'} size="sm" tone="brand" />
+                  <span className="kds-workspace-username">{userProfile?.username ?? 'Conta conectada'}{roleLabel && <small>{roleLabel}</small>}</span>
+                  <ChevronDown className="kds-control-icon" aria-hidden="true" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="kds-workspace-action-menu" aria-label="Menu da conta">
+                <DropdownOption role="button" onClick={() => { setAccountOpen(false); setProfileOpen(true); }}><User className="kds-control-icon" aria-hidden="true" />Minha conta</DropdownOption>
+                <DropdownOption role="button" onClick={() => { setAccountOpen(false); setSignOutOpen(true); }}><LogOut className="kds-control-icon" aria-hidden="true" />Sair do painel</DropdownOption>
+              </PopoverContent>
+            </Popover>
+          }
+        />
+        <main ref={mainRef} id="painel-conteudo" className={`terracota-main flex min-h-0 flex-1 flex-col ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}
             className={`terracota-panel-content ${
               useFullBleedContent
                 ? 'w-full h-full min-h-0'
-                : 'w-full py-8 px-2 sm:px-3 lg:px-4'
+                : 'w-full terracota-page-content'
             }`}
           >
             {children}

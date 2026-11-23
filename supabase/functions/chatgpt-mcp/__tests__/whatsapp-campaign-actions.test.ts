@@ -478,9 +478,9 @@ describe('MCP WhatsApp campaign actions', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it('exposes the global 24h campaign message quota without calling the worker', async () => {
-    const expected = { success: true, daily_message_limit: 20, reserved_messages_24h: 5,
-      remaining_messages: 15, next_available_at: null, period: 'rolling_24h' };
+  it('exposes the global 24h campaign new-contact quota without calling the worker', async () => {
+    const expected = { success: true, daily_contact_limit: 20, started_contacts_24h: 5,
+      remaining_contacts: 15, next_available_at: null, period: 'rolling_24h' };
     const { client, rpc, invoke } = makeSupabase(expected);
     const result = await executeMcpWhatsAppCampaignReadAction({
       supabase: client, toolName: 'kifer_get_whatsapp_campaign_global_status', arguments: {}, actorId,
@@ -491,12 +491,12 @@ describe('MCP WhatsApp campaign actions', () => {
   });
 
   it('writes a new global limit through an idempotent narrow RPC without touching campaign statuses', async () => {
-    const { client, rpc, invoke } = makeSupabase({ success: true, daily_message_limit: 20 });
+    const { client, rpc, invoke } = makeSupabase({ success: true, daily_contact_limit: 20 });
     const result = await executeMcpWhatsAppCampaignWriteAction({
       supabase: client, actorId, toolName: 'kifer_set_whatsapp_campaign_global_limit',
-      arguments: { daily_message_limit: 20, expected_updated_at: updatedAt, client_request_id: 'global-limit-20' },
+      arguments: { daily_contact_limit: 20, expected_updated_at: updatedAt, client_request_id: 'global-limit-20' },
     });
-    expect(result).toMatchObject({ success: true, daily_message_limit: 20 });
+    expect(result).toMatchObject({ success: true, daily_contact_limit: 20 });
     expect(rpc).toHaveBeenCalledWith('mcp_set_comm_whatsapp_campaign_global_limit', {
       p_actor_user_id: actorId, p_limit: 20, p_expected_updated_at: updatedAt,
       p_client_request_id: 'global-limit-20',

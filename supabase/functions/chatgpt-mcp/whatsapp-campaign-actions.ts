@@ -10,7 +10,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const REQUEST_ID = /^[A-Za-z0-9:_-]{1,128}$/;
 const CAMPAIGN_SELECT = [
   'id', 'name', 'objective', 'status', 'audience_source', 'audience_config',
-  'message_text', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit',
+  'message_text', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit', 'dispatch_priority',
   'contact_interval_minutes', 'inter_message_interval_minutes',
   'send_window_start', 'send_window_end', 'active_weekdays', 'stop_on_reply',
   'create_leads_from_csv', 'validate_whatsapp_numbers', 'total_targets',
@@ -37,6 +37,7 @@ const CAMPAIGN_CONTACT_SELECT = [
 export const MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES = [
   'kifer_list_whatsapp_campaigns',
   'kifer_get_whatsapp_campaign',
+  'kifer_get_whatsapp_campaign_global_status',
   'kifer_preview_whatsapp_campaign',
   'kifer_list_whatsapp_campaign_contacts',
   'kifer_get_whatsapp_campaign_contact',
@@ -50,6 +51,8 @@ export const MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES = [
 export const MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES = [
   'kifer_create_whatsapp_campaign',
   'kifer_update_whatsapp_campaign',
+  'kifer_set_whatsapp_campaign_global_limit',
+  'kifer_set_whatsapp_campaign_priority',
   'kifer_import_whatsapp_campaign_contacts',
   'kifer_remove_whatsapp_campaign_contact',
   'kifer_activate_whatsapp_campaign',
@@ -109,6 +112,7 @@ const CAMPAIGN_COMMON_PROPERTIES = {
   scheduled_at: { type: 'string', format: 'date-time' },
   pacing_per_minute: { type: 'integer', minimum: 1, maximum: 120, default: 12 },
   daily_send_limit: { type: ['integer', 'null'], minimum: 1 },
+  dispatch_priority: { type: 'integer', minimum: 1, maximum: 3, description: 'Peso do rodízio global de admissões: Normal=1, Alta=2, Máxima=3. Não altera status nem supera o teto de mensagens.' },
   contact_interval_minutes: { type: ['integer', 'null'], minimum: 1, maximum: 1440, description: 'Intervalo mínimo entre novos contatos. Nulo distribui o público elegível pela janela de envio.' },
   inter_message_interval_seconds: { type: 'integer', minimum: 0, maximum: 86400, description: 'Espera mínima entre balões em segundos. Zero mantém o padrão de cerca de 3 segundos. Em sequências longas ou esperas a partir de 60 segundos, a retomada pode levar até um minuto adicional. Não combinar com inter_message_interval_minutes.' },
   inter_message_interval_minutes: { type: 'integer', minimum: 0, maximum: 1440, description: 'Compatibilidade com integrações anteriores. Prefira inter_message_interval_seconds; não combine as duas unidades.' },
@@ -126,13 +130,19 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
   {
     name: 'kifer_list_whatsapp_campaigns',
     description: 'Lista campanhas reais do módulo Disparos WhatsApp (/painel/disparos), com filtros, paginação e métricas persistidas. Não lista nem altera fluxos de follow-up.',
-    inputSchema: { type: 'object', additionalProperties: false, properties: { status: { type: 'string', enum: ['draft', 'scheduled', 'queued', 'running', 'paused', 'completed', 'cancelled'] }, name: { type: 'string', maxLength: 160 }, date_from: { type: 'string', format: 'date-time' }, date_to: { type: 'string', format: 'date-time' }, data_inicial: { type: 'string', format: 'date-time', description: 'Alias compatível com as consultas administrativas do CRM.' }, data_final: { type: 'string', format: 'date-time', description: 'Alias compatível com as consultas administrativas do CRM.' }, page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 }, order_by: { type: 'string', enum: ['created_at', 'updated_at', 'scheduled_at', 'name', 'status'], default: 'created_at' }, ascending: { type: 'boolean', default: false } } },
+    inputSchema: { type: 'object', additionalProperties: false, properties: { status: { type: 'string', enum: ['draft', 'scheduled', 'queued', 'running', 'paused', 'completed', 'cancelled'] }, name: { type: 'string', maxLength: 160 }, date_from: { type: 'string', format: 'date-time' }, date_to: { type: 'string', format: 'date-time' }, data_inicial: { type: 'string', format: 'date-time', description: 'Alias compatível com as consultas administrativas do CRM.' }, data_final: { type: 'string', format: 'date-time', description: 'Alias compatível com as consultas administrativas do CRM.' }, page: { type: 'integer', minimum: 1, default: 1 }, page_size: { type: 'integer', minimum: 1, maximum: 50, default: 20 }, order_by: { type: 'string', enum: ['created_at', 'updated_at', 'scheduled_at', 'name', 'status', 'dispatch_priority'], default: 'created_at' }, ascending: { type: 'boolean', default: false } } },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: 'kifer_get_whatsapp_campaign',
     description: 'Consulta uma campanha real do Disparos WhatsApp, sua configuração segura, etapas e resumo. Segredos não são retornados.',
     inputSchema: { type: 'object', required: ['campaign_id'], additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_get_whatsapp_campaign_global_status',
+    description: 'Consulta o limite global compartilhado de mensagens por 24h, reservas usadas, saldo e próxima liberação. Conta reservas de balões e follow-ups; não envia nada.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: {} },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
@@ -199,6 +209,27 @@ export const MCP_WHATSAPP_CAMPAIGN_TOOLS: McpToolDescriptor[] = [
     description: 'Edita campanha não processada usando expected_updated_at. stages substitui completamente as variações e balões da sequência; demais opções são preservadas quando omitidas.',
     inputSchema: { type: 'object', required: ['campaign_id', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: { campaign_id: { type: 'string', format: 'uuid' }, expected_updated_at: { type: 'string', format: 'date-time' }, client_request_id: { type: 'string', minLength: 1, maxLength: 128 }, name: { type: 'string', minLength: 1, maxLength: 160 }, message: { type: 'string', minLength: 1, maxLength: 4096 }, ...CAMPAIGN_COMMON_PROPERTIES } },
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  },
+  {
+    name: 'kifer_set_whatsapp_campaign_global_limit',
+    description: 'Altera o teto global de mensagens reservadas por 24h para todas as campanhas; não ativa, pausa ou envia campanhas. Exige consulta prévia e expected_updated_at da configuração para evitar disputa.',
+    inputSchema: { type: 'object', required: ['daily_message_limit', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: {
+      daily_message_limit: { type: 'integer', minimum: 1, maximum: 10000 },
+      expected_updated_at: { type: 'string', format: 'date-time' },
+      client_request_id: { type: 'string', minLength: 1, maxLength: 128 },
+    } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: 'kifer_set_whatsapp_campaign_priority',
+    description: 'Muda apenas o peso de uma campanha no rodízio, inclusive se estiver running/queued. Não pausa, ativa, modifica mensagens ou altera o teto global. Exige expected_updated_at atual.',
+    inputSchema: { type: 'object', required: ['campaign_id', 'dispatch_priority', 'expected_updated_at', 'client_request_id'], additionalProperties: false, properties: {
+      campaign_id: { type: 'string', format: 'uuid' },
+      dispatch_priority: { type: 'integer', enum: [1, 2, 3], description: '1 normal, 2 alta, 3 máxima.' },
+      expected_updated_at: { type: 'string', format: 'date-time' },
+      client_request_id: { type: 'string', minLength: 1, maxLength: 128 },
+    } },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   },
   {
     name: 'kifer_import_whatsapp_campaign_contacts',
@@ -523,7 +554,7 @@ const listCampaigns = async (supabase: SupabaseClient, args: JsonRecord): Promis
   if (name) query = query.ilike('name', `%${name.replace(/[%_]/g, '')}%`);
   if (dateFrom) query = query.gte('created_at', dateFrom);
   if (dateTo) query = query.lte('created_at', dateTo);
-  const orderBy = ['created_at', 'updated_at', 'scheduled_at', 'name', 'status'].includes(text(args.order_by)) ? text(args.order_by) : 'created_at';
+  const orderBy = ['created_at', 'updated_at', 'scheduled_at', 'name', 'status', 'dispatch_priority'].includes(text(args.order_by)) ? text(args.order_by) : 'created_at';
   const { data, error, count } = await query.order(orderBy, { ascending: args.ascending === true, nullsFirst: false }).range(from, from + pageSize - 1);
   if (error) return { success: false, error_code: 'INTERNAL_ERROR', message: 'Não foi possível listar as campanhas WhatsApp.' };
   const campaigns = data ?? [];
@@ -882,8 +913,13 @@ const getCampaignTemplate = async (supabase: SupabaseClient, args: JsonRecord): 
   return { success: true, template: { ...data, stages: safeAudienceConfig(data.steps), steps: undefined } };
 };
 
-export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: JsonRecord }): Promise<JsonRecord | null> {
-  const { supabase, toolName, arguments: args } = params;
+export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: SupabaseClient; toolName: string; arguments: JsonRecord; actorId: string }): Promise<JsonRecord | null> {
+  const { supabase, toolName, arguments: args, actorId } = params;
+  if (toolName === 'kifer_get_whatsapp_campaign_global_status') {
+    const { data, error } = await supabase.rpc('mcp_get_comm_whatsapp_campaign_global_status', { p_actor_user_id: actorId });
+    if (error || !isRecord(data)) return errorResult('INTERNAL_ERROR', 'Não foi possível consultar a cota global.');
+    return data;
+  }
   if (toolName === 'kifer_list_whatsapp_campaigns') return listCampaigns(supabase, args);
   if (toolName === 'kifer_get_whatsapp_campaign') return getCampaign(supabase, args);
   if (toolName === 'kifer_preview_whatsapp_campaign') return previewCampaign(supabase, args);
@@ -899,7 +935,7 @@ export async function executeMcpWhatsAppCampaignReadAction(params: { supabase: S
 
 const campaignPatch = (args: JsonRecord): JsonRecord => {
   const patch: JsonRecord = {};
-  for (const key of ['name', 'message', 'status', 'objective', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit', 'contact_interval_minutes', 'inter_message_interval_minutes', 'start_hour', 'end_hour', 'allowed_weekdays', 'stop_on_reply', 'validate_whatsapp_numbers', 'steps', 'audience_config']) {
+  for (const key of ['name', 'message', 'status', 'objective', 'scheduled_at', 'pacing_per_minute', 'daily_send_limit', 'dispatch_priority', 'contact_interval_minutes', 'inter_message_interval_minutes', 'start_hour', 'end_hour', 'allowed_weekdays', 'stop_on_reply', 'validate_whatsapp_numbers', 'steps', 'audience_config']) {
     if (Object.prototype.hasOwnProperty.call(args, key)) patch[key] = args[key];
   }
   return patch;
@@ -924,6 +960,8 @@ const safeCampaignPatch = (args: JsonRecord): JsonRecord | null => {
     if ('inter_message_interval_minutes' in args
       || !Number.isInteger(seconds) || Number(seconds) < 0 || Number(seconds) > 86400) return null;
   }
+  if ('dispatch_priority' in patch
+    && (!Number.isInteger(patch.dispatch_priority) || Number(patch.dispatch_priority) < 1 || Number(patch.dispatch_priority) > 3)) return null;
   if (
     ('contact_interval_minutes' in patch
       && patch.contact_interval_minutes !== null
@@ -955,12 +993,40 @@ export async function executeMcpWhatsAppCampaignWriteAction(params: { supabase: 
   if (!(MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES as readonly string[]).includes(toolName)) return null;
   const campaignId = text(args.campaign_id);
   const requestId = text(args.client_request_id);
-  if (toolName !== 'kifer_create_whatsapp_campaign' && !safeUuid(campaignId)) return errorResult('INVALID_INPUT', 'campaign_id inválido.');
+  const globalOperation = toolName === 'kifer_set_whatsapp_campaign_global_limit';
+  if (!globalOperation && toolName !== 'kifer_create_whatsapp_campaign' && !safeUuid(campaignId)) return errorResult('INVALID_INPUT', 'campaign_id inválido.');
   if (!requestId) return errorResult('CLIENT_REQUEST_ID_REQUIRED', 'client_request_id é obrigatório para ações de campanha.');
   if (!REQUEST_ID.test(requestId)) return errorResult('CLIENT_REQUEST_ID_INVALID', 'client_request_id deve usar apenas letras, números, :, _ ou - e ter até 128 caracteres.');
   const expectedUpdatedAt = text(args.expected_updated_at) || undefined;
   if (toolName !== 'kifer_create_whatsapp_campaign' && toolName !== 'kifer_import_whatsapp_campaign_contacts' && !expectedUpdatedAt) {
     return errorResult('EXPECTED_UPDATED_AT_REQUIRED', 'expected_updated_at é obrigatório para evitar sobrescrever alterações recentes.');
+  }
+  if (globalOperation) {
+    if (!Number.isInteger(args.daily_message_limit) || Number(args.daily_message_limit) < 1 || Number(args.daily_message_limit) > 10000) {
+      return errorResult('INVALID_INPUT', 'daily_message_limit deve ser um inteiro entre 1 e 10000.');
+    }
+    const { data, error } = await supabase.rpc('mcp_set_comm_whatsapp_campaign_global_limit', {
+      p_actor_user_id: actorId,
+      p_limit: args.daily_message_limit,
+      p_expected_updated_at: expectedUpdatedAt,
+      p_client_request_id: requestId,
+    });
+    if (error) return mapRpcError(error.message);
+    return isRecord(data) ? data : errorResult('INTERNAL_ERROR', 'A atualização do limite não retornou resultado.');
+  }
+  if (toolName === 'kifer_set_whatsapp_campaign_priority') {
+    if (![1, 2, 3].includes(Number(args.dispatch_priority)) || !Number.isInteger(args.dispatch_priority)) {
+      return errorResult('INVALID_INPUT', 'dispatch_priority deve ser 1, 2 ou 3.');
+    }
+    const { data, error } = await supabase.rpc('mcp_set_comm_whatsapp_campaign_priority', {
+      p_actor_user_id: actorId,
+      p_campaign_id: campaignId,
+      p_priority: args.dispatch_priority,
+      p_expected_updated_at: expectedUpdatedAt,
+      p_client_request_id: requestId,
+    });
+    if (error) return mapRpcError(error.message);
+    return isRecord(data) ? data : errorResult('INTERNAL_ERROR', 'A atualização da prioridade não retornou resultado.');
   }
   let result: CampaignWriteResult;
 

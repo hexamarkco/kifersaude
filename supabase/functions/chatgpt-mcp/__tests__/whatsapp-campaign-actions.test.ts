@@ -78,6 +78,7 @@ describe('MCP WhatsApp campaign actions', () => {
     const client = { from: () => query, rpc } as never;
 
     const result = await executeMcpWhatsAppCampaignReadAction({
+      actorId,
       supabase: client,
       toolName: 'kifer_list_whatsapp_campaigns',
       arguments: { page: 1, page_size: 20 },
@@ -152,6 +153,7 @@ describe('MCP WhatsApp campaign actions', () => {
     } as never;
 
     const result = await executeMcpWhatsAppCampaignReadAction({
+      actorId,
       supabase: client,
       toolName: 'kifer_preview_whatsapp_campaign',
       arguments: { campaign_id: amilCampaignId, samples: [{ name: 'Ana' }] },
@@ -474,6 +476,75 @@ describe('MCP WhatsApp campaign actions', () => {
     });
     expect(result).toMatchObject({ success: false, error_code: 'INVALID_INPUT' });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('exposes the global 24h campaign message quota without calling the worker', async () => {
+    const expected = { success: true, daily_message_limit: 20, reserved_messages_24h: 5,
+      remaining_messages: 15, next_available_at: null, period: 'rolling_24h' };
+    const { client, rpc, invoke } = makeSupabase(expected);
+    const result = await executeMcpWhatsAppCampaignReadAction({
+      supabase: client, toolName: 'kifer_get_whatsapp_campaign_global_status', arguments: {}, actorId,
+    });
+    expect(result).toMatchObject(expected);
+    expect(rpc).toHaveBeenCalledWith('mcp_get_comm_whatsapp_campaign_global_status', { p_actor_user_id: actorId });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('writes a new global limit through an idempotent narrow RPC without touching campaign statuses', async () => {
+    const { client, rpc, invoke } = makeSupabase({ success: true, daily_message_limit: 20 });
+    const result = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client, actorId, toolName: 'kifer_set_whatsapp_campaign_global_limit',
+      arguments: { daily_message_limit: 20, expected_updated_at: updatedAt, client_request_id: 'global-limit-20' },
+    });
+    expect(result).toMatchObject({ success: true, daily_message_limit: 20 });
+    expect(rpc).toHaveBeenCalledWith('mcp_set_comm_whatsapp_campaign_global_limit', {
+      p_actor_user_id: actorId, p_limit: 20, p_expected_updated_at: updatedAt,
+      p_client_request_id: 'global-limit-20',
+    });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('changes only a running campaign priority with compare-and-set and never invokes the worker', async () => {
+    const { client, rpc, invoke } = makeSupabase({ success: true, dispatch_priority: 3, status: 'running' });
+    const result = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client, actorId, toolName: 'kifer_set_whatsapp_campaign_priority',
+      arguments: { campaign_id: campaignId, dispatch_priority: 3, expected_updated_at: updatedAt,
+        client_request_id: 'priority-running-3' },
+    });
+    expect(result).toMatchObject({ success: true, dispatch_priority: 3, status: 'running' });
+    expect(rpc).toHaveBeenCalledWith('mcp_set_comm_whatsapp_campaign_priority', {
+      p_actor_user_id: actorId, p_campaign_id: campaignId, p_priority: 3,
+      p_expected_updated_at: updatedAt, p_client_request_id: 'priority-running-3',
+    });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('passes priority to the existing draft create tool and rejects invalid priorities', async () => {
+    const { client, rpc, invoke } = makeSupabase();
+    const valid = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client, actorId, toolName: 'kifer_create_whatsapp_campaign',
+      arguments: { name: 'Campanha prioritaria', message: 'Olá!', client_request_id: 'new-priority',
+        dispatch_priority: 2 },
+    });
+    expect(valid).toMatchObject({ success: true });
+    const original = rpc.mock.calls.find(([name]) => name === 'mcp_comm_whatsapp_campaign_mutation')?.[1];
+    expect(original.p_payload.dispatch_priority).toBe(2);
+    const invalid = await executeMcpWhatsAppCampaignWriteAction({
+      supabase: client, actorId, toolName: 'kifer_set_whatsapp_campaign_priority',
+      arguments: { campaign_id: campaignId, dispatch_priority: 7, expected_updated_at: updatedAt,
+        client_request_id: 'invalid-priority' },
+    });
+    expect(invalid).toMatchObject({ success: false, error_code: 'INVALID_INPUT' });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('advertises strict tools for global budget and weighted priority', () => {
+    for (const name of ['kifer_get_whatsapp_campaign_global_status',
+      'kifer_set_whatsapp_campaign_global_limit', 'kifer_set_whatsapp_campaign_priority']) {
+      expect(MCP_WHATSAPP_CAMPAIGN_TOOLS.some((tool) => tool.name === name)).toBe(true);
+    }
+    expect(MCP_WHATSAPP_CAMPAIGN_READ_TOOL_NAMES).toContain('kifer_get_whatsapp_campaign_global_status');
+    expect(MCP_WHATSAPP_CAMPAIGN_WRITE_TOOL_NAMES).toContain('kifer_set_whatsapp_campaign_priority');
   });
 
 });

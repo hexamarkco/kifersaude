@@ -3132,7 +3132,7 @@ async function processFlowJobs({
           }
         }
 
-        if (flow.triggerType === 'lead_created' || job.action_payload?.dispatch_pacing !== 'retroactive') {
+        if (INACTIVITY_REACTIVATION_FLOW_IDS.has(flow.id) || flow.triggerType === 'lead_created' || job.action_payload?.dispatch_pacing !== 'retroactive') {
           const storedMessageIndex = Number(job.action_payload?.message_index ?? 0);
           const messageStartIndex =
             Number.isInteger(storedMessageIndex) && storedMessageIndex >= 0 ? storedMessageIndex : 0;

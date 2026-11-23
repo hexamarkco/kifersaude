@@ -7625,6 +7625,15 @@ export type Database = {
       }
     }
     Functions: {
+      get_comm_whatsapp_campaign_global_contact_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          daily_contact_limit: number
+          started_contacts_24h: number
+          remaining_contacts: number
+          next_available_at: string | null
+        }[]
+      }
       get_comm_whatsapp_campaign_global_status: {
         Args: Record<PropertyKey, never>
         Returns: {

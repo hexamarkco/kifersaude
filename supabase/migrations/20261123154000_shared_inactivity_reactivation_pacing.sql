@@ -21,7 +21,7 @@ DECLARE
   v_next timestamptz;
   v_reserved boolean := false;
 BEGIN
-  IF auth.role() IS DISTINCT FROM 'service_role' THEN
+  IF current_setting('request.jwt.claim.role', true) IS DISTINCT FROM 'service_role' THEN
     RAISE EXCEPTION 'service_role only' USING ERRCODE='42501';
   END IF;
   IF p_interval_seconds < 60 OR p_interval_seconds > 3600 THEN

@@ -1,14 +1,17 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
-import { LoadingState, Text, Heading } from '../../../../design-system';
+import { LoadingState, Text } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
 import {
   Badge,
   Button,
   EmptyState,
-  OperationalMetricChip,
-  Surface,
+  Alert,
+  CrmCard,
+  KpiCard,
+  Progress,
+  RecordActions,
   type TabItem,
   Tabs,
 } from '../../../../design-system';
@@ -437,149 +440,101 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       isOpen={isOpen}
       onClose={handleClose}
       title="Painel WhatsApp"
-      description="Veja as conversas que precisam de atenção e acompanhe o atendimento."
+      description="Acompanhe o volume de conversas, a fila de atendimento e o que precisa de atenção."
       size="xl"
       footer={(
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="w-full text-center text-xs text-[var(--text-muted)] sm:w-auto sm:text-left">
-            {syncAllProgress ?? exportProgress ?? `Atualizado: ${formatDateTime(metrics?.generatedAt)}`}
-          </div>
-          <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
-            <Button
-              variant="secondary"
-              onClick={() => void handleSyncAllChats()}
-              loading={syncingAll}
-              title="Busca até 25 mensagens recentes por conversa para recuperar atualizações que ainda não apareceram aqui."
-            >
-              {!syncingAll && <RotateCw className="kds-control-icon" />}
-              Forçar sincronização geral
-            </Button>
-            <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>
-              {!exportingInbox && <Download className="kds-control-icon" />}
-              Exportar conversas (.json)
-            </Button>
-            <Button variant="secondary" onClick={() => void loadMetrics()} loading={loading}>
-              {!loading && <RefreshCw className="kds-control-icon" />}
-              Atualizar
-            </Button>
+        <div className="whatsapp-inbox-report-footer">
+          <Text size="sm" tone="muted" role="status">
+            {syncAllProgress ?? exportProgress ?? (metrics ? `Atualizado em ${formatDateTime(metrics.generatedAt)}` : 'Aguardando dados do atendimento')}
+          </Text>
+          <div className="whatsapp-inbox-report-actions">
+            <RecordActions label="Ações do painel WhatsApp" visibleCount={0} actions={[
+              { label: 'Forçar sincronização geral', icon: RotateCw, loading: syncingAll, onClick: () => void handleSyncAllChats() },
+              { label: 'Exportar conversas (.json)', icon: Download, loading: exportingInbox, onClick: () => void handleExportInboxJson() },
+            ]} />
+            <Button variant="secondary" onClick={() => void loadMetrics()} loading={loading}><RefreshCw className="kds-control-icon" aria-hidden="true" />Atualizar</Button>
             <Button variant="secondary" onClick={handleClose}>Fechar</Button>
           </div>
         </div>
       )}
     >
-      {<LoadingState active={loading && !metrics} className="flex min-h-[420px] items-center justify-center text-sm text-[var(--text-muted)]" label="Carregando métricas do WhatsApp..." fallback={() => error ? (
-        <EmptyState
-          icon={<AlertTriangle className="h-7 w-7" />}
-          title="Não foi possível carregar o dashboard"
-          description={error}
-          action={<Button variant="secondary" size="sm" onClick={() => void loadMetrics()}>Tentar novamente</Button>}
-        />
+      <LoadingState active={loading && !metrics} className="whatsapp-inbox-report-loading" label="Carregando métricas do WhatsApp" fallback={() => error && !metrics ? (
+        <EmptyState icon={<AlertTriangle aria-hidden="true" />} title="Não foi possível carregar o painel do WhatsApp"
+          description={error} action={<Button variant="secondary" onClick={() => void loadMetrics()}>Tentar novamente</Button>} />
       ) : metrics ? (
-        <div className="whatsapp-inbox-dashboard-workspace">
-          {/* Left rail: channel health + at-a-glance metrics */}
-          <aside className="whatsapp-inbox-dashboard-rail">
-            <Surface
-              variant={channelHealth.tone === 'success' ? 'success' : channelHealth.tone === 'danger' ? 'danger' : channelHealth.tone === 'warning' ? 'warning' : 'default'}
-              padding="sm"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-surface)]">
-                <ChannelHealthIcon className="h-6 w-6" />
-              </div>
-              <Text className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] opacity-75">Saúde do canal</Text>
-              <Heading level={3} className="mt-1 text-base font-semibold">{channelHealth.title}</Heading>
-              <Text className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</Text>
-              {metrics?.channel?.last_error && (
-                <details className="mt-3 text-xs">
-                  <summary className="cursor-pointer">Informações para o suporte</summary>
-                  <Text className="mt-2 break-words">{metrics.channel.last_error}</Text>
-                </details>
-              )}
-              <div className="mt-3 border-t border-[color:var(--border-subtle)] pt-3 text-xs font-medium">
-                <Text>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</Text>
-                <Text className="mt-0.5 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</Text>
-              </div>
-            </Surface>
+        <div className="whatsapp-inbox-report">
+          {error && <Alert tone="warning" title="Os indicadores não foram atualizados.">{error}</Alert>}
+          <section className="kds-workspace-record-metrics kds-kpi-grid" aria-label="Indicadores do WhatsApp">
+            <KpiCard title="Conversas na fila" value={formatNumber(metrics.chatMetrics.activeChats)} trend="Conversas ativas e não arquivadas" icon={<Inbox />} />
+            <KpiCard title="Conversas não lidas" value={formatNumber(metrics.chatMetrics.unreadChats)}
+              trend={`${formatNumber(metrics.chatMetrics.staleUnreadChats)} sem leitura há mais tempo`} icon={<MessageCircle />} data-tone="warning" />
+            <KpiCard title="Mensagens nas últimas 24h" value={formatNumber(metrics.messageMetrics.messages24h)} trend="Recebidas e enviadas" icon={<BarChart3 />} data-tone="info" />
+            <KpiCard title="Lembretes nas próximas 24h" value={formatNumber(metrics.reminderMetrics.upcomingReminders24h)}
+              trend={`${formatNumber(metrics.reminderMetrics.overdueReminders)} atrasados`} icon={<Clock3 />} data-tone="cyan" />
+          </section>
 
-            <div>
-              <Text className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Atividade</Text>
-              <div className="flex flex-wrap gap-2">
-                <OperationalMetricChip icon={<Inbox className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.activeChats)} label="Fila ativa" />
-                <OperationalMetricChip icon={<MessageCircle className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.unreadChats)} label="Não lidas" tone={metrics.chatMetrics.unreadChats > 0 ? 'warning' : 'neutral'} />
-                <OperationalMetricChip icon={<BarChart3 className="h-3.5 w-3.5" />} value={formatNumber(metrics.messageMetrics.messages24h)} label="Volume 24h" />
-                <OperationalMetricChip icon={<Clock3 className="h-3.5 w-3.5" />} value={formatNumber(metrics.reminderMetrics.upcomingReminders24h)} label="Agenda 24h" />
-              </div>
-            </div>
+          <div className="whatsapp-inbox-report-columns">
+            <CrmCard title="Ritmo das conversas" subtitle="Mensagens registradas nas últimas 24 horas." subtitlePlacement="visible">
+              {[
+                { label: 'Recebidas', value: metrics.messageMetrics.inbound24h },
+                { label: 'Enviadas', value: metrics.messageMetrics.outbound24h },
+              ].map(({ label, value }) => (
+                <div className="whatsapp-inbox-report-bar" key={label}>
+                  <Text>{label}</Text><Text weight="semibold">{formatNumber(value)}</Text>
+                  <Progress size="sm" value={value} max={Math.max(1, metrics.messageMetrics.messages24h, value)} />
+                </div>
+              ))}
+              <Text size="sm" tone="muted">{formatNumber(metrics.messageMetrics.pendingOutbound)} aguardando envio · {formatNumber(metrics.messageMetrics.failedOutbound24h)} com falha nas últimas 24 horas</Text>
+            </CrmCard>
+            <CrmCard title="Canal de atendimento" subtitle={channelHealth.description} subtitlePlacement="visible">
+              <Badge tone={channelHealth.tone} icon={ChannelHealthIcon}>{channelHealth.title}</Badge>
+              <Text weight="semibold">{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</Text>
+              <Text size="sm" tone="muted">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</Text>
+              <Text size="sm" tone="muted">{formatNumber(metrics.chatMetrics.linkedLeadChats)} com lead vinculado · {formatNumber(metrics.chatMetrics.archivedChats)} arquivadas</Text>
+              {metrics.channel?.last_error && <details className="whatsapp-inbox-report-support">
+                <summary>Informações para o suporte</summary>
+                <Text size="sm">{metrics.channel.last_error}</Text>
+              </details>}
+            </CrmCard>
+          </div>
 
-            <div>
-              <Text className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Saúde operacional</Text>
-              <div className="flex flex-wrap gap-2">
-                <OperationalMetricChip icon={<Link2 className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.linkedLeadChats)} label="Com lead" />
-                <OperationalMetricChip icon={<Archive className="h-3.5 w-3.5" />} value={formatNumber(metrics.chatMetrics.archivedChats)} label="Arquivadas" />
-                <OperationalMetricChip icon={<AlertTriangle className="h-3.5 w-3.5" />} value={formatNumber(metrics.messageMetrics.failedOutbound24h)} label="Falhas 24h" tone={metrics.messageMetrics.failedOutbound24h > 0 ? 'danger' : 'neutral'} />
-              </div>
-            </div>
-          </aside>
-
-          {/* Right: tabbed priorities / recent chats */}
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <Tabs items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} variant="underline" ariaLabel="Visão do painel WhatsApp" />
-
+          <CrmCard title="Acompanhamento das conversas">
+            <Tabs items={DASHBOARD_VIEW_TABS} value={view} onChange={setView} ariaLabel="Visão do painel WhatsApp" />
             {view === 'priorities' ? (
-              <div className="space-y-2.5">
+              <ul className="whatsapp-inbox-report-list">
                 {priorities.map((item) => {
                   const Icon = priorityIcon[item.tone];
-                  return (
-                    <Surface
-                      key={`${item.title}:${item.description}`}
-                      variant={item.tone === 'neutral' ? 'muted' : item.tone}
-                      padding="sm"
-                      className="whatsapp-inbox-dashboard-priority flex items-start gap-3"
-                    >
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div className="min-w-0">
-                        <Text className="text-sm font-semibold">{item.title}</Text>
-                        <Text className="mt-1 text-sm leading-6 opacity-90">{item.description}</Text>
-                      </div>
-                    </Surface>
-                  );
+                  return <li key={item.title}>
+                    <span className="whatsapp-inbox-report-symbol" data-tone={item.tone}><Icon aria-hidden="true" /></span>
+                    <div><Text weight="semibold">{item.title}</Text><Text size="sm" tone="muted">{item.description}</Text></div>
+                  </li>;
                 })}
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {metrics.recentChats.length > 0 ? metrics.recentChats.map((chat) => (
-                  <Surface key={chat.id} variant="muted" padding="sm" className="whatsapp-inbox-dashboard-chat">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-sm font-semibold text-[var(--brand-primary)]">
-                          {(chat.displayName || chat.phoneNumber || '?').trim().charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</Text>
-                          <Text className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatDashboardRecentChatMeta(formatCommWhatsAppPhoneLabel(chat.phoneNumber), formatDateTime(chat.lastMessageAt))}</Text>
-                        </div>
+              </ul>
+            ) : metrics.recentChats.length > 0 ? (
+              <ul className="whatsapp-inbox-report-list">
+                {metrics.recentChats.map((chat) => (
+                  <li key={chat.id}>
+                    <div className="whatsapp-inbox-report-conversation">
+                      <Text weight="semibold">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</Text>
+                      <Text size="sm" tone="muted">{formatDashboardRecentChatMeta(formatCommWhatsAppPhoneLabel(chat.phoneNumber), formatDateTime(chat.lastMessageAt))}</Text>
+                      <Text size="sm" className="line-clamp-2">{getChatPreview(chat)}</Text>
+                      <div className="whatsapp-inbox-report-actions">
+                        {chat.leadId ? <Badge tone="info" size="sm" icon={Link2}>Lead vinculado</Badge> : <Badge tone="neutral" size="sm">Sem lead</Badge>}
+                        {chat.isPinned && <Badge tone="neutral" size="sm">Fixado</Badge>}
+                        {chat.isMuted && <Badge tone="neutral" size="sm">Silenciado</Badge>}
+                        {chat.lastMessageStatus && <Badge tone="neutral" size="sm" icon={SendHorizontal}>{normalizeStatusLabel(chat.lastMessageStatus)}</Badge>}
                       </div>
-                      {chat.unreadCount > 0 || chat.manualUnread ? (
-                        <Badge tone="accent" size="sm" className="shrink-0">
-                          {chat.unreadCount > 99 ? '99+' : Math.max(chat.unreadCount, 1)}
-                        </Badge>
-                      ) : null}
                     </div>
-                    <Text className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{getChatPreview(chat)}</Text>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {chat.leadId ? <Badge tone="info" size="sm" icon={Link2}>Lead vinculado</Badge> : <Badge tone="neutral" size="sm">Sem lead</Badge>}
-                      {chat.isPinned ? <Badge tone="neutral" size="sm">Fixado</Badge> : null}
-                      {chat.isMuted ? <Badge tone="neutral" size="sm">Silenciado</Badge> : null}
-                      {chat.lastMessageStatus ? <Badge tone="neutral" size="sm" icon={SendHorizontal}>{normalizeStatusLabel(chat.lastMessageStatus)}</Badge> : null}
-                    </div>
-                  </Surface>
-                )) : (
-                  <EmptyState title="Nenhuma conversa recente" description="Ainda não há pontos de atenção recentes para mostrar aqui." />
-                )}
-              </div>
+                    {(chat.unreadCount > 0 || chat.manualUnread) && <Badge tone="accent" size="sm">{chat.unreadCount > 99 ? '99+' : Math.max(chat.unreadCount, 1)}</Badge>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState title="Nenhuma conversa recente" description="As conversas aparecem aqui conforme o atendimento avança." />
             )}
-          </div>
+          </CrmCard>
         </div>
-      ) : null} />}
+      ) : null} />
     </WhatsAppInboxDialog>
   );
 }

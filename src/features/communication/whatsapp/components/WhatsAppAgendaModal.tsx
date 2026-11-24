@@ -30,6 +30,7 @@ import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpM
 import ReminderSchedulerModal from './WhatsAppReminderSchedulerModal';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import {
+  Alert,
   Badge,
   Button,
   DropdownOption,
@@ -37,12 +38,14 @@ import {
   ControlGroup,
   EmptyState,
   Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Surface,
   Textarea,
   IconButton,
   FilterSelect,
 } from '../../../../design-system';
-import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
 import type { PanelTone } from '../../../../design-system';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
 import { formatDateTimeFullBR, getDateKey, isOverdue } from '../../../../lib/dateUtils';
@@ -162,12 +165,7 @@ export default function WhatsAppAgendaModal({
     reminderId: string;
     daysAhead: 1 | 2 | 3 | 4 | 5;
   } | null>(null);
-  const [quickScheduleDropdown, setQuickScheduleDropdown] = useState<{
-    reminderId: string;
-    position: { top: number; left: number };
-  } | null>(null);
-  const quickScheduleDropdownRef = useRef<HTMLDivElement>(null);
-  const quickScheduleButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [quickScheduleReminderId, setQuickScheduleReminderId] = useState<string | null>(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -235,38 +233,6 @@ export default function WhatsAppAgendaModal({
     },
     [contractsMap],
   );
-
-  useEffect(() => {
-    if (!quickScheduleDropdown) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      const activeTrigger = quickScheduleButtonRefs.current[quickScheduleDropdown.reminderId];
-      if (
-        quickScheduleDropdownRef.current &&
-        target &&
-        !quickScheduleDropdownRef.current.contains(target) &&
-        activeTrigger &&
-        !activeTrigger.contains(target)
-      ) {
-        setQuickScheduleDropdown(null);
-      }
-    };
-
-    const handleScroll = () => setQuickScheduleDropdown(null);
-
-    document.addEventListener('mousedown', handleClickOutside);
-    const scrollContainer = document.querySelector('.whatsapp-agenda-dialog-body');
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      if (scrollContainer) {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, [quickScheduleDropdown]);
 
   const loadReminders = useCallback(async (options?: { showLoading?: boolean }) => {
     const requestId = ++loadRemindersRequestIdRef.current;
@@ -1319,14 +1285,14 @@ export default function WhatsAppAgendaModal({
         padding="sm"
         className="whatsapp-inbox-agenda-item"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="whatsapp-inbox-agenda-row">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-3">
-              <div className={`rounded-[1rem] border p-3 kds-surface-${reminder.lido ? 'success' : getReminderTypeTone(reminder.tipo)}`}>
+              <div className={`whatsapp-inbox-reminder-symbol kds-surface-${reminder.lido ? 'success' : getReminderTypeTone(reminder.tipo)}`}>
                 {getReminderIcon(reminder.tipo)}
               </div>
 
-              <div className="min-w-0 flex-1 space-y-3">
+              <div className="min-w-0 flex-1 space-y-2">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">
@@ -1346,7 +1312,7 @@ export default function WhatsAppAgendaModal({
                     ) : null}
                   </div>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     {leadInfo?.nome_completo ? (
                       <Badge tone="neutral" icon={<LeadFavoriteBadge favorito={leadInfo.favorito} />}>
                         {leadInfo.nome_completo}
@@ -1405,70 +1371,47 @@ export default function WhatsAppAgendaModal({
 
             {!reminder.lido && canEdit ? (
               <>
-                <div className="relative">
-                  <IconButton
-                    loading={isQuickSchedulingCurrentReminder} ref={(node) => {
-                      quickScheduleButtonRefs.current[reminder.id] = node;
-                    }}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (quickScheduleDropdown?.reminderId === reminder.id) {
-                        setQuickScheduleDropdown(null);
-                      } else {
-                        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                        const viewportHeight = window.innerHeight;
-                        const spaceBelow = viewportHeight - rect.bottom;
-                        const dropdownHeight = 200;
-                        const shouldOpenUpward = spaceBelow < dropdownHeight + 20;
-                        setQuickScheduleDropdown({
-                          reminderId: reminder.id,
-                          position: {
-                            top: shouldOpenUpward ? rect.top - dropdownHeight - 8 : rect.bottom + 4,
-                            left: rect.left,
-                          },
-                        });
-                      }
-                    }}
-                    disabled={isQuickSchedulingCurrentReminder}
-                    variant="primary"
-                    className="shrink-0"
-                    title="Agendar dias úteis e marcar atual como lido"
-                    aria-label="Agendar dias úteis e marcar atual como lido"
-                    size="md"
-                  >
-                    <CalendarClock className="kds-control-icon" aria-hidden="true" />
-                  </IconButton>
-                  {quickScheduleDropdown?.reminderId === reminder.id && (
-                    <PanelPopoverShell
-                      ref={quickScheduleDropdownRef}
-                      isOpen={true}
-                      position={quickScheduleDropdown.position}
-                      onClose={() => setQuickScheduleDropdown(null)}
-                      ariaLabel="Selecionar dias para agendar"
-                      role="menu"
-                      className="comm-whatsapp-action-menu comm-quick-schedule-popover"
+                <Popover
+                  open={quickScheduleReminderId === reminder.id}
+                  onOpenChange={(open) => setQuickScheduleReminderId(open ? reminder.id : null)}
+                >
+                  <PopoverTrigger>
+                    <IconButton
+                      loading={isQuickSchedulingCurrentReminder}
+                      type="button"
+                      disabled={isQuickSchedulingCurrentReminder}
+                      variant="secondary"
+                      title="Agendar dias úteis e marcar atual como lido"
+                      aria-label="Agendar dias úteis e marcar atual como lido"
+                      aria-expanded={quickScheduleReminderId === reminder.id}
+                      size="md"
                     >
-                      <div>
-                        {[1, 2, 3, 4, 5].map((days) => (
-                          <DropdownOption role="menuitem"
-                            key={days}
-                            type="button"
-                            onClick={() => {
-                              setQuickScheduleDropdown(null);
-                              void handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
-                            }}
-                            disabled={isQuickSchedulingCurrentReminder}
-                            className="flex items-center text-left transition disabled:opacity-60"
-                          >
-                            <CalendarPlus className="kds-control-icon" />
-                            <span>+{days} dia{days > 1 ? 's' : ''}</span>
-                          </DropdownOption>
-                        ))}
-                      </div>
-                    </PanelPopoverShell>
-                  )}
-                </div>
+                      <CalendarClock className="kds-control-icon" aria-hidden="true" />
+                    </IconButton>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    aria-label="Selecionar dias para agendar"
+                    role="menu"
+                    className="comm-whatsapp-action-menu comm-quick-schedule-popover"
+                  >
+                    {([1, 2, 3, 4, 5] as const).map((days) => (
+                      <DropdownOption
+                        key={days}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          setQuickScheduleReminderId(null);
+                          void handleQuickSchedule(reminder, days);
+                        }}
+                        disabled={isQuickSchedulingCurrentReminder}
+                      >
+                        <CalendarPlus className="kds-control-icon" aria-hidden="true" />
+                        +{days} {days === 1 ? 'dia' : 'dias'}
+                      </DropdownOption>
+                    ))}
+                  </PopoverContent>
+                </Popover>
               </>
             ) : null}
 
@@ -1572,9 +1515,12 @@ export default function WhatsAppAgendaModal({
         panelClassName="whatsapp-inbox-agenda-panel"
         icon={Calendar}
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={() => {
+          setQuickScheduleReminderId(null);
+          onClose();
+        }}
         title="Agenda do WhatsApp"
-        description="Lembretes e tarefas do atendimento, sincronizados com a Agenda do sistema."
+        description="Organize os retornos e lembretes das suas conversas."
         size="xl"
         initialFocus="first-content"
         bodyClassName="whatsapp-inbox-agenda-body"
@@ -1587,52 +1533,39 @@ export default function WhatsAppAgendaModal({
         }
       >
         {showLoading ? (
-          <Surface variant="muted" padding="none" className="flex min-h-[520px] items-center justify-center">
-            <Surface variant="strong" padding="sm" className="flex items-center gap-3 shadow-lg">
-              <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" label="Carregando agenda" />
-            </Surface>
-          </Surface>
+          <div className="whatsapp-inbox-report-loading">
+            <LoadingMonogram label="Carregando agenda" />
+          </div>
         ) : (
           <div className="whatsapp-inbox-agenda-workspace">
-            <aside className="whatsapp-inbox-agenda-rail" aria-label="Navegação e filtros da agenda">
+            {error ? <Alert tone="danger" title="Não foi possível atualizar a agenda.">{error}</Alert> : (
+              <Alert tone="info" title="Os próximos passos das suas conversas.">
+                {visiblePendingReminders.length > 0
+                  ? `${pendingSelectedReminders.length} para o dia selecionado e ${overdueReminders.length} em atraso.`
+                  : 'Nenhum retorno pendente para este dia com os filtros selecionados.'}
+              </Alert>
+            )}
+            <div className="whatsapp-inbox-agenda-toolbar" aria-label="Navegação e filtros da agenda">
             <section className="whatsapp-inbox-agenda-day-control">
-              <div className="flex flex-col gap-4">
+              <div>
                 <div>
-                  <Text className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                    Dia em foco
-                  </Text>
-                  <Heading level={3} className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
+                  <Heading level={3}>
                     {selectedDateLabel}
                   </Heading>
-                  <Text className="mt-1 text-sm text-[var(--text-muted)]">
-                    {visiblePendingReminders.length > 0
-                      ? `${visiblePendingReminders.length} pendência(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
-                      : `Sem pendências abertas para ${selectedDateLabel.toLowerCase()}.`}
-                  </Text>
                 </div>
 
                 <ControlGroup aria-label="Ações do dia" className="whatsapp-inbox-agenda-day-actions">
-                  {onSendBatchFollowUps ? (
-                    <div className="relative inline-flex">
-                      <IconButton variant="secondary"  size="md" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
-                        <Sparkles className="kds-control-icon" />
-                      </IconButton>
-                      {pendingCount !== null && pendingCount > 0 ? (
-                        <span className="absolute -right-1.5 -top-1.5 flex min-w-[20px] items-center justify-center rounded-full bg-[var(--warning)] px-1.5 py-0.5 text-[10px] font-bold leading-tight text-[var(--text-on-brand)] shadow-sm">
-                          {pendingCount}
-                        </span>
-                      ) : null}
+                  <ControlGroup aria-label="Navegar entre dias" className="whatsapp-inbox-agenda-date-nav">
+                    <IconButton onClick={goToPreviousDay} variant="secondary" aria-label="Dia anterior" size="md">
+                      <ChevronLeft className="kds-control-icon" />
+                    </IconButton>
+                    <div className="whatsapp-inbox-agenda-date">
+                      <DateTimePicker aria-label="Data da agenda" type="date" value={selectedDateInputValue} onChange={(event) => handleSelectedDateChange(event.target.value)} />
                     </div>
-                  ) : null}
-                  <IconButton onClick={goToPreviousDay} variant="secondary"  aria-label="Dia anterior" size="md">
-                    <ChevronLeft className="kds-control-icon" />
-                  </IconButton>
-                  <div className="whatsapp-inbox-agenda-date">
-                    <DateTimePicker type="date" value={selectedDateInputValue} onChange={(event) => handleSelectedDateChange(event.target.value)} />
-                  </div>
-                  <IconButton onClick={goToNextDay} variant="secondary"  aria-label="Próximo dia" size="md">
-                    <ChevronRight className="kds-control-icon" />
-                  </IconButton>
+                    <IconButton onClick={goToNextDay} variant="secondary" aria-label="Próximo dia" size="md">
+                      <ChevronRight className="kds-control-icon" />
+                    </IconButton>
+                  </ControlGroup>
                   <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="whatsapp-inbox-agenda-day-button">
                     Hoje
                   </Button>
@@ -1640,12 +1573,20 @@ export default function WhatsAppAgendaModal({
                     <Plus className="kds-control-icon" />
                     Nova tarefa
                   </Button>
+                  {onSendBatchFollowUps ? (
+                    <div className="relative inline-flex">
+                      <IconButton variant="secondary"  size="md" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
+                        <Sparkles className="kds-control-icon" />
+                      </IconButton>
+                      {pendingCount !== null && pendingCount > 0 && <Badge className="whatsapp-inbox-agenda-pending-count" tone="warning" size="sm">{pendingCount}</Badge>}
+                    </div>
+                  ) : null}
                 </ControlGroup>
               </div>
             </section>
 
             <section className="whatsapp-inbox-agenda-filter-controls">
-              <div className="grid gap-3">
+              <div className="whatsapp-inbox-agenda-filter-row">
                 <div className="relative">
                   <Input
                     type="text"
@@ -1702,7 +1643,7 @@ export default function WhatsAppAgendaModal({
                 ) : null}
               </div>
             </section>
-            </aside>
+            </div>
             <div className="whatsapp-inbox-agenda-results">
             {duplicateReminderCount > 0 ? (
               <Surface variant="warning" padding="sm" className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
@@ -1719,13 +1660,6 @@ export default function WhatsAppAgendaModal({
               </Surface>
             ) : null}
 
-            {error ? (
-              <Surface variant="danger" padding="sm" className="flex items-center gap-2 py-3 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>{error}</span>
-              </Surface>
-            ) : null}
-
             {filteredReminders.length === 0 ? (
               <EmptyState
                 icon={<Bell className="h-14 w-14" />}
@@ -1735,37 +1669,29 @@ export default function WhatsAppAgendaModal({
             ) : (
               <div className="space-y-4">
                 {overdueReminders.length > 0 ? (
-                  <Surface padding="sm" className="whatsapp-inbox-agenda-section">
-                    <div className="mb-4 flex items-center justify-between gap-3">
+                  <Surface padding="none" className="whatsapp-inbox-agenda-section">
+                    <div className="whatsapp-inbox-agenda-section-header">
                       <div>
-                        <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--danger-text)]">
-                          Atrasados
-                        </Text>
-                        <Heading level={4} className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
+                        <Heading level={4}>
                           Pendências de dias anteriores
                         </Heading>
                       </div>
                       <Badge tone="danger">{overdueReminders.length}</Badge>
                     </div>
-                    <div className="space-y-3">{overdueReminders.map(renderReminderCard)}</div>
+                    <div>{overdueReminders.map(renderReminderCard)}</div>
                   </Surface>
                 ) : null}
 
-                <Surface padding="sm" className="whatsapp-inbox-agenda-section">
-                  <div className="mb-4 flex items-center justify-between gap-3">
+                <Surface padding="none" className="whatsapp-inbox-agenda-section">
+                  <div className="whatsapp-inbox-agenda-section-header">
                     <div>
-                      <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                        Rotina do dia
-                      </Text>
-                      <Heading level={4} className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                        {selectedDateLabel}
-                      </Heading>
+                      <Heading level={4}>Retornos do dia</Heading>
                     </div>
                     <Badge tone="accent">{pendingSelectedReminders.length} pendente(s)</Badge>
                   </div>
 
                   {pendingSelectedReminders.length > 0 ? (
-                    <div className="space-y-3">{pendingSelectedReminders.map(renderReminderCard)}</div>
+                    <div>{pendingSelectedReminders.map(renderReminderCard)}</div>
                   ) : (
                     <Surface variant="muted" padding="sm" className="py-8 text-center text-sm text-[var(--text-secondary)]">
                       Nenhum item pendente neste dia.
@@ -1773,15 +1699,10 @@ export default function WhatsAppAgendaModal({
                   )}
                 </Surface>
 
-                <Surface padding="sm" className="whatsapp-inbox-agenda-section">
-                  <div className="mb-4 flex items-center justify-between gap-3">
+                <Surface padding="none" className="whatsapp-inbox-agenda-section">
+                  <div className="whatsapp-inbox-agenda-section-header">
                     <div>
-                      <Text className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                        Concluídos no dia
-                      </Text>
-                      <Heading level={4} className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-                        {completedSelectedReminders.length > 0 ? 'Histórico do dia em foco' : 'Nada concluído ainda'}
-                      </Heading>
+                      <Heading level={4}>Concluídos no dia</Heading>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge tone="success">{completedSelectedReminders.length}</Badge>
@@ -1793,17 +1714,13 @@ export default function WhatsAppAgendaModal({
 
                   {showCompleted ? (
                     completedSelectedReminders.length > 0 ? (
-                      <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
+                      <div>{completedSelectedReminders.map(renderReminderCard)}</div>
                     ) : (
                       <Surface variant="muted" padding="sm" className="py-8 text-center text-sm text-[var(--text-secondary)]">
                         Nenhum item concluído neste dia.
                       </Surface>
                     )
-                  ) : (
-                    <Surface variant="muted" padding="sm" className="py-5 text-center text-sm text-[var(--text-secondary)]">
-                      Expanda quando quiser revisar o que já foi concluído neste dia.
-                    </Surface>
-                  )}
+                  ) : null}
                 </Surface>
               </div>
             )}
@@ -1820,8 +1737,18 @@ export default function WhatsAppAgendaModal({
           title="Nova tarefa"
           description={selectedDateLabel}
           size="sm"
+          footer={(
+            <>
+              <Button type="button" onClick={closeAddTaskModal} disabled={savingTask} variant="secondary">
+                Cancelar
+              </Button>
+              <Button type="submit" form="whatsapp-agenda-task-form" disabled={savingTask} loading={savingTask}>
+                Adicionar
+              </Button>
+            </>
+          )}
         >
-          <form onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
+          <form id="whatsapp-agenda-task-form" onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
             <div className="space-y-1">
               <FieldLabel htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium text-[var(--text-secondary)]">
                 Tarefa
@@ -1846,19 +1773,8 @@ export default function WhatsAppAgendaModal({
                 value={newTaskDescription}
                 onChange={(event) => setNewTaskDescription(event.target.value)}
                 placeholder="Adicione detalhes da tarefa"
-                
                 disabled={savingTask}
               />
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <Button type="button" onClick={closeAddTaskModal} disabled={savingTask} variant="secondary" size="md">
-                Cancelar
-              </Button>
-              <Button type="submit" variant="primary" size="md" disabled={savingTask} loading={savingTask}>
-                {!savingTask && <Plus className="kds-control-icon" />}
-                Adicionar
-              </Button>
             </div>
           </form>
         </WhatsAppInboxDialog>

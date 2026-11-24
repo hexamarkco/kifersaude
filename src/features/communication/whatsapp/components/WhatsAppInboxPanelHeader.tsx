@@ -24,7 +24,7 @@ export function WhatsAppInboxPanelHeader({
       <div className="whatsapp-inbox-panel-heading">
         <span className="whatsapp-inbox-panel-icon" aria-hidden="true"><Icon className="kds-control-icon" /></span>
         <div className="whatsapp-inbox-panel-heading-copy">
-          <Text className="whatsapp-inbox-panel-context">{context || 'WhatsApp Inbox'}</Text>
+          <Text className="whatsapp-inbox-panel-context">{context || 'Inbox'}</Text>
           <DialogTitle>{title}</DialogTitle>
         </div>
         {showCloseButton ? <IconButton variant="ghost" size="sm" onClick={onClose} aria-label="Fechar" className="whatsapp-inbox-panel-close">

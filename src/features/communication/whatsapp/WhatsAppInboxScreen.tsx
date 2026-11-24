@@ -1875,16 +1875,7 @@ export default function WhatsAppInboxScreen() {
         // A mutação já notifica o operador em caso de erro.
         void handleLeadStatusChange(headerLeadPanel.id, newStatus).catch(() => undefined);
       },
-      isSelectedChatWaitingForQuote,
-      assumingControl: assumingControlChatId === selectedChat.id,
-      chatFilesOpen,
-      chatMessageSearchOpen,
       scheduledMessagesPanelOpen,
-      copyingTranscript,
-      syncingHistory: syncingHistoryChatId === selectedChat.id,
-      historyRecoveryDisabledReason,
-      followUpGenerationDisabledReason,
-      generatingFollowUp,
       threadActionsMenuOpen,
       contactContextPanelOpen,
       threadActionsMenuTriggerRef,
@@ -1895,22 +1886,7 @@ export default function WhatsAppInboxScreen() {
         setContactContextPanelOpen(false);
         handleBackToChatList();
       },
-      onToggleAutonomousAttendance: () => {
-        if (isSelectedChatWaitingForQuote) {
-          return;
-        }
-        if (selectedChat.autonomous_attendance_status === 'active') {
-          void handleDeactivateAutonomousAttendance(selectedChat);
-        } else {
-          void handleActivateAutonomousAttendance(selectedChat);
-        }
-      },
-      onOpenChatFiles: () => setChatFilesOpen(true),
-      onToggleChatMessageSearch: handleToggleChatMessageSearch,
       onOpenScheduledMessages: () => setScheduledMessagesPanelOpen(true),
-      onCopyTranscript: () => void handleCopyChatTranscript(),
-      onRecoverHistory: () => void handleRecoverChatHistory(),
-      onOpenFollowUp: handleOpenFollowUpModal,
       onToggleContactContextPanel: handleToggleContactContextPanel,
       onToggleThreadActionsMenu: () => setThreadActionsMenuOpen((current) => !current),
     },
@@ -2110,6 +2086,8 @@ export default function WhatsAppInboxScreen() {
           onRetrySearch={retrySearch}
           selectedChatId={selectedChatId}
           connectedUserName={channelState?.connected_user_name ?? null}
+          channelLabel={channelState ? connectionStatusLabel : undefined}
+          channelConnected={isChannelConnected}
           composerDraftsByChatId={composerDraftsByChatId}
           favoritedLeadIds={favoritedLeadIds}
           onSelectChat={handleSelectSidebarChat}

@@ -2,7 +2,7 @@ import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
 import { FieldLabel, Text } from '../../../../design-system';
 import { FileInput, ActionSurface } from '../../../../design-system';
 import { useState, useMemo, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
-import { Calendar, Clock, MessageSquare, Plus, Repeat, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
+import { Calendar, CalendarClock, Clock, MessageSquare, Plus, Repeat, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
 
 import {
   Button,
@@ -556,7 +556,8 @@ export default function WhatsAppScheduleMessageModal({
 
   return (
     <WhatsAppInboxDialog
-      panelClassName="comm-whatsapp-overlay"
+      icon={CalendarClock}
+      panelClassName="whatsapp-inbox-schedule-editor"
       isOpen={isOpen}
       onClose={handleClose}
       title={scheduledSequence ? 'Editar sequência agendada' : scheduledMessage ? 'Editar mensagem agendada' : 'Agendar mensagem'}
@@ -566,7 +567,7 @@ export default function WhatsAppScheduleMessageModal({
           ? 'Atualize o conteúdo ou a programação do envio automático.'
           : 'Configure quando a mensagem deve ser enviada automaticamente.'}
       descriptionPlacement="visible"
-      size="form"
+      size="lg"
       footer={(
         <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
@@ -645,11 +646,12 @@ export default function WhatsAppScheduleMessageModal({
           </div>
         </div>
 
-        {mode === 'single' ? <div>
-          <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+        {mode === 'single' ? <div className="whatsapp-inbox-schedule-message-fields">
+          <FieldLabel htmlFor="whatsapp-schedule-message" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
             Mensagem
           </FieldLabel>
           <Textarea
+            id="whatsapp-schedule-message"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Digite a mensagem..."

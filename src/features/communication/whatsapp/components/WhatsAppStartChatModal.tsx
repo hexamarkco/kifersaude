@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  FieldLabel,
   Input,
   LoadingState,
   Surface,
@@ -102,7 +103,7 @@ export default function WhatsAppStartChatModal({
       description="Escolha um contato salvo, encontre um lead no CRM ou informe um número."
       isOpen={isOpen}
       onClose={onClose}
-      title="Novo chat"
+      title="Nova conversa"
       size="form"
       initialFocus="first-content"
       bodyScrollable
@@ -121,24 +122,15 @@ export default function WhatsAppStartChatModal({
 
         {source === 'manual' ? (
           <div className="flex min-w-0 flex-col gap-4">
-            <Surface variant="muted" padding="lg" className="overflow-y-auto">
-              <div className="flex min-h-[12rem] flex-col items-center justify-center text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                  <Phone className="h-6 w-6" />
-                </div>
-                <Text className="mt-4 text-base font-semibold text-[var(--text-primary)]">Iniciar por número</Text>
-                <Text className="mt-1 max-w-xs text-sm leading-6 text-[var(--text-muted)]">
-                  Digite um número com DDD. O sistema confere se ele tem WhatsApp antes de abrir a conversa.
-                </Text>
-                <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
-                  <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
-                  <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting} className="w-full sm:w-auto sm:shrink-0">
-                    {!startingKey && <MessageSquarePlus className="kds-control-icon" />}
-                    Iniciar chat
-                  </Button>
-                </div>
-              </div>
-            </Surface>
+            <div className="flex flex-col gap-2">
+              <FieldLabel htmlFor="whatsapp-start-chat-phone">WhatsApp com DDD</FieldLabel>
+              <Input id="whatsapp-start-chat-phone" type="tel" value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
+            </div>
+            <Text tone="muted" size="sm">O número será verificado antes de abrir a conversa.</Text>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={onClose} disabled={starting}>Cancelar</Button>
+              <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>Iniciar chat</Button>
+            </div>
           </div>
         ) : (
           <div className="flex min-w-0 flex-col gap-4">

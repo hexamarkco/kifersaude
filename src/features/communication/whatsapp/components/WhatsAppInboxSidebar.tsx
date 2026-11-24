@@ -1,5 +1,5 @@
 import { useMinimumLoading, LoadingState, LoadingMonogram, Text } from '../../../../design-system';
-import { Archive, Calendar, CalendarClock, Cog, MessageCircle, MoreHorizontal, SquarePen, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { Archive, ArrowUpRight, Calendar, CalendarClock, BarChart3, MessageCircle, MoreHorizontal, SquarePen, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import { useState, type MutableRefObject } from 'react';
 import type { LeadStatusConfig } from '../../../leads';
 
@@ -66,6 +66,8 @@ type WhatsAppInboxSidebarProps = {
   onRetrySearch: () => void;
   selectedChatId: string | null;
   connectedUserName: string | null;
+  channelLabel?: string;
+  channelConnected?: boolean;
   composerDraftsByChatId: Record<string, string>;
   favoritedLeadIds: ReadonlySet<string>;
   onSelectChat: (chat: CommWhatsAppChat) => void;
@@ -116,6 +118,8 @@ export function WhatsAppInboxSidebar({
   onRetrySearch,
   selectedChatId,
   connectedUserName,
+  channelLabel,
+  channelConnected,
   composerDraftsByChatId,
   favoritedLeadIds,
   onSelectChat,
@@ -200,7 +204,7 @@ export function WhatsAppInboxSidebar({
                   <DropdownOption role="button" aria-pressed={archivedSectionOpen} onClick={() => selectAction(() => onSwitchArchivedSection(!archivedSectionOpen))}><Archive className="kds-control-icon" aria-hidden="true" />{archivedSectionOpen ? 'Voltar às conversas' : 'Conversas arquivadas'}{archivedChatsCount > 0 && <small>{archivedChatsCount}</small>}</DropdownOption>
                   <DropdownOption role="button" disabled={!canViewAgenda} onClick={() => selectAction(onOpenAgenda)}><Calendar className="kds-control-icon" aria-hidden="true" />Agenda do WhatsApp</DropdownOption>
                   <DropdownOption role="button" aria-pressed={allScheduledMessagesPanelOpen} onClick={() => selectAction(onOpenScheduledMessages)}><CalendarClock className="kds-control-icon" aria-hidden="true" />Mensagens agendadas</DropdownOption>
-                  <DropdownOption role="button" onClick={() => selectAction(onOpenDashboard)}><Cog className="kds-control-icon" aria-hidden="true" />Painel WhatsApp</DropdownOption>
+                  <DropdownOption role="button" onClick={() => selectAction(onOpenDashboard)}><BarChart3 className="kds-control-icon" aria-hidden="true" />Painel WhatsApp</DropdownOption>
                 </PopoverContent>
               </Popover>
             </div>
@@ -315,6 +319,16 @@ export function WhatsAppInboxSidebar({
           </>
         )} />}
       </div>
+      <footer className="whatsapp-inbox-channel-footer">
+        <div className="whatsapp-inbox-channel-label">
+          <span className="whatsapp-inbox-channel-dot" data-connected={channelConnected} aria-hidden="true" />
+          <div>
+            <Text size="sm" weight="semibold">WhatsApp da equipe</Text>
+            {channelLabel && <Text size="sm" tone="muted">{channelLabel}</Text>}
+          </div>
+        </div>
+        <Button variant="text" size="sm" onClick={onOpenDashboard}>Ver canal <ArrowUpRight aria-hidden="true" className="kds-control-icon" /></Button>
+      </footer>
     </div>
   );
 }

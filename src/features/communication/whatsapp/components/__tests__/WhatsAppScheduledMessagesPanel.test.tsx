@@ -96,21 +96,21 @@ test('seções recolhem e paginam independentemente, com busca em todas as pági
     return section;
   };
   const sequences = getSection('Sequências');
-  const messages = getSection('Mensagens normais');
-  assert.ok(sequences.querySelector('.kds-card'), 'sequências devem usar o cartão do design system');
+  const messages = getSection('Mensagens');
+  assert.ok(sequences.querySelector('table.kds-table'), 'sequências devem usar a tabela do design system');
   assert.ok(sequences.querySelector('.kds-badge'), 'status das sequências deve usar o badge do design system');
-  assert.ok(messages.querySelector('.kds-card'), 'mensagens devem usar o cartão do design system');
+  assert.ok(messages.querySelector('table.kds-table'), 'mensagens devem usar a tabela do design system');
   assert.ok(messages.querySelector('.kds-badge'), 'status das mensagens deve usar o badge do design system');
   const click = (element: HTMLElement | null) => {
     assert.ok(element);
     act(() => element.click());
   };
-  const cardCount = (section: HTMLElement, pattern: RegExp) => Array.from(section.querySelectorAll('p')).filter((element) => pattern.test(element.textContent ?? '')).length;
-  assert.equal(cardCount(sequences, /^Sequência \d$/), 5);
-  assert.equal(cardCount(messages, /^Normal \d$/), 5);
+  const rowCount = (section: HTMLElement, pattern: RegExp) => Array.from(section.querySelectorAll('p')).filter((element) => pattern.test(element.textContent ?? '')).length;
+  assert.equal(rowCount(sequences, /^Sequência \d$/), 5);
+  assert.equal(rowCount(messages, /^Normal \d$/), 5);
   click(sequences.querySelector<HTMLButtonElement>('button[aria-label="Próxima página de Sequências"]'));
-  assert.equal(cardCount(sequences, /^Sequência \d$/), 2);
-  assert.equal(cardCount(messages, /^Normal \d$/), 5);
+  assert.equal(rowCount(sequences, /^Sequência \d$/), 2);
+  assert.equal(rowCount(messages, /^Normal \d$/), 5);
   assert.equal(sequences.querySelector<HTMLButtonElement>('button[aria-label="Próxima página de Sequências"]')?.disabled, true);
 
   click(sequences.querySelector('button[aria-expanded]'));
@@ -125,10 +125,10 @@ test('seções recolhem e paginam independentemente, com busca em todas as pági
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'Normal 6');
     search.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  assert.match(getSection('Mensagens normais').textContent ?? '', /Normal 6/);
-  assert.match(getSection('Mensagens normais').querySelector('nav')?.textContent ?? '', /Página 1 de 1/);
+  assert.match(getSection('Mensagens').textContent ?? '', /Normal 6/);
+  assert.equal(getSection('Mensagens').querySelector('nav'), null);
   click(Array.from(document.querySelectorAll('button')).find((button) => button.textContent === 'Limpar') ?? null);
-  assert.match(getSection('Mensagens normais').querySelector('nav')?.textContent ?? '', /Página 1 de 2/);
+  assert.match(getSection('Mensagens').querySelector('nav')?.textContent ?? '', /Página 1 de 2/);
   view.unmount();
 });
 

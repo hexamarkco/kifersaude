@@ -900,6 +900,7 @@ export function WhatsAppComposer({
                         ) : (
                           <Mic className="h-5 w-5" />
                         )} className="h-5 w-5" />}
+                        {hasSendPayload && <span className="whatsapp-inbox-composer-send-label">Enviar</span>}
                       </ActionSurface>
                     </div>
                   </div>

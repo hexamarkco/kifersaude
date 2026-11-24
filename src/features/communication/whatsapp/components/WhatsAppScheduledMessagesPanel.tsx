@@ -1,5 +1,5 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CalendarClock, Clock, Pencil, Plus, Repeat, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
 import {
@@ -7,13 +7,15 @@ import {
   Badge,
   Button,
   ButtonGroup,
-  Card,
   DateTimePicker,
   EmptyState,
   FieldLabel,
   IconButton,
   Input,
+  KpiCard,
   LoadingState,
+  TableCell,
+  TableRow,
   Tabs,
   Text,
   type BadgeTone,
@@ -638,9 +640,9 @@ export default function WhatsAppScheduledMessagesPanel({
         panelClassName={`whatsapp-inbox-scheduled-panel ${isFiltered ? 'is-contact' : ''}`}
         bodyClassName="whatsapp-inbox-scheduled-body"
       >
-        {onScheduleNew ? <div className="whatsapp-inbox-scheduled-create">
-          <Text>Organize os próximos envios e acompanhe o histórico.</Text>
-          <Button onClick={onScheduleNew} size="sm"><Plus className="kds-control-icon" />Agendar nova</Button>
+        {onScheduleNew && !loading && loadError !== 'all' ? <div className="whatsapp-inbox-scheduled-create">
+          <Text>Revise as mensagens programadas para este contato.</Text>
+          <Button onClick={onScheduleNew} size="sm"><Plus className="kds-control-icon" />Agendar mensagem</Button>
         </div> : null}
           {loading ? (
             <div className="flex flex-1 items-center justify-center">
@@ -684,12 +686,17 @@ export default function WhatsAppScheduledMessagesPanel({
                 </Alert>
               ) : null}
 
+              {!isFiltered && <section className="whatsapp-inbox-schedule-metrics" aria-label="Indicadores de agendamento">
+                <KpiCard title="Mensagens previstas" value={countsLoadError ? '—' : String(viewCounts.upcoming)} icon={<CalendarClock />} />
+                <KpiCard title="Sequências próximas" value={countsLoadError ? '—' : String(sequenceViewCounts.upcoming)} icon={<Repeat />} data-tone="purple" />
+                <KpiCard title="Para revisar" value={countsLoadError ? '—' : String(viewCounts.attention + sequenceViewCounts.attention)} icon={<Clock />} data-tone="warning" />
+              </section>}
+
               <Tabs
                 items={viewTabs}
                 value={activeView}
                 onChange={setActiveView}
                 variant="underline"
-                size="sm"
                 ariaLabel="Filtrar mensagens agendadas por situação"
                 className="whatsapp-inbox-scheduled-tabs" listClassName="overflow-x-auto"
               />
@@ -802,7 +809,7 @@ export default function WhatsAppScheduledMessagesPanel({
               ) : null}
               <ScheduledItemsSection
                   key={`messages:${activeView}:${searchQuery}:${startDate}:${endDate}`}
-                  title="Mensagens normais"
+                  title="Mensagens"
                   icon={CalendarClock}
                   items={visibleMessages}
                   renderItem={(message) => (
@@ -831,7 +838,7 @@ export default function WhatsAppScheduledMessagesPanel({
           channelId={editingMessage.channel_id}
           chatId={editingMessage.chat_id}
           phoneDigits={editingMessage.phone_digits}
-          contactDisplayName={currentContactName}
+          contactDisplayName={resolveScheduledContactName(editingMessage)}
           leadId={editingMessage.lead_id}
           contractId={editingMessage.contract_id}
           scheduledMessage={editingMessage}
@@ -850,7 +857,7 @@ export default function WhatsAppScheduledMessagesPanel({
           channelId={editingSequence.channel_id}
           chatId={editingSequence.chat_id}
           phoneDigits={editingSequence.phone_digits}
-          contactDisplayName={currentContactName}
+          contactDisplayName={resolveScheduledContactName(editingSequence)}
           leadId={editingSequence.lead_id}
           contractId={editingSequence.contract_id}
           scheduledSequence={editingSequence}
@@ -879,79 +886,22 @@ function ScheduledMessageItem({ message, currentContactName, cancelling, onEdit,
   const contactDisplayName = getScheduledContactDisplayName(message, currentContactName);
 
   return (
-    <Card padding="sm" className="whatsapp-inbox-scheduled-item transition-colors hover:border-[var(--border-default)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge tone={STATUS_BADGE_TONES[message.status]} size="sm">
-              {STATUS_LABELS[message.status] ?? message.status}
-            </Badge>
-            {message.recurrence !== 'none' && (
-              <Badge tone="neutral" size="sm">
-                {RECURRENCE_LABELS[message.recurrence]}
-              </Badge>
-            )}
-          </div>
-
-          <Text className="whatsapp-inbox-scheduled-text text-sm text-[var(--text-primary)]">
-            {message.text_content ?? '(Mídia)'}
-          </Text>
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-1 font-medium text-[var(--text-secondary)]">
-              <Clock className="kds-control-icon" />
-              {getScheduleTimingLabel(scheduledAt)}
-            </span>
-            <span>{formatDateTimeFullBR(scheduledAt)}</span>
-            <span>{formatCommWhatsAppPhoneLabel(message.phone_digits)}</span>
-            {contactDisplayName && contactDisplayName !== message.phone_number && (
-              <span className="truncate">{contactDisplayName}</span>
-            )}
-          </div>
-
-          {message.label && (
-            <Text className="text-xs text-[var(--text-subtle)] mt-1">{message.label}</Text>
-          )}
-
-          {message.error_message && (
-            <Text className="text-xs text-[var(--danger-text)] mt-1 truncate">{message.error_message}</Text>
-          )}
-        </div>
-
-        {isActive && (
-          <ButtonGroup size="md" aria-label="Ações da mensagem agendada">
-            {message.status === 'scheduled' && (
-              <IconButton
-                onClick={onEdit}
-                disabled={cancelling}
-                aria-label="Editar mensagem agendada"
-                title="Editar mensagem agendada"
-              >
-                <Pencil className="kds-control-icon" />
-              </IconButton>
-            )}
-            {message.status === 'scheduled' && (
-              <IconButton loading={cancelling}
-                onClick={onCancel}
-                disabled={cancelling}
-                aria-label="Cancelar agendamento"
-              >
-                <X className="kds-control-icon" />
-              </IconButton>
-            )}
-            {message.status === 'failed' && (
-              <IconButton loading={cancelling}
-                onClick={onDelete}
-                disabled={cancelling}
-                aria-label="Excluir mensagem"
-              >
-                <Trash2 className="kds-control-icon" />
-              </IconButton>
-            )}
-          </ButtonGroup>
-        )}
-      </div>
-    </Card>
+    <ScheduledRow
+      contactDisplayName={contactDisplayName}
+      phone={message.phone_digits}
+      summary={message.text_content ?? 'Mensagem com mídia'}
+      detail={[message.label, RECURRENCE_LABELS[message.recurrence]].filter(Boolean).join(' · ')}
+      error={message.error_message}
+      scheduledAt={scheduledAt}
+      status={<Badge tone={STATUS_BADGE_TONES[message.status]} size="sm">{STATUS_LABELS[message.status] ?? message.status}</Badge>}
+      actions={isActive && <ButtonGroup size="sm" aria-label="Ações da mensagem agendada">
+        {message.status === 'scheduled' && <>
+          <IconButton size="sm" onClick={onEdit} disabled={cancelling} aria-label="Editar mensagem agendada" title="Editar mensagem agendada"><Pencil className="kds-control-icon" /></IconButton>
+          <IconButton size="sm" loading={cancelling} onClick={onCancel} disabled={cancelling} aria-label="Cancelar agendamento"><X className="kds-control-icon" /></IconButton>
+        </>}
+        {message.status === 'failed' && <IconButton size="sm" loading={cancelling} onClick={onDelete} disabled={cancelling} aria-label="Excluir mensagem"><Trash2 className="kds-control-icon" /></IconButton>}
+      </ButtonGroup>}
+    />
   );
 }
 
@@ -975,56 +925,53 @@ function ScheduledSequenceItem({ sequence, currentContactName, cancelling, onEdi
   const contactDisplayName = getScheduledContactDisplayName(sequence, currentContactName);
 
   return (
-    <Card padding="sm" className="whatsapp-inbox-scheduled-item transition-colors hover:border-[var(--border-default)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge tone={SEQUENCE_STATUS_BADGE_TONES[sequence.status]} size="sm">
-              {SEQUENCE_STATUS_LABELS[sequence.status]}
-            </Badge>
-            <Badge tone="neutral" size="sm">
-              Etapa {sequence.current_step_index + 1}{stepCount ? ` de ${stepCount}` : ''}
-            </Badge>
-          </div>
-          <Text className="truncate text-sm font-medium text-[var(--text-primary)]">
-            {sequence.label || 'Sequência de mensagens'}
-          </Text>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-1 font-medium text-[var(--text-secondary)]">
-              <Clock className="kds-control-icon" />
-              {getScheduleTimingLabel(sequence.scheduled_at)}
-            </span>
-            <span>{formatDateTimeFullBR(sequence.scheduled_at)}</span>
-            <span>{formatCommWhatsAppPhoneLabel(sequence.phone_digits)}</span>
-            {contactDisplayName && contactDisplayName !== sequence.phone_number && (
-              <span className="truncate">{contactDisplayName}</span>
-            )}
-          </div>
-          {sequence.last_error && (
-            <Text className="mt-1 truncate text-xs text-[var(--danger-text)]">{sequence.last_error}</Text>
-          )}
-        </div>
+    <ScheduledRow
+      contactDisplayName={contactDisplayName}
+      phone={sequence.phone_digits}
+      summary={sequence.label || 'Sequência de mensagens'}
+      detail={`Etapa ${sequence.current_step_index + 1}${stepCount ? ` de ${stepCount}` : ''}`}
+      error={sequence.last_error}
+      scheduledAt={sequence.scheduled_at}
+      status={<Badge tone={SEQUENCE_STATUS_BADGE_TONES[sequence.status]} size="sm">{SEQUENCE_STATUS_LABELS[sequence.status]}</Badge>}
+      actions={(canCancel || canRetry) && <ButtonGroup size="sm" aria-label="Ações da sequência agendada">
+        {canEdit && <IconButton size="sm" onClick={onEdit} disabled={cancelling} aria-label="Editar sequência agendada" title="Editar sequência agendada"><Pencil className="kds-control-icon" /></IconButton>}
+        {canRetry && <IconButton size="sm" loading={cancelling} onClick={onRetry} disabled={cancelling} aria-label="Retomar sequência" title="Retomar sequência"><RotateCcw className="kds-control-icon" /></IconButton>}
+        {canCancel && <IconButton size="sm" loading={cancelling} onClick={onCancel} disabled={cancelling} aria-label="Cancelar sequência" title="Cancelar sequência"><X className="kds-control-icon" /></IconButton>}
+      </ButtonGroup>}
+    />
+  );
+}
 
-        {(canCancel || canRetry) && (
-          <ButtonGroup size="md" aria-label="Ações da sequência agendada">
-            {canEdit && (
-              <IconButton onClick={onEdit} disabled={cancelling} aria-label="Editar sequência agendada" title="Editar sequência agendada">
-                <Pencil className="kds-control-icon" />
-              </IconButton>
-            )}
-            {canRetry && (
-              <IconButton loading={cancelling} onClick={onRetry} disabled={cancelling} aria-label="Retomar sequência" title="Retomar sequência">
-                <RotateCcw className="kds-control-icon" />
-              </IconButton>
-            )}
-            {canCancel && (
-              <IconButton loading={cancelling} onClick={onCancel} disabled={cancelling} aria-label="Cancelar sequência" title="Cancelar sequência">
-                <X className="kds-control-icon" />
-              </IconButton>
-            )}
-          </ButtonGroup>
-        )}
-      </div>
-    </Card>
+type ScheduledRowProps = {
+  contactDisplayName?: string | null;
+  phone: string;
+  summary: string;
+  detail: string;
+  error?: string | null;
+  scheduledAt: string;
+  status: ReactNode;
+  actions: ReactNode;
+};
+
+function ScheduledRow({ contactDisplayName, phone, summary, detail, error, scheduledAt, status, actions }: ScheduledRowProps) {
+  const phoneLabel = formatCommWhatsAppPhoneLabel(phone);
+  return (
+    <TableRow className="whatsapp-inbox-scheduled-item">
+      <TableCell>
+        <Text weight="semibold">{contactDisplayName || phoneLabel}</Text>
+        {contactDisplayName && contactDisplayName !== phoneLabel && <Text size="sm" tone="muted">{phoneLabel}</Text>}
+      </TableCell>
+      <TableCell>
+        <Text className="whatsapp-inbox-scheduled-text">{summary}</Text>
+        {detail && <Text size="sm" tone="muted">{detail}</Text>}
+        {error && <Text size="sm" tone="danger">{error}</Text>}
+      </TableCell>
+      <TableCell>
+        <Text size="sm" weight="medium">{getScheduleTimingLabel(scheduledAt)}</Text>
+        <Text size="sm" tone="muted">{formatDateTimeFullBR(scheduledAt)}</Text>
+      </TableCell>
+      <TableCell>{status}</TableCell>
+      <TableCell align="right">{actions}</TableCell>
+    </TableRow>
   );
 }

@@ -23,16 +23,7 @@ const createProps = (): ComponentProps<typeof WhatsAppThreadHeader> => ({
   leadStatusUpdating: false,
   leadStatusDisabled: false,
   onLeadStatusChange: noop,
-  isSelectedChatWaitingForQuote: false,
-  assumingControl: false,
-  chatFilesOpen: false,
-  chatMessageSearchOpen: false,
   scheduledMessagesPanelOpen: false,
-  copyingTranscript: false,
-  syncingHistory: false,
-  historyRecoveryDisabledReason: null,
-  followUpGenerationDisabledReason: null,
-  generatingFollowUp: false,
   threadActionsMenuOpen: false,
   contactContextPanelOpen: false,
   threadActionsMenuTriggerRef: createRef<HTMLButtonElement>(),
@@ -43,18 +34,12 @@ const createProps = (): ComponentProps<typeof WhatsAppThreadHeader> => ({
   nextChatReminderSummary: 'Próximo lembrete: conferir retorno sobre proposta · 30/10/2026 às 14:30',
   chatAgendaSummaryError: null,
   onBack: noop,
-  onToggleAutonomousAttendance: noop,
-  onOpenChatFiles: noop,
-  onToggleChatMessageSearch: noop,
   onOpenScheduledMessages: noop,
-  onCopyTranscript: noop,
-  onRecoverHistory: noop,
-  onOpenFollowUp: noop,
   onToggleContactContextPanel: noop,
   onToggleThreadActionsMenu: noop,
 });
 
-test('mantém no cabeçalho o nome, o status e o próximo lembrete', () => {
+test('organiza o nome no cabeçalho e o status e o lembrete na faixa de contexto', () => {
   const view = render(<WhatsAppThreadHeader {...createProps()} />);
 
   try {
@@ -62,8 +47,10 @@ test('mantém no cabeçalho o nome, o status e o próximo lembrete', () => {
     assert.ok(header);
     assert.equal(header.querySelector('.kds-avatar'), null);
     assert.match(header.textContent ?? '', /Gisele Goulart \(cliente\)/);
-    assert.match(header.textContent ?? '', /Reativação/);
-    assert.match(header.textContent ?? '', /Próximo lembrete: conferir retorno sobre proposta/);
+    const context = view.container.querySelector('[aria-label="Contexto da conversa"]');
+    assert.ok(context);
+    assert.match(context.textContent ?? '', /Reativação/);
+    assert.match(context.textContent ?? '', /Próximo lembrete: conferir retorno sobre proposta/);
     assert.equal(header.textContent?.includes('Renomear contato'), false);
     assert.equal(header.textContent?.includes('IA atendendo'), false);
     assert.equal(header.textContent?.includes('Responsável:'), false);
@@ -72,7 +59,7 @@ test('mantém no cabeçalho o nome, o status e o próximo lembrete', () => {
   }
 });
 
-test('permite alterar o status do lead ao lado do nome', () => {
+test('permite alterar o status do lead na faixa de contexto', () => {
   const changes: string[] = [];
   const view = render(
     <WhatsAppThreadHeader {...createProps()} onLeadStatusChange={(status) => changes.push(status)} />,
@@ -81,12 +68,13 @@ test('permite alterar o status do lead ao lado do nome', () => {
   try {
     const header = view.container.querySelector('.whatsapp-inbox-thread-header');
     const name = header?.querySelector('h2');
-    const trigger = header?.querySelector<HTMLButtonElement>(
+    const context = view.container.querySelector('[aria-label="Contexto da conversa"]');
+    const trigger = context?.querySelector<HTMLButtonElement>(
       '[aria-label="Alterar status do lead Gisele Goulart (cliente): Reativação"]',
     );
     assert.ok(name);
     assert.ok(trigger);
-    assert.equal(name.parentElement, trigger.parentElement?.parentElement);
+    assert.equal(header?.nextElementSibling, context);
 
     act(() => trigger.click());
     const option = document.body.querySelector<HTMLButtonElement>(

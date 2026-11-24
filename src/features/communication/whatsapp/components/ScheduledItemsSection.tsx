@@ -1,4 +1,4 @@
-import { Text } from '../../../../design-system';
+import { Table, TableBody, TableHead, TableHeader, TableRow, Text } from '../../../../design-system';
 import { useId, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 
@@ -35,11 +35,16 @@ export default function ScheduledItemsSection<T>({ title, icon: Icon, items, ren
         <span className="flex-1 text-left font-semibold">{title} ({items.length})</span>
         <ChevronDown className={`kds-control-icon transition-transform ${expanded ? '' : '-rotate-90'}`} aria-hidden="true" />
       </Button>
-      <div id={contentId} hidden={!expanded} className="space-y-2">
-        {items.slice(start, start + PAGE_SIZE).map(renderItem)}
+      <div id={contentId} hidden={!expanded} className="whatsapp-inbox-scheduled-collection">
+        {items.length > 0 && <Table size="sm" aria-label={title} className="whatsapp-inbox-scheduled-table" columnWidths={['23%', '33%', '19%', '13%', '12%']}>
+          <TableHeader><TableRow>
+            <TableHead>Contato</TableHead><TableHead>Mensagem ou sequência</TableHead><TableHead>Próximo envio</TableHead><TableHead>Situação</TableHead><TableHead align="right"><span className="sr-only">Ações</span></TableHead>
+          </TableRow></TableHeader>
+          <TableBody>{items.slice(start, start + PAGE_SIZE).map(renderItem)}</TableBody>
+        </Table>}
         {items.length === 0 ? (
           <Text className="px-3 py-4 text-sm text-[var(--text-muted)]">Nenhum agendamento nesta seção.</Text>
-        ) : (
+        ) : pageCount > 1 ? (
           <nav aria-label={`Paginação de ${title}`} className="flex flex-wrap items-center justify-between gap-2 pt-2">
             <span className="text-xs text-[var(--text-muted)]" aria-live="polite">
               {start + 1}–{Math.min(start + PAGE_SIZE, items.length)} de {items.length} · Página {page} de {pageCount}
@@ -53,7 +58,7 @@ export default function ScheduledItemsSection<T>({ title, icon: Icon, items, ren
               </Button>
             </div>
           </nav>
-        )}
+        ) : null}
       </div>
     </section>
   );

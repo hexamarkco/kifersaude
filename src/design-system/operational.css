@@ -189,45 +189,11 @@
   color: var(--brand-primary-hover);
 }
 
-.kds-calendar,
-.kds-agenda {
+.kds-calendar {
   border: 1px solid color-mix(in srgb, var(--accent-gold-border) 32%, var(--border-default));
   border-radius: var(--radius-xl);
   background: var(--surface-muted-bg);
   box-shadow: var(--shadow-card);
-}
-
-.kds-agenda-status-switcher {
-  width: 100%;
-  min-width: 0;
-}
-
-.kds-agenda-status-switcher .kds-tabs-list {
-  width: 100%;
-  flex-wrap: nowrap;
-}
-
-.kds-agenda-status-switcher .kds-tab {
-  flex: 0 0 auto;
-  gap: var(--space-2);
-}
-
-.kds-agenda-status-switcher .kds-tab > span {
-  overflow: visible;
-  text-overflow: clip;
-}
-
-@media (min-width: 1024px) {
-  .kds-agenda-status-switcher {
-    width: fit-content;
-    max-width: 100%;
-  }
-
-  .kds-agenda-status-switcher .kds-tabs-list {
-    width: fit-content;
-    overflow-x: visible;
-    padding-bottom: 0;
-  }
 }
 
 .kds-calendar-grid {
@@ -254,13 +220,6 @@
   border-color: var(--border-default) !important;
   border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
-}
-
-@media (min-width: 640px) {
-  .painel-theme.kifer-ds .kds-agenda-calendar .kds-calendar-day { aspect-ratio: 1.25 / 1; }
-}
-@media (min-width: 1536px) {
-  .painel-theme.kifer-ds .kds-agenda-calendar .kds-calendar-day { aspect-ratio: 1.4 / 1; }
 }
 
 .kds-calendar-event-count {
@@ -466,10 +425,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 }
 
 .kds-leads-sort-field {
-  grid-column: 2;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: var(--space-3);
   min-width: 0;
   white-space: nowrap;
@@ -477,72 +435,15 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 
 .kds-leads-sort-label {
   color: var(--text-primary);
-  font: 700 0.875rem / 1.2 var(--font-sans);
-}
-
-.kds-leads-bulk-panel {
-  gap: var(--space-4);
-}
-
-.kds-leads-bulk-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 0 var(--space-1) var(--space-4);
-}
-
-.kds-leads-bulk-clear {
-  flex: 0 0 auto;
-  color: var(--text-secondary);
-  font: 700 0.875rem / 1.2 var(--font-sans);
-  transition: color 150ms ease;
-}
-
-.kds-leads-bulk-clear:hover:not(:disabled) {
-  color: var(--text-primary);
-}
-
-.kds-leads-bulk-clear:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.kds-leads-bulk-body,
-.kds-leads-bulk-controls,
-.kds-leads-bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.kds-leads-bulk-body {
-  flex-wrap: wrap;
+  font: var(--type-label);
 }
 
 .kds-leads-bulk-controls {
-  min-width: 0;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
-
-.kds-leads-bulk-control {
-  width: 16.5rem;
-  min-width: min(100%, 11rem);
-}
-
-.kds-leads-bulk-date {
-  width: 17.5rem;
-  min-width: min(100%, 13rem);
-}
-
-.kds-leads-bulk-actions {
-  flex: 0 0 auto;
-  margin-left: auto;
-  border-left: 1px solid var(--border-default);
-  padding-left: var(--space-4);
-}
+.kds-leads-bulk-date { grid-column: 1 / -1; }
 
 .kds-leads-view-tabs .kds-tabs-list {
   flex-wrap: nowrap;
@@ -848,29 +749,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
     justify-content: space-between;
   }
 
-  .kds-leads-bulk-header,
-  .kds-leads-bulk-body {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .kds-leads-bulk-controls,
-  .kds-leads-bulk-actions {
-    width: 100%;
-  }
-
-  .kds-leads-bulk-control,
-  .kds-leads-bulk-date {
-    width: 100%;
-  }
-
-  .kds-leads-bulk-actions {
-    margin-left: 0;
-    border-top: 1px solid var(--border-default);
-    border-left: 0;
-    padding-top: var(--space-3);
-    padding-left: 0;
-  }
+  .kds-leads-bulk-controls { grid-template-columns: minmax(0, 1fr); }
 
   .kds-op-pagination {
     grid-template-columns: minmax(0, 1fr);
@@ -1075,29 +954,32 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-dashboard-primary-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(20rem, 1fr); gap: var(--layout-gap); align-items: stretch; min-width: 0; }
 .kds-workspace-theme .kds-dashboard-header-actions .kds-button { min-height: 2.375rem; font: 500 .625rem / 1.5 var(--font-sans); }
 .kds-workspace-theme .kds-dashboard-header-actions .kds-button-ghost { border-color: transparent; }
-.kds-dashboard-today { display: grid; min-width: 0; gap: 1.375rem; }
-.kds-dashboard-today [data-tone='brand'] { --stat-icon-bg: var(--brand-primary-soft); --stat-icon-color: var(--brand-primary); }
-.kds-dashboard-today [data-tone='info'] { --stat-icon-bg: var(--info-soft); --stat-icon-color: var(--info-text); }
-.kds-dashboard-today [data-tone='cyan'] { --stat-icon-bg: var(--cyan-soft); --stat-icon-color: var(--cyan-text); }
-.kds-dashboard-today [data-tone='purple'] { --stat-icon-bg: var(--purple-soft); --stat-icon-color: var(--purple-text); }
+.kds-dashboard-overview { display: grid; min-width: 0; gap: 1.375rem; }
+.kds-dashboard-overview [data-tone='brand'] { --stat-icon-bg: var(--brand-primary-soft); --stat-icon-color: var(--brand-primary); }
+.kds-dashboard-overview [data-tone='info'] { --stat-icon-bg: var(--info-soft); --stat-icon-color: var(--info-text); }
+.kds-dashboard-overview [data-tone='cyan'] { --stat-icon-bg: var(--cyan-soft); --stat-icon-color: var(--cyan-text); }
+.kds-dashboard-overview [data-tone='purple'] { --stat-icon-bg: var(--purple-soft); --stat-icon-color: var(--purple-text); }
+.kds-dashboard-overview [data-tone='warning'] { --stat-icon-bg: var(--warning-soft); --stat-icon-color: var(--warning-text); }
+.kds-dashboard-activity-icon[data-tone='cyan'] { color: var(--cyan-text); }
 .kds-dashboard-welcome { display: flex; align-items: center; gap: .625rem; padding: .9375rem 1.1875rem; border-radius: .5625rem; }
 .kds-dashboard-welcome p { flex: 1; min-width: 0; color: var(--text-muted); font: 400 .625rem / 1.8 var(--font-sans); }
 .kds-dashboard-welcome strong { color: var(--text-primary); font-weight: 500; }
 .kds-dashboard-welcome .kds-button { font-size: .625rem; }
 .kds-dashboard-welcome .kds-dashboard-activity-icon { width: 2.125rem; height: 2.125rem; }
-.kds-dashboard-today-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
-.kds-dashboard-today-metrics > .kds-card-kpi { min-height: 9.875rem; padding: 1.1875rem; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-today-metrics .kds-kpi-value { font: 600 clamp(1.25rem, 2.3vw, 1.8125rem) / 1.3 var(--font-display); }
-.kds-workspace-theme .kds-dashboard-today-metrics .kds-kpi-trend { font: var(--type-caption); }
-.kds-dashboard-today-columns { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 1.25rem; }
-.kds-dashboard-today :is(.kds-card-chart, .kds-card-base) { padding: 1.25rem 1.375rem; min-width: 0; }
-.kds-dashboard-today .kds-card-chart .kds-card-actions { align-self: flex-start; width: min(31%, 9.6875rem); }
-.kds-dashboard-today .kds-card-chart:has(.kds-dashboard-funnel) .kds-card-actions { width: auto; }
-.kds-dashboard-today .kds-card-actions .kds-button { font-size: .625rem; }
-.kds-dashboard-today .kds-card-chart .kds-card-actions > span { width: 100%; }
-.kds-dashboard-today .kds-card-chart .kds-card-actions .kds-filter-trigger { min-height: 2rem; font-size: .5625rem; }
-.kds-dashboard-today :is(.kds-card-chart, .kds-card-base) .kds-card-title { color: var(--text-primary); font: var(--type-ui-section); letter-spacing: -.04em; }
-.kds-dashboard-today .kds-card-subtitle { font: var(--type-body-sm); color: var(--text-muted); }
+.kds-dashboard-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.kds-dashboard-metric-grid > .kds-card-kpi { min-height: 9.875rem; padding: 1.1875rem; }
+.kds-dashboard-metric-grid-compact > .kds-card-kpi { min-height: 9rem; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-kpi-value { font: 600 clamp(1.25rem, 2.3vw, 1.8125rem) / 1.3 var(--font-display); }
+.kds-workspace-theme .kds-dashboard-metric-grid .kds-kpi-trend { font: var(--type-caption); }
+.kds-dashboard-columns { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 1.25rem; }
+.kds-dashboard-overview :is(.kds-card-chart, .kds-card-base) { padding: 1.25rem 1.375rem; min-width: 0; }
+.kds-dashboard-overview .kds-card-chart .kds-card-actions { align-self: flex-start; width: min(31%, 9.6875rem); }
+.kds-dashboard-overview .kds-card-chart:has(.kds-dashboard-funnel) .kds-card-actions { width: auto; }
+.kds-dashboard-overview .kds-card-actions .kds-button { font-size: .625rem; }
+.kds-dashboard-overview .kds-card-chart .kds-card-actions > span { width: 100%; }
+.kds-dashboard-overview .kds-card-chart .kds-card-actions .kds-filter-trigger { min-height: 2rem; font-size: .5625rem; }
+.kds-dashboard-overview :is(.kds-card-chart, .kds-card-base) .kds-card-title { color: var(--text-primary); font: var(--type-ui-section); letter-spacing: -.04em; }
+.kds-dashboard-overview .kds-card-subtitle { font: var(--type-body-sm); color: var(--text-muted); }
 .kds-operation-chart { --chart-comparison: #a7b5c9; }
 .theme-dark .kds-operation-chart { --chart-comparison: #7186a5; }
 .kds-operation-chart-legend { display: flex; flex-wrap: wrap; gap: 1.125rem; margin-block-end: 1.25rem; font: var(--type-caption); color: var(--text-muted); }
@@ -1114,8 +996,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-dashboard-funnel-key .kds-action-surface { display: flex; align-items: center; gap: .375rem; min-width: 0; min-height: 1rem; padding: 0; color: var(--text-muted); font: var(--type-caption); text-align: start; }
 .kds-dashboard-funnel-key .kds-action-surface::before { flex: 0 0 .375rem; height: .375rem; border-radius: 2px; background: var(--stage-color); content: ''; }
 .kds-dashboard-funnel-key .kds-action-surface strong { margin-inline-start: auto; color: var(--text-primary); font-weight: 500; }
-.kds-dashboard-today :is(.kds-dashboard-recent-leads, .kds-dashboard-task-card) { padding: 0; overflow: hidden; }
-.kds-dashboard-today :is(.kds-dashboard-recent-leads, .kds-dashboard-task-card) .kds-card-header { padding: 1.25rem 1.375rem 0; }
+.kds-dashboard-overview :is(.kds-dashboard-recent-leads, .kds-dashboard-task-card, .kds-dashboard-table-card) { padding: 0; overflow: hidden; }
+.kds-dashboard-overview :is(.kds-dashboard-recent-leads, .kds-dashboard-task-card, .kds-dashboard-table-card) .kds-card-header { padding: 1.25rem 1.375rem 0; }
+.kds-dashboard-table-card .kds-table-wrapper { border: 0; border-radius: 0; }
 .kds-dashboard-task-row, .kds-dashboard-activity-row { display: flex; align-items: center; gap: .75rem; min-height: 4rem; font: var(--type-body-sm); }
 .kds-dashboard-task-row { padding: .875rem 1.375rem; }
 :is(.kds-dashboard-task-row, .kds-dashboard-activity-row) + :is(.kds-dashboard-task-row, .kds-dashboard-activity-row) { border-block-start: 1px solid var(--border-subtle); }
@@ -1125,25 +1008,177 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 :is(.kds-dashboard-task-row, .kds-dashboard-activity-row, .kds-dashboard-lead-cell) small, .kds-dashboard-task-row time { display: block; color: var(--text-muted); font: var(--type-caption); }
 .kds-dashboard-activity-icon { display: grid; place-items: center; width: 1.8125rem; height: 1.8125rem; flex: none; border-radius: .5rem; background: var(--stat-icon-bg); color: var(--stat-icon-color); }
 .kds-dashboard-overview-empty { padding: 1.375rem; color: var(--text-muted); font: var(--type-body-sm); }
-.kds-dashboard-lead-cell { display: flex; align-items: center; gap: .625rem; }
 .kds-dashboard-lead-cell .kds-button { min-height: auto; padding: 0; color: var(--text-primary); font: var(--type-label); }
 .kds-dashboard-recent-leads .kds-table { min-width: 36rem; }
+.kds-dashboard-notices { display: grid; gap: .75rem; }
+.kds-dashboard-notices .kds-alert { margin: 0; }
+.kds-dashboard-bar-list { display: grid; gap: 1.125rem; margin: 0; padding: .25rem 0; list-style: none; }
+.kds-dashboard-bar-list li { display: grid; gap: .375rem; min-width: 0; }
+.kds-dashboard-bar-list li > div:not(.kds-progress) { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .375rem .75rem; font: var(--type-body-sm); }
+.kds-dashboard-bar-list span { color: var(--text-muted); }
+.kds-dashboard-bar-list strong { color: var(--text-primary); font-weight: 500; }
+.kds-dashboard-progress-secondary .kds-progress-fill { background: var(--info-text); }
+.kds-dashboard-details > :not(summary) { margin-block-start: var(--space-4); }
+.kds-production-summary-table { min-width: 30rem; }
+.kds-production-filters { display: flex; flex-wrap: wrap; align-items: end; gap: .625rem; }
+.kds-production-filters > .kds-field { flex: 1 1 8.75rem; min-width: 0; }
+.kds-production-shortcuts { display: flex; flex-wrap: wrap; gap: .375rem; }
 
 @media (max-width: 767px) {
   .kds-workspace-theme .kds-dashboard-header-actions { display: flex; }
-  .kds-dashboard-today-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
-  .kds-dashboard-today-metrics > .kds-card-kpi { min-height: 9.5rem; padding: .875rem; }
-  .kds-dashboard-today-columns { grid-template-columns: minmax(0, 1fr); }
-  .kds-dashboard-today :is(.kds-card-chart, .kds-card-base):not(.kds-dashboard-task-card, .kds-dashboard-recent-leads) { padding: 1.1875rem 1.0625rem; }
+  .kds-dashboard-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+  .kds-dashboard-metric-grid > .kds-card-kpi { min-height: 9.5rem; padding: .875rem; }
+  .kds-dashboard-columns { grid-template-columns: minmax(0, 1fr); }
+  .kds-dashboard-overview :is(.kds-card-chart, .kds-card-base):not(.kds-dashboard-task-card, .kds-dashboard-recent-leads, .kds-dashboard-table-card) { padding: 1.1875rem 1.0625rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-kpi-value { font-size: clamp(1.125rem, 5vw, 1.5rem); }
+  .kds-dashboard-metric-grid-compact > .kds-card-kpi { min-height: 8.5rem; }
   .kds-dashboard-welcome { display: grid; grid-template-columns: auto minmax(0, 1fr); padding: .9375rem; }
   .kds-dashboard-welcome .kds-button { grid-column: 2; justify-self: start; }
 }
-.kds-forecast-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-4); }
-.kds-forecast-toolbar > .kds-input-shell { flex: 1 1 15rem; width: auto; }
-.kds-forecast-type { flex: 0 1 12rem; min-width: 0; }
-.kds-forecast-month { display: flex; align-items: center; gap: var(--space-2); margin-inline-start: auto; }
+/* Comissões */
+.kds-forecast-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.kds-forecast-toolbar {
+  display: grid;
+  grid-template-columns: minmax(12rem, 23.75rem) minmax(10rem, 12rem) minmax(11rem, max-content) 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+.kds-forecast-toolbar > .kds-forecast-filter { justify-self: end; }
+.kds-forecast-type { min-width: 0; }
+.kds-forecast-month .kds-button-content { white-space: nowrap; }
+.kds-forecast-list { min-width: 0; }
 .kds-forecast-list .kds-pagination { padding: var(--space-3) var(--space-4); }
-.kds-forecast-calendar { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--layout-gap); }
+.kds-forecast-list .kds-table { min-width: 43rem; }
+.kds-forecast-list .kds-record-actions,
+.kds-forecast-list .kds-record-actions .kds-button { background: transparent; border-color: transparent; box-shadow: none; }
+.kds-forecast-contract {
+  display: grid;
+  min-width: 0;
+  border: 0;
+  text-align: start;
+  gap: var(--space-1);
+}
+.kds-forecast-contract strong { font-weight: 500; }
+.kds-forecast-contract small,
+.kds-forecast-event-copy small { color: var(--text-muted); font: var(--type-caption); }
+.kds-forecast-contract:hover { color: var(--brand-primary); }
+.kds-forecast-notice {
+  display: flex;
+  align-items: start;
+  gap: var(--space-3);
+}
+.kds-forecast-notice svg { width: 1rem; height: 1rem; flex: none; color: var(--text-muted); }
+.kds-forecast-notice .kds-text { font: var(--type-caption); }
+.kds-forecast-notice .kds-text-weight-semibold { font-weight: 600; }
+
+.kds-forecast-day { min-width: 0; }
+.kds-forecast-day-header {
+  padding: var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.kds-forecast-day-header .kds-heading { font: var(--type-ui-section); }
+.kds-forecast-day-header .kds-text { margin-top: var(--space-1); }
+.kds-forecast-day-body { display: grid; gap: var(--space-2); padding: var(--space-4); }
+.kds-forecast-day-body .kds-empty { border: 0; }
+.kds-forecast-day-totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+  font: var(--type-caption);
+}
+.kds-forecast-day-totals dt { color: var(--text-muted); }
+.kds-forecast-day-totals dd { font-weight: 600; text-align: end; }
+.kds-forecast-event {
+  display: flex;
+  align-items: start;
+  text-align: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-color: var(--border-subtle);
+}
+.kds-forecast-event-copy { display: grid; min-width: 0; gap: var(--space-1); overflow-wrap: anywhere; }
+.kds-forecast-event-copy > strong { font: var(--type-label); font-weight: 600; }
+.kds-forecast-event-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: var(--radius-control);
+}
+.kds-forecast-event-icon > svg { width: .9375rem; height: .9375rem; }
+.kds-forecast-event[data-forecast-type='comissao'] :is(.kds-forecast-event-icon, .kds-forecast-event-value) { color: var(--cyan-text); }
+.kds-forecast-event[data-forecast-type='bonificacao'] :is(.kds-forecast-event-icon, .kds-forecast-event-value) { color: var(--purple-text); }
+.kds-forecast-event[data-forecast-type='comissao'] .kds-forecast-event-icon { background: var(--cyan-soft); }
+.kds-forecast-event[data-forecast-type='bonificacao'] .kds-forecast-event-icon { background: var(--purple-soft); }
+.kds-forecast-year { display: flex; align-items: center; justify-content: space-between; }
+.kds-finance-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.kds-finance-dialog .kds-dialog-footer { justify-content: flex-end; }
+.kds-forecast-detail-heading { display: grid; justify-items: start; gap: var(--space-2); }
+.kds-forecast-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) minmax(0, 2fr);
+  gap: var(--space-3);
+  color: var(--text-primary);
+  font: var(--type-body);
+  overflow-wrap: anywhere;
+}
+.kds-forecast-detail-grid dt { color: var(--text-muted); }
+.kds-finance-production { display: grid; min-width: 0; gap: var(--space-4); }
+.kds-finance-production-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.kds-finance-production-charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--space-5);
+}
+.kds-finance-production-charts > * { min-width: 0; }
+.kds-finance-production .kds-dashboard-table-card > .kds-card-header { padding: var(--space-4) var(--space-5); }
+.kds-finance-participation { display: grid; gap: var(--space-4); }
+.kds-finance-participation li {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 1fr) minmax(3rem, 1.4fr) max-content;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font: var(--type-caption);
+}
+.kds-finance-participation li > span { overflow-wrap: anywhere; }
+.kds-finance-participation li:nth-child(3n + 2) .kds-progress-fill { background: var(--chart-2); }
+.kds-finance-participation li:nth-child(3n + 3) .kds-progress-fill { background: var(--chart-3); }
+
+@media (max-width: 767px) {
+  .kds-forecast-toolbar { grid-template-columns: minmax(0, 1fr) repeat(2, max-content); }
+  .kds-forecast-toolbar > :first-child { grid-column: 1 / -1; }
+  .kds-forecast-toolbar > .kds-forecast-filter { justify-self: start; }
+  .painel-theme.kifer-ds .kds-forecast-toolbar > :is(.kds-forecast-month, .kds-forecast-filter) {
+    padding-inline: var(--space-2);
+    font: var(--type-caption);
+    font-weight: 600;
+  }
+  .kds-forecast-toolbar > :is(.kds-forecast-month, .kds-forecast-filter) .kds-button-content { gap: var(--space-1); }
+  .kds-forecast-toolbar .kds-forecast-month .kds-control-icon { width: .8125rem; height: .8125rem; }
+  .kds-finance-production-charts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 639px) {
+  .kds-finance-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .kds-forecast-day-header { padding: var(--space-3); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics > .kds-card-kpi {
+    min-height: 8rem;
+    padding: var(--space-3);
+    row-gap: var(--space-2);
+  }
+  .painel-theme.kifer-ds .kds-finance-page .kds-workspace-record-metrics .kds-card-title { font: var(--type-caption); }
+}
+@media (max-width: 359px) {
+  .kds-forecast-toolbar .kds-forecast-month .kds-control-icon:last-child { display: none; }
+}
+
 .kds-system-settings-layout { display: grid; grid-template-columns: 12.8125rem minmax(0, 1fr); gap: 1.625rem; align-items: start; }
 .kds-system-settings-nav { display: grid; min-width: 0; gap: .375rem; }
 .kds-system-settings-nav > p { padding: .625rem; color: var(--brand-primary); font: 500 .5rem / 1.6 var(--font-sans); letter-spacing: .13em; text-transform: uppercase; }
@@ -1184,9 +1219,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   .kds-system-settings-nav > :is(.kds-action-surface, a) > svg:last-child { display: none; }
   .kds-system-settings-integration-link { margin-block-start: 0; }
   .kds-system-settings-heading { flex-wrap: wrap; }
-}
-@media (min-width: 1100px) {
-  .kds-forecast-calendar { grid-template-columns: minmax(0, 1.65fr) minmax(17rem, 1fr); }
 }
 .kds-dashboard-primary-grid > * { min-width: 0; }
 .kds-dashboard-more-metrics { margin-top: var(--space-3); }
@@ -1305,6 +1337,31 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-filter-multi-option-all { border-bottom-color: var(--border-default); color: var(--text-primary); }
 .painel-theme.kifer-ds .kds-filter-multi-footer { justify-content: flex-start; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 .painel-theme.kifer-ds .kds-filter-multi-action { min-width: 7rem; }
+.kds-filter-multi-trigger { display: inline-flex; min-width: 0; }
+.painel-theme.kifer-ds .kds-filter-multi-popover {
+  display: flex;
+  flex-direction: column;
+  width: min(18rem, calc(100vw - 1.5rem));
+  padding: .375rem;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+.kds-filter-multi-popover .kds-filter-multi-options { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.painel-theme.kifer-ds .kds-filter-multi-popover .kds-filter-multi-option { border: 0; min-height: 2.25rem; padding-inline: .625rem; }
+.kds-filter-multi-popover .kds-filter-multi-option-all { margin-bottom: .25rem; }
+.kds-filter-multi-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .375rem;
+  flex: none;
+  border-top: 1px solid var(--border-subtle);
+  padding: .375rem .125rem .125rem;
+}
+.kds-filter-multi-popover-actions .kds-filter-multi-action { min-width: 0; }
+@media (pointer: coarse) {
+  .painel-theme.kifer-ds .kds-filter-multi-popover .kds-filter-multi-option { min-height: var(--touch-target); }
+}
 .painel-theme.kifer-ds .kds-dialog-header { flex-shrink: 0; padding: var(--dialog-header-padding, var(--space-5)); }
 .painel-theme.kifer-ds .kds-dialog-footer { flex-shrink: 0; padding: var(--dialog-footer-padding, var(--space-5)); }
 .painel-theme.kifer-ds .kds-dialog-body { padding: var(--dialog-body-padding, var(--space-5)); overflow-x: hidden; }
@@ -1561,7 +1618,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-leads-mobile-filter-toggle { display: none; }
 .kds-lead-identity { display: inline-flex; min-width: 0; max-width: 100%; align-items: center; gap: var(--space-3); text-align: left; font: var(--type-body-sm); }
 .painel-theme.kifer-ds .kds-lead-identity, .painel-theme.kifer-ds .kds-lead-identity:hover { background: transparent; border: 0; box-shadow: none; border-radius: var(--radius-control); }
-.kds-lead-avatar { flex-shrink: 0; border-radius: var(--radius-control); }
 .kds-lead-form-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'contact qualification' 'location followup'; align-items: start; }
 .kds-lead-form-page .kds-form-section { background: var(--bg-surface); }
 .kds-lead-form-grid > :nth-child(1) { grid-area: contact; }
@@ -1673,7 +1729,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-record-results .kds-table-sm { font: var(--type-caption); }
 .kds-record-results > .kds-record-results-header { padding: var(--space-4) var(--space-3) 0; }
 .kds-record-results > .kds-record-results-pagination { padding: var(--space-3); }
-.kds-leads-results > .kds-leads-bulk-panel { margin: 0 var(--space-3) var(--space-4); }
 .kds-contracts-results > .kds-record-results-header,
 .kds-contracts-results > .kds-record-results-pagination,
 .kds-contracts-results .kds-contracts-table-container,
@@ -1701,44 +1756,315 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-record-form > .kds-page-action-bar { background: var(--bg-surface); padding: var(--space-4); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); }
 @media(max-width: 767px) { .kds-record-form .kds-page-action-bar-sticky { bottom: 0; } }
 
-.kds-agenda-search-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: var(--space-2); }
-.kds-agenda-workspace-grid { display: grid; align-items: start; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
-.kds-workspace-theme .kds-agenda-status-switcher { width: 100%; }
-.kds-workspace-theme .kds-agenda-status-switcher .kds-tab { flex: none; }
-.kds-workspace-theme .kds-agenda-controls-row .kds-agenda-filters { width: 100%; max-width: 46rem; }
-.kds-agenda-calendar-grid { gap: 0; }
-.kds-agenda-week-grid { grid-template-columns: repeat(7, minmax(4.25rem, 1fr)); overflow-x: auto; }
-.painel-theme.kifer-ds .kds-agenda-calendar-grid .kds-calendar-day {
-  aspect-ratio: auto;
-  min-height: clamp(4rem, 6vw, 5.75rem);
-  justify-content: flex-start;
-  align-items: flex-start;
-  padding: .625rem;
-  border-width: 0 1px 1px 0;
+/* Agenda */
+.kds-agenda-header-actions,
+.kds-month-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.painel-theme.kifer-ds .kds-agenda-page .kds-record-actions {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.painel-theme.kifer-ds .kds-agenda-page .kds-record-actions .kds-icon-button { background: transparent; }
+.painel-theme.kifer-ds .kds-agenda-page .kds-record-actions .kds-icon-button:hover { background: var(--bg-hover); }
+.kds-agenda-status-switcher { min-width: 0; }
+.kds-agenda-status-switcher .kds-tabs-list { padding-bottom: 0; }
+.kds-agenda-status-switcher .kds-tab { flex: none; }
+.kds-agenda-workspace-grid,
+.kds-month-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-5);
+}
+.kds-month-calendar,
+.kds-agenda-selected-day,
+.kds-agenda-task-list { min-width: 0; }
+.kds-month-header,
+.kds-agenda-selected-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5);
+  gap: var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.kds-month-header h2,
+.kds-agenda-selected-heading h2 {
+  font: var(--type-label);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.kds-month-header h2 { text-transform: capitalize; }
+.kds-month-nav { flex-shrink: 0; }
+
+.kds-month-weekdays,
+.kds-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.kds-month-weekdays {
+  padding-block: var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  color: var(--text-muted);
+  font: var(--type-caption);
+  text-align: center;
+}
+.kds-month-calendar .kds-month-day {
+  display: flex;
+  min-width: 0;
+  min-height: 6.25rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  overflow: hidden;
+  padding: var(--space-2) var(--space-1);
+  border: solid var(--border-subtle);
+  border-width: 0 var(--border-width) var(--border-width) 0;
   border-radius: 0;
+  color: var(--text-primary);
+  text-align: start;
+}
+.kds-month-calendar .kds-month-day:nth-child(7n) { border-inline-end: 0; }
+.kds-month-calendar .kds-month-day:nth-last-child(-n + 7) { border-bottom: 0; }
+.kds-month-calendar .kds-month-day:hover:not(:disabled) { background: var(--bg-hover); }
+.kds-month-calendar .kds-month-day:disabled { background: var(--bg-inset); color: var(--text-muted); opacity: .5; }
+.kds-month-calendar .kds-month-day[aria-pressed="true"] {
+  background: var(--brand-primary-soft);
+  box-shadow: inset 0 0 0 var(--border-width) var(--brand-primary);
+}
+.kds-month-day-number {
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: var(--radius-control);
+  font: var(--type-caption);
+}
+.kds-month-day[aria-current="date"] .kds-month-day-number {
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+}
+.kds-month-overflow { color: var(--text-muted); font: var(--type-caption); }
+.kds-month-event {
+  --calendar-event-background: var(--brand-primary-soft);
+  --calendar-event-color: var(--panel-accent-ink);
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: .1875rem var(--space-1);
+  border-radius: var(--radius-control);
+  background: var(--calendar-event-background);
+  color: var(--calendar-event-color);
+  font: var(--type-caption);
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kds-month-event[data-tone="info"] { --calendar-event-background: var(--info-soft); --calendar-event-color: var(--info-text); }
+.kds-month-event[data-tone="success"] { --calendar-event-background: var(--success-soft); --calendar-event-color: var(--success-text); }
+.kds-month-event[data-tone="danger"] { --calendar-event-background: var(--danger-soft); --calendar-event-color: var(--danger-text); }
+.kds-month-event[data-tone="cyan"] { --calendar-event-background: var(--cyan-soft); --calendar-event-color: var(--cyan-text); }
+.kds-month-event[data-tone="purple"] { --calendar-event-background: var(--purple-soft); --calendar-event-color: var(--purple-text); }
+
+.kds-agenda-week-scroll {
+  overflow-x: auto;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+}
+.kds-agenda-week-grid {
+  display: grid;
+  grid-template-columns: 4.0625rem repeat(7, minmax(8rem, 1fr));
+  min-width: 60.0625rem;
+}
+.kds-agenda-week-grid > div {
+  min-width: 0;
+  min-height: 4.125rem;
+  padding: var(--space-2);
+  border: solid var(--border-subtle);
+  border-width: 0 var(--border-width) var(--border-width) 0;
+}
+.kds-agenda-week-grid > div:nth-child(8n) { border-inline-end: 0; }
+.kds-agenda-week-grid > div:nth-last-child(-n + 8) { border-bottom: 0; }
+.kds-agenda-week-heading {
+  background: var(--bg-inset);
+  color: var(--text-primary);
+  font: var(--type-caption);
+  text-align: center;
+  text-transform: capitalize;
+}
+.kds-agenda-week-heading strong { display: block; margin-top: var(--space-1); color: var(--text-muted); }
+.kds-agenda-week-heading[aria-current="date"] { background: var(--brand-primary-soft); }
+.kds-agenda-week-hour {
+  color: var(--text-muted);
+  font: var(--type-caption);
+  position: sticky;
+  inset-inline-start: 0;
   background: var(--bg-surface);
+  z-index: 1;
 }
-.painel-theme.kifer-ds .kds-agenda-calendar-grid .kds-calendar-day-selected {
-  background: var(--brand-primary-soft) !important;
-  color: var(--text-primary) !important;
+.kds-agenda-week-slot { display: flex; flex-direction: column; gap: var(--space-1); position: relative; }
+.kds-agenda-week-slot .kds-month-event {
+  min-height: 2.5rem;
+  border-radius: var(--radius-control);
+  background: var(--calendar-event-background);
+  color: var(--calendar-event-color);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
-.painel-theme.kifer-ds .kds-agenda-week-grid .kds-calendar-day { min-height: 12rem; }
-.kds-agenda-calendar-grid .kds-calendar-day > .kds-button-content { flex-direction: column; width: 100%; min-width: 0; align-items: flex-start; }
-.kds-agenda-calendar-day-number { font: 500 .6875rem / 1.5 var(--font-sans); }
-.kds-agenda-calendar-grid .kds-calendar-event-count { inset: .3rem .3rem auto auto; width: .875rem; min-width: .875rem; height: .875rem; min-height: .875rem; font-size: .5rem; }
-.kds-agenda-calendar-header .kds-agenda-calendar-heading { order: -1; text-align: start; }
-.kds-agenda-week-events { display: grid; width: 100%; min-width: 0; gap: .375rem; }
-.kds-agenda-week-events > span { overflow: hidden; width: 100%; border-radius: .25rem; padding: .125rem .25rem; background: var(--brand-primary-soft); color: var(--text-secondary); font: var(--type-caption); text-overflow: ellipsis; white-space: nowrap; }
+.kds-agenda-week-slot .kds-month-event:hover {
+  background: var(--calendar-event-background);
+  box-shadow: inset 0 0 0 var(--border-width) currentColor;
+}
+.kds-agenda-week-slot .kds-agenda-empty-slot { position: absolute; inset: 0; border-radius: 0; }
+.kds-agenda-week-slot .kds-agenda-empty-slot:hover { background: var(--bg-hover); }
+.kds-month-calendar :is(.kds-month-day, .kds-month-event, .kds-agenda-empty-slot):focus-visible {
+  outline: 2px solid var(--panel-focus);
+  outline-offset: -2px;
+}
+
+.kds-agenda-selected-heading { align-items: start; }
+.kds-agenda-selected-heading p {
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font: var(--type-caption);
+}
+.kds-agenda-day-body, .kds-agenda-day-note { padding-inline: var(--space-5); }
+.kds-agenda-day-note { padding-block: var(--space-3) var(--space-5); }
+.kds-agenda-day-notice {
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+  font: var(--type-caption);
+}
+.kds-agenda-day-notice > svg { width: 1rem; height: 1rem; flex: none; }
+.kds-agenda-day-notice p { margin-top: var(--space-1); }
+
+.kds-agenda-toolbar {
+  display: grid;
+  grid-template-columns: minmax(12rem, 22rem) minmax(10rem, 12rem) max-content max-content;
+  gap: var(--space-2);
+  align-items: center;
+}
+.kds-agenda-toolbar-count { color: var(--text-muted); font: var(--type-caption); }
+.kds-agenda-task-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+.kds-agenda-task-row:last-child { border-bottom: 0; }
+.kds-agenda-task-row .kds-checkbox { border-radius: var(--radius-sm); }
+.kds-agenda-task-copy {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--text-primary);
+  font: var(--type-label);
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.kds-agenda-task-copy strong { font-weight: 500; }
+.kds-agenda-task-copy:hover strong { color: var(--brand-primary); }
+.kds-agenda-task-copy small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font: var(--type-caption);
+}
+.kds-agenda-task-row[data-completed="true"] .kds-agenda-task-copy strong {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.kds-agenda-task-time { color: var(--text-muted); font: var(--type-caption); }
+.kds-agenda-task-time[data-overdue="true"] { color: var(--danger-text); }
+.kds-agenda-day-body .kds-agenda-task-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding-inline: 0;
+  column-gap: var(--space-1);
+  row-gap: var(--space-1);
+}
+.kds-agenda-day-body .kds-agenda-task-time { grid-column: 2; }
+.kds-agenda-day-body .kds-record-actions { grid-column: 3; grid-row: 1 / span 2; }
+.kds-agenda-selected-day .kds-empty, .kds-agenda-task-list .kds-empty { border: 0; }
+.kds-agenda-selected-day .kds-empty { padding: var(--space-8) var(--space-2); }
+.kds-agenda-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.kds-agenda-detail-summary {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.kds-agenda-reschedule-summary {
+  display: flex;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: var(--bg-inset);
+  overflow-wrap: anywhere;
+}
+.kds-agenda-detail-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border-radius: var(--radius-control);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary);
+}
+.kds-agenda-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(0, 3fr);
+  align-items: baseline;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+  font: var(--type-body);
+}
+.kds-agenda-detail-grid dt { color: var(--text-muted); }
+.painel-theme.kifer-ds .kds-agenda-dialog .kds-dialog-footer { justify-content: flex-end; }
+.kds-agenda-reminder-dialog .kds-lead-reminder-observations { grid-column: 1 / -1; }
+.kds-agenda-reminder-dialog .kds-lead-reminder-observations textarea { min-height: 6.25rem; }
+.kds-agenda-organizer-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.kds-agenda-organizer-options { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+.kds-agenda-organizer-options label { display: flex; align-items: center; gap: var(--space-2); }
+.kds-agenda-organizer-preview .kds-table-wrapper { max-height: 22rem; }
+
 @media (min-width: 1100px) {
-  .kds-agenda-workspace-grid:not(.is-week) { grid-template-columns: minmax(0, 1fr) minmax(17rem, 18.75rem); }
+  .kds-month-layout { grid-template-columns: minmax(0, 1fr) minmax(15rem, 18.75rem); }
 }
-@media (max-width: 640px) {
-  .painel-theme.kifer-ds .kds-agenda-calendar-grid .kds-calendar-day { padding: .375rem .25rem; }
-  .kds-agenda-calendar-grid .kds-calendar-event-count { inset: .25rem .2rem auto auto; }
+@media (max-width: 639px) {
+  .kds-agenda-status-switcher .kds-tab { padding-inline: var(--space-2); font-size: .75rem; }
+  .kds-month-header,
+  .kds-agenda-selected-heading { padding: var(--space-3); }
+  .kds-month-calendar .kds-month-day { min-height: 4.875rem; padding: var(--space-1) .1875rem; }
+  .kds-agenda-toolbar { grid-template-columns: minmax(0, 1fr) repeat(2, max-content); }
+  .kds-agenda-toolbar > :first-child { grid-column: 1 / -1; }
+  .kds-agenda-form-grid,
+  .kds-agenda-organizer-fields { grid-template-columns: minmax(0, 1fr); }
+  .kds-agenda-task-list .kds-agenda-task-row {
+    padding-inline: var(--space-2);
+    gap: var(--space-1);
+  }
+  .kds-agenda-task-time { max-width: 5rem; text-align: end; }
 }
-.kds-agenda-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
-.painel-theme.kifer-ds .kds-agenda-reminder-icon { border-radius: var(--radius-control); }
-.kds-agenda-secondary-filters.is-open { border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); background: var(--bg-surface); padding: var(--space-3); }
+
 .kds-rich-text-preview .ql-container.ql-snow { border: 0; font: inherit; }
 .kds-rich-text-preview .ql-editor { padding: 0; min-height: 0; overflow-wrap: anywhere; }
 .kds-dashboard-trend-main, .kds-monthly-trend-chart { display: flex; flex-direction: column; min-width: 0; }
@@ -1758,15 +2084,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 @media (max-width: 767px) {
   .kds-dashboard-monthly-trend-chart .kds-monthly-trend-plot { min-height: min(var(--kds-monthly-trend-min-height, 15.625rem), 16rem); }
 }
-.painel-theme.kifer-ds .kds-agenda-filter-toggle { display: inline-flex; }
-.kds-agenda-secondary-filters { display: none; grid-template-columns: repeat(3,minmax(0,1fr)); align-items: start; gap: var(--space-3); }
-.kds-agenda-secondary-filters.is-open { display: grid; }
-.kds-agenda-clear-filters { grid-column: 1 / -1; justify-self: end; }
-@media(max-width: 1023px) { .kds-agenda-secondary-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(min-width: 1536px) { .painel-theme.kifer-ds .kds-dashboard-primary-kpis { grid-template-columns: repeat(4,minmax(0,1fr)); } }
-@media(max-width: 767px) {
- .kds-agenda-secondary-filters { grid-template-columns: minmax(0,1fr); }
-}
 
 .kds-integration-overview-action { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--space-3); text-align: left; }
 .kds-integration-overview-action > span:first-child { flex: 1 1 auto; min-width: 0; }
@@ -1948,23 +2266,8 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
  .kds-ai-composer { grid-template-columns: minmax(0,1fr); }
  .kds-ai-composer > .kds-button { justify-self: end; }
 }
-.painel-theme.kifer-ds .kds-agenda-organize-label-compact { display: none; }
-
 /* Numeric calendar cells do not inherit the horizontal padding of text buttons. */
 .painel-theme.kifer-ds :is(.kds-calendar-day,.calendar-day) { padding: 0; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
-@media(max-width: 639px) {
- .kds-agenda-search-row { grid-template-columns: minmax(0,1fr); }
- .kds-agenda-toolbar-actions { justify-content: flex-end; }
- .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { padding-inline: var(--space-2); }
-}
-@media(max-width: 379px) {
- .painel-theme.kifer-ds .kds-agenda-header-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); width: 100%; gap: var(--space-2); }
- .painel-theme.kifer-ds .kds-agenda-header-actions > .kds-button { min-width: 0; justify-content: center; padding-inline: var(--space-2); white-space: nowrap; font-size: 0.8125rem; }
- .painel-theme.kifer-ds .kds-agenda-organize-label-full { display: none; }
- .painel-theme.kifer-ds .kds-agenda-organize-label-compact { display: inline; }
- .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-list { gap: 0; }
- .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { font-size: 0.75rem; }
-}
 @media(max-width: 639px) {
  .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) { grid-template-columns: repeat(2,minmax(0,1fr)); }
  .painel-theme.kifer-ds :is(.kds-dashboard-primary-kpis,.kds-dashboard-secondary-kpis) .kds-card-icon { display: none; }
@@ -1976,16 +2279,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
  .painel-theme.kifer-ds .kds-dashboard-kpi-grid > .kds-card-kpi { padding: var(--space-2); row-gap: var(--space-1); }
  .painel-theme.kifer-ds .kds-dashboard-more-metrics { margin-top: var(--space-2); }
  .painel-theme.kifer-ds .kds-dashboard-filter-label { display: none; }
- .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-list { overflow-x: hidden; }
- .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { flex: 1 1 0; gap: var(--space-1); padding-inline: var(--space-1); font-size: 0.75rem; }
- .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-badge { display: none; }
- .painel-theme.kifer-ds .kds-agenda-create-action { padding-inline: var(--space-2); }
- .painel-theme.kifer-ds .kds-agenda-calendar-header { display: grid; grid-template-columns: minmax(0,1fr) repeat(3,auto); grid-template-areas: "heading today previous next"; gap: var(--space-1); }
- .painel-theme.kifer-ds .kds-agenda-previous-month { grid-area: previous; }
- .painel-theme.kifer-ds .kds-agenda-calendar-heading { grid-area: heading; }
- .painel-theme.kifer-ds .kds-agenda-calendar-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
- .painel-theme.kifer-ds .kds-agenda-today { grid-area: today; justify-self: center; }
- .painel-theme.kifer-ds .kds-agenda-next-month { grid-area: next; }
+
 }
 /* Reference-aligned record actions and contact cards. */
 .kds-record-actions { flex: none; }

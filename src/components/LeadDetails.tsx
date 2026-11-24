@@ -33,7 +33,6 @@ import {
   FilterSelect,
   PageHeader,
   Tabs,
-  Avatar,
   Drawer,
   DrawerBody,
   DrawerFooter,
@@ -453,7 +452,6 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
         <div className="kds-lead-details-drawer-content">
           <Surface className="kds-lead-details-drawer-summary">
             <div className="kds-lead-details-drawer-identity">
-              <Avatar name={lead.nome_completo} size="sm" tone="brand" />
               <div className="kds-lead-details-drawer-copy">
                 <Text className="font-semibold text-[var(--text-primary)]">{lead.nome_completo}</Text>
                 <Badge>{lead.status_nome ?? lead.status ?? 'Sem status'}</Badge>

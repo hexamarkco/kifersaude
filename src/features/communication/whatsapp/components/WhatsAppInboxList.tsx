@@ -1,4 +1,4 @@
-import { Avatar, Text, FieldLabel, Image, Video, LoadingState } from '../../../../design-system';
+import { Text, FieldLabel, Image, Video, LoadingState } from '../../../../design-system';
 import { ActionSurface, IconButton } from '../../../../design-system';
 import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, Clock3, MoreHorizontal, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
@@ -388,7 +388,6 @@ export function InboxChatListItem({
       }}
     >
       <ActionSurface variant="plain" padding="none" type="button" onClick={() => onSelect(chat.id)} aria-current={selected ? 'true' : undefined} className="whatsapp-inbox-chat-select text-left">
-        <Avatar name={displayName} tone="brand" size="sm" className="whatsapp-inbox-chat-avatar" />
         <div className="whatsapp-inbox-chat-identity flex min-w-0 items-center gap-1.5">
           <LeadFavoriteBadge favorito={favorito} />
           <Text className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]" title={displayName}>

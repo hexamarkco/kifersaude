@@ -1,10 +1,8 @@
-import { Text, Heading } from '../../../design-system';
-import { ActionSurface } from '../../../design-system';
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Filter, ListTodo, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Filter, ListTodo, TrendingDown, TrendingUp, ArrowUpRight, Workflow, UserCheck, Users } from 'lucide-react';
 
-import { Badge, Button, Card, EmptyState, SectionHeader, Surface } from '../../../design-system';
+import { ActionSurface, Alert, Badge, Button, Card, CrmCard, EmptyState, Heading, KpiCard, SectionHeader, Surface, Text } from '../../../design-system';
 import type { Lead } from '../../leads';
-import type { DashboardOperationsAnalysis } from '../shared/dashboardTypes';
+import type { DashboardCommercialAnalysis, DashboardOperationsAnalysis } from '../shared/dashboardTypes';
 
 type OperationsProps = {
   analysis: DashboardOperationsAnalysis;
@@ -147,28 +145,83 @@ export function DashboardSourcePerformance({ analysis }: Pick<OperationsProps, '
   );
 }
 
-type AutomationCommandProps = {
+type DashboardOperationsOverviewProps = {
   leads: Lead[];
-  onNavigate: (tab: 'leads' | 'agenda' | 'config', status?: string) => void;
+  analysis: DashboardCommercialAnalysis;
+  agendaAvailable: boolean;
+  onOpenLeads?: () => void;
+  onOpenEligible?: () => void;
+  onOpenAgenda?: () => void;
+  onOpenAutomation?: () => void;
 };
 
-export function DashboardAutomationCommand({ leads, onNavigate }: AutomationCommandProps) {
-  const initialContactCandidates = leads.filter((lead) => lead.status === 'Contato Inicial' && !lead.skip_automation);
-  const blockedCandidates = leads.filter((lead) => lead.status === 'Contato Inicial' && Boolean(lead.skip_automation));
+export function DashboardOperationsOverview({
+  leads,
+  analysis,
+  agendaAvailable,
+  onOpenLeads,
+  onOpenEligible,
+  onOpenAgenda,
+  onOpenAutomation,
+}: DashboardOperationsOverviewProps) {
+  const initialContactLeads = leads.filter((lead) => lead.status === 'Contato Inicial');
+  const blocked = initialContactLeads.filter((lead) => lead.skip_automation).length;
+  const metrics = [
+    { title: 'Retornos pendentes', value: agendaAvailable ? analysis.agenda.pending : '—', description: agendaAvailable ? `${analysis.agenda.overdue} em atraso` : 'Agenda indisponível', icon: Clock3, tone: 'warning' },
+    { title: 'Oportunidades abertas', value: analysis.followUp.openOpportunities, description: 'Em acompanhamento', icon: Users, tone: 'info' },
+    { title: 'Elegíveis para automação', value: initialContactLeads.length - blocked, description: 'No Contato Inicial', icon: Workflow, tone: 'brand' },
+    { title: 'Excluídos da automação', value: blocked, description: 'No Contato Inicial', icon: UserCheck, tone: 'cyan' },
+  ];
 
   return (
-    <Surface padding="md" data-panel-animate className="space-y-5" aria-labelledby="dashboard-automation-title">
-      <SectionHeader eyebrow="Orquestração" title="Automações e atendimento que exigem gestão" description="Ação segura: a seleção do fluxo e qualquer agendamento continuam no espaço de Automação." as="h2" />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Card padding="sm" className="space-y-1"><Text className="kds-card-subtitle">Contato Inicial elegível</Text><Text className="text-2xl font-semibold tabular-nums">{initialContactCandidates.length}</Text><Text className="text-xs text-[var(--text-muted)]">sem bloqueio de automação</Text></Card>
-        <Card padding="sm" className="space-y-1"><Text className="kds-card-subtitle">Excluídos de automação</Text><Text className="text-2xl font-semibold tabular-nums">{blockedCandidates.length}</Text><Text className="text-xs text-[var(--text-muted)]">requerem tratamento humano</Text></Card>
+    <>
+      <section className="kds-dashboard-metric-grid kds-dashboard-metric-grid-compact" aria-label="Indicadores de operação">
+        {metrics.map(({ title, value, description, icon: Icon, tone }) => (
+          <KpiCard key={title} title={title} value={<span>{value}</span>} trend={description} data-tone={tone} icon={<Icon aria-hidden="true" />} />
+        ))}
+      </section>
+      <div className="kds-dashboard-columns">
+        <CrmCard title="O que precisa de atenção" subtitle="Pendências que afetam o acompanhamento.">
+          <div className="kds-dashboard-notices">
+            <Alert
+              tone="warning"
+              title={agendaAvailable
+                ? analysis.agenda.overdue === 1 ? '1 retorno em atraso' : `${analysis.agenda.overdue} retornos em atraso`
+                : 'Agenda indisponível'}
+              action={onOpenAgenda && <Button size="sm" variant="secondary" onClick={onOpenAgenda}>Ver agenda</Button>}
+            >
+              {agendaAvailable
+                ? `${analysis.agenda.pending} ${analysis.agenda.pending === 1 ? 'retorno pendente' : 'retornos pendentes'} neste recorte.`
+                : 'Confira os lembretes diretamente na Agenda.'}
+            </Alert>
+            <Alert
+              tone="info"
+              title={`${analysis.followUp.withoutNextStep} ${analysis.followUp.withoutNextStep === 1 ? 'oportunidade' : 'oportunidades'} sem próximo passo`}
+              action={onOpenLeads && <Button size="sm" variant="secondary" onClick={onOpenLeads}>Ver leads</Button>}
+            >
+              Volte à carteira para organizar os próximos contatos.
+            </Alert>
+          </div>
+        </CrmCard>
+        <CrmCard
+          title="Rotinas de atendimento"
+          subtitle="Acompanhamento do Contato Inicial."
+          actions={onOpenAutomation && <Button size="sm" variant="text" onClick={onOpenAutomation}>Ver automações <ArrowUpRight aria-hidden="true" /></Button>}
+        >
+          <div className="kds-dashboard-activity-row">
+            <span className="kds-dashboard-activity-icon" data-tone="brand"><Workflow size={15} aria-hidden="true" /></span>
+            <span><strong>Contato Inicial</strong><small>Leads sem bloqueio de automação</small></span>
+            {onOpenEligible
+              ? <Button size="sm" variant="text" onClick={onOpenEligible}>{initialContactLeads.length - blocked} elegíveis</Button>
+              : <Badge tone="neutral" size="sm">{initialContactLeads.length - blocked} elegíveis</Badge>}
+          </div>
+          <div className="kds-dashboard-activity-row">
+            <span className="kds-dashboard-activity-icon" data-tone="info"><UserCheck size={15} aria-hidden="true" /></span>
+            <span><strong>Atendimento manual</strong><small>Leads com bloqueio de automação</small></span>
+            <Badge tone="neutral" size="sm">{blocked} excluídos</Badge>
+          </div>
+        </CrmCard>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={() => onNavigate('leads', 'Contato Inicial')}>Revisar elegíveis <ArrowRight aria-hidden="true" /></Button>
-        <Button variant="secondary" size="sm" onClick={() => onNavigate('agenda')}>Organizar follow-ups <ArrowRight aria-hidden="true" /></Button>
-        <Button variant="secondary" size="sm" onClick={() => onNavigate('config')}>Revisar fluxos e IA <ArrowRight aria-hidden="true" /></Button>
-      </div>
-      <Text className="text-xs text-[var(--text-muted)]">O acompanhamento detalhado das automações ainda não está disponível neste painel. Para investigar uma falha, peça ajuda ao responsável pelas automações.</Text>
-    </Surface>
+    </>
   );
 }

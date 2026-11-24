@@ -1,6 +1,5 @@
 import type { ReactNode, Ref } from 'react';
 import { Menu, Moon, PanelTop, Sun, X } from 'lucide-react';
-import Avatar from './Avatar';
 import { IconButton } from './Button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from './Breadcrumb';
 
@@ -65,10 +64,7 @@ export function WorkspaceHeader({
       </IconButton>
       {notificationsAction}
       {createAction}
-      {accountAction ?? <>
-        <Avatar name={username} size="sm" tone="brand" />
-        <span className="kds-workspace-username">{username}{roleLabel && <small>{roleLabel}</small>}</span>
-      </>}
+      {accountAction ?? <span className="kds-workspace-username">{username}{roleLabel && <small>{roleLabel}</small>}</span>}
     </div>
   </header>;
 }

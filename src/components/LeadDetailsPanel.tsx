@@ -6,7 +6,6 @@ import type { Lead, LeadStatusConfig } from '../features/leads';
 import StatusDropdown from './StatusDropdown';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
-  Avatar,
   Button,
   FilterSelect,
   IconButton,
@@ -42,7 +41,6 @@ type LeadDetailsPanelProps = {
   onViewLead?: (() => void) | undefined;
   onEditLead?: (() => void) | undefined;
   disabled?: boolean;
-  showAvatar?: boolean;
   headerActions?: ReactNode;
   headerMetadata?: ReactNode;
 };
@@ -77,7 +75,6 @@ export default function LeadDetailsPanel({
   onViewLead,
   onEditLead,
   disabled = false,
-  showAvatar = true,
   headerActions,
   headerMetadata,
 }: LeadDetailsPanelProps) {
@@ -210,8 +207,7 @@ export default function LeadDetailsPanel({
   return (
     <aside className={rootClassName}>
       <div className="kds-lead-details-header flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-5">
-        <div className="kds-lead-details-identity flex min-w-0 items-center gap-3">
-          {showAvatar ? <Avatar name={lead.nome_completo || lead.telefone || 'Lead'} size="lg" className="shrink-0" /> : null}
+        <div className="kds-lead-details-identity min-w-0">
           <div className="min-w-0">
             <div className="kds-lead-details-metadata flex flex-wrap items-center gap-2">
               <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">

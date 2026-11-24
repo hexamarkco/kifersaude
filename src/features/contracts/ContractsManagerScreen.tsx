@@ -37,7 +37,6 @@ import { useContractStatus } from "./hooks/useContractStatus";
 import { useProductionOperators } from "../production";
 import {
   Badge,
-  Avatar,
   Button,
   Alert,
   ConfirmationSummary,
@@ -904,7 +903,6 @@ export default function ContractsManager({
                         className="kds-lead-identity"
                         title={`${displayName} · ${contract.codigo_contrato}`}
                       >
-                        <Avatar name={displayName} tone="brand" size="sm" />
                         <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{displayName}</span><span className="mt-0.5 block truncate text-[.5625rem] text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
                       </ActionSurface>
                     </TableCell>

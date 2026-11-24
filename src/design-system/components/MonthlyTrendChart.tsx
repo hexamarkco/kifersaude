@@ -12,6 +12,8 @@ export type MonthlyTrendChartProps = {
   height?: number;
   formatValue?: (value: number) => string;
   className?: string;
+  embedded?: boolean;
+  ariaLabel?: string;
 };
 
 const PADDING = {
@@ -28,6 +30,8 @@ export default function MonthlyTrendChart({
   height = 280,
   formatValue = (value) => value.toLocaleString('pt-BR'),
   className,
+  embedded = false,
+  ariaLabel = 'Evolução mensal do indicador selecionado',
 }: MonthlyTrendChartProps) {
   const plotRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 720, height });
@@ -85,8 +89,9 @@ export default function MonthlyTrendChart({
 
     const areaPath = `${linePath} L ${points[points.length - 1].x} ${size.height - PADDING.bottom} L ${points[0].x} ${size.height - PADDING.bottom} Z`;
 
-    const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, index) => {
-      const ratio = index / TICK_COUNT;
+    const tickCount = Math.min(TICK_COUNT, Math.ceil(maxValue - minValue));
+    const ticks = Array.from({ length: tickCount + 1 }, (_, index) => {
+      const ratio = tickCount === 0 ? 1 : index / tickCount;
       const value = maxValue - (maxValue - minValue) * ratio;
       const y = PADDING.top + chartHeight * ratio;
 
@@ -123,10 +128,10 @@ export default function MonthlyTrendChart({
 
   return (
     <div
-      className={cx('kds-monthly-trend-chart rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5', className)}
+      className={cx('kds-monthly-trend-chart', !embedded && 'rounded-2xl bg-[var(--bg-hover)] p-4 sm:p-5', className)}
       style={{ '--kds-monthly-trend-min-height': `${height}px` } as CSSProperties}
     >
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      {!embedded && <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
             Série temporal
@@ -139,10 +144,10 @@ export default function MonthlyTrendChart({
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
           Série atual
         </div>
-      </div>
+      </div>}
 
       <div ref={plotRef} className="kds-monthly-trend-plot">
-      <svg viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label="Evolução mensal do indicador selecionado">
+      <svg viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label={ariaLabel}>
           {chart.points.map((point, index) => (
             <line
               key={`x-grid-${point.label}-${index}`}
@@ -165,7 +170,7 @@ export default function MonthlyTrendChart({
                 y2={tick.y}
                 stroke="var(--panel-chart-grid)"
                 strokeWidth="1"
-                strokeDasharray={index === TICK_COUNT ? '0' : '4 10'}
+                strokeDasharray={index === chart.ticks.length - 1 ? '0' : '4 10'}
               />
               <text
                 x={PADDING.left - 12}

@@ -1,5 +1,5 @@
 import DropdownOption from './DropdownOption';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import type { ControlSize } from '../tokens';
@@ -52,15 +52,22 @@ export type FilterMultiSelectProps = {
   placeholder: string;
   dialogTitle: string;
   dialogClassName?: string;
+  presentation?: 'dialog' | 'popover';
   values: string[];
   onChange: (values: string[]) => void;
   size?: ControlSize;
 };
 
-export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, dialogClassName, values, onChange, size = 'md' }: FilterMultiSelectProps) {
+export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, dialogClassName, presentation = 'dialog', values, onChange, size = 'md' }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [draftValues, setDraftValues] = useState<string[]>(values);
   const dialogId = useId().replace(/:/g, '');
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const firstOptionRef = useRef<HTMLInputElement>(null);
+  const isPopover = presentation === 'popover';
+  useEffect(() => {
+    if (open && isPopover) firstOptionRef.current?.focus({ preventScroll: true });
+  }, [isPopover, open]);
   const selected = options.filter((option) => values.includes(option.value));
   const label = selected.length === 0 ? placeholder : selected.length <= 2 ? selected.map((option) => option.label).join(', ') : `${selected.length} selecionados`;
 
@@ -71,10 +78,12 @@ export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, dia
   const closeFilters = () => {
     setDraftValues([...values]);
     setOpen(false);
+    if (isPopover) triggerRef.current?.focus();
   };
   const applyFilters = () => {
     onChange([...draftValues]);
     setOpen(false);
+    if (isPopover) triggerRef.current?.focus();
   };
   const toggleOption = (value: string, checked: boolean) => {
     setDraftValues((current) => checked
@@ -85,6 +94,7 @@ export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, dia
     <div className="kds-filter-multi-options" role="group" aria-label={dialogTitle}>
       <label className="kds-filter-multi-option kds-filter-multi-option-all">
         <Checkbox
+          ref={isPopover ? firstOptionRef : undefined}
           checked={draftValues.length === 0}
           onChange={() => setDraftValues([])}
         />
@@ -113,19 +123,34 @@ export function FilterMultiSelect({ icon, options, placeholder, dialogTitle, dia
     </>
   );
 
+  const trigger = (
+    <FilterTrigger
+      ref={triggerRef}
+      icon={icon}
+      value={label}
+      active={values.length > 0}
+      open={open}
+      size={size}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls={open ? dialogId : undefined}
+      onClick={isPopover ? undefined : openFilters}
+    />
+  );
+
+  if (isPopover) return (
+    <Popover open={open} onOpenChange={(nextOpen) => nextOpen ? openFilters() : setOpen(false)}>
+      <PopoverTrigger className="kds-filter-multi-trigger">{trigger}</PopoverTrigger>
+      <PopoverContent id={dialogId} className="kds-filter-multi-popover" aria-label={dialogTitle}>
+        {filterOptions}
+        <div className="kds-filter-multi-popover-actions">{filterActions}</div>
+      </PopoverContent>
+    </Popover>
+  );
+
   return (
     <>
-      <FilterTrigger
-        icon={icon}
-        value={label}
-        active={values.length > 0}
-        open={open}
-        size={size}
-        onClick={openFilters}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? dialogId : undefined}
-      />
+      {trigger}
       {open && (
         <Dialog
           id={dialogId}

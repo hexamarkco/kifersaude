@@ -50,6 +50,8 @@ const button = (label: string) => {
   return element!;
 };
 
+const checkbox = () => document.querySelector<HTMLInputElement>('.kds-agenda-task-row input[type="checkbox"]');
+
 const waitForAgenda = async (ready: () => boolean) => {
   const start = Date.now();
   while (!ready()) {
@@ -63,8 +65,8 @@ test('concluir na Agenda abre o modal real e permite agendar um próximo lembret
   mocks.reminders = [pendingReminder()];
   const view = render(<AgendaScreen />);
   try {
-    await waitForAgenda(() => Boolean(document.querySelector('button[aria-label="Marcar como lido"]')));
-    await act(async () => { button('Marcar como lido').click(); });
+    await waitForAgenda(() => Boolean(checkbox()));
+    await act(async () => { checkbox()?.click(); });
     assert.equal(mocks.update.mock.calls[0]?.[0], 'reminder-1');
     const patch = mocks.update.mock.calls[0]?.[1] as { lido: boolean; concluido_em: string };
     assert.equal(patch.lido, true);
@@ -87,8 +89,11 @@ test('conclusão em lote usa uma única data e não agenda outro lembrete automa
   mocks.reminders = [pendingReminder('r1'), pendingReminder('r2'), { ...pendingReminder('legacy'), lido: true }];
   const view = render(<AgendaScreen />);
   try {
-    await waitForAgenda(() => Boolean(document.querySelector('button[aria-label="Marcar itens filtrados como lidos"]')));
-    await act(async () => { button('Marcar itens filtrados como lidos').click(); });
+    await waitForAgenda(() => Boolean(checkbox()));
+    await act(async () => { button('Mais ações da página').click(); });
+    const completeAll = Array.from(document.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find((item) => item.textContent === 'Marcar itens filtrados como lidos');
+    assert.ok(completeAll);
+    await act(async () => { completeAll.click(); });
     assert.deepEqual(mocks.updateBatch.mock.calls[0]?.[0], ['r1', 'r2']);
     const patch = mocks.updateBatch.mock.calls[0]?.[1] as { lido: boolean; concluido_em: string };
     assert.equal(patch.lido, true);
@@ -106,8 +111,8 @@ test('reabrir um encerrado histórico limpa a conclusão sem abrir o modal de pr
     const completedTab = Array.from(document.querySelectorAll('button')).find((item) => item.textContent?.includes('Concluídos'));
     assert.ok(completedTab);
     await act(async () => { completedTab!.click(); });
-    await waitForAgenda(() => Boolean(document.querySelector('button[aria-label="Marcar como não lido"]')));
-    await act(async () => { button('Marcar como não lido').click(); });
+    await waitForAgenda(() => Boolean(checkbox()?.checked));
+    await act(async () => { checkbox()?.click(); });
     assert.deepEqual(mocks.update.mock.calls, [['legacy', { lido: false, concluido_em: null }]]);
     assert.ok(!document.body.textContent?.includes('Deseja marcar um próximo lembrete para este lead?'));
     assert.equal(mocks.create.mock.calls.length, 0);
@@ -125,5 +130,36 @@ test('não renderiza um badge de prioridade vazio em lembretes sem prioridade ca
     assert.deepEqual(emptyBadges, []);
     assert.ok(document.body.textContent?.includes('Follow-up'));
     assert.ok(!document.body.textContent?.includes('follow_up'));
+  } finally { view.unmount(); }
+});
+
+test('aplica prazo e busca juntos ao confirmar os filtros da agenda', async () => {
+  resetMocks();
+  mocks.reminders = [pendingReminder()];
+  const view = render(<AgendaScreen />);
+  try {
+    await waitForAgenda(() => Boolean(checkbox()));
+    const pending = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((item) => item.textContent === 'Pendentes');
+    assert.ok(pending);
+    await act(async () => { pending.click(); });
+    const filters = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((item) => item.textContent === 'Filtros');
+    assert.ok(filters);
+    await act(async () => { filters.click(); });
+    const search = document.querySelector<HTMLInputElement>('#agenda-filter-search');
+    const deadline = document.querySelector<HTMLButtonElement>('#agenda-filter-time');
+    assert.ok(search && deadline);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'inexistente');
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      deadline.click();
+    });
+    const today = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]')).find((item) => item.textContent === 'Hoje');
+    assert.ok(today);
+    await act(async () => { today.click(); });
+    const apply = document.querySelector<HTMLButtonElement>('[role="dialog"] button[type="submit"]');
+    assert.ok(apply);
+    await act(async () => { apply.click(); });
+    assert.ok(document.body.textContent?.includes('Nenhuma tarefa com esses filtros.'));
+    assert.equal(checkbox(), null);
   } finally { view.unmount(); }
 });

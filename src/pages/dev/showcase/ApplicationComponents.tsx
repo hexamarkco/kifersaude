@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   AppLoadingBoundary, AppLoadingScreen, Audio, AutomationFlowsSkeleton, BlogTabSkeletonList, Button,
-  CommissionCalendarSkeleton, ContractsPageSkeleton, DashboardPageSkeleton,
+  CommissionCalendarSkeleton, ContractsPageSkeleton, CrmCard, DashboardPageSkeleton,
   DonutChart, DropdownOption, Field, FieldLabel, FileInput, Image, ImageCropDialog, Input, Textarea, IntegrationsSkeleton,
   LeadsPageSkeleton, LoadingMonogram, MonthlyTrendChart, OperadorasSkeleton, PanelAdaptiveLoadingFrame,
   PanelBootSkeleton, PositionedPopover, RemindersPageSkeleton, RichTextEditor,
@@ -95,6 +95,9 @@ export default function ApplicationComponents() {
       <Specimen title="Gráficos do dashboard" description="Os gráficos reais de distribuição e tendência permitem consultar a mesma informação visual usada no painel." source="DonutChart · MonthlyTrendChart" wide>
         <DonutChart data={[{ label: 'Em atendimento', value: 12, color: 'var(--brand-primary)' }, { label: 'Contratados', value: 8, color: 'var(--success)' }]} size={160} onSegmentClick={setSegment} />
         <MonthlyTrendChart data={[{ label: 'Jan', value: 12 }, { label: 'Fev', value: 18 }, { label: 'Mar', value: 15 }, { label: 'Abr', value: 24 }]} />
+        <CrmCard title="Produção ao longo do período" subtitle="Vendas fechadas por dia." subtitlePlacement="visible">
+          <MonthlyTrendChart embedded ariaLabel="Vendas fechadas por dia" height={180} data={[{ label: '21/11', value: 2 }, { label: '22/11', value: 0 }, { label: '23/11', value: 3 }]} />
+        </CrmCard>
       </Specimen>
       <Specimen title="Editor de conteúdo" description="A barra de edição e o conteúdo usam o editor real das publicações, com tema controlado pela biblioteca." source="RichTextEditor" wide>
         <RichTextEditor value={content} onChange={setContent} placeholder="Escreva uma orientação para o atendimento" />

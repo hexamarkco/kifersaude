@@ -228,12 +228,13 @@ test('Select and Combobox expose listbox semantics and commit selection', () => 
   unmount();
 });
 
-test('FilterMultiSelect keeps choices pending until applied and discards them on Escape', () => {
+for (const presentation of ['dialog', 'popover'] as const) test(`FilterMultiSelect in ${presentation} keeps choices pending until applied and discards them on Escape`, () => {
   const applied: string[][] = [];
   function Harness() {
     const [values, setValues] = useState<string[]>([]);
     return (
       <FilterMultiSelect
+        presentation={presentation}
         icon={Filter}
         options={[{ value: 'new', label: 'Novo' }, { value: 'active', label: 'Em andamento' }]}
         placeholder="Todos os status"
@@ -254,7 +255,13 @@ test('FilterMultiSelect keeps choices pending until applied and discards them on
   click(trigger);
   const dialog = document.body.querySelector('[role="dialog"]');
   assert.ok(dialog);
-  assert.equal(dialog.querySelector('h2')?.textContent, 'Filtrar por status');
+  if (presentation === 'popover') {
+    assert.equal(dialog.getAttribute('aria-label'), 'Filtrar por status');
+    assert.equal(dialog.hasAttribute('aria-modal'), false);
+    assert.equal(document.activeElement, dialog.querySelector('input'));
+  } else {
+    assert.equal(dialog.querySelector('h2')?.textContent, 'Filtrar por status');
+  }
   const pendingCheckbox = Array.from(dialog.querySelectorAll('label')).find((option) => option.textContent?.includes('Em andamento'))?.querySelector('input');
   click(pendingCheckbox ?? null);
   keyDown(document, 'Escape');

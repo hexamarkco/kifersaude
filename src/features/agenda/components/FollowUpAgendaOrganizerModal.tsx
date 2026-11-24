@@ -1,8 +1,9 @@
-import { LoadingState, FieldLabel, Text } from '../../../design-system';
+import { LoadingState, FieldLabel, Heading, Text } from '../../../design-system';
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { CalendarClock, CheckCircle2, Sparkles } from 'lucide-react';
 
 import {
+  Alert,
   Badge,
   Button,
   Checkbox,
@@ -17,18 +18,21 @@ import {
   Field,
   Input,
   OperationalMetricChip,
-  SectionHeader,
   Select,
-  Surface,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../../../design-system';
 import { useConfirmationModal } from '../../../hooks/useConfirmationModal';
 import { LeadFavoriteBadge } from '../../../components/LeadFavoriteStar';
 import { useFavoritedLeadIds } from '../../../lib/leadFavoriteService';
-import { formatDateTimeFullBR } from '../../../lib/dateUtils';
+import { formatDateTimeFullBR, getDateKey } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import {
   whatsappFollowUpService,
-  type FollowUpAgendaOrganizerChange,
   type FollowUpAgendaOrganizerMode,
   type FollowUpAgendaOrganizerOptions,
   type FollowUpAgendaOrganizerPreview,
@@ -40,7 +44,7 @@ type FollowUpAgendaOrganizerModalProps = {
   onApplied?: () => void | Promise<void>;
 };
 
-const getTodayDateInput = () => new Date().toISOString().slice(0, 10);
+const getTodayDateInput = () => getDateKey(new Date());
 
 const defaultOptions = (): FollowUpAgendaOrganizerOptions => ({
   dailyLimit: 20,
@@ -54,15 +58,15 @@ const defaultOptions = (): FollowUpAgendaOrganizerOptions => ({
 
 const modeLabels: Record<FollowUpAgendaOrganizerMode, string> = {
   balanced: 'Equilibrado',
-  urgency: 'Urgencia',
+  urgency: 'Urgência',
   minimal_changes: 'Menos mudanças',
 };
 
-const groupChangesByDate = (changes: FollowUpAgendaOrganizerChange[]) => changes.reduce<Record<string, FollowUpAgendaOrganizerChange[]>>((groups, change) => {
-  const key = change.newDateTime.slice(0, 10);
-  groups[key] = [...(groups[key] ?? []), change];
-  return groups;
-}, {});
+const organizerToggles = [
+  ['weekdaysOnly', 'Somente dias úteis'],
+  ['includeOverdue', 'Incluir atrasados'],
+  ['preserveToday', 'Preservar follow-ups de hoje'],
+] as const;
 
 export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplied }: FollowUpAgendaOrganizerModalProps) {
   const [options, setOptions] = useState<FollowUpAgendaOrganizerOptions>(defaultOptions);
@@ -72,7 +76,6 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const favoritedLeadIds = useFavoritedLeadIds();
 
-  const groupedChanges = useMemo(() => preview ? groupChangesByDate(preview.changes) : {}, [preview]);
   const changedItems = useMemo(() => preview?.changes.filter((change) => change.changed) ?? [], [preview]);
   const updateOption = <K extends keyof FollowUpAgendaOrganizerOptions>(key: K, value: FollowUpAgendaOrganizerOptions[K]) => {
     setOptions((current) => ({ ...current, [key]: value }));
@@ -131,152 +134,140 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
     }
   };
 
+  const busy = loadingPreview || applying;
+
   return (
     <>
       <Dialog
         open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
+        onOpenChange={(open) => !open && !busy && onClose()}
         size="xl"
-        aria-label="Organizar follow-ups da agenda"
-        className="max-w-5xl"
+        className="kds-agenda-dialog"
       >
-        <DialogHeader onClose={onClose}>
+        <DialogHeader onClose={busy ? undefined : onClose}>
           <DialogTitle>Organizar follow-ups</DialogTitle>
-          <DialogDescription>
-            Monte uma fila diária: até o limite definido por dia, todos no mesmo horário, em ordem de prioridade.
+          <DialogDescription placement="visible">
+            Distribua os retornos respeitando a disponibilidade da equipe e a prioridade das negociações.
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-5">
-          <Surface variant="muted" padding="sm" className="space-y-4">
-            <SectionHeader
-              as="h3"
-              title="Configuração da fila"
-              description="Defina capacidade, início e critério de priorização."
-            />
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <Field label="Limite diário" htmlFor="agenda-organizer-limit">
-                <Input
-                  id="agenda-organizer-limit"
-                  type="number"
-                  min={1}
-                  max={80}
-                  value={options.dailyLimit}
-                  onChange={handleDailyLimitChange}
-                />
-              </Field>
-              <Field label="Horário único da fila" htmlFor="agenda-organizer-time">
-                <DateTimePicker
-                  id="agenda-organizer-time"
-                  type="time"
-                  value={options.queueTime}
-                  onChange={(event) => updateOption('queueTime', event.target.value)}
-                />
-              </Field>
-              <Field label="Data inicial" htmlFor="agenda-organizer-date">
-                <DateTimePicker
-                  id="agenda-organizer-date"
-                  type="date"
-                  value={options.startDate}
-                  onChange={(event) => updateOption('startDate', event.target.value)}
-                />
-              </Field>
-              <Field label="Modo" htmlFor="agenda-organizer-mode">
-                <Select
-                  id="agenda-organizer-mode"
-                  value={options.priorityMode}
-                  onChange={(event) => updateOption('priorityMode', event.target.value as FollowUpAgendaOrganizerMode)}
-                  options={Object.entries(modeLabels).map(([value, label]) => ({ value, label }))}
-                />
-              </Field>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {[
-                ['weekdaysOnly', 'Somente dias úteis'],
-                ['includeOverdue', 'Incluir atrasados'],
-                ['preserveToday', 'Preservar follow-ups de hoje'],
-              ].map(([key, label]) => (
-                <FieldLabel
-                  key={key}
-                  className="kds-surface kds-surface-default flex min-h-10 cursor-pointer items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors"
-                >
-                  <Checkbox
-                    checked={Boolean(options[key as keyof FollowUpAgendaOrganizerOptions])}
-                    onChange={(event) => updateOption(key as keyof FollowUpAgendaOrganizerOptions, event.target.checked as never)}
-                  />
-                  <span>{label}</span>
-                </FieldLabel>
-              ))}
-            </div>
-          </Surface>
-
-          <Surface padding="sm" className="space-y-4">
-            {!preview && !loadingPreview ? (
-              <EmptyState
-                icon={<CalendarClock className="h-8 w-8" />}
-                title="Aguardando configuração"
-                description="Configure a fila e gere uma prévia. Nada será alterado antes da confirmação."
+          <Alert tone="info" title="Uma agenda com mais equilíbrio.">
+            Defina quantos retornos a equipe consegue assumir por dia e gere uma prévia antes de aplicar.
+          </Alert>
+          <div className="kds-agenda-organizer-fields">
+            <Field label="Começar a partir de" htmlFor="agenda-organizer-date">
+              <DateTimePicker
+                id="agenda-organizer-date"
+                type="date"
+                value={options.startDate}
+                disabled={busy}
+                onChange={(event) => updateOption('startDate', event.target.value)}
               />
-            ) : null}
+            </Field>
+            <Field label="Retornos por dia" htmlFor="agenda-organizer-limit">
+              <Input
+                id="agenda-organizer-limit"
+                type="number"
+                min={1}
+                max={80}
+                value={options.dailyLimit}
+                disabled={busy}
+                onChange={handleDailyLimitChange}
+              />
+            </Field>
+            <Field label="Horário da fila" htmlFor="agenda-organizer-time">
+              <DateTimePicker
+                id="agenda-organizer-time"
+                type="time"
+                value={options.queueTime}
+                disabled={busy}
+                onChange={(event) => updateOption('queueTime', event.target.value)}
+              />
+            </Field>
+            <Field label="Modo de priorização" htmlFor="agenda-organizer-mode">
+              <Select
+                id="agenda-organizer-mode"
+                value={options.priorityMode}
+                disabled={busy}
+                onChange={(event) => updateOption('priorityMode', event.target.value as FollowUpAgendaOrganizerMode)}
+                options={Object.entries(modeLabels).map(([value, label]) => ({ value, label }))}
+              />
+            </Field>
+          </div>
+          <div className="kds-agenda-organizer-options">
+            {organizerToggles.map(([key, label]) => (
+              <FieldLabel key={key}>
+                <Checkbox
+                  checked={options[key]}
+                  disabled={busy}
+                  onChange={(event) => updateOption(key, event.target.checked)}
+                />
+                <span>{label}</span>
+              </FieldLabel>
+            ))}
+          </div>
 
-            {<LoadingState active={loadingPreview} className="flex min-h-48 items-center justify-center gap-3 text-sm font-semibold text-[var(--text-secondary)]" label="Organizando follow-ups..." />}
-
-            {preview ? (
-              <div className="space-y-4">
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  <OperationalMetricChip value={preview.totalCandidates} label="analisados" />
-                  <OperationalMetricChip value={preview.totalChanges} label="mudanças" tone="accent" />
-                  <OperationalMetricChip value={Object.keys(preview.groupedDays).length} label="dias usados" />
-                  <OperationalMetricChip value={preview.options.queueTime} label="horário único" tone="gold" />
-                </div>
-
-                <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
-                  {Object.entries(groupedChanges).map(([date, items]) => (
-                    <Surface key={date} variant="muted" padding="sm" className="space-y-3">
-                      <SectionHeader
-                        as="h3"
-                        title={`${new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })} as ${preview.options.queueTime}`}
-                        action={<Badge tone="neutral">{items.length} follow-up(s)</Badge>}
-                      />
-                      <div className="space-y-2">
-                        {items.slice(0, 30).map((change, index) => (
-                          <Surface key={change.reminderId} padding="sm" className="text-sm">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <strong className="inline-flex items-center gap-1.5 text-[var(--text-primary)]">
-                                  {index + 1}.
-                                  <LeadFavoriteBadge favorito={change.leadId ? favoritedLeadIds.has(change.leadId) : false} />
-                                  {change.leadName}
-                                </strong>
-                                <Text className="truncate text-[var(--text-muted)]">{change.title}</Text>
-                              </div>
-                              <Badge tone={change.changed ? 'accent' : 'neutral'} className="max-w-full whitespace-normal text-right">
-                                {change.changed
-                                  ? `${formatDateTimeFullBR(change.currentDateTime)} -> ${formatDateTimeFullBR(change.newDateTime)}`
-                                  : 'mantém horário'}
-                              </Badge>
-                            </div>
-                            <Text className="mt-2 text-xs text-[var(--text-muted)]">{change.reasons.join(' ')}</Text>
-                          </Surface>
-                        ))}
-                      </div>
-                    </Surface>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </Surface>
+          <section className="kds-agenda-organizer-preview space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Heading level={3} size="sm">{preview ? 'Sugestão de distribuição' : 'Retornos para organizar'}</Heading>
+              <Button variant="secondary" size="sm" onClick={() => void handleGeneratePreview()} loading={loadingPreview} disabled={busy || !options.startDate || !options.queueTime}>
+                {!loadingPreview && <Sparkles className="kds-control-icon" />}
+                Sugerir organização
+              </Button>
+            </div>
+            <LoadingState active={loadingPreview} label="Organizando follow-ups..." className="min-h-36" fallback={() => (
+              preview && preview.changes.length > 0 ? (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    <OperationalMetricChip value={preview.totalCandidates} label="analisados" />
+                    <OperationalMetricChip value={preview.totalChanges} label="mudanças" tone="accent" />
+                    <OperationalMetricChip value={Object.keys(preview.groupedDays).length} label="dias usados" />
+                  </div>
+                  <Table aria-label="Distribuição dos follow-ups" size="sm" stickyHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead scope="col">Acompanhamento</TableHead>
+                        <TableHead scope="col">Horário atual</TableHead>
+                        <TableHead scope="col">Horário sugerido</TableHead>
+                        <TableHead scope="col">Prioridade</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.changes.map((change) => (
+                        <TableRow key={change.reminderId}>
+                          <TableCell>
+                            <strong className="flex items-center gap-1">
+                              <LeadFavoriteBadge favorito={change.leadId ? favoritedLeadIds.has(change.leadId) : false} />
+                              {change.leadName}
+                            </strong>
+                            <Text className="text-xs text-[var(--text-muted)]">{change.title}</Text>
+                            {change.reasons.length > 0 && <Text className="text-xs text-[var(--text-muted)]">{change.reasons.join(' ')}</Text>}
+                          </TableCell>
+                          <TableCell>{formatDateTimeFullBR(change.currentDateTime)}</TableCell>
+                          <TableCell>{change.changed ? <Badge tone="accent">{formatDateTimeFullBR(change.newDateTime)}</Badge> : 'Mantém horário'}</TableCell>
+                          <TableCell>{change.priority && <Badge tone={change.priority === 'alta' ? 'warning' : 'neutral'}>{change.priority}</Badge>}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
+              ) : (
+                <EmptyState
+                  icon={<CalendarClock />}
+                  title={preview ? 'Nenhum retorno para reorganizar.' : 'Aguardando a primeira sugestão.'}
+                  description={preview ? 'Ajuste os critérios para consultar outros retornos.' : 'Configure a fila e gere uma prévia para conferir os horários.'}
+                />
+              )
+            )} />
+          </section>
         </DialogBody>
 
-        <DialogFooter className="flex-wrap">
-          <Button variant="secondary" onClick={onClose} disabled={loadingPreview || applying}>Fechar</Button>
-          <Button variant="primary" onClick={() => void handleGeneratePreview()} loading={loadingPreview} disabled={applying}>
-            {!loadingPreview && <Sparkles className="kds-control-icon" />}
-            Gerar prévia
-          </Button>
-          <Button variant="success" onClick={() => void handleApply()} loading={applying} disabled={!preview || changedItems.length === 0 || loadingPreview}>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button variant="primary" onClick={() => void handleApply()} loading={applying} disabled={busy || changedItems.length === 0}>
             {!applying && <CheckCircle2 className="kds-control-icon" />}
-            Aplicar
+            Aplicar organização
           </Button>
         </DialogFooter>
       </Dialog>

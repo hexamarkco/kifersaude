@@ -1813,7 +1813,7 @@ html,
     width: 100%;
   }
 
-  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container { padding: .75rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container { align-items: center; padding: .75rem; }
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog:not(.kds-drawer, .kds-filter-multi-dialog) {
     max-width: 100%;
     max-height: calc(100dvh - 1.5rem);
@@ -2158,28 +2158,6 @@ html,
       clip: auto;
       white-space: nowrap;
     }
-  }
-
-  .kds-agenda-filter-actions {
-    width: 100%;
-    gap: 0.375rem;
-  }
-
-  .kds-agenda-filter-actions .kds-button {
-    padding-inline: 0.75rem;
-  }
-
-  .kds-agenda-filter-actions .kds-button:not(.kds-agenda-clear-filters) {
-    flex: 1 1 0;
-    min-width: 0;
-    justify-content: center;
-  }
-
-  .kds-agenda-filter-actions .kds-agenda-clear-filters {
-    width: var(--control-height-md);
-    min-width: var(--control-height-md);
-    flex: 0 0 var(--control-height-md);
-    padding: 0;
   }
 
   .kds-ai-integration-action,

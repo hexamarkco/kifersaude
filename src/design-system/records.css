@@ -95,7 +95,26 @@
   border-top: var(--border-width) solid var(--border-subtle);
   background: var(--bg-canvas-subtle);
 }
-.kds-leads-results .kds-leads-bulk-panel { margin: var(--space-3); border-color: var(--brand-primary-border); }
+.kds-leads-selection-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .625rem;
+  padding: .625rem 1rem;
+  border-block-end: 1px solid var(--border-default);
+  background: var(--brand-primary-soft);
+  color: var(--text-primary);
+  font: var(--type-body-sm);
+}
+.kds-leads-selection-bar strong { font-weight: 500; }
+.kds-leads-reset { margin-block-start: .5rem; }
+.kds-leads-toolbar-actions > .kds-filter-multi-trigger {
+  --control-group-padding: .75rem;
+  flex: 0 1 9.25rem;
+}
+.kds-leads-advanced-fields > .kds-filter-multi-trigger { display: flex; }
+.kds-leads-results .kds-table-row-selected { background: var(--brand-primary-soft); }
+.kds-leads-results .kds-record-actions .kds-button:not(:hover) { border-color: transparent; background: transparent; }
 .kds-leads-results .kds-op-lead-list { padding: var(--space-3); gap: var(--space-3); }
 .kds-lead-list-card { padding: var(--space-4); border-radius: var(--radius-lg); gap: var(--space-3); }
 .kds-lead-list-card-status { gap: var(--space-2); }
@@ -299,12 +318,6 @@
   .kds-record-results.is-mobile-cards > .kds-record-table-container { display: none; }
   .kds-record-table-container .kds-table { min-width: 51rem; }
 }
-.kds-workspace-theme .kds-forecast-toolbar { padding: 0; margin-block-end: 1.0625rem; }
-.kds-workspace-theme .kds-forecast-toolbar > .kds-input-shell { max-width: 23.75rem; }
-.kds-workspace-theme .kds-forecast-month { margin-inline-start: 0; border: 1px solid var(--border-strong); border-radius: var(--radius-control); background: var(--bg-surface); }
-.kds-workspace-theme .kds-forecast-month .kds-icon-button { border-color: transparent; }
-.kds-workspace-theme .kds-forecast-list { overflow: hidden; }
-.kds-workspace-theme .kds-forecast-list .kds-table { min-width: 40rem; }
 .kds-workspace-theme .kds-forecast-type-badge[data-forecast-type='comissao'] { color: var(--cyan-text); background: var(--cyan-soft); border-color: transparent; }
 .kds-workspace-theme .kds-forecast-type-badge[data-forecast-type='bonificacao'] { color: var(--purple-text); background: var(--purple-soft); border-color: transparent; }
 

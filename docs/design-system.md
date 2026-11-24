@@ -80,7 +80,11 @@ No workspace, o cabeçalho da página usa Sora de 27px no desktop e alinha as a�
 
 Os diálogos comuns do workspace têm 620px de largura máxima, raio de 14px no desktop, título de 18px e rodapé separado do corpo rolável. No celular eles ganham margens laterais de 12px, enquanto os painéis laterais usam a altura da tela. Leads e contratos exibem a tabela com rolagem horizontal em telas estreitas e oferecem a opção **Cartões**.
 
+Filtros rápidos de múltipla escolha podem usar `FilterMultiSelect presentation="popover"` para abrir junto ao acionador. A lista mantém as escolhas pendentes até a confirmação e devolve o foco ao fechar com Escape. O botão **Filtros** da carteira de Leads abre um diálogo central com os critérios avançados. Na tabela, a caixa do cabeçalho indica seleção parcial e atua sobre a página atual.
+
 O único entrypoint visual é `src/design-system/styles.css`: tokens em `foundation.css`, primitivos em `components.css`, padrões em `operational.css`, temas em `themes.css`, composição da aplicação em `application.css` e comunicação em `communication.css`. `showcase.css` documenta a composição do catálogo. Os estilos de fornecedores também entram por esse entrypoint. `tailwind.preset.js` conecta as utilidades de layout aos tokens da mesma biblioteca.
+
+Agenda e Comissões usam as classes `kds-month-*` para a grade mensal. Os eventos usam a cor semântica da categoria e a célula informa a data e a quantidade de itens ao leitor de tela. Use `MonthlyTrendChart` com `embedded` quando o cartão já fornece título e descrição, e com `ariaLabel` para identificar a série.
 
 ## Limites dos exemplos
 

@@ -32,6 +32,7 @@ type OwnerOption = {
 type DashboardHeaderProps = {
   title?: string;
   description?: string;
+  showFilters?: boolean;
   periodFilter: DashboardPeriodFilter;
   customStartDate: string;
   customEndDate: string;
@@ -70,6 +71,7 @@ const fromDatePickerValue = (value: string) => {
 export function DashboardHeader({
   title = 'Um olhar sobre a operação',
   description = 'Tudo o que precisa da sua atenção, em um só lugar.',
+  showFilters = true,
   periodFilter,
   customStartDate,
   customEndDate,
@@ -316,7 +318,7 @@ export function DashboardHeader({
         eyebrow={new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).format(new Date())}
         title={title}
         description={description}
-        actions={(
+        actions={showFilters && (
           <div className="kds-dashboard-header-actions">
             {filterTrigger()}
             {periodTrigger}
@@ -324,8 +326,8 @@ export function DashboardHeader({
         )}
         data-panel-animate
       />
-      {advancedFiltersPanel}
-      {periodPanel}
+      {showFilters && advancedFiltersPanel}
+      {showFilters && periodPanel}
     </>
   );
 }

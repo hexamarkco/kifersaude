@@ -1,8 +1,8 @@
-import { ArrowUpRight, CalendarClock, FileCheck, Heart, Sun, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, FileCheck, Heart, Sun, Target, UserPlus, Users, Wallet } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
 import {
-  ActionSurface, Avatar, Badge, Button, ChartCard, CrmCard, DonutChart, FilterSelect,
-  IconButton, KpiCard, Surface, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text,
+  ActionSurface, Badge, Button, ChartCard, CrmCard, DonutChart, FilterSelect,
+  IconButton, KpiCard, Progress, Surface, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text,
 } from '../../../design-system';
 import { formatDateTimeFullBR, formatTimeBR, getDateKey } from '../../../lib/dateUtils';
 import type { Contract } from '../../contracts';
@@ -14,6 +14,7 @@ import type {
 import { parseDashboardDateValue } from '../shared/dashboardUtils';
 
 type DashboardTodayProps = {
+  variant?: 'today' | 'commercial';
   name?: string;
   analysis: DashboardCommercialAnalysis;
   funnel: DashboardChartDatum[];
@@ -102,39 +103,38 @@ function OperationChart({ series }: { series: ReturnType<typeof getSeries> }) {
 }
 
 export function DashboardToday({
-  name, analysis, funnel, leads, contracts, activeContracts, period, canViewAgenda, canViewLeads, canViewContracts,
+  variant = 'today', name, analysis, funnel, leads, contracts, activeContracts, period, canViewAgenda, canViewLeads, canViewContracts,
   showFinancialMetrics, onPeriodChange, onOpenAgenda, onOpenLeads, onOpenLead, onOpenContract, onOpenStage,
 }: DashboardTodayProps) {
   const series = useMemo(() => getSeries(leads, contracts, analysis.currentRange), [analysis.currentRange, contracts, leads]);
+  const isCommercial = variant === 'commercial';
   const totalLeads = funnel.reduce((total, stage) => total + stage.value, 0);
   const agenda = analysis.agenda.items.filter((item) => !item.completed).slice(0, 4);
   const todayCount = analysis.agenda.pending;
+  const maxOriginLeads = Math.max(1, ...analysis.origins.map((origin) => origin.leads));
   const recentLeads = canViewLeads ? [...leads].sort((left, right) => right.created_at.localeCompare(left.created_at)).slice(0, 4) : [];
-  const recentContracts = canViewContracts ? [...contracts].sort((left, right) => right.created_at.localeCompare(left.created_at)).slice(0, 3) : [];
-  const recentActivities = [
-    ...recentLeads.map((lead) => ({ id: lead.id, title: lead.origem ? `${lead.nome_completo} chegou por ${lead.origem}.` : `${lead.nome_completo} entrou no funil.`, date: lead.created_at, icon: UserPlus, action: canViewLeads ? () => onOpenLead(lead.id) : undefined, tone: 'info' })),
-    ...recentContracts.map((contract) => ({ id: contract.id, title: `Contrato ${contract.codigo_contrato} cadastrado.`, date: contract.created_at, icon: FileCheck, action: () => onOpenContract(contract), tone: 'brand' })),
-  ].sort((left, right) => right.date.localeCompare(left.date)).slice(0, 3);
   const metrics = [
-    { title: 'Leads em acompanhamento', value: totalLeads, description: 'No funil do período', icon: Users, tone: 'brand' },
+    { title: isCommercial ? 'Leads recebidos' : 'Leads em acompanhamento', value: isCommercial ? analysis.leadsReceived : totalLeads, description: isCommercial ? 'No período selecionado' : 'No funil do período', icon: Users, tone: 'brand' },
     { title: 'Contratos ativos', value: activeContracts.length, description: 'Contratos vigentes', icon: FileCheck, tone: 'info' },
-    { title: 'Mensalidades da carteira', value: showFinancialMetrics ? currency.format(activeContracts.reduce((sum, contract) => sum + (Number(contract.mensalidade_total) || 0), 0)) : '—', description: showFinancialMetrics ? 'Nos contratos vigentes' : 'Restrito ao perfil', icon: Wallet, tone: 'cyan' },
+    isCommercial
+      ? { title: 'Taxa de conversão', value: analysis.conversion === null ? '—' : `${analysis.conversion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, description: analysis.conversion === null ? 'Base insuficiente' : 'Leads com contrato', icon: Target, tone: 'cyan' }
+      : { title: 'Mensalidades da carteira', value: showFinancialMetrics ? currency.format(activeContracts.reduce((sum, contract) => sum + (Number(contract.mensalidade_total) || 0), 0)) : '—', description: showFinancialMetrics ? 'Nos contratos vigentes' : 'Restrito ao perfil', icon: Wallet, tone: 'cyan' },
     { title: 'Vidas acompanhadas', value: activeContracts.reduce((sum, contract) => sum + (Number(contract.vidas) || 0), 0), description: 'Nos contratos vigentes', icon: Heart, tone: 'purple' },
   ];
 
-  return <div className="kds-dashboard-today">
+  return <div className="kds-dashboard-overview">
     <Surface className="kds-dashboard-welcome" padding="none">
       <span className="kds-dashboard-activity-icon" data-tone="brand"><Sun size={18} aria-hidden="true" /></span>
       <Text><strong>{name ? `Olá, ${name.split(' ')[0]}.` : 'Olá.'}</strong> {canViewAgenda && (todayCount === 1 ? 'Você tem 1 acompanhamento para hoje.' : `Você tem ${todayCount} acompanhamentos para hoje.`)}</Text>
       {canViewAgenda && <Button size="sm" variant="secondary" onClick={onOpenAgenda}>Organizar meu dia <ArrowUpRight aria-hidden="true" /></Button>}
     </Surface>
 
-    <section className="kds-dashboard-today-metrics" aria-label="Indicadores da operação">
+    <section className="kds-dashboard-metric-grid" aria-label="Indicadores da operação">
       {metrics.map(({ title, description, value, icon: Icon, tone }) => <KpiCard key={title} data-tone={tone} title={title} value={<span>{value}</span>} icon={<Icon aria-hidden="true" />} trend={description} />)}
     </section>
 
-    <div className="kds-dashboard-today-columns">
-      <ChartCard title="Uma operação que avança" subtitle="Evolução de leads e contratos no período." subtitlePlacement="visible" actions={<FilterSelect size="sm" value={period} options={periodOptions} neutralValues={[period]} onChange={(value) => onPeriodChange(value as DashboardPeriodFilter)} includePlaceholderOption={false} placeholder="Período do gráfico" />}>
+    <div className="kds-dashboard-columns">
+      <ChartCard title={isCommercial ? "Da conversa ao contrato" : "Uma operação que avança"} subtitle="Evolução de leads e contratos no período." subtitlePlacement="visible" actions={<FilterSelect size="sm" value={period} options={periodOptions} neutralValues={[period]} onChange={(value) => onPeriodChange(value as DashboardPeriodFilter)} includePlaceholderOption={false} placeholder="Período do gráfico" />}>
         <OperationChart series={series} />
       </ChartCard>
       <ChartCard title="Seu funil, agora" subtitle="Oportunidades em cada momento da negociação." subtitlePlacement="visible" actions={canViewLeads && <IconButton variant="ghost" size="sm" aria-label="Abrir funil de leads" onClick={onOpenLeads}><ArrowUpRight aria-hidden="true" /></IconButton>}>
@@ -143,27 +143,64 @@ export function DashboardToday({
           <ActionSurface key={stage.label} variant="plain" padding="none" disabled={!canViewLeads} onClick={() => onOpenStage(stage.label)} style={{ '--stage-color': funnelColors[index % funnelColors.length] } as CSSProperties}><span>{stage.label}</span><strong>{stage.value}</strong></ActionSurface>
         ))}</div>
       </ChartCard>
-      {canViewAgenda && <CrmCard className="kds-dashboard-task-card" title="Atenção para os próximos passos" subtitle="Pequenas ações que mantêm o cuidado em dia." subtitlePlacement="visible" actions={<Button variant="text" size="sm" onClick={onOpenAgenda}>Ver agenda <ArrowUpRight aria-hidden="true" /></Button>}>
+      {canViewAgenda && <CrmCard className="kds-dashboard-task-card" title={isCommercial ? "Oportunidades em destaque" : "Atenção para os próximos passos"} subtitle={isCommercial ? "Negociações com retorno programado." : "Pequenas ações que mantêm o cuidado em dia."} subtitlePlacement="visible" actions={<Button variant="text" size="sm" onClick={onOpenAgenda}>Ver agenda <ArrowUpRight aria-hidden="true" /></Button>}>
         {agenda.length ? <div>{agenda.map((item) => <div key={item.id} className="kds-dashboard-task-row">
           <CalendarClock size={16} aria-hidden="true" /><span><strong>{item.title}</strong><small>{[item.leadName, item.type].filter(Boolean).join(' · ')}</small></span><time dateTime={item.date}>{formatTimeBR(item.date)}</time>
         </div>)}</div> : <Text className="kds-dashboard-overview-empty">Nenhum acompanhamento pendente no período.</Text>}
       </CrmCard>}
-      <CrmCard title="A operação em movimento" subtitle="O que aconteceu mais recentemente." subtitlePlacement="visible">
-        {recentActivities.length ? <div>{recentActivities.map(({ id, title, date, icon: Icon, tone, action }) => <div className="kds-dashboard-activity-row" key={id}>
-          <span className="kds-dashboard-activity-icon" data-tone={tone}><Icon size={14} aria-hidden="true" /></span><span><strong>{title}</strong><small>{formatDateTimeFullBR(date)}</small></span>
-          {action && <IconButton variant="ghost" size="sm" aria-label={title} onClick={action}><ArrowUpRight aria-hidden="true" /></IconButton>}
-        </div>)}</div> : <Text className="kds-dashboard-overview-empty">Sem atividades recentes no período.</Text>}
-      </CrmCard>
+      {isCommercial ? (
+        <CrmCard title="De onde chegam os leads" subtitle="Canais de entrada das oportunidades.">
+          {analysis.origins.some((row) => row.leads > 0) ? (
+            <ul className="kds-dashboard-bar-list">
+              {analysis.origins.filter((row) => row.leads > 0).slice(0, 6).map((row) => (
+                <li key={row.label}>
+                  <div><span>{row.label}</span><strong>{row.leads}</strong></div>
+                  <Progress size="sm" value={row.leads} max={maxOriginLeads} />
+                </li>
+              ))}
+            </ul>
+          ) : <Text className="kds-dashboard-overview-empty">Nenhum lead por origem no período.</Text>}
+        </CrmCard>
+      ) : (
+        <DashboardActivityCard leads={recentLeads} contracts={contracts} canViewContracts={canViewContracts} onOpenLead={onOpenLead} onOpenContract={onOpenContract} />
+      )}
     </div>
 
     {canViewLeads && <CrmCard className="kds-dashboard-recent-leads" title="Conversas que merecem continuidade" subtitle="Leads recentes para acompanhar com proximidade." subtitlePlacement="visible" padding="none" actions={<Button variant="text" size="sm" onClick={onOpenLeads}>Todos os leads <ArrowUpRight aria-hidden="true" /></Button>}>
       {recentLeads.length ? <Table aria-label="Leads recentes">
         <TableHeader><TableRow><TableHead>Lead</TableHead><TableHead>Etapa</TableHead><TableHead>Responsável</TableHead><TableHead>Próximo acompanhamento</TableHead></TableRow></TableHeader>
         <TableBody>{recentLeads.map((lead) => <TableRow key={lead.id}><TableCell>
-          <div className="kds-dashboard-lead-cell"><Avatar name={lead.nome_completo} size="sm" tone="brand" />
+          <div className="kds-dashboard-lead-cell">
             <span><Button size="sm" variant="text" onClick={() => onOpenLead(lead.id)}>{lead.nome_completo}</Button><small>{lead.cidade || lead.origem || '—'}</small></span>
           </div></TableCell><TableCell><Badge tone="info">{lead.status || 'Sem etapa'}</Badge></TableCell><TableCell>{lead.responsavel || '—'}</TableCell><TableCell>{lead.proximo_retorno ? formatDateTimeFullBR(lead.proximo_retorno) : '—'}</TableCell></TableRow>)}</TableBody>
       </Table> : <Text className="kds-dashboard-overview-empty">Nenhum lead para mostrar no período.</Text>}
     </CrmCard>}
   </div>;
+}
+
+
+type ActivityCardProps = Pick<DashboardTodayProps, 'leads' | 'contracts' | 'canViewContracts' | 'onOpenLead' | 'onOpenContract'> & {
+  title?: string;
+  subtitle?: string;
+};
+
+export function DashboardActivityCard({
+  leads, contracts, canViewContracts, onOpenLead, onOpenContract,
+  title = 'A operação em movimento', subtitle = 'O que aconteceu mais recentemente.',
+}: ActivityCardProps) {
+  const recentLeads = [...leads].sort((left, right) => right.created_at.localeCompare(left.created_at)).slice(0, 3);
+  const recentContracts = canViewContracts ? [...contracts].sort((left, right) => right.created_at.localeCompare(left.created_at)).slice(0, 3) : [];
+  const recentActivities = [
+    ...recentLeads.map((lead) => ({ id: `lead-${lead.id}`, title: lead.origem ? `${lead.nome_completo} chegou por ${lead.origem}.` : `${lead.nome_completo} entrou no funil.`, date: lead.created_at, icon: UserPlus, action: () => onOpenLead(lead.id), tone: 'info' })),
+    ...recentContracts.map((contract) => ({ id: `contract-${contract.id}`, title: `Contrato ${contract.codigo_contrato} cadastrado.`, date: contract.created_at, icon: FileCheck, action: () => onOpenContract(contract), tone: 'brand' })),
+  ].sort((left, right) => right.date.localeCompare(left.date)).slice(0, 3);
+
+  return (
+    <CrmCard title={title} subtitle={subtitle} subtitlePlacement="visible">
+        {recentActivities.length ? <div>{recentActivities.map(({ id, title, date, icon: Icon, tone, action }) => <div className="kds-dashboard-activity-row" key={id}>
+          <span className="kds-dashboard-activity-icon" data-tone={tone}><Icon size={14} aria-hidden="true" /></span><span><strong>{title}</strong><small>{formatDateTimeFullBR(date)}</small></span>
+          <IconButton variant="ghost" size="sm" aria-label={title} onClick={action}><ArrowUpRight aria-hidden="true" /></IconButton>
+        </div>)}</div> : <Text className="kds-dashboard-overview-empty">Sem atividades recentes no período.</Text>}
+    </CrmCard>
+  );
 }

@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { Contract } from "../contracts";
 import type { Lead } from "../leads";
 import { deduplicateBirthdayPeople } from "../reminders";
+import { hasConfigAreaAccess } from "../config";
 import { TeamProduction } from "../production";
 import {
   getDateKey,
@@ -24,14 +25,14 @@ import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { PanelAdaptiveLoadingFrame } from '../../design-system';
-import { Alert, Button, Tabs, type TabItem } from "../../design-system";
+import { Alert, Button, DisclosureTrigger, Tabs, type TabItem } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardEventsCalendar } from "./components/DashboardEventsCalendar";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
-import { DashboardToday } from "./components/DashboardToday";
-import { DashboardAutomationCommand } from "./components/DashboardOperationsSections";
+import { DashboardActivityCard, DashboardToday } from "./components/DashboardToday";
+import { DashboardOperationsOverview } from "./components/DashboardOperationsSections";
 import {
   DashboardCommercialSections,
   DashboardResultOverview,
@@ -2235,9 +2236,9 @@ export default function DashboardScreen({
     setSelectedLead(lead);
   };
 
-  const handleAutomationNavigate = (tab: 'leads' | 'agenda' | 'config', status?: string) => {
-    onNavigateToTab?.(tab, status ? { leadsStatusFilter: [status] } : undefined);
-  };
+  const canViewAgenda = getRoleModulePermission(role, 'agenda').can_view;
+  const canViewLeads = getRoleModulePermission(role, 'leads').can_view;
+  const canViewContracts = getRoleModulePermission(role, 'contracts').can_view;
 
   const handleCreateReminderRequest = async (options: ReminderRequest) => {
     if (onCreateReminder) {
@@ -2289,6 +2290,7 @@ export default function DashboardScreen({
       >
         <DashboardHeader
           {...dashboardHeadings[dashboardView]}
+          showFilters={dashboardView !== 'production'}
           periodFilter={periodFilter}
           customStartDate={customStartDate}
           customEndDate={customEndDate}
@@ -2320,7 +2322,8 @@ export default function DashboardScreen({
           onRetry={loadData}
         />
         <Tabs items={dashboardViews} value={dashboardView} onChange={setDashboardView} ariaLabel="Visões do painel" variant="underline" />
-        {dashboardView === 'today' && <DashboardToday
+        {(dashboardView === 'today' || dashboardView === 'sales') && <DashboardToday
+          variant={dashboardView === 'sales' ? 'commercial' : 'today'}
           name={userProfile?.username}
           analysis={dashboardCommercial}
           funnel={donutChartData}
@@ -2328,9 +2331,9 @@ export default function DashboardScreen({
           contracts={filteredContracts}
           activeContracts={dashboardScopedContracts.filter((contract) => contract.status === 'Ativo')}
           period={periodFilter}
-          canViewAgenda={getRoleModulePermission(role, 'agenda').can_view}
-          canViewLeads={getRoleModulePermission(role, 'leads').can_view}
-          canViewContracts={getRoleModulePermission(role, 'contracts').can_view}
+          canViewAgenda={canViewAgenda}
+          canViewLeads={canViewLeads}
+          canViewContracts={canViewContracts}
           showFinancialMetrics={!isObserver}
           onPeriodChange={handleDashboardPeriodFilterChange}
           onOpenAgenda={() => onNavigateToTab?.('agenda')}
@@ -2341,40 +2344,60 @@ export default function DashboardScreen({
         />}
         {dashboardView === 'production' && <TeamProduction onNavigateToLead={handleNavigateToLead} />}
         {dashboardView === 'sales' && (
-          <div className="space-y-6">
-            <DashboardResultOverview analysis={dashboardCommercial} showFinancialMetrics={!isObserver} />
-            <DashboardTrendSection
-              selectedMetric={selectedMetric}
-              chartRangeInMonths={chartRangeInMonths}
-              displayedMonthlySeries={displayedMonthlySeries}
-              latestMonthlyPoint={latestMonthlyPoint}
-              previousMonthlyPoint={previousMonthlyPoint}
-              highestMonthlyPoint={highestMonthlyPoint}
-              averageMonthlyValue={averageMonthlyValue}
-              onSelectedMetricChange={setSelectedMetric}
-              onChartRangeChange={setChartRangeInMonths}
-            />
-            <DashboardCommercialSections
-              analysis={dashboardCommercial}
-              showFinancialMetrics={!isObserver}
-              onNavigateToLead={handleNavigateToLead}
-              onNavigateToStatus={handleLeadStatusSegmentClick}
-              onNavigateToTab={onNavigateToTab}
-            />
-            <DashboardDistributionSection
-              leadStatusData={leadStatusData}
-              donutChartData={donutChartData}
-              operadoraChartData={operadoraChartData}
-              onLeadStatusSegmentClick={handleLeadStatusSegmentClick}
-              onOperadoraSegmentClick={handleOperadoraSegmentClick}
-            />
-          </div>
+          <details className="kds-dashboard-details">
+            <DisclosureTrigger size="sm">Análise comercial detalhada</DisclosureTrigger>
+            <div className="kds-dashboard-overview">
+              <DashboardResultOverview analysis={dashboardCommercial} showFinancialMetrics={!isObserver} />
+              <DashboardTrendSection
+                selectedMetric={selectedMetric}
+                chartRangeInMonths={chartRangeInMonths}
+                displayedMonthlySeries={displayedMonthlySeries}
+                latestMonthlyPoint={latestMonthlyPoint}
+                previousMonthlyPoint={previousMonthlyPoint}
+                highestMonthlyPoint={highestMonthlyPoint}
+                averageMonthlyValue={averageMonthlyValue}
+                onSelectedMetricChange={setSelectedMetric}
+                onChartRangeChange={setChartRangeInMonths}
+              />
+              <DashboardCommercialSections
+                analysis={dashboardCommercial}
+                showFinancialMetrics={!isObserver}
+                onNavigateToLead={handleNavigateToLead}
+                onNavigateToStatus={handleLeadStatusSegmentClick}
+                onNavigateToTab={onNavigateToTab}
+              />
+              <DashboardDistributionSection
+                leadStatusData={leadStatusData}
+                donutChartData={donutChartData}
+                operadoraChartData={operadoraChartData}
+                onLeadStatusSegmentClick={handleLeadStatusSegmentClick}
+                onOperadoraSegmentClick={handleOperadoraSegmentClick}
+              />
+            </div>
+          </details>
         )}
 
         {showSupportingAnalysis && (
-          <div id="dashboard-supporting-analysis" className="space-y-6">
-            <DashboardAutomationCommand leads={dashboardScopedLeads} onNavigate={handleAutomationNavigate} />
-            {calendarSnapshotError && !isObserver && (
+          <div id="dashboard-supporting-analysis" className="kds-dashboard-overview">
+            <DashboardOperationsOverview
+              leads={dashboardScopedLeads}
+              analysis={dashboardCommercial}
+              agendaAvailable={!decisionSnapshotError}
+              onOpenLeads={canViewLeads ? () => onNavigateToTab?.('leads') : undefined}
+              onOpenEligible={canViewLeads ? () => onNavigateToTab?.('leads', { leadsStatusFilter: ['Contato Inicial'] }) : undefined}
+              onOpenAgenda={canViewAgenda ? () => onNavigateToTab?.('agenda') : undefined}
+              onOpenAutomation={hasConfigAreaAccess(role, getRoleModulePermission, 'automation') ? () => onNavigateToTab?.('automation-hub') : undefined}
+            />
+            <DashboardActivityCard
+              title="Acompanhamento da operação"
+              subtitle="Últimos registros da equipe no período."
+              leads={canViewLeads ? filteredLeads : []}
+              contracts={filteredContracts}
+              canViewContracts={canViewContracts}
+              onOpenLead={handleNavigateToLead}
+              onOpenContract={handleNavigateToContract}
+            />
+            {!isObserver && calendarSnapshotError && (
               <Alert
                 tone="warning"
                 title="Calendário detalhado indisponível"
@@ -2394,7 +2417,7 @@ export default function DashboardScreen({
               </Alert>
             )}
 
-            {adjustmentReminderSyncError && !isObserver && (
+            {!isObserver && adjustmentReminderSyncError && (
               <Alert
                 tone="warning"
                 title="Lembretes de reajuste não sincronizados"
@@ -2416,7 +2439,8 @@ export default function DashboardScreen({
               </Alert>
             )}
 
-            {!isObserver && (
+            {!isObserver && <details className="kds-dashboard-details">
+              <DisclosureTrigger size="sm">Calendário de reajustes e aniversários</DisclosureTrigger>
               <DashboardEventsCalendar
                 calendarMonth={calendarMonth}
                 calendarMonthLabel={calendarMonthLabel}
@@ -2437,7 +2461,7 @@ export default function DashboardScreen({
                 onNavigateToAgenda={() => onNavigateToTab?.("agenda")}
                 onCreateReminder={handleCreateReminderRequest}
               />
-            )}
+            </details>}
           </div>
         )}
         {selectedContract && (

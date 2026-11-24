@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { activateProduction, loadProductionOperators, loadProductionReport } from '../data/productionRepository';
-import { productionRange, type ProductionOperator, type ProductionReport } from '../domain/types';
+import { productionDay, productionRange, type ProductionOperator, type ProductionReport } from '../domain/types';
 
 export function useProductionOperators() {
   const [operators, setOperators] = useState<ProductionOperator[]>([]);
@@ -13,8 +13,12 @@ export function useProductionOperators() {
   return { operators, error };
 }
 
-export function useProduction() {
-  const [range, setRange] = useState(() => productionRange(1));
+export function useProduction(initialPeriod: 'day' | 'month' = 'day') {
+  const [range, setRange] = useState(() => {
+    if (initialPeriod === 'day') return productionRange(1);
+    const end = productionDay();
+    return { start: `${end.slice(0, 7)}-01`, end };
+  });
   const [operator, setOperator] = useState('');
   const [offset, setOffset] = useState(0);
   const [report, setReport] = useState<ProductionReport | null>(null);

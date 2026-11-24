@@ -3,6 +3,9 @@ import { getContractBonusSummary } from "../../../lib/contractBonus";
 import { getCommissionInstallmentSummary } from "../../../lib/contractCommission";
 import type { CommissionEvent } from "./commissionCalendarTypes";
 
+export const getCommissionContractName = (contract: CommissionContract) =>
+  contract.nome_fantasia || contract.razao_social || contract.codigo_contrato || "Contrato sem código";
+
 export const getCommissionDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

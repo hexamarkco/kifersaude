@@ -1,5 +1,5 @@
 import {
-  ActionSurface, Avatar, BrandWordmark, Button, ConfirmDialog, DesignSystemProvider, DialogTitle, Drawer,
+  ActionSurface, BrandWordmark, Button, ConfirmDialog, DesignSystemProvider, DialogTitle, Drawer,
   DrawerBody, DrawerHeader, DropdownOption, IconButton, LoadingState, PANEL_THEME_STORAGE_KEY,
   Popover, PopoverContent, PopoverTrigger, Text, WorkspaceHeader, readPanelTheme,
 } from '../design-system';
@@ -782,12 +782,9 @@ export default function Layout({
         <DrawerHeader onClose={() => setProfileOpen(false)}><DialogTitle>Minha conta</DialogTitle></DrawerHeader>
         <DrawerBody className="kds-workspace-profile">
           <div className="kds-workspace-profile-identity">
-            <Avatar name={userProfile?.username ?? 'Conta conectada'} tone="brand" size="lg" />
-            <div>
-              <Text tone="primary" weight="semibold">{userProfile?.username ?? 'Conta conectada'}</Text>
-              {roleLabel && <Text size="sm">{roleLabel}</Text>}
-              {userProfile?.email && <Text size="sm" tone="muted">{userProfile.email}</Text>}
-            </div>
+            <Text tone="primary" weight="semibold">{userProfile?.username ?? 'Conta conectada'}</Text>
+            {roleLabel && <Text size="sm">{roleLabel}</Text>}
+            {userProfile?.email && <Text size="sm" tone="muted">{userProfile.email}</Text>}
           </div>
           <div className="kds-workspace-profile-theme">
             <Text size="sm" weight="medium">Aparência do painel</Text>
@@ -844,7 +841,6 @@ export default function Layout({
             <Popover open={accountOpen} onOpenChange={setAccountOpen}>
               <PopoverTrigger>
                 <Button variant="ghost" size="sm" className="kds-workspace-account-trigger" aria-label="Menu da conta" aria-expanded={accountOpen}>
-                  <Avatar name={userProfile?.username ?? 'Conta conectada'} size="sm" tone="brand" />
                   <span className="kds-workspace-username">{userProfile?.username ?? 'Conta conectada'}{roleLabel && <small>{roleLabel}</small>}</span>
                   <ChevronDown className="kds-control-icon" aria-hidden="true" />
                 </Button>

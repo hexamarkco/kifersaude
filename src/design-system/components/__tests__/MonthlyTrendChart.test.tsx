@@ -42,3 +42,19 @@ test('fits the plot to its container without shrinking labels or dropping data p
   assert.equal(disconnected, true);
 });
 
+test('embedded chart announces the metric and uses distinct ticks for a small count', () => {
+  const view = render(<MonthlyTrendChart embedded ariaLabel="Vendas fechadas por dia" data={[
+    { label: '22/11', value: 0 },
+    { label: '23/11', value: 1 },
+  ]} />);
+  try {
+    const chart = view.container.querySelector('svg[role="img"][aria-label="Vendas fechadas por dia"]');
+    assert.ok(chart);
+    assert.ok(!view.container.textContent?.includes('Série temporal'));
+    assert.deepEqual(
+      [...chart.querySelectorAll('text[text-anchor="end"][dominant-baseline="middle"]')].map((tick) => tick.textContent),
+      ['1', '0'],
+    );
+  } finally { view.unmount(); }
+});
+

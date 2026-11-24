@@ -9,7 +9,6 @@ import {
   LoadingMonogram,
   LoadingState,
   useMinimumLoading,
-  Avatar,
   Badge,
   Button,
   DateTimePicker,
@@ -526,7 +525,6 @@ export default function WhatsAppLeadDrawer({
             <div className="space-y-5">
               <LeadDetailsPanel
                 className="whatsapp-lead-drawer-panel"
-                showAvatar={false}
                 headerMetadata={autoLinked ? <Badge tone="accent" size="sm" icon={Sparkles}>Automático</Badge> : null}
                 headerActions={<>
                 {onUnlinkLead && (
@@ -676,7 +674,6 @@ export default function WhatsAppLeadDrawer({
                 {suggestedLead && (
                   <Surface padding="sm" className="border-[var(--brand-primary-border)]">
                     <div className="flex items-start gap-3">
-                      <div className="shrink-0" aria-hidden="true"><Avatar name={suggestedLead.nome_completo || suggestedLead.telefone || '?'} size="sm" tone="brand" /></div>
                       <div className="min-w-0 flex-1">
                         <Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
                           Sugestão para esta conversa
@@ -734,7 +731,6 @@ export default function WhatsAppLeadDrawer({
                       .filter((lead) => lead.id !== suggestedLead?.id)
                       .map((lead) => (
                       <Surface key={lead.id} variant="muted" padding="sm" className="flex items-center gap-3">
-                        <div className="shrink-0" aria-hidden="true"><Avatar name={lead.nome_completo || lead.telefone || '?'} size="sm" tone="brand" /></div>
                         <div className="min-w-0 flex-1">
                           <Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]">
                             <LeadFavoriteBadge favorito={lead.favorito} />

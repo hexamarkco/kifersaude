@@ -1,51 +1,39 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, FileText, Gift, Wallet } from 'lucide-react';
 import {
-  AlertCircle,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  DollarSign,
-  FileText,
-  Gift,
-  Wallet,
-} from "lucide-react";
+  Alert, Badge, Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Field, Heading, IconButton, KpiCard, PanelAdaptiveLoadingFrame, Select, Surface, Text,
+} from '../../design-system';
+import { listActiveCommissionContracts } from './data/commissionRepository';
+import type { CommissionContract } from './domain/types';
+import CommissionMonthGrid from './components/CommissionMonthGrid';
+import CommissionSelectedDatePanel, { CommissionNotice } from './components/CommissionSelectedDatePanel';
+import { CommissionForecastList } from './components/CommissionForecastList';
+import type { CommissionEvent } from './shared/commissionCalendarTypes';
+import {
+  buildCommissionEvents, formatCommissionCurrency, getCommissionContractName, getCommissionDateKey,
+  groupCommissionEventsByDay, isCommissionSameMonth, parseCommissionDate, sumCommissionTotals,
+} from './shared/commissionCalendarUtils';
 
-import {
-  Alert,
-  Heading,
-  IconButton,
-  KpiCard,
-  OperationalMetricChip,
-  PanelAdaptiveLoadingFrame,
-  SectionHeader,
-  Surface,
-  Text,
-} from "../../design-system";
-import { listActiveCommissionContracts } from "./data/commissionRepository";
-import type { CommissionContract } from "./domain/types";
-import CommissionMonthGrid from "./components/CommissionMonthGrid";
-import CommissionSelectedDatePanel from "./components/CommissionSelectedDatePanel";
-import { CommissionForecastList } from "./components/CommissionForecastList";
-import {
-  buildCommissionEvents,
-  formatCommissionCurrency,
-  getCommissionDateKey,
-  groupCommissionEventsByDay,
-  isCommissionSameMonth,
-  parseCommissionDate,
-  sumCommissionTotals,
-} from "./shared/commissionCalendarUtils";
+const formatMonth = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+const monthOptions = Array.from({ length: 12 }, (_, month) => ({
+  value: String(month),
+  label: new Date(2026, month, 1).toLocaleDateString('pt-BR', { month: 'long' }),
+}));
 
-export default function CommissionCalendarScreen({ view, header }: { view: 'forecasts' | 'calendar'; header: ReactNode }) {
+type Props = {
+  view: 'forecasts' | 'calendar';
+  header: ReactNode;
+  onOpenContract?: (code: string) => void;
+};
+
+export default function CommissionCalendarScreen({ view, header, onOpenContract }: Props) {
   const [contracts, setContracts] = useState<CommissionContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const date = new Date();
-    date.setDate(1);
-    return date;
-  });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [date, setDate] = useState(() => new Date());
+  const [monthDraft, setMonthDraft] = useState<Date | null>(null);
+  const [detail, setDetail] = useState<CommissionEvent | null>(null);
   const contractsRequestIdRef = useRef(0);
 
   useEffect(() => {
@@ -53,281 +41,150 @@ export default function CommissionCalendarScreen({ view, header }: { view: 'fore
     const fetchContracts = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const nextContracts = await listActiveCommissionContracts();
-        if (requestId !== contractsRequestIdRef.current) return;
-        setContracts(nextContracts);
+        if (requestId === contractsRequestIdRef.current) setContracts(nextContracts);
       } catch (fetchContractsError) {
         if (requestId !== contractsRequestIdRef.current) return;
-        console.error("Erro ao carregar comissoes:", fetchContractsError);
-        setError("Não foi possível carregar as informações financeiras.");
+        console.error('Erro ao carregar comissões:', fetchContractsError);
+        setError('Não foi possível carregar as informações financeiras.');
       } finally {
-        if (requestId === contractsRequestIdRef.current) {
-          setLoading(false);
-        }
+        if (requestId === contractsRequestIdRef.current) setLoading(false);
       }
     };
-
     void fetchContracts();
-
-    return () => {
-      contractsRequestIdRef.current += 1;
-    };
+    return () => { contractsRequestIdRef.current += 1; };
   }, []);
 
+  const year = date.getFullYear();
+  const month = date.getMonth();
   const events = useMemo(() => buildCommissionEvents(contracts), [contracts]);
+  const monthEvents = useMemo(() => {
+    const firstOfMonth = new Date(year, month, 1);
+    return events.filter((event) => {
+      const eventDate = parseCommissionDate(event.date);
+      return eventDate && isCommissionSameMonth(eventDate, firstOfMonth);
+    });
+  }, [events, month, year]);
 
-  const monthEvents = useMemo(
-    () =>
-      events.filter((event) => {
-        const eventDate = parseCommissionDate(event.date);
-        return eventDate
-          ? isCommissionSameMonth(eventDate, currentMonth)
-          : false;
-      }),
-    [currentMonth, events],
-  );
+  const eventsByDay = useMemo(() => groupCommissionEventsByDay(monthEvents), [monthEvents]);
+  const totals = sumCommissionTotals(monthEvents);
+  const monthContractCount = new Set(monthEvents.map((event) => event.contract.id)).size;
+  const monthLabel = formatMonth.format(date).replace(/^./, (first) => first.toLocaleUpperCase('pt-BR'));
+  const selectedEvents = eventsByDay.get(getCommissionDateKey(date)) ?? [];
+  const goToMonth = (difference: number) => setDate((previous) => new Date(previous.getFullYear(), previous.getMonth() + difference, 1));
 
-  const eventsByDay = useMemo(
-    () => groupCommissionEventsByDay(monthEvents),
-    [monthEvents],
-  );
-  const totals = useMemo(() => sumCommissionTotals(monthEvents), [monthEvents]);
-  const monthContractCount = useMemo(
-    () => new Set(monthEvents.map((event) => event.contract.id)).size,
-    [monthEvents],
-  );
-
-  const selectedDateEvents = useMemo(() => {
-    if (!selectedDate) {
-      return [];
-    }
-
-    return eventsByDay.get(getCommissionDateKey(selectedDate)) || [];
-  }, [eventsByDay, selectedDate]);
-  const selectedDateTotals = useMemo(
-    () => sumCommissionTotals(selectedDateEvents),
-    [selectedDateEvents],
-  );
-  const hasCommissionForecast = monthEvents.some(
-    (event) => event.type === "comissao",
-  );
-  const hasBonusForecast = monthEvents.some(
-    (event) => event.type === "bonificacao",
-  );
-  const selectedDateHasCommission = selectedDateEvents.some(
-    (event) => event.type === "comissao",
-  );
-  const selectedDateHasBonus = selectedDateEvents.some(
-    (event) => event.type === "bonificacao",
-  );
-
-  const goToPreviousMonth = () => {
-    setCurrentMonth(
-      (previousMonth) =>
-        new Date(previousMonth.getFullYear(), previousMonth.getMonth() - 1, 1),
-    );
-    setSelectedDate(null);
-  };
-
-  const goToNextMonth = () => {
-    setCurrentMonth(
-      (previousMonth) =>
-        new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 1),
-    );
-    setSelectedDate(null);
-  };
-
-  const hasContractsSnapshot = contracts.length > 0;
-  const monthLabel = currentMonth
-    .toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-    .replace(/^./, (firstLetter) => firstLetter.toLocaleUpperCase("pt-BR"));
-  const selectedDateLabel = selectedDate
-    ? selectedDate.toLocaleDateString("pt-BR")
-    : null;
   const monthControl = (
-    <div className="kds-forecast-month">
-      <IconButton onClick={goToPreviousMonth} variant="ghost" size="sm" aria-label="Mês anterior"><ChevronLeft className="kds-control-icon" /></IconButton>
-      <Text as="span" size="sm" weight="medium" aria-live="polite">{monthLabel}</Text>
-      <IconButton onClick={goToNextMonth} variant="ghost" size="sm" aria-label="Próximo mês"><ChevronRight className="kds-control-icon" /></IconButton>
-    </div>
+    <Button
+      className="kds-forecast-month"
+      variant="secondary"
+      aria-label={`Selecionar competência: ${monthLabel}`}
+      aria-haspopup="dialog"
+      aria-expanded={Boolean(monthDraft)}
+      onClick={() => setMonthDraft(date)}
+    >
+      <CalendarDays className="kds-control-icon" aria-hidden="true" />
+      {monthLabel}
+      <ChevronDown className="kds-control-icon" aria-hidden="true" />
+    </Button>
   );
 
   return (
-    <div className="panel-page-shell space-y-5">
+    <div className="panel-page-shell kds-finance-page space-y-5">
       {header}
-
-      {!loading && !error && <section
-        aria-label="Resumo de previsões do mês"
-        className="kds-workspace-record-metrics"
-      >
-        <KpiCard
-          title="Comissão prevista"
-          icon={<Wallet aria-hidden="true" />}
-          trend={`Previsões de ${monthLabel}`}
-          value={(
-            <span>
-              {hasCommissionForecast ? formatCommissionCurrency(totals.commission) : "—"}
-            </span>
-          )}
-        />
-        <KpiCard
-          title="Bonificação prevista"
-          icon={<Gift aria-hidden="true" />}
-          data-tone="cyan"
-          trend="Conforme os contratos"
-          value={(
-            <span>
-              {hasBonusForecast ? formatCommissionCurrency(totals.bonus) : "—"}
-            </span>
-          )}
-        />
-        <KpiCard
-          title="Contratos com previsão"
-          icon={<FileText aria-hidden="true" />}
-          data-tone="info"
-          trend="Na competência selecionada"
-          value={String(monthContractCount)}
-        />
-        <KpiCard
-          title="Eventos previstos"
-          icon={<CalendarDays aria-hidden="true" />}
-          data-tone="purple"
-          trend="Comissões e bonificações"
-          value={String(monthEvents.length)}
-        />
-      </section>}
-
+      {!loading && !error && (
+        <section aria-label="Resumo de previsões do mês" className="kds-workspace-record-metrics">
+          <KpiCard title="Comissão prevista" icon={<Wallet aria-hidden="true" />} trend={`Previsões de ${monthOptions[month].label}`}
+            value={monthEvents.some((event) => event.type === 'comissao') ? formatCommissionCurrency(totals.commission) : '—'} />
+          <KpiCard title="Bonificação prevista" icon={<Gift aria-hidden="true" />} data-tone="cyan" trend="Conforme os contratos"
+            value={monthEvents.some((event) => event.type === 'bonificacao') ? formatCommissionCurrency(totals.bonus) : '—'} />
+          <KpiCard title="Contratos com previsão" icon={<FileText aria-hidden="true" />} data-tone="info" trend="Na competência selecionada" value={String(monthContractCount)} />
+          <KpiCard title="Eventos previstos" icon={<CalendarDays aria-hidden="true" />} data-tone="purple" trend="Comissões e bonificações" value={String(monthEvents.length)} />
+        </section>
+      )}
       <PanelAdaptiveLoadingFrame
         loading={loading}
-        label="Carregando agenda de comissões"
-        hasContent={hasContractsSnapshot}
-
-        overlayLabel="Atualizando agenda de comissões..."
-        stageClassName="min-h-[560px]"
+        label="Carregando previsões"
+        hasContent={contracts.length > 0}
+        overlayLabel="Atualizando previsões..."
+        stageClassName="min-h-80"
       >
-        {error && (
-          <Alert tone="danger" className="mb-4">
-            <span className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              {error}
-            </span>
-          </Alert>
-        )}
-
-        {!error && (view === 'forecasts' ? (
-          <CommissionForecastList events={monthEvents} monthControl={monthControl} />
-        ) : <section aria-label="Calendário financeiro" className="space-y-4">
-          <SectionHeader
-            as="h2"
-            title="Calendário financeiro"
-            description="Selecione uma data para consultar os recebimentos previstos por contrato."
+        {error ? <Alert tone="danger" role="alert">{error}</Alert> : view === 'forecasts' ? (
+          <CommissionForecastList
+            monthKey={`${year}-${month}`}
+            events={monthEvents}
+            monthControl={monthControl}
+            onSelectEvent={setDetail}
+            onOpenContract={onOpenContract}
           />
-
-          <div className="kds-forecast-calendar">
-            <Surface
-              padding="md"
-              className="min-w-0 space-y-4 2xl:sticky 2xl:top-4 2xl:self-start"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <IconButton
-                  onClick={goToPreviousMonth}
-                  variant="icon"
-                  aria-label="Mês anterior"
-                  size="md"
-                >
-                  <ChevronLeft className="kds-control-icon" />
-                </IconButton>
-
-                <div className="text-center">
-                  <Heading
-                    level={3}
-                    className="text-sm font-semibold text-[var(--text-primary)] min-[375px]:text-base sm:text-lg"
-                  >
-                    {monthLabel}
-                  </Heading>
-                  <Text className="text-xs text-[var(--text-muted)]">
-                    {monthEvents.length === 1
-                      ? "1 lançamento previsto"
-                      : `${monthEvents.length} lançamentos previstos`}
-                  </Text>
+        ) : (
+          <section aria-label="Calendário financeiro" className="kds-month-layout">
+            <Surface padding="none" className="kds-month-calendar">
+              <div className="kds-month-header">
+                <Heading level={2} size="sm">{monthLabel}</Heading>
+                <div className="kds-month-nav">
+                  <Button variant="secondary" size="sm" onClick={() => setDate(new Date())}>Hoje</Button>
+                  <IconButton size="sm" aria-label="Mês anterior" onClick={() => goToMonth(-1)}><ChevronLeft /></IconButton>
+                  <IconButton size="sm" aria-label="Próximo mês" onClick={() => goToMonth(1)}><ChevronRight /></IconButton>
                 </div>
-
-                <IconButton
-                  onClick={goToNextMonth}
-                  variant="icon"
-                  aria-label="Próximo mês"
-                  size="md"
-                >
-                  <ChevronRight className="kds-control-icon" />
-                </IconButton>
               </div>
-
-              <CommissionMonthGrid
-                currentMonth={currentMonth}
-                eventsByDay={eventsByDay}
-                onSelectDate={setSelectedDate}
-                selectedDate={selectedDate}
-              />
-
-              <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
-                <span className="inline-flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" /> Comissão
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Gift className="h-3.5 w-3.5 text-[var(--brand-primary)]" /> Bonificação
-                </span>
-              </div>
+              <CommissionMonthGrid currentMonth={date} selectedDate={date} eventsByDay={eventsByDay} onSelectDate={setDate} />
             </Surface>
-
-            <Surface padding="none" className="min-w-0 overflow-hidden">
-              <div className="space-y-3 border-b border-[var(--border-subtle)] p-4">
-                <SectionHeader
-                  as="h3"
-                  title={selectedDateLabel ? `Eventos de ${selectedDateLabel}` : "Selecione um dia"}
-                  description={
-                    selectedDate
-                      ? selectedDateEvents.length === 1
-                        ? "1 lançamento previsto para esta data."
-                        : `${selectedDateEvents.length} lançamentos previstos para esta data.`
-                      : "Escolha um dia no calendário para ver os detalhes."
-                  }
-                />
-                {(selectedDateHasCommission || selectedDateHasBonus) && (
-                  <div className="flex flex-wrap gap-2" aria-label="Totais da data selecionada">
-                    {selectedDateHasCommission && (
-                      <OperationalMetricChip
-                        size="sm"
-                        tone="gold"
-                        icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
-                        label="Comissão"
-                        value={formatCommissionCurrency(selectedDateTotals.commission)}
-                      />
-                    )}
-                    {selectedDateHasBonus && (
-                      <OperationalMetricChip
-                        size="sm"
-                        tone="accent"
-                        icon={<Gift className="h-4 w-4" aria-hidden="true" />}
-                        label="Bonificação"
-                        value={formatCommissionCurrency(selectedDateTotals.bonus)}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 2xl:max-h-[calc(100vh-22rem)] 2xl:min-h-96 2xl:overflow-y-auto">
-                <CommissionSelectedDatePanel
-                  selectedDate={selectedDate}
-                  selectedDateEvents={selectedDateEvents}
-                />
-              </div>
-            </Surface>
-          </div>
-        </section>)}
+            <CommissionSelectedDatePanel date={date} events={selectedEvents} onSelectEvent={setDetail} />
+          </section>
+        )}
       </PanelAdaptiveLoadingFrame>
+      {monthDraft && (
+        <Dialog open size="sm" className="kds-finance-dialog" onOpenChange={(open) => !open && setMonthDraft(null)}>
+          <DialogHeader onClose={() => setMonthDraft(null)}>
+            <DialogTitle>Selecionar competência</DialogTitle>
+            <DialogDescription placement="visible">Escolha o mês das previsões.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="kds-forecast-year">
+              <IconButton size="sm" aria-label="Ano anterior" onClick={() => setMonthDraft(new Date(monthDraft.getFullYear() - 1, monthDraft.getMonth(), 1))}><ChevronLeft /></IconButton>
+              <Text as="span" weight="semibold" aria-live="polite">{monthDraft.getFullYear()}</Text>
+              <IconButton size="sm" aria-label="Próximo ano" onClick={() => setMonthDraft(new Date(monthDraft.getFullYear() + 1, monthDraft.getMonth(), 1))}><ChevronRight /></IconButton>
+            </div>
+            <Field label="Mês" htmlFor="forecast-month">
+              <Select id="forecast-month" value={String(monthDraft.getMonth())} options={monthOptions} onChange={({ target }) => setMonthDraft(new Date(monthDraft.getFullYear(), Number(target.value), 1))} />
+            </Field>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setMonthDraft(null)}>Cancelar</Button>
+            <Button onClick={() => { setDate(new Date(monthDraft.getFullYear(), monthDraft.getMonth(), 1)); setMonthDraft(null); }}>Aplicar competência</Button>
+          </DialogFooter>
+        </Dialog>
+      )}
+      {detail && (
+        <Dialog open size="md" className="kds-finance-dialog" onOpenChange={(open) => !open && setDetail(null)}>
+          <DialogHeader onClose={() => setDetail(null)}>
+            <DialogTitle>{detail.type === 'comissao' ? 'Previsão de comissão' : 'Previsão de bonificação'}</DialogTitle>
+            <DialogDescription placement="visible">Consulte os dados do lançamento previsto.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="kds-forecast-detail-heading">
+              <Badge tone="neutral" className="kds-forecast-type-badge" data-forecast-type={detail.type}>{detail.type === 'comissao' ? 'Comissão' : 'Bonificação'}</Badge>
+              <Heading level={3}>{formatCommissionCurrency(detail.value)}</Heading>
+            </div>
+            <dl className="kds-forecast-detail-grid">
+              <dt>Contrato</dt><dd>{getCommissionContractName(detail.contract)}</dd>
+              {detail.contract.codigo_contrato && <><dt>Código</dt><dd>{detail.contract.codigo_contrato}</dd></>}
+              <dt>Operadora</dt><dd>{detail.contract.operadora || 'Não informada'}</dd>
+              <dt>Data prevista</dt><dd>{parseCommissionDate(detail.date)?.toLocaleDateString('pt-BR') ?? '—'}</dd>
+              <dt>Responsável</dt><dd>{detail.contract.responsavel || 'Não informado'}</dd>
+              {detail.installmentIndex && detail.installmentCount && <><dt>Parcela</dt><dd>{detail.installmentIndex} de {detail.installmentCount}</dd></>}
+            </dl>
+            <CommissionNotice />
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setDetail(null)}>Fechar</Button>
+            {onOpenContract && detail.contract.codigo_contrato && (
+              <Button onClick={() => onOpenContract(detail.contract.codigo_contrato)}>Abrir contrato</Button>
+            )}
+          </DialogFooter>
+        </Dialog>
+      )}
     </div>
   );
 }

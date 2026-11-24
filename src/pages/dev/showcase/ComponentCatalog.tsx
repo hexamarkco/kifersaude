@@ -1054,6 +1054,7 @@ function Data() {
                 options={operatorOptions}
               />
               <FilterMultiSelect
+                presentation="popover"
                 icon={Users}
                 placeholder="Operadoras"
                 dialogTitle="Filtrar por operadora"

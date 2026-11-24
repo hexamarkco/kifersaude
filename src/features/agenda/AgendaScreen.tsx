@@ -1,12 +1,10 @@
-import { useMinimumLoading, LoadingMonogram, ButtonGroup, Heading, Text } from '../../design-system';
+import { useMinimumLoading, LoadingMonogram, Heading, Text } from '../../design-system';
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type MouseEvent as ReactMouseEvent,
 } from "react";
 import { useWorkspaceCreate } from "../../hooks/useWorkspaceCreate";
 import {
@@ -15,19 +13,16 @@ import {
   Calendar,
   CalendarClock,
   CalendarPlus,
-  Check,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Circle,
-  Clock3,
   ExternalLink,
+  Eye,
+  Heart,
+  ListChecks,
+  UserRound,
   Plus,
   Search,
   SlidersHorizontal,
   Sparkles,
-  Tag,
-  Timer,
   Trash2,
   X,
 } from "lucide-react";
@@ -50,7 +45,7 @@ import {
   type ReminderLeadContext,
   type ManualReminderPrompt,
 } from "../reminders";
-import { formatDateTimeFullBR, getDateKey, isOverdue } from "../../lib/dateUtils";
+import { convertLocalToUTC, formatDateTimeFullBR, formatTimeBR, getDateKey, isOverdue } from "../../lib/dateUtils";
 import {
   addBusinessDaysSkippingWeekends,
   formatEstimatedTime,
@@ -58,9 +53,12 @@ import {
 import { syncLeadNextReturnFromUpcomingReminder } from "../../lib/leadReminderUtils";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import {
+  ActionSurface,
   Alert,
   Badge,
   Button,
+  Checkbox,
+  DateTimePicker,
   Dialog,
   DialogBody,
   DialogDescription,
@@ -71,15 +69,12 @@ import {
   Field,
   Input,
   LoadingState,
-  OperationalMetricChip,
   PageHeader,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  SectionHeader,
+  RecordActions,
+  Select,
+  type RecordAction,
   Surface,
   Textarea,
-  type SurfaceVariant,
   IconButton,
   FilterSelect,
   Tabs,
@@ -88,6 +83,8 @@ import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
 import { LeadFavoriteBadge } from "../../components/LeadFavoriteStar";
 import { toast } from "../../lib/toast";
+import { agendaDateKey, todayForAgenda } from "./agendaDates";
+import { AgendaCalendar } from "./components/AgendaCalendar";
 import FollowUpAgendaOrganizerModal from "./components/FollowUpAgendaOrganizerModal";
 
 type AgendaStatusFilter = "todos" | "nao-lidos" | "lidos";
@@ -102,29 +99,15 @@ const TIME_FILTER_OPTIONS = [
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "all", label: "Todas prioridades" },
+  { value: "all", label: "Todas as prioridades" },
   { value: "baixa", label: "Baixa" },
   { value: "normal", label: "Normal" },
   { value: "alta", label: "Alta" },
 ];
 
-const AGENDA_DAY_SECTION_STYLES = {
-  overdue: {
-    title: "Atrasados",
-    description: "Exigem atenção primeiro",
-    tone: "danger" as const,
-  },
-  pending: {
-    title: "Pendentes",
-    description: "Próximas ações do dia",
-    tone: "accent" as const,
-  },
-  completed: {
-    title: "Concluídos",
-    description: "Itens já finalizados",
-    tone: "success" as const,
-  },
-};
+const EMPTY_FILTERS = { searchQuery: "", typeFilter: "all", priorityFilter: "all", timeFilter: "todos" as AgendaTimeFilter };
+const SCHEDULE_OFFSETS = [1, 2, 3, 4, 5] as const;
+const TASK_PRIORITIES = PRIORITY_OPTIONS.filter(({ value }) => value !== "all");
 
 const formatAgendaCount = (count: number, singular: string, plural: string) =>
   `${count} ${count === 1 ? singular : plural}`;
@@ -133,7 +116,7 @@ const getReminderTypeLabel = (type: string) =>
   type.trim().toLocaleLowerCase("pt-BR") === "follow_up" ? "Follow-up" : type;
 
 export default function AgendaScreen() {
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState<typeof EMPTY_FILTERS | null>(null);
   const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,17 +126,7 @@ export default function AgendaScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const date = new Date();
-    date.setDate(1);
-    date.setHours(0, 0, 0, 0);
-    return date;
-  });
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
-  });
+  const [selectedDate, setSelectedDate] = useState(todayForAgenda);
   const [leadsMap, setLeadsMap] = useState<Map<string, ReminderLeadContext>>(new Map());
   const [contractsMap, setContractsMap] = useState<Map<string, ReminderContractContext>>(new Map());
   const [loadingLeadId, setLoadingLeadId] = useState<string | null>(null);
@@ -165,16 +138,27 @@ export default function AgendaScreen() {
     reminderId: string;
     daysAhead: 1 | 2 | 3 | 4 | 5;
   } | null>(null);
-  const [quickScheduleDropdownId, setQuickScheduleDropdownId] = useState<string | null>(null);
-  const [reschedulingReminderId, setReschedulingReminderId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [reschedule, setReschedule] = useState<{ id: string; date: string; time: string } | null>(null);
   const [reschedulingInFlightId, setReschedulingInFlightId] = useState<string | null>(null);
   const [reminderPendingDeletion, setReminderPendingDeletion] = useState<ReminderListItem | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
-  const openNewTask = useCallback(() => setIsAddTaskModalOpen(true), []);
-  useWorkspaceCreate(!isAddTaskModalOpen, openNewTask);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskDate, setNewTaskDate] = useState("");
+  const [newTaskTime, setNewTaskTime] = useState("12:00");
+  const [newTaskPriority, setNewTaskPriority] = useState("normal");
+  const openNewTask = useCallback((date = selectedDate, time = "12:00") => {
+    setNewTaskTitle("");
+    setNewTaskDescription("");
+    setNewTaskDate(agendaDateKey(date));
+    setNewTaskTime(time);
+    setNewTaskPriority("normal");
+    setError(null);
+    setIsAddTaskModalOpen(true);
+  }, [selectedDate]);
+  useWorkspaceCreate(!isAddTaskModalOpen, openNewTask);
   const [savingTask, setSavingTask] = useState(false);
   const [updatingReminderIds, setUpdatingReminderIds] = useState<Set<string>>(new Set());
   const [markingAllFiltered, setMarkingAllFiltered] = useState(false);
@@ -696,7 +680,7 @@ export default function AgendaScreen() {
     }
   };
 
-  const handleRescheduleReminder = async (reminderId: string, newDate: Date) => {
+  const handleRescheduleReminder = async (reminderId: string, date: string, time: string) => {
     if (reschedulingInFlightIdRef.current) {
       return;
     }
@@ -707,10 +691,7 @@ export default function AgendaScreen() {
         return;
       }
 
-      const reminderDateTime = new Date(reminder.data_lembrete);
-      const newDateTime = new Date(newDate);
-      newDateTime.setHours(reminderDateTime.getHours(), reminderDateTime.getMinutes(), 0, 0);
-      const newDateIso = newDateTime.toISOString();
+      const newDateIso = convertLocalToUTC(`${date}T${time}`);
 
       reschedulingInFlightIdRef.current = reminderId;
       setReschedulingInFlightId(reminderId);
@@ -730,7 +711,7 @@ export default function AgendaScreen() {
         }
       }
 
-      setReschedulingReminderId(null);
+      setReschedule(null);
       setReminders((current) =>
         current.map((item) =>
           item.id === reminderId
@@ -753,7 +734,7 @@ export default function AgendaScreen() {
   const handleAddTask = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (savingTaskRef.current || !newTaskTitle.trim()) {
+    if (savingTaskRef.current || !newTaskTitle.trim() || !newTaskDate || !newTaskTime) {
       return;
     }
 
@@ -761,17 +742,14 @@ export default function AgendaScreen() {
     setSavingTask(true);
     setError(null);
 
-    const dueDate = new Date(selectedDate);
-    dueDate.setHours(12, 0, 0, 0);
-
     try {
       const createdTask = await createReminder({
         tipo: "Tarefa",
         titulo: newTaskTitle.trim(),
         descricao: newTaskDescription.trim() || null,
-        data_lembrete: dueDate.toISOString(),
+        data_lembrete: convertLocalToUTC(`${newTaskDate}T${newTaskTime}`),
         lido: false,
-        prioridade: "normal",
+        prioridade: newTaskPriority,
       });
 
       if (!createdTask) {
@@ -877,35 +855,18 @@ export default function AgendaScreen() {
     const normalizedDate = new Date(date);
     normalizedDate.setHours(0, 0, 0, 0);
     setSelectedDate(normalizedDate);
-    setCurrentMonth(new Date(normalizedDate.getFullYear(), normalizedDate.getMonth(), 1));
   };
 
   const moveCalendar = (direction: -1 | 1) => {
     if (calendarView === 'week') {
       selectDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + direction * 7));
     } else {
-      selectDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1));
+      selectDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + direction, 1));
     }
   };
 
   const goToToday = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    selectDate(today);
-  };
-
-  const handleDayClick = async (date: Date) => {
-    if (reschedulingInFlightIdRef.current) {
-      return;
-    }
-
-    if (reschedulingReminderId) {
-      await handleRescheduleReminder(reschedulingReminderId, date);
-      return;
-    }
-
-    setError(null);
-    selectDate(date);
+    selectDate(todayForAgenda());
   };
 
   const closeAddTaskModal = () => {
@@ -961,11 +922,6 @@ export default function AgendaScreen() {
 
   const matchesNonStatusFilters = useCallback(
     (reminder: ReminderListItem) => {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(now);
-      todayEnd.setHours(23, 59, 59, 999);
-
       if (typeFilter !== "all" && reminder.tipo !== typeFilter) {
         return false;
       }
@@ -975,19 +931,12 @@ export default function AgendaScreen() {
       }
 
       if (timeFilter !== "todos") {
-        const reminderDate = new Date(reminder.data_lembrete);
-        if (timeFilter === "atrasados") {
-          if (!reminder.lido && reminderDate < now) return true;
-          return false;
-        }
-        if (timeFilter === "dia") {
-          if (reminderDate >= now && reminderDate <= todayEnd) return true;
-          return false;
-        }
-        if (timeFilter === "futuros") {
-          if (reminderDate > todayEnd) return true;
-          return false;
-        }
+        const reminderDay = getDateKey(reminder.data_lembrete);
+        const today = getDateKey(new Date());
+        if (!reminderDay) return false;
+        if (timeFilter === "atrasados" && (reminder.lido || reminderDay >= today)) return false;
+        if (timeFilter === "dia" && reminderDay !== today) return false;
+        if (timeFilter === "futuros" && reminderDay <= today) return false;
       }
 
       if (!searchQuery.trim()) {
@@ -1007,13 +956,6 @@ export default function AgendaScreen() {
     [getLeadIdForReminder, leadsMap, priorityFilter, searchQuery, timeFilter, typeFilter],
   );
 
-  // Ignora o statusFilter de proposito: usado para contar pendentes/concluidos/atrasados
-  // nas abas e no cabecalho independente de qual aba esta ativa no momento.
-  const statusAgnosticFilteredReminders = useMemo(
-    () => reminders.filter(matchesNonStatusFilters),
-    [matchesNonStatusFilters, reminders],
-  );
-
   const filteredReminders = useMemo(() => {
     return reminders
       .filter((reminder) => {
@@ -1030,19 +972,6 @@ export default function AgendaScreen() {
       .sort(compareRemindersByDueAtThenAlphabetical);
   }, [compareRemindersByDueAtThenAlphabetical, matchesNonStatusFilters, reminders, statusFilter]);
 
-  const filteredMonthReminders = useMemo(() => {
-    const currentMonthKey = `${currentMonth.getFullYear()}-${currentMonth.getMonth()}`;
-
-    return filteredReminders.filter((reminder) => {
-      const reminderDate = new Date(reminder.data_lembrete);
-      if (Number.isNaN(reminderDate.getTime())) {
-        return false;
-      }
-
-      return `${reminderDate.getFullYear()}-${reminderDate.getMonth()}` === currentMonthKey;
-    });
-  }, [currentMonth, filteredReminders]);
-
   const remindersByDay = useMemo(() => {
     const map = new Map<string, ReminderListItem[]>();
 
@@ -1050,82 +979,45 @@ export default function AgendaScreen() {
       const dateKey = getDateKey(reminder.data_lembrete);
       const items = map.get(dateKey) ?? [];
       items.push(reminder);
-      items.sort(compareRemindersByDueAtThenAlphabetical);
       map.set(dateKey, items);
     });
 
     return map;
-  }, [compareRemindersByDueAtThenAlphabetical, filteredReminders]);
+  }, [filteredReminders]);
 
-  const selectedDateKey = getDateKey(selectedDate);
+  const selectedDateKey = agendaDateKey(selectedDate);
 
-  const selectedDateReminders = useMemo(
-    () => filteredReminders.filter((reminder) => getDateKey(reminder.data_lembrete) === selectedDateKey),
-    [filteredReminders, selectedDateKey],
-  );
+  const selectedDateReminders = remindersByDay.get(selectedDateKey) ?? [];
+  const detail = reminders.find((item) => item.id === detailId);
+  const detailLeadId = detail ? getLeadIdForReminder(detail) : undefined;
+  const detailLead = detailLeadId ? leadsMap.get(detailLeadId) : undefined;
+  const detailContract = detail?.contract_id ? contractsMap.get(detail.contract_id) : undefined;
+  const rescheduledItem = reschedule ? reminders.find((item) => item.id === reschedule.id) : undefined;
+  const hasAdvancedFilters = typeFilter !== "all" || timeFilter !== "todos";
+  const hasActiveFilters = hasAdvancedFilters || priorityFilter !== "all" || searchQuery.trim() !== "";
 
-  const pendingSelectedReminders = selectedDateReminders.filter((item) => !item.lido);
-  const completedSelectedReminders = selectedDateReminders.filter((item) => item.lido);
-  const overdueSelectedReminders = pendingSelectedReminders.filter((item) => isOverdue(item.data_lembrete));
-  const activeSelectedReminders = pendingSelectedReminders.filter((item) => !isOverdue(item.data_lembrete));
-  const selectedDateSections = [
-    {
-      id: "overdue" as const,
-      ...AGENDA_DAY_SECTION_STYLES.overdue,
-      items: overdueSelectedReminders,
-    },
-    {
-      id: "pending" as const,
-      ...AGENDA_DAY_SECTION_STYLES.pending,
-      items: activeSelectedReminders,
-    },
-    {
-      id: "completed" as const,
-      ...AGENDA_DAY_SECTION_STYLES.completed,
-      items: completedSelectedReminders,
-    },
-  ].filter((section) => section.items.length > 0);
-  const selectedDateDensity = selectedDateReminders.length >= 18 ? "compact" : selectedDateReminders.length >= 8 ? "comfortable" : "spacious";
-
-  const pendingFilteredCount = statusAgnosticFilteredReminders.filter((item) => !item.lido).length;
-  const completedFilteredCount = statusAgnosticFilteredReminders.filter((item) => item.lido).length;
-  const overdueFilteredCount = statusAgnosticFilteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
-  const hasActiveFilters = [
-    typeFilter !== "all",
-    priorityFilter !== "all",
-    timeFilter !== "todos",
-    searchQuery.trim() !== "",
-  ].filter(Boolean).length;
-
-  const getCalendarCellClass = ({
-    isSelected,
-    isToday,
-    hasItems,
-    isRescheduling,
-  }: {
-    isSelected: boolean;
-    isToday: boolean;
-    hasItems: boolean;
-    isRescheduling: boolean;
-  }) => {
-    if (isSelected) {
-      return "kds-calendar-day kds-calendar-day-selected";
-    }
-
-    if (isToday) {
-      return "kds-calendar-day kds-calendar-day-today";
-    }
-
-    if (hasItems) {
-      return "kds-calendar-day kds-surface-muted";
-    }
-
-    if (isRescheduling) {
-      return "kds-calendar-day kds-surface-strong";
-    }
-
-    return "kds-calendar-day";
+  const beginReschedule = (reminder: ReminderListItem) => {
+    const date = getDateKey(reminder.data_lembrete);
+    const time = formatTimeBR(reminder.data_lembrete);
+    setDetailId(null);
+    setReschedule({ id: reminder.id, date: date || selectedDateKey, time: time || "12:00" });
   };
+
+  const reminderBusy = (id: string) =>
+    updatingReminderIds.has(id) || quickSchedulingAction?.reminderId === id || Boolean(reschedulingInFlightId) || markingAllFiltered;
+
+  const openFilters = () => setFilterDraft({ searchQuery, typeFilter, priorityFilter, timeFilter });
+
+  const pageActions: RecordAction[] = [
+    { label: "Organizar follow-ups", icon: Sparkles, onClick: () => setOrganizerOpen(true) },
+    ...(statusFilter === "todos" ? [{ label: "Filtrar agenda", icon: SlidersHorizontal, onClick: openFilters }] : []),
+    ...(filteredReminders.some((item) => !item.lido) ? [{
+      label: "Marcar itens filtrados como lidos",
+      icon: ListChecks,
+      onClick: () => void handleMarkAllFilteredAsRead(),
+      disabled: markingAllFiltered || updatingReminderIds.size > 0,
+    }] : []),
+  ];
 
   const getReminderPriorityTone = (priority: string): AgendaTone => {
     const tones = {
@@ -1155,24 +1047,6 @@ export default function AgendaScreen() {
     return tones[label as keyof typeof tones] ?? "neutral";
   };
 
-  const getReminderTypeSurface = (type: string): SurfaceVariant => {
-    const tone = getReminderTypeTone(type);
-    if (tone === "neutral") return "muted";
-    if (tone === "accent") return "strong";
-    return tone;
-  };
-
-  const reminderIconChipClasses: Record<SurfaceVariant, string> = {
-    default: "bg-[var(--bg-hover)] text-[var(--text-secondary)]",
-    muted: "bg-[var(--bg-hover)] text-[var(--text-secondary)]",
-    strong: "bg-[var(--surface-strong-bg)] text-[var(--text-secondary)]",
-    hero: "bg-[var(--surface-hero-bg)] text-[var(--text-secondary)]",
-    danger: "bg-[var(--danger-soft)] text-[var(--danger-text)]",
-    warning: "bg-[var(--warning-soft)] text-[var(--warning-text)]",
-    success: "bg-[var(--success-soft)] text-[var(--success-text)]",
-    info: "bg-[var(--info-soft)] text-[var(--info-text)]",
-  };
-
   const getReminderIcon = (type: string) => {
     const icons = {
       "Documentos pendentes": AlertCircle,
@@ -1186,326 +1060,66 @@ export default function AgendaScreen() {
 
     const label = getReminderTypeLabel(type);
     const Icon = icons[label as keyof typeof icons] ?? Bell;
-    return <Icon className="h-5 w-5" />;
+    return <Icon className="h-4 w-4" aria-hidden="true" />;
   };
 
-  const getReminderCardClass = (reminder: ReminderListItem) => {
-    if (reminder.lido) {
-      return "kds-surface-success";
-    }
+  const renderReminderRow = (reminder: ReminderListItem) => {
+    const leadId = getLeadIdForReminder(reminder);
+    const lead = leadId ? leadsMap.get(leadId) : undefined;
+    const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
+    const overdue = !reminder.lido && isOverdue(reminder.data_lembrete);
+    const dueDay = getDateKey(reminder.data_lembrete);
+    const dueTime = formatTimeBR(reminder.data_lembrete);
+    const showDay = statusFilter !== "todos" && dueDay && dueDay !== getDateKey(new Date());
+    const busy = reminderBusy(reminder.id);
+    const actions: RecordAction[] = [
+      { label: "Ver detalhes", icon: Eye, onClick: () => setDetailId(reminder.id) },
+    ];
 
-    if (isOverdue(reminder.data_lembrete)) {
-      return "kds-surface-danger";
-    }
-
-    return "kds-surface-muted";
-  };
-
-  const weekStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - selectedDate.getDay());
-  const weekDates = Array.from({ length: 7 }, (_, index) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + index));
-  const weekLabel = `${weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} a ${weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`;
-  const weekRemindersCount = weekDates.reduce((sum, date) => sum + (remindersByDay.get(getDateKey(date))?.length ?? 0), 0);
-
-  const renderCalendar = () => {
-    const cells = [];
-    const firstWeekday = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-    const totalDays = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-    const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-
-    for (let index = 0; calendarView === 'month' && index < firstWeekday; index += 1) {
-      cells.push(<div key={`empty-${index}`} className="aspect-square" />);
-    }
-
-    const dates = calendarView === 'week' ? weekDates : Array.from({ length: totalDays }, (_, index) => new Date(currentMonth.getFullYear(), currentMonth.getMonth(), index + 1));
-    for (const cellDate of dates) {
-      const day = cellDate.getDate();
-      const dayKey = getDateKey(cellDate);
-      const dayReminders = remindersByDay.get(dayKey) ?? [];
-      const pendingCount = dayReminders.filter((item) => !item.lido).length;
-      const doneCount = dayReminders.filter((item) => item.lido).length;
-      const totalCount = dayReminders.length;
-      const isToday = getDateKey(new Date()) === dayKey;
-      const isSelected = selectedDateKey === dayKey;
-      const stateClass = getCalendarCellClass({
-        isSelected,
-        isToday,
-        hasItems: totalCount > 0,
-        isRescheduling: Boolean(reschedulingReminderId),
-      });
-
-      cells.push(
-        <Button variant="ghost"
-          key={dayKey}
-          type="button"
-          onClick={() => {
-            void handleDayClick(cellDate);
-          }}
-          disabled={Boolean(reschedulingInFlightId)}
-          className={`kds-action-surface kds-calendar-day border transition-colors ${stateClass}`}
-          aria-pressed={isSelected}
-          aria-label={`${day} de ${cellDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${formatAgendaCount(totalCount, "item", "itens")}`}
-        >
-          <span className="kds-agenda-calendar-day-number">{day}</span>
-          {totalCount > 0 && (
-            <span
-              className={`kds-calendar-event-count ${
-                isSelected
-                  ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
-                  : "bg-[var(--brand-primary)] text-[var(--text-on-brand)]"
-              }`}
-              title={`${formatAgendaCount(pendingCount, "pendente", "pendentes")}, ${formatAgendaCount(doneCount, "concluído", "concluídos")}`}
-            >
-              {totalCount}
-            </span>
-          )}
-          {dayReminders.length > 0 && <span className="kds-agenda-week-events">{dayReminders.slice(0, calendarView === 'week' ? 3 : 2).map((item) => <span key={item.id}>{item.titulo}</span>)}</span>}
-        </Button>,
+    if (!reminder.lido) {
+      actions.push(
+        { label: "Reagendar item", icon: Calendar, disabled: busy, onClick: () => beginReschedule(reminder) },
+        ...SCHEDULE_OFFSETS.map((days) => ({
+          label: `Concluir e agendar em +${days} ${days === 1 ? "dia útil" : "dias úteis"}`,
+          icon: CalendarClock,
+          disabled: busy,
+          onClick: () => void handleQuickSchedule(reminder, days),
+        })),
       );
     }
 
-    return (
-      <div className={`kds-calendar-grid kds-agenda-calendar-grid grid grid-cols-7 ${calendarView === 'week' ? 'kds-agenda-week-grid' : ''}`}>
-        {weekDays.map((day) => (
-          <div
-            key={day}
-            className="text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
-            {day}
-          </div>
-        ))}
-        {cells}
-      </div>
-    );
-  };
+    if (leadId) {
+      actions.push(
+        { label: "Abrir cadastro do lead", icon: UserRound, onClick: () => void handleOpenLead(leadId) },
+        { label: "Abrir WhatsApp oficial", icon: ExternalLink, disabled: !lead?.telefone, onClick: () => void openLeadInOfficialWhatsApp(lead ?? null) },
+        { label: "Marcar lead como perdido e limpar lembretes", icon: X, destructive: true, disabled: markingLostLeadId === leadId, onClick: () => void handleMarkLeadAsLost(reminder) },
+      );
+    }
 
-  const renderReminderCard = (reminder: ReminderListItem) => {
-    const leadId = getLeadIdForReminder(reminder);
-    const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
-    const leadInfo = leadId ? leadsMap.get(leadId) : undefined;
-    const hasLeadPhone = Boolean(leadInfo?.telefone);
-    const overdue = isOverdue(reminder.data_lembrete);
-    const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
-    const canOpenLead = Boolean(leadId);
-    const contextBadge = reminder.lead_id || reminder.contract_id
-      ? (
-          <AgendaReminderContextLink
-            leadId={reminder.lead_id ?? contract?.lead_id}
-            contractId={reminder.contract_id}
-            leadName={leadInfo?.nome_completo}
-            leadFavorito={leadInfo?.favorito}
-            isLoading={loadingLeadId === leadId}
-          />
-        )
-      : null;
-
-    const handleCardOpen = () => {
-      if (!leadId) {
-        return;
-      }
-
-      void handleOpenLead(leadId);
-    };
-
-    const handleCardKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-      if (!canOpenLead || event.target !== event.currentTarget) {
-        return;
-      }
-
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        void handleOpenLead(leadId!);
-      }
-    };
-
-    const handleCardAction = (callback: () => unknown | Promise<unknown>) =>
-      (event: ReactMouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        void callback();
-      };
+    actions.push({ label: "Excluir item", icon: Trash2, destructive: true, disabled: busy, onClick: () => handleDelete(reminder.id) });
 
     return (
-      <article
-        key={reminder.id}
-        className={`kds-surface border p-3 text-[var(--text-secondary)] transition-colors ${getReminderCardClass(reminder)} ${canOpenLead ? "kds-action-surface" : ""}`}
-        onClick={canOpenLead ? handleCardOpen : undefined}
-        onKeyDown={canOpenLead ? handleCardKeyDown : undefined}
-        role={canOpenLead ? "button" : undefined}
-        tabIndex={canOpenLead ? 0 : undefined}
-        aria-label={canOpenLead ? `Abrir edicao do lead ${leadInfo?.nome_completo ?? ""}`.trim() : undefined}
-      >
-        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-          <span
-            className={`kds-agenda-reminder-icon flex h-10 w-10 shrink-0 items-center justify-center ${reminderIconChipClasses[reminder.lido ? "success" : getReminderTypeSurface(reminder.tipo)]}`}
-          >
-            {getReminderIcon(reminder.tipo)}
-          </span>
-
-          <div className="min-w-0 flex-1">
-            <div className="space-y-2">
-              <div>
-                <Heading level={3} className="line-clamp-2 text-sm font-bold leading-5 text-[var(--text-primary)]">
-                  {reminder.titulo}
-                </Heading>
-                {reminder.descricao && (
-                  <Text className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-secondary)]">
-                    {reminder.descricao}
-                  </Text>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                {contextBadge}
-                {reminder.prioridade && (
-                  <Badge size="sm" tone={getReminderPriorityTone(reminder.prioridade)}>
-                    {reminder.prioridade}
-                  </Badge>
-                )}
-                <Badge size="sm" tone={getReminderTypeTone(reminder.tipo)}>
-                  {getReminderTypeLabel(reminder.tipo)}
-                </Badge>
-                {reminder.tempo_estimado_minutos && (
-                  <Badge
-                    size="sm"
-                    className="gap-1"
-                    tone="info"
-                  >
-                    <Timer className="h-3 w-3" />
-                    <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
-                  </Badge>
-                )}
-                {overdue && !reminder.lido && (
-                  <Badge
-                    size="sm"
-                    tone="danger"
-                  >
-                    Atrasado
-                  </Badge>
-                )}
-                {reminder.tags?.map((tag, index) => (
-                  <Badge
-                    size="sm"
-                    key={`${tag}-${index}`}
-                    className="gap-1 font-medium"
-                    tone="info"
-                  >
-                    <Tag className="h-3 w-3" />
-                    <span>{tag}</span>
-                  </Badge>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
-                <div className="flex items-center gap-1">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <ButtonGroup size="md" aria-label="Ações do lembrete" className="col-span-2 ml-auto flex max-w-full flex-wrap justify-end overflow-visible sm:col-span-1 sm:self-start">
-                <IconButton
-                  onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
-                  disabled={!hasLeadPhone}
-                  variant="soft"
-                  
-                  title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone não disponível"}
-                  aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone não disponível"}
-                 size="md">
-                  <ExternalLink aria-hidden="true" />
-                </IconButton>
-                {!reminder.lido && (
-                  <>
-                    <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
-                      <PopoverTrigger className="inline-flex">
-                        <IconButton loading={isQuickSchedulingCurrentReminder} type="button" disabled={isQuickSchedulingCurrentReminder || updatingReminderIds.has(reminder.id) || Boolean(reschedulingInFlightId) || markingAllFiltered} variant="primary" title="Agendar dias úteis e marcar atual como lido" aria-label="Agendar dias úteis e marcar atual como lido" size="md">
-                          {(
-                            <CalendarClock className="kds-control-icon" aria-hidden="true" />
-                          )}
-                        </IconButton>
-                      </PopoverTrigger>
-                      <PopoverContent aria-label="Selecionar dias para agendar" className="w-36 p-1">
-                        <div className="flex flex-col gap-1">
-                          {[1, 2, 3, 4, 5].map((days) => (
-                            <Button
-                              key={days}
-                              type="button"
-                              onClick={handleCardAction(() => {
-                                setQuickScheduleDropdownId(null);
-                                handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
-                              })}
-                              disabled={isQuickSchedulingCurrentReminder || updatingReminderIds.has(reminder.id) || Boolean(reschedulingInFlightId) || markingAllFiltered}
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start text-left"
-                            >
-                              <CalendarPlus className="kds-control-icon" />
-                              <span>+{days} dia{days > 1 ? "s" : ""}</span>
-                            </Button>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </>
-                )}
-                <IconButton
-                  onClick={handleCardAction(() => handleMarkAsRead(reminder.id, reminder.lido))}
-                  variant={reminder.lido ? "secondary" : "soft"}
-                  loading={updatingReminderIds.has(reminder.id)}
-                  disabled={updatingReminderIds.has(reminder.id) || isQuickSchedulingCurrentReminder || Boolean(reschedulingInFlightId) || markingAllFiltered}
-                  title={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
-                  aria-label={reminder.lido ? "Marcar como não lido" : "Marcar como lido"}
-                 size="md">
-                  {!updatingReminderIds.has(reminder.id) && <Check aria-hidden="true" />}
-                </IconButton>
-                {!reminder.lido && (
-                  <IconButton
-                    onClick={handleCardAction(() => {
-                      setStatusFilter("todos");
-                      setReschedulingReminderId(reminder.id);
-                    })}
-                    variant="secondary"
-                    disabled={updatingReminderIds.has(reminder.id) || isQuickSchedulingCurrentReminder || Boolean(reschedulingInFlightId) || markingAllFiltered}
-                    title="Reagendar item"
-                    aria-label="Reagendar item"
-                   size="md">
-                    <Calendar aria-hidden="true" />
-                  </IconButton>
-                )}
-                {leadId && (
-                  <IconButton
-                    onClick={handleCardAction(() => handleMarkLeadAsLost(reminder))}
-                    variant="danger"
-                    
-                    title="Marcar lead como perdido e limpar lembretes"
-                    aria-label="Marcar lead como perdido e limpar lembretes"
-                    disabled={markingLostLeadId === leadId}
-                    loading={markingLostLeadId === leadId}
-                   size="md">
-                    {markingLostLeadId !== leadId && <X aria-hidden="true" />}
-                  </IconButton>
-                )}
-                <IconButton
-                  onClick={handleCardAction(() => handleDelete(reminder.id))}
-                  variant="danger"
-                  
-                  title="Excluir item"
-                  aria-label="Excluir item"
-                 size="md">
-                  <Trash2 aria-hidden="true" />
-                </IconButton>
-          </ButtonGroup>
-        </div>
+      <article key={reminder.id} className="kds-agenda-task-row" data-completed={reminder.lido}>
+        <Checkbox touchTarget checked={reminder.lido} disabled={busy} aria-label={`${reminder.lido ? "Reabrir" : "Concluir"} ${reminder.titulo}`} onChange={() => void handleMarkAsRead(reminder.id, reminder.lido)} />
+        <ActionSurface variant="plain" padding="none" className="kds-agenda-task-copy" onClick={() => setDetailId(reminder.id)}>
+          <strong>{reminder.titulo}</strong>
+          <small>
+            {lead?.nome_completo && <><LeadFavoriteBadge favorito={lead.favorito} />{lead.nome_completo}<span aria-hidden="true">·</span></>}
+            {!lead?.nome_completo && contract?.codigo_contrato && <>{contract.codigo_contrato}<span aria-hidden="true">·</span></>}
+            {getReminderTypeLabel(reminder.tipo)}
+          </small>
+        </ActionSurface>
+        <time className="kds-agenda-task-time" data-overdue={overdue} dateTime={reminder.data_lembrete} title={dueDay ? formatDateTimeFullBR(reminder.data_lembrete) : undefined}>
+          {overdue ? "Atrasado" : showDay ? `${dueDay.slice(8, 10)}/${dueDay.slice(5, 7)} · ${dueTime}` : dueTime || "Sem horário"}
+        </time>
+        <RecordActions label={`Ações de ${reminder.titulo}`} actions={actions} visibleCount={0} />
       </article>
     );
   };
 
   const hasAgendaSnapshot = reminders.length > 0;
-  const selectedDateLabel = selectedDate.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const selectedDateLabel = selectedDate.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+  const showCalendar = statusFilter === "todos";
   return (
     <>
       {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." className="min-h-96" fallback={() => (
@@ -1514,13 +1128,9 @@ export default function AgendaScreen() {
           title={statusFilter === 'nao-lidos' ? 'O que precisa acontecer.' : statusFilter === 'lidos' ? 'O trabalho que já foi feito.' : calendarView === 'week' ? 'Uma semana com mais clareza.' : 'Sua rotina, bem organizada.'}
           description={statusFilter === 'nao-lidos' ? 'Priorize os retornos e mantenha o acompanhamento em dia.' : statusFilter === 'lidos' ? 'Consulte o histórico de tarefas e lembretes concluídos.' : calendarView === 'week' ? 'Atendimentos, tarefas e follow-ups distribuídos no tempo.' : 'Encontre tempo para o que merece a sua atenção.'}
           actions={(
-            <div role="group" aria-label="Ações da agenda" className="kds-agenda-header-actions flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-              <Button onClick={() => setOrganizerOpen(true)} variant="secondary" size="md" aria-label="Organizar follow-ups">
-                <Sparkles className="kds-control-icon" aria-hidden="true" />
-                <span className="kds-agenda-organize-label-full">Organizar follow-ups</span>
-                <span className="kds-agenda-organize-label-compact">Organizar</span>
-              </Button>
-              <Button onClick={openNewTask} variant="primary" size="md">
+            <div role="group" aria-label="Ações da agenda" className="kds-agenda-header-actions">
+              <RecordActions label="Ações da página" actions={pageActions} visibleCount={0} />
+              <Button onClick={() => openNewTask()} variant="primary" size="md">
                 <Plus className="kds-control-icon" aria-hidden="true" />
                 Nova tarefa
               </Button>
@@ -1532,8 +1142,8 @@ export default function AgendaScreen() {
             items={[
               { id: "month", label: "Calendário" },
               { id: "week", label: "Semana" },
-              { id: "nao-lidos", label: "Pendentes", badge: pendingFilteredCount },
-              { id: "lidos", label: "Concluídos", badge: completedFilteredCount },
+              { id: "nao-lidos", label: "Pendentes" },
+              { id: "lidos", label: "Concluídos" },
             ]}
             value={statusFilter === 'todos' ? calendarView : statusFilter}
             onChange={(view) => {
@@ -1549,239 +1159,205 @@ export default function AgendaScreen() {
             ariaLabel="Visões da agenda"
         />
 
-        <div className="kds-agenda-controls-row flex flex-col gap-3">
-          <div className="kds-agenda-filters min-w-0 flex-1 space-y-3 xl:max-w-5xl">
-            <div className="kds-agenda-search-row">
+        {error && <Alert tone="danger" title="Não foi possível concluir a operação">{error}</Alert>}
+
+        {showCalendar ? (
+          <div className={`kds-agenda-workspace-grid${calendarView === "month" ? " kds-month-layout" : ""}`}>
+            <AgendaCalendar
+              view={calendarView}
+              selected={selectedDate}
+              remindersByDay={remindersByDay}
+              onSelect={selectDate}
+              onMove={moveCalendar}
+              onToday={goToToday}
+              onCreate={openNewTask}
+              onDetail={setDetailId}
+            />
+            {calendarView === "month" && (
+              <Surface padding="none" className="kds-agenda-selected-day">
+                <div className="kds-agenda-selected-heading">
+                  <div>
+                    <Heading level={2}>{selectedDateLabel}</Heading>
+                    <Text>O que está reservado para este dia.</Text>
+                  </div>
+                  <IconButton variant="secondary" size="sm" aria-label="Adicionar tarefa neste dia" onClick={() => openNewTask()}><Plus /></IconButton>
+                </div>
+                <div className="kds-agenda-day-body">
+                  {selectedDateReminders.length > 0 ? selectedDateReminders.map(renderReminderRow) : (
+                    <EmptyState
+                      icon={<Calendar />}
+                      title={hasActiveFilters ? "Nenhum item com esses filtros." : "Um espaço livre na sua agenda."}
+                      description="Adicione uma tarefa ou escolha outro dia."
+                      action={<Button variant="secondary" size="sm" onClick={() => openNewTask()}>Adicionar tarefa</Button>}
+                    />
+                  )}
+                </div>
+                <div className="kds-agenda-day-note">
+                  <div className="kds-agenda-day-notice">
+                    <Heart aria-hidden="true" />
+                    <div><strong>O acompanhamento faz a diferença.</strong><Text>Reserve tempo para retomar as conversas com calma.</Text></div>
+                  </div>
+                </div>
+              </Surface>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="kds-agenda-toolbar">
               <Input
-                type="text"
-                placeholder="Buscar tarefa ou lead..."
+                placeholder="Buscar tarefa ou contato…"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 leftIcon={Search}
                 aria-label="Buscar tarefas e lembretes"
               />
-              <div className="kds-agenda-toolbar-actions">
-                <Button
-                  type="button"
-                  onClick={() => setFiltersOpen((open) => !open)}
-                  variant="secondary"
-                  size="md"
-                  className="kds-agenda-filter-toggle"
-                  aria-label={filtersOpen ? "Ocultar filtros da agenda" : "Mostrar filtros da agenda"}
-                  aria-expanded={filtersOpen}
-                  aria-controls="agenda-secondary-filters"
-                >
-                  <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />
-                  Filtros
-                  {hasActiveFilters > 0 && <Badge size="sm" tone="accent">{hasActiveFilters}</Badge>}
-                </Button>
-                {filteredReminders.some((item) => !item.lido) && (
-                  <Button
-                    onClick={() => void handleMarkAllFilteredAsRead()}
-                    variant="soft"
-                    size="md"
-                    className="shrink-0 whitespace-nowrap"
-                    aria-label="Marcar itens filtrados como lidos"
-                    title="Marcar itens filtrados como lidos"
-                    disabled={markingAllFiltered || updatingReminderIds.size > 0}
-                    loading={markingAllFiltered}
-                  >
-                    {!markingAllFiltered && <span>Marcar lidos</span>}
-                    {markingAllFiltered && "Marcando..."}
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div
-              id="agenda-secondary-filters"
-              className={`kds-agenda-secondary-filters ${filtersOpen ? "is-open" : ""}`}
-              aria-hidden={!filtersOpen}
-            >
               <FilterSelect
-                icon={Tag}
-                value={typeFilter}
-                onChange={setTypeFilter}
-                placeholder="Todos os tipos"
-                includePlaceholderOption={false}
-                options={typeOptions}
-              />
-              <FilterSelect
-                icon={AlertCircle}
                 value={priorityFilter}
                 onChange={setPriorityFilter}
-                placeholder="Todas prioridades"
+                placeholder="Todas as prioridades"
                 includePlaceholderOption={false}
                 options={PRIORITY_OPTIONS}
+                neutralValues={["all"]}
               />
-              <FilterSelect
-                icon={Calendar}
-                value={timeFilter}
-                onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
-                placeholder="Prazo"
-                includePlaceholderOption={false}
-                options={TIME_FILTER_OPTIONS}
-              />
-              {hasActiveFilters > 0 && (
-                <Button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setTypeFilter("all");
-                    setPriorityFilter("all");
-                    setTimeFilter("todos");
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="kds-agenda-clear-filters"
-                >
-                  <X className="kds-control-icon" aria-hidden="true" />
-                  Limpar filtros
-                </Button>
-              )}
+              <Button onClick={openFilters} variant="secondary" size="md">
+                <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />
+                Filtros
+                {hasAdvancedFilters && <Badge size="sm" tone="accent">Ativos</Badge>}
+              </Button>
+              <Text className="kds-agenda-toolbar-count" role="status">
+                {statusFilter === "nao-lidos"
+                  ? formatAgendaCount(filteredReminders.length, "pendente", "pendentes")
+                  : formatAgendaCount(filteredReminders.length, "concluído", "concluídos")}
+              </Text>
             </div>
-          </div>
-        </div>
-
-        {statusFilter === "todos" ? (
-          <div className={`kds-agenda-workspace-grid${calendarView === 'week' ? ' is-week' : ''}`}>
-            <Surface padding="md" className="kds-agenda-calendar space-y-4">
-              <div className="kds-agenda-calendar-header flex items-center justify-between gap-2">
-                <IconButton className="kds-agenda-previous-month" onClick={() => moveCalendar(-1)} variant="icon" aria-label={calendarView === 'month' ? 'Mês anterior' : 'Semana anterior'} size="md">
-                  <ChevronLeft className="kds-control-icon" />
-                </IconButton>
-                <div className="kds-agenda-calendar-heading min-w-0 flex-1 text-center">
-                  <Heading level={3} className="text-base font-semibold capitalize text-[var(--text-primary)] sm:text-lg">
-                    {calendarView === 'month' ? currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) : weekLabel}
-                  </Heading>
-                  <Text className="kds-agenda-calendar-subtitle text-xs text-[var(--text-muted)]">
-                    {calendarView === 'month' ? `${formatAgendaCount(filteredMonthReminders.length, 'compromisso', 'compromissos')} neste mês` : `${formatAgendaCount(weekRemindersCount, 'compromisso', 'compromissos')} nesta semana`}
-                  </Text>
-                </div>
-                <Button onClick={goToToday} variant="secondary" size="sm" className="kds-agenda-today shrink-0">
-                  Hoje
-                </Button>
-                <IconButton className="kds-agenda-next-month" onClick={() => moveCalendar(1)} variant="icon" aria-label={calendarView === 'month' ? 'Próximo mês' : 'Próxima semana'} size="md">
-                  <ChevronRight className="kds-control-icon" />
-                </IconButton>
-              </div>
-              <div>{renderCalendar()}</div>
-              <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
-                <span className="inline-flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-[var(--brand-primary)] text-[var(--brand-primary)]" /> Pendentes</span>
-                <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[var(--success)]" /> Concluídos</span>
-              </div>
+            <Surface padding="none" className="kds-agenda-task-list">
+              {filteredReminders.length > 0 ? filteredReminders.map(renderReminderRow) : (
+                <EmptyState
+                  icon={<CheckCircle2 />}
+                  title={statusFilter === "lidos" && !hasActiveFilters ? "Ainda não há tarefas concluídas." : hasActiveFilters ? "Nenhuma tarefa com esses filtros." : "Nenhuma tarefa pendente."}
+                  description="Experimente ajustar os filtros ou voltar ao calendário."
+                />
+              )}
             </Surface>
+          </>
+        )}
 
-            <Surface padding="none" className="overflow-hidden">
-              <div className="border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <SectionHeader
-                    eyebrow="Dia selecionado"
-                    title={selectedDateLabel}
-                    description={selectedDateReminders.length > 0
-                      ? `${formatAgendaCount(selectedDateReminders.length, "item", "itens")}: ${formatAgendaCount(pendingSelectedReminders.length, "pendente", "pendentes")}, ${formatAgendaCount(overdueSelectedReminders.length, "atrasado", "atrasados")}, ${formatAgendaCount(completedSelectedReminders.length, "concluído", "concluídos")}.`
-                      : "Nenhum item encontrado para este dia com os filtros atuais."}
-                  />
+        {filterDraft && (
+          <Dialog open size="md" className="kds-agenda-dialog" onOpenChange={(open) => !open && setFilterDraft(null)}>
+            <DialogHeader onClose={() => setFilterDraft(null)}>
+              <DialogTitle>Filtrar agenda</DialogTitle>
+              <DialogDescription placement="visible">Encontre as tarefas e os lembretes que você quer acompanhar.</DialogDescription>
+            </DialogHeader>
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => {
+              event.preventDefault();
+              setSearchQuery(filterDraft.searchQuery);
+              setTypeFilter(filterDraft.typeFilter);
+              setPriorityFilter(filterDraft.priorityFilter);
+              setTimeFilter(filterDraft.timeFilter);
+              setFilterDraft(null);
+            }}>
+              <DialogBody className="space-y-4">
+                <Field label="Buscar tarefa ou contato" htmlFor="agenda-filter-search">
+                  <Input id="agenda-filter-search" leftIcon={Search} value={filterDraft.searchQuery} onChange={(event) => setFilterDraft({ ...filterDraft, searchQuery: event.target.value })} />
+                </Field>
+                <div className="kds-agenda-form-grid">
+                  <Field label="Tipo" htmlFor="agenda-filter-type">
+                    <Select id="agenda-filter-type" value={filterDraft.typeFilter} options={typeOptions} onChange={(event) => setFilterDraft({ ...filterDraft, typeFilter: event.target.value })} />
+                  </Field>
+                  <Field label="Prazo" htmlFor="agenda-filter-time">
+                    <Select id="agenda-filter-time" value={filterDraft.timeFilter} options={TIME_FILTER_OPTIONS} onChange={(event) => setFilterDraft({ ...filterDraft, timeFilter: event.target.value as AgendaTimeFilter })} />
+                  </Field>
+                  <Field label="Prioridade" htmlFor="agenda-filter-priority">
+                    <Select id="agenda-filter-priority" value={filterDraft.priorityFilter} options={PRIORITY_OPTIONS} onChange={(event) => setFilterDraft({ ...filterDraft, priorityFilter: event.target.value })} />
+                  </Field>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setFilterDraft({ ...EMPTY_FILTERS })}>Limpar filtros</Button>
+              </DialogBody>
+              <DialogFooter>
+                <Button variant="secondary" onClick={() => setFilterDraft(null)}>Cancelar</Button>
+                <Button variant="primary" type="submit">Aplicar filtros</Button>
+              </DialogFooter>
+            </form>
+          </Dialog>
+        )}
 
-                  <div className="grid grid-cols-1 gap-2 sm:min-w-80 sm:grid-cols-3">
-                    {[
-                      { label: "Atrasados", value: overdueSelectedReminders.length, tone: "danger" as const },
-                      { label: "Pendentes", value: activeSelectedReminders.length, tone: "accent" as const },
-                      { label: "Concluídos", value: completedSelectedReminders.length, tone: "success" as const },
-                    ].map((item) => (
-                      <OperationalMetricChip
-                        key={item.label}
-                        value={item.value}
-                        label={item.label}
-                        tone={item.tone}
-                        active={item.value > 0}
-                        className="justify-center"
-                      />
-                    ))}
+        {detail && (
+          <Dialog open size="md" className="kds-agenda-dialog" onOpenChange={(open) => !open && setDetailId(null)}>
+            <DialogHeader onClose={() => setDetailId(null)}>
+              <DialogTitle>Detalhes do lembrete</DialogTitle>
+              <DialogDescription placement="visible">Informações e ações deste item da agenda.</DialogDescription>
+            </DialogHeader>
+            <DialogBody className="space-y-4">
+              <div className="kds-agenda-detail-summary">
+                <span className="kds-agenda-detail-icon">{getReminderIcon(detail.tipo)}</span>
+                <Heading level={3}>{detail.titulo}</Heading>
+                <Badge tone={detail.lido ? "success" : isOverdue(detail.data_lembrete) ? "danger" : "accent"}>
+                  {detail.lido ? "Concluído" : isOverdue(detail.data_lembrete) ? "Atrasado" : "Pendente"}
+                </Badge>
+              </div>
+              <dl className="kds-agenda-detail-grid">
+                {detailLead && <><dt>Contato</dt><dd><Button variant="ghost" size="sm" onClick={() => { setDetailId(null); void handleOpenLead(detailLead.id); }}>{detailLead.nome_completo}</Button></dd></>}
+                {detailContract?.codigo_contrato && <><dt>Contrato</dt><dd>{detailContract.codigo_contrato}</dd></>}
+                <dt>Quando</dt><dd>{formatDateTimeFullBR(detail.data_lembrete)}</dd>
+                <dt>Tipo</dt><dd><Badge tone={getReminderTypeTone(detail.tipo)}>{getReminderTypeLabel(detail.tipo)}</Badge></dd>
+                {detail.prioridade && <><dt>Prioridade</dt><dd><Badge tone={getReminderPriorityTone(detail.prioridade)}>{detail.prioridade}</Badge></dd></>}
+                {detail.descricao && <><dt>Detalhes</dt><dd className="whitespace-pre-wrap">{detail.descricao}</dd></>}
+                {detail.tempo_estimado_minutos && <><dt>Tempo estimado</dt><dd>{formatEstimatedTime(detail.tempo_estimado_minutos)}</dd></>}
+                {Boolean(detail.tags?.length) && <><dt>Marcadores</dt><dd className="flex flex-wrap gap-1">{detail.tags?.map((tag, index) => <Badge key={`${tag}-${index}`} tone="info">{tag}</Badge>)}</dd></>}
+              </dl>
+              {!detail.lido && <Button variant="secondary" size="sm" disabled={reminderBusy(detail.id)} onClick={() => beginReschedule(detail)}><CalendarClock className="kds-control-icon" />Reagendar</Button>}
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setDetailId(null)}>Fechar</Button>
+              <Button variant="primary" disabled={reminderBusy(detail.id)} onClick={() => { setDetailId(null); void handleMarkAsRead(detail.id, detail.lido); }}>
+                {detail.lido ? "Reabrir item" : "Concluir item"}
+              </Button>
+            </DialogFooter>
+          </Dialog>
+        )}
+
+        {reschedule && (
+          <Dialog open size="md" className="kds-agenda-dialog" onOpenChange={(open) => !open && !reschedulingInFlightId && setReschedule(null)}>
+            <DialogHeader onClose={reschedulingInFlightId ? undefined : () => setReschedule(null)}>
+              <DialogTitle>Reagendar lembrete</DialogTitle>
+              <DialogDescription placement="visible">Escolha quando este lembrete deve aparecer na agenda.</DialogDescription>
+            </DialogHeader>
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => {
+              event.preventDefault();
+              if (reschedule.date && reschedule.time) void handleRescheduleReminder(reschedule.id, reschedule.date, reschedule.time);
+            }}>
+              <DialogBody className="space-y-4">
+                {rescheduledItem && (
+                  <div className="kds-agenda-reschedule-summary">
+                    <span className="kds-agenda-detail-icon">{getReminderIcon(rescheduledItem.tipo)}</span>
+                    <div>
+                      <Text weight="semibold">{rescheduledItem.titulo}</Text>
+                      {rescheduledItem.descricao && <Text size="sm" tone="muted">{rescheduledItem.descricao}</Text>}
+                    </div>
                   </div>
+                )}
+                <div className="kds-agenda-form-grid">
+                  <Field label="Nova data" htmlFor="agenda-reschedule-date" required>
+                    <DateTimePicker id="agenda-reschedule-date" type="date" value={reschedule.date} disabled={Boolean(reschedulingInFlightId)} onChange={({ target }) => setReschedule({ ...reschedule, date: target.value })} />
+                  </Field>
+                  <Field label="Horário" htmlFor="agenda-reschedule-time" required>
+                    <DateTimePicker id="agenda-reschedule-time" type="time" value={reschedule.time} disabled={Boolean(reschedulingInFlightId)} onChange={({ target }) => setReschedule({ ...reschedule, time: target.value })} />
+                  </Field>
                 </div>
-
-                {reschedulingReminderId && (
-                  <Alert
-                    className="mt-3"
-                    tone="accent"
-                    action={(
-                      <Button onClick={() => setReschedulingReminderId(null)} variant="ghost" size="sm">
-                        Cancelar reagendamento
-                      </Button>
-                    )}
-                  >
-                    <span>Selecione um dia no calendário para reagendar o item.</span>
-                  </Alert>
-                )}
-
-                {error && (
-                  <Alert className="mt-3" tone="danger" title="Não foi possível concluir a operação">
-                    {error}
-                  </Alert>
-                )}
-              </div>
-
-              <div className={`min-h-80 px-4 py-4 ${selectedDateDensity === "compact" ? "space-y-3" : "space-y-4"}`}>
-                {selectedDateSections.length > 0 ? (
-                  selectedDateSections.map((section) => (
-                    <section key={section.id} className="space-y-2">
-                      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] py-2">
-                        <SectionHeader
-                          as="h3"
-                          title={section.title}
-                          description={section.description}
-                        />
-                        <Badge size="sm" tone={section.tone}>{section.items.length}</Badge>
-                      </div>
-                      <div className={selectedDateDensity === "compact" ? "space-y-2" : "space-y-3"}>
-                        {section.items.map(renderReminderCard)}
-                      </div>
-                    </section>
-                  ))
-                ) : (
-                  <EmptyState
-                    icon={<Calendar className="h-8 w-8" />}
-                    title="Nenhum item neste dia"
-                    description="Os filtros atuais não retornaram tarefas ou lembretes para a data selecionada."
-                  />
-                )}
-              </div>
-            </Surface>
-          </div>
-        ) : (
-          <Surface padding="md" className="kds-agenda-task-list">
-            <SectionHeader
-              eyebrow={statusFilter === "nao-lidos" ? "Acompanhamento" : "Histórico"}
-              title={statusFilter === "nao-lidos" ? "Pendentes" : "Concluídos"}
-              description={statusFilter === "nao-lidos"
-                ? `${pendingFilteredCount === 1 ? "1 item aguarda atendimento" : `${pendingFilteredCount} itens aguardam atendimento`}; ${overdueFilteredCount === 0 ? "nenhum está atrasado" : overdueFilteredCount === 1 ? "1 está atrasado" : `${overdueFilteredCount} estão atrasados`}.`
-                : completedFilteredCount === 0
-                  ? "Nenhum item concluído corresponde aos filtros atuais."
-                  : `${formatAgendaCount(completedFilteredCount, "item concluído", "itens concluídos")} ${completedFilteredCount === 1 ? "corresponde" : "correspondem"} aos filtros atuais.`}
-            />
-            {filteredReminders.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {filteredReminders.map(renderReminderCard)}
-              </div>
-            ) : (
-              <EmptyState
-                icon={statusFilter === "nao-lidos" ? <Bell className="h-8 w-8" /> : <CheckCircle2 className="h-8 w-8" />}
-                title={statusFilter === "nao-lidos" ? "Nenhum item pendente" : "Nenhum item concluído"}
-                description="Ajuste os filtros para consultar outros itens da agenda."
-                action={statusFilter === "nao-lidos" ? (
-                  <Button onClick={openNewTask} variant="primary" size="md">
-                    <Plus className="kds-control-icon" />
-                    Nova tarefa
-                  </Button>
-                ) : undefined}
-              />
-            )}
-          </Surface>
+              </DialogBody>
+              <DialogFooter>
+                <Button variant="secondary" onClick={() => setReschedule(null)} disabled={Boolean(reschedulingInFlightId)}>Cancelar</Button>
+                <Button type="submit" variant="primary" loading={Boolean(reschedulingInFlightId)} disabled={!reschedule.date || !reschedule.time || Boolean(reschedulingInFlightId)}>Salvar reagendamento</Button>
+              </DialogFooter>
+            </form>
+          </Dialog>
         )}
 
         {reminderPendingDeletion && (
           <Dialog
             open
             aria-label="Remover item da agenda"
+            className="kds-agenda-dialog"
             onOpenChange={(open) => {
               if (!open && !isDeletingReminder) setReminderPendingDeletion(null);
             }}
@@ -1813,6 +1389,7 @@ export default function AgendaScreen() {
           <Dialog
             open
             aria-label="Criar nova tarefa"
+            className="kds-agenda-dialog"
             onOpenChange={(open) => !open && !savingTask && closeAddTaskModal()}
             size="md"
           >
@@ -1820,28 +1397,38 @@ export default function AgendaScreen() {
               <DialogHeader onClose={savingTask ? undefined : closeAddTaskModal}>
                 <Text className="kds-dialog-eyebrow">Agenda</Text>
                 <DialogTitle>Nova tarefa</DialogTitle>
-                <DialogDescription placement="visible">{selectedDateLabel}</DialogDescription>
+                <DialogDescription placement="visible">Reserve um horário para o próximo passo.</DialogDescription>
               </DialogHeader>
               <DialogBody className="space-y-4">
-                <Field label="Tarefa" htmlFor="agenda-task-title">
+                <Field label="Título da tarefa" htmlFor="agenda-task-title" required>
                   <Input
                     id="agenda-task-title"
                     type="text"
                     value={newTaskTitle}
                     onChange={(event) => setNewTaskTitle(event.target.value)}
-                    placeholder="Digite o titulo da tarefa"
+                    placeholder="Ex.: Retornar sobre a proposta"
                     required
                     disabled={savingTask}
                   />
                 </Field>
 
-                <Field label="Descricao (opcional)" htmlFor="agenda-task-description">
+                <div className="kds-agenda-form-grid">
+                  <Field label="Data" htmlFor="agenda-task-date" required>
+                    <DateTimePicker id="agenda-task-date" type="date" value={newTaskDate} onChange={({ target }) => setNewTaskDate(target.value)} disabled={savingTask} />
+                  </Field>
+                  <Field label="Horário" htmlFor="agenda-task-time" required>
+                    <DateTimePicker id="agenda-task-time" type="time" value={newTaskTime} onChange={({ target }) => setNewTaskTime(target.value)} disabled={savingTask} />
+                  </Field>
+                </div>
+                <Field label="Prioridade" htmlFor="agenda-task-priority">
+                  <Select id="agenda-task-priority" value={newTaskPriority} options={TASK_PRIORITIES} onChange={({ target }) => setNewTaskPriority(target.value)} disabled={savingTask} />
+                </Field>
+                <Field label="Detalhes (opcional)" htmlFor="agenda-task-description">
                   <Textarea
                     id="agenda-task-description"
                     value={newTaskDescription}
                     onChange={(event) => setNewTaskDescription(event.target.value)}
                     placeholder="Adicione detalhes da tarefa"
-                    
                     disabled={savingTask}
                   />
                 </Field>
@@ -1854,12 +1441,10 @@ export default function AgendaScreen() {
                   type="submit"
                   variant="primary"
                   size="md"
-                  className="kds-agenda-create-action whitespace-nowrap"
-                  disabled={savingTask}
+                  disabled={savingTask || !newTaskTitle.trim() || !newTaskDate || !newTaskTime}
                   loading={savingTask}
                 >
-                  {!savingTask && <Plus className="kds-control-icon" />}
-                  Adicionar
+                  Salvar tarefa
                 </Button>
               </DialogFooter>
             </form>
@@ -1868,6 +1453,7 @@ export default function AgendaScreen() {
 
         {manualReminderQueue[0] && (
           <ReminderSchedulerModal
+            className="kds-agenda-dialog kds-agenda-reminder-dialog"
             lead={manualReminderQueue[0].lead}
             onClose={() => setManualReminderQueue((current) => current.slice(1))}
             onScheduled={() => {
@@ -1915,80 +1501,5 @@ export default function AgendaScreen() {
       </div>
       )} />}
     </>
-  );
-}
-
-type AgendaReminderContextLinkProps = {
-  leadId?: string;
-  contractId?: string;
-  leadName?: string;
-  leadFavorito?: boolean;
-  isLoading?: boolean;
-};
-
-type ContextInfo =
-  | { type: "lead"; label: string; favorito?: boolean }
-  | { type: "contract"; label: string };
-
-function AgendaReminderContextLink({
-  leadId,
-  contractId,
-  leadName,
-  leadFavorito,
-  isLoading,
-}: AgendaReminderContextLinkProps) {
-  const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadContext = async () => {
-      if (leadId) {
-        if (leadName) {
-          if (active) {
-            setContextInfo({ type: "lead", label: leadName, favorito: leadFavorito });
-          }
-          return;
-        }
-
-        const data = (await listReminderLeads([leadId]))[0];
-
-        if (active && data?.nome_completo) {
-          setContextInfo({ type: "lead", label: data.nome_completo, favorito: Boolean(data.favorito) });
-        }
-        return;
-      }
-
-      if (contractId) {
-        const data = (await listReminderContracts([contractId]))[0];
-
-        if (active && data?.codigo_contrato) {
-          setContextInfo({ type: "contract", label: data.codigo_contrato });
-        }
-        return;
-      }
-
-      if (active) {
-        setContextInfo(null);
-      }
-    };
-
-    void loadContext();
-
-    return () => {
-      active = false;
-    };
-  }, [contractId, leadId, leadName, leadFavorito]);
-
-  if (!contextInfo) {
-    return null;
-  }
-
-  return (
-    <Badge tone="neutral" className="kds-agenda-context-badge max-w-full min-w-0 gap-1 font-medium">
-      {<LoadingMonogram active={isLoading} fallback={<Bell className="h-3 w-3" />} className="h-3 w-3" />}
-      {contextInfo.type === "lead" ? <LeadFavoriteBadge favorito={contextInfo.favorito} /> : null}
-      <span className="min-w-0 truncate">{contextInfo.label}</span>
-    </Badge>
   );
 }

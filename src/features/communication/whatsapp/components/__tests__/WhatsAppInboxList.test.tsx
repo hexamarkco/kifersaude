@@ -34,7 +34,7 @@ const createChat = (overrides: Partial<CommWhatsAppChat> = {}): CommWhatsAppChat
   ...overrides,
 });
 
-test('renders chat identity with an avatar and preserves independent selection and menu actions', () => {
+test('renders chat identity as text and preserves independent selection and menu actions', () => {
   const selectedChatIds: string[] = [];
   const openedMenuChatIds: string[] = [];
   const view = render(
@@ -55,7 +55,7 @@ test('renders chat identity with an avatar and preserves independent selection a
   try {
     assert.match(view.container.textContent ?? '', /Contato de demonstração/);
     assert.match(view.container.textContent ?? '', /Olá/);
-    assert.ok(view.container.querySelector('.kds-avatar'));
+    assert.equal(view.container.querySelector('.kds-avatar'), null);
     assert.ok(view.container.querySelector('[aria-label="3 mensagens não lidas"]'));
     const selectButton = view.container.querySelector<HTMLButtonElement>('.whatsapp-inbox-chat-select');
     const menuButton = view.container.querySelector<HTMLButtonElement>('[aria-label="Abrir menu da conversa"]');

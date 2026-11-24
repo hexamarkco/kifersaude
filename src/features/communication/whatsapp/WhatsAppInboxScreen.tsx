@@ -1,6 +1,6 @@
 import { Heading, Text } from '../../../design-system';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Clock3, MessageCircle, Pin, Trash2, WifiOff } from 'lucide-react';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Bot, CalendarClock, Clock3, Download, FolderOpen, MessageCircle, Pin, Search, Sparkles, Trash2, WifiOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useWorkspaceCreate } from '../../../hooks/useWorkspaceCreate';
 
@@ -1875,7 +1875,7 @@ export default function WhatsAppInboxScreen() {
         // A mutação já notifica o operador em caso de erro.
         void handleLeadStatusChange(headerLeadPanel.id, newStatus).catch(() => undefined);
       },
-      scheduledMessagesPanelOpen,
+      copyingTranscript,
       threadActionsMenuOpen,
       contactContextPanelOpen,
       threadActionsMenuTriggerRef,
@@ -1886,7 +1886,7 @@ export default function WhatsAppInboxScreen() {
         setContactContextPanelOpen(false);
         handleBackToChatList();
       },
-      onOpenScheduledMessages: () => setScheduledMessagesPanelOpen(true),
+      onCopyTranscript: () => void handleCopyChatTranscript(),
       onToggleContactContextPanel: handleToggleContactContextPanel,
       onToggleThreadActionsMenu: () => setThreadActionsMenuOpen((current) => !current),
     },
@@ -2086,8 +2086,6 @@ export default function WhatsAppInboxScreen() {
           onRetrySearch={retrySearch}
           selectedChatId={selectedChatId}
           connectedUserName={channelState?.connected_user_name ?? null}
-          channelLabel={channelState ? connectionStatusLabel : undefined}
-          channelConnected={isChannelConnected}
           composerDraftsByChatId={composerDraftsByChatId}
           favoritedLeadIds={favoritedLeadIds}
           onSelectChat={handleSelectSidebarChat}
@@ -2118,6 +2116,52 @@ export default function WhatsAppInboxScreen() {
               chatDisplayName={selectedChatDisplayName}
               chatPhoneNumber={selectedChat.phone_number}
               onSaveContact={handleOpenSaveContactDialog}
+              conversationActions={[
+                ...(selectedChat.lead_id ? [{
+                  label: isSelectedChatWaitingForQuote
+                    ? 'IA encerrada enquanto aguarda cotação'
+                    : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat',
+                  icon: Bot,
+                  loading: assumingControlChatId === selectedChat.id,
+                  disabled: isSelectedChatWaitingForQuote,
+                  onClick: () => {
+                    if (selectedChat.autonomous_attendance_status === 'active') {
+                      void handleDeactivateAutonomousAttendance(selectedChat);
+                    } else {
+                      void handleActivateAutonomousAttendance(selectedChat);
+                    }
+                  },
+                }] : []),
+                { label: 'Arquivos da conversa', icon: FolderOpen, onClick: () => setChatFilesOpen(true) },
+                {
+                  label: 'Pesquisar neste chat',
+                  icon: Search,
+                  onClick: () => {
+                    setContactContextPanelOpen(false);
+                    handleToggleChatMessageSearch();
+                  },
+                },
+                { label: 'Mensagens agendadas', icon: CalendarClock, onClick: () => setScheduledMessagesPanelOpen(true) },
+                {
+                  label: 'Recuperar histórico antigo',
+                  icon: Download,
+                  onClick: () => void handleRecoverChatHistory(),
+                  disabled: Boolean(historyRecoveryDisabledReason),
+                  loading: syncingHistoryChatId === selectedChat.id,
+                  title: historyRecoveryDisabledReason ?? undefined,
+                },
+                {
+                  label: 'Gerar follow-up com IA',
+                  icon: Sparkles,
+                  onClick: () => {
+                    setContactContextPanelOpen(false);
+                    handleOpenFollowUpModal();
+                  },
+                  disabled: Boolean(followUpGenerationDisabledReason),
+                  loading: generatingFollowUp,
+                  title: followUpGenerationDisabledReason ?? undefined,
+                },
+              ]}
               linkedLead={leadPanel}
               leadPanelError={leadPanelError}
               autoLinked={selectedChatWasAutoLinked}
@@ -2529,32 +2573,15 @@ export default function WhatsAppInboxScreen() {
 
         <WhatsAppThreadActionsMenu
           menuRef={threadActionsMenuRef}
-          isOpen={Boolean(selectedChat && threadActionsMenuOpen && threadActionsMenuPosition)}
-          contactContextPanelOpen={contactContextPanelOpen}
+          isOpen={Boolean(selectedChat?.is_group && threadActionsMenuOpen && threadActionsMenuPosition)}
           position={threadActionsMenuPosition}
-          selectedChat={selectedChat}
-          setOpen={setThreadActionsMenuOpen}
-          assumingControlChatId={assumingControlChatId}
-          isSelectedChatWaitingForQuote={isSelectedChatWaitingForQuote}
-          copyingTranscript={copyingTranscript}
+          onClose={() => setThreadActionsMenuOpen(false)}
           historyRecoveryDisabledReason={historyRecoveryDisabledReason}
-          syncingHistoryChatId={syncingHistoryChatId}
-          followUpGenerationDisabledReason={followUpGenerationDisabledReason}
-          generatingFollowUp={generatingFollowUp}
-          onToggleAutonomousAttendance={(chat) => {
-            if (chat.autonomous_attendance_status === 'active') {
-              void handleDeactivateAutonomousAttendance(chat);
-            } else {
-              void handleActivateAutonomousAttendance(chat);
-            }
-          }}
+          syncingHistory={Boolean(selectedChat && syncingHistoryChatId === selectedChat.id)}
           onOpenChatFiles={() => setChatFilesOpen(true)}
           onToggleChatMessageSearch={handleToggleChatMessageSearch}
           onOpenScheduledMessages={() => setScheduledMessagesPanelOpen(true)}
-          onCopyTranscript={() => void handleCopyChatTranscript()}
           onRecoverHistory={() => void handleRecoverChatHistory()}
-          onOpenFollowUp={handleOpenFollowUpModal}
-          onToggleContactContextPanel={handleToggleContactContextPanel}
         />
 
         <WhatsAppInboxAdvancedFiltersDialog

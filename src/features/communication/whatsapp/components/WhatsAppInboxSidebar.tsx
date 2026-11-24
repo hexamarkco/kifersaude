@@ -1,5 +1,5 @@
 import { useMinimumLoading, LoadingState, LoadingMonogram, Text } from '../../../../design-system';
-import { Archive, ArrowUpRight, Calendar, CalendarClock, BarChart3, MessageCircle, MoreHorizontal, SquarePen, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { Archive, Calendar, CalendarClock, BarChart3, MessageCircle, MoreHorizontal, SquarePen, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import { useState, type MutableRefObject } from 'react';
 import type { LeadStatusConfig } from '../../../leads';
 
@@ -66,8 +66,6 @@ type WhatsAppInboxSidebarProps = {
   onRetrySearch: () => void;
   selectedChatId: string | null;
   connectedUserName: string | null;
-  channelLabel?: string;
-  channelConnected?: boolean;
   composerDraftsByChatId: Record<string, string>;
   favoritedLeadIds: ReadonlySet<string>;
   onSelectChat: (chat: CommWhatsAppChat) => void;
@@ -118,8 +116,6 @@ export function WhatsAppInboxSidebar({
   onRetrySearch,
   selectedChatId,
   connectedUserName,
-  channelLabel,
-  channelConnected,
   composerDraftsByChatId,
   favoritedLeadIds,
   onSelectChat,
@@ -192,11 +188,12 @@ export function WhatsAppInboxSidebar({
                 onClick={onToggleAdvancedFilters}
                 aria-expanded={advancedFiltersOpen}
                 aria-haspopup="dialog"
-                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'text'}
+                aria-label={activeChatFiltersCount > 0 ? `Filtrar conversas (${activeChatFiltersCount})` : 'Filtrar conversas'}
+                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
                 size="sm"
               >
-                <SlidersHorizontal className="kds-control-icon" />
-                Filtrar conversas{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
+                <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />
+                Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
               </Button>
               <Popover open={actionsOpen} onOpenChange={setActionsOpen}>
                 <PopoverTrigger><IconButton variant="ghost" size="sm" aria-label="Ações das conversas"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
@@ -319,16 +316,6 @@ export function WhatsAppInboxSidebar({
           </>
         )} />}
       </div>
-      <footer className="whatsapp-inbox-channel-footer">
-        <div className="whatsapp-inbox-channel-label">
-          <span className="whatsapp-inbox-channel-dot" data-connected={channelConnected} aria-hidden="true" />
-          <div>
-            <Text size="sm" weight="semibold">WhatsApp da equipe</Text>
-            {channelLabel && <Text size="sm" tone="muted">{channelLabel}</Text>}
-          </div>
-        </div>
-        <Button variant="text" size="sm" onClick={onOpenDashboard}>Ver canal <ArrowUpRight aria-hidden="true" className="kds-control-icon" /></Button>
-      </footer>
     </div>
   );
 }

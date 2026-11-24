@@ -1,8 +1,8 @@
-import { Text, FieldLabel, Image, Video, LoadingState } from '../../../../design-system';
+import { Text, Image, Video, LoadingState } from '../../../../design-system';
 import { ActionSurface, IconButton } from '../../../../design-system';
 import { AlertCircle, AlertTriangle, Archive, BellOff, Check, CheckCheck, Clock3, MoreHorizontal, Pin, Play, SendHorizontal, Users, Volume2 } from 'lucide-react';
 
-import { Button, Checkbox, OperationalStatusBadge } from '../../../../design-system';
+import { Button, OperationalStatusBadge } from '../../../../design-system';
 import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import type { CommWhatsAppMessageSearchResult } from '../data';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../domain/types';
@@ -121,109 +121,6 @@ export function InboxFilterChip({
     >
       {label}
     </Button>
-  );
-}
-
-export function InboxFilterGroup<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-  compact = false,
-}: {
-  label: string;
-  value: T;
-  options: Array<{ value: T; label: string }>;
-  onChange: (value: T) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div role="group" aria-label={label} className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
-      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
-        {options.map((option) => (
-          <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function InboxMultiFilterGroup({
-  label,
-  values,
-  options,
-  onChange,
-  compact = false,
-  variant = 'chips',
-}: {
-  label: string;
-  values: string[];
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string[]) => void;
-  compact?: boolean;
-  variant?: 'chips' | 'list';
-}) {
-  const normalizedValues = values.map((value) => value.toLowerCase());
-
-  const toggleValue = (value: string) => {
-    const normalized = value.toLowerCase();
-    const next = normalizedValues.includes(normalized)
-      ? values.filter((item) => item.toLowerCase() !== normalized)
-      : [...values, value];
-    onChange(next);
-  };
-
-  if (variant === 'list') {
-    return (
-      <div role="group" aria-label={label} className={compact ? 'space-y-1.5' : 'space-y-2'}>
-        <div className="flex items-center justify-between">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
-          {values.length > 0 ? (
-            <Button variant="ghost"
-              type="button"
-              onClick={() => onChange([])}
-              className="font-semibold uppercase tracking-[0.08em] transition"
-            >
-              Limpar
-            </Button>
-          ) : null}
-        </div>
-        <div className="max-h-40 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-1">
-          {options.map((option) => {
-            const selected = normalizedValues.includes(option.value.toLowerCase());
-            return (
-              <FieldLabel
-                key={option.value}
-                className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border-b border-[var(--border-subtle)] px-2 py-2 text-xs text-[var(--text-secondary)] transition last:border-b-0 hover:bg-[var(--bg-hover)]"
-              >
-                <Checkbox checked={selected} onChange={() => toggleValue(option.value)} />
-                <span className="truncate">{option.label}</span>
-              </FieldLabel>
-            );
-          })}
-          {options.length === 0 ? <Text className="px-2 py-3 text-xs text-[var(--text-muted)]">Nenhuma opção disponível</Text> : null}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div role="group" aria-label={label} className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <Text className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</Text>
-      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
-        <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
-        {options.map((option) => (
-          <InboxFilterChip
-            key={option.value}
-            active={normalizedValues.includes(option.value.toLowerCase())}
-            label={option.label}
-            onClick={() => toggleValue(option.value)}
-            compact={compact}
-          />
-        ))}
-      </div>
-    </div>
   );
 }
 

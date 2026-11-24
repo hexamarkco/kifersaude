@@ -23,7 +23,7 @@ const createProps = (): ComponentProps<typeof WhatsAppThreadHeader> => ({
   leadStatusUpdating: false,
   leadStatusDisabled: false,
   onLeadStatusChange: noop,
-  scheduledMessagesPanelOpen: false,
+  copyingTranscript: false,
   threadActionsMenuOpen: false,
   contactContextPanelOpen: false,
   threadActionsMenuTriggerRef: createRef<HTMLButtonElement>(),
@@ -34,32 +34,37 @@ const createProps = (): ComponentProps<typeof WhatsAppThreadHeader> => ({
   nextChatReminderSummary: 'Próximo lembrete: conferir retorno sobre proposta · 30/10/2026 às 14:30',
   chatAgendaSummaryError: null,
   onBack: noop,
-  onOpenScheduledMessages: noop,
+  onCopyTranscript: noop,
   onToggleContactContextPanel: noop,
   onToggleThreadActionsMenu: noop,
 });
 
-test('organiza o nome no cabeçalho e o status e o lembrete na faixa de contexto', () => {
-  const view = render(<WhatsAppThreadHeader {...createProps()} />);
+test('mostra o status ao lado do nome, o lembrete abaixo e dois atalhos para chats individuais', () => {
+  let copyCalls = 0;
+  const view = render(<WhatsAppThreadHeader {...createProps()} onCopyTranscript={() => { copyCalls += 1; }} />);
 
   try {
     const header = view.container.querySelector('.whatsapp-inbox-thread-header');
     assert.ok(header);
     assert.equal(header.querySelector('.kds-avatar'), null);
     assert.match(header.textContent ?? '', /Gisele Goulart \(cliente\)/);
-    const context = view.container.querySelector('[aria-label="Contexto da conversa"]');
-    assert.ok(context);
-    assert.match(context.textContent ?? '', /Reativação/);
-    assert.match(context.textContent ?? '', /Próximo lembrete: conferir retorno sobre proposta/);
-    assert.equal(header.textContent?.includes('Renomear contato'), false);
-    assert.equal(header.textContent?.includes('IA atendendo'), false);
-    assert.equal(header.textContent?.includes('Responsável:'), false);
+    const nameRow = header.querySelector('.whatsapp-inbox-thread-name');
+    assert.match(nameRow?.textContent ?? '', /Reativação/);
+    assert.match(nameRow?.nextElementSibling?.textContent ?? '', /Próximo lembrete: conferir retorno sobre proposta/);
+    assert.equal(header.nextElementSibling, null);
+    const actions = [...header.querySelectorAll<HTMLButtonElement>('.whatsapp-inbox-thread-actions button')];
+    assert.deepEqual(actions.map((button) => button.getAttribute('aria-label')), [
+      'Abrir informações do contato',
+      'Copiar conversa formatada',
+    ]);
+    act(() => actions[1].click());
+    assert.equal(copyCalls, 1);
   } finally {
     view.unmount();
   }
 });
 
-test('permite alterar o status do lead na faixa de contexto', () => {
+test('permite alterar o status do lead ao lado do nome', () => {
   const changes: string[] = [];
   const view = render(
     <WhatsAppThreadHeader {...createProps()} onLeadStatusChange={(status) => changes.push(status)} />,
@@ -68,13 +73,12 @@ test('permite alterar o status do lead na faixa de contexto', () => {
   try {
     const header = view.container.querySelector('.whatsapp-inbox-thread-header');
     const name = header?.querySelector('h2');
-    const context = view.container.querySelector('[aria-label="Contexto da conversa"]');
-    const trigger = context?.querySelector<HTMLButtonElement>(
+    const nameRow = name?.parentElement;
+    const trigger = nameRow?.querySelector<HTMLButtonElement>(
       '[aria-label="Alterar status do lead Gisele Goulart (cliente): Reativação"]',
     );
     assert.ok(name);
     assert.ok(trigger);
-    assert.equal(header?.nextElementSibling, context);
 
     act(() => trigger.click());
     const option = document.body.querySelector<HTMLButtonElement>(

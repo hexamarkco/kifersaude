@@ -68,12 +68,16 @@ test('chat menu uses its own minimum height and clamps to a narrow viewport', ()
 
 test('advanced filters stay beside their trigger and fit the desktop viewport', () => {
   assert.deepEqual(
-    getAdvancedFiltersPosition(rect(900, 20, 40, 32), { width: 1024, height: 768 }),
+    getAdvancedFiltersPosition(rect(990, 20, 40, 32), { width: 1024, height: 768 }),
     { top: 60, left: 648, width: 360, maxHeight: 560 },
   );
   assert.deepEqual(
     getAdvancedFiltersPosition(rect(120, 700, 40, 32), { width: 1024, height: 768 }),
-    { top: 132, left: 120, width: 360, maxHeight: 560 },
+    { top: 132, left: 16, width: 360, maxHeight: 560 },
+  );
+  assert.deepEqual(
+    getAdvancedFiltersPosition(rect(450, 120, 90, 32), { width: 1440, height: 1000 }, 580),
+    { top: 160, left: 220, width: 360, maxHeight: 560 },
   );
   assert.deepEqual(
     getAdvancedFiltersPosition(rect(140, 500, 100, 32), { width: 390, height: 844 }),

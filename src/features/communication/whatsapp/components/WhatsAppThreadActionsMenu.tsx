@@ -1,184 +1,75 @@
-import { LoadingMonogram, DropdownOption } from '../../../../design-system';
-import type { Dispatch, Ref, SetStateAction } from 'react';
-import { Bot, CalendarClock, Copy, Download, FolderOpen, Info, Search, Sparkles } from 'lucide-react';
+import { DropdownOption, LoadingMonogram, PositionedPopover } from '../../../../design-system';
+import type { Ref } from 'react';
+import { CalendarClock, Download, FolderOpen, Search } from 'lucide-react';
 
-import { PositionedPopover as PanelPopoverShell } from '../../../../design-system';
-import type { CommWhatsAppChat } from '../domain/types';
 import type { InboxOverlayPosition } from '../hooks/useInboxOverlayPositions';
 
 type WhatsAppThreadActionsMenuProps = {
   menuRef: Ref<HTMLDivElement>;
   isOpen: boolean;
-  contactContextPanelOpen: boolean;
   position: InboxOverlayPosition | null;
-  selectedChat: CommWhatsAppChat | null;
-  setOpen: Dispatch<SetStateAction<boolean>>;
-  assumingControlChatId: string | null;
-  isSelectedChatWaitingForQuote: boolean;
-  copyingTranscript: boolean;
+  onClose: () => void;
   historyRecoveryDisabledReason: string | null;
-  syncingHistoryChatId: string | null;
-  followUpGenerationDisabledReason: string | null;
-  generatingFollowUp: boolean;
-  onToggleAutonomousAttendance: (chat: CommWhatsAppChat) => void;
+  syncingHistory: boolean;
   onOpenChatFiles: () => void;
   onToggleChatMessageSearch: () => void;
   onOpenScheduledMessages: () => void;
-  onCopyTranscript: () => void;
   onRecoverHistory: () => void;
-  onOpenFollowUp: () => void;
-  onToggleContactContextPanel: () => void;
 };
 
-export const WhatsAppThreadActionsMenu = ({
+export function WhatsAppThreadActionsMenu({
   menuRef,
   isOpen,
-  contactContextPanelOpen,
   position,
-  selectedChat,
-  setOpen,
-  assumingControlChatId,
-  isSelectedChatWaitingForQuote,
-  copyingTranscript,
+  onClose,
   historyRecoveryDisabledReason,
-  syncingHistoryChatId,
-  followUpGenerationDisabledReason,
-  generatingFollowUp,
-  onToggleAutonomousAttendance,
+  syncingHistory,
   onOpenChatFiles,
   onToggleChatMessageSearch,
   onOpenScheduledMessages,
-  onCopyTranscript,
   onRecoverHistory,
-  onOpenFollowUp,
-  onToggleContactContextPanel,
-}: WhatsAppThreadActionsMenuProps) => (
-  <PanelPopoverShell
-    ref={menuRef}
-    isOpen={isOpen}
-    position={position}
-    onClose={() => setOpen(false)}
-    ariaLabel="Ações da conversa"
-    role="menu"
-    className="comm-whatsapp-action-menu before:hidden overflow-y-auto"
-    style={{ width: position?.width ?? 288, maxHeight: position?.maxHeight }}
-  >
-    {selectedChat ? (
-      <div>
-        {!selectedChat.is_group && selectedChat.lead_id ? (
-          <DropdownOption
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              if (isSelectedChatWaitingForQuote) {
-                return;
-              }
-              onToggleAutonomousAttendance(selectedChat);
-            }}
-            disabled={assumingControlChatId === selectedChat.id || isSelectedChatWaitingForQuote}
-            className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-          >
-            {<LoadingMonogram active={assumingControlChatId === selectedChat.id} fallback={<Bot className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
-            <span>{isSelectedChatWaitingForQuote
-              ? 'IA encerrada enquanto aguarda cotação'
-              : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat'}</span>
-          </DropdownOption>
-        ) : null}
+}: WhatsAppThreadActionsMenuProps) {
+  const actions = [
+    { label: 'Arquivos da conversa', icon: FolderOpen, run: onOpenChatFiles },
+    { label: 'Pesquisar neste chat', icon: Search, run: onToggleChatMessageSearch },
+    { label: 'Mensagens agendadas desta conversa', icon: CalendarClock, run: onOpenScheduledMessages },
+    {
+      label: 'Recuperar histórico antigo',
+      icon: Download,
+      run: onRecoverHistory,
+      disabled: Boolean(historyRecoveryDisabledReason) || syncingHistory,
+      loading: syncingHistory,
+      title: historyRecoveryDisabledReason ?? undefined,
+    },
+  ];
+
+  return (
+    <PositionedPopover
+      ref={menuRef}
+      isOpen={isOpen}
+      position={position}
+      onClose={onClose}
+      ariaLabel="Ações da conversa"
+      role="menu"
+      className="comm-whatsapp-action-menu before:hidden overflow-y-auto"
+      style={{ width: position?.width ?? 288, maxHeight: position?.maxHeight }}
+    >
+      {actions.map(({ label, icon: Icon, run, disabled, loading, title }) => (
         <DropdownOption
+          key={label}
           type="button"
           role="menuitem"
           onClick={() => {
-            setOpen(false);
-            onOpenChatFiles();
+            onClose();
+            run();
           }}
-          className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
+          disabled={disabled}
+          title={title}
         >
-          <FolderOpen className="h-4 w-4 shrink-0" />
-          <span>Arquivos da conversa</span>
+          <LoadingMonogram active={loading ?? false} fallback={<Icon className="kds-control-icon" aria-hidden="true" />} className="kds-control-icon" />
+          <span>{label}</span>
         </DropdownOption>
-        <DropdownOption
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setOpen(false);
-            onToggleChatMessageSearch();
-          }}
-          className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-        >
-          <Search className="h-4 w-4 shrink-0" />
-          <span>Pesquisar neste chat</span>
-        </DropdownOption>
-        <DropdownOption
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setOpen(false);
-            onOpenScheduledMessages();
-          }}
-          className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-        >
-          <CalendarClock className="h-4 w-4 shrink-0" />
-          <span>Mensagens agendadas desta conversa</span>
-        </DropdownOption>
-        <DropdownOption
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setOpen(false);
-            onCopyTranscript();
-          }}
-          disabled={copyingTranscript}
-          className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-        >
-          {<LoadingMonogram active={copyingTranscript} fallback={<Copy className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
-          <span>Copiar conversa formatada</span>
-        </DropdownOption>
-        <DropdownOption
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setOpen(false);
-            onRecoverHistory();
-          }}
-          disabled={Boolean(historyRecoveryDisabledReason) || syncingHistoryChatId === selectedChat.id}
-          className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-          title={historyRecoveryDisabledReason ?? undefined}
-        >
-          {<LoadingMonogram active={syncingHistoryChatId === selectedChat.id} fallback={<Download className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
-          <span>Recuperar histórico antigo</span>
-        </DropdownOption>
-        {!selectedChat.is_group ? (
-          <DropdownOption
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onOpenFollowUp();
-            }}
-            disabled={Boolean(followUpGenerationDisabledReason)}
-            className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm disabled:opacity-60"
-            title={followUpGenerationDisabledReason ?? undefined}
-          >
-            {<LoadingMonogram active={generatingFollowUp} fallback={<Sparkles className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />}
-            <span>Gerar follow-up com IA</span>
-          </DropdownOption>
-        ) : null}
-        {!selectedChat.is_group ? (
-          <DropdownOption
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onToggleContactContextPanel();
-            }}
-            className="kds-dropdown-option flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm"
-          >
-            <Info className="h-4 w-4 shrink-0" />
-            <span>{contactContextPanelOpen ? 'Fechar informações do contato' : 'Informações do contato'}</span>
-          </DropdownOption>
-        ) : null}
-      </div>
-    ) : null}
-  </PanelPopoverShell>
-);
+      ))}
+    </PositionedPopover>
+  );
+}

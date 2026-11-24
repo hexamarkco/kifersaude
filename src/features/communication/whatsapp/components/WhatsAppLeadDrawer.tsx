@@ -12,16 +12,19 @@ import {
   Badge,
   Button,
   DateTimePicker,
+  DisclosureTrigger,
   Drawer,
   DrawerBody,
   EmptyState,
   Heading,
+  IconButton,
   InfoTooltip,
   OperationalStatusBadge,
   SearchInput,
   Surface,
   Tabs,
   Text,
+  type RecordAction,
   type TabItem,
 } from '../../../../design-system';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
@@ -48,12 +51,14 @@ import WhatsAppAttendanceCritiquePanel from './WhatsAppAttendanceCritiquePanel';
 import { KeyedActionLock } from './keyedActionLock';
 import WhatsAppPresenceIndicator from './WhatsAppPresenceIndicator';
 
-type LeadDrawerTab = 'info' | 'critique';
+type LeadDrawerTab = 'info' | 'agenda' | 'critique';
 
 const LEAD_DRAWER_TABS: TabItem<LeadDrawerTab>[] = [
-  { id: 'info', label: 'Dados do lead' },
+  { id: 'info', label: 'Lead' },
+  { id: 'agenda', label: 'Agenda' },
   { id: 'critique', label: 'Análise com IA' },
 ];
+const LEAD_DRAWER_TABS_WITHOUT_AGENDA = LEAD_DRAWER_TABS.filter((tab) => tab.id !== 'agenda');
 
 type WhatsAppLeadDrawerProps = {
   isOpen: boolean;
@@ -92,6 +97,7 @@ type WhatsAppLeadDrawerProps = {
   canViewAgenda: boolean;
   canEditAgenda: boolean;
   onSaveContact: (name: string) => void;
+  conversationActions: readonly (RecordAction & { title?: string })[];
 };
 
 const DAY_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
@@ -147,10 +153,13 @@ export default function WhatsAppLeadDrawer({
   canViewAgenda,
   canEditAgenda,
   onSaveContact,
+  conversationActions,
 }: WhatsAppLeadDrawerProps) {
   const showSearchLoading = useMinimumLoading(searchLoading);
   const [activeTab, setActiveTab] = useState<LeadDrawerTab>('info');
   const phoneRegion = getCommWhatsAppPhoneRegion(chatPhoneNumber);
+  const showAgendaTab = canViewAgenda && Boolean(linkedLead);
+  const currentTab = activeTab === 'agenda' && !showAgendaTab ? 'info' : activeTab;
 
   useEffect(() => {
     setActiveTab('info');
@@ -395,10 +404,10 @@ export default function WhatsAppLeadDrawer({
 
     return (
       <Surface key={reminder.id} padding="sm">
-        <div className="flex items-start justify-between gap-3">
+        <div className="whatsapp-inbox-contact-reminder">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</Text>
+              <Text size="sm" weight="semibold" className="break-words">{reminder.titulo}</Text>
               {overdue ? <Badge tone="danger" size="sm">Atrasado</Badge> : null}
             </div>
             <Text className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
@@ -410,7 +419,7 @@ export default function WhatsAppLeadDrawer({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="soft"
               size="sm"
@@ -462,53 +471,111 @@ export default function WhatsAppLeadDrawer({
     return null;
   }
 
+  const agendaContent = currentTab === 'agenda' ? (
+    <section className="whatsapp-inbox-contact-agenda" aria-label="Agenda do chat">
+      <div className="whatsapp-inbox-contact-agenda-header">
+        <Heading level={3} size="sm">Agenda do chat</Heading>
+        <InfoTooltip
+          content="Reúne lembretes do lead e dos contratos ligados a esta conversa. Agende, conclua ou reagende sem sair da Inbox."
+          label="Sobre a agenda do chat"
+          side="left"
+        />
+        <IconButton variant="ghost" size="sm" onClick={() => void loadAgendaReminders()} loading={agendaLoading} aria-label="Atualizar lembretes" title="Atualizar lembretes">
+          <RefreshCw className="kds-control-icon" aria-hidden="true" />
+        </IconButton>
+      </div>
+      {agendaLead && canEditAgenda && (
+        <Button variant="secondary" size="sm" onClick={() => setSchedulerOpen(true)}>
+          <CalendarPlus className="kds-control-icon" aria-hidden="true" />
+          Agendar lembrete
+        </Button>
+      )}
+      {agendaError ? (
+        <Surface variant="danger" padding="sm" role="alert">
+          <Text size="sm">{agendaError}</Text>
+        </Surface>
+      ) : (
+        <LoadingState active={agendaLoading} label="Carregando lembretes" fallback={() => pendingAgendaReminders.length ? (
+          [
+            { title: 'Atrasados', items: overdueAgendaReminders },
+            { title: 'Hoje', items: todayAgendaReminders },
+            { title: 'Próximos', items: futureAgendaReminders },
+          ].filter(({ items }) => items.length > 0).map(({ title, items }) => (
+            <section key={title} className="whatsapp-inbox-contact-agenda-list" aria-label={title}>
+              <Heading level={4} size="sm">{title} <Badge tone="neutral" size="sm">{items.length}</Badge></Heading>
+              {items.map(renderAgendaReminderItem)}
+            </section>
+          ))
+        ) : (
+          <EmptyState icon={<Bell className="kds-control-icon" aria-hidden="true" />} title="Nenhum lembrete pendente" />
+        )} />
+      )}
+    </section>
+  ) : null;
+
   const drawerContent = (
     <>
-        <WhatsAppInboxPanelHeader icon={UserRound} title="Informações do contato" context={chatDisplayName} className="comm-whatsapp-lead-drawer-header"
-          description="Dados do lead, contratos e próximos acompanhamentos." onClose={onClose}>
+        <WhatsAppInboxPanelHeader icon={UserRound} title="Informações do contato" className="comm-whatsapp-lead-drawer-header" onClose={onClose}>
           <div className="whatsapp-inbox-contact-summary">
-            <div className="whatsapp-inbox-contact-status">
-              <Badge tone={linkedLead?.status_nome ? 'accent' : 'neutral'} size="sm">{linkedLead?.status_nome || 'Contato do WhatsApp'}</Badge>
-              {chat.autonomous_attendance_status === 'active' ? (
-                <OperationalStatusBadge statusColor="var(--accent-gold)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA atendendo</OperationalStatusBadge>
-              ) : chat.autonomous_attendance_status === 'handed_off' ? (
-                <OperationalStatusBadge statusColor="var(--text-muted)" className="uppercase"><Bot className="h-3 w-3" aria-hidden="true" />IA encerrada</OperationalStatusBadge>
-              ) : null}
+            <div className="whatsapp-inbox-contact-identity">
+              <div className="min-w-0">
+                <Heading level={3} size="sm">{chatDisplayName}</Heading>
+                <Text size="sm" tone="muted" className="whatsapp-inbox-contact-phone">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</Text>
+              </div>
+              <IconButton
+                variant="secondary"
+                size="sm"
+                aria-label={chat.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}
+                title={chat.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}
+                onClick={() => onSaveContact(chat.saved_contact_name || chatDisplayName)}
+              >
+                {chat.saved_contact_name ? <Pencil aria-hidden="true" /> : <UserPlus aria-hidden="true" />}
+              </IconButton>
             </div>
-            <Text size="sm" tone="primary" weight="medium" className="whatsapp-inbox-contact-phone">{formatCommWhatsAppPhoneLabel(chatPhoneNumber)}</Text>
-            <div className="whatsapp-inbox-contact-location">
-              {phoneRegion ? (
+            <div className="whatsapp-inbox-contact-metadata">
+              {linkedLead?.status_nome && (
+                <OperationalStatusBadge statusColor={getStatusColor(linkedLead.status_nome)}>{linkedLead.status_nome}</OperationalStatusBadge>
+              )}
+              {chat.autonomous_attendance_status === 'active' ? (
+                <Badge tone="accent" size="sm" icon={Bot}>IA atendendo</Badge>
+              ) : chat.autonomous_attendance_status === 'handed_off' ? (
+                <Badge tone="neutral" size="sm" icon={Bot}>IA encerrada</Badge>
+              ) : null}
+              {phoneRegion && (
                 <Badge tone="neutral" size="sm" icon={MapPin} title={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}. Região do telefone; não indica a localização atual do contato.`} aria-label={`DDD ${phoneRegion.ddd}: ${phoneRegion.name}`}>
                   {phoneRegion.uf} · DDD {phoneRegion.ddd}
                 </Badge>
-              ) : null}
+              )}
               <WhatsAppPresenceIndicator chat={chat} />
             </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                className="whatsapp-inbox-contact-save"
-                onClick={() => onSaveContact(chat.saved_contact_name || chatDisplayName)}
-              >
-                {chat.saved_contact_name ? <Pencil className="kds-control-icon" /> : <UserPlus className="kds-control-icon" />}
-                {chat.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}
-              </Button>
           </div>
         </WhatsAppInboxPanelHeader>
         <DrawerBody className={'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto'}>
+          {conversationActions.length > 0 && (
+            <details key={chatId} className="whatsapp-inbox-contact-actions">
+              <DisclosureTrigger size="sm" className="w-full justify-between">Ações da conversa</DisclosureTrigger>
+              <div className="whatsapp-inbox-contact-action-list" role="group" aria-label="Ações da conversa">
+                {conversationActions.map(({ label, icon: Icon, onClick, disabled, loading, title }) => (
+                  <Button key={label} variant="ghost" size="sm" onClick={onClick} disabled={disabled} loading={loading} title={title}>
+                    <Icon className="kds-control-icon" aria-hidden="true" />
+                    <span>{label}</span>
+                  </Button>
+                ))}
+              </div>
+            </details>
+          )}
           <Tabs
-            items={LEAD_DRAWER_TABS}
-            value={activeTab}
+            items={showAgendaTab ? LEAD_DRAWER_TABS : LEAD_DRAWER_TABS_WITHOUT_AGENDA}
+            value={currentTab}
             onChange={setActiveTab}
             variant="underline"
             size="sm"
             ariaLabel="Seções de informações do chat"
-            className="comm-whatsapp-lead-drawer-tabs mb-5"
+            className="comm-whatsapp-lead-drawer-tabs"
           />
 
-          {activeTab === 'critique' ? (
-            <WhatsAppAttendanceCritiquePanel chatId={chatId} isActive={activeTab === 'critique'} />
+          {currentTab === 'agenda' ? agendaContent : currentTab === 'critique' ? (
+            <WhatsAppAttendanceCritiquePanel chatId={chatId} isActive />
           ) : <LoadingState active={loading} className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]" label="Carregando informações do chat..." fallback={() => leadPanelError ? (
             <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
@@ -541,7 +608,13 @@ export default function WhatsAppLeadDrawer({
                   </Button>
                 )}
                 </>}
-                lead={{ ...linkedLead, telefone: linkedLead.telefone ? formatCommWhatsAppPhoneLabel(linkedLead.telefone) : linkedLead.telefone, observacoes: linkedLead.observacoes ?? undefined, favorito: linkedLead.favorito ?? undefined }}
+                lead={{
+                  ...linkedLead,
+                  telefone: linkedLead.telefone ? formatCommWhatsAppPhoneLabel(linkedLead.telefone) : linkedLead.telefone,
+                  status_value: linkedLead.status_value || linkedLead.status_nome,
+                  observacoes: linkedLead.observacoes ?? undefined,
+                  favorito: linkedLead.favorito ?? undefined,
+                }}
                 statusOptions={statusOptions}
                 responsavelOptions={responsavelOptions}
                 onStatusChange={onStatusChange}
@@ -556,93 +629,6 @@ export default function WhatsAppLeadDrawer({
 
               <LeadRelationshipsPanel lead={linkedLead} />
 
-              {canViewAgenda ? (
-                <Surface variant="muted" padding="sm" className="whatsapp-inbox-contact-agenda">
-                  <div className="comm-whatsapp-chat-agenda-header flex min-w-0 flex-col gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Heading level={3} className="min-w-0 text-base font-semibold leading-tight text-[var(--text-primary)]">
-                        Agenda do chat
-                      </Heading>
-                      <InfoTooltip
-                        content="Reúne lembretes do lead e dos contratos ligados a esta conversa. Agende, conclua ou reagende sem sair da Inbox."
-                        label="Sobre a agenda do chat"
-                        side="left"
-                      />
-                    </div>
-
-                    <div className={`comm-whatsapp-chat-agenda-actions grid gap-2 ${agendaLead && canEditAgenda ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      {agendaLead && canEditAgenda ? (
-                        <Button variant="secondary" size="sm" className="w-full justify-center" onClick={() => setSchedulerOpen(true)}>
-                          <CalendarPlus className="kds-control-icon" />
-                          Agendar
-                        </Button>
-                      ) : null}
-                      <Button variant="ghost" size="sm" className="w-full justify-center" onClick={() => void loadAgendaReminders()} loading={agendaLoading}>
-                        <RefreshCw className="kds-control-icon" />
-                        Atualizar
-                      </Button>
-                    </div>
-                  </div>
-
-                  {agendaError ? (
-                    <Surface variant="danger" padding="sm" className="mt-4 flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span className="text-sm">{agendaError}</span>
-                    </Surface>
-                  ) : <LoadingState active={agendaLoading} className="mt-4" label="Carregando lembretes" fallback={() => pendingAgendaReminders.length === 0 ? (
-                    <EmptyState
-                      className="mt-4"
-                      icon={<Bell className="h-5 w-5" />}
-                      title="Nenhum lembrete pendente"
-                      description="A agenda deste chat está em dia no momento."
-                    />
-                  ) : (
-                    <div className="mt-4 space-y-4">
-                      {[
-                        {
-                          id: 'overdue',
-                          title: 'Atrasados',
-                          subtitle: 'Precisam de ação imediata.',
-                          items: overdueAgendaReminders,
-                          toneClassName: 'text-[var(--danger-text)]',
-                        },
-                        {
-                          id: 'today',
-                          title: 'Hoje',
-                          subtitle: 'Compromissos do dia atual.',
-                          items: todayAgendaReminders,
-                          toneClassName: 'text-[var(--accent-gold-hover)]',
-                        },
-                        {
-                          id: 'future',
-                          title: 'Futuros',
-                          subtitle: 'Próximos acompanhamentos agendados.',
-                          items: futureAgendaReminders,
-                          toneClassName: 'text-[var(--text-secondary)]',
-                        },
-                      ].map((section) => (
-                        <div key={section.id} className="space-y-3">
-                          <div className="flex items-center justify-between gap-3 px-1">
-                            <div>
-                              <Text className={`text-sm font-semibold ${section.toneClassName}`}>{section.title}</Text>
-                              <Text className="text-xs text-[var(--text-muted)]">{section.subtitle}</Text>
-                            </div>
-                            <Badge tone="neutral" size="sm">{section.items.length}</Badge>
-                          </div>
-
-                          {section.items.length > 0 ? (
-                            <div className="space-y-3">{section.items.slice(0, 4).map(renderAgendaReminderItem)}</div>
-                          ) : (
-                            <Surface padding="sm" className="text-sm text-[var(--text-muted)]">
-                              Nenhum lembrete nesta seção.
-                            </Surface>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )} />}
-                </Surface>
-              ) : null}
             </div>
           ) : (
             <div className="space-y-4">

@@ -209,6 +209,7 @@ export const useInboxOverlayPositions = ({
       applyPosition(setAdvancedFiltersPosition, getAdvancedFiltersPosition(
         trigger.getBoundingClientRect(),
         { width: window.innerWidth, height: window.innerHeight },
+        trigger.parentElement?.getBoundingClientRect().right,
       ));
     };
 

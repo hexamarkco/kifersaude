@@ -30,6 +30,12 @@ const findCheckbox = (dialog: HTMLElement, label: string) => {
   return row?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
 };
 
+const openOptions = (dialog: HTMLElement, label: string) => {
+  const summary = Array.from(dialog.querySelectorAll('summary')).find((item) => item.textContent?.includes(label));
+  click(summary ?? null);
+  return summary;
+};
+
 test('advanced filters are staged and applied together from an anchored non-modal dropdown', () => {
   const applied: InboxAdvancedFilterValues[] = [];
   let closeCount = 0;
@@ -48,9 +54,12 @@ test('advanced filters are staged and applied together from an anchored non-moda
     assert.equal(dialog.getAttribute('aria-modal'), null);
     assert.equal(document.querySelector('.kds-dialog-backdrop'), null);
     assert.notEqual(document.body.style.overflow, 'hidden');
-    assert.equal(dialog.querySelector('h2')?.textContent, 'Filtros do inbox');
+    assert.equal(dialog.querySelector('h2')?.textContent, 'Filtrar conversas');
+    assert.equal(dialog.querySelectorAll('details[open]').length, 0);
 
     const unreadButton = Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Não lidas'));
+    const statusSummary = openOptions(dialog, 'Status do lead');
+    openOptions(dialog, 'Agente responsável');
     const statusCheckbox = findCheckbox(dialog, 'Convertido');
     const responsavelCheckbox = findCheckbox(dialog, 'Agente de demonstração');
     assert.ok(statusCheckbox);
@@ -59,6 +68,7 @@ test('advanced filters are staged and applied together from an anchored non-moda
     click(unreadButton ?? null);
     click(statusCheckbox);
     click(responsavelCheckbox);
+    assert.equal(statusSummary?.getAttribute('aria-label'), 'Status do lead, 1 selecionado');
     assert.equal(applied.length, 0);
 
     click(Array.from(dialog.querySelectorAll('button')).find((button) => button.textContent?.includes('Aplicar filtros')) ?? null);
@@ -95,6 +105,7 @@ test('closing the filters discards draft selections and reopening starts from ap
     click(view.container.querySelector('button'));
     let dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
     assert.ok(dialog);
+    openOptions(dialog, 'Status do lead');
     const statusCheckbox = findCheckbox(dialog, 'Atendimento');
     assert.ok(statusCheckbox);
     click(statusCheckbox);
@@ -106,6 +117,7 @@ test('closing the filters discards draft selections and reopening starts from ap
     click(view.container.querySelector('button'));
     dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
     assert.ok(dialog);
+    openOptions(dialog, 'Status do lead');
     assert.equal(findCheckbox(dialog, 'Atendimento')?.checked, false);
   } finally {
     view.unmount();

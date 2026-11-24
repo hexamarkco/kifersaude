@@ -32,7 +32,7 @@ test('filters trigger registers its positioning anchor and exposes the open stat
   }
   const view = render(<Harness />);
   try {
-    const button = [...view.container.querySelectorAll('button')].find(node => node.textContent?.trim() === 'Filtrar conversas');
+    const button = view.container.querySelector<HTMLButtonElement>('button[aria-label="Filtrar conversas"]');
     assert.ok(button);
     assert.equal(triggerRef.current, button);
     assert.equal(button.getAttribute('aria-haspopup'), 'dialog');

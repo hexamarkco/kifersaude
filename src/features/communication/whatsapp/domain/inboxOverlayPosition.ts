@@ -89,6 +89,7 @@ export const getPointerMenuPosition = ({
 export const getAdvancedFiltersPosition = (
   trigger: InboxOverlayRect,
   viewport: InboxOverlayViewport,
+  toolbarRight = trigger.right,
 ): InboxOverlayPosition => {
   const viewportPadding = 16;
   const panelWidth = Math.min(360, viewport.width - viewportPadding * 2);
@@ -97,7 +98,7 @@ export const getAdvancedFiltersPosition = (
   const openAbove = availableBelow < 400 && availableAbove > availableBelow;
   const maxHeight = Math.min(560, openAbove ? availableAbove : availableBelow);
   const left = Math.min(
-    Math.max(viewportPadding, trigger.left),
+    Math.max(viewportPadding, toolbarRight - panelWidth),
     viewport.width - panelWidth - viewportPadding,
   );
   const top = openAbove

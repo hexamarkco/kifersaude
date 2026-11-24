@@ -1,16 +1,62 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { ListFilter, SlidersHorizontal, UsersRound, type LucideIcon } from 'lucide-react';
 
 import {
   Button,
+  Checkbox,
+  DisclosureTrigger,
+  FieldLabel,
   PositionedPopover,
   DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  SegmentedControl,
+  Text,
+  type SegmentedControlItem,
 } from '../../../../design-system';
 import type { InboxOverlayPosition } from '../domain/inboxOverlayPosition';
 import type { ChatActivityFilter } from '../domain/chatFilters';
-import { InboxFilterGroup, InboxMultiFilterGroup } from './WhatsAppInboxList';
+
+const ACTIVITY_OPTIONS: SegmentedControlItem<ChatActivityFilter>[] = [
+  { id: 'all', label: 'Todas' },
+  { id: 'unread', label: 'Não lidas' },
+];
+
+function InboxFilterOptions({ label, icon, options, values, onChange }: {
+  label: string;
+  icon: LucideIcon;
+  options: InboxAdvancedFiltersDialogProps['statusOptions'];
+  values: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const normalizedValues = values.map((value) => value.toLowerCase());
+  const selectionLabel = values.length ? `${values.length} ${values.length === 1 ? 'selecionado' : 'selecionados'}` : 'Todos';
+
+  return (
+    <details className="whatsapp-inbox-filter-options">
+      <DisclosureTrigger icon={icon} className="whatsapp-inbox-filter-options-trigger" aria-label={`${label}, ${selectionLabel}`}>
+        {label} <span className="whatsapp-inbox-filter-selection">· {values.length || 'Todos'}</span>
+      </DisclosureTrigger>
+      <div className="whatsapp-inbox-filter-option-list" role="group" aria-label={label}>
+        {options.map(({ value, label: optionLabel }) => {
+          const normalizedValue = value.toLowerCase();
+          const selected = normalizedValues.includes(normalizedValue);
+          return (
+            <FieldLabel key={value} className="whatsapp-inbox-filter-option">
+              <Checkbox
+                checked={selected}
+                onChange={() => onChange(selected ? values.filter((item) => item.toLowerCase() !== normalizedValue) : [...values, value])}
+              />
+              <span>{optionLabel}</span>
+            </FieldLabel>
+          );
+        })}
+        {options.length === 0 && <Text size="sm" tone="muted" className="whatsapp-inbox-filter-option">Nenhuma opção disponível</Text>}
+      </div>
+    </details>
+  );
+}
 
 export type InboxAdvancedFilterValues = {
   activityFilter: ChatActivityFilter;
@@ -73,7 +119,7 @@ export function WhatsAppInboxAdvancedFiltersDialog({
       isOpen={isOpen}
       position={position}
       onClose={onClose}
-      ariaLabel="Filtros do inbox"
+      ariaLabel="Filtrar conversas"
       className="whatsapp-inbox-filter-dropdown"
     >
       {isOpen ? (
@@ -121,45 +167,34 @@ function InboxAdvancedFiltersDialogContent({
   return (
     <>
       <DialogHeader onClose={onClose}>
-        <DialogTitle>Filtros do inbox</DialogTitle>
+        <DialogTitle><SlidersHorizontal aria-hidden="true" className="kds-control-icon" />Filtrar conversas</DialogTitle>
       </DialogHeader>
-      <DialogBody className="whatsapp-inbox-filter-dialog-body space-y-4">
-        <InboxFilterGroup
-          label="Atividade"
-          value={activityFilter}
-          onChange={setActivityFilter}
-          compact
-          options={[
-            { value: 'all', label: 'Todas' },
-            { value: 'unread', label: 'Não lidas' },
-          ]}
-        />
-
-        <InboxMultiFilterGroup
+      <DialogBody className="whatsapp-inbox-filter-dialog-body">
+        <div className="whatsapp-inbox-filter-activity">
+          <Text size="sm" weight="medium">Atividade</Text>
+          <SegmentedControl items={ACTIVITY_OPTIONS} value={activityFilter} onChange={setActivityFilter} size="sm" ariaLabel="Atividade" />
+        </div>
+        <InboxFilterOptions
           label="Status do lead"
+          icon={ListFilter}
           values={leadStatusFilters}
           onChange={setLeadStatusFilters}
-          compact
-          variant="list"
           options={statusOptions}
         />
 
-        <InboxMultiFilterGroup
+        <InboxFilterOptions
           label="Agente responsável"
+          icon={UsersRound}
           values={leadResponsavelFilters}
           onChange={setLeadResponsavelFilters}
-          compact
-          variant="list"
           options={responsavelOptions}
         />
       </DialogBody>
       <DialogFooter className="whatsapp-inbox-filter-dialog-footer justify-between">
-        {hasDraftFilters ? (
-          <Button type="button" variant="secondary" size="md" onClick={clearDraftFilters}>
-            Limpar filtros
-          </Button>
-        ) : <span aria-hidden="true" />}
-        <Button type="button" variant="primary" size="md" onClick={applyDraftFilters}>
+        <Button type="button" variant="ghost" size="sm" onClick={clearDraftFilters} disabled={!hasDraftFilters}>
+          Limpar filtros
+        </Button>
+        <Button type="button" variant="primary" size="sm" onClick={applyDraftFilters}>
           Aplicar filtros
         </Button>
       </DialogFooter>

@@ -86,6 +86,8 @@ O único entrypoint visual é `src/design-system/styles.css`: tokens em `foundat
 
 Agenda e Comissões usam as classes `kds-month-*` para a grade mensal. Os eventos usam a cor semântica da categoria e a célula informa a data e a quantidade de itens ao leitor de tela. Use `MonthlyTrendChart` com `embedded` quando o cartão já fornece título e descrição, e com `ariaLabel` para identificar a série.
 
+A central de Automações usa texto de 13px nos rótulos e 14px nos campos. As abas concentram Fluxos, Modelos de mensagem e Operação, enquanto atalhos para outras áreas respeitam as permissões. O editor usa uma paleta lateral, um canvas vertical e um painel de edição por etapa.
+
 ## Limites dos exemplos
 
 `src/pages/dev/showcase/demoData.ts` contém apenas dados ilustrativos. Busca, ordenação, filtros, seleção e paginação operam nessa base. Criar e editar atualiza o estado React da prévia; recarregar ou trocar de padrão restaura os exemplos. Observações são preservadas nos detalhes. A seleção de data não agenda um atendimento real.

@@ -98,7 +98,7 @@ export function MessageListEditor({
             className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2"
           >
             <div className="mb-1 flex items-center justify-between gap-1">
-              <span className="text-[10px] font-medium text-[var(--text-muted)]">
+              <span className="text-xs font-medium text-[var(--text-muted)]">
                 Mensagem {index + 1}
               </span>
               <ButtonGroup size="sm" aria-label="Ações da mensagem">
@@ -189,7 +189,7 @@ export function MessageListEditor({
                   suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                 />
                 <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[10px] text-[var(--text-subtle)]">
+                  <span className="text-xs text-[var(--text-subtle)]">
                     Instrução obrigatória. A IA gera uma única mensagem no momento do envio.
                   </span>
                   <Button
@@ -232,7 +232,7 @@ export function MessageListEditor({
                   size="sm"
                   suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                 />
-                <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
+                <div className="mt-1 text-xs text-[var(--text-subtle)]">
                   Use variáveis como {"{{primeiro_nome}}"} ou fórmulas com
                   {"{{= ... }}"}.
                 </div>
@@ -251,7 +251,7 @@ export function MessageListEditor({
         <Plus /> Adicionar mensagem
       </Button>
 
-      <div className="text-[10px] text-[var(--text-subtle)]">
+      <div className="text-xs text-[var(--text-subtle)]">
         As mensagens desta etapa são enviadas em ordem, cada uma como uma
         mensagem própria do WhatsApp.
       </div>

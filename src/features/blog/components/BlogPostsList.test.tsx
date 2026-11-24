@@ -14,8 +14,8 @@ test('shows a retry instead of an empty state when loading articles fails', () =
     posts={[]} searchTerm="" />);
 
   assert.ok(view.container.querySelector('[role="alert"]')?.textContent?.includes('Não foi possível carregar os artigos'));
-  assert.deepEqual(Array.from(view.container.querySelectorAll('.kds-kpi-value')).map(element => element.textContent), ['—', '—', '—', '—']);
-  assert.ok(!view.container.textContent?.includes('Nenhum post encontrado'));
+  assert.equal(view.container.querySelector('[aria-label="Indicadores do blog"]'), null);
+  assert.ok(!view.container.textContent?.includes('Nenhum artigo encontrado'));
   const retryButton = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Tentar novamente');
   assert.ok(retryButton);
   retryButton.click();
@@ -37,17 +37,17 @@ test('paginates articles and returns to a valid page when results shrink', () =>
     return <><button type="button" onClick={() => setVisiblePosts(posts.slice(0, 2))}>Reduzir</button><BlogPostsList {...props} posts={visiblePosts} /></>;
   }
   const view = render(<Harness />);
-  assert.equal(view.container.querySelectorAll('tbody tr').length, 10);
+  assert.equal(view.container.querySelectorAll('.kds-blog-library > li').length, 10);
   const next = view.container.querySelector<HTMLButtonElement>('button[aria-label="Próxima página"]');
   assert.ok(next);
   act(() => next.click());
-  assert.equal(view.container.querySelectorAll('tbody tr').length, 2);
-  assert.ok(view.container.querySelector('tbody')?.textContent?.includes('Artigo 11'));
+  assert.equal(view.container.querySelectorAll('.kds-blog-library > li').length, 2);
+  assert.ok(view.container.querySelector('.kds-blog-library')?.textContent?.includes('Artigo 11'));
   const reduce = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Reduzir');
   assert.ok(reduce);
   act(() => reduce.click());
-  assert.equal(view.container.querySelectorAll('tbody tr').length, 2);
-  assert.ok(view.container.querySelector('tbody')?.textContent?.includes('Artigo 1'));
-  assert.equal(view.container.querySelector('[aria-current="page"]')?.textContent, '1');
+  assert.equal(view.container.querySelectorAll('.kds-blog-library > li').length, 2);
+  assert.ok(view.container.querySelector('.kds-blog-library')?.textContent?.includes('Artigo 1'));
+  assert.equal(view.container.querySelector('[aria-label="Próxima página"]'), null);
   view.unmount();
 });

@@ -6,6 +6,7 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
+import { BookOpen } from "lucide-react";
 
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { uploadBlogImage } from "../../lib/imageUploadService";
@@ -22,7 +23,7 @@ import {
   mapBlogPostToFormData,
 } from "./shared/blogUtils";
 import type { BlogPost } from "./shared/blogTypes";
-import { Badge, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Image, RichTextEditor, Text } from '../../design-system';
+import { Badge, BrandWordmark, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Heading, Image, RichTextEditor, Text } from '../../design-system';
 import {
   deleteBlogPost,
   listBlogPosts,
@@ -42,7 +43,7 @@ export default function BlogTabScreen() {
   const [validationAttempted, setValidationAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
-  const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
+  const [previewPost, setPreviewPost] = useState<Pick<BlogPost, "title" | "category" | "content" | "excerpt" | "cover_image_url" | "published" | "published_at" | "read_time"> | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingContent, setUploadingContent] = useState(false);
   const [formData, setFormData] = useState(createEmptyBlogFormData);
@@ -107,7 +108,7 @@ export default function BlogTabScreen() {
     }));
   }, []);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (published = formData.published) => {
     if (savingRef.current || uploadingCover || uploadingContent) return;
     if (
       !formData.title ||
@@ -120,9 +121,19 @@ export default function BlogTabScreen() {
       return;
     }
 
+    if (published && !editingPost?.published) {
+      const confirmed = await requestConfirmation({
+        title: "Publicar artigo?",
+        description: `“${formData.title}” ficará disponível no blog da Kifer Saúde.`,
+        confirmLabel: "Publicar artigo",
+        cancelLabel: "Cancelar",
+      });
+      if (!confirmed || savingRef.current) return;
+    }
+
     const postData = buildBlogPostPayload({
       authorId: user?.id,
-      formData,
+      formData: { ...formData, published },
     });
 
     savingRef.current = true;
@@ -139,7 +150,7 @@ export default function BlogTabScreen() {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [closeEditor, editingPost, formData, loadPosts, uploadingContent, uploadingCover, user?.id]);
+  }, [closeEditor, editingPost, formData, loadPosts, requestConfirmation, uploadingContent, uploadingCover, user?.id]);
 
   const handleEdit = useCallback((post: BlogPost) => {
     setEditingPost(post);
@@ -176,6 +187,15 @@ export default function BlogTabScreen() {
 
   const handleTogglePublish = useCallback(
     async (post: BlogPost) => {
+      if (!post.published) {
+        const confirmed = await requestConfirmation({
+          title: "Publicar artigo?",
+          description: `“${post.title}” ficará disponível no blog da Kifer Saúde.`,
+          confirmLabel: "Publicar artigo",
+          cancelLabel: "Cancelar",
+        });
+        if (!confirmed) return;
+      }
       try {
         await setBlogPostPublished(post, !post.published);
       } catch (error) {
@@ -186,7 +206,7 @@ export default function BlogTabScreen() {
 
       await loadPosts();
     },
-    [loadPosts],
+    [loadPosts, requestConfirmation],
   );
 
   const handleCoverImageUpload = useCallback(
@@ -284,7 +304,9 @@ export default function BlogTabScreen() {
           onContentImageUpload={handleContentImageUpload}
           onCoverImageUpload={handleCoverImageUpload}
           onFormDataChange={setFormData}
-          onSave={handleSave}
+          onPreview={() => setPreviewPost({ ...formData, published_at: editingPost?.published_at })}
+          onSave={() => void handleSave()}
+          onPublish={() => void handleSave(true)}
           onTitleChange={handleTitleChange}
           saving={saving}
           validationAttempted={validationAttempted}
@@ -312,14 +334,26 @@ export default function BlogTabScreen() {
         />
       )}
       {ConfirmationDialog}
-      <Dialog open={Boolean(previewPost)} onOpenChange={open => { if (!open) setPreviewPost(null); }} size="lg" aria-label="Prévia do artigo">
+      <Dialog open={Boolean(previewPost)} onOpenChange={open => { if (!open) setPreviewPost(null); }} size="xl" className="kds-blog-workspace kds-blog-preview" aria-label="Prévia do artigo">
         {previewPost && <>
-          <DialogHeader onClose={() => setPreviewPost(null)}><div><Text size="sm" tone="brand">Prévia do artigo</Text><DialogTitle>{previewPost.title}</DialogTitle></div></DialogHeader>
-          <DialogBody className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2"><Badge>{previewPost.category}</Badge><Badge tone={previewPost.published ? 'success' : 'neutral'}>{previewPost.published ? 'Publicado' : 'Rascunho'}</Badge><Text size="sm">{previewPost.read_time}</Text></div>
-            {previewPost.cover_image_url && <Image src={previewPost.cover_image_url} alt={previewPost.title} className="w-full" />}
-            <Text>{previewPost.excerpt}</Text>
-            <RichTextEditor className="kds-rich-text-preview" value={previewPost.content} readOnly modules={{ toolbar: false }} />
+          <DialogHeader onClose={() => setPreviewPost(null)}><DialogTitle>Prévia do artigo</DialogTitle></DialogHeader>
+          <DialogBody>
+            <article className="kds-blog-preview-body">
+              <BrandWordmark variant="lockup" />
+              <div className="space-y-2">
+                <Text size="sm" tone="brand">{previewPost.category}</Text>
+                <Heading level={3} family="display" className="kds-blog-preview-title">{previewPost.title || "Artigo sem título"}</Heading>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Text size="sm" tone="muted">Por Kifer Saúde{previewPost.published_at && ` · ${new Date(previewPost.published_at).toLocaleDateString("pt-BR")}`}{previewPost.read_time && ` · ${previewPost.read_time} de leitura`}</Text>
+                  {!previewPost.published && <Badge tone="warning">Rascunho</Badge>}
+                </div>
+              </div>
+              {previewPost.cover_image_url
+                ? <Image src={previewPost.cover_image_url} alt="" className="kds-blog-preview-cover" />
+                : <div className="kds-blog-preview-cover" aria-hidden="true"><BookOpen /></div>}
+              <Text>{previewPost.excerpt}</Text>
+              <RichTextEditor className="kds-rich-text-preview" value={previewPost.content} readOnly modules={{ toolbar: false }} />
+            </article>
           </DialogBody>
           <DialogFooter><Button variant="secondary" onClick={() => setPreviewPost(null)}>Fechar</Button></DialogFooter>
         </>}

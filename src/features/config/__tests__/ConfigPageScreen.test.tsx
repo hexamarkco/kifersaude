@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({ modules: new Set<string>(), canEdit: false }))
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ role: 'custom' }) }));
 vi.mock('../../../contexts/ConfigContext', () => ({ useConfig: () => ({ getRoleModulePermission: (_role: string, module: string) => ({ can_view: mocks.modules.has(module), can_edit: mocks.canEdit }) }) }));
 vi.mock('../ai/AiConfigScreen', () => ({ default: () => <p>Área de IA</p> }));
-vi.mock('../automation/AutomationSettingsScreen', () => ({ default: () => <p>Área de automações</p> }));
+vi.mock('../automation/AutomationSettingsScreen', () => ({ default: ({ areaActions }: {
+  areaActions: Array<{ label: string; onClick: () => void }>;
+}) => <><p>Área de automações</p>{areaActions.map((action) => <button key={action.label} type="button" onClick={action.onClick}>{action.label}</button>)}</> }));
 vi.mock('../integrations/IntegrationsScreen', () => ({ default: () => <p>Área de integrações</p> }));
 vi.mock('../general/SystemSettingsScreen', () => ({ default: () => <p>Área geral</p> }));
 vi.mock('../users/UsersScreen', () => ({ default: ({ createDialogOpen }: { createDialogOpen: boolean }) => <><p>Área de usuários</p>{createDialogOpen && <div role="dialog">Criar usuário</div>}</> }));
@@ -50,12 +52,16 @@ const renderAt = (path: string, modules: string[], canEdit = false) => {
   </MemoryRouter>);
 };
 
-test('abre a nova área apenas com as abas permitidas', () => {
+test('passa ao workspace apenas os atalhos das outras áreas permitidas', () => {
   const view = renderAt('/painel/automacoes', ['config-automation', 'config-integrations', 'config-ai', 'config-users']);
   try {
-    assert.deepEqual(Array.from(view.container.querySelectorAll('[role="tab"]')).map((tab) => tab.textContent), ['Automações', 'Integrações', 'IA']);
+    assert.deepEqual(Array.from(view.container.querySelectorAll('button')).map((button) => button.textContent), ['Integrações', 'IA']);
     assert.ok(view.container.textContent?.includes('Área de automações'));
     assert.equal(view.container.textContent?.includes('Área de usuários'), false);
+    const ai = Array.from(view.container.querySelectorAll('button')).find((button) => button.textContent === 'IA');
+    assert.ok(ai);
+    act(() => ai.click());
+    assert.ok(view.container.textContent?.includes('Área de IA'));
   } finally { view.unmount(); }
 });
 

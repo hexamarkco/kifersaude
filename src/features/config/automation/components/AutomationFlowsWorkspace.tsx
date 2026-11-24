@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Activity, ArrowUpRight, Clock3, Layers3, MessageSquareText, Play, Search, Tag } from 'lucide-react';
+import { Activity, ArrowUpRight, Clock3, Edit3, GitBranch, Layers3, MessageSquareText, Pause, Play, Search, Tag, Trash2, UserRoundPlus } from 'lucide-react';
 
 import type { AutoContactFlow } from '../../../../lib/autoContactService';
+import { automationTriggerLabels } from '../automationPresentation';
 import {
   Badge,
   Button,
@@ -13,10 +14,10 @@ import {
   Input,
   KpiCard,
   Pagination,
-  SectionHeader,
+  Heading,
+  RecordActions,
   Text,
 } from '../../../../design-system';
-import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 
 type AutomationFlowsWorkspaceProps = {
   flows: AutoContactFlow[];
@@ -34,15 +35,10 @@ type AutomationFlowsWorkspaceProps = {
   availableTags: string[];
   getConditionPreview: (flow: AutoContactFlow) => string;
   onEditFlow: (flowId: string) => void;
+  onToggleFlow?: (flowId: string) => void;
+  onRemoveFlow?: (flowId: string) => void;
   onOpenTemplates?: () => void;
   onOpenSimulation?: (flowId: string) => void;
-};
-
-const triggerLabels: Record<AutoContactFlow['triggerType'], string> = {
-  lead_created: 'Novo lead',
-  status_changed: 'Mudança de status',
-  status_duration: 'Tempo no status',
-  inactivity_duration: 'Tempo sem contato',
 };
 
 export default function AutomationFlowsWorkspace({
@@ -61,6 +57,8 @@ export default function AutomationFlowsWorkspace({
   availableTags,
   getConditionPreview,
   onEditFlow,
+  onToggleFlow,
+  onRemoveFlow,
   onOpenTemplates,
   onOpenSimulation,
 }: AutomationFlowsWorkspaceProps) {
@@ -91,29 +89,7 @@ export default function AutomationFlowsWorkspace({
         <KpiCard title="Mensagens hoje" data-tone="warning" value={<span>{dailyCountValue}</span>} trend={dailyCountDetail} icon={<Clock3 aria-hidden="true" />} />
       </section>
 
-      <section className="kds-automation-journeys space-y-5">
-        <SectionHeader
-          eyebrow="Automação comercial"
-          title="Fluxos de automação"
-          description={(
-            <div className="space-y-3">
-              <Text>Organize regras, horários e mensagens usadas no acompanhamento dos leads.</Text>
-              <div>
-                <Text className="font-semibold">Variáveis disponíveis nas mensagens</Text>
-                <ul className="mt-2 space-y-1">
-                  {AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS.map(({ key, label }) => (
-                    <li key={key} className="flex items-baseline gap-2">
-                      <code>{`{{${key}}}`}</code>
-                      <span>{label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-          as="h2"
-        />
-
+      <section className="kds-automation-journeys" aria-label="Fluxos de automação">
         {totalFlows === 0 ? (
           <EmptyState
             icon={<Activity aria-hidden="true" />}
@@ -122,7 +98,7 @@ export default function AutomationFlowsWorkspace({
           />
         ) : (
           <>
-            <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(20rem,2.5fr)_minmax(14rem,1fr)_auto] xl:items-center">
+            <div className="kds-automation-list-toolbar">
               <Input
                 type="search"
                 value={search}
@@ -131,7 +107,7 @@ export default function AutomationFlowsWorkspace({
                   onSearchChange(event.target.value);
                 }}
                 leftIcon={Search}
-                placeholder="Buscar fluxo por nome, condição ou tag"
+                placeholder="Buscar fluxo por nome, condição ou tag…"
                 aria-label="Buscar fluxo por nome, condição ou tag"
               />
               <FilterSelect
@@ -143,6 +119,7 @@ export default function AutomationFlowsWorkspace({
                 }}
                 placeholder="Todas as tags"
                 includePlaceholderOption={false}
+                neutralValues={['all']}
                 options={[
                   { value: 'all', label: 'Todas as tags' },
                   ...availableTags.map((tag) => ({ value: tag, label: tag })),
@@ -163,39 +140,41 @@ export default function AutomationFlowsWorkspace({
             ) : (
               <>
                 <ul className="kds-automation-journey-grid" aria-label="Fluxos de automação em cartões">
-                  {visibleFlows.map((flow) => (
-                    <li key={flow.id}>
-                      <Card padding="md" className="kds-automation-journey-card space-y-4">
-                        <CardIcon><MessageSquareText aria-hidden="true" /></CardIcon>
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <Text className="kds-card-title">{flow.name || 'Fluxo sem nome'}</Text>
-                            <Text className="kds-card-subtitle">{triggerLabels[flow.triggerType]}</Text>
+                  {visibleFlows.map((flow) => {
+                    const name = flow.name || 'Fluxo sem nome';
+                    const active = flow.ativo !== false;
+                    const Icon = flow.triggerType === 'lead_created' ? UserRoundPlus : flow.triggerType === 'status_changed' ? GitBranch : Clock3;
+                    return (
+                      <li key={flow.id}>
+                        <Card padding="md" className="kds-automation-journey-card">
+                          <div className="kds-automation-card-top">
+                            <CardIcon data-trigger={flow.triggerType}><Icon aria-hidden="true" /></CardIcon>
+                            <RecordActions label={`Ações do fluxo ${name}`} visibleCount={0} actions={[
+                              { label: 'Editar jornada', icon: Edit3, onClick: () => onEditFlow(flow.id) },
+                              ...(onOpenSimulation ? [{ label: 'Simular e testar', icon: Play, onClick: () => onOpenSimulation(flow.id) }] : []),
+                              ...(onToggleFlow ? [{ label: active ? 'Pausar fluxo' : 'Revisar ativação', icon: active ? Pause : Play, onClick: () => onToggleFlow(flow.id) }] : []),
+                              ...(onRemoveFlow ? [{ label: 'Remover fluxo', icon: Trash2, destructive: true, onClick: () => onRemoveFlow(flow.id) }] : []),
+                            ]} />
                           </div>
-                          <Badge tone={flow.ativo === false ? 'warning' : 'success'} size="sm">
-                            {flow.ativo === false ? 'Pausado' : 'Ativo'}
-                          </Badge>
-                        </div>
-                        <Text className="break-words text-xs text-[var(--text-muted)]">{getConditionPreview(flow)}</Text>
-                        <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
-                          <Text className="text-sm tabular-nums text-[var(--text-secondary)]">
-                            {flow.steps.length} {flow.steps.length === 1 ? 'etapa' : 'etapas'}
-                          </Text>
-                          <Button
-                            variant="text"
-                            size="sm"
-                            onClick={() => onEditFlow(flow.id)}
-                            aria-label={`Editar fluxo ${flow.name || 'sem nome'}`}
-                          >
-                            Ver jornada <ArrowUpRight className="kds-control-icon" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </Card>
-                    </li>
-                  ))}
+                          <Heading level={2} size="sm" className="kds-card-title">{name}</Heading>
+                          <Text size="sm" tone="muted" className="kds-automation-card-description">{getConditionPreview(flow)}</Text>
+                          <div className="kds-automation-card-meta">
+                            <Badge tone={active ? 'success' : 'warning'} size="sm">{active ? 'Ativo' : 'Pausado'}</Badge>
+                            <Text as="span" size="sm" tone="muted">{flow.steps.length} {flow.steps.length === 1 ? 'etapa' : 'etapas'}</Text>
+                          </div>
+                          <div className="kds-automation-card-footer">
+                            <Text as="span" size="sm" tone="muted">{automationTriggerLabels[flow.triggerType]}</Text>
+                            <Button variant="text" size="sm" onClick={() => onEditFlow(flow.id)} aria-label={`Editar fluxo ${name}`}>
+                              Ver jornada <ArrowUpRight className="kds-control-icon" aria-hidden="true" />
+                            </Button>
+                          </div>
+                        </Card>
+                      </li>
+                    );
+                  })}
                 </ul>
 
-                <Pagination
+                {totalPages > 1 && <Pagination
                   currentPage={safePage}
                   totalPages={totalPages}
                   totalItems={flows.length}
@@ -206,7 +185,7 @@ export default function AutomationFlowsWorkspace({
                     setCurrentPage(1);
                   }}
                   pageSizeOptions={[10, 25, 50]}
-                />
+                />}
               </>
             )}
           </>

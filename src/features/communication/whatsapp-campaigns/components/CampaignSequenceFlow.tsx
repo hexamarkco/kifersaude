@@ -5,7 +5,7 @@ import { WorkflowCanvas as ReactFlow, WorkflowBackground as Background, Workflow
 import { MarkerType, Position, useReactFlow, type Edge, type Node, type NodeProps, type ReactFlowInstance } from 'reactflow';
 import { Check, Clock3, Flag, Maximize2, MessageCircle, Paperclip, Play, Plus, ZoomIn, ZoomOut } from 'lucide-react';
 
-import { Button, IconButton, Select } from '../../../../design-system';
+import { Badge, Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DisclosureTrigger, IconButton, Surface } from '../../../../design-system';
 import type { CommWhatsAppCampaignStageDraft, CommWhatsAppCampaignStepKind } from '../commWhatsAppCampaignService';
 
 type StageNodeData = {
@@ -107,9 +107,9 @@ function ViewControls() {
 }
 
 export function CampaignSequenceFlow({ stages, statusOptions, interMessageIntervalSeconds, abTestEnabled, onAddStage, renderStageEditor }: CampaignSequenceFlowProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const flowRef = useRef<ReactFlowInstance | null>(null);
-  const activeIndex = Math.min(selectedIndex, Math.max(0, stages.length - 1));
+  const activeIndex = Math.min(selectedIndex ?? 0, Math.max(0, stages.length - 1));
 
   const selectStage = (index: number) => {
     setSelectedIndex(index);
@@ -135,7 +135,7 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
           alternativeCount: stage.kind === 'message' && abTestEnabled
             ? 1 + Object.keys(stages[0]?.variantMessages ?? {}).length
             : 1,
-          active: index === activeIndex,
+          active: selectedIndex !== null && index === activeIndex,
           onSelect: () => selectStage(index),
         },
       };
@@ -163,17 +163,32 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
 
   return (
     <section className="space-y-3" aria-label="Editor visual da sequência do disparo">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Select aria-label="Etapa em edição" value={activeIndex} onChange={(event) => selectStage(Number(event.target.value))} className="w-full sm:w-auto">
-          {stages.map((stage, index) => <option key={index} value={index}>Etapa {index + 1} · {stage.kind === 'message' ? 'Mensagens' : 'Mudança de status'}</option>)}
-        </Select>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={() => addStage('message')}><Plus className="kds-control-icon" />Adicionar mensagens</Button>
-          <Button size="sm" variant="secondary" onClick={() => addStage('status_change')}><Flag className="kds-control-icon" />Adicionar mudança de status</Button>
-        </div>
+      <ol className="kds-campaign-sequence">
+        {stages.map((stage, index) => {
+          const caption = stage.kind === 'message'
+            ? stage.messages.find((message) => message.messageText.trim())?.messageText || (stage.messages.some((message) => message.mediaUrl) ? 'Mensagem com anexo' : 'Escreva a primeira mensagem desta etapa.')
+            : statusOptions.find((option) => option.value === stage.statusToSet)?.label || stage.statusToSet || 'Escolha o status do lead.';
+          return (
+            <li key={index}>
+              <Surface padding="sm" className="kds-campaign-sequence-row">
+                <span className="kds-campaign-sequence-number">{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <Badge size="sm">{describeWait(stage, index)}</Badge>
+                  <Text weight="semibold">{stage.kind === 'message' ? (index === 0 ? 'Primeiro contato' : 'Mensagem de acompanhamento') : 'Mudança de status'}</Text>
+                  <Text size="sm" tone="muted">{caption}</Text>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => selectStage(index)}>{stage.kind === 'message' ? 'Editar mensagem' : 'Editar etapa'}</Button>
+              </Surface>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" onClick={() => addStage('message')}><Plus className="kds-control-icon" />Adicionar mensagens</Button>
+        <Button size="sm" variant="secondary" onClick={() => addStage('status_change')}><Flag className="kds-control-icon" />Adicionar mudança de status</Button>
       </div>
-      <Text className="text-xs text-[color:var(--panel-text-muted)]">Siga as setas para ver a ordem do envio. Selecione uma etapa para editar. Arraste o fundo para navegar pela sequência.</Text>
-      <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+      <details className="kds-campaign-sequence-map">
+        <DisclosureTrigger size="sm">Mapa da sequência</DisclosureTrigger>
         <div className="h-[360px] min-w-0 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-soft)] lg:h-[560px]" role="region" aria-label="Mapa da sequência de envio">
           <ReactFlow
             nodes={nodes}
@@ -198,10 +213,17 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
             <ViewControls />
           </ReactFlow>
         </div>
-        <div className="min-w-0 rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] lg:max-h-[560px] lg:overflow-y-auto" aria-label={`Edição da etapa ${activeIndex + 1}`}>
-          {stages[activeIndex] && renderStageEditor(stages[activeIndex], activeIndex)}
-        </div>
-      </div>
+      </details>
+      {selectedIndex !== null && stages[activeIndex] && (
+        <Dialog open size="lg" className="kds-campaign-workspace" onOpenChange={(open) => !open && setSelectedIndex(null)}>
+          <DialogHeader onClose={() => setSelectedIndex(null)}>
+            <DialogTitle>{stages[activeIndex].kind === 'message' ? 'Editar mensagem da campanha' : 'Editar mudança de status'}</DialogTitle>
+            <DialogDescription placement="visible">Etapa {activeIndex + 1} · {describeWait(stages[activeIndex], activeIndex)}</DialogDescription>
+          </DialogHeader>
+          <DialogBody>{renderStageEditor(stages[activeIndex], activeIndex)}</DialogBody>
+          <DialogFooter><Button onClick={() => setSelectedIndex(null)}>Concluir edição</Button></DialogFooter>
+        </Dialog>
+      )}
       <Text className="text-xs text-[color:var(--panel-text-muted)]">Entre as mensagens da mesma etapa: {interMessageIntervalSeconds > 0 ? `espera mínima de ${interMessageIntervalSeconds} segundos` : 'cerca de 3 segundos'}. As etapas seguintes respeitam a espera indicada e podem parar se o contato responder.</Text>
     </section>
   );

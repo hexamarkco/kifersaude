@@ -34,12 +34,15 @@ test('previews the selected article read-only without publishing, saving or open
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const preview = view.container.querySelector<HTMLButtonElement>('button[aria-label="Visualizar"]');
+    const menu = view.container.querySelector<HTMLButtonElement>('.kds-blog-library button[aria-haspopup="menu"]');
+    assert.ok(menu);
+    act(() => menu.click());
+    const preview = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Visualizar'));
     assert.ok(preview);
     act(() => preview.click());
     const dialog = document.body.querySelector('[role="dialog"][aria-label="Prévia do artigo"]');
     assert.ok(dialog);
-    assert.equal(dialog.querySelector('h2')?.textContent, 'Orientação para escolher um plano');
+    assert.equal(dialog.querySelector('h3')?.textContent, 'Orientação para escolher um plano');
     assert.ok(dialog.textContent?.includes('Resumo da publicação'));
     assert.ok(dialog.textContent?.includes('Rascunho'));
     const content = dialog.querySelector('[data-testid="preview-content"]');
@@ -57,26 +60,23 @@ test('filters articles by publication status without changing the totals', async
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const filter = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Todos os status'));
+    const filter = Array.from(view.container.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find(button => button.textContent === 'Publicado');
     assert.ok(filter);
     act(() => filter.click());
-    const option = Array.from(document.body.querySelectorAll('[role="option"]')).find(element => element.textContent?.includes('Publicado')) as HTMLButtonElement | undefined;
-    assert.ok(option);
-    act(() => option.click());
-    assert.ok(view.container.textContent?.includes('Nenhum post encontrado'));
+    assert.ok(view.container.textContent?.includes('Nenhum artigo encontrado'));
     assert.deepEqual(Array.from(view.container.querySelectorAll('.kds-kpi-value')).map(element => element.textContent), ['0', '1', '0', '0']);
-    assert.equal(view.container.querySelectorAll('tbody tr').length, 0);
+    assert.equal(view.container.querySelectorAll('.kds-blog-library > li').length, 0);
   } finally { view.unmount(); }
 });
 
-test('uses the content management hierarchy and shared filter bar', async () => {
+test('uses the article library and publication filters', async () => {
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
     assert.ok(Array.from(view.container.querySelectorAll('h1')).some(heading => heading.textContent === 'Conteúdo que aproxima.'));
-    assert.ok(view.container.querySelector('.kds-blog-filter-bar.kds-op-toolbar'));
-    assert.ok(view.container.querySelector('.kds-toolbar-search input[aria-label="Buscar artigos"]'));
-    assert.ok(Array.from(view.container.querySelectorAll('th')).some(heading => heading.textContent === 'Atualizado em'));
+    assert.ok(view.container.querySelector('.kds-blog-library-toolbar [role="tablist"]'));
+    assert.ok(view.container.querySelector('.kds-blog-library-toolbar input[aria-label="Buscar artigos"]'));
+    assert.equal(view.container.querySelectorAll('.kds-blog-library > li').length, 1);
   } finally { view.unmount(); }
 });
 
@@ -84,7 +84,7 @@ test('opens the article preview from the compact collection menu', async () => {
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-blog-library button[aria-haspopup="menu"]');
     assert.ok(menuButton);
     act(() => menuButton.click());
     const preview = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Visualizar'));
@@ -100,7 +100,7 @@ test('identifies the article in the deletion confirmation and cancels without de
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    const menuButton = view.container.querySelector<HTMLButtonElement>('.kds-blog-library button[aria-haspopup="menu"]');
     assert.ok(menuButton);
     act(() => menuButton.click());
     const remove = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Excluir'));
@@ -121,23 +121,23 @@ test('opens the article editor and returns without saving', async () => {
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const create = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Novo post'));
+    const create = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Novo artigo'));
     assert.ok(create);
     act(() => create.click());
-    assert.ok(view.container.querySelector('input[placeholder="Digite o título do post"]'));
-    assert.ok(view.container.querySelector('input[placeholder="url-amigavel-do-post"]'));
-    assert.ok(view.container.textContent?.includes('SEO (otimização para Google)'));
+    assert.ok(view.container.querySelector('input[placeholder="Digite o título do artigo"]'));
+    assert.ok(view.container.querySelector('input[placeholder="endereco-do-artigo"]'));
+    assert.ok(view.container.textContent?.includes('Busca e compartilhamento'));
     const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
     assert.ok(save);
     act(() => save.click());
-    assert.equal(view.container.querySelector('input[placeholder="Digite o título do post"]')?.getAttribute('aria-invalid'), 'true');
-    assert.equal(document.activeElement, view.container.querySelector('input[placeholder="Digite o título do post"]'));
+    assert.equal(view.container.querySelector('input[placeholder="Digite o título do artigo"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(document.activeElement, view.container.querySelector('input[placeholder="Digite o título do artigo"]'));
     assert.ok(view.container.textContent?.includes('Escreva o conteúdo do artigo.'));
     assert.equal(calls.save, 0);
-    const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Cancelar');
+    const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Voltar para artigos'));
     assert.ok(cancel);
     act(() => cancel.click());
-    assert.ok(view.container.textContent?.includes('Biblioteca de artigos'));
+    assert.ok(view.container.querySelector('[aria-label="Biblioteca de artigos"]'));
     assert.equal(calls.save, 0);
   } finally { view.unmount(); }
 });
@@ -149,7 +149,7 @@ test('locks the editor during save and returns to the list after success', async
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const menu = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    const menu = view.container.querySelector<HTMLButtonElement>('.kds-blog-library button[aria-haspopup="menu"]');
     assert.ok(menu);
     act(() => menu.click());
     const edit = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Editar'));
@@ -161,11 +161,11 @@ test('locks the editor during save and returns to the list after success', async
     assert.equal(calls.save, 1);
     assert.ok(view.container.querySelector('button[aria-busy="true"]')?.textContent?.includes('Salvando'));
     assert.ok(view.container.querySelector('fieldset')?.disabled);
-    const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent === 'Cancelar');
+    const cancel = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Voltar para artigos'));
     assert.ok(cancel?.disabled);
     assert.ok(resolveSave);
     await act(async () => { resolveSave?.(); await new Promise(resolve => setTimeout(resolve, 0)); });
-    assert.ok(view.container.textContent?.includes('Biblioteca de artigos'));
+    assert.ok(view.container.querySelector('[aria-label="Biblioteca de artigos"]'));
     assert.equal(calls.save, 1);
   } finally { view.unmount(); saveControl.pending = null; calls.save = 0; }
 });
@@ -175,7 +175,7 @@ test('keeps article data and enables retry when saving fails', async () => {
   const view = render(<BlogTabScreen />);
   try {
     await waitForBlogLoaded(view.container);
-    const menu = view.container.querySelector<HTMLButtonElement>('.kds-collection-cards button[aria-haspopup="menu"]');
+    const menu = view.container.querySelector<HTMLButtonElement>('.kds-blog-library button[aria-haspopup="menu"]');
     assert.ok(menu);
     act(() => menu.click());
     const edit = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Editar'));
@@ -184,9 +184,30 @@ test('keeps article data and enables retry when saving fails', async () => {
     const save = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
     assert.ok(save);
     await act(async () => { save.click(); await new Promise(resolve => setTimeout(resolve, 0)); });
-    assert.equal(view.container.querySelector<HTMLInputElement>('input[placeholder="Digite o título do post"]')?.value, 'Orientação para escolher um plano');
+    assert.equal(view.container.querySelector<HTMLInputElement>('input[placeholder="Digite o título do artigo"]')?.value, 'Orientação para escolher um plano');
     const retry = Array.from(view.container.querySelectorAll('button')).find(button => button.textContent?.includes('Salvar'));
     assert.ok(retry);
     assert.equal(retry.disabled, false);
   } finally { view.unmount(); saveControl.fail = false; calls.save = 0; }
+});
+
+test('requires confirmation before publishing from an article card', async () => {
+  const view = render(<BlogTabScreen />);
+  try {
+    await waitForBlogLoaded(view.container);
+    const menu = view.container.querySelector<HTMLButtonElement>('.kds-blog-library button[aria-haspopup="menu"]');
+    assert.ok(menu);
+    act(() => menu.click());
+    const publish = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(item => item.textContent?.includes('Publicar'));
+    assert.ok(publish);
+    act(() => publish.click());
+    const dialog = document.body.querySelector('[role="dialog"]');
+    assert.ok(dialog);
+    assert.ok(dialog.textContent?.includes('Orientação para escolher um plano'));
+    assert.equal(calls.publish, 0);
+    const confirm = Array.from(dialog.querySelectorAll('button')).find(button => button.textContent === 'Publicar artigo');
+    assert.ok(confirm);
+    await act(async () => confirm.click());
+    assert.equal(calls.publish, 1);
+  } finally { view.unmount(); calls.publish = 0; }
 });

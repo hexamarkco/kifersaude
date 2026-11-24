@@ -1,4 +1,4 @@
-import { LoadingMonogram, ButtonGroup, Text, Heading, FieldLabel, InfoTooltip } from '../../../design-system';
+import { Text, Heading, FieldLabel, InfoTooltip } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -6,9 +6,10 @@ import {
   Activity,
   AlarmClock,
   AlertCircle,
-  BarChart3,
+  Check,
+  GitBranch,
+  Play,
   ClipboardList,
-  Edit3,
   File,
   Film,
   Globe2,
@@ -67,7 +68,9 @@ import type { Lead, LeadStatusConfig } from "../../leads";
 import { toast } from "../../../lib/toast";
 import FlowBuilder from "./components/FlowBuilder";
 import AutomationFlowsWorkspace from "./components/AutomationFlowsWorkspace";
-import { MessageVariationsEditor } from "./components/MessageVariationsEditor";
+import { AutomationOperation, AutomationTemplates } from "./components/AutomationWorkspacePanels";
+import { automationTriggerLabels } from "./automationPresentation";
+import { useConfigParam } from "../shared/useConfigTab";
 import { VariableAutocompleteTextarea } from '../../../design-system';
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { PanelAdaptiveLoadingFrame } from '../../../design-system';
@@ -84,14 +87,24 @@ import {
   CardIcon,
   DateTimePicker as DesignSystemDateTimePicker,
   Input,
-  OperationalMetricChip,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DisclosureTrigger,
+  EmptyState,
+  Field,
+  RecordActions,
+  Select,
+  type RecordAction,
   Surface,
   Switch,
   FilterSelect,
   IconButton,
   DialogShell,
   PageHeader,
-  SegmentedControl,
   Tabs,
 } from "../../../design-system";
 
@@ -101,7 +114,14 @@ type TemplateDraft = {
   messages: TemplateMessage[];
 };
 
-export default function AutoContactFlowSettingsScreen() {
+const workspaces = ['flows', 'templates', 'operation'] as const;
+const workspaceHeadings = {
+  flows: { title: 'Rotinas que trabalham com você.', description: 'Organize jornadas, mensagens e regras de acompanhamento.' },
+  templates: { title: 'Mensagens com a sua voz.', description: 'Organize os modelos que a equipe reutiliza nas jornadas.' },
+  operation: { title: 'Acompanhe cada execução.', description: 'Consulte a situação dos fluxos e os registros de mensagens automáticas.' },
+};
+
+export default function AutoContactFlowSettingsScreen({ areaActions = [] }: { areaActions?: RecordAction[] }) {
   const { leadOrigins, options } = useConfig();
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -145,9 +165,9 @@ export default function AutoContactFlowSettingsScreen() {
   );
   const [flowSearch, setFlowSearch] = useState("");
   const [flowTagFilter, setFlowTagFilter] = useState("all");
-  const [activeWorkspace, setActiveWorkspace] = useState<
-    "flows" | "templates" | "operation"
-  >("flows");
+  const [activeWorkspace, setActiveWorkspace] = useConfigParam('workspace', workspaces, 'flows');
+  const [newFlowDraft, setNewFlowDraft] = useState<{ name: string; triggerType: AutoContactFlowTriggerType } | null>(null);
+  const [exitDraft, setExitDraft] = useState<AutoContactFlowCondition | null>(null);
   const [tagDraft, setTagDraft] = useState("");
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationStart, setSimulationStart] = useState("");
@@ -163,7 +183,6 @@ export default function AutoContactFlowSettingsScreen() {
   const [dailyAutomationError, setDailyAutomationError] = useState<
     string | null
   >(null);
-  const [flowEditorMode] = useState<"basic" | "advanced">("advanced");
   const [flowDetailTab, setFlowDetailTab] = useState<
     "journey" | "settings" | "test"
   >("journey");
@@ -962,18 +981,11 @@ export default function AutoContactFlowSettingsScreen() {
     () => flowDrafts.find((flow) => flow.id === activeFlowId) ?? null,
     [flowDrafts, activeFlowId],
   );
-  const activeFlowIndex = useMemo(
-    () =>
-      activeFlow
-        ? flowDrafts.findIndex((flow) => flow.id === activeFlow.id)
-        : -1,
-    [activeFlow, flowDrafts],
-  );
   useEffect(() => {
     if (activeFlow && !activeFlow.flowGraph) {
       handleUpdateFlowGraph(activeFlow.id, buildFlowGraphFromFlow(activeFlow));
     }
-  }, [activeFlow]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeFlow]);
   const availableTags = useMemo(() => {
     const tags = flowDrafts.flatMap((flow) => flow.tags ?? []).filter(Boolean);
     return Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
@@ -994,18 +1006,10 @@ export default function AutoContactFlowSettingsScreen() {
       (total, flow) => total + flow.steps.length,
       0,
     );
-    const flowsWithConditions = flowDrafts.filter(
-      (flow) => (flow.conditions ?? []).length > 0,
-    ).length;
-    const taggedFlows = flowDrafts.filter(
-      (flow) => (flow.tags ?? []).length > 0,
-    ).length;
     return {
       totalFlows: flowDrafts.length,
       totalSteps,
       totalTemplates: messageTemplatesDraft.length,
-      flowsWithConditions,
-      taggedFlows,
     };
   }, [flowDrafts, messageTemplatesDraft]);
   const activeFlowCount = useMemo(
@@ -1072,6 +1076,7 @@ export default function AutoContactFlowSettingsScreen() {
   const createFlowDraft = (): AutoContactFlow => ({
     id: `flow-${Date.now()}`,
     name: "",
+    ativo: false,
     triggerStatus: "",
     triggerType: "lead_created",
     triggerStatuses: [],
@@ -1093,9 +1098,25 @@ export default function AutoContactFlowSettingsScreen() {
     tags: [],
   });
   const handleAddFlow = () => {
-    const newFlow = createFlowDraft();
+    if (!newFlowDraft?.name.trim()) return;
+    const newFlow = { ...createFlowDraft(), ...newFlowDraft, name: newFlowDraft.name.trim() };
     setFlowDrafts((previous) => [...previous, newFlow]);
+    setNewFlowDraft(null);
     openFlowEditor(newFlow.id);
+  };
+  const handleToggleFlow = async (flowId: string) => {
+    const flow = flowDrafts.find(({ id }) => id === flowId);
+    if (!flow || savingFlow) return;
+    const activate = flow.ativo === false;
+    const confirmed = await requestConfirmation({
+      title: activate ? "Revisar antes de ativar" : "Pausar fluxo",
+      description: activate
+        ? `“${flow.name || "Fluxo sem nome"}” poderá executar as etapas configuradas quando o envio automático estiver liberado.`
+        : `“${flow.name || "Fluxo sem nome"}” ficará pausado até ser ativado novamente.`,
+      confirmLabel: activate ? "Ativar fluxo" : "Pausar fluxo",
+    });
+    if (!confirmed) return;
+    await handleSaveFlow(flowDrafts.map((item) => item.id === flowId ? { ...item, ativo: activate } : item), activate ? "Fluxo ativado." : "Fluxo pausado.");
   };
   const handleUpdateFlow = (
     flowId: string,
@@ -1163,34 +1184,7 @@ export default function AutoContactFlowSettingsScreen() {
       closeFlowEditor();
     }
   };
-  const handleAddFlowStep = (flowId: string) => {
-    setFlowDrafts((previous) =>
-      previous.map((flow) =>
-        flow.id === flowId
-          ? { ...flow, steps: [...flow.steps, createFlowStep()] }
-          : flow,
-      ),
-    );
-  };
-  const handleUpdateFlowStep = (
-    flowId: string,
-    stepId: string,
-    updates: Partial<AutoContactFlowStep>,
-  ) => {
-    setFlowDrafts((previous) =>
-      previous.map((flow) =>
-        flow.id === flowId
-          ? {
-              ...flow,
-              steps: flow.steps.map((step) =>
-                step.id === stepId ? { ...step, ...updates } : step,
-              ),
-            }
-          : flow,
-      ),
-    );
-  };
-  const handleAddFlowExitCondition = (flowId: string) => {
+  const handleAddFlowExitCondition = (flowId: string, condition: AutoContactFlowCondition) => {
     setFlowDrafts((previous) =>
       previous.map((flow) =>
         flow.id === flowId
@@ -1198,7 +1192,7 @@ export default function AutoContactFlowSettingsScreen() {
               ...flow,
               exitConditions: [
                 ...(flow.exitConditions ?? []),
-                createFlowExitCondition(),
+                condition,
               ],
             }
           : flow,
@@ -1240,18 +1234,6 @@ export default function AutoContactFlowSettingsScreen() {
             }
           : flow,
       ),
-    );
-  };
-  const handleRemoveFlowStep = (flowId: string, stepId: string) => {
-    setFlowDrafts((previous) =>
-      previous.map((flow) => {
-        if (flow.id !== flowId) return flow;
-        const nextSteps = flow.steps.filter((step) => step.id !== stepId);
-        return {
-          ...flow,
-          steps: nextSteps.length ? nextSteps : [createFlowStep()],
-        };
-      }),
     );
   };
   const handleAddFlowTag = (flowId: string) => {
@@ -1592,7 +1574,7 @@ export default function AutoContactFlowSettingsScreen() {
       setFlowDetailTab("journey");
       return;
     }
-    setShowSimulation(openFlowInTest);
+    setShowSimulation(false);
     setSimulationStart(openFlowInTest ? getLocalDateTimeValue() : '');
     setTestStepId("");
     setTagDraft("");
@@ -1784,8 +1766,31 @@ export default function AutoContactFlowSettingsScreen() {
 
   const hasFlowSnapshot = autoContactIntegration !== null;
 
+  const workspaceHeader = !activeFlowId && (
+    <PageHeader
+      {...workspaceHeadings[activeWorkspace]}
+      descriptionPlacement="visible"
+      actions={<div className="kds-automation-header-actions">
+        {areaActions.length > 0 && <RecordActions actions={areaActions} visibleCount={0} label="Ações da página" />}
+        {activeWorkspace === "flows" && autoContactIntegration && <Button onClick={() => setNewFlowDraft({ name: '', triggerType: 'lead_created' })}><Plus className="kds-control-icon" />Novo fluxo</Button>}
+        {activeWorkspace === "templates" && autoContactIntegration && <Button onClick={handleAddTemplate} disabled={savingTemplate}><Plus className="kds-control-icon" />Novo modelo</Button>}
+      </div>}
+    >
+      <Tabs
+        items={[{ id: "flows", label: "Fluxos" }, { id: "templates", label: "Modelos de mensagem" }, { id: "operation", label: "Operação" }]}
+        value={activeWorkspace}
+        onChange={setActiveWorkspace}
+        className="kds-automation-workspace-tabs"
+        listClassName="flex-nowrap overflow-x-auto"
+        ariaLabel="Visões das automações"
+      />
+    </PageHeader>
+  );
+
   if (!autoContactIntegration && !loadingFlow) {
     return (
+      <div className="space-y-5">
+        {workspaceHeader}
       <Alert tone="warning" className="items-start">
         <Info className="w-5 h-5 text-[var(--text-secondary)] mt-1" />
         <div className="space-y-1 text-sm text-[var(--text-primary)]">
@@ -1793,11 +1798,11 @@ export default function AutoContactFlowSettingsScreen() {
             Integração de automação não encontrada.
           </Text>
           <Text>
-            Execute as migrações mais recentes e configure o serviço antes de
-            definir os templates de automação.
+            Configure a integração para cadastrar fluxos e modelos de mensagem.
           </Text>
         </div>
       </Alert>
+      </div>
     );
   }
 
@@ -1810,91 +1815,21 @@ export default function AutoContactFlowSettingsScreen() {
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
-      <div className="space-y-6">
-        <div className="space-y-6">
-          {!activeFlowId && (
-            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <Tabs
-              items={[
-                { id: "flows", label: "Fluxos" },
-                { id: "templates", label: "Modelos de mensagem" },
-                { id: "operation", label: "Operação" },
-              ]}
-              value={activeWorkspace}
-              onChange={setActiveWorkspace}
-              className="kds-automation-workspace-tabs w-full lg:w-auto"
-              listClassName="w-full flex-nowrap overflow-x-auto lg:w-auto"
-              ariaLabel="Visões das automações"
-            />
-            <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-              <span role="status" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                {<LoadingMonogram active={autoSaveState === "saving"} fallback={<span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} aria-hidden="true" />} className="h-3.5 w-3.5" />}
-                <span className={autoSaveState === "saving" ? "sr-only" : undefined}>{autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}</span>
-              </span>
-              {activeWorkspace === "flows" && (
-                <Button className="w-full sm:w-auto" onClick={handleAddFlow}>
-                  <Plus className="kds-control-icon" aria-hidden="true" />
-                  Novo fluxo
-                </Button>
-              )}
-            </div>
-            </div>
-          )}
-
-          {activeWorkspace === "operation" && (
-            <section className="space-y-6" aria-labelledby="automation-operation-heading">
-              <Card padding="md" className="space-y-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <CardIcon>
-                      <Activity className="h-5 w-5" aria-hidden="true" />
-                    </CardIcon>
-                    <div className="min-w-0">
-                      <Text className="kds-card-subtitle uppercase tracking-[0.12em]">Resumo operacional</Text>
-                      <div className="kds-card-title-row mt-1">
-                        <Heading level={3} id="automation-operation-heading" className="kds-card-title">Visão geral da operação</Heading>
-                        <InfoTooltip content="Volume dos fluxos e atividade recente das automações." label="Informações sobre o resumo operacional" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <Badge tone={autoSendEnabled ? "success" : "neutral"} size="sm" icon={ShieldCheck}>
-                      {autoSendEnabled ? "Envios automáticos ativos" : "Envios automáticos pausados"}
-                    </Badge>
-                    <Badge
-                      tone={autoSaveState === "error" ? "danger" : autoSaveState === "saved" ? "success" : "neutral"}
-                      size="sm"
-                      icon={<LoadingMonogram active={autoSaveState === "saving"} fallback={autoSaveState === "error" ? <AlertCircle className="kds-control-icon" /> : <Save className="kds-control-icon" />} className="kds-control-icon" />}
-                    >
-                      <span className={autoSaveState === "saving" ? "sr-only" : undefined}>{autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}</span>
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-                  <OperationalMetricChip icon={<BarChart3 className="h-4 w-4" />} value={metrics.totalFlows} label="fluxos" className="w-full justify-start" />
-                  <OperationalMetricChip icon={<Timer className="h-4 w-4" />} value={metrics.totalSteps} label="etapas" className="w-full justify-start" />
-                  <OperationalMetricChip icon={<Tag className="h-4 w-4" />} value={metrics.taggedFlows} label="com tags" tone="accent" className="w-full justify-start" />
-                  <OperationalMetricChip icon={<Activity className="h-4 w-4" />} value={lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} label="última atualização" tone="info" className="w-full justify-start" />
-                  <OperationalMetricChip icon={<AlarmClock className="h-4 w-4" />} value={dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)} label="envios hoje" tone={dailyAutomationError ? "warning" : "neutral"} className="w-full justify-start" />
-                </div>
-                {dailyAutomationError && (
-                  <Alert tone="warning" className="items-center">
-                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{dailyAutomationError}</span>
-                  </Alert>
+      <div className="kds-automation-page">
+        {workspaceHeader}
+        <div className="kds-automation-content">
+          {!activeFlowId && activeWorkspace === "operation" && (
+            <section className="kds-automation-content" aria-label="Operação de automações">
+              <AutomationOperation flows={flowDrafts} enabled={autoSendEnabled} dailyCount={dailyAutomationCount} dailyLoading={dailyAutomationLoading} dailyError={dailyAutomationError} getConditionPreview={getFlowConditionPreview} getSchedule={getFlowScheduling} onOpenFlow={openFlowEditor} />
+              <details className="kds-automation-global-settings">
+                <DisclosureTrigger size="sm">Configurações globais</DisclosureTrigger>
+                {autoSaveState !== "idle" && (
+                  <Text size="sm" tone={autoSaveState === "error" ? "danger" : "muted"} role="status">
+                    {autoSaveState === "saving" ? "Salvando…" : autoSaveState === "saved" ? "Configurações salvas" : "Não foi possível salvar as configurações"}
+                  </Text>
                 )}
-              </Card>
-
-              <section className="space-y-4" aria-labelledby="automation-global-settings-heading">
-                <div>
-                  <Text className="kds-op-section-label">Preferências da operação</Text>
-                  <div className="kds-section-title-row mt-1">
-                    <Heading level={3} id="automation-global-settings-heading" className="kds-section-title kds-section-title-h3">Configurações globais</Heading>
-                    <InfoTooltip content="Ajuste o envio automático, a agenda e a observabilidade sem alterar as regras individuais dos fluxos." label="Informações sobre as configurações globais" />
-                  </div>
-                </div>
-
+              <section className="space-y-4" aria-label="Preferências da operação">
+                <Text tone="muted">Ajuste o envio automático, a agenda e o histórico da operação.</Text>
                 <div className="grid gap-4 xl:grid-cols-2">
                   <Card padding="md" className="kds-automation-setting-card space-y-5">
                     <div className="kds-automation-setting-heading">
@@ -2049,11 +1984,12 @@ export default function AutoContactFlowSettingsScreen() {
                   </section>
                 </div>
               </Card>
+              </details>
             </section>
           )}
 
-          {activeWorkspace === "flows" && <>
-            {autoContactSettings?.enabled === false && (
+          {(activeFlowId || activeWorkspace === "flows") && <>
+            {!activeFlowId && autoContactSettings?.enabled === false && (
               <Alert tone="warning" className="mt-4 flex-row items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 <span>
@@ -2079,6 +2015,8 @@ export default function AutoContactFlowSettingsScreen() {
                 availableTags={availableTags}
                 getConditionPreview={getFlowConditionPreview}
                 onEditFlow={openFlowEditor}
+                onToggleFlow={(id) => void handleToggleFlow(id)}
+                onRemoveFlow={(id) => void handleRemoveFlow(id)}
                 onOpenTemplates={() => setActiveWorkspace('templates')}
                 onOpenSimulation={(flowId) => openFlowEditor(flowId, 'test')}
               />
@@ -2104,12 +2042,11 @@ export default function AutoContactFlowSettingsScreen() {
               {activeFlow && (
                 <section className="min-w-0 space-y-5" aria-label="Editor do fluxo automático">
                   <PageHeader
-                    className="kds-flow-editor-header sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 sm:px-6"
-                    eyebrow={`Fluxo ${activeFlowIndex + 1}`}
+                    className="kds-flow-editor-header"
                     title={activeFlow.name || "Novo fluxo"}
-                    description="Organize a jornada, as regras operacionais e os testes em um só lugar."
+                    description="Organize a jornada, as regras e os testes do fluxo."
                     descriptionPlacement="visible"
-                    status={activeFlow.ativo === false ? <Badge tone="danger" size="sm">Desativado</Badge> : undefined}
+                    status={<Badge tone={activeFlow.ativo === false ? "warning" : "success"} size="sm">{activeFlow.ativo === false ? "Pausado" : "Ativo"}</Badge>}
                     breadcrumbs={(
                       <Button type="button" variant="ghost" size="sm" onClick={closeFlowEditor}>
                         <ArrowLeft className="kds-control-icon" aria-hidden="true" />
@@ -2117,30 +2054,11 @@ export default function AutoContactFlowSettingsScreen() {
                       </Button>
                     )}
                     actions={(
-                      <>
-                      <Button
-                        onClick={() => handleRemoveFlow(activeFlow.id)}
-                        variant="danger"
-                        size="md"
-                        disabled={savingFlow}
-                      >
-                        <Trash2 className="kds-control-icon" aria-hidden="true" />
-                        Remover fluxo
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setFlowDetailTab("test");
-                          setShowSimulation(true);
-                          if (!simulationStart) {
-                            setSimulationStart(getLocalDateTimeValue());
-                          }
-                        }}
-                        variant="ghost"
-                        size="md"
-                      >
-                        <Timer className="kds-control-icon" aria-hidden="true" />
-                        Testar fluxo
-                      </Button>
+                      <div className="kds-automation-header-actions">
+                      <RecordActions label="Ações do fluxo" visibleCount={0} actions={[
+                        { label: activeFlow.ativo === false ? "Revisar ativação" : "Pausar fluxo", icon: activeFlow.ativo === false ? Play : ShieldCheck, disabled: savingFlow, onClick: () => void handleToggleFlow(activeFlow.id) },
+                        { label: "Remover fluxo", icon: Trash2, destructive: true, disabled: savingFlow, onClick: () => void handleRemoveFlow(activeFlow.id) },
+                      ]} />
                       <Button
                         onClick={() => handleSaveFlow()}
                         loading={savingFlow}
@@ -2149,16 +2067,18 @@ export default function AutoContactFlowSettingsScreen() {
                         {!savingFlow && <Save className="kds-control-icon" aria-hidden="true" />}
                         {savingFlow ? "Salvando..." : "Salvar fluxo"}
                       </Button>
-                      </>
+                      </div>
                     )}
                   >
-                    <SegmentedControl
-                      className="kds-flow-detail-tabs mt-5"
+                    <Tabs
+                      className="kds-flow-detail-tabs"
+                      listClassName="flex-nowrap overflow-x-auto"
+                      ariaLabel="Etapas da edição do fluxo"
                       value={flowDetailTab}
                       onChange={(next) => {
                         setFlowDetailTab(next);
                         if (next === "test") {
-                          setShowSimulation(true);
+                          setShowSimulation(false);
                           if (!simulationStart) setSimulationStart(getLocalDateTimeValue());
                         }
                       }}
@@ -2171,77 +2091,53 @@ export default function AutoContactFlowSettingsScreen() {
                   </PageHeader>
 
                   <div className="space-y-5">
+                    {flowDetailTab === "journey" && <>
+                    <FlowBuilder
+                      flow={activeFlow}
+                      onOpenExitCondition={() => { setFlowDetailTab("settings"); setExitDraft(createFlowExitCondition()); }}
+                      messageTemplates={messageTemplatesDraft}
+                      conditionFieldOptions={conditionFieldOptions}
+                      conditionOperatorLabels={conditionOperatorLabels}
+                      getConditionOptionLabel={getConditionOptionLabel}
+                      delayUnitLabels={delayUnitLabels}
+                      flowActionLabels={flowActionLabels}
+                      getConditionValueOptions={getConditionValueOptions}
+                      leadStatuses={leadStatuses}
+                      onChangeGraph={(graph) =>
+                        handleUpdateFlowGraph(activeFlow.id, graph)
+                      }
+                      onPreviewAiMessage={({ instruction }) =>
+                        handlePreviewAiMessage(instruction)
+                      }
+                      onTriggerChange={(
+                        triggerType,
+                        triggerStatuses,
+                        triggerDurationHours,
+                      ) => {
+                        handleUpdateFlow(activeFlow.id, {
+                          triggerType,
+                          triggerStatuses,
+                          triggerDurationHours,
+                        });
+                      }}
+                    />
+                    </>}
+
                     {flowDetailTab === "settings" && (
-                      <>
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                            Nome do fluxo
-                          </FieldLabel>
-                          <Input
-                            type="text"
-                            value={activeFlow.name}
-                            onChange={(event) =>
-                              handleUpdateFlow(activeFlow.id, {
-                                name: event.target.value,
-                              })
-                            }
-                            placeholder="Ex.: Follow-up de contato inicial"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
-                        <div className="text-xs font-semibold text-[var(--text-muted)] uppercase">
-                          Resumo do fluxo
-                        </div>
-                        <div className="mt-2 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={activeFlow.ativo !== false}
-                              onChange={(event) =>
-                                handleUpdateFlow(activeFlow.id, {
-                                  ativo: event.target.checked,
-                                })
-                              }
-                              size="sm"
-                            />
-                            <div>
-                              <div className="text-xs font-medium text-[var(--text-primary)]">
-                                Fluxo ativo
-                              </div>
-                              <div className="text-[10px] text-[var(--text-muted)]">
-                                Desative para pausar este fluxo sem apagá-lo
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
-                            {activeFlow.triggerStatus
-                              ? `Status: ${activeFlow.triggerStatus}`
-                              : "Disparo por condições"}
-                          </span>
-                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
-                            Janela {activeFlowScheduling.startHour} -{" "}
-                            {activeFlowScheduling.endHour}
-                          </span>
-                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
-                            {activeFlow.steps.length} etapa
-                            {activeFlow.steps.length === 1 ? "" : "s"}
-                          </span>
-                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
-                            {getFlowConditionPreview(activeFlow)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+                      <div className="kds-automation-rules-layout">
+                        <Surface padding="sm" className="kds-automation-rule-nav" aria-label="Seções das regras">
+                          <Button variant="ghost" size="sm" onClick={() => document.getElementById("automation-flow-scheduling")?.scrollIntoView({ block: "start" })}>
+                            <AlarmClock className="kds-control-icon" /> Horários e limites
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => document.getElementById("automation-flow-exit")?.scrollIntoView({ block: "start" })}>
+                            <GitBranch className="kds-control-icon" /> Condições de saída
+                          </Button>
+                        </Surface>
+                        <div className="kds-automation-content">
+                    <div id="automation-flow-scheduling" className="kds-automation-rule-card">
                       <div>
                         <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
-                          Agendamento do fluxo
+                          O momento certo para cada mensagem.
                         </Heading>
                         <Text className="text-xs text-[var(--text-muted)] mt-1">
                           Defina a janela diária, os dias permitidos e o limite
@@ -2304,6 +2200,7 @@ export default function AutoContactFlowSettingsScreen() {
                                           ].sort((a, b) => a - b),
                                     })
                                   }
+                                  aria-pressed={isActive}
                                   variant={isActive ? "primary" : "secondary"}
                                   size="sm"
                                   
@@ -2339,51 +2236,7 @@ export default function AutoContactFlowSettingsScreen() {
                         </div>
                       </div>
                     </div>
-                      </>
-                    )}
-
-                    {flowDetailTab === "journey" && <>
-                    <div className="flex flex-wrap items-end justify-between gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
-                      <div>
-                         <div className="kds-card-title-row"><Heading level={5} className="text-sm font-semibold text-[var(--text-primary)]">Jornada do lead</Heading><InfoTooltip content="Clique em um bloco para editar o gatilho, condições e ações. O canvas ocupa a área principal para facilitar a leitura da sequência." label="Informações sobre a jornada do lead" /></div>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-                        <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-1">{activeFlow.steps.length} etapas</span>
-                        <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-1">{getFlowConditionPreview(activeFlow)}</span>
-                      </div>
-                    </div>
-                    <FlowBuilder
-                      flow={activeFlow}
-                      messageTemplates={messageTemplatesDraft}
-                      conditionFieldOptions={conditionFieldOptions}
-                      conditionOperatorLabels={conditionOperatorLabels}
-                      getConditionOptionLabel={getConditionOptionLabel}
-                      delayUnitLabels={delayUnitLabels}
-                      flowActionLabels={flowActionLabels}
-                      getConditionValueOptions={getConditionValueOptions}
-                      leadStatuses={leadStatuses}
-                      onChangeGraph={(graph) =>
-                        handleUpdateFlowGraph(activeFlow.id, graph)
-                      }
-                      onPreviewAiMessage={({ instruction }) =>
-                        handlePreviewAiMessage(instruction)
-                      }
-                      onTriggerChange={(
-                        triggerType,
-                        triggerStatuses,
-                        triggerDurationHours,
-                      ) => {
-                        handleUpdateFlow(activeFlow.id, {
-                          triggerType,
-                          triggerStatuses,
-                          triggerDurationHours,
-                        });
-                      }}
-                    />
-                    </>}
-
-                    {flowDetailTab === "settings" && <>
-                    <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+                    <div id="automation-flow-exit" className="kds-automation-rule-card">
                       <div className="flex items-center justify-between">
                         <div>
                           <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
@@ -2396,7 +2249,7 @@ export default function AutoContactFlowSettingsScreen() {
                         </div>
                         <Button
                           onClick={() =>
-                            handleAddFlowExitCondition(activeFlow.id)
+                            setExitDraft(createFlowExitCondition())
                           }
                           variant="secondary"
                           size="sm"
@@ -2677,622 +2530,128 @@ export default function AutoContactFlowSettingsScreen() {
                       )}
                     </div>
 
-                    {flowEditorMode === "basic" && (
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
-                              Sequência de ações
-                            </Heading>
-                            <Text className="text-xs text-[var(--text-muted)] mt-1">
-                              Cada etapa representa uma ação. Configure o
-                              intervalo, o tipo de ação e, se necessário, o
-                              conteúdo da mensagem.
-                            </Text>
-                          </div>
-                          <Button
-                            onClick={() => handleAddFlowStep(activeFlow.id)}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            <Plus className="kds-control-icon" />
-                            Nova etapa
-                          </Button>
+                    <div className="kds-automation-rule-card">
+<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                            Nome do fluxo
+                          </FieldLabel>
+                          <Input
+                            type="text"
+                            value={activeFlow.name}
+                            onChange={(event) =>
+                              handleUpdateFlow(activeFlow.id, {
+                                name: event.target.value,
+                              })
+                            }
+                            placeholder="Ex.: Follow-up de contato inicial"
+                          />
                         </div>
+                      </div>
 
-                        {activeFlow.steps.map((step, stepIndex) => (
-                          <div
-                            key={step.id}
-                            className="grid gap-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
-                          >
-                            <div className="grid gap-3 md:grid-cols-[160px_160px_1fr_auto]">
-                              <div>
-                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                  Esperar
-                                </FieldLabel>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  value={step.delayValue}
-                                  onChange={(event) =>
-                                    handleUpdateFlowStep(
-                                      activeFlow.id,
-                                      step.id,
-                                      {
-                                        delayValue: Number(event.target.value),
-                                      },
-                                    )
-                                  }
-                                  size="sm"
-                                />
+                      <div className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
+                        <div className="text-xs font-semibold text-[var(--text-muted)] uppercase">
+                          Resumo do fluxo
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={activeFlow.ativo !== false}
+                              onChange={(event) =>
+                                handleUpdateFlow(activeFlow.id, {
+                                  ativo: event.target.checked,
+                                })
+                              }
+                              size="sm"
+                            />
+                            <div>
+                              <div className="text-xs font-medium text-[var(--text-primary)]">
+                                Fluxo ativo
                               </div>
-                              <div>
-                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                  Unidade
-                                </FieldLabel>
-                                <FilterSelect
-                                  icon={Timer}
-                                  value={step.delayUnit ?? "hours"}
-                                  onChange={(value) =>
-                                    handleUpdateFlowStep(
-                                      activeFlow.id,
-                                      step.id,
-                                      {
-                                        delayUnit:
-                                          value as AutoContactDelayUnit,
-                                      },
-                                    )
-                                  }
-                                  placeholder="Unidade"
-                                  includePlaceholderOption={false}
-                                  options={Object.entries(delayUnitLabels).map(
-                                    ([value, label]) => ({
-                                      value,
-                                      label: label.plural,
-                                    }),
-                                  )}
-                                />
+                              <div className="text-xs text-[var(--text-muted)]">
+                                Desative para pausar este fluxo sem apagá-lo
                               </div>
-                              <div>
-                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                  Tipo de ação
-                                </FieldLabel>
-                                <FilterSelect
-                                  icon={Activity}
-                                  value={step.actionType ?? "send_message"}
-                                  onChange={(value) =>
-                                    handleUpdateFlowStep(
-                                      activeFlow.id,
-                                      step.id,
-                                      {
-                                        actionType:
-                                          value as AutoContactFlowActionType,
-                                      },
-                                    )
-                                  }
-                                  placeholder="Tipo de ação"
-                                  includePlaceholderOption={false}
-                                  options={Object.entries(flowActionLabels).map(
-                                    ([value, label]) => ({
-                                      value,
-                                      label,
-                                    }),
-                                  )}
-                                />
-                              </div>
-                              <div className="flex items-end">
-                                <Button
-                                  onClick={() =>
-                                    handleRemoveFlowStep(activeFlow.id, step.id)
-                                  }
-                                  variant="danger"
-                                  size="sm"
-                                >
-                                  Remover
-                                </Button>
-                              </div>
-                            </div>
-
-                            {step.actionType === "send_message" && (
-                              <div className="space-y-3">
-                                <div className="text-xs text-[var(--text-muted)]">
-                                  Canal ativo: WhatsApp (configurado em
-                                  Integrações). Cada item abaixo é enviado
-                                  como uma mensagem própria, em ordem.
-                                </div>
-                                <MessageVariationsEditor
-                                  step={step}
-                                  messageTemplates={messageTemplatesDraft}
-                                  onUpdate={(updates) =>
-                                    handleUpdateFlowStep(
-                                      activeFlow.id,
-                                      step.id,
-                                      updates,
-                                    )
-                                  }
-                                  onPreviewAiMessage={handlePreviewAiMessage}
-                                />
-                              </div>
-                            )}
-
-                            {step.actionType === "create_task" && (
-                              <div className="grid gap-3 md:grid-cols-2">
-                                <div className="md:col-span-2">
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Título da tarefa
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.taskTitle ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { taskTitle: event.target.value },
-                                      )
-                                    }
-                                    placeholder="Ex.: Retornar contato"
-                                  />
-                                </div>
-                                <div className="md:col-span-2">
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Descrição
-                                  </FieldLabel>
-                                  <VariableAutocompleteTextarea
-                                    value={step.taskDescription ?? ""}
-                                    onChange={(value) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { taskDescription: value },
-                                      )
-                                    }
-                                    rows={3}
-                                    size="sm"
-                                    suggestions={
-                                      AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
-                                    }
-                                    placeholder="Detalhes da tarefa"
-                                  />
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Vencimento (horas)
-                                  </FieldLabel>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    value={step.taskDueHours ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        {
-                                          taskDueHours: Number(
-                                            event.target.value,
-                                          ),
-                                        },
-                                      )
-                                    }
-                                    placeholder="24"
-                                  />
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Prioridade
-                                  </FieldLabel>
-                                  <FilterSelect
-                                    icon={AlertCircle}
-                                    value={step.taskPriority ?? "normal"}
-                                    onChange={(value) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        {
-                                          taskPriority:
-                                            value as AutoContactFlowStep["taskPriority"],
-                                        },
-                                      )
-                                    }
-                                    placeholder="Prioridade"
-                                    includePlaceholderOption={false}
-                                    options={[
-                                      { value: "baixa", label: "Baixa" },
-                                      { value: "normal", label: "Normal" },
-                                      { value: "alta", label: "Alta" },
-                                    ]}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {step.actionType === "send_email" && (
-                              <div className="grid gap-3 md:grid-cols-2">
-                                <div className="md:col-span-2 text-xs text-[var(--text-muted)]">
-                                  Envio depende de conta configurada em
-                                  Integrações de e-mail.
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Para
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.emailTo ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { emailTo: event.target.value },
-                                      )
-                                    }
-                                    placeholder="email@exemplo.com"
-                                  />
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    CC
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.emailCc ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { emailCc: event.target.value },
-                                      )
-                                    }
-                                  />
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    BCC
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.emailBcc ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { emailBcc: event.target.value },
-                                      )
-                                    }
-                                  />
-                                </div>
-                                <div className="md:col-span-2">
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Assunto
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.emailSubject ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { emailSubject: event.target.value },
-                                      )
-                                    }
-                                  />
-                                </div>
-                                <div className="md:col-span-2">
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Corpo do e-mail
-                                  </FieldLabel>
-                                  <VariableAutocompleteTextarea
-                                    value={step.emailBody ?? ""}
-                                    onChange={(value) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { emailBody: value },
-                                      )
-                                    }
-                                    rows={4}
-                                    size="sm"
-                                    suggestions={
-                                      AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
-                                    }
-                                  />
-                                  <Text className="text-[11px] text-[var(--text-subtle)] mt-1">
-Use variáveis como {"{{primeiro_nome}}"} ou{" "}
-                                     {"{{= ... }}"} para fórmulas.
-                                  </Text>
-                                </div>
-                              </div>
-                            )}
-
-                            {step.actionType === "webhook" && (
-                              <div className="grid gap-3 md:grid-cols-2">
-                                <Text className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</Text>
-                                <div className="md:col-span-2">
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Endereço do serviço
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.webhookUrl ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { webhookUrl: event.target.value },
-                                      )
-                                    }
-                                    placeholder="https://api.exemplo.com/webhook"
-                                  />
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Método
-                                  </FieldLabel>
-                                  <FilterSelect
-                                    icon={Activity}
-                                    value={step.webhookMethod ?? "POST"}
-                                    onChange={(value) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        {
-                                          webhookMethod:
-                                            value as AutoContactFlowStep["webhookMethod"],
-                                        },
-                                      )
-                                    }
-                                    placeholder="Método"
-                                    includePlaceholderOption={false}
-                                    options={[
-                                      { value: "POST", label: "POST" },
-                                      { value: "PUT", label: "PUT" },
-                                      { value: "PATCH", label: "PATCH" },
-                                      { value: "GET", label: "GET" },
-                                    ]}
-                                  />
-                                </div>
-                                <div>
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Cabeçalhos da conexão (JSON)
-                                  </FieldLabel>
-                                  <Input
-                                    type="text"
-                                    value={step.webhookHeaders ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { webhookHeaders: event.target.value },
-                                      )
-                                    }
-                                    placeholder='{"Authorization":"Bearer ..."}'
-                                  />
-                                </div>
-                                <div className="md:col-span-2">
-                                  <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                    Dados enviados
-                                  </FieldLabel>
-                                  <VariableAutocompleteTextarea
-                                    value={step.webhookBody ?? ""}
-                                    onChange={(value) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { webhookBody: value },
-                                      )
-                                    }
-                                    rows={4}
-                                    size="sm"
-                                    suggestions={
-                                      AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
-                                    }
-                                    placeholder='{"lead_id":"{{= lead.id }}"}'
-                                  />
-                                  <Text className="text-[11px] text-[var(--text-subtle)] mt-1">
-                                    Se vazio, envia JSON padrão com dados do
-                                    lead.
-                                  </Text>
-                                </div>
-                              </div>
-                            )}
-
-                            {step.actionType === "update_status" && (
-                              <div>
-                                <FieldLabel className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
-                                  Novo status do lead
-                                </FieldLabel>
-                                {showStatusSelect ? (
-                                  <FilterSelect
-                                    icon={Tag}
-                                    value={step.statusToSet ?? ""}
-                                    onChange={(value) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { statusToSet: value },
-                                      )
-                                    }
-                                    placeholder="Selecione um status"
-                                    includePlaceholderOption={false}
-                                    options={[
-                                      {
-                                        value: "",
-                                        label: "Selecione um status",
-                                      },
-                                      ...statusOptions.map((status) => ({
-                                        value: status.nome,
-                                        label: status.nome,
-                                      })),
-                                    ]}
-                                  />
-                                ) : (
-                                  <Input
-                                    type="text"
-                                    value={step.statusToSet ?? ""}
-                                    onChange={(event) =>
-                                      handleUpdateFlowStep(
-                                        activeFlow.id,
-                                        step.id,
-                                        { statusToSet: event.target.value },
-                                      )
-                                    }
-                                    placeholder="Ex.: Em negociação"
-                                  />
-                                )}
-                              </div>
-                            )}
-
-                            {(step.actionType === "archive_lead" ||
-                              step.actionType === "delete_lead") && (
-                              <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
-                                Esta ação será aplicada automaticamente ao lead
-                                ao chegar nesta etapa.
-                              </div>
-                            )}
-
-                            {step.actionType === "activate_autonomous_service" && (
-                              <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
-                                A partir desta etapa, a IA (Luiza) passa a
-                                responder sozinha nesse chat específico do
-                                WhatsApp, fazendo a qualificação do lead. Ela
-                                nunca monta ou envia cotação — isso continua
-                                manual. Quando a qualificação termina (ou a
-                                IA identifica que precisa de um humano), o
-                                atendimento autônomo é encerrado naquele chat
-                                e o status do lead é atualizado automaticamente.
-                                Nenhum outro chat é afetado.
-                              </div>
-                            )}
-
-                            <div className="text-[11px] text-[var(--text-muted)]">
-                              Etapa {stepIndex + 1} da sequência.
                             </div>
                           </div>
-                        ))}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                            {activeFlow.triggerStatus
+                              ? `Status: ${activeFlow.triggerStatus}`
+                              : "Disparo por condições"}
+                          </span>
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                            Janela {activeFlowScheduling.startHour} -{" "}
+                            {activeFlowScheduling.endHour}
+                          </span>
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                            {activeFlow.steps.length} etapa
+                            {activeFlow.steps.length === 1 ? "" : "s"}
+                          </span>
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                            {getFlowConditionPreview(activeFlow)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    </div>
+                        </div>
                       </div>
                     )}
-
-                    </>}
-
-                    {flowDetailTab === "test" && showSimulation && (
-                      <div className="space-y-4 rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] p-5 shadow-sm">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                              <Timer className="w-4 h-4" />
-                              Simulação operacional
+                    {flowDetailTab === "test" && (
+                      <div className="kds-automation-content">
+                        <div className="kds-automation-paired">
+                          <Card padding="md" className="kds-automation-rule-card">
+                            <div>
+                              <Heading level={2} size="sm">Um contato fictício para experimentar.</Heading>
+                              <Text size="sm" tone="muted">Confira os horários e as etapas da jornada em uma simulação local.</Text>
                             </div>
-                            <Text className="text-xs text-[var(--text-primary)]">
-                              Dry run do fluxo. Nenhuma mensagem é enviada;
-                              mostramos somente a previsão de execução.
+                            <div className="kds-automation-simulation-form">
+                              <Field label="Nome" htmlFor="automation-simulation-name"><Input id="automation-simulation-name" value={simulationLead.nome_completo} readOnly /></Field>
+                              <Field label="Status inicial" htmlFor="automation-simulation-status"><Input id="automation-simulation-status" value={simulationLead.status ?? ""} readOnly /></Field>
+                              <Field label="Origem" htmlFor="automation-simulation-origin"><Input id="automation-simulation-origin" value={simulationLead.origem ?? ""} readOnly /></Field>
+                              <Field label="Início da simulação" htmlFor="automation-simulation-start">
+                                <DesignSystemDateTimePicker id="automation-simulation-start" type="datetime-local" value={simulationInputValue} onChange={(event) => { setSimulationStart(event.target.value); setShowSimulation(false); }} />
+                              </Field>
+                            </div>
+                            <Text size="sm" tone="muted">
+                              Janela {activeFlowScheduling.startHour} às {activeFlowScheduling.endHour} · {activeFlowScheduling.timezone}
                             </Text>
-                          </div>
-                          <div className="kds-config-token border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                            Lead de exemplo + agenda do fluxo
-                          </div>
+                            <Button onClick={() => setShowSimulation(true)} disabled={!simulationBaseDate}><Play className="kds-control-icon" />Executar simulação</Button>
+                          </Card>
+                          <Card padding="md" className="kds-automation-rule-card">
+                            <div>
+                              <Heading level={2} size="sm">O caminho percorrido</Heading>
+                              <Text size="sm" tone="muted">Horários previstos e ajustes conforme a agenda do fluxo.</Text>
+                            </div>
+                            {simulationIssues.length > 0 && (
+                              <Alert tone="warning" title="Pontos para revisar">
+                                <ul className="space-y-1">{simulationIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
+                              </Alert>
+                            )}
+                            {simulationTimeline.length > 0 ? (
+                              <>
+                                <Text size="sm" tone="muted">{simulationSummary?.totalSteps} etapas configuradas · {simulationSummary?.adjustedSteps} com ajuste de agenda</Text>
+                                <ol className="kds-automation-timeline">
+                                  {simulationTimeline.map((item) => (
+                                    <li key={item.step.id}>
+                                      <CardIcon><Check aria-hidden="true" /></CardIcon>
+                                      <div>
+                                        <Text weight="semibold">{getSimulationStepLabel(item.step)}</Text>
+                                        <Text size="sm" tone="muted">{formatSimulationDateTime(item.scheduledAt, activeFlowScheduling.timezone)} · {formatDelayLabel(item.delayValue, item.delayUnit)} após o marco anterior</Text>
+                                        {item.adjustmentReasons.map((reason) => <Text key={reason} size="sm" tone="warning">Ajustado por {adjustmentReasonLabels[reason]}</Text>)}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ol>
+                              </>
+                            ) : (
+                              <EmptyState icon={<Play />} title={showSimulation ? "Nenhuma etapa prevista" : "Vamos percorrer a jornada?"} description={showSimulation ? "Confira as etapas e as regras da jornada." : "Execute a simulação para acompanhar cada etapa."} />
+                            )}
+                          </Card>
                         </div>
-
-                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                          <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:color-mix(in_srgb,var(--bg-surface)_90%,transparent)] p-4">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div>
-                                <FieldLabel className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                                  Início da simulação
-                                </FieldLabel>
-                                <DesignSystemDateTimePicker
-                                  type="datetime-local"
-                                  value={simulationInputValue}
-                                  onChange={(event) => setSimulationStart(event.target.value)}
-                                  className="border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)]"
-                                  placeholder="Selecionar início"
-                                />
-                              </div>
-                              <div className="grid gap-2 text-xs text-[var(--text-primary)]">
-                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
-                                  <span className="font-semibold">Janela:</span>{" "}
-                                  {activeFlowScheduling.startHour} até{" "}
-                                  {activeFlowScheduling.endHour}
-                                </div>
-                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
-                                  <span className="font-semibold">Fuso:</span>{" "}
-                                  {activeFlowScheduling.timezone}
-                                </div>
-                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
-                                  <span className="font-semibold">Dias:</span>{" "}
-                                  {activeFlowScheduling.allowedWeekdays.length
-                                    ? weekdayLabels
-                                        .filter((day) =>
-                                          activeFlowScheduling.allowedWeekdays.includes(
-                                            day.value,
-                                          ),
-                                        )
-                                        .map((day) => day.label)
-                                        .join(", ")
-                                    : "nenhum selecionado"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
-                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                                <ClipboardList className="h-3.5 w-3.5" />
-                                Etapas
-                              </div>
-                              <div className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
-                                {simulationSummary?.totalSteps ?? 0}
-                              </div>
-                              <div className="text-xs text-[var(--text-muted)]">
-                                Ações previstas no fluxo atual.
-                              </div>
-                            </div>
-                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
-                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                                <AlarmClock className="h-3.5 w-3.5" />
-                                Ajustes
-                              </div>
-                              <div className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
-                                {simulationSummary?.adjustedSteps ?? 0}
-                              </div>
-                              <div className="text-xs text-[var(--text-muted)]">
-                                Etapas movidas por regras de agenda.
-                              </div>
-                            </div>
-                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4 sm:col-span-2">
-                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                                <Activity className="h-3.5 w-3.5" />
-                                Janela estimada
-                              </div>
-                              <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
-                                <div>
-                                  Primeiro disparo:{" "}
-                                  <span className="font-medium text-[var(--text-primary)]">
-                                    {simulationSummary?.firstAt
-                                      ? formatSimulationDateTime(
-                                          simulationSummary.firstAt,
-                                          activeFlowScheduling.timezone,
-                                        )
-                                      : "aguardando dados"}
-                                  </span>
-                                </div>
-                                <div>
-                                  Última execução:{" "}
-                                  <span className="font-medium text-[var(--text-primary)]">
-                                    {simulationSummary?.lastAt
-                                      ? formatSimulationDateTime(
-                                          simulationSummary.lastAt,
-                                          activeFlowScheduling.timezone,
-                                        )
-                                      : "aguardando dados"}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[var(--bg-surface)] p-4">
+                        <div className="kds-automation-rule-card">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
@@ -3300,10 +2659,10 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                                 Envio de teste
                               </div>
                               <Text className="mt-1 text-xs text-[var(--text-muted)]">
-                                Envia somente as mensagens da etapa escolhida para o seu número. Não agenda novas ações nem altera os dados ou o status do contato.
+                                Envia as mensagens da etapa escolhida para o número informado.
                               </Text>
                             </div>
-                            <span className="kds-config-token border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-1 text-[11px] text-[var(--text-primary)]">
+                            <span className="kds-config-token border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-1 text-xs text-[var(--text-primary)]">
                               Envio real pelo WhatsApp
                             </span>
                           </div>
@@ -3356,167 +2715,6 @@ Use variáveis como {"{{primeiro_nome}}"} ou{" "}
                           </div>
                         </div>
 
-                        {simulationSummary &&
-                          Object.keys(simulationSummary.actionCounts).length >
-                            0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(
-                                simulationSummary.actionCounts,
-                              ).map(([actionType, count]) => (
-                                <span
-                                  key={actionType}
-                                  className="rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] text-[var(--text-primary)]"
-                                >
-                                  {count}x{" "}
-                                  {flowActionLabels[
-                                    actionType as AutoContactFlowActionType
-                                  ] ?? actionType}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                        {simulationIssues.length > 0 && (
-                          <div className="rounded-xl border border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--accent-gold-soft)_70%,transparent)] p-4">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                              <AlertCircle className="h-4 w-4" />
-                              Pontos para revisar antes de confiar na simulação
-                            </div>
-                            <div className="mt-3 grid gap-2">
-                              {simulationIssues.map((issue) => (
-                                <div
-                                  key={issue}
-                                  className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-2 text-xs text-[var(--text-primary)]"
-                                >
-                                  {issue}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                              <Timer className="h-4 w-4 text-[var(--text-secondary)]" />
-                              Linha do tempo prevista
-                            </div>
-
-                            {simulationTimeline.length === 0 ? (
-                              <div className="rounded-xl border border-dashed border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--bg-surface)_80%,transparent)] p-5 text-sm text-[var(--text-secondary)]">
-                                {simulationIssues.length > 0
-                                  ? "A simulação ficou incompleta porque ainda existem configurações pendentes."
-                                  : "Adicione etapas para visualizar a linha do tempo."}
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                {simulationTimeline.map((item) => (
-                                  <div
-                                    key={item.step.id}
-                                    className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4 shadow-sm"
-                                  >
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                      <div className="space-y-1">
-                                        <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                                          Etapa {item.index}
-                                        </div>
-                                        <div className="text-sm font-semibold text-[var(--text-primary)]">
-                                          {getSimulationStepLabel(item.step)}
-                                        </div>
-                                        <div className="text-xs text-[var(--text-muted)]">
-                                          {formatDelayLabel(
-                                            item.delayValue,
-                                            item.delayUnit,
-                                          )}{" "}
-                                          após o marco anterior
-                                        </div>
-                                      </div>
-                                      <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-right text-xs text-[var(--text-primary)]">
-                                        {formatSimulationDateTime(
-                                          item.scheduledAt,
-                                          activeFlowScheduling.timezone,
-                                        )}
-                                      </div>
-                                    </div>
-                                    {item.adjustmentReasons.length > 0 && (
-                                      <div className="mt-3 flex flex-wrap gap-2">
-                                        {item.adjustmentReasons.map(
-                                          (reason) => (
-                                            <span
-                                              key={item.step.id + "-" + reason}
-                                              className="kds-config-token border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-2.5 py-1 text-[11px] text-[var(--text-primary)]"
-                                            >
-                                              Ajustado por{" "}
-                                              {adjustmentReasonLabels[reason]}
-                                            </span>
-                                          ),
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                              <Info className="h-4 w-4 text-[var(--text-secondary)]" />
-                              Contexto da simulação
-                            </div>
-                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                                Lead de exemplo
-                              </div>
-                              <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)]">
-                                <div>
-                                  <span className="font-semibold text-[var(--text-primary)]">
-                                    Nome:
-                                  </span>{" "}
-                                  {simulationLead.nome_completo}
-                                </div>
-                                <div>
-                                  <span className="font-semibold text-[var(--text-primary)]">
-                                    Status inicial:
-                                  </span>{" "}
-                                  {simulationLead.status}
-                                </div>
-                                <div>
-                                  <span className="font-semibold text-[var(--text-primary)]">
-                                    Origem:
-                                  </span>{" "}
-                                  {simulationLead.origem}
-                                </div>
-                                <div>
-                                  <span className="font-semibold text-[var(--text-primary)]">
-                                    Cidade:
-                                  </span>{" "}
-                                  {simulationLead.cidade}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                                Como ler
-                              </div>
-                              <div className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]">
-                                <Text>
-Os horários já consideram a janela do fluxo,
-                                   os dias permitidos e pulos automáticos da
-                                  agenda.
-                                </Text>
-                                <Text>
-                                  Quando uma etapa não pode rodar no horário
-                                  original, ela aparece com o motivo do ajuste.
-                                </Text>
-                                <Text>
-                                  Se houver pendências de configuração, a
-                                  simulação mostra os alertas antes da timeline.
-                                </Text>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -3525,139 +2723,90 @@ Os horários já consideram a janela do fluxo,
 
           </>}
 
-          {activeWorkspace === "templates" && <div className="border-t border-[var(--border-subtle)] pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">
-                    Biblioteca de templates
-                  </Heading>
-                  <Text className="text-xs text-[var(--text-muted)] mt-1">
-                    Crie e edite templates pré-fabricados para usar na automação
-                    ou em disparos manuais.
-                  </Text>
-                </div>
-                <Button
-                  onClick={handleAddTemplate}
-                  variant="secondary"
-                  size="sm"
-                  disabled={savingTemplate}
-                >
-                  <Plus className="kds-control-icon" />
-                  Novo modelo
-                </Button>
-              </div>
-
-              {messageTemplatesDraft.length === 0 ? (
-                <div className="text-sm text-[var(--text-muted)] bg-[color:var(--bg-elevated)] border border-[var(--border-subtle)] rounded-lg p-4">
-                  Nenhum modelo cadastrado. Clique em "Novo modelo" para
-                  adicionar mensagens rápidas.
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {messageTemplatesDraft.map((template, index) => {
-                    const previewMessages = getTemplateMessages(template).slice(
-                      0,
-                      2,
-                    );
-                    return (
-                      <Card
-                        key={template.id}
-                        className="flex flex-col gap-3"
-                        padding="sm"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
-                                {template.name?.trim() || `Modelo ${index + 1}`}
-                              </Heading>
-                            </div>
-                            <Text className="text-xs text-[var(--text-muted)] mt-1">
-                              {getTemplateMessages(template).length} mensagens
-                              configuradas
-                            </Text>
-                          </div>
-                          <ButtonGroup size="md" aria-label="Ações do modelo">
-                            <Button
-                              onClick={() => handleEditTemplate(template.id)}
-                              variant="secondary"
-                              size="sm"
-                              disabled={savingTemplate}
-                            >
-                              <Edit3 className="kds-control-icon" />
-                              Editar
-                            </Button>
-                            <IconButton
-                              onClick={() => handleRemoveTemplate(template.id)}
-                              variant="danger"
-                              loading={savingTemplateId === template.id}
-                              disabled={savingTemplate}
-                              title="Remover modelo"
-                              size="sm"
-                              aria-label="Remover modelo"
-                            >
-                              <Trash2 aria-hidden="true" />
-                            </IconButton>
-                          </ButtonGroup>
-                        </div>
-                        <div className="space-y-2">
-                          {previewMessages.length > 0 ? (
-                            previewMessages.map((message, messageIndex) => {
-                              const Icon = messageTypeIcons[message.type];
-                              const content =
-                                message.type === "text"
-                                  ? message.text?.trim()
-                                  : message.caption?.trim() ||
-                                    message.mediaUrl?.trim() ||
-                                    "Conteúdo pendente";
-                              return (
-                                  <Surface
-                                    key={message.id}
-                                    variant="muted"
-                                    padding="sm"
-                                    className="flex gap-2"
-                                >
-                                  <Icon className="w-4 h-4 text-[var(--text-subtle)] mt-0.5" />
-                                  <div>
-                                    <div className="text-[11px] uppercase font-semibold text-[var(--text-muted)]">
-                                      {messageTypeLabels[message.type]}{" "}
-                                      {messageIndex + 1}
-                                    </div>
-                                    <Text className="text-xs text-[var(--text-secondary)] whitespace-pre-wrap">
-                                      {content || "Sem conteúdo"}
-                                    </Text>
-                                  </div>
-                                </Surface>
-                              );
-                            })
-                          ) : (
-                            <Text className="text-xs text-[var(--text-muted)]">
-                              Nenhuma mensagem configurada ainda. Abra para
-                              editar.
-                            </Text>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </div>}
+          {!activeFlowId && activeWorkspace === "templates" && (
+            <AutomationTemplates templates={messageTemplatesDraft} busy={savingTemplate || savingTemplateId !== null}
+              onEdit={handleEditTemplate} onRemove={(id) => void handleRemoveTemplate(id)} />
+          )}
           </div>
           {ConfirmationDialog}
+          {newFlowDraft && (
+            <Dialog open size="md" className="kds-automation-dialog" onOpenChange={(open) => !open && setNewFlowDraft(null)}>
+              <DialogHeader onClose={() => setNewFlowDraft(null)}>
+                <DialogTitle>Novo fluxo</DialogTitle>
+                <DialogDescription placement="visible">Dê um nome à jornada e escolha o que inicia o acompanhamento.</DialogDescription>
+              </DialogHeader>
+              <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => { event.preventDefault(); handleAddFlow(); }}>
+                <DialogBody className="space-y-4">
+                  <Field label="Nome do fluxo" htmlFor="automation-new-name" required>
+                    <Input id="automation-new-name" value={newFlowDraft.name} required placeholder="Ex.: Primeiro contato" onChange={(event) => setNewFlowDraft({ ...newFlowDraft, name: event.target.value })} />
+                  </Field>
+                  <Field label="Gatilho de entrada" htmlFor="automation-new-trigger">
+                    <Select id="automation-new-trigger" value={newFlowDraft.triggerType} onChange={({ target }) => setNewFlowDraft({ ...newFlowDraft, triggerType: target.value as AutoContactFlowTriggerType })}
+                      options={Object.entries(automationTriggerLabels).map(([value, label]) => ({ value, label }))} />
+                  </Field>
+                  <Alert tone="info">O fluxo começa pausado. Configure e revise a jornada antes de ativar.</Alert>
+                </DialogBody>
+                <DialogFooter>
+                  <Button variant="secondary" onClick={() => setNewFlowDraft(null)}>Cancelar</Button>
+                  <Button type="submit" disabled={!newFlowDraft.name.trim()}>Criar fluxo</Button>
+                </DialogFooter>
+              </form>
+            </Dialog>
+          )}
+          {exitDraft && activeFlow && (
+            <Dialog open size="md" className="kds-automation-dialog" onOpenChange={(open) => !open && setExitDraft(null)}>
+              <DialogHeader onClose={() => setExitDraft(null)}>
+                <DialogTitle>Condição de saída</DialogTitle>
+                <DialogDescription placement="visible">Defina quando este fluxo deve encerrar o acompanhamento.</DialogDescription>
+              </DialogHeader>
+              <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => {
+                event.preventDefault();
+                if (!isEventLeadCreated(exitDraft) && !exitDraft.value.trim()) return;
+                handleAddFlowExitCondition(activeFlow.id, exitDraft);
+                setExitDraft(null);
+              }}>
+                <DialogBody className="space-y-4">
+                  <Field label="Campo" htmlFor="automation-exit-field">
+                    <Select id="automation-exit-field" value={exitDraft.field} onChange={({ target }) => setExitDraft({ ...exitDraft, field: target.value as AutoContactFlowCondition["field"], value: "" })}
+                      options={conditionFieldOptions.map(([value, label]) => ({ value, label }))} />
+                  </Field>
+                  {!isEventLeadCreated(exitDraft) && (
+                    <>
+                      <Field label="Comparação" htmlFor="automation-exit-operator">
+                        <Select id="automation-exit-operator" value={exitDraft.operator} onChange={({ target }) => setExitDraft({ ...exitDraft, operator: target.value as AutoContactFlowCondition["operator"] })}
+                          options={Object.entries(conditionOperatorLabels).map(([value, label]) => ({ value, label }))} />
+                      </Field>
+                      <Field label="Valor" htmlFor="automation-exit-value" required>
+                        {getConditionValueOptions(exitDraft.field) ? (
+                          <Select id="automation-exit-value" value={exitDraft.value} placeholder="Selecionar valor" onChange={({ target }) => setExitDraft({ ...exitDraft, value: target.value })}
+                            options={(getConditionValueOptions(exitDraft.field) ?? []).map((value) => ({ value, label: getConditionOptionLabel(exitDraft.field, value) }))} />
+                        ) : <Input id="automation-exit-value" value={exitDraft.value} onChange={(event) => setExitDraft({ ...exitDraft, value: event.target.value })} />}
+                      </Field>
+                    </>
+                  )}
+                </DialogBody>
+                <DialogFooter>
+                  <Button variant="secondary" onClick={() => setExitDraft(null)}>Cancelar</Button>
+                  <Button type="submit" disabled={!isEventLeadCreated(exitDraft) && !exitDraft.value.trim()}>Adicionar condição</Button>
+                </DialogFooter>
+              </form>
+            </Dialog>
+          )}
+
           {isTemplateModalOpen && templateDraft && (
             <DialogShell
               isOpen
               onClose={handleCloseTemplateModal}
               title={
                 templateModalMode === "create"
-                  ? "Novo template"
-                  : "Editar template"
+                  ? "Novo modelo de mensagem"
+                  : "Editar modelo de mensagem"
               }
-              description="Mudanças nos fluxos exigem salvar a automação."
-              descriptionPlacement="tooltip"
+              description="Organize as mensagens reutilizadas nas jornadas."
+              descriptionPlacement="visible"
               initialFocus="first-content"
-              size="form"
+              size="lg"
+              panelClassName="kds-automation-dialog"
               footer={
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <Button
@@ -3672,7 +2821,7 @@ Os horários já consideram a janela do fluxo,
                     loading={savingTemplate}
                     className="w-full sm:w-auto"
                   >
-                    {!savingTemplate && "Salvar template"}
+                    {!savingTemplate && "Salvar modelo"}
                     {savingTemplate && "Salvando..."}
                   </Button>
                 </div>
@@ -3681,7 +2830,7 @@ Os horários já consideram a janela do fluxo,
               <div className="space-y-6">
                 <div>
                   <FieldLabel className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                    Nome do template
+                    Nome do modelo
                   </FieldLabel>
                   <Input
                     type="text"
@@ -3697,7 +2846,7 @@ Os horários já consideram a janela do fluxo,
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <Heading level={4} className="text-sm font-semibold text-[var(--text-primary)]">
-                        Mensagens do template
+                        Mensagens do modelo
                       </Heading>
                     </div>
                     <div className="flex flex-wrap gap-2">

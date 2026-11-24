@@ -1,20 +1,31 @@
 import { useMinimumLoading, ButtonGroup, LoadingState } from '../../../design-system';
 import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, Filter, PauseCircle, Pencil, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Ban, Clock3, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
+  ActionSurface,
   Alert,
   Badge,
   Button,
   Card,
+  CrmCard,
+  DialogDescription,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
   EmptyState,
   IconButton,
   Input,
   KpiCard,
   PageHeader,
   PageActions,
+  Progress,
+  Surface,
+  Tabs,
   SectionHeader,
   Table,
   TableBody,
@@ -36,6 +47,7 @@ import {
   computeContactIntervalMinutes,
   formatContactInterval,
   type CommWhatsAppCampaign,
+  type CommWhatsAppCampaignStep,
   type CommWhatsAppCampaignTargetListItem,
   type CommWhatsAppCampaignTargetStatus,
 } from './commWhatsAppCampaignService';
@@ -123,9 +135,17 @@ const targetStatusFilterOptions = (Object.keys(targetStatusLabels) as CommWhatsA
   label: targetStatusLabels[status],
 }));
 
+const campaignDetailCopy = {
+  audience: { title: 'O público da campanha.', description: 'Veja quem participa da campanha e acompanhe a situação de cada contato.' },
+  messages: { title: 'Mensagens e próximos passos.', description: 'Confira a sequência de mensagens e os intervalos entre as etapas.' },
+  activity: { title: 'O que aconteceu na campanha.', description: 'Acompanhe as últimas tentativas e respostas do público.' },
+};
+
 export default function WhatsAppCampaignDetailScreen() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
+  const [view, setView] = useState<'overview' | 'audience' | 'messages' | 'activity'>('overview');
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [campaign, setCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [targets, setTargets] = useState<CommWhatsAppCampaignTargetListItem[]>([]);
   const [targetsTotal, setTargetsTotal] = useState(0);
@@ -599,21 +619,26 @@ export default function WhatsAppCampaignDetailScreen() {
     return <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell text-sm text-[var(--text-secondary)]">Disparo não informado.</div>;
   }
 
+  const selectedTarget = targets.find((target) => target.id === selectedTargetId);
+  const openEditor = () => {
+    if (campaign) navigate('/painel/disparos', { state: { campaignToEdit: campaign } });
+  };
+  const recentAttempts = targets.filter((target) => Boolean(target.last_attempt_at)).sort((left, right) =>
+    (right.last_attempt_at ?? '').localeCompare(left.last_attempt_at ?? ''));
+
   return (
-    <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
+    <div className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell space-y-5">
       <PageHeader
-        eyebrow="Kifer Saúde / Campanhas"
-        title={campaign?.name ?? 'Detalhe do disparo'}
-        description="Resultados, público e envio de mensagens para esta campanha."
+        title={view === 'overview' ? campaign?.name ?? 'Detalhe do disparo' : campaignDetailCopy[view].title}
+        breadcrumbs={<Button variant="ghost" size="sm" onClick={() => navigate('/painel/disparos')}><ArrowLeft className="kds-control-icon" />Todos os disparos</Button>}
+        description={view === 'overview' ? campaign?.objective || 'Resultados, público e mensagens da campanha.' : campaignDetailCopy[view].description}
         descriptionPlacement="visible"
         actions={(
           <div className="comm-campaign-detail-header-actions flex flex-wrap items-center gap-2">
             <Button
               className="order-first whitespace-nowrap lg:order-last"
               disabled={!campaign}
-              onClick={() => {
-                if (campaign) navigate('/painel/disparos', { state: { campaignToEdit: campaign } });
-              }}
+              onClick={openEditor}
             >
               <Pencil className="kds-control-icon" />
               Editar campanha
@@ -626,9 +651,6 @@ export default function WhatsAppCampaignDetailScreen() {
                 </span>
               )}
               <ButtonGroup aria-label="Ações do disparo">
-                <IconButton title="Voltar" aria-label="Voltar" onClick={() => navigate('/painel/disparos')}>
-                  <ArrowLeft className="kds-control-icon" />
-                </IconButton>
                 <IconButton title="Atualizar" aria-label="Atualizar" loading={loading} onClick={() => void loadDetail()}>
                   <RefreshCw className="kds-control-icon" />
                 </IconButton>
@@ -636,7 +658,13 @@ export default function WhatsAppCampaignDetailScreen() {
             </div>
           </div>
         )}
-      />
+      >
+        {campaign && <div className="kds-campaign-detail-meta">
+          <Badge tone={campaignStatusTones[campaign.status]}>{campaignStatusLabels[campaign.status]}</Badge>
+          {view !== 'overview' && <Text size="sm" weight="semibold">{campaign.name}</Text>}
+          <Text size="sm" tone="muted">Criada em {formatDateTime(campaign.created_at)}</Text>
+        </div>}
+      </PageHeader>
 
       {liveRefreshError && (
         <Alert
@@ -682,13 +710,33 @@ export default function WhatsAppCampaignDetailScreen() {
         <Card><LoadingState className="h-48" label="Carregando campanha" /></Card>
       ) : campaign ? (
         <>
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <KpiCard padding="sm" title="Destinatários" value={campaign.total_targets || targetsTotal} />
-            <KpiCard padding="sm" title="Pendentes" value={targetCounts.pending + targetCounts.scheduled + targetCounts.sending} />
-            <KpiCard padding="sm" title="Enviadas" value={targetCounts.sent} />
-            <KpiCard padding="sm" title="Responderam" value={respondedCount} />
+          <Tabs value={view} onChange={setView} ariaLabel="Visões da campanha" listClassName="flex-nowrap overflow-x-auto"
+            items={[{ id: 'overview', label: 'Visão geral' }, { id: 'audience', label: 'Público' }, { id: 'messages', label: 'Mensagens' }, { id: 'activity', label: 'Atividade' }]} />
+          {view === 'overview' && <>
+          <section className="kds-workspace-record-metrics" aria-label="Indicadores da campanha">
+            <KpiCard title="Público selecionado" value={String(campaign.total_targets || targetsTotal)} trend="Destinatários da campanha" icon={<Users />} />
+            <KpiCard title="Mensagens enviadas" value={String(targetCounts.sent + targetCounts.responded)} trend="Contatos enviados ou respondidos" icon={<Send />} data-tone="info" />
+            <KpiCard title="Pessoas que responderam" value={String(respondedCount)} trend={`${conversionRate}% dos contatos com tentativa`} icon={<MessageCircle />} data-tone="cyan" />
+            <KpiCard title="Aguardando envio" value={String(targetCounts.pending + targetCounts.scheduled + targetCounts.sending)} trend="Pendentes, agendados ou em envio" icon={<Clock3 />} data-tone="purple" />
+          </section>
+          <div className="kds-campaign-overview-pair">
+            <CrmCard title="Evolução da campanha" subtitle="Situação dos contatos no momento." subtitlePlacement="visible">
+              {[
+                { label: 'Enviados', count: targetCounts.sent },
+                { label: 'Responderam', count: respondedCount },
+                { label: 'Aguardando', count: targetCounts.pending + targetCounts.scheduled + targetCounts.sending },
+              ].map(({ label, count }) => (
+                <div key={label} className="kds-campaign-progress-row">
+                  <Text size="sm">{label}</Text><Text size="sm" weight="semibold">{count}</Text>
+                  <Progress size="sm" value={count} max={Math.max(1, campaign.total_targets, targetsTotal)} />
+                </div>
+              ))}
+            </CrmCard>
+            <CrmCard title="Etapas do acompanhamento" subtitle="Consulte as mensagens e os próximos passos." subtitlePlacement="visible">
+              <Text size="sm" tone="muted">{campaign.message_text || 'Abra a sequência para verificar as mensagens configuradas.'}</Text>
+              <Button variant="secondary" size="sm" onClick={() => setView('messages')}>Ver sequência <ArrowUpRight className="kds-control-icon" /></Button>
+            </CrmCard>
           </div>
-
           <div className="grid gap-3 xl:grid-cols-5">
             <Card className="comm-campaign-toolbar space-y-3 xl:col-span-3">
                 <SectionHeader
@@ -735,15 +783,6 @@ export default function WhatsAppCampaignDetailScreen() {
                 </dl>
             </Card>
           </div>
-
-          {pendingWhatsAppValidation > 0 && (
-            <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">
-              <Badge tone="info">Validando</Badge>
-              <Text className="text-sm text-[color:var(--panel-text-soft)]">
-                {pendingWhatsAppValidation.toLocaleString('pt-BR')} contato(s) aguardando confirmação de que o número tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; números sem WhatsApp são marcados como inválidos automaticamente.
-              </Text>
-            </Card>
-          )}
 
           <Card className="space-y-4">
             <SectionHeader
@@ -795,6 +834,17 @@ export default function WhatsAppCampaignDetailScreen() {
             </div>
           </Card>
 
+          </>}
+          {view === 'audience' && <>
+          {pendingWhatsAppValidation > 0 && (
+            <Card className="flex items-center gap-3 border border-[color:var(--panel-border)] bg-[color:var(--panel-surface-muted)] px-4 py-3">
+              <Badge tone="info">Validando</Badge>
+              <Text className="text-sm text-[color:var(--panel-text-soft)]">
+                {pendingWhatsAppValidation.toLocaleString('pt-BR')} contato(s) aguardando confirmação de que o número tem WhatsApp antes de entrar na fila de envio. Isso roda em segundo plano; números sem WhatsApp são marcados como inválidos automaticamente.
+              </Text>
+            </Card>
+          )}
+
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -813,6 +863,7 @@ export default function WhatsAppCampaignDetailScreen() {
                   type="text"
                   leftIcon={Search}
                   placeholder="Buscar por nome ou telefone..."
+                  aria-label="Buscar contatos da campanha"
                   value={targetsSearch}
                   onChange={(event) => setTargetsSearch(event.target.value)}
                 />
@@ -828,12 +879,12 @@ export default function WhatsAppCampaignDetailScreen() {
                 />
               </div>
             </div>
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden">
                 {targets.map((target) => (
                 <Card key={target.id} className="space-y-3 bg-[color:var(--panel-surface-soft)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <Text className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</Text>
+                      <ActionSurface variant="plain" padding="none" className="kds-campaign-contact-button" onClick={() => setSelectedTargetId(target.id)}>{getCampaignTargetDisplayName(target)}</ActionSurface>
                       <Text className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</Text>
                     </div>
                     <div className="flex flex-wrap gap-1">
@@ -851,8 +902,8 @@ export default function WhatsAppCampaignDetailScreen() {
               ))}
               {targets.length === 0 && <EmptyState title="Nenhum contato nesta lista." />}
             </div>
-            <div className="hidden lg:block">
-              <Table size="sm" columnWidths={['24%', '12%', '7%', '16%', '16%', '25%']} className={`min-w-[70rem] transition-opacity ${loadingTargetsPage ? 'opacity-60' : ''}`}>
+            <div className="hidden xl:block">
+              <Table size="sm" aria-label="Contatos da campanha" columnWidths={['24%', '12%', '7%', '16%', '16%', '25%']} className={`min-w-[52rem] transition-opacity ${loadingTargetsPage ? 'opacity-60' : ''}`}>
                 <TableHeader>
                   <TableRow>
                     <SortableTableHead label="Contato" sortDirection={targetSorting.key === "contact" ? targetSorting.direction : null} onSort={() => sortTargetsBy("contact")} />
@@ -867,7 +918,7 @@ export default function WhatsAppCampaignDetailScreen() {
                   {targets.map((target) => (
                     <TableRow key={target.id} className="align-top">
                       <TableCell>
-                        <Text className="font-medium text-[var(--text-primary)]">{getCampaignTargetDisplayName(target)}</Text>
+                        <ActionSurface variant="plain" padding="none" className="kds-campaign-contact-button" onClick={() => setSelectedTargetId(target.id)}>{getCampaignTargetDisplayName(target)}</ActionSurface>
                         <Text className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</Text>
                       </TableCell>
                       <TableCell>
@@ -899,12 +950,100 @@ export default function WhatsAppCampaignDetailScreen() {
               />
             )}
           </Card>
+          </>}
+          {view === 'messages' && <CampaignMessageSequence campaignId={campaign.id} initialMessage={campaign.message_text} onEdit={openEditor} />}
+          {view === 'activity' && (
+            <CrmCard title="Linha do tempo" subtitle="Últimas tentativas dos contatos na página atual do público." subtitlePlacement="visible">
+              {recentAttempts.length > 0 ? (
+                <ol className="kds-campaign-activity">
+                  {recentAttempts.map((target) => (
+                    <li key={target.id}>
+                      <span className="kds-campaign-sequence-number"><Clock3 aria-hidden="true" /></span>
+                      <div>
+                        <Text size="sm" tone="muted">{formatDateTime(target.last_attempt_at)}</Text>
+                        <Text weight="semibold">{getCampaignTargetDisplayName(target)}</Text>
+                        <Text size="sm">{targetStatusLabels[target.status]} · Etapa {target.current_step_index + 1}</Text>
+                        {target.error_message && <CampaignIssueNotice reason={target.error_message} />}
+                      </div>
+                      <IconButton size="sm" aria-label={`Detalhes de ${getCampaignTargetDisplayName(target)}`} onClick={() => setSelectedTargetId(target.id)}><ArrowUpRight /></IconButton>
+                    </li>
+                  ))}
+                </ol>
+              ) : <EmptyState icon={<Clock3 />} title="Nenhuma tentativa registrada neste recorte." description="Os registros aparecem conforme os contatos são processados." />}
+              <Button variant="secondary" size="sm" onClick={() => setView('audience')}>Consultar público</Button>
+            </CrmCard>
+          )}
+          {selectedTarget && (
+            <Drawer open size="md" className="kds-campaign-workspace" onOpenChange={(open) => !open && setSelectedTargetId(null)}>
+              <DrawerHeader onClose={() => setSelectedTargetId(null)}>
+                <DialogTitle>Contato na campanha</DialogTitle>
+                <DialogDescription placement="visible">{getCampaignTargetDisplayName(selectedTarget)}</DialogDescription>
+              </DrawerHeader>
+              <DrawerBody className="space-y-4">
+                <Badge tone={targetStatusTones[selectedTarget.status]}>{targetStatusLabels[selectedTarget.status]}</Badge>
+                <dl className="divide-y divide-[var(--border-subtle)]">
+                  <CampaignFact label="Telefone" value={selectedTarget.phone_number || selectedTarget.phone_digits} />
+                  <CampaignFact label="Etapa" value={String(selectedTarget.current_step_index + 1)} />
+                  <CampaignFact label="Próximo envio" value={formatDateTime(selectedTarget.next_send_at)} />
+                  <CampaignFact label="Última tentativa" value={formatDateTime(selectedTarget.last_attempt_at)} />
+                  {selectedTarget.ab_variant && <CampaignFact label="Variação" value={selectedTarget.ab_variant} />}
+                </dl>
+                {selectedTarget.error_message && <CampaignIssueNotice reason={selectedTarget.error_message} />}
+              </DrawerBody>
+              <DrawerFooter><Button variant="secondary" onClick={() => setSelectedTargetId(null)}>Fechar</Button></DrawerFooter>
+            </Drawer>
+          )}
         </>
       ) : (
         <Card className="p-6 text-sm text-[color:var(--panel-text-soft)]">Disparo não encontrado.</Card>
       )}
     </div>
   );
+}
+
+function CampaignMessageSequence({ campaignId, initialMessage, onEdit }: { campaignId: string; initialMessage: string | null; onEdit: () => void }) {
+  const [steps, setSteps] = useState<CommWhatsAppCampaignStep[] | null>(null);
+  const [error, setError] = useState(false);
+  const [request, setRequest] = useState(0);
+  useEffect(() => {
+    let current = true;
+    setError(false);
+    setSteps(null);
+    void commWhatsAppCampaignService.listCampaignSteps(campaignId).then((result) => {
+      if (current) setSteps(result);
+    }).catch(() => {
+      if (current) setError(true);
+    });
+    return () => { current = false; };
+  }, [campaignId, request]);
+
+  if (error) return <Alert tone="danger" title="Não foi possível carregar a sequência."
+    action={<Button variant="secondary" onClick={() => setRequest((value) => value + 1)}>Tentar novamente</Button>}>Consulte novamente para ver as mensagens.</Alert>;
+  if (!steps) return <LoadingState label="Carregando a sequência" className="min-h-40" />;
+  if (steps.length === 0) return initialMessage ? (
+    <CrmCard title="Primeiro contato" actions={<Button variant="secondary" size="sm" onClick={onEdit}>Editar campanha</Button>}>
+      <Text className="whitespace-pre-wrap">{initialMessage}</Text>
+    </CrmCard>
+  ) : <EmptyState icon={<MessageCircle />} title="Nenhuma etapa cadastrada." action={<Button onClick={onEdit}>Editar campanha</Button>} />;
+
+  return <ol className="kds-campaign-sequence" aria-label="Mensagens da campanha">
+    {steps.map((step) => {
+      const stage = step.stage_index ?? step.step_index;
+      return <li key={step.id}>
+        <Surface padding="md" className="kds-campaign-sequence-row">
+          <span className="kds-campaign-sequence-number">{String(stage + 1).padStart(2, '0')}</span>
+          <div>
+            <Badge size="sm">{stage === 0 ? 'Primeiro contato' : `Etapa ${stage + 1}`}</Badge>
+            {step.variant_label !== 'ANY' && <Badge size="sm" className="ml-2">Variação {step.variant_label}</Badge>}
+            <Text weight="semibold">{step.step_kind === 'status_change' ? 'Mudança de status' : 'Mensagem'}</Text>
+            <Text size="sm" className="whitespace-pre-wrap">{step.step_kind === 'status_change' ? step.status_to_set : step.message_text}</Text>
+            {step.media_filename && <Text size="sm" tone="muted">Anexo: {step.media_filename}</Text>}
+          </div>
+          <IconButton size="sm" variant="secondary" aria-label={`Editar etapa ${stage + 1}`} onClick={onEdit}><Pencil /></IconButton>
+        </Surface>
+      </li>;
+    })}
+  </ol>;
 }
 
 function CampaignFact({ label, value, detail }: { label: string; value: string; detail?: string }) {

@@ -1,8 +1,8 @@
-import { ButtonGroup, FieldLabel, Text } from '../../../../design-system';
+import { FieldLabel, Text } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkflowCanvas as ReactFlow, WorkflowBackground as Background, WorkflowControls as Controls, WorkflowHandle as Handle, WorkflowMiniMap as MiniMap } from '../../../../design-system';
 import { addEdge, Position, type Connection, type Edge, type Node, getNodesBounds, getViewportForBounds, useEdgesState, useNodesState } from 'reactflow';
-import { RefreshCcw, Download } from "lucide-react";
+import { Clock3, Download, FileText, GitBranch, MessageCircle, Plus, RefreshCcw, UserRoundCheck, UserRoundPlus } from "lucide-react";
 import { toPng } from "html-to-image";
 
 import {
@@ -28,7 +28,14 @@ import {
   Button,
   Field,
   Input,
-  IconButton,
+  DialogDescription,
+  DialogTitle,
+  Drawer,
+  DrawerBody,
+  DrawerFooter,
+  DrawerHeader,
+  RecordActions,
+  Surface,
   FilterSelect,
   MultiSelect,
 } from "../../../../design-system";
@@ -52,6 +59,7 @@ type FlowBuilderProps = {
   ) => string[] | null;
   leadStatuses: LeadStatusConfig[];
   onChangeGraph: (graph: AutoContactFlowGraph) => void;
+  onOpenExitCondition?: () => void;
   onPreviewAiMessage?: (input: {
     stepId: string;
     itemIndex: number;
@@ -107,18 +115,19 @@ const createDefaultStep = (templateId?: string): AutoContactFlowStep => ({
   customMessage: { type: "text", text: "" },
 });
 
+// Turn the saved left-to-right coordinates into a top-to-bottom canvas.
 const toReactFlowNode = (
   node: AutoContactFlowGraphNode,
 ): Node<AutoContactFlowGraphNodeData> => ({
   id: node.id,
   type: node.type,
-  position: node.position,
+  position: { x: node.position.y, y: node.position.x },
   data: node.data,
 });
 
 const toReactFlowEdge = (edge: AutoContactFlowGraph["edges"][number]): Edge => {
   const label = typeof edge.label === "string" ? edge.label : undefined;
-  const normalizedLabel = label?.toLowerCase();
+  const normalizedLabel = label?.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
   const sourceHandle =
     edge.sourceHandle ??
     (normalizedLabel === "sim"
@@ -141,7 +150,7 @@ const toGraphNode = (
 ): AutoContactFlowGraphNode => ({
   id: node.id,
   type: node.type as AutoContactFlowGraphNode["type"],
-  position: node.position,
+  position: { x: node.position.y, y: node.position.x },
   data: node.data,
 });
 
@@ -172,29 +181,15 @@ const TriggerNode = ({
   };
 
   return (
-    <div
-      className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)]"
-      style={
-        selected
-          ? {
-              borderColor: "var(--accent-gold-border)",
-              background: "var(--surface-selected-bg)",
-            }
-          : undefined
-      }
-    >
-      <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-        Gatilho
+    <div className="kds-automation-node" data-kind="trigger" data-selected={selected}>
+      <div className="kds-automation-node-heading">
+        <span className="kds-automation-node-icon"><UserRoundPlus aria-hidden="true" /></span>
+        <span><strong>{data.label || "Lead criado"}</strong><small>Gatilho de entrada</small></span>
       </div>
-      <div className="text-sm font-semibold text-[var(--text-primary)]">
-        {data.label || "Lead criado"}
-      </div>
-      <div className="mt-1 text-xs text-[var(--text-secondary)]">
-        {getTriggerDescription()}
-      </div>
+      <Text size="sm" tone="muted">{getTriggerDescription()}</Text>
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         className="h-2 w-2 bg-[var(--border-strong)]"
       />
     </div>
@@ -210,51 +205,28 @@ const ConditionNode = ({
   data: AutoContactFlowGraphNodeData;
   selected?: boolean;
 }) => (
-  <div
-    className="rounded-[var(--radius-xl)] border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)]"
-    style={
-      selected
-        ? {
-            borderColor: "var(--accent-gold-border)",
-            background: "var(--surface-selected-bg)",
-          }
-        : undefined
-    }
-  >
-    <div className="text-xs font-semibold uppercase text-[var(--brand-primary)]">
-      Condição
+  <div className="kds-automation-node" data-kind="condition" data-selected={selected}>
+    <div className="kds-automation-node-heading">
+      <span className="kds-automation-node-icon"><GitBranch aria-hidden="true" /></span>
+      <span><strong>{data.label || "Condições"}</strong><small>Decisão na jornada</small></span>
     </div>
-    <div className="text-sm font-semibold text-[var(--text-primary)]">
-      {data.label || "Condições"}
-    </div>
-    <div className="mt-1 text-xs text-[var(--text-secondary)]">
-      {data.conditions?.length
-        ? `${data.conditions.length} condição(ões)`
-        : "Sem condições"}
-    </div>
-    <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
-      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-2 py-0.5">
-        Sim
-      </span>
-      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-2 py-0.5">
-        Não
-      </span>
-    </div>
+    <Text size="sm" tone="muted">{data.conditions?.length ? `${data.conditions.length} condição(ões)` : "Configure as condições."}</Text>
+    <div className="kds-automation-node-branches"><small>Sim</small><small>Não</small></div>
     <Handle
       type="target"
-      position={Position.Left}
+      position={Position.Top}
       className="h-2 w-2 bg-[var(--brand-primary)]"
     />
     <Handle
       id="yes"
       type="source"
-      position={Position.Right}
+      position={Position.Bottom}
       className="kds-flow-handle-yes h-2 w-2 bg-[var(--brand-primary)]"
     />
     <Handle
       id="no"
       type="source"
-      position={Position.Right}
+      position={Position.Bottom}
       className="kds-flow-handle-no h-2 w-2 bg-[var(--brand-primary)]"
     />
   </div>
@@ -267,34 +239,23 @@ const ActionNode = ({
   data: AutoContactFlowGraphNodeData;
   selected?: boolean;
 }) => (
-  <div
-    className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[var(--shadow-card)]"
-    style={
-      selected
-        ? {
-            borderColor: "var(--accent-gold-border)",
-            background: "var(--surface-selected-bg)",
-          }
-        : undefined
-    }
-  >
-    <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">Ação</div>
-    <div className="text-sm font-semibold text-[var(--text-primary)]">
-      {data.label || "Ação"}
+  <div className="kds-automation-node" data-kind="action" data-selected={selected}>
+    <div className="kds-automation-node-heading">
+      <span className="kds-automation-node-icon"><MessageCircle aria-hidden="true" /></span>
+      <span><strong>{data.label || "Ação"}</strong><small>Etapa da jornada</small></span>
     </div>
-    {data.step && (
-      <div className="mt-1 text-xs text-[var(--text-secondary)]">
-        Esperar {data.step.delayValue} {data.step.delayUnit}
-      </div>
-    )}
+    {data.step && <Text size="sm" tone="muted">
+      <Clock3 className="kds-control-icon" aria-hidden="true" />
+      {data.step.delayValue > 0 ? ` Aguardar ${data.step.delayValue} ${data.step.delayUnit === "minutes" ? "min" : data.step.delayUnit === "hours" ? "h" : data.step.delayUnit === "days" ? "dias" : "s"}` : " Executar sem espera"}
+    </Text>}
     <Handle
       type="target"
-      position={Position.Left}
+      position={Position.Top}
         className="h-2 w-2 bg-[var(--border-strong)]"
     />
     <Handle
       type="source"
-      position={Position.Right}
+      position={Position.Bottom}
         className="h-2 w-2 bg-[var(--border-strong)]"
     />
   </div>
@@ -319,6 +280,7 @@ export default function FlowBuilder({
   onChangeGraph,
   onPreviewAiMessage,
   onTriggerChange,
+  onOpenExitCondition,
 }: FlowBuilderProps) {
   const baseGraph = useMemo(() => buildFlowGraphFromFlow(flow), [flow]);
   const [nodes, setNodes, onNodesChange] = useNodesState(
@@ -391,6 +353,15 @@ export default function FlowBuilder({
     }),
     [edges, nodes],
   );
+
+  const finishEditingNode = () => {
+    if (graphSyncTimeoutRef.current !== null) {
+      window.clearTimeout(graphSyncTimeoutRef.current);
+      graphSyncTimeoutRef.current = null;
+    }
+    onChangeGraph(buildCurrentGraph());
+    setSelectedNodeId(null);
+  };
 
   useEffect(() => {
     if (graphSyncTimeoutRef.current !== null) {
@@ -892,15 +863,16 @@ export default function FlowBuilder({
     updateSelectedNode({ step: nextStep, label });
   };
 
-  const addActionNode = () => {
+  const addActionNode = (actionType: AutoContactFlowActionType) => {
     const newId = createId("action");
     const lastNode = nodes
       .filter((node) => !edges.some((edge) => edge.source === node.id))
       .sort((a, b) => b.position.y - a.position.y)[0];
     const position = lastNode
-      ? { x: lastNode.position.x + 260, y: lastNode.position.y }
-      : { x: 200, y: 120 };
-    const step = createDefaultStep(messageTemplates[0]?.id);
+      ? { x: lastNode.position.x, y: lastNode.position.y + 184 }
+      : { x: 0, y: 160 };
+    const step = { ...createDefaultStep(messageTemplates[0]?.id), actionType };
+    setSelectedNodeId(newId);
     setNodes((current) => [
       ...current,
       {
@@ -908,7 +880,7 @@ export default function FlowBuilder({
         type: "action",
         position,
         data: {
-          label: "Nova ação",
+          label: flowActionLabels[actionType],
           step,
         },
       },
@@ -933,7 +905,8 @@ export default function FlowBuilder({
     const anchor = lastNode ?? nodes.find((node) => node.type === "trigger");
     if (!anchor) return;
     const newId = createId("condition");
-    const position = { x: anchor.position.x + 220, y: anchor.position.y + 20 };
+    setSelectedNodeId(newId);
+    const position = { x: anchor.position.x, y: anchor.position.y + 184 };
     setNodes((current) => [
       ...current,
       {
@@ -961,8 +934,8 @@ export default function FlowBuilder({
     if (!selectedNode) return;
     const newId = createId("condition");
     const position = {
-      x: selectedNode.position.x + 220,
-      y: selectedNode.position.y + 20,
+      x: selectedNode.position.x + 20,
+      y: selectedNode.position.y + 184,
     };
     setNodes((current) => [
       ...current,
@@ -1021,8 +994,8 @@ export default function FlowBuilder({
         const level = levels.get(node.id) ?? 0;
         const group = levelGroups.get(level) ?? [node];
         const index = group.findIndex((item) => item.id === node.id);
-        const x = 80 + level * 280;
-        const y = 80 + index * 160;
+        const x = 80 + index * 320;
+        const y = 80 + level * 184;
         return {
           ...node,
           position: { x, y },
@@ -1031,61 +1004,37 @@ export default function FlowBuilder({
     );
   };
 
+  const paletteActions = [
+    { title: "Mensagem", icon: MessageCircle, type: "send_message" },
+    { title: "Atualização do lead", icon: FileText, type: "update_status" },
+    { title: "Criar tarefa", icon: Clock3, type: "create_task" },
+    { title: "Atendimento autônomo", icon: UserRoundCheck, type: "activate_autonomous_service" },
+  ] as const;
   return (
-    <div className="panel-page-shell grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div
-        ref={reactFlowWrapperRef}
-        className="flex h-[520px] flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:h-[560px] lg:h-[680px]"
-      >
-        <div className="flex flex-col items-start gap-3 rounded-t-[var(--radius-2xl)] border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-              Construtor avançado
-            </div>
-            <div className="text-sm text-[var(--text-secondary)]">
-              Arraste e conecte as etapas do seu fluxo.
-            </div>
-            <div className="mt-1 text-[11px] text-[var(--text-muted)]">
-              Clique em uma linha para remover.
-            </div>
-          </div>
-          <ButtonGroup size="sm" aria-label="Ações do fluxo" className="max-w-full overflow-x-auto">
-            <Button onClick={addConditionNode} variant="secondary" size="sm">
-              + Condição
-            </Button>
-            <Button onClick={addActionNode} size="sm">
-              + Ação
-            </Button>
-            <Button
-              onClick={exportFlowAsImage}
-              disabled={isExporting}
-              variant="secondary"
-              size="sm"
-              title="Exportar como imagem"
-            >
-              <Download className="kds-control-icon" />
-              PNG
-            </Button>
-            <Button
-              onClick={exportFlowAsTxtDiagnostic}
-              disabled={isExporting}
-              variant="secondary"
-              size="sm"
-              title="Exportar detalhes do fluxo em TXT"
-            >
-              <Download className="kds-control-icon" />
-              TXT
-            </Button>
-            <IconButton
-              onClick={reorganizeLayout}
-              variant="secondary"
-              
-              title="Reorganizar"
-              aria-label="Reorganizar"
-             size="sm">
-              <RefreshCcw className="kds-control-icon" />
-            </IconButton>
-          </ButtonGroup>
+    <div className="kds-automation-builder">
+      <Surface padding="md" className="kds-automation-palette" aria-label="Etapas disponíveis">
+        <div>
+          <Text weight="semibold">Uma etapa de cada vez.</Text>
+          <Text size="sm" tone="muted">Escolha o próximo passo ou arraste as etapas para organizar a jornada.</Text>
+        </div>
+        {paletteActions.map(({ title, icon: Icon, type }) => (
+          <Button key={type} variant="secondary" size="sm" onClick={() => addActionNode(type)}>
+            <Icon className="kds-control-icon" aria-hidden="true" /><span>{title}</span><Plus className="kds-control-icon" aria-hidden="true" />
+          </Button>
+        ))}
+        <Button variant="secondary" size="sm" onClick={addConditionNode}>
+          <GitBranch className="kds-control-icon" aria-hidden="true" /><span>Condição</span><Plus className="kds-control-icon" aria-hidden="true" />
+        </Button>
+        {onOpenExitCondition && <Button variant="text" size="sm" onClick={onOpenExitCondition}>Condições de saída</Button>}
+      </Surface>
+      <div ref={reactFlowWrapperRef} className="kds-automation-canvas">
+        <div className="kds-automation-canvas-bar">
+          <Text size="sm" tone="muted">Clique em uma etapa para editar.</Text>
+          <RecordActions label="Ações da jornada" visibleCount={0} actions={[
+            { label: "Reorganizar etapas", icon: RefreshCcw, onClick: reorganizeLayout },
+            { label: "Exportar como imagem", icon: Download, onClick: () => void exportFlowAsImage(), disabled: isExporting },
+            { label: "Exportar detalhes em TXT", icon: FileText, onClick: () => void exportFlowAsTxtDiagnostic(), disabled: isExporting },
+          ]} />
         </div>
         {totalIssueCount > 0 && (
           <div className="border-b border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-2 text-xs text-[var(--warning-text)]">
@@ -1106,7 +1055,6 @@ export default function FlowBuilder({
             }}
             onNodeContextMenu={(event, node) => {
               event.preventDefault();
-              setSelectedNodeId(node.id);
               setContextMenu({
                 nodeId: node.id,
                 x: event.clientX,
@@ -1116,9 +1064,9 @@ export default function FlowBuilder({
             onPaneClick={() => setContextMenu(null)}
             nodeTypes={nodeTypes}
             fitView
-            fitViewOptions={{ padding: 0.18 }}
+            fitViewOptions={{ padding: 0.14, minZoom: 0.72, maxZoom: 1 }}
             minZoom={0.25}
-            className="h-full bg-[var(--bg-surface-muted)]"
+            className="h-full kds-automation-react-flow"
           >
             <MiniMap
               position="top-right"
@@ -1151,21 +1099,13 @@ export default function FlowBuilder({
         )}
       </div>
 
-      <div className="min-h-[140px] overflow-y-auto rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 lg:h-[680px]">
-        <div className="text-xs font-semibold uppercase text-[var(--text-subtle)]">
-          Inspector
-        </div>
-        {selectedNode ? (
-          <div className="mt-3 space-y-4">
-            <div>
-              <div className="text-sm font-semibold text-[var(--text-primary)]">
-                {selectedNode.data.label || "No"}
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Tipo: {selectedNode.type}
-              </div>
-            </div>
-
+      {selectedNode && (
+        <Drawer open size="md" className="kds-automation-drawer" onOpenChange={(open) => !open && finishEditingNode()}>
+          <DrawerHeader onClose={finishEditingNode}>
+            <DialogTitle>Editar etapa da jornada</DialogTitle>
+            <DialogDescription placement="visible">{selectedNode.data.label || "Etapa do fluxo"}</DialogDescription>
+          </DrawerHeader>
+          <DrawerBody className="space-y-4">
             {selectedNodeIssues.length > 0 && (
               <div className="rounded-[var(--radius-lg)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-2 text-xs text-[var(--warning-text)]">
                 {selectedNodeIssues.join(" • ")}
@@ -1175,7 +1115,7 @@ export default function FlowBuilder({
             {selectedNode.type === "trigger" && (
               <div className="space-y-3">
                 <div>
-                  <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                  <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                     Tipo de gatilho
                   </FieldLabel>
                   <FilterSelect
@@ -1249,7 +1189,7 @@ export default function FlowBuilder({
                 {(selectedNode.data.triggerType === "status_duration" ||
                   selectedNode.data.triggerType === "inactivity_duration") && (
                   <div>
-                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                       {selectedNode.data.triggerType === "inactivity_duration"
                         ? "Tempo sem interação (horas)"
                         : "Tempo no status (horas)"}
@@ -1265,7 +1205,7 @@ export default function FlowBuilder({
                       }
                       size="sm"
                     />
-                    <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
+                    <div className="mt-1 text-xs text-[var(--text-subtle)]">
                       {selectedNode.data.triggerType === "inactivity_duration"
                         ? "Mínimo de 1 hora. Uma resposta do cliente cancela a régua."
                         : "O fluxo será executado quando o lead estiver há mais de X horas neste(s) status"}
@@ -1371,7 +1311,7 @@ export default function FlowBuilder({
                           )}
                         />
                         {BOOLEAN_FIELDS.includes(condition.field) ? (
-                          <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 text-[11px] text-[var(--text-muted)]">
+                          <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 text-xs text-[var(--text-muted)]">
                             Use as conexões{" "}
                             <span className="font-semibold">Sim/Não</span> para
                             definir o fluxo quando a condição for verdadeira ou
@@ -1431,7 +1371,7 @@ export default function FlowBuilder({
                           </>
                         )}
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-[var(--text-subtle)]">
+                          <span className="text-xs text-[var(--text-subtle)]">
                             Condicao {index + 1}
                           </span>
                           <Button
@@ -1471,9 +1411,9 @@ export default function FlowBuilder({
                   size="sm"
                   fullWidth
                 >
-                  + Adicionar condicao
+                  + Adicionar condição
                 </Button>
-                <div className="text-[11px] text-[var(--text-subtle)]">
+                <div className="text-xs text-[var(--text-subtle)]">
                   Use formulas iniciando com '=' (ex.:
                   =len(lead.telefone)&gt;10).
                 </div>
@@ -1483,7 +1423,7 @@ export default function FlowBuilder({
                   size="sm"
                   fullWidth
                 >
-                  + Condicao abaixo
+                  + Condição abaixo
                 </Button>
                 <Button
                   onClick={() => {
@@ -1503,7 +1443,7 @@ export default function FlowBuilder({
                   size="sm"
                   fullWidth
                 >
-                  Remover bloco de condicao
+                  Remover bloco de condição
                 </Button>
               </div>
             )}
@@ -1512,7 +1452,7 @@ export default function FlowBuilder({
               <div className="space-y-3">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
-                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                       Esperar
                     </FieldLabel>
                     <Input
@@ -1528,7 +1468,7 @@ export default function FlowBuilder({
                     />
                   </div>
                   <div>
-                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                       Unidade
                     </FieldLabel>
                     <FilterSelect
@@ -1553,8 +1493,8 @@ export default function FlowBuilder({
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <FieldLabel className="block text-[11px] text-[var(--text-muted)]">
-                      Formula de delay (opcional)
+                    <FieldLabel className="block text-xs text-[var(--text-muted)]">
+                      Fórmula de espera (opcional)
                     </FieldLabel>
                     <Button
                       onClick={() =>
@@ -1569,8 +1509,8 @@ export default function FlowBuilder({
                       size="sm"
                     >
                       {selectedNode.data.step?.delayExpression
-                        ? "Remover formula"
-                        : "Usar formula"}
+                        ? "Remover fórmula"
+                        : "Usar fórmula"}
                     </Button>
                   </div>
                   {selectedNode.data.step?.delayExpression && (
@@ -1586,17 +1526,17 @@ export default function FlowBuilder({
                       placeholder="=if(len(lead.telefone)>10, 2, 6)"
                     />
                   )}
-                  <div className="mt-1 text-[11px] text-[var(--text-subtle)]">
+                  <div className="mt-1 text-xs text-[var(--text-subtle)]">
                     Ex.: =if(len(lead.telefone)&gt;10, 2, 6)
                   </div>
                   {delayPreview && (
-                    <div className="mt-1 text-[11px] text-[var(--text-muted)]">
+                    <div className="mt-1 text-xs text-[var(--text-muted)]">
                       Preview: {delayPreview}
                     </div>
                   )}
                 </div>
                 <div>
-                  <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                  <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                     Tipo de ação
                   </FieldLabel>
                   <FilterSelect
@@ -1621,7 +1561,7 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "send_message" && (
                   <div className="space-y-3">
-                    <div className="text-[11px] text-[var(--text-muted)]">
+                    <div className="text-xs text-[var(--text-muted)]">
                       Canal ativo: WhatsApp (configurado em Integrações). Cada
                       item abaixo é enviado como uma mensagem própria, em
                       ordem.
@@ -1643,7 +1583,7 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "update_status" && (
                   <div>
-                    <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                    <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                       Status do lead
                     </FieldLabel>
                     <FilterSelect
@@ -1671,7 +1611,7 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === "create_task" && (
                   <div className="space-y-2">
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Título
                       </FieldLabel>
                       <Input
@@ -1684,7 +1624,7 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Descrição
                       </FieldLabel>
                       <VariableAutocompleteTextarea
@@ -1699,7 +1639,7 @@ export default function FlowBuilder({
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
-                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                           Vencimento (h)
                         </FieldLabel>
                         <Input
@@ -1715,7 +1655,7 @@ export default function FlowBuilder({
                         />
                       </div>
                       <div>
-                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                           Prioridade
                         </FieldLabel>
                         <FilterSelect
@@ -1745,12 +1685,12 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "send_email" && (
                   <div className="space-y-2">
-                    <div className="text-[11px] text-[var(--text-muted)]">
+                    <div className="text-xs text-[var(--text-muted)]">
                       Envio depende de conta configurada em Integrações de
                       e-mail.
                     </div>
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Para
                       </FieldLabel>
                       <Input
@@ -1763,7 +1703,7 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Assunto
                       </FieldLabel>
                       <Input
@@ -1778,7 +1718,7 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Corpo
                       </FieldLabel>
                       <VariableAutocompleteTextarea
@@ -1798,7 +1738,7 @@ export default function FlowBuilder({
                   <div className="space-y-2">
                     <Text className="text-xs text-[var(--text-muted)] md:col-span-2">Esta etapa conecta outro sistema. Peça ao responsável pela integração os dados abaixo.</Text>
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Endereço do serviço
                       </FieldLabel>
                       <Input
@@ -1812,7 +1752,7 @@ export default function FlowBuilder({
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
-                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                           Método
                         </FieldLabel>
                         <FilterSelect
@@ -1838,7 +1778,7 @@ export default function FlowBuilder({
                         />
                       </div>
                       <div>
-                        <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                        <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                           Cabeçalhos da conexão (JSON)
                         </FieldLabel>
                         <Input
@@ -1854,7 +1794,7 @@ export default function FlowBuilder({
                       </div>
                     </div>
                     <div>
-                      <FieldLabel className="mb-1 block text-[11px] text-[var(--text-muted)]">
+                      <FieldLabel className="mb-1 block text-xs text-[var(--text-muted)]">
                         Dados enviados
                       </FieldLabel>
                       <VariableAutocompleteTextarea
@@ -1872,7 +1812,7 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType ===
                   "activate_autonomous_service" && (
-                  <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-[11px] text-[var(--text-secondary)]">
+                  <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                     A partir desta etapa, a IA (Luiza) passa a responder
                     sozinha nesse chat, fazendo a qualificação do lead — nunca
                     monta cotação. Ao final ela encerra o atendimento autônomo
@@ -1882,15 +1822,13 @@ export default function FlowBuilder({
                 )}
               </div>
             )}
-          </div>
-        ) : (
-          <div className="mt-3 text-xs text-[var(--text-muted)]">
-            Selecione um no para editar.
-          </div>
-        )}
-      </div>
+          </DrawerBody>
+          <DrawerFooter>
+            {selectedNode.type !== "trigger" && <Button variant="danger" onClick={() => handleDeleteNode(selectedNode.id)}>Remover etapa</Button>}
+            <Button onClick={finishEditingNode}>Concluir edição</Button>
+          </DrawerFooter>
+        </Drawer>
+      )}
     </div>
   );
 }
-
-

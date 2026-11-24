@@ -57,9 +57,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   const activeAllowedTab = allowedTabs.some((tab) => tab.id === activeTab)
     ? activeTab
     : allowedTabs[0].id;
-  const isAutomationFlowDetail = area === "automation"
-    && activeAllowedTab === "automation"
-    && Boolean(new URLSearchParams(location.search).get("flowId"));
+  const isAutomationWorkspace = area === "automation" && activeAllowedTab === "automation";
   const query = new URLSearchParams(location.search);
   const section = query.get('section');
   const leadTab = query.get('leadTab');
@@ -117,7 +115,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
   };
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
-      {!isAutomationFlowDetail && (
+      {!isAutomationWorkspace && (
         <PageHeader
           title={title}
           description={description}
@@ -140,7 +138,11 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
       <div className="min-w-0">
           {activeAllowedTab === "system" && <SystemSettingsScreen />}
           {activeAllowedTab === "users" && <UsersScreen createDialogOpen={createUserDialogOpen} onCreateDialogOpenChange={setCreateUserDialogOpen} />}
-          {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
+          {activeAllowedTab === "automation" && <AutomationSettingsScreen areaActions={
+            CONFIG_TAB_DEFINITIONS
+              .filter(({ id }) => id !== 'automation' && allowedTabs.some((tab) => tab.id === id))
+              .map(({ id, icon, label }) => ({ label, icon, onClick: () => handleTabChange(id) }))
+          } />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
           {activeAllowedTab === "ai" && <AiConfigScreen />}
           {activeAllowedTab === "links" && (

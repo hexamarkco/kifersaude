@@ -208,6 +208,7 @@ export default function LeadsManager({
     return () => window.removeEventListener("resize", updateViewport);
   }, []);
   const [viewMode, setViewMode] = useState<LeadsViewMode>("list");
+  const [showMobileCards, setShowMobileCards] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
@@ -1690,6 +1691,11 @@ export default function LeadsManager({
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-leads-toolbar-actions">
+              {viewMode === 'list' && (
+                <Button type="button" variant="secondary" size="sm" className="kds-record-mobile-view" aria-pressed={showMobileCards} onClick={() => setShowMobileCards((show) => !show)}>
+                  Cartões
+                </Button>
+              )}
               <FilterMultiSelect dialogClassName="kds-crm-dialog" options={statusFilterOptions} placeholder="Todas as etapas" dialogTitle="Filtrar leads por status" values={filterStatus} onChange={setFilterStatus} />
               <FilterMultiSelect dialogClassName="kds-crm-dialog" options={responsavelFilterOptions} placeholder="Toda a equipe" dialogTitle="Filtrar leads por responsável" values={filterResponsavel} onChange={setFilterResponsavel} />
               <Button variant="secondary" aria-expanded={mobileFiltersOpen} aria-controls="leads-filter-controls" onClick={() => setMobileFiltersOpen(open => !open)}><Filter aria-hidden="true" />Filtros</Button>
@@ -1814,8 +1820,8 @@ export default function LeadsManager({
             />
           </div>
         ) : (
-          <Surface className="kds-record-results kds-leads-results" padding="none" data-panel-animate>
-            {canSelectLeads && paginatedLeads.length > 0 && <div className="kds-record-results-header lg:hidden">
+          <Surface className={`kds-record-results kds-leads-results${showMobileCards ? ' is-mobile-cards' : ''}`} padding="none" data-panel-animate>
+            {showMobileCards && canSelectLeads && paginatedLeads.length > 0 && <div className="kds-record-results-header lg:hidden">
               <div className="kds-leads-list-summary flex flex-wrap gap-2">
                   <FieldLabel
                     className="kds-op-chip kds-leads-select-page cursor-pointer"
@@ -1940,7 +1946,7 @@ export default function LeadsManager({
                   </div>
                 </Surface>
             )}
-            <div className="hidden lg:block">
+            <div className="kds-record-table-container">
               <Table size="sm" stickyHeader aria-label="Carteira de leads" className="kds-leads-table" columnWidths={canSelectLeads
                 ? ['4%', '19%', '21%', '10%', '13%', '14%', '14%', '5%']
                 : ['23%', '21%', '10%', '13%', '14%', '14%', '5%']}>
@@ -2032,7 +2038,7 @@ export default function LeadsManager({
               </Table>
             </div>
 
-            <div className="kds-op-lead-list lg:hidden">
+            {showMobileCards && <div className="kds-op-lead-list lg:hidden">
               {paginatedLeads.map((lead) => (
                 <LeadListCard
                   key={lead.id}
@@ -2065,7 +2071,7 @@ export default function LeadsManager({
                   data-panel-animate
                 />
               )}
-            </div>
+            </div>}
 
             {filteredLeads.length > 0 && (
               <Pagination

@@ -82,7 +82,6 @@ import {
   type SurfaceVariant,
   IconButton,
   FilterSelect,
-  SegmentedControl,
   Tabs,
 } from "../../design-system";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
@@ -1246,7 +1245,7 @@ export default function AgendaScreen() {
           aria-pressed={isSelected}
           aria-label={`${day} de ${cellDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${formatAgendaCount(totalCount, "item", "itens")}`}
         >
-          <span className="text-sm font-bold sm:text-base">{day}</span>
+          <span className="kds-agenda-calendar-day-number">{day}</span>
           {totalCount > 0 && (
             <span
               className={`kds-calendar-event-count ${
@@ -1259,13 +1258,13 @@ export default function AgendaScreen() {
               {totalCount}
             </span>
           )}
-          {calendarView === 'week' && dayReminders.length > 0 && <span className="kds-agenda-week-events">{dayReminders.slice(0, 3).map((item) => <span key={item.id}>{item.titulo}</span>)}</span>}
+          {dayReminders.length > 0 && <span className="kds-agenda-week-events">{dayReminders.slice(0, calendarView === 'week' ? 3 : 2).map((item) => <span key={item.id}>{item.titulo}</span>)}</span>}
         </Button>,
       );
     }
 
     return (
-      <div className={`kds-calendar-grid grid grid-cols-7 gap-1 sm:gap-2 ${calendarView === 'week' ? 'kds-agenda-week-grid' : ''}`}>
+      <div className={`kds-calendar-grid kds-agenda-calendar-grid grid grid-cols-7 ${calendarView === 'week' ? 'kds-agenda-week-grid' : ''}`}>
         {weekDays.map((day) => (
           <div
             key={day}
@@ -1531,12 +1530,20 @@ export default function AgendaScreen() {
 
         <Tabs
             items={[
-              { id: "todos", label: "Calendário" },
+              { id: "month", label: "Calendário" },
+              { id: "week", label: "Semana" },
               { id: "nao-lidos", label: "Pendentes", badge: pendingFilteredCount },
               { id: "lidos", label: "Concluídos", badge: completedFilteredCount },
             ]}
-            value={statusFilter}
-            onChange={setStatusFilter}
+            value={statusFilter === 'todos' ? calendarView : statusFilter}
+            onChange={(view) => {
+              if (view === 'month' || view === 'week') {
+                setCalendarView(view);
+                setStatusFilter('todos');
+              } else {
+                setStatusFilter(view);
+              }
+            }}
             className="kds-agenda-status-switcher"
             listClassName="flex-nowrap overflow-x-auto pb-1"
             ariaLabel="Visões da agenda"
@@ -1635,9 +1642,8 @@ export default function AgendaScreen() {
         </div>
 
         {statusFilter === "todos" ? (
-          <div className="kds-agenda-workspace-grid">
+          <div className={`kds-agenda-workspace-grid${calendarView === 'week' ? ' is-week' : ''}`}>
             <Surface padding="md" className="kds-agenda-calendar space-y-4">
-              <SegmentedControl items={[{ id: 'month', label: 'Mês' }, { id: 'week', label: 'Semana' }]} value={calendarView} onChange={setCalendarView} size="sm" ariaLabel="Intervalo do calendário" />
               <div className="kds-agenda-calendar-header flex items-center justify-between gap-2">
                 <IconButton className="kds-agenda-previous-month" onClick={() => moveCalendar(-1)} variant="icon" aria-label={calendarView === 'month' ? 'Mês anterior' : 'Semana anterior'} size="md">
                   <ChevronLeft className="kds-control-icon" />
@@ -1808,10 +1814,11 @@ export default function AgendaScreen() {
             open
             aria-label="Criar nova tarefa"
             onOpenChange={(open) => !open && !savingTask && closeAddTaskModal()}
-            size="sm"
+            size="md"
           >
             <form onSubmit={(event) => void handleAddTask(event)} className="flex min-h-0 flex-1 flex-col">
               <DialogHeader onClose={savingTask ? undefined : closeAddTaskModal}>
+                <Text className="kds-dialog-eyebrow">Agenda</Text>
                 <DialogTitle>Nova tarefa</DialogTitle>
                 <DialogDescription placement="visible">{selectedDateLabel}</DialogDescription>
               </DialogHeader>

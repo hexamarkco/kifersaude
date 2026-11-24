@@ -844,7 +844,7 @@ export const commWhatsAppCampaignService = {
       // Percorrer todas as páginas, sem limitar a listagem aos 80 registros mais recentes.
       // O ID desempata datas iguais e mantém a ordenação estável entre páginas.
       const campaigns = await fetchAllPages(
-        (from, to) => supabase
+        async (from, to) => supabase
           .from('comm_whatsapp_campaigns')
           .select(CAMPAIGN_SELECT)
           .order('created_at', { ascending: false })

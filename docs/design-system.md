@@ -68,13 +68,17 @@ O código acima ilustra composição; handlers, estado, validação e breadcrumb
 
 ## Tokens e acessibilidade
 
-- **Tipografia:** Poppins em títulos operacionais, campos, tabelas e ações. Tokens `--type-ui-title`, `--type-ui-section`, `--type-ui-heading` definem a hierarquia compacta. `Heading family="display"` reserva Sora para apresentações editoriais.
+- **Tipografia:** no workspace, Sora compõe os títulos e valores dos indicadores. Poppins compõe rótulos, controles, descrições e tabelas. A hierarquia usa `--type-ui-title`, `--type-ui-section` e `--type-ui-heading`.
 - **Escala:** `--layout-gap`, `--section-gap`, `--page-gutter` usam a escala existente de espaços. Raios `6/8/12/16px`; aliases semânticos `--radius-control`, `--radius-panel`, `--radius-dialog`. Superfícies planas; sombras para elementos sobrepostos.
 - **Controles compostos:** opções de dropdown, paginação, calendário e ações usam raio de 8px em todos os estados. Opções consecutivas de dropdown têm separação de 4px, preservando a distinção entre seleção, hover e foco. Segmentação tem contêiner de 12px, itens de 8px e recuo de 4px. Grupos de botões conectados usam contorno de 8px, extremidades internas de 7px (descontando a borda) e junções retas. Checkboxes usam 6px. Formas circulares ficam nos indicadores, avatares, radios e switches; estados não alteram a geometria do controle.
 - **Temas:** `--action-primary-bg`, `--action-primary-hover`, `--action-primary-text` e `--action-accent-text` mantêm legibilidade sobre terracota e dourado em claro/escuro. O tema acompanha toasts, tooltips, calendários e diálogos via contexto, inclusive com múltiplas raízes na página.
 - **Campos:** `Field` conecta label, descrição, erro, obrigatoriedade e `aria-invalid` também nos controles compostos. Descrições operacionais ficam visíveis. A validação do exemplo foca o primeiro erro.
 - **Toque:** controles operacionais têm mínimo de 44px no mobile; dias do calendário têm 36px para caber em sete colunas a 320px. `Checkbox touchTarget` amplia a área clicável sem aumentar o desenho do checkbox.
 - **Sobreposições:** popovers e tooltips compartilham posicionamento que inverte o lado quando necessário e respeita a área visível, inclusive ao mudar o viewport. Escape fecha a camada interna antes da externa; foco volta ao acionador. Diálogos têm corpo rolável e ações separadas. Use modais para confirmações/tarefas rápidas; criação e edição completas ficam em páginas.
+
+No workspace, o cabeçalho da página usa Sora de 27px no desktop e alinha as ações ao centro do bloco de título e descrição. Campos de formulário usam 44px de altura e rótulos acima do controle. Barras de filtros e ações de página usam a escala compacta de 38px no desktop. As tabelas usam cabeçalhos de 43px com texto de 10px e células de 11px. As abas sublinhadas mantêm o indicador dentro da área rolável.
+
+Os diálogos comuns do workspace têm 620px de largura máxima, raio de 14px no desktop, título de 18px e rodapé separado do corpo rolável. No celular eles ganham margens laterais de 12px, enquanto os painéis laterais usam a altura da tela. Leads e contratos exibem a tabela com rolagem horizontal em telas estreitas e oferecem a opção **Cartões**.
 
 O único entrypoint visual é `src/design-system/styles.css`: tokens em `foundation.css`, primitivos em `components.css`, padrões em `operational.css`, temas em `themes.css`, composição da aplicação em `application.css` e comunicação em `communication.css`. `showcase.css` documenta a composição do catálogo. Os estilos de fornecedores também entram por esse entrypoint. `tailwind.preset.js` conecta as utilidades de layout aos tokens da mesma biblioteca.
 

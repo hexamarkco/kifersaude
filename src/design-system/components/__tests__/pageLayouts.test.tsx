@@ -17,6 +17,7 @@ import {
   FormPage,
   FormSection,
   Input,
+  KpiCard,
   ListPage,
   MultiSelect,
   PageActions,
@@ -30,6 +31,26 @@ import {
   Tooltip,
 } from '../../index';
 import { getOverlayPosition } from '../../hooks/useOverlayPosition';
+
+test('workspace headers and indicators expose the layout without hiding descriptions', () => {
+  const view = render(
+    <DesignSystemProvider workspace>
+      <PageHeader
+        title="Carteira"
+        description="Acompanhe os contratos."
+        actions={<button type="button">Novo contrato</button>}
+      />
+      <KpiCard title="Contratos ativos" value="6" trend="Na carteira" />
+    </DesignSystemProvider>,
+  );
+  const header = view.container.querySelector('.kds-page-header-main');
+  assert.equal(header?.querySelector('h1')?.textContent, 'Carteira');
+  assert.equal(header?.querySelector('.kds-page-description')?.textContent, 'Acompanhe os contratos.');
+  assert.equal(header?.querySelector('.kds-page-actions button')?.textContent, 'Novo contrato');
+  const indicator = view.container.querySelector('.kds-workspace-card-content.kds-card-kpi');
+  assert.equal(indicator?.querySelector('.kds-card-title')?.textContent, 'Contratos ativos');
+  assert.equal(indicator?.querySelector('.kds-kpi-value')?.textContent, '6');
+});
 
 test('page actions isolate destruction and preserve secondary/primary order while saving', () => {
   const view = render(

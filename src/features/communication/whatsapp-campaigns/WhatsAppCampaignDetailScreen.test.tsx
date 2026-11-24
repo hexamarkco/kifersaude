@@ -72,6 +72,7 @@ const campaign: CommWhatsAppCampaign = {
   scheduled_at: null,
   pacing_per_minute: 1,
   daily_send_limit: null,
+  dispatch_priority: 2,
   contact_interval_minutes: null,
   inter_message_interval_minutes: 0,
   send_window_start: null,

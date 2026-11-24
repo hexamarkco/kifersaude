@@ -322,6 +322,18 @@
   --type-label: 500 .6875rem / 1.6 var(--font-sans);
   --control-height-md: 2.5rem;
   --control-height-lg: 2.75rem;
+  --form-control-height: 2.75rem;
+  --toolbar-control-height: 2.375rem;
+  --control-font-md: .6875rem;
+  --type-form-control: 400 .75rem / 1.5 var(--font-sans);
+  --type-page-description: 400 .75rem / 1.8 var(--font-sans);
+  --type-card-description: 400 .6875rem / 1.7 var(--font-sans);
+  --type-table: 400 .6875rem / 1.65 var(--font-sans);
+  --type-table-heading: 500 .625rem / 1.5 var(--font-sans);
+  --type-dialog-title: 600 1.125rem / 1.55 var(--font-display);
+  --button-secondary-bg: var(--bg-surface);
+  --button-secondary-text: var(--text-primary);
+  --table-header-background: var(--bg-surface-muted);
   --workspace-header-height: 4.5625rem;
   --workspace-mobile-header-height: 3.875rem;
   --sidebar-width: 14rem;
@@ -330,9 +342,21 @@
   --page-gutter: 1.875rem;
   --radius-control: .4375rem;
   --radius-panel: .75rem;
+  --radius-table: var(--radius-panel);
+  --radius-dialog: .875rem;
+  --radius-metric: .6875rem;
   --layout-gap: var(--space-5);
+  --dialog-width-form: 38.75rem;
   --dialog-width-md: 38.75rem;
   --dialog-width-xl: 60rem;
+  --dialog-inline-padding: 1.6875rem;
+  --dialog-header-padding: 1.3125rem var(--dialog-inline-padding);
+  --dialog-body-padding: 1.625rem var(--dialog-inline-padding);
+  --dialog-footer-padding: 1.125rem var(--dialog-inline-padding);
+  --dialog-border: var(--border-default);
+  --dialog-backdrop-blur: 4px;
+  --dialog-title-tracking: -.035em;
+  --dialog-footer-background: var(--bg-surface);
   --brand-primary-gradient: var(--brand-primary);
   --brand-primary-gradient-hover: var(--brand-primary-hover);
   --brand-primary-gradient-active: var(--brand-primary-active);
@@ -372,12 +396,12 @@
   --danger-soft: #fcf0ee;
   --danger-text: #ba5149;
   --focus-ring: #c54f2e33;
-  --overlay: #18202d66;
+  --overlay: #11192366;
   --action-primary-bg: var(--brand-primary);
   --action-primary-hover: var(--brand-primary-hover);
   --shadow-card: none;
   --shadow-popover: 0 12px 36px -12px #17203130;
-  --shadow-modal: 0 24px 72px -16px #17203145;
+  --shadow-modal: 0 30px 100px #09112238;
 }
 
 .painel-theme.kifer-ds.kds-workspace-theme.theme-dark {
@@ -407,8 +431,10 @@
   --brand-primary-soft: #352721;
   --brand-primary-muted: #302521;
   --brand-primary-border: #634032;
+  --action-primary-bg: var(--brand-primary);
+  --action-primary-hover: var(--brand-primary-hover);
   --focus-ring: #ed89684d;
-  --overlay: #080b116b;
+  --overlay: #11192366;
   --success-soft: #1e332b;
   --success-border: #345247;
   --success-text: #a3d8be;
@@ -441,10 +467,19 @@
 @media (max-width: 767px) {
   .painel-theme.kifer-ds.kds-workspace-theme {
     --page-gutter: 1.25rem;
-    --type-ui-title: 600 1.4375rem / 1.35 var(--font-display);
+    --type-ui-title: 600 1.4375rem / 1.5 var(--font-display);
+    --type-page-description: 400 .6875rem / 1.8 var(--font-sans);
+    --type-dialog-title: 600 1.0625rem / 1.6 var(--font-display);
+    --dialog-inline-padding: 1.25rem;
+    --dialog-header-padding: 1.25rem var(--dialog-inline-padding);
+    --dialog-body-padding: 1.375rem var(--dialog-inline-padding);
+    --dialog-footer-padding: 1rem var(--dialog-inline-padding);
   }
 }
 
 @media (max-width: 390px) {
-  .painel-theme.kifer-ds.kds-workspace-theme { --page-gutter: 1rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme {
+    --page-gutter: 1rem;
+    --type-ui-title: 600 1.3125rem / 1.5 var(--font-display);
+  }
 }

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CalendarDays, Layers3, MoreHorizontal, Stethoscope, Tag, Target, Users } from 'lucide-react';
+import { useState } from 'react';
+import { CalendarDays, MoreHorizontal } from 'lucide-react';
 
 import {
   Badge,
@@ -10,14 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
   DateTimePicker,
-  Drawer,
-  DrawerBody,
-  DrawerFooter,
-  DrawerHeader,
   Field,
   PageHeader,
-  FilterSelect,
   Radio,
+  Select,
   Text,
 } from '../../../design-system';
 import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
@@ -102,15 +98,6 @@ export function DashboardHeader({
   const [draftStartDate, setDraftStartDate] = useState(customStartDate);
   const [draftEndDate, setDraftEndDate] = useState(customEndDate);
   const [periodStep, setPeriodStep] = useState<DashboardPeriodStep>('options');
-  const [isMobileViewport, setIsMobileViewport] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth <= 767,
-  );
-
-  useEffect(() => {
-    const updateViewport = () => setIsMobileViewport(window.innerWidth <= 767);
-    window.addEventListener('resize', updateViewport);
-    return () => window.removeEventListener('resize', updateViewport);
-  }, []);
 
   const activeFilterCount = [
     dashboardOriginFilter,
@@ -180,53 +167,13 @@ export function DashboardHeader({
     </Button>
   );
 
-  const filterTitleCopy = (
-    <DialogTitle>Filtros do dashboard</DialogTitle>
-  );
-
-  const filterFieldControls = (
-    <>
-      <FilterSelect
-        icon={Target}
-        value={dashboardOriginFilter}
-        onChange={onOriginFilterChange}
-        placeholder="Todas as origens"
-        neutralValues={['']}
-        options={visibleLeadOrigins.map((origin) => ({ value: origin.nome, label: origin.nome }))}
-      />
-      <FilterSelect
-        icon={Users}
-        value={dashboardOwnerFilter}
-        onChange={onOwnerFilterChange}
-        placeholder="Todos os responsáveis"
-        options={responsavelOptions.map((option) => ({ value: option.value, label: option.label }))}
-      />
-      <FilterSelect
-        icon={Stethoscope}
-        value={dashboardOperatorFilter}
-        onChange={onOperatorFilterChange}
-        placeholder="Todas as operadoras"
-        neutralValues={['']}
-        options={operatorOptions.map((operator) => ({ value: operator, label: operator }))}
-      />
-      <FilterSelect
-        icon={Tag}
-        value={dashboardContractTypeFilter}
-        onChange={onContractTypeFilterChange}
-        placeholder="Todos os tipos"
-        neutralValues={['']}
-        options={contractTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
-      />
-      <FilterSelect
-        icon={Layers3}
-        value={dashboardStatusFilter}
-        onChange={onStatusFilterChange}
-        placeholder="Todos os estágios"
-        neutralValues={['']}
-        options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
-      />
-    </>
-  );
+  const filters = [
+    { label: 'Responsável', all: 'Todos os responsáveis', value: dashboardOwnerFilter, onChange: onOwnerFilterChange, options: responsavelOptions },
+    { label: 'Etapa do lead', all: 'Todos os estágios', value: dashboardStatusFilter, onChange: onStatusFilterChange, options: statusOptions },
+    { label: 'Origem', all: 'Todas as origens', value: dashboardOriginFilter, onChange: onOriginFilterChange, options: visibleLeadOrigins.map(({ nome }) => ({ value: nome, label: nome })) },
+    { label: 'Tipo de contratação', all: 'Todos os tipos', value: dashboardContractTypeFilter, onChange: onContractTypeFilterChange, options: contractTypeOptions },
+    { label: 'Operadora', all: 'Todas as operadoras', value: dashboardOperatorFilter, onChange: onOperatorFilterChange, options: operatorOptions.map((operator) => ({ value: operator, label: operator })) },
+  ];
 
   const filterActions = (
     <>
@@ -319,75 +266,48 @@ export function DashboardHeader({
     </div>
   );
 
-  const advancedFiltersPanel = filtersOpen ? (
-    isMobileViewport ? (
-      <Drawer
-        id="dashboard-advanced-filters"
-        open
-        onOpenChange={setFiltersOpen}
-        side="right"
-        size="sm"
-        aria-label="Filtros avançados do dashboard"
-        className="kds-dashboard-filter-drawer"
-      >
-        <DrawerHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
-          {filterTitleCopy}
-        </DrawerHeader>
-        <DrawerBody className="kds-dashboard-filter-fields">{filterFieldControls}</DrawerBody>
-        <DrawerFooter className="kds-dashboard-filter-footer">{filterActions}</DrawerFooter>
-      </Drawer>
-    ) : (
-      <Dialog
-        id="dashboard-advanced-filters"
-        open
-        onOpenChange={setFiltersOpen}
-        size="sm"
-        aria-label="Filtros avançados do dashboard"
-        className="kds-dashboard-filter-dialog"
-      >
-        <DialogHeader onClose={() => setFiltersOpen(false)} className="kds-dashboard-filter-header">
-          {filterTitleCopy}
-        </DialogHeader>
-        <DialogBody className="kds-dashboard-filter-fields">{filterFieldControls}</DialogBody>
-        <DialogFooter className="kds-dashboard-filter-footer">{filterActions}</DialogFooter>
-      </Dialog>
-    )
-  ) : null;
+  const advancedFiltersPanel = filtersOpen && (
+    <Dialog
+      id="dashboard-advanced-filters"
+      open
+      onOpenChange={setFiltersOpen}
+      aria-label="Filtros avançados do dashboard"
+    >
+      <DialogHeader onClose={() => setFiltersOpen(false)}>
+        <Text className="kds-dialog-eyebrow">Visão geral</Text>
+        <DialogTitle>Filtros do dashboard</DialogTitle>
+      </DialogHeader>
+      <DialogBody className="kds-dashboard-filter-fields">
+        {filters.map(({ label, all, value, onChange, options }) => (
+          <Field key={label} label={label}>
+            <Select
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder={all}
+              options={options.some((option) => option.value === '') ? options : [{ value: '', label: all }, ...options]}
+            />
+          </Field>
+        ))}
+      </DialogBody>
+      <DialogFooter className="kds-dashboard-filter-footer">{filterActions}</DialogFooter>
+    </Dialog>
+  );
 
-  const periodPanel = periodOpen ? (
-    isMobileViewport ? (
-      <Drawer
-        id="dashboard-period-filter"
-        open
-        onOpenChange={setPeriodOpen}
-        side="right"
-        size="sm"
-        aria-label="Período do dashboard"
-        className="kds-dashboard-period-drawer"
-      >
-        <DrawerHeader onClose={() => setPeriodOpen(false)} className="kds-dashboard-filter-header">
-          {periodTitle}
-        </DrawerHeader>
-        <DrawerBody className="kds-dashboard-period-body">{periodBody}</DrawerBody>
-        <DrawerFooter className="kds-dashboard-period-footer-wrap">{periodFooter}</DrawerFooter>
-      </Drawer>
-    ) : (
-      <Dialog
-        id="dashboard-period-filter"
-        open
-        onOpenChange={setPeriodOpen}
-        size="sm"
-        aria-label="Período do dashboard"
-        className="kds-dashboard-period-dialog"
-      >
-        <DialogHeader onClose={() => setPeriodOpen(false)} className="kds-dashboard-filter-header">
-          {periodTitle}
-        </DialogHeader>
-        <DialogBody className="kds-dashboard-period-body">{periodBody}</DialogBody>
-        <DialogFooter className="kds-dashboard-period-footer-wrap">{periodFooter}</DialogFooter>
-      </Dialog>
-    )
-  ) : null;
+  const periodPanel = periodOpen && (
+    <Dialog
+      id="dashboard-period-filter"
+      open
+      onOpenChange={setPeriodOpen}
+      aria-label="Período do dashboard"
+    >
+      <DialogHeader onClose={() => setPeriodOpen(false)}>
+        <Text className="kds-dialog-eyebrow">Visão geral</Text>
+        {periodTitle}
+      </DialogHeader>
+      <DialogBody className="kds-dashboard-period-body">{periodBody}</DialogBody>
+      <DialogFooter>{periodFooter}</DialogFooter>
+    </Dialog>
+  );
 
   return (
     <>

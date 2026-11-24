@@ -43,7 +43,7 @@ export default function PageHeader({
       {...props}
     >
       {breadcrumbs && <div className="kds-page-breadcrumbs">{breadcrumbs}</div>}
-      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="kds-page-header-main flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           {eyebrow && <p className="kds-page-eyebrow">{eyebrow}</p>}
           <div className="kds-page-identification">

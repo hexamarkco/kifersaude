@@ -114,6 +114,7 @@ export default function ContractsManager({
   const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
   const [contractsLoadWarning, setContractsLoadWarning] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(initialSearch ?? "");
+  const [showMobileCards, setShowMobileCards] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterResponsavel, setFilterResponsavel] = useState("todos");
   const [filterOperadora, setFilterOperadora] = useState<string[]>([]);
@@ -817,6 +818,9 @@ export default function ContractsManager({
               <Button type="button" variant={advancedFiltersOpen ? 'soft' : 'secondary'} aria-expanded={advancedFiltersOpen} aria-controls="contracts-filter-controls" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
                 <Filter className="kds-control-icon" aria-hidden="true" /> Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
               </Button>
+              <Button type="button" variant="secondary" size="sm" className="kds-record-mobile-view" aria-pressed={showMobileCards} onClick={() => setShowMobileCards((show) => !show)}>
+                Cartões
+              </Button>
               {hasActiveFilters && (
                 <Button
                   type="button"
@@ -862,8 +866,8 @@ export default function ContractsManager({
           </div>}
         </Surface>
 
-        <Surface className="kds-record-results kds-contracts-results" padding="none" data-panel-animate>
-          <div className="kds-contracts-table-container hidden lg:block">
+        <Surface className={`kds-record-results kds-contracts-results${showMobileCards ? ' is-mobile-cards' : ''}`} padding="none" data-panel-animate>
+          <div className="kds-record-table-container kds-contracts-table-container">
             <Table size="sm" stickyHeader aria-label="Carteira de contratos" className="kds-contracts-table" columnWidths={['19%', '14%', '17%', '8%', '13%', '12%', '12%', '5%']}>
               <TableHeader>
                 <TableRow>
@@ -942,7 +946,7 @@ export default function ContractsManager({
             </Table>
           </div>
 
-          <div className="kds-contracts-mobile-list grid grid-cols-1 gap-3 lg:hidden">
+          {showMobileCards && <div className="kds-contracts-mobile-list grid grid-cols-1 gap-3 lg:hidden">
             {filteredContracts.length === 0 && <EmptyState icon={<FileText className="h-8 w-8" />} title="Nenhum contrato encontrado" description="Tente ajustar os filtros ou adicione um novo contrato." />}
             {paginatedContracts.map((contract) => {
               const bonusValue = getBonusValue(contract);
@@ -1021,7 +1025,7 @@ export default function ContractsManager({
               );
             })}
 
-          </div>
+          </div>}
 
           {filteredContracts.length > 0 && (
             <Pagination

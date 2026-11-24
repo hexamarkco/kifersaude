@@ -1073,7 +1073,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 }
 .kds-dashboard-indicators { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--section-gap); min-width: 0; }
 .kds-dashboard-primary-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(20rem, 1fr); gap: var(--layout-gap); align-items: stretch; min-width: 0; }
-.kds-workspace-theme .kds-dashboard-page-header > div:first-child { align-items: center; }
 .kds-workspace-theme .kds-dashboard-header-actions .kds-button { min-height: 2.375rem; font: 500 .625rem / 1.5 var(--font-sans); }
 .kds-workspace-theme .kds-dashboard-header-actions .kds-button-ghost { border-color: transparent; }
 .kds-dashboard-today { display: grid; min-width: 0; gap: 1.375rem; }
@@ -1088,7 +1087,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-dashboard-welcome .kds-dashboard-activity-icon { width: 2.125rem; height: 2.125rem; }
 .kds-dashboard-today-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
 .kds-dashboard-today-metrics > .kds-card-kpi { min-height: 9.875rem; padding: 1.1875rem; }
-.kds-dashboard-today-metrics > .kds-card-kpi > * + * { margin-block-start: .6875rem; }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-today-metrics .kds-kpi-value { font: 600 clamp(1.25rem, 2.3vw, 1.8125rem) / 1.3 var(--font-display); }
 .kds-workspace-theme .kds-dashboard-today-metrics .kds-kpi-trend { font: var(--type-caption); }
 .kds-dashboard-today-columns { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 1.25rem; }
@@ -1098,7 +1096,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-dashboard-today .kds-card-actions .kds-button { font-size: .625rem; }
 .kds-dashboard-today .kds-card-chart .kds-card-actions > span { width: 100%; }
 .kds-dashboard-today .kds-card-chart .kds-card-actions .kds-filter-trigger { min-height: 2rem; font-size: .5625rem; }
-.kds-dashboard-today .kds-card-title { color: var(--text-primary); font: var(--type-ui-section); letter-spacing: -.04em; }
+.kds-dashboard-today :is(.kds-card-chart, .kds-card-base) .kds-card-title { color: var(--text-primary); font: var(--type-ui-section); letter-spacing: -.04em; }
 .kds-dashboard-today .kds-card-subtitle { font: var(--type-body-sm); color: var(--text-muted); }
 .kds-operation-chart { --chart-comparison: #a7b5c9; }
 .theme-dark .kds-operation-chart { --chart-comparison: #7186a5; }
@@ -1193,44 +1191,35 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-dashboard-primary-grid > * { min-width: 0; }
 .kds-dashboard-more-metrics { margin-top: var(--space-3); }
 .kds-dashboard-more-metrics > .kds-disclosure-trigger { width: max-content; max-width: 100%; }
-.kds-dialog-container:has(.kds-dashboard-filter-dialog),
-.kds-dialog-container:has(.kds-dashboard-period-dialog) { align-items: flex-start; justify-content: flex-end; padding: clamp(7rem, 13vh, 9rem) clamp(1.5rem, 4.5vw, 6rem) var(--space-4); }
-.painel-theme.kifer-ds .kds-dashboard-filter-dialog { width: min(22rem, calc(100vw - var(--space-4))); max-width: min(22rem, calc(100vw - var(--space-4))) !important; }
-.painel-theme.kifer-ds .kds-dashboard-period-dialog { width: min(22rem, calc(100vw - var(--space-4))); max-width: min(22rem, calc(100vw - var(--space-4))) !important; }
-.painel-theme.kifer-ds .kds-dashboard-filter-dialog :is(.kds-dialog-header, .kds-dialog-footer) { padding: var(--space-2) var(--space-3); }
-.painel-theme.kifer-ds .kds-dashboard-filter-dialog .kds-dialog-body { padding: var(--space-3); }
-.painel-theme.kifer-ds .kds-dashboard-period-dialog :is(.kds-dialog-header, .kds-dialog-footer) { padding: var(--space-2) var(--space-3); }
-.painel-theme.kifer-ds .kds-dashboard-period-dialog .kds-dialog-body { padding: var(--space-3); }
 .painel-theme.kifer-ds .kds-dashboard-period-trigger { min-width: 0; max-width: 100%; }
 .painel-theme.kifer-ds .kds-dashboard-period-trigger-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .painel-theme.kifer-ds .kds-dashboard-header-actions { display: flex; min-width: 0; max-width: 100%; align-items: center; justify-content: flex-end; gap: var(--space-2); }
 .painel-theme.kifer-ds .kds-dashboard-period-body { display: flex; flex-direction: column; min-height: 0; }
-.painel-theme.kifer-ds .kds-dashboard-period-options { display: grid; min-width: 0; margin: 0; padding: 0; border: 0; }
-.painel-theme.kifer-ds .kds-dashboard-period-option { display: flex; width: 100%; min-width: 0; align-items: center; gap: var(--space-3); margin: 0; padding: var(--space-2); border-bottom: 1px solid var(--border-subtle); }
-.painel-theme.kifer-ds .kds-dashboard-period-option:last-child { border-bottom: 0; }
+.painel-theme.kifer-ds .kds-dashboard-period-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; gap: .5rem; margin: 0; padding: 0; border: 0; }
+.painel-theme.kifer-ds .kds-dashboard-period-option { display: flex; width: 100%; min-width: 0; align-items: center; gap: var(--space-3); margin: 0; padding: .375rem .625rem; min-height: 2.5rem; border: 1px solid var(--border-default); border-radius: var(--radius-control); }
 .painel-theme.kifer-ds .kds-dashboard-period-option .kds-radio-indicator { margin-top: 0; }
-.painel-theme.kifer-ds .kds-dashboard-period-option .kds-radio-label { color: var(--text-primary); font: var(--type-body); }
+.painel-theme.kifer-ds .kds-dashboard-period-option .kds-radio-label { color: var(--text-primary); font: var(--type-body-sm); }
+.kds-dashboard-period-option.kds-radio-checked { background: var(--brand-primary-soft); }
 .painel-theme.kifer-ds .kds-dashboard-period-option.kds-radio-checked .kds-radio-indicator { border-color: var(--brand-primary); }
 .painel-theme.kifer-ds .kds-dashboard-period-option.kds-radio-checked .kds-radio-indicator::after { background: var(--brand-primary); }
 .painel-theme.kifer-ds .kds-dashboard-period-custom-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-3); }
 .painel-theme.kifer-ds .kds-dashboard-period-custom-fields > .kds-dashboard-period-help { grid-column: 1 / -1; margin: 0; color: var(--text-secondary); font: var(--type-body-sm); }
-.painel-theme.kifer-ds .kds-dashboard-period-footer-wrap { border-top: 1px solid var(--border-subtle); background: var(--bg-surface); }
 .painel-theme.kifer-ds .kds-dashboard-period-footer { display: flex; align-items: center; gap: var(--space-2); }
 .painel-theme.kifer-ds .kds-dashboard-period-footer-custom { justify-content: space-between; }
-.painel-theme.kifer-ds .kds-dashboard-filter-drawer { display: flex; flex-direction: column; }
-.painel-theme.kifer-ds .kds-dashboard-period-drawer { display: flex; flex-direction: column; }
-.painel-theme.kifer-ds .kds-dashboard-filter-header { align-items: flex-start; padding: var(--space-4); }
-.painel-theme.kifer-ds .kds-dashboard-filter-header .kds-dialog-title { font: var(--type-ui-heading); }
-.painel-theme.kifer-ds .kds-dashboard-filter-fields { display: grid; align-content: start; gap: var(--space-2); }
-.painel-theme.kifer-ds .kds-dashboard-filter-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.painel-theme.kifer-ds .kds-dashboard-filter-dialog .kds-dashboard-filter-footer { border-top: 1px solid var(--border-subtle); background: var(--bg-surface); }
-.painel-theme.kifer-ds .kds-dashboard-filter-drawer .kds-dashboard-filter-fields { flex: 1; overflow-y: auto; padding: var(--space-4); }
-.painel-theme.kifer-ds .kds-dashboard-filter-drawer .kds-dashboard-filter-footer { flex: 0 0 auto; padding: var(--space-4); border-top: 1px solid var(--border-subtle); }
-.painel-theme.kifer-ds .kds-dashboard-period-drawer .kds-dashboard-period-body { flex: 1; overflow-y: auto; padding: var(--space-4); }
-.painel-theme.kifer-ds .kds-dashboard-period-drawer .kds-dashboard-period-footer-wrap { flex: 0 0 auto; padding: var(--space-4); }
+.kds-dashboard-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 1.375rem 1.25rem;
+}
+.kds-dashboard-filter-footer .kds-button-text { margin-inline-end: auto; }
+@media (max-width: 389px) {
+  .kds-dashboard-filter-fields { gap: 1.1875rem .875rem; }
+}
 .kds-list-summary { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); color: var(--text-secondary); font: var(--type-body-sm); }
 .painel-theme.kifer-ds .kds-page-container { padding: var(--page-gutter); }
-.painel-theme.kifer-ds :where(.kds-card-title, .kds-section-title, .kds-dialog-title) { font: var(--type-ui-heading); }
+.painel-theme.kifer-ds :where(.kds-card-title, .kds-section-title) { font: var(--type-ui-heading); }
+.painel-theme.kifer-ds :where(.kds-dialog-title) { font: var(--type-dialog-title, var(--type-ui-heading)); }
 .painel-theme.kifer-ds .kds-section-title-h2 { font: var(--type-ui-section); }
 .painel-theme.kifer-ds .kds-heading:not(.kds-heading-editorial) { font-family: var(--font-sans); }
 .painel-theme.kifer-ds :where(.kds-input, .kds-select, .kds-textarea, .kds-button, .kds-tab) { border-radius: var(--radius-control); max-width: 100%; }
@@ -1316,8 +1305,9 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .painel-theme.kifer-ds .kds-filter-multi-option-all { border-bottom-color: var(--border-default); color: var(--text-primary); }
 .painel-theme.kifer-ds .kds-filter-multi-footer { justify-content: flex-start; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 .painel-theme.kifer-ds .kds-filter-multi-action { min-width: 7rem; }
-.painel-theme.kifer-ds .kds-dialog-header, .painel-theme.kifer-ds .kds-dialog-footer { flex-shrink: 0; padding: var(--space-5); }
-.painel-theme.kifer-ds .kds-dialog-body { padding: var(--space-5); overflow-x: hidden; }
+.painel-theme.kifer-ds .kds-dialog-header { flex-shrink: 0; padding: var(--dialog-header-padding, var(--space-5)); }
+.painel-theme.kifer-ds .kds-dialog-footer { flex-shrink: 0; padding: var(--dialog-footer-padding, var(--space-5)); }
+.painel-theme.kifer-ds .kds-dialog-body { padding: var(--dialog-body-padding, var(--space-5)); overflow-x: hidden; }
 .painel-theme.kifer-ds .kds-lead-reminder-dialog .kds-dialog-body { padding-block: var(--space-4); }
 .painel-theme.kifer-ds .kds-lead-reminder-intro { display: flex; align-items: flex-start; gap: var(--space-2); }
 .painel-theme.kifer-ds .kds-lead-reminder-intro-icon { flex: 0 0 auto; color: var(--brand-primary); }
@@ -1716,13 +1706,35 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-workspace-theme .kds-agenda-status-switcher { width: 100%; }
 .kds-workspace-theme .kds-agenda-status-switcher .kds-tab { flex: none; }
 .kds-workspace-theme .kds-agenda-controls-row .kds-agenda-filters { width: 100%; max-width: 46rem; }
+.kds-agenda-calendar-grid { gap: 0; }
 .kds-agenda-week-grid { grid-template-columns: repeat(7, minmax(4.25rem, 1fr)); overflow-x: auto; }
-.painel-theme.kifer-ds .kds-agenda-week-grid .kds-calendar-day { aspect-ratio: auto; min-height: 10rem; align-items: flex-start; padding: var(--space-2); }
-.kds-agenda-week-grid .kds-calendar-day > .kds-button-content { flex-direction: column; width: 100%; min-width: 0; align-items: flex-start; }
+.painel-theme.kifer-ds .kds-agenda-calendar-grid .kds-calendar-day {
+  aspect-ratio: auto;
+  min-height: clamp(4rem, 6vw, 5.75rem);
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: .625rem;
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: var(--bg-surface);
+}
+.painel-theme.kifer-ds .kds-agenda-calendar-grid .kds-calendar-day-selected {
+  background: var(--brand-primary-soft) !important;
+  color: var(--text-primary) !important;
+}
+.painel-theme.kifer-ds .kds-agenda-week-grid .kds-calendar-day { min-height: 12rem; }
+.kds-agenda-calendar-grid .kds-calendar-day > .kds-button-content { flex-direction: column; width: 100%; min-width: 0; align-items: flex-start; }
+.kds-agenda-calendar-day-number { font: 500 .6875rem / 1.5 var(--font-sans); }
+.kds-agenda-calendar-grid .kds-calendar-event-count { inset: .3rem .3rem auto auto; width: .875rem; min-width: .875rem; height: .875rem; min-height: .875rem; font-size: .5rem; }
+.kds-agenda-calendar-header .kds-agenda-calendar-heading { order: -1; text-align: start; }
 .kds-agenda-week-events { display: grid; width: 100%; min-width: 0; gap: .375rem; }
-.kds-agenda-week-events > span { overflow: hidden; width: 100%; border-radius: .3125rem; padding: .25rem; background: var(--bg-surface); color: var(--text-secondary); font: var(--type-caption); text-overflow: ellipsis; white-space: nowrap; }
+.kds-agenda-week-events > span { overflow: hidden; width: 100%; border-radius: .25rem; padding: .125rem .25rem; background: var(--brand-primary-soft); color: var(--text-secondary); font: var(--type-caption); text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 1100px) {
-  .kds-agenda-workspace-grid { grid-template-columns: minmax(0, 1fr) minmax(17rem, 18.75rem); }
+  .kds-agenda-workspace-grid:not(.is-week) { grid-template-columns: minmax(0, 1fr) minmax(17rem, 18.75rem); }
+}
+@media (max-width: 640px) {
+  .painel-theme.kifer-ds .kds-agenda-calendar-grid .kds-calendar-day { padding: .375rem .25rem; }
+  .kds-agenda-calendar-grid .kds-calendar-event-count { inset: .25rem .2rem auto auto; }
 }
 .kds-agenda-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
 .painel-theme.kifer-ds .kds-agenda-reminder-icon { border-radius: var(--radius-control); }
@@ -1968,7 +1980,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
  .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tab { flex: 1 1 0; gap: var(--space-1); padding-inline: var(--space-1); font-size: 0.75rem; }
  .painel-theme.kifer-ds .kds-agenda-status-switcher .kds-tabs-badge { display: none; }
  .painel-theme.kifer-ds .kds-agenda-create-action { padding-inline: var(--space-2); }
- .painel-theme.kifer-ds .kds-agenda-calendar-header { display: grid; grid-template-columns: 2.5rem minmax(0,1fr) 2.5rem; grid-template-areas: "previous heading next" "today today today"; gap: var(--space-2) var(--space-1); }
+ .painel-theme.kifer-ds .kds-agenda-calendar-header { display: grid; grid-template-columns: minmax(0,1fr) repeat(3,auto); grid-template-areas: "heading today previous next"; gap: var(--space-1); }
  .painel-theme.kifer-ds .kds-agenda-previous-month { grid-area: previous; }
  .painel-theme.kifer-ds .kds-agenda-calendar-heading { grid-area: heading; }
  .painel-theme.kifer-ds .kds-agenda-calendar-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2034,7 +2046,6 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 
 .kds-leads-mobile-result-count { display: none; }
 @media(max-width: 767px) {
-  .kds-leads-page { margin-top: calc(-1 * var(--space-4)); }
   .painel-theme.kifer-ds .kds-leads-filters { padding: 0; border: 0; background: transparent; }
   .painel-theme.kifer-ds .kds-leads-filter-controls.is-open { padding: var(--space-3); border: var(--border-width) solid var(--border-default); border-radius: var(--radius-panel); background: var(--bg-surface); }
   .kds-leads-mobile-result-count { display: block; align-self: center; color: var(--text-secondary); font: var(--type-caption); }

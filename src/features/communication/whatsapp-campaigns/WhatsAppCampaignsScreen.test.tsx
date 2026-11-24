@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { test, vi } from 'vitest';
 
-import type { CampaignStats, CommWhatsAppCampaign } from './commWhatsAppCampaignService';
+import type { CampaignGlobalStatus, CampaignStats, CommWhatsAppCampaign } from './commWhatsAppCampaignService';
 
 const mocks = vi.hoisted(() => ({
   service: {
@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
     getStats: vi.fn(),
     listPendingAiSuggestions: vi.fn(),
     getWorkerHealth: vi.fn(),
+    getGlobalStatus: vi.fn(),
     listTemplates: vi.fn(),
     listCampaignSteps: vi.fn(),
     normalizePhoneDigits: vi.fn((value: unknown) => typeof value === 'string' ? value.replace(/\D/g, '') : ''),
@@ -49,6 +50,7 @@ const serviceMocks = mocks.service as unknown as {
   getStats: MockFunction<[], Promise<CampaignStats>>;
   listPendingAiSuggestions: MockFunction<[], Promise<unknown[]>>;
   getWorkerHealth: MockFunction<[], Promise<unknown>>;
+  getGlobalStatus: MockFunction<[], Promise<CampaignGlobalStatus>>;
   listTemplates: MockFunction<[], Promise<unknown[]>>;
   listCampaignSteps: MockFunction<[string], Promise<unknown[]>>;
   normalizePhoneDigits: MockFunction<[string], string>;
@@ -69,6 +71,7 @@ const createCampaign = (index: number): CommWhatsAppCampaign => ({
   scheduled_at: null,
   pacing_per_minute: 12,
   daily_send_limit: null,
+  dispatch_priority: 2,
   contact_interval_minutes: null,
   inter_message_interval_minutes: 0,
   send_window_start: null,
@@ -127,6 +130,7 @@ const setupMocks = () => {
   serviceMocks.getStats.mockReset();
   serviceMocks.listPendingAiSuggestions.mockReset();
   serviceMocks.getWorkerHealth.mockReset();
+  serviceMocks.getGlobalStatus.mockReset();
   serviceMocks.listTemplates.mockReset();
   serviceMocks.listCampaignSteps.mockReset();
   serviceMocks.normalizePhoneDigits.mockClear();
@@ -141,6 +145,7 @@ const setupMocks = () => {
   } satisfies CampaignStats);
   serviceMocks.listPendingAiSuggestions.mockResolvedValue([]);
   serviceMocks.getWorkerHealth.mockResolvedValue({ latestRun: null, latestSuccess: null, latestFailure: null, recentRuns: [] });
+  serviceMocks.getGlobalStatus.mockResolvedValue({ daily_contact_limit: 20, started_contacts_24h: 0, remaining_contacts: 20, next_available_at: null });
   serviceMocks.listTemplates.mockResolvedValue([]);
   serviceMocks.listCampaignSteps.mockResolvedValue([]);
   subscribeToCampaignListChangesMock.mockReturnValue(() => {});
@@ -152,8 +157,8 @@ test('apresenta as campanhas em tabela paginada e navega pelo menu compartilhado
   const view = renderCampaigns();
   await settleCampaignLoading();
 
-  assert.ok(view.container.querySelector('button[aria-label="Informações sobre envios automáticos"]'));
-  assert.ok(view.container.querySelector('button[aria-label="Informações sobre esta seção"]'));
+  assert.equal(view.container.querySelector('[role="progressbar"][aria-label="Consumo do limite global em 24 horas"]')?.getAttribute('aria-valuemax'), '20');
+  assert.ok(view.container.querySelector('table[aria-label="Todas as campanhas"]'));
 
   const rows = () => Array.from(view.container.querySelectorAll<HTMLTableRowElement>('tbody tr'));
   assert.equal(rows().length, 10);

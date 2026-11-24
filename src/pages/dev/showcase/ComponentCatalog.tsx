@@ -1171,14 +1171,16 @@ function Data() {
         <Specimen
           title="Indicadores e status"
           wide
-          description="Alinhe títulos, valores e contexto por linha de indicadores. Status usam texto além da cor e um seletor único compartilhado entre Leads e Contratos."
+          description="No painel, o rótulo de um indicador usa Poppins, o valor usa Sora e o ícone fica no canto superior direito. Os status mantêm rótulos legíveis junto às cores."
           source="KpiCard / Badge / OperationalMetricChip / OperationalStatusBadge / OperationalStatusDot / OperationalStatusSelect"
         >
-          <div className="kds-kpi-grid grid-cols-1 xl:grid-cols-3">
-            <KpiCard title="Vendas" subtitle="Contratos fechados" value="24" trend="80 leads recebidos" icon={<Users />} />
-            <KpiCard title="Valor mensal vendido" subtitle="Contratos do período" value="R$ 62.947,16" trend="Mensalidade registrada" icon={<Users />} />
-            <KpiCard title="Comissão prevista" subtitle="Vendas do período" value="R$ 128.234,12" trend="Sem previsão adicional" icon={<Users />} />
-          </div>
+          <DesignSystemProvider workspace>
+            <div className="kds-kpi-grid grid-cols-1 xl:grid-cols-3">
+              <KpiCard title="Vendas" value="24" trend="Contratos fechados no período" icon={<Users />} />
+              <KpiCard title="Valor mensal vendido" value="R$ 62.947,16" trend="Mensalidade registrada" icon={<Users />} />
+              <KpiCard title="Comissão prevista" value="R$ 128.234,12" trend="Vendas do período" icon={<Users />} />
+            </div>
+          </DesignSystemProvider>
           <div className="ds-row">
             {(
               [

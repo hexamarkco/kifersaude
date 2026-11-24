@@ -63,7 +63,7 @@ test('mantém período acessível e recolhe filtros avançados com contador de f
   }
 });
 
-test('apresenta filtros em drawer modal no mobile e fecha com Escape', async () => {
+test('apresenta filtros em diálogo modal no mobile e fecha com Escape', async () => {
   const originalWidth = window.innerWidth;
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
   const container = document.createElement('div');
@@ -81,7 +81,8 @@ test('apresenta filtros em drawer modal no mobile e fecha com Escape', async () 
 
     const filterDialog = document.querySelector('[aria-label="Filtros avançados do dashboard"]');
     assert.equal(filterDialog?.getAttribute('aria-modal'), 'true');
-    assert.equal(filterDialog?.classList.contains('kds-drawer'), true);
+    assert.equal(filterDialog?.classList.contains('kds-dialog'), true);
+    assert.equal(filterDialog?.classList.contains('kds-drawer'), false);
     assert.equal(filterDialog?.textContent?.includes('Todos os estágios'), true);
 
     await act(async () => {
@@ -157,17 +158,18 @@ test('divide o período personalizado em seleção e datas e não aplica interva
     trigger.focus();
     await act(async () => { trigger.click(); });
 
-    const periodDrawer = document.querySelector('[aria-label="Período do dashboard"]');
-    assert.equal(periodDrawer?.classList.contains('kds-drawer'), true);
-    const customOption = periodDrawer?.querySelector<HTMLInputElement>('input[type="radio"][value="personalizado"]');
+    const periodDialog = document.querySelector('[aria-label="Período do dashboard"]');
+    assert.equal(periodDialog?.classList.contains('kds-dialog'), true);
+    assert.equal(periodDialog?.getAttribute('aria-modal'), 'true');
+    const customOption = periodDialog?.querySelector<HTMLInputElement>('input[type="radio"][value="personalizado"]');
     assert.ok(customOption);
     const customOptionLabel = customOption.closest('label');
     assert.ok(customOptionLabel);
     await act(async () => { customOptionLabel.click(); });
 
-    assert.equal(periodDrawer?.textContent?.includes('Data inicial do intervalo.'), true);
-    assert.equal(periodDrawer?.querySelector('[aria-label="Data inicial do período"]') !== null, true);
-    const apply = Array.from(periodDrawer?.querySelectorAll('button') ?? [])
+    assert.equal(periodDialog?.textContent?.includes('Data inicial do intervalo.'), true);
+    assert.equal(periodDialog?.querySelector('[aria-label="Data inicial do período"]') !== null, true);
+    const apply = Array.from(periodDialog?.querySelectorAll('button') ?? [])
       .find((button) => button.textContent?.includes('Aplicar filtros'));
     assert.equal(apply?.disabled, true);
 

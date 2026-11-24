@@ -91,7 +91,11 @@ export function CrmCard({
   const appearance = useDesignSystemAppearance();
   const resolvedSubtitlePlacement = subtitlePlacement ?? (appearance?.workspace ? 'visible' : 'tooltip');
   return (
-    <Card kind={kind} className={cx('space-y-5', className)} {...props}>
+    <Card
+      kind={kind}
+      className={cx(appearance?.workspace ? 'kds-workspace-card-content' : 'space-y-5', className)}
+      {...props}
+    >
       {(eyebrow || title || subtitle || icon || actions) && (
         <div className="kds-card-header flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
@@ -99,7 +103,7 @@ export function CrmCard({
             <div className="min-w-0">
               {eyebrow && <p className="kds-card-subtitle uppercase tracking-[0.14em]">{eyebrow}</p>}
               {title && (
-                <div className="kds-card-title-row mt-1">
+                <div className={cx('kds-card-title-row', !appearance?.workspace && 'mt-1')}>
                   <h3 className="kds-card-title">{title}</h3>
                   {subtitle && resolvedSubtitlePlacement === 'tooltip' && (
                     <InfoTooltip content={subtitle} label="Informações sobre este cartão" />

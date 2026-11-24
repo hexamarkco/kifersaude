@@ -1591,43 +1591,69 @@ html,
   --app-scrollbar-thumb-solid: var(--border-strong) !important;
   --app-scrollbar-thumb-hover: var(--text-subtle) !important;
 }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-page-header .kds-page-title { font: var(--type-ui-title); letter-spacing: -.045em; }
-.painel-theme.kifer-ds.kds-workspace-theme .panel-page-shell :is(.kds-section-title, .kds-card-title) { font-family: var(--font-display); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-page-header .kds-page-title { margin-top: 0; font: var(--type-ui-title); letter-spacing: -.045em; }
+.kds-workspace-theme .kds-page-eyebrow + .kds-page-identification { margin-top: .5rem; }
 .kds-workspace-theme .kds-page-eyebrow { color: var(--brand-primary); font: 500 .5rem / 1.6 var(--font-sans); letter-spacing: .15em; }
-.kds-workspace-theme .kds-page-description { color: var(--text-muted); font: 400 .75rem / 1.8 var(--font-sans); margin-top: .4375rem; }
-.kds-workspace-theme .kds-page-actions :is(.kds-button, .kds-link-button) { min-height: 2.375rem; font: 500 .625rem / 1.5 var(--font-sans); }
+.kds-workspace-theme .kds-page-description { color: var(--text-muted); font: var(--type-page-description); margin-top: .4375rem; }
+.kds-workspace-theme .kds-page-actions :is(.kds-button, .kds-link-button) { font: 500 .625rem / 1.5 var(--font-sans); }
 .kds-workspace-theme .kds-avatar { border-radius: .5rem; }
-.kds-workspace-theme .kds-tabs-list { overflow-y: hidden; }
-.kds-workspace-theme .kds-tabs-list-underline { gap: 1.5rem; }
-.kds-workspace-theme .kds-tabs-list-underline > .kds-tab { padding-inline: 0; font: 500 .625rem / 1.6 var(--font-sans); }
-.kds-workspace-theme :is(.kds-table-head, .kds-table-cell) { border-color: var(--border-subtle); }
-.kds-workspace-theme .kds-table-head { color: var(--text-muted); font: 500 .625rem / 1.5 var(--font-sans); }
-.kds-workspace-theme .kds-table-cell { font-size: .6875rem; }
-.kds-workspace-theme .kds-table-header { background: var(--bg-surface-muted); }
+.kds-workspace-theme .kds-tabs-list-underline {
+  --tab-indicator-inset: 0;
+  --tab-indicator-offset: 0;
+  gap: 1.5rem;
+  border-color: var(--border-default);
+}
+.kds-workspace-theme .kds-tabs-list-underline > .kds-tab {
+  height: auto;
+  min-height: 2.4375rem;
+  padding: .75rem 0;
+  border-radius: 0;
+  font: 400 .625rem / 1.6 var(--font-sans);
+  letter-spacing: normal;
+}
+.kds-workspace-theme .kds-tabs-list-underline > .kds-tab-active { font-weight: 500; }
+.kds-workspace-theme .kds-table :is(.kds-table-head, .kds-table-cell) { border-color: var(--border-subtle); vertical-align: middle; }
+.kds-workspace-theme .kds-table .kds-table-head {
+  height: 2.6875rem;
+  padding: .6875rem 1.125rem;
+  color: var(--text-muted);
+  font: var(--type-table-heading);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.kds-workspace-theme .kds-table .kds-table-cell { padding: .875rem 1.125rem; font: var(--type-table); }
 .kds-workspace-theme .kds-kpi-value { font: 600 1.8125rem / 1.3 var(--font-display); letter-spacing: -.05em; }
-.kds-workspace-theme .kds-card-kpi .kds-card-title { font: var(--type-body-sm); }
-.kds-workspace-theme .kds-card-kpi { background: var(--bg-surface); }
+.kds-workspace-theme .kds-card-title { color: var(--text-primary); }
+.kds-workspace-theme .kds-card-kpi .kds-card-title { color: var(--text-muted); font: var(--type-body-sm); }
 .kds-workspace-theme .kds-card-kpi .kds-card-header > div:first-child { width: 100%; flex-direction: row-reverse; justify-content: space-between; align-items: center; }
 .kds-workspace-theme .kds-card-kpi .kds-card-icon { flex-basis: 1.75rem; width: 1.75rem; height: 1.75rem; border-color: transparent; background: var(--stat-icon-bg, var(--brand-primary-soft)); color: var(--stat-icon-color, var(--brand-primary)); box-shadow: none; }
 .kds-workspace-theme .kds-card-kpi .kds-card-icon svg { width: 1rem; height: 1rem; }
 .kds-workspace-theme .kds-card-kpi .kds-card-trend { font: var(--type-caption); }
-.kds-workspace-theme .kds-form-fields { align-items: start; }
-.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-input, .kds-select, .kds-textarea) { font-size: .75rem; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-form-fields .kds-filter-trigger.is-active { border-color: var(--border-strong); background: var(--bg-surface); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-form-fields .kds-filter-trigger-value-active { font-weight: 400; }
-.kds-workspace-theme .kds-dialog-backdrop { backdrop-filter: blur(3px); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog { border-color: var(--border-default); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-title { font: 600 1.125rem / 1.55 var(--font-display); letter-spacing: -.035em; }
+.kds-workspace-theme .kds-form-fields { gap: 1.375rem 1.25rem; }
+.kds-workspace-theme :is(.kds-input, .kds-select).kds-control-md {
+  --kds-control-height: var(--control-group-height, var(--form-control-height));
+  --kds-control-font: var(--control-group-font, .75rem);
+}
+.kds-workspace-theme .kds-textarea { font-size: .75rem; }
+.kds-workspace-theme .kds-form-fields :is(.kds-select, .kds-filter-trigger) { min-height: var(--form-control-height); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-form-fields .kds-filter-trigger.is-active { border-color: var(--border-default); background: var(--bg-surface); }
+.kds-workspace-theme .kds-form-fields .kds-filter-trigger-value-active { font-weight: 400; }
 .kds-workspace-theme .kds-dialog-description { font: var(--type-body-sm); }
-.kds-workspace-theme .kds-dialog-header { padding: 1.5rem 1.6875rem 1.3125rem; }
-.kds-workspace-theme .kds-dialog-body { padding-inline: 1.6875rem; }
-.kds-workspace-theme .kds-dialog-footer { padding: 1.125rem 1.6875rem; background: var(--bg-surface); }
 .kds-workspace-theme .kds-dialog-footer .kds-button { font: 500 .625rem / 1.5 var(--font-sans); }
 .kds-workspace-theme .kds-dialog-close { width: 2rem; height: 2rem; border-color: transparent; }
 .kds-workspace-theme .kds-workspace-notification-actions { display: flex; justify-content: flex-end; margin-bottom: var(--space-3); }
 .kds-workspace-notification-list .kds-popover-section { border-color: var(--border-subtle); }
 
+.kds-blog-editor-layout { display: grid; min-width: 0; gap: var(--layout-gap); align-items: start; }
+.kds-blog-editor-layout > *, .kds-blog-editor-settings > * { min-width: 0; }
+.kds-blog-editor-settings { display: grid; gap: var(--layout-gap); }
+.kds-blog-editor-content .kds-blog-editor .ql-editor { min-height: 24rem; }
+@media (min-width: 1024px) {
+  .kds-blog-editor-layout { grid-template-columns: minmax(0, 2.5fr) minmax(17rem, 1fr); }
+}
+
 @media (min-width: 768px) {
+  .kds-workspace-theme .kds-page-actions { --control-group-height: var(--toolbar-control-height); }
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog:not(.kds-drawer, .kds-filter-multi-dialog) { max-height: calc(100dvh - 3.75rem); }
   .kds-workspace-theme .kds-dialog-container:has(> :is(.kds-drawer-right, .kds-drawer-left)) { padding: .875rem; }
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog:is(.kds-drawer-right, .kds-drawer-left) {
@@ -1636,6 +1662,10 @@ html,
     border-radius: var(--radius-panel);
   }
   .kds-workspace-theme .kds-drawer-md { --kds-drawer-width: 41.25rem; }
+}
+
+@media (min-width: 1024px) {
+  .kds-workspace-theme .kds-page-header-main { align-items: center; }
 }
 
 .terracota-sidebar-popover {
@@ -1744,20 +1774,20 @@ html,
 }
 
 @media (max-width: 640px) {
-  .painel-theme .kds-dialog {
+  .painel-theme:not(.kds-workspace-theme) .kds-dialog,
+  .kds-workspace-theme .kds-dialog.kds-drawer {
     max-width: 100vw !important;
     max-height: 100dvh !important;
     border-radius: 0 !important;
   }
 
-  .painel-theme .kds-dialog-container {
+  .painel-theme:not(.kds-workspace-theme) .kds-dialog-container,
+  .kds-workspace-theme .kds-dialog-container:has(> .kds-drawer) {
     align-items: stretch !important;
     padding: 0 !important;
   }
 
-  .painel-theme .kds-dialog-header,
-  .painel-theme .kds-dialog-body,
-  .painel-theme .kds-dialog-footer {
+  .painel-theme:not(.kds-workspace-theme) :is(.kds-dialog-header, .kds-dialog-body, .kds-dialog-footer) {
     padding-inline: 1rem !important;
   }
 
@@ -1773,15 +1803,24 @@ html,
     justify-content: center;
   }
 
-  .painel-theme .kds-page-actions > :not(.kds-button-group) {
+  .painel-theme:not(.kds-workspace-theme) .kds-page-actions > :not(.kds-button-group) {
     flex: 1 1 100%;
   }
 
-  .painel-theme .kds-dialog-footer > :not(.kds-button-group),
+  .painel-theme:not(.kds-workspace-theme) .kds-dialog-footer > :not(.kds-button-group),
   .painel-theme .kds-drawer-footer > :not(.kds-button-group) {
     flex: 0 0 auto;
     width: 100%;
   }
+
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container { padding: .75rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog:not(.kds-drawer, .kds-filter-multi-dialog) {
+    max-width: 100%;
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: var(--radius-panel);
+  }
+  .kds-workspace-theme .kds-page-actions { justify-content: flex-end; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-footer > .kds-button { flex: 0 1 auto; }
 
   .painel-theme .kds-contract-bulk-import-dialog {
     max-width: 100vw !important;

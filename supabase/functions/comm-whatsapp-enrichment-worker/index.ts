@@ -105,12 +105,20 @@ async function failJob(
   const lockToken = toTrimmedString(job.lock_token);
   if (!lockToken) return;
 
-  const retry = Math.max(Number(job.attempts) || 0, 0) < MAX_JOB_ATTEMPTS;
+  // Preserve unresolved LID lookups for a slow retry; the provider may learn
+  // the LID-to-phone mapping long after the message history was synced.
+  const awaitingLidMapping = job.kind === 'chat_identity'
+    && errorMessage === 'LID ainda nao possui mapeamento bidirecional confirmado na Whapi.';
+  const attempts = Math.max(Number(job.attempts) || 0, 0);
+  const retry = attempts < MAX_JOB_ATTEMPTS || awaitingLidMapping;
+  const nextRetryAt = awaitingLidMapping && attempts >= MAX_JOB_ATTEMPTS
+    ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    : getRetryAt(job.attempts);
   const { error } = await supabaseAdmin
     .from('comm_whatsapp_enrichment_jobs')
     .update({
       status: retry ? 'retrying' : 'failed',
-      next_attempt_at: retry ? getRetryAt(job.attempts) : getNowIso(),
+      next_attempt_at: retry ? nextRetryAt : getNowIso(),
       locked_at: null,
       lock_token: null,
       last_error: errorMessage.slice(0, 2000),
@@ -199,6 +207,23 @@ async function processIdentityJob(params: {
   }
 
   if (identity.lidChatId && !identity.verified) {
+    // A verified phone is required for merging, but not for a display-only name.
+    // A name must never be used to attach an unrelated lead or chat.
+    let pendingName = '';
+    try {
+      pendingName = await fetchWhapiChatName({ token: params.token, chatId: chat.external_chat_id });
+    } catch {
+      // Keep the identity job retryable even when the name lookup is unavailable.
+    }
+    if (isValidCommWhatsAppDisplayName(pendingName)
+      && !isPhoneLabelLikeDisplayName(pendingName)
+      && (!params.ownChannelName || pendingName.toLowerCase() !== params.ownChannelName.toLowerCase())) {
+      const { error: nameError } = await params.supabaseAdmin.rpc('comm_whatsapp_set_chat_push_name', {
+        p_chat_id: chat.id,
+        p_push_name: pendingName,
+      });
+      if (nameError) throw new Error(`Erro ao atualizar nome provisório do chat: ${nameError.message}`);
+    }
     throw new Error('LID ainda nao possui mapeamento bidirecional confirmado na Whapi.');
   }
 

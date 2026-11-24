@@ -16,6 +16,12 @@ test('renderiza sem sessão, com canais reais, texto final e seções acessívei
   for (const section of sections) {
     assert.ok(view.container.querySelector(`[id="${section.getAttribute('aria-labelledby')}"]`));
   }
+  const indexLinks = [...view.container.querySelectorAll('.privacy-index-desktop a')];
+  assert.deepEqual(indexLinks.map(link => link.getAttribute('href')), sections.map(section => `#${section.id}`));
+  assert.ok(view.container.querySelector('header .header-brand[href="/"] .brand-ks'));
+  assert.ok(view.container.querySelector('header a[href="/#cotacao"]'));
+  assert.ok(view.container.querySelector('footer .footer-brand a[href="/"] .brand-ks'));
+  assert.ok(view.container.querySelector('footer nav a[href="/#sobre"]'));
   assert.doesNotMatch(view.container.textContent ?? '', /minuta|revisão antes da publicação|após aprovação|código inspecionado/i);
   assert.equal(view.container.querySelector('aside[aria-label="Documento em revisão"]'), null);
   assert.ok(view.container.textContent?.includes('Última atualização:'));

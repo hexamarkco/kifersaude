@@ -6,8 +6,8 @@ import {
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import {
-  Bell, Brain, BookOpen, Calendar, ChevronDown, ChevronsDown, ChevronsUp, FileText, LayoutDashboard, Link2,
-  LogOut, MessageCircle, PanelLeftClose, PanelLeftOpen, Plug, Plus, Search, Send,
+  Bell, BookOpen, Calendar, ChevronDown, ChevronsDown, ChevronsUp, FileText, LayoutDashboard,
+  LogOut, MessageCircle, PanelLeftClose, PanelLeftOpen, Plus, Search, Send,
   Settings, User, Users, Wallet, Workflow, X, type LucideIcon,
 } from 'lucide-react';
 import { WorkspaceSearch, type WorkspaceDestination } from './WorkspaceSearch';
@@ -27,14 +27,13 @@ import { useConfig } from '../contexts/ConfigContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { TabNavigationOptions } from '../types/navigation';
 import { usePanelMotion } from '../hooks/usePanelMotion';
-import { getAllowedConfigTabs, getConfigAreaForTab, type ConfigTabType } from '../features/config';
+import { getAllowedConfigTabs, getConfigAreaForTab } from '../features/config';
 
 type TabConfig = {
   id: string;
   label: string;
   icon: LucideIcon;
   badge?: number;
-  configTab?: ConfigTabType;
 };
 
 type LayoutProps = {
@@ -130,26 +129,26 @@ export default function Layout({
     ] },
     { label: 'Gestão', items: [
       { id: 'financeiro-comissoes', label: 'Financeiro', icon: Wallet },
-      { id: 'automation-hub', label: 'Automações', icon: Workflow, configTab: 'automation' },
-      { id: 'automation-hub', label: 'Inteligência artificial', icon: Brain, configTab: 'ai' },
+      { id: 'automation-hub', label: 'Automações e IA', icon: Workflow },
       { id: 'whatsapp-campaigns', label: 'Disparos', icon: Send },
     ] },
     { label: 'Conteúdo', items: [
       { id: 'blog', label: 'Blog', icon: BookOpen },
-      { id: 'config', label: 'Formulários', icon: FileText, configTab: 'forms' },
-      { id: 'config', label: 'Página de links', icon: Link2, configTab: 'links' },
     ] },
     { label: 'Sistema', items: [
-      { id: 'automation-hub', label: 'Integrações', icon: Plug, configTab: 'integrations' },
-      { id: 'config', label: 'Configurações', icon: Settings, configTab: allowedConfigTabs.some((tab) => tab.id === 'system') ? 'system' : 'users' },
+      { id: 'config', label: 'Configurações', icon: Settings },
     ] },
   ];
   const visibleGroups = groups.map(({ label, items }) => ({
     label,
-    items: items.filter((item) => item.configTab ? allowedConfigTabs.some((tab) => tab.id === item.configTab) : canView(item.id)),
+    items: items.filter(({ id }) => {
+      if (id === 'automation-hub') return allowedConfigTabs.some((tab) => getConfigAreaForTab(tab.id) === 'automation');
+      if (id === 'config') return allowedConfigTabs.some((tab) => getConfigAreaForTab(tab.id) === 'settings');
+      return canView(id);
+    }),
   })).filter(({ items }) => items.length > 0);
   const sidebarNavigationKey = visibleGroups
-    .map(({ label, items }) => `${label}:${items.map((item) => item.configTab ?? item.id).join(',')}`)
+    .map(({ label, items }) => `${label}:${items.map((item) => item.id).join(',')}`)
     .join('|');
 
   const updateSidebarOverflow = useCallback(() => {
@@ -193,7 +192,7 @@ export default function Layout({
       navigation.scrollTop += activeBounds.bottom - navigationBounds.bottom + clearance;
     }
     updateSidebarOverflow();
-  }, [activeTab, currentConfigTab, isSidebarCollapsed, updateSidebarOverflow]);
+  }, [activeTab, isSidebarCollapsed, sidebarNavigationKey, updateSidebarOverflow]);
 
   const scrollSidebarNavigation = (direction: -1 | 1) => {
     const navigation = sidebarNavigationRef.current;
@@ -203,25 +202,29 @@ export default function Layout({
       behavior: 'smooth',
     });
   };
-  const availableConfigTabs = allowedConfigTabs.filter((tab) => getConfigAreaForTab(tab.id) === (activeTab === 'automation-hub' ? 'automation' : 'settings'));
-  const selectedConfigTab = availableConfigTabs.some((tab) => tab.id === currentConfigTab) ? currentConfigTab : availableConfigTabs[0]?.id;
-  const isSelected = (item: TabConfig) => item.id === activeTab && (
-    location.pathname === '/chat' ? item.configTab === 'ai'
-      : !item.configTab || item.configTab === selectedConfigTab || (item.icon === Settings && selectedConfigTab === 'users')
-  );
+  const isSelected = (item: TabConfig) => item.id === activeTab;
   const selectDestination = (item: TabConfig) => {
     setIsMobileMenuOpen(false);
-    if (item.configTab) {
-      const path = item.id === 'automation-hub' ? 'automacoes' : 'config';
-      navigate('/painel/' + path + '?tab=' + item.configTab);
-    } else {
-      onTabChange(item.id);
-    }
+    onTabChange(item.id);
   };
   const destinations: WorkspaceDestination[] = visibleGroups.flatMap(({ label, items }) => items.map((item) => ({
-    id: item.configTab ?? item.id, label: item.label, icon: item.icon, group: label,
+    id: item.id, label: item.label, icon: item.icon, group: label,
     onSelect: () => selectDestination(item),
   })));
+  for (const { id, label, icon } of allowedConfigTabs) {
+    if (!icon || id === 'system' || id === 'automation') continue;
+    const isAutomation = getConfigAreaForTab(id) === 'automation';
+    destinations.push({
+      id,
+      label: id === 'ai' ? 'Inteligência artificial' : id === 'links' ? 'Página de links' : label,
+      icon,
+      group: isAutomation ? 'Automações e IA' : 'Configurações',
+      onSelect: () => {
+        setIsMobileMenuOpen(false);
+        navigate({ pathname: isAutomation ? '/painel/automacoes' : '/painel/config', search: new URLSearchParams({ tab: id }).toString() });
+      },
+    });
+  }
   const creationActions = [
     { module: 'leads', path: 'leads', label: 'Novo lead', icon: Users },
     { module: 'contracts', path: 'contratos', label: 'Novo contrato', icon: FileText },
@@ -648,7 +651,7 @@ export default function Layout({
                   const Icon = item.icon;
                   const active = isSelected(item);
                   return <ActionSurface
-                    key={item.configTab ?? item.id}
+                    key={item.id}
                     variant="plain"
                     padding="none"
                     className={cx('kds-sidebar-item terracota-nav-item', active && 'is-active')}

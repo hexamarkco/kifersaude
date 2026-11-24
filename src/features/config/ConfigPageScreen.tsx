@@ -7,7 +7,7 @@ import { Alert, Button, PageHeader, Tabs, type TabItem } from "../../design-syst
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import AiConfigScreen from "./ai/AiConfigScreen";
-import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
+import AutoContactFlowSettingsScreen from "./automation/AutoContactFlowSettingsScreen";
 import FormsScreen from "./forms/FormsScreen";
 import SystemSettingsScreen from "./general/SystemSettingsScreen";
 import IntegrationsScreen from "./integrations/IntegrationsScreen";
@@ -113,8 +113,20 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
     }
     setActiveTab(nextTab);
   };
+  const areaNavigation = allowedTabs.length > 1 && (
+    <Tabs
+      items={allowedTabs}
+      value={activeAllowedTab}
+      onChange={handleTabChange}
+      variant="underline"
+      ariaLabel={area === "automation" ? "Automações, integrações e IA" : "Áreas de configurações"}
+      listClassName="kds-config-tabs-scrollable flex-nowrap overflow-x-auto"
+      triggerClassName="shrink-0 whitespace-nowrap"
+    />
+  );
   return (
     <div className="kds-config-screen panel-page-shell w-full space-y-6">
+      {area === "automation" && !(isAutomationWorkspace && query.has("flowId")) && areaNavigation}
       {!isAutomationWorkspace && (
         <PageHeader
           title={title}
@@ -122,27 +134,14 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
           descriptionPlacement="visible"
           actions={headerActions}
         >
-          <Tabs
-            items={allowedTabs}
-            value={activeAllowedTab}
-            onChange={handleTabChange}
-            variant="underline"
-            size={area === "automation" ? "sm" : "md"}
-            ariaLabel={area === "automation" ? "Áreas de automações e IA" : "Áreas de configurações"}
-            listClassName="kds-config-tabs-scrollable flex-nowrap overflow-x-auto"
-            triggerClassName="shrink-0 whitespace-nowrap"
-          />
+          {area === "settings" && areaNavigation}
         </PageHeader>
       )}
 
       <div className="min-w-0">
           {activeAllowedTab === "system" && <SystemSettingsScreen />}
           {activeAllowedTab === "users" && <UsersScreen createDialogOpen={createUserDialogOpen} onCreateDialogOpenChange={setCreateUserDialogOpen} />}
-          {activeAllowedTab === "automation" && <AutomationSettingsScreen areaActions={
-            CONFIG_TAB_DEFINITIONS
-              .filter(({ id }) => id !== 'automation' && allowedTabs.some((tab) => tab.id === id))
-              .map(({ id, icon, label }) => ({ label, icon, onClick: () => handleTabChange(id) }))
-          } />}
+          {activeAllowedTab === "automation" && <AutoContactFlowSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
           {activeAllowedTab === "ai" && <AiConfigScreen />}
           {activeAllowedTab === "links" && (

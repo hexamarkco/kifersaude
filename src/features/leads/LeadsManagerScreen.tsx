@@ -1717,13 +1717,13 @@ export default function LeadsManager({
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-leads-toolbar-actions">
+              <FilterMultiSelect presentation="popover" options={statusFilterOptions} placeholder="Todas as etapas" dialogTitle="Filtrar leads por status" values={filterStatus} onChange={setFilterStatus} />
+              <FilterMultiSelect presentation="popover" options={responsavelFilterOptions} placeholder="Toda a equipe" dialogTitle="Filtrar leads por responsável" values={filterResponsavel} onChange={setFilterResponsavel} />
               {viewMode === 'list' && (
                 <Button type="button" variant="secondary" size="sm" className="kds-record-mobile-view" aria-pressed={showMobileCards} onClick={() => setShowMobileCards((show) => !show)}>
                   Cartões
                 </Button>
               )}
-              <FilterMultiSelect presentation="popover" options={statusFilterOptions} placeholder="Todas as etapas" dialogTitle="Filtrar leads por status" values={filterStatus} onChange={setFilterStatus} />
-              <FilterMultiSelect presentation="popover" options={responsavelFilterOptions} placeholder="Toda a equipe" dialogTitle="Filtrar leads por responsável" values={filterResponsavel} onChange={setFilterResponsavel} />
               <Button variant="secondary" aria-haspopup="dialog" aria-expanded={advancedFiltersOpen} aria-controls="leads-advanced-filters" onClick={openAdvancedFilters}>
                 <Filter aria-hidden="true" />Filtros
                 {advancedFilterCount > 0 && <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>}
@@ -1933,7 +1933,7 @@ export default function LeadsManager({
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <ActionSurface variant="plain" padding="none" type="button" onClick={() => openLeadDetails(lead)} className="kds-lead-identity">
-                              <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-0.5 block truncate text-[.5625rem] text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
+                              <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
                             </ActionSurface>
                           </div>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}

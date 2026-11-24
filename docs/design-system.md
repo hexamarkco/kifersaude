@@ -68,7 +68,7 @@ O código acima ilustra composição; handlers, estado, validação e breadcrumb
 
 ## Tokens e acessibilidade
 
-- **Tipografia:** no workspace, Sora compõe os títulos e valores dos indicadores. Poppins compõe rótulos, controles, descrições e tabelas. A hierarquia usa `--type-ui-title`, `--type-ui-section` e `--type-ui-heading`.
+- **Tipografia do workspace.** Sora compõe os títulos e indicadores. Poppins usa 14 px em abas, rótulos, controles e tabelas, 13 px em legendas e 15 px na descrição das páginas. Use os tokens semânticos para manter essa escala nas telas e nos diálogos.
 - **Escala:** `--layout-gap`, `--section-gap`, `--page-gutter` usam a escala existente de espaços. Raios `6/8/12/16px`; aliases semânticos `--radius-control`, `--radius-panel`, `--radius-dialog`. Superfícies planas; sombras para elementos sobrepostos.
 - **Controles compostos:** opções de dropdown, paginação, calendário e ações usam raio de 8px em todos os estados. Opções consecutivas de dropdown têm separação de 4px, preservando a distinção entre seleção, hover e foco. Segmentação tem contêiner de 12px, itens de 8px e recuo de 4px. Grupos de botões conectados usam contorno de 8px, extremidades internas de 7px (descontando a borda) e junções retas. Checkboxes usam 6px. Formas circulares ficam nos indicadores, avatares, radios e switches; estados não alteram a geometria do controle.
 - **Temas:** `--action-primary-bg`, `--action-primary-hover`, `--action-primary-text` e `--action-accent-text` mantêm legibilidade sobre terracota e dourado em claro/escuro. O tema acompanha toasts, tooltips, calendários e diálogos via contexto, inclusive com múltiplas raízes na página.
@@ -86,7 +86,7 @@ O único entrypoint visual é `src/design-system/styles.css`: tokens em `foundat
 
 Agenda e Comissões usam as classes `kds-month-*` para a grade mensal. Os eventos usam a cor semântica da categoria e a célula informa a data e a quantidade de itens ao leitor de tela. Use `MonthlyTrendChart` com `embedded` quando o cartão já fornece título e descrição, e com `ariaLabel` para identificar a série.
 
-A central de Automações usa texto de 13px nos rótulos e 14px nos campos. As abas concentram Fluxos, Modelos de mensagem e Operação, enquanto atalhos para outras áreas respeitam as permissões. O editor usa uma paleta lateral, um canvas vertical e um painel de edição por etapa.
+A central reúne Automações, Integrações e IA em abas acessíveis conforme as permissões. A aba de Automações organiza Fluxos, Modelos de mensagem e Operação. O editor usa uma paleta lateral, um canvas vertical e um painel de edição por etapa.
 
 ## Limites dos exemplos
 

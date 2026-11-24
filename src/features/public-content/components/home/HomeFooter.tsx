@@ -11,19 +11,20 @@ import HomeBrand from "./HomeBrand";
 export default function HomeFooter({
   onQuote,
 }: {
-  onQuote: (kind: ContractKind) => void;
+  onQuote?: (kind: ContractKind) => void;
 }) {
   const profiles = [
     ["PF", "Pessoa física e família"],
     ["MEI", "Planos para MEI"],
     ["CNPJ", "Pequenas empresas"],
   ] as const;
+  const homepagePrefix = onQuote ? "" : "/";
   return (
     <footer className="footer">
       <div className="wrap">
         <div className="footer-grid">
           <div className="footer-brand">
-            <TextLink href="#topo" aria-label="Kifer Saúde, início">
+            <TextLink href={onQuote ? "#topo" : "/"} aria-label="Kifer Saúde, início">
               <HomeBrand />
             </TextLink>
             <Text>
@@ -39,7 +40,7 @@ export default function HomeFooter({
             <ul>
               {homeNavigation.map(({ section, label }) => (
                 <li key={section}>
-                  <TextLink href={`#${section}`}>{label}</TextLink>
+                  <TextLink href={`${homepagePrefix}#${section}`}>{label}</TextLink>
                 </li>
               ))}
             </ul>
@@ -52,8 +53,9 @@ export default function HomeFooter({
               {profiles.map(([kind, label]) => (
                 <li key={kind}>
                   <TextLink
-                    href="#cotacao"
+                    href={onQuote ? "#cotacao" : "/#para-quem"}
                     onClick={(event) => {
+                      if (!onQuote) return;
                       event.preventDefault();
                       onQuote(kind);
                     }}
@@ -63,7 +65,7 @@ export default function HomeFooter({
                 </li>
               ))}
               <li>
-                <TextLink href="#operadoras">Conheça as operadoras</TextLink>
+                <TextLink href={`${homepagePrefix}#operadoras`}>Conheça as operadoras</TextLink>
               </li>
             </ul>
           </nav>

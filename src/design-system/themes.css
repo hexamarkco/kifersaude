@@ -317,19 +317,19 @@
   --type-ui-title: 600 1.6875rem / 1.35 var(--font-display);
   --type-ui-section: 600 .9375rem / 1.5 var(--font-display);
   --type-ui-heading: 600 .9375rem / 1.5 var(--font-display);
-  --type-body-sm: 400 .6875rem / 1.65 var(--font-sans);
-  --type-caption: 400 .5625rem / 1.5 var(--font-sans);
-  --type-label: 500 .6875rem / 1.6 var(--font-sans);
+  --type-body-sm: 400 .875rem / 1.55 var(--font-sans);
+  --type-caption: 400 .8125rem / 1.5 var(--font-sans);
+  --type-label: 500 .875rem / 1.5 var(--font-sans);
   --control-height-md: 2.5rem;
   --control-height-lg: 2.75rem;
   --form-control-height: 2.75rem;
   --toolbar-control-height: 2.375rem;
-  --control-font-md: .6875rem;
-  --type-form-control: 400 .75rem / 1.5 var(--font-sans);
-  --type-page-description: 400 .75rem / 1.8 var(--font-sans);
-  --type-card-description: 400 .6875rem / 1.7 var(--font-sans);
-  --type-table: 400 .6875rem / 1.65 var(--font-sans);
-  --type-table-heading: 500 .625rem / 1.5 var(--font-sans);
+  --control-font-md: .875rem;
+  --type-form-control: 400 .875rem / 1.5 var(--font-sans);
+  --type-page-description: 400 .9375rem / 1.65 var(--font-sans);
+  --type-card-description: var(--type-body-sm);
+  --type-table: var(--type-body-sm);
+  --type-table-heading: var(--type-label);
   --type-dialog-title: 600 1.125rem / 1.55 var(--font-display);
   --button-secondary-bg: var(--bg-surface);
   --button-secondary-text: var(--text-primary);
@@ -468,7 +468,6 @@
   .painel-theme.kifer-ds.kds-workspace-theme {
     --page-gutter: 1.25rem;
     --type-ui-title: 600 1.4375rem / 1.5 var(--font-display);
-    --type-page-description: 400 .6875rem / 1.8 var(--font-sans);
     --type-dialog-title: 600 1.0625rem / 1.6 var(--font-display);
     --dialog-inline-padding: 1.25rem;
     --dialog-header-padding: 1.25rem var(--dialog-inline-padding);

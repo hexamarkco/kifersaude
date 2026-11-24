@@ -119,7 +119,7 @@ export default function DonutChart({
             y={center + (centerLabel ? 20 : 24)}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize={centerLabel ? 9 : 12}
+            fontSize={13}
             fontWeight={centerLabel ? 400 : 700}
             fontFamily="var(--font-sans)"
             letterSpacing={centerLabel ? '0' : '0.18em'}
@@ -148,7 +148,7 @@ export default function DonutChart({
             />
             <div className="min-w-0 flex-1">
               <div
-                className="kds-donut-label-muted truncate text-[11px] font-semibold uppercase tracking-[0.16em]"
+                className="kds-donut-label-muted truncate text-xs font-semibold uppercase tracking-[0.08em]"
               >
                 {segment.label}
               </div>

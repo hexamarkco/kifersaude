@@ -903,7 +903,7 @@ export default function ContractsManager({
                         className="kds-lead-identity"
                         title={`${displayName} · ${contract.codigo_contrato}`}
                       >
-                        <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{displayName}</span><span className="mt-0.5 block truncate text-[.5625rem] text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
+                        <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{displayName}</span><span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
                       </ActionSurface>
                     </TableCell>
                     <TableCell>

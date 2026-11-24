@@ -196,7 +196,7 @@ export function DashboardEventsCalendar({
                 <Calendar className="h-4 w-4 text-[var(--brand-primary)]" strokeWidth={1.75} />
                 {calendarMonthLabel}
               </Heading>
-              <Text className="mt-0.5 text-[11px] text-[var(--text-muted)]">Visão operacional do mês</Text>
+              <Text className="mt-0.5 text-xs text-[var(--text-muted)]">Visão operacional do mês</Text>
             </div>
 
             <IconButton
@@ -231,7 +231,7 @@ export function DashboardEventsCalendar({
             {WEEK_DAYS.map((day) => (
               <div
                 key={day}
-                className="py-1 text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
+                className="py-1 text-center text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
               >
                 {day.slice(0, 1)}
               </div>
@@ -316,7 +316,7 @@ function CalendarEventRow({
       <article className="group rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
         <div className="flex items-start gap-3">
           <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand-primary-muted)] p-1 text-center text-[var(--brand-primary)]">
-            <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
+            <span className="text-xs font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
             <span className="mt-1 text-lg font-bold leading-none tabular-nums">{event.date.getDate()}</span>
           </div>
           <div className="min-w-0 flex-1">
@@ -378,7 +378,7 @@ function CalendarEventRow({
     <article className="group rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 transition hover:border-[var(--brand-primary-border)]">
       <div className="flex items-start gap-3">
         <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-[var(--radius-control)] bg-[var(--bg-elevated)] p-1 text-center text-[var(--accent-copper)]">
-          <span className="text-[10px] font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
+          <span className="text-xs font-semibold uppercase leading-none">{getCalendarDateLabel(event.date).split(' ')[1]}</span>
           <span className="mt-1 text-lg font-bold leading-none tabular-nums">{event.date.getDate()}</span>
         </div>
         <div className="min-w-0 flex-1">

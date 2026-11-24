@@ -415,7 +415,7 @@ export default function WhatsAppApiSettingsPanel() {
             </div>
             <Text className="mt-3 text-xs text-[var(--text-muted)]">
               O disparo automático dos fluxos continua sendo controlado em
-              Configurações &gt; Automações.
+              Automações e IA &gt; Automações.
             </Text>
           </Card>
           <Alert

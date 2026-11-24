@@ -903,7 +903,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'warning' as const,
         icon: AlertTriangle,
         title: 'Envio desabilitado',
-        description: 'O envio está desativado. Peça ao responsável pelo sistema para conferir Configurações > Integrações.',
+        description: 'O envio está desativado. Peça ao responsável pelo sistema para conferir Automações e IA > Integrações.',
       };
     }
 
@@ -912,7 +912,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'danger' as const,
         icon: WifiOff,
         title: `WhatsApp ${connectionStatusLabel}`,
-        description: 'Confira a conexão do WhatsApp em Configurações > Integrações antes de continuar o atendimento.',
+        description: 'Confira a conexão do WhatsApp em Automações e IA > Integrações antes de continuar o atendimento.',
       };
     }
 
@@ -930,7 +930,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'info' as const,
         icon: Clock3,
         title: 'Sem atualizações recentes do WhatsApp',
-        description: `Última atualização recebida em ${formatMessageTime(channelState.last_webhook_received_at)}. Se faltarem mensagens, confira a conexão em Configurações > Integrações.`,
+        description: `Última atualização recebida em ${formatMessageTime(channelState.last_webhook_received_at)}. Se faltarem mensagens, confira a conexão em Automações e IA > Integrações.`,
       };
     }
 

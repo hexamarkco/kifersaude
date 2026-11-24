@@ -117,7 +117,7 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
     return {
       tone: 'danger',
       title: 'Conexão interrompida',
-      description: 'Confira a conexão em Configurações > Integrações antes de enviar novas mensagens.',
+      description: 'Confira a conexão em Automações e IA > Integrações antes de enviar novas mensagens.',
       connected: false,
     };
   }
@@ -126,7 +126,7 @@ const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => 
     return {
       tone: 'danger',
       title: 'Problema ao atualizar as conversas',
-      description: 'Confira a conexão em Configurações > Integrações. Se continuar, peça ajuda ao responsável pelo sistema.',
+      description: 'Confira a conexão em Automações e IA > Integrações. Se continuar, peça ajuda ao responsável pelo sistema.',
       connected: false,
     };
   }

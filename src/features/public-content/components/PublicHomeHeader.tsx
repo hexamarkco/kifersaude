@@ -12,13 +12,14 @@ import {
   DrawerFooter,
   DrawerHeader,
   IconButton,
+  LinkButton,
 } from "../../../design-system";
 
 const navigationItems = homeNavigation;
 
 type PublicHomeHeaderProps = {
-  onNavigate: (section: string) => void;
-  onRequestQuote: () => void;
+  onNavigate?: (section: string) => void;
+  onRequestQuote?: () => void;
 };
 
 export default function PublicHomeHeader({
@@ -38,7 +39,8 @@ export default function PublicHomeHeader({
   }, [menuOpen]);
 
   useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 851px)");
+    const desktop = window.matchMedia?.("(min-width: 851px)");
+    if (!desktop) return;
     const closeOnDesktop = () => {
       if (desktop.matches) setMenuOpen(false);
     };
@@ -54,18 +56,22 @@ export default function PublicHomeHeader({
   };
 
   const navigate = (event: MouseEvent<HTMLAnchorElement>, section: string) => {
+    if (!onNavigate) return;
     event.preventDefault();
     closeMenuAndRun(() => onNavigate(section));
   };
 
-  const requestQuote = () => closeMenuAndRun(onRequestQuote);
+  const requestQuote = () => {
+    if (onRequestQuote) closeMenuAndRun(onRequestQuote);
+  };
+  const homeSectionHref = (section: string) => `${onNavigate ? "" : "/"}#${section}`;
 
   return (
     <>
       <header className="header" id="topo">
         <div className="wrap">
           <TextLink
-            href="#topo"
+            href={onNavigate ? "#topo" : "/"}
             onClick={(event) => navigate(event, "topo")}
             aria-label="Kifer Saúde, início"
             className="header-brand"
@@ -77,7 +83,7 @@ export default function PublicHomeHeader({
             {navigationItems.map(({ section, label }) => (
               <TextLink
                 key={section}
-                href={`#${section}`}
+                href={homeSectionHref(section)}
                 onClick={(event) => navigate(event, section)}
               >
                 {label}
@@ -86,7 +92,7 @@ export default function PublicHomeHeader({
           </nav>
 
           <div className="header-actions">
-            <Button
+            {onRequestQuote ? <Button
               type="button"
               variant="primary"
               size="lg"
@@ -95,7 +101,10 @@ export default function PublicHomeHeader({
             >
               Quero uma cotação
               <ArrowUpRight aria-hidden="true" />
-            </Button>
+            </Button> : <LinkButton href="/#cotacao" variant="primary" size="lg" className="button">
+              Quero uma cotação
+              <ArrowUpRight aria-hidden="true" />
+            </LinkButton>}
             <div className="header-toggle">
               <IconButton
                 type="button"
@@ -133,7 +142,7 @@ export default function PublicHomeHeader({
             {navigationItems.map(({ section, label }) => (
               <TextLink
                 key={section}
-                href={`#${section}`}
+                href={homeSectionHref(section)}
                 onClick={(event) => navigate(event, section)}
               >
                 {label}
@@ -142,7 +151,7 @@ export default function PublicHomeHeader({
           </nav>
         </DrawerBody>
         <DrawerFooter>
-          <Button
+          {onRequestQuote ? <Button
             type="button"
             variant="primary"
             size="lg"
@@ -150,7 +159,9 @@ export default function PublicHomeHeader({
             onClick={requestQuote}
           >
             Cotação grátis
-          </Button>
+          </Button> : <LinkButton href="/#cotacao" variant="primary" size="lg" className="w-full">
+            Cotação grátis
+          </LinkButton>}
         </DrawerFooter>
       </Drawer>
     </>

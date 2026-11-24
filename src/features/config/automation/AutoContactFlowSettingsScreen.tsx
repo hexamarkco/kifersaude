@@ -98,7 +98,6 @@ import {
   Field,
   RecordActions,
   Select,
-  type RecordAction,
   Surface,
   Switch,
   FilterSelect,
@@ -121,7 +120,7 @@ const workspaceHeadings = {
   operation: { title: 'Acompanhe cada execução.', description: 'Consulte a situação dos fluxos e os registros de mensagens automáticas.' },
 };
 
-export default function AutoContactFlowSettingsScreen({ areaActions = [] }: { areaActions?: RecordAction[] }) {
+export default function AutoContactFlowSettingsScreen() {
   const { leadOrigins, options } = useConfig();
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1771,7 +1770,6 @@ export default function AutoContactFlowSettingsScreen({ areaActions = [] }: { ar
       {...workspaceHeadings[activeWorkspace]}
       descriptionPlacement="visible"
       actions={<div className="kds-automation-header-actions">
-        {areaActions.length > 0 && <RecordActions actions={areaActions} visibleCount={0} label="Ações da página" />}
         {activeWorkspace === "flows" && autoContactIntegration && <Button onClick={() => setNewFlowDraft({ name: '', triggerType: 'lead_created' })}><Plus className="kds-control-icon" />Novo fluxo</Button>}
         {activeWorkspace === "templates" && autoContactIntegration && <Button onClick={handleAddTemplate} disabled={savingTemplate}><Plus className="kds-control-icon" />Novo modelo</Button>}
       </div>}
@@ -1782,6 +1780,7 @@ export default function AutoContactFlowSettingsScreen({ areaActions = [] }: { ar
         onChange={setActiveWorkspace}
         className="kds-automation-workspace-tabs"
         listClassName="flex-nowrap overflow-x-auto"
+        variant="pill"
         ariaLabel="Visões das automações"
       />
     </PageHeader>

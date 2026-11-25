@@ -1073,14 +1073,16 @@ export default function AgendaScreen() {
     const showDay = statusFilter !== "todos" && dueDay && dueDay !== getDateKey(new Date());
     const busy = reminderBusy(reminder.id);
     const actions: RecordAction[] = [
-      { label: "Ver detalhes", icon: Eye, onClick: () => setDetailId(reminder.id) },
+      { label: "Ver detalhes", menuGroup: "Lembrete", icon: Eye, onClick: () => setDetailId(reminder.id) },
     ];
 
     if (!reminder.lido) {
       actions.push(
-        { label: "Reagendar item", icon: Calendar, disabled: busy, onClick: () => beginReschedule(reminder) },
+        { label: "Reagendar item", menuGroup: "Lembrete", icon: Calendar, disabled: busy, onClick: () => beginReschedule(reminder) },
         ...SCHEDULE_OFFSETS.map((days) => ({
           label: `Concluir e agendar em +${days} ${days === 1 ? "dia útil" : "dias úteis"}`,
+          menuGroup: "Concluir e agendar (dias úteis)",
+          compactLabel: `+${days}`,
           icon: CalendarClock,
           disabled: busy,
           onClick: () => void handleQuickSchedule(reminder, days),
@@ -1090,13 +1092,13 @@ export default function AgendaScreen() {
 
     if (leadId) {
       actions.push(
-        { label: "Abrir cadastro do lead", icon: UserRound, onClick: () => void handleOpenLead(leadId) },
-        { label: "Abrir WhatsApp oficial", icon: ExternalLink, disabled: !lead?.telefone, onClick: () => void openLeadInOfficialWhatsApp(lead ?? null) },
-        { label: "Marcar lead como perdido e limpar lembretes", icon: X, destructive: true, disabled: markingLostLeadId === leadId, onClick: () => void handleMarkLeadAsLost(reminder) },
+        { label: "Abrir cadastro do lead", menuGroup: "Contato", icon: UserRound, onClick: () => void handleOpenLead(leadId) },
+        { label: "Abrir WhatsApp oficial", menuGroup: "Contato", icon: ExternalLink, disabled: !lead?.telefone, onClick: () => void openLeadInOfficialWhatsApp(lead ?? null) },
+        { label: "Marcar lead como perdido e limpar lembretes", menuGroup: "Ações críticas", icon: X, destructive: true, disabled: markingLostLeadId === leadId, onClick: () => void handleMarkLeadAsLost(reminder) },
       );
     }
 
-    actions.push({ label: "Excluir item", icon: Trash2, destructive: true, disabled: busy, onClick: () => handleDelete(reminder.id) });
+    actions.push({ label: "Excluir item", menuGroup: "Ações críticas", icon: Trash2, destructive: true, disabled: busy, onClick: () => handleDelete(reminder.id) });
 
     return (
       <article key={reminder.id} className="kds-agenda-task-row" data-completed={reminder.lido}>

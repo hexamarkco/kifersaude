@@ -2,8 +2,8 @@ import { useMinimumLoading, LoadingMonogram, LoadingState, ButtonGroup } from '.
 import { Text, Audio, Image, TextLink, Video } from '../../../../design-system';
 import { ActionSurface } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users } from 'lucide-react';
-import { Button } from '../../../../design-system';
+import { AlertTriangle, Download, ExternalLink, FileText, Headphones, Link2, MapPin, Mic, Pause, Play, Radio, Reply, ShieldCheck, UserRound, Users, X } from 'lucide-react';
+import { Button, IconButton } from '../../../../design-system';
 import { getPanelButtonClass } from '../../../../design-system';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppMessage } from '../domain/types';
@@ -54,18 +54,30 @@ export function MediaSendingOverlay({
   if (!visible) return null;
   return (
     <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-[1px]">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm">
-        <LoadingMonogram />
+      <div className="pointer-events-auto flex items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] text-[var(--text-primary)] shadow-sm">
         <span className="sr-only" role="status">{progress === null ? 'Enviando' : `${progress}%`}</span>
         {onCancel && active ? (
-          <Button variant="ghost"
+          <IconButton
+            variant="ghost"
+            size="lg"
             type="button"
             onClick={onCancel}
-            className="ml-1 underline decoration-current/40 underline-offset-2 transition"
+            aria-label="Cancelar envio"
+            title="Cancelar envio"
+            className="group/media-cancel !rounded-full !border-transparent !bg-transparent !shadow-none"
           >
-            Cancelar
-          </Button>
-        ) : null}
+            <span className="grid grid-cols-1 place-items-center [@media(hover:none)]:grid-cols-2">
+              <span className="col-start-1 row-start-1 transition-opacity group-hover/media-cancel:opacity-0 group-focus-visible/media-cancel:opacity-0 [@media(hover:none)]:!opacity-100">
+                <LoadingMonogram />
+              </span>
+              <span className="col-start-1 row-start-1 opacity-0 transition-opacity group-hover/media-cancel:opacity-100 group-focus-visible/media-cancel:opacity-100 [@media(hover:none)]:col-start-2 [@media(hover:none)]:!opacity-100">
+                <X aria-hidden="true" />
+              </span>
+            </span>
+          </IconButton>
+        ) : (
+          <span className="flex items-center justify-center p-3"><LoadingMonogram /></span>
+        )}
       </div>
     </div>
   );

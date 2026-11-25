@@ -27,7 +27,11 @@ export default function MetaAdsPanel() {
   const state = useMetaAds();
   const [selected, setSelected] = useState('');
   const [search, setSearch] = useState('');
+  const [formId, setFormId] = useState('');
+  const [commercialField, setCommercialField] = useState('');
+  const [expectedField, setExpectedField] = useState<string | null>(null);
   const snapshot = state.snapshot;
+  const forms = snapshot ? Object.entries({ ...snapshot.settings.forms, ...(snapshot.settings.formId ? { [snapshot.settings.formId]: snapshot.settings.commercialField } : {}) }) : [];
   const attribution = snapshot?.attributions.find((item) => item.id === selected);
   return <section className="space-y-4">
     <SectionHeader title="Meta Ads" description="Acompanhe os formulários, a origem das oportunidades e as avaliações comerciais." />
@@ -37,7 +41,7 @@ export default function MetaAdsPanel() {
     {snapshot && <>
       <Card>
         <Heading level={3} className="font-[var(--font-display)] text-lg">{metaConnectionLabel(snapshot)}</Heading>
-        <Text className="mt-2 text-sm">Formulário configurado: {snapshot.settings.formId || 'Pendente'}</Text>
+        <Text className="mt-2 text-sm">Formulários configurados: {forms.length}</Text>
         <Text className="text-sm text-[var(--text-muted)]">A configuração do formulário não comprova a assinatura da página. O primeiro recebimento confirma o caminho até o CRM.</Text>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <Text>Recebimentos: <strong>{snapshot.received}</strong></Text>
@@ -50,6 +54,25 @@ export default function MetaAdsPanel() {
         </div>
         <Text className="mt-4 text-sm">Último recebimento: {date(snapshot.lastReceivedAt)}</Text>
         <Text className="text-sm">Última importação concluída: {date(snapshot.lastImportedAt)}</Text>
+      </Card>
+      <Card>
+        <Heading level={3} className="font-[var(--font-display)] text-lg">Mapeamento dos formulários Meta</Heading>
+        <Text className="mt-2 text-sm">Autorize o ID do formulário e a chave exata da pergunta comercial. Nome completo e telefone usam as chaves padrão da Meta.</Text>
+        <div className="mt-3 space-y-2">
+          {forms.map(([id, field]) => <div key={id} className="flex flex-wrap items-center justify-between gap-2">
+            <div><Text className="text-sm">{id}</Text><Text className="text-xs text-[var(--text-muted)]">{field || 'Sem pergunta comercial'}</Text></div>
+            <Button variant="secondary" onClick={() => { setFormId(id); setCommercialField(field); setExpectedField(field); }}>Editar</Button>
+          </div>)}
+        </div>
+        <form className="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); void state.saveForm(formId.trim(), commercialField.trim(), expectedField); }}>
+          <Field label="ID do formulário"><Input value={formId} onChange={(e) => { setFormId(e.target.value); setExpectedField(null); }} maxLength={32} disabled={expectedField !== null} /></Field>
+          <Field label="Chave da pergunta comercial"><Input value={commercialField} onChange={(e) => setCommercialField(e.target.value)} maxLength={200} /></Field>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" loading={state.saving} disabled={!/^\d{1,32}$/.test(formId.trim()) || !commercialField.trim() || state.saving}>Salvar mapeamento</Button>
+            <Button type="button" variant="secondary" onClick={() => { setFormId(''); setCommercialField(''); setExpectedField(null); }}>Novo formulário</Button>
+          </div>
+        </form>
+        <Text className="mt-2 text-xs text-[var(--text-muted)]">Salvar não comprova a entrega do webhook. Valide o recebimento antes de iniciar uma campanha.</Text>
       </Card>
       <Alert tone="warning" title={snapshot.capiEnabled ? 'Envio comercial liberado no servidor' : 'Envio à Meta desabilitado'}>
         {snapshot.capiEnabled ? 'Somente sinais liberados individualmente podem ser enviados.' : 'As avaliações ficam registradas no CRM. O envio exige revisão das restrições de dados de saúde, aprovação da configuração e autorização explícita.'}
@@ -72,6 +95,7 @@ export default function MetaAdsPanel() {
               <div><dt>Conjunto</dt><dd>{attribution.adset_name || attribution.adset_id || 'Não informado pela Meta'}</dd></div>
               <div><dt>Anúncio</dt><dd>{attribution.ad_name || attribution.ad_id || 'Não informado pela Meta'}</dd></div>
               <div><dt>Preenchimento na Meta</dt><dd>{date(attribution.meta_created_at)}</dd></div>
+              <div><dt>Formulário</dt><dd>{attribution.form_id}</dd></div>
               <div><dt>Resposta comercial do formulário</dt><dd>{attribution.commercial_answer || 'Não recebida ou campo ainda não mapeado'}</dd></div>
               <div><dt>Cadastro no CRM</dt><dd>{attribution.matched_existing ? 'Contato existente preservado' : 'Novo contato'}</dd></div>
               <div><dt>Origem do formulário</dt><dd>{attribution.traffic_type === 'paid' ? 'Anúncio identificado' : attribution.traffic_type === 'organic' ? 'Preenchimento orgânico · sem sinal publicitário' : 'Origem ainda não confirmada · sem sinal publicitário'}</dd></div>
@@ -108,7 +132,7 @@ export default function MetaAdsPanel() {
         <details className="mt-4 text-xs text-[var(--text-muted)]">
           <summary>Informações para suporte</summary>
           <Text className="mt-2 break-all">Recebimento: {snapshot.webhookUrl}</Text>
-          <Text>Página: {snapshot.settings.pageId} · Formulário: {snapshot.settings.formId}</Text>
+          <Text>Página: {snapshot.settings.pageId} · Formulários: {forms.map(([id]) => id).join(', ')}</Text>
           {attribution && <Text>Lead Meta: {attribution.leadgen_id} · CRM: {attribution.lead_id} · Anúncio: {attribution.ad_id || 'Ausente'}</Text>}
           {snapshot.history.filter((item) => item.error_code).slice(0,20).map((item) => <Text key={item.id}>{item.entity_id} · tentativa {item.attempt} · {item.error_code}</Text>)}
           <Text>As credenciais são configuradas exclusivamente no servidor.</Text>

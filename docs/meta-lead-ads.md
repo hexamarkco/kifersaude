@@ -446,3 +446,7 @@ schema confirmado, gerar novamente os tipos pelo script oficial do projeto.
   credenciais e arquitetura passaram. Este teste comprova o caminho real de
   recebimento e importação; não valida transporte CAPI, revisão comercial nem
   criação de contrato em produção. A CAPI continua desativada e o cron ativo.
+
+## Múltiplos formulários (25/11/2026)
+
+O ID legado e sua chave comercial continuam válidos. O objeto adicional `settings.forms` associa cada ID autorizado à sua chave comercial. Webhook, worker e RPCs de fila/importação verificam a página e a lista de formulários; o worker escolhe a pergunta pelo ID efetivamente recebido. O painel Meta Ads permite adicionar ou editar mapeamentos por administrador, com controle de concorrência e sem alteração das credenciais. A autorização do ID não prova a entrega real da Meta; validar antes de ativar anúncios. O novo formulário `1683135126631039` usa `possui_cnpj_mei`. A resposta não define modalidade nem qualificação automaticamente.

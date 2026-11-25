@@ -216,3 +216,27 @@ describe('admin HTTP boundary', () => {
     expect((await handler(request({ action: 'requeue',leadgenId: receipt.leadgen_id }))).status).toBe(409);
   });
 });
+
+describe('multiple Meta forms', () => {
+  const otherForm = '888888888888888';
+  const multi = { ...config, forms: { [otherForm]: 'has_company' } };
+  const otherReceipt = { ...receipt, form_id: otherForm };
+  const otherLead = { ...graphLead(), form_id: otherForm, field_data: [...graphLead().field_data, { name: 'has_company', values: ['Sim'] }] };
+  it('accepts both configured forms and ignores unknown forms', () => {
+    const payload = notification();
+    const change = payload.entry[0].changes[0];
+    payload.entry[0].changes.push({ ...change, value: { ...change.value, form_id: otherForm, leadgen_id: '888888888888889' } });
+    payload.entry[0].changes.push({ ...change, value: { ...change.value, form_id: '777777777777777', leadgen_id: '777777777777778' } });
+    expect(parseNotifications(payload, multi).map((r) => r.form_id)).toEqual([config.formId, otherForm]);
+  });
+  it('maps each form independently and rejects unauthorized origins', () => {
+    expect(mapGraphLead(graphLead(), receipt, multi).commercial_answer).toBe('MEI — duas vidas');
+    expect(mapGraphLead(otherLead, otherReceipt, multi).commercial_answer).toBe('Sim');
+    expect(() => mapGraphLead(otherLead, otherReceipt, config)).toThrow('ORIGIN_MISMATCH');
+  });
+  it('processes a second authorized form through the worker', async () => {
+    const deps = worker({ config: async () => multi, claimInbound: vi.fn().mockResolvedValueOnce(otherReceipt).mockResolvedValue(null), retrieve: vi.fn().mockResolvedValue(otherLead) });
+    expect((await runMetaWorker(deps)).imported).toBe(1);
+    expect(deps.importLead).toHaveBeenCalledWith(otherReceipt, expect.objectContaining({ commercial_answer: 'Sim' }));
+  });
+});

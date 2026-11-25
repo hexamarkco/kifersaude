@@ -6,6 +6,7 @@ export type Receipt = {
 export type MetaConfig = {
   enabled: boolean; pageId: string; formId: string; graphVersion: string;
   commercialField: string;
+  forms?: Record<string, string>;
 };
 export class MetaError extends Error {
   constructor(readonly code: string, readonly retryable = false) { super(code); }
@@ -14,6 +15,12 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 export const metaId = (value: unknown): string | null =>
   typeof value === 'string' && /^\d{1,32}$/.test(value) ? value : null;
+
+// The original mapping remains valid for legacy configuration and queued receipts.
+export function commercialFieldFor(config: MetaConfig, formId: string): string | undefined {
+  if (formId === config.formId) return config.commercialField;
+  return config.forms && Object.prototype.hasOwnProperty.call(config.forms, formId) ? config.forms[formId] : undefined;
+}
 
 export function parseNotifications(payload: unknown, config: MetaConfig): Receipt[] {
   if (!isRecord(payload) || payload.object !== 'page' || !Array.isArray(payload.entry)) {
@@ -25,7 +32,7 @@ export function parseNotifications(payload: unknown, config: MetaConfig): Receip
     for (const change of entry.changes) {
       if (!isRecord(change) || change.field !== 'leadgen') continue;
       const v = change.value;
-      if (!isRecord(v) || v.page_id !== config.pageId || v.form_id !== config.formId) continue;
+      if (!isRecord(v) || v.page_id !== config.pageId || typeof v.form_id !== 'string' || commercialFieldFor(config, v.form_id) === undefined) continue;
       const id = metaId(v.leadgen_id);
       const time = typeof v.created_time === 'number' ? v.created_time : NaN;
       if (!id || !Number.isSafeInteger(time) || time <= 0 || time > Date.now() / 1000 + 300) {
@@ -61,6 +68,8 @@ export function mapGraphLead(payload: unknown, receipt: Receipt, config: MetaCon
     !Array.isArray(payload.field_data) || (payload.ad_id && receipt.ad_id && payload.ad_id !== receipt.ad_id)) {
     throw new MetaError('ORIGIN_MISMATCH');
   }
+  const commercialField = commercialFieldFor(config, receipt.form_id);
+  if (commercialField === undefined) throw new MetaError('ORIGIN_MISMATCH');
   const fields = payload.field_data;
   const field = (key: string): string => {
     const row = fields.find((item: unknown) => isRecord(item) && item.name === key);
@@ -72,7 +81,7 @@ export function mapGraphLead(payload: unknown, receipt: Receipt, config: MetaCon
   if (!rawPhone.startsWith('+') && (phone.length === 10 || phone.length === 11)) phone = `55${phone}`;
   if (!name || name.length > 200 || !/^\d{10,15}$/.test(phone)) throw new MetaError('MISSING_CONTACT_FIELDS');
   return {
-    name, phone, ad_id: metaId(payload.ad_id), commercial_answer: config.commercialField ? field(config.commercialField).slice(0, 500) || null : null,
+    name, phone, ad_id: metaId(payload.ad_id), commercial_answer: commercialField ? field(commercialField).slice(0, 500) || null : null,
     traffic_type: payload.is_organic === true ? 'organic' : metaId(payload.ad_id) || receipt.ad_id ? 'paid' : 'unknown',
     campaign_id: metaId(payload.campaign_id), campaign_name: label(payload.campaign_name),
     adset_id: metaId(payload.adset_id), adset_name: label(payload.adset_name), ad_name: label(payload.ad_name),

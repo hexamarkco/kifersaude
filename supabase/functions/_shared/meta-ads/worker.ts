@@ -1,4 +1,4 @@
-import { buildConversion, canSend, mapGraphLead, MetaError, retryDelay,
+import { buildConversion, canSend, commercialFieldFor, mapGraphLead, MetaError, retryDelay,
   type CapiApproval, type Conversion, type ImportedLead, type MetaConfig, type Receipt } from './domain.ts';
 
 export type WorkerDependencies = {
@@ -25,7 +25,7 @@ export async function runMetaWorker(deps: WorkerDependencies) {
     const receipt = await deps.claimInbound();
     if (!receipt) break;
     try {
-      if (receipt.page_id !== config.pageId || receipt.form_id !== config.formId) throw new MetaError('ORIGIN_MISMATCH');
+      if (receipt.page_id !== config.pageId || commercialFieldFor(config, receipt.form_id) === undefined) throw new MetaError('ORIGIN_MISMATCH');
       const lead = mapGraphLead(await deps.retrieve(receipt.leadgen_id), receipt, config);
       const outcome = await deps.importLead(receipt, lead);
       if (outcome === 'validated_test') result.validatedTests++;

@@ -32,7 +32,7 @@ export type MetaAttribution = {
   opportunities: { id: string; label: string; status: string }[];
 };
 export type MetaSnapshot = {
-  settings: { enabled: boolean; pageId: string; formId: string; adAccountId: string; commercialField: string };
+  settings: { enabled: boolean; pageId: string; formId: string; adAccountId: string; commercialField: string; forms?: Record<string, string> };
   serverConfigured: boolean; capiEnabled: boolean; webhookUrl: string;
   received: number; imported: number; pending: number; failed: number;
   eventsHeld: number; eventsPending: number; eventsFailed: number;

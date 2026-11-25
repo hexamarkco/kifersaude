@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { loadMetaAds, loadMetaHistory, requeueMetaReceipt, requeueMetaEvent, saveMetaReview } from '../data/metaAdsApi';
+import { loadMetaAds, loadMetaHistory, requeueMetaReceipt, requeueMetaEvent, saveMetaReview, saveMetaForm } from '../data/metaAdsApi';
 import type { MetaReviewInput, MetaSnapshot } from '../domain/metaAds';
 
 export function useMetaAds() {
@@ -53,6 +53,8 @@ export function useMetaAds() {
       } catch { setError('Não foi possível consultar o histórico anterior.'); }
       finally { setHistoryLoading(false); }
     },
+    saveForm: (formId: string, commercialField: string, expectedField: string | null) =>
+      mutate(() => saveMetaForm(formId, commercialField, expectedField), 'Mapeamento do formulário salvo.'),
     review: (input: MetaReviewInput) => mutate(() => saveMetaReview(input), input.saleClosed && !input.contractCompleted
       ? 'Venda fechada registrada. Quando cadastrar o contrato, volte para vinculá-lo e confirmar a contratação.'
       : 'Avaliação comercial registrada.'),

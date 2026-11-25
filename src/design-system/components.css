@@ -1424,11 +1424,11 @@
   cursor: pointer;
 }
 
-.kds-action-surface:hover,
-.kds-card-interactive:hover {
-  border-color: var(--brand-primary-border);
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-card-hover);
+/* Hover must not introduce a decorative border or glow.
+   Plain actions rely on their contextual hover styles; keyboard focus stays visible. */
+.kds-action-surface.kds-surface-default:hover:not(:disabled):not(.is-selected),
+.kds-card-interactive:hover:not(.is-selected) {
+  background: var(--bg-hover);
 }
 
 .kds-card-title {

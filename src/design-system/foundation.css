@@ -672,12 +672,6 @@
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
-.kds-action-surface:hover,
-.kds-card-interactive:hover {
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-card-hover);
-}
-
 .kds-action-surface:focus-visible,
 .kds-card-interactive:focus-visible {
   outline: none;

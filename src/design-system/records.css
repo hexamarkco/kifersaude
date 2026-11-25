@@ -348,3 +348,60 @@
   }
   .kds-workspace-theme .kds-workspace-result-count { justify-self: end; white-space: nowrap; }
 }
+
+/* Contracts: reference-aligned search and quick filters, with no unused toolbar width. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-search-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-search-toolbar .kds-toolbar-search {
+  flex: 1 1 18rem;
+  min-width: 0;
+  max-width: none;
+  width: auto;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-toolbar-actions {
+  display: flex;
+  flex: 1 1 30rem;
+  width: auto;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-toolbar-actions > .kds-popover-trigger {
+  flex: 1 1 7rem;
+  width: auto;
+  min-width: 0;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-toolbar-actions > .kds-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+@media (min-width: 768px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-search-toolbar :is(.kds-input, .kds-filter-trigger, .kds-button) {
+    height: var(--toolbar-control-height);
+    min-height: var(--toolbar-control-height);
+  }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-search-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-search-toolbar .kds-toolbar-search {
+    width: 100%;
+  }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-toolbar-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-toolbar-actions > :is(.kds-popover-trigger, .kds-button:not(.kds-record-mobile-view)) {
+    width: 100%;
+  }
+}

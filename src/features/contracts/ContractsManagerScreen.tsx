@@ -559,7 +559,7 @@ export default function ContractsManager({
       filterOperadora.length > 0 ||
       dateProximityFilter.length > 0,
   );
-  const activeFilterCount = filterStatus.length + filterOperadora.length + dateProximityFilter.length + (filterResponsavel !== 'todos' ? 1 : 0);
+  const advancedFilterCount = dateProximityFilter.length;
 
   const handleExportContracts = () => {
     const headers = [
@@ -794,29 +794,43 @@ export default function ContractsManager({
               <Input
                 type="text"
                 leftIcon={Search}
-                placeholder="Buscar por cliente, contrato, CNPJ ou plano..."
+                placeholder="Buscar por nome, contrato, plano..."
                 aria-label="Buscar contratos"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </ToolbarSearch>
             <ToolbarActions className="kds-contracts-toolbar-actions">
-              <FilterMultiSelect dialogClassName="kds-crm-dialog"
+              <FilterMultiSelect presentation="popover"
                 values={filterStatus}
                 onChange={setFilterStatus}
-                placeholder="Todos os status"
+                placeholder="Status"
                 dialogTitle="Filtrar contratos por status"
                 options={statusFilterOptions}
               />
-              <FilterMultiSelect dialogClassName="kds-crm-dialog"
+              <FilterMultiSelect presentation="popover"
                 values={filterOperadora}
                 onChange={setFilterOperadora}
-                placeholder="Todas as operadoras"
+                placeholder="Operadora"
                 dialogTitle="Filtrar contratos por operadora"
                 options={operadoraOptions.map((operadora) => ({ value: operadora, label: operadora }))}
               />
-              <Button type="button" variant={advancedFiltersOpen ? 'soft' : 'secondary'} aria-expanded={advancedFiltersOpen} aria-controls="contracts-filter-controls" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
-                <Filter className="kds-control-icon" aria-hidden="true" /> Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+              <FilterSelect
+                value={filterResponsavel}
+                onChange={setFilterResponsavel}
+                placeholder="Corretor"
+                includePlaceholderOption={false}
+                neutralValues={["todos"]}
+                options={[
+                  { value: "todos", label: "Corretor" },
+                  ...responsavelFilterOptions.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  })),
+                ]}
+              />
+              <Button type="button" variant={advancedFiltersOpen || advancedFilterCount > 0 ? 'soft' : 'secondary'} aria-expanded={advancedFiltersOpen} aria-controls="contracts-filter-controls" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
+                <Filter className="kds-control-icon" aria-hidden="true" /> Mais filtros{advancedFilterCount > 0 ? ` · ${advancedFilterCount}` : ''}
               </Button>
               <Button type="button" variant="secondary" size="sm" className="kds-record-mobile-view" aria-pressed={showMobileCards} onClick={() => setShowMobileCards((show) => !show)}>
                 Cartões
@@ -833,27 +847,10 @@ export default function ContractsManager({
                 </Button>
               )}
             </ToolbarActions>
-            <span className="kds-workspace-result-count">{filteredContracts.length} {filteredContracts.length === 1 ? 'contrato' : 'contratos'}</span>
           </Toolbar>
 
           {advancedFiltersOpen && <div id="contracts-filter-controls" className="kds-workspace-extra-filters">
-            <FilterSelect
-              icon={Users}
-              value={filterResponsavel}
-              onChange={(value) => setFilterResponsavel(value)}
-              placeholder="Todos os responsáveis"
-              includePlaceholderOption={false}
-              neutralValues={["todos"]}
-              options={[
-                { value: "todos", label: "Todos os responsáveis" },
-                ...responsavelFilterOptions.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                })),
-              ]}
-            />
-
-            <FilterMultiSelect dialogClassName="kds-crm-dialog"
+            <FilterMultiSelect presentation="popover"
               icon={Calendar}
               values={dateProximityFilter}
               onChange={setDateProximityFilter}

@@ -361,6 +361,17 @@ function Actions() {
               { label: 'Editar contato', icon: Pencil, onClick: () => toast({ variant: 'info', description: 'Edição demonstrativa selecionada.' }) },
               { label: 'Excluir contato', icon: Trash2, destructive: true, onClick: () => setDeleteConfirm(true) },
             ]} />
+            <RecordActions label="Ações do lembrete demonstrativo" visibleCount={0} actions={[
+              { label: 'Ver detalhes', menuGroup: 'Lembrete', icon: Eye, onClick: () => toast({ variant: 'info', description: 'Detalhes demonstrativos.' }) },
+              ...[1, 2, 3, 4, 5].map((days) => ({
+                label: `Concluir e agendar em +${days} ${days === 1 ? 'dia útil' : 'dias úteis'}`,
+                menuGroup: 'Concluir e agendar (dias úteis)',
+                compactLabel: `+${days}`,
+                icon: Eye,
+                onClick: () => toast({ variant: 'info', description: `Agendamento demonstrativo: +${days}.` }),
+              })),
+              { label: 'Excluir item', menuGroup: 'Ações críticas', icon: Trash2, destructive: true, onClick: () => setDeleteConfirm(true) },
+            ]} />
             <ButtonGroup aria-label="Ações do registro demonstrativo">
               <IconButton variant="secondary" aria-label="Editar registro demonstrativo" onClick={() => toast({ variant: 'info', description: 'Edição demonstrativa selecionada.' })}><Pencil /></IconButton>
               <IconButton variant="danger" aria-label="Excluir registro demonstrativo" onClick={() => setDeleteConfirm(true)}><Trash2 /></IconButton>

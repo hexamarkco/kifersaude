@@ -11,7 +11,7 @@ import {
   KIFER_THEME_COLORS,
   LinkButton,
   LoadingState,
-  useMinimumLoading,
+  Skeleton,
   PublicEmptyState,
   PublicShell,
   Text,
@@ -28,7 +28,6 @@ const DEFAULT_THEME_COLOR = KIFER_THEME_COLORS.lightCanvas;
 
 export default function LinksPage() {
   const [loading, setLoading] = useState(true);
-  const showLoading = useMinimumLoading(loading);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [settings, setSettings] = useState<PublicLinkPageSettings | null>(null);
@@ -94,10 +93,19 @@ export default function LinksPage() {
       />
 
       <main className="w-full max-w-sm sm:max-w-md">
-        {showLoading ? (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <LoadingState compact label="Carregando..." />
-          </div>
+        {loading ? (
+          <LoadingState className="min-h-[60vh] pt-10" label="Carregando página de links" placeholder={
+            <div className="space-y-3">
+              <Skeleton variant="avatar" className="mx-auto h-24 w-24" />
+              <Skeleton className="mx-auto h-5 w-40" />
+              <Skeleton className="mx-auto h-4 w-2/3" />
+              <div className="space-y-2 pt-3">
+                <Skeleton variant="control" className="w-full" />
+                <Skeleton variant="control" className="w-full" />
+                <Skeleton variant="control" className="w-full" />
+              </div>
+            </div>
+          } />
         ) : loadError ? (
           <PublicEmptyState
             icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}

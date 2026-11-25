@@ -15,7 +15,7 @@ import {
   FieldLabel,
   IconButton,
   Input,
-  LoadingState,
+  LoadingState, MessageHistorySkeleton, RecordListSkeleton,
   PageContainer,
   PageHeader,
   Text,
@@ -191,7 +191,7 @@ export function AiSandboxChatPage({
             aria-live="polite"
             aria-relevant="additions text"
           >
-            {<LoadingState active={messagesLoading} compact label="Carregando conversa..." fallback={() => messages.length === 0 ? (
+            {<LoadingState active={messagesLoading} label="Carregando conversa..." placeholder={<MessageHistorySkeleton />} fallback={() => messages.length === 0 ? (
               <EmptyState
                 className="kds-ai-thread-empty"
                 icon={<Sparkles className="kds-control-icon kds-ai-empty-icon" />}
@@ -371,7 +371,7 @@ export function AiSandboxChatPage({
           </div>
         </DrawerHeader>
         <DrawerBody className="kds-ai-history-body">
-          {<LoadingState active={conversationsLoading} label="Carregando simulações..." fallback={() => conversations.length === 0 ? (
+          {<LoadingState active={conversationsLoading} label="Carregando simulações..." placeholder={<RecordListSkeleton />} fallback={() => conversations.length === 0 ? (
             <EmptyState
               icon={<Clock3 className="kds-control-icon kds-ai-empty-icon" />}
               title="Nenhuma simulação salva"

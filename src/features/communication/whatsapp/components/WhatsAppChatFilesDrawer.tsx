@@ -21,7 +21,7 @@ import {
   DrawerBody,
   EmptyState,
   IconButton,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   Surface,
   Tabs,
   type TabItem,
@@ -235,7 +235,7 @@ function FileThumbnail({ message, onOpen }: { message: CommWhatsAppMessage; onOp
         </ActionSurface>
       ) : (
         <div className="comm-whatsapp-chat-files-visual-preview is-unavailable" role={error ? 'alert' : 'status'} aria-busy={loading}>
-          <span className="comm-whatsapp-chat-files-visual-placeholder">{<LoadingMonogram active={loading} fallback={<Icon className="kds-control-icon" />} className="kds-control-icon" />}</span>
+          <span className="comm-whatsapp-chat-files-visual-placeholder">{<LoadingMonogram active={loading} fallback={<Icon className="kds-control-icon" />} size="control" />}</span>
           <Text className={loading ? 'sr-only' : 'text-xs'}>{loading ? 'Carregando mídia...' : error || 'Prévia indisponível'}</Text>
           {error && retryable ? <Button variant="primary" size="sm" onClick={retry}>Tentar novamente</Button> : null}
         </div>
@@ -519,7 +519,7 @@ export default function WhatsAppChatFilesDrawer({ chatId, chatDisplayName, isOpe
           <Tabs variant="underline" items={mediaFilters} value={mediaType} onChange={setMediaType} ariaLabel="Filtrar arquivos por tipo" />
         </div>
 
-        {<LoadingState active={loading} label="Carregando arquivos da conversa" fallback={() => error ? (
+        {<LoadingState active={loading} label="Carregando arquivos da conversa" placeholder={<RecordListSkeleton />} fallback={() => error ? (
           <EmptyState
             icon={<Files className="kds-control-icon" />}
             title="Arquivos indisponíveis"

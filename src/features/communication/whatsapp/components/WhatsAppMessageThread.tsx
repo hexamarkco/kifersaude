@@ -1,4 +1,4 @@
-import { LoadingMonogram, LoadingState, Text, useMinimumLoading } from '../../../../design-system';
+import { LoadingMonogram, LoadingState, MessageHistorySkeleton, Text } from '../../../../design-system';
 import { ActionSurface } from '../../../../design-system';
 import type { MutableRefObject, ReactNode, UIEventHandler } from 'react';
 import { ChevronDown, ChevronUp, Forward, Smile, Star } from 'lucide-react';
@@ -120,7 +120,7 @@ export function WhatsAppMessageThread({
 }) {
   const loadingInitialMessages = loadingMessages && messages.length === 0;
   const reconcilingEmptyThread = !messageLoadError && threadReconcileChatId === selectedChat.id && messages.length === 0;
-  const showThreadLoading = useMinimumLoading(loadingInitialMessages || reconcilingEmptyThread);
+  const showThreadLoading = loadingInitialMessages || reconcilingEmptyThread;
 
   return (
               <div
@@ -148,7 +148,7 @@ export function WhatsAppMessageThread({
 
                 {showThreadLoading ? (
                   <LoadingState
-                    className="min-h-[220px]"
+                    placeholder={<MessageHistorySkeleton />}
                     label={reconcilingEmptyThread && !loadingInitialMessages ? 'Atualizando histórico desta conversa...' : 'Carregando mensagens...'}
                   />
                 ) : !messageLoadError && messages.length === 0 ? (
@@ -331,7 +331,7 @@ export function WhatsAppMessageThread({
                             aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
                             title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
                           >
-                            {<LoadingMonogram active={starringMessageIds.has(message.id)} fallback={<Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />} className="h-3.5 w-3.5" />}
+                            {<LoadingMonogram active={starringMessageIds.has(message.id)} fallback={<Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />} />}
                         </ActionSurface>
                         ) : null}
                         {message.direction === 'outbound' && message.delivery_status === 'failed' && retryingMessageId !== message.id && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (

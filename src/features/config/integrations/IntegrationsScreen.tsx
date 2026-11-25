@@ -12,7 +12,7 @@ import {
 import { configService } from "../data/configService";
 import type { IntegrationSetting } from "../domain/types";
 import { toast } from "../../../lib/toast";
-import { PanelAdaptiveLoadingFrame } from '../../../design-system';
+import { IntegrationsSkeleton, PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Alert,
   Button,
@@ -781,6 +781,7 @@ export default function IntegrationsScreen() {
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<IntegrationsSkeleton />}
       loading={activeSection === "ai" && loadingAi}
       label="Carregando integrações"
       hasContent={activeSection === "ai" ? hasIntegrationSnapshot : true}

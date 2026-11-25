@@ -17,6 +17,44 @@ function PanelCard({ children, className = '' }: PanelCardProps) {
   );
 }
 
+export function RecordListSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="divide-y divide-[var(--border-subtle)]">
+      {Array.from({ length: rows }, (_, index) => (
+        <div key={index} className="space-y-2 px-4 py-3">
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function RecordFieldsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="space-y-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton variant="control" className="w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function MessageHistorySkeleton() {
+  return (
+    <div className="space-y-3 px-4 py-5">
+      <Skeleton className="mx-auto mb-5 h-5 w-16 rounded-full" />
+      <Skeleton variant="block" className="h-12 w-3/5" />
+      <Skeleton variant="block" className="ml-auto h-16 w-2/3" />
+      <Skeleton variant="block" className="h-14 w-1/2" />
+      <Skeleton variant="block" className="ml-auto h-12 w-3/5" />
+    </div>
+  );
+}
+
 function CalendarGridSkeleton({ tone }: { tone: 'success' | 'info' }) {
   const toneClass = tone === 'success' ? 'bg-[var(--success-soft)]' : 'bg-[var(--info-soft)]';
 
@@ -394,68 +432,32 @@ export function RemindersPageSkeleton() {
 
 export function WhatsAppPageSkeleton() {
   return (
-    <div className="kds-card kds-card-default flex h-[calc(100vh-2rem)] min-h-[560px] overflow-hidden">
-      <aside className="w-full border-r border-[var(--border-default)] bg-[var(--bg-surface)] md:w-96">
-        <div className="space-y-3 border-b border-[var(--border-default)] p-4">
+    <div className="kds-workspace-skeleton-inbox">
+      <div className="min-w-0">
+        <div className="space-y-3 border-b border-[var(--border-subtle)] p-4">
           <div className="flex items-center justify-between">
-            <Skeleton className="h-7 w-28" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-9 w-24 rounded-lg" />
-              <Skeleton className="h-9 w-9 rounded-lg" />
-            </div>
+            <Skeleton className="h-5 w-28" />
+            <Skeleton variant="control" size="sm" className="w-8" />
           </div>
-          <Skeleton className="h-10 w-full rounded-lg" />
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={`chat-filter-${index}`} variant="line" className="h-7 w-20" />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2 p-3">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <div key={`chat-row-${index}`} className="kds-card kds-card-default p-3">
-              <div className="flex items-start gap-3">
-                <Skeleton variant="avatar" className="h-11 w-11" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Skeleton variant="line" className="h-4 w-24" />
-                    <Skeleton variant="line" className="h-3 w-10" />
-                  </div>
-                  <Skeleton variant="line" className="h-3.5 w-11/12" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      <div className="hidden min-w-0 flex-1 flex-col md:flex">
-        <div className="flex items-center justify-between border-b border-[var(--border-default)] p-4">
-          <div className="flex items-center gap-3">
-            <Skeleton variant="avatar" className="h-10 w-10" />
-            <div className="space-y-1.5">
-              <Skeleton variant="line" className="h-4 w-36" />
-              <Skeleton variant="line" className="h-3 w-28" />
-            </div>
-          </div>
+          <Skeleton variant="control" className="w-full" />
           <div className="flex gap-2">
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton variant="control" size="sm" className="w-16" />
+            <Skeleton variant="control" size="sm" className="w-24" />
           </div>
         </div>
-        <div className="flex-1 space-y-3 overflow-hidden p-4">
-          {Array.from({ length: 10 }).map((_, index) => (
-            <div
-              key={`message-bubble-${index}`}
-              className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}
-            >
-              <Skeleton className={`h-14 ${index % 3 === 0 ? 'w-80' : 'w-64'} rounded-2xl`} />
-            </div>
-          ))}
+        <RecordListSkeleton rows={7} />
+      </div>
+      <div className="kds-workspace-skeleton-thread">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] p-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <Skeleton variant="control" size="sm" className="w-20" />
         </div>
-        <div className="border-t border-[var(--border-default)] p-4">
-          <Skeleton className="h-11 w-full rounded-xl" />
+        <div className="flex-1"><MessageHistorySkeleton /></div>
+        <div className="border-t border-[var(--border-subtle)] p-4">
+          <Skeleton variant="control" className="w-full" />
         </div>
       </div>
     </div>

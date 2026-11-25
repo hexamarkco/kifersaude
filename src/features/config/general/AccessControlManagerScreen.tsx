@@ -11,7 +11,7 @@ import { toast } from "../../../lib/toast";
 import {
   Alert, Badge, Button, Card, Checkbox, Combobox,
   Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  EmptyState, Field, Input, LoadingState, SectionHeader, Select, Textarea,
+  EmptyState, Field, Input, LoadingState, RecordListSkeleton, SectionHeader, Select, Textarea,
 } from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
 
@@ -198,7 +198,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
         <Button variant="secondary" size="sm" className="ml-3" onClick={retryLoad} disabled={loading}>Tentar novamente</Button>
       </Alert>}
 
-      {<LoadingState active={loading && profiles.length === 0} label="Carregando perfis e acessos…" fallback={() => selectedProfile ? (
+      {<LoadingState active={loading && profiles.length === 0} label="Carregando perfis e acessos…" placeholder={<RecordListSkeleton />} fallback={() => selectedProfile ? (
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
           <Card padding="md" className="sticky top-4 hidden min-w-0 lg:block">
             <div className="mb-4 flex items-center justify-between gap-3">

@@ -4,8 +4,7 @@ import {
   FormPage,
   FormSection,
   IconButton,
-  LoadingState,
-  useMinimumLoading,
+  LoadingState, RecordFieldsSkeleton,
 } from '../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -267,13 +266,12 @@ export default function LeadForm({ presentation = 'dialog', lead, initialValues,
     [cityOptions, formData.cidade],
   );
 
-  const showConfigLoading = useMinimumLoading(configLoading && !lead);
-  if (showConfigLoading) {
+  if (configLoading && !lead) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="sm" className="kds-crm-dialog">
         <DialogHeader showCloseButton={false} className="sr-only"><DialogTitle>Carregando configurações</DialogTitle></DialogHeader>
-        <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
-          <LoadingState compact indicator="brand" label="Carregando configurações" />
+        <DialogBody className="min-h-[220px]">
+          <LoadingState label="Carregando configurações" placeholder={<RecordFieldsSkeleton />} />
         </DialogBody>
       </Dialog>
     );

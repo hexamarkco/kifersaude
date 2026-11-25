@@ -73,7 +73,7 @@ import { automationTriggerLabels } from "./automationPresentation";
 import { useConfigParam } from "../shared/useConfigTab";
 import { VariableAutocompleteTextarea } from '../../../design-system';
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { PanelAdaptiveLoadingFrame } from '../../../design-system';
+import { AutomationFlowsSkeleton, PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   countDailyAutomationInteractions,
   previewAutomationFlowMessage,
@@ -1807,6 +1807,7 @@ export default function AutoContactFlowSettingsScreen() {
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<AutomationFlowsSkeleton />}
       loading={loadingFlow}
       label="Carregando fluxos de automação"
       hasContent={hasFlowSnapshot}

@@ -18,7 +18,7 @@ import {
   Field,
   FilterSelect,
   Input,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   Pagination,
   SearchInput,
   SectionHeader,
@@ -270,7 +270,7 @@ export default function FormsScreen({
   };
 
   if (loading) {
-    return <LoadingState label="Carregando formulários..." />;
+    return <LoadingState label="Carregando formulários..." placeholder={<RecordListSkeleton rows={6} />} />;
   }
 
   const pageHeader = showPageHeader ? (

@@ -14,7 +14,7 @@ import {
   type AutoContactSettings,
 } from "../../../../lib/autoContactService";
 import type { IntegrationSetting } from "../../domain/types";
-import { PanelAdaptiveLoadingFrame } from '../../../../design-system';
+import { WhatsAppApiSkeleton, PanelAdaptiveLoadingFrame } from '../../../../design-system';
 import { toast } from "../../../../lib/toast";
 import { formatConnectionStatusLabel, WhatsAppProviderOperationsPanel } from '../../../communication/whatsapp';
 import {
@@ -302,6 +302,7 @@ export default function WhatsAppApiSettingsPanel() {
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<WhatsAppApiSkeleton />}
       loading={loading}
       label="Carregando conexão do WhatsApp"
       hasContent={autoContactIntegration !== null}

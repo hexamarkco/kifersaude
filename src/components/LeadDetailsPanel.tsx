@@ -1,4 +1,4 @@
-import { LoadingMonogram, LoadingState, Text, Heading, useMinimumLoading } from '../design-system';
+import { LoadingState, RecordListSkeleton, Text, Heading } from '../design-system';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Contract } from '../features/contracts';
 import type { ConfigOption } from '../features/config';
@@ -79,7 +79,6 @@ export default function LeadDetailsPanel({
   headerMetadata,
 }: LeadDetailsPanelProps) {
   const [isUpdatingResponsavel, setIsUpdatingResponsavel] = useState(false);
-  const showContractsLoading = useMinimumLoading(contractsLoading);
   const [favorito, setFavorito] = useState(Boolean(lead?.favorito));
 
   useEffect(() => {
@@ -124,11 +123,9 @@ export default function LeadDetailsPanel({
   };
 
   const renderContracts = () => {
-    if (showContractsLoading) {
+    if (contractsLoading) {
       return (
-        <div className="flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-inset)] py-8 text-[var(--text-muted)]">
-          <LoadingMonogram className="h-4 w-4" label="Carregando contratos" />
-        </div>
+        <LoadingState label="Carregando contratos" placeholder={<RecordListSkeleton rows={2} />} />
       );
     }
 

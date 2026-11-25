@@ -114,7 +114,7 @@ export function OperationalStatusSelect({
           aria-busy={showLoading || undefined}
         >
           <span className={showLoading ? 'sr-only' : undefined}>{currentLabel}</span>
-          {showLoading && <LoadingMonogram className="kds-control-icon" />}
+          {showLoading && <LoadingMonogram size="control" />}
           {!isDisabled && <ChevronDown className="h-3 w-3" aria-hidden="true" />}
         </ActionSurface>
       </PopoverTrigger>

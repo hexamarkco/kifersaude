@@ -2564,7 +2564,7 @@ export default function WhatsAppInboxScreen() {
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
                 className="kds-record-action-danger"
               >
-                <LoadingMonogram active={deletingChatId === openChatMenuChat.id} fallback={<Trash2 className="kds-control-icon" />} className="kds-control-icon" />
+                <LoadingMonogram active={deletingChatId === openChatMenuChat.id} fallback={<Trash2 className="kds-control-icon" />} size="control" />
                 <span>Excluir conversa</span>
               </DropdownOption>
             </div>

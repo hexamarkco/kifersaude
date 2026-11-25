@@ -18,7 +18,7 @@ import {
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
 import { toast } from "../../../lib/toast";
-import { PanelAdaptiveLoadingFrame } from '../../../design-system';
+import { UsersSkeleton, PanelAdaptiveLoadingFrame } from '../../../design-system';
 import {
   Alert,
   Badge,
@@ -331,6 +331,7 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<UsersSkeleton />}
       loading={loading}
       label="Carregando usuários"
       hasContent={hasUsersSnapshot}

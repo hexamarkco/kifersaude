@@ -68,7 +68,7 @@ import {
   EmptyState,
   Field,
   Input,
-  LoadingState,
+  LoadingState, RecordListSkeleton, RemindersPageSkeleton,
   PageHeader,
   RecordActions,
   Select,
@@ -1122,7 +1122,7 @@ export default function AgendaScreen() {
   const showCalendar = statusFilter === "todos";
   return (
     <>
-      {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." className="min-h-96" fallback={() => (
+      {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." placeholder={showCalendar ? <RemindersPageSkeleton /> : <RecordListSkeleton rows={7} />} fallback={() => (
       <div className="kds-agenda-page panel-page-shell space-y-4 sm:space-y-5">
         <PageHeader
           title={statusFilter === 'nao-lidos' ? 'O que precisa acontecer.' : statusFilter === 'lidos' ? 'O trabalho que já foi feito.' : calendarView === 'week' ? 'Uma semana com mais clareza.' : 'Sua rotina, bem organizada.'}
@@ -1485,7 +1485,7 @@ export default function AgendaScreen() {
             </DialogHeader>
             <DialogBody className="flex min-h-44 items-center justify-center">
               <Surface variant="strong" padding="sm" className="flex items-center gap-2 px-4 py-3" role="status">
-                <LoadingMonogram className="h-5 w-5 text-[var(--brand-primary)]" label="Carregando lead" />
+                <LoadingMonogram size="control" label="Carregando lead" />
               </Surface>
             </DialogBody>
           </Dialog>

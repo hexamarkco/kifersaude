@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, FileText, Gift, Wallet } from 'lucide-react';
 import {
   Alert, Badge, Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Field, Heading, IconButton, KpiCard, PanelAdaptiveLoadingFrame, Select, Surface, Text,
+  Field, Heading, IconButton, KpiCard, CommissionCalendarSkeleton, RecordListSkeleton, PanelAdaptiveLoadingFrame, Select, Surface, Text,
 } from '../../design-system';
 import { listActiveCommissionContracts } from './data/commissionRepository';
 import type { CommissionContract } from './domain/types';
@@ -103,6 +103,7 @@ export default function CommissionCalendarScreen({ view, header, onOpenContract 
         </section>
       )}
       <PanelAdaptiveLoadingFrame
+        placeholder={view === 'forecasts' ? <RecordListSkeleton /> : <CommissionCalendarSkeleton />}
         loading={loading}
         label="Carregando previsões"
         hasContent={contracts.length > 0}

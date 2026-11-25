@@ -21,7 +21,7 @@ import {
   Alert,
   EmptyState,
   Field,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   SectionHeader,
   Surface,
   Textarea,
@@ -221,7 +221,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
             className="mb-4"
             action={<History className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />}
           />
-          {<LoadingState active={loading} compact label="Carregando linha do tempo" className="py-8" fallback={() => timelineLoadError ? (
+          {<LoadingState active={loading} label="Carregando linha do tempo" placeholder={<RecordListSkeleton />} fallback={() => timelineLoadError ? (
             <Alert tone="danger" role="alert" className="items-start">
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -364,7 +364,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
           </Surface>
         )}
 
-        {<LoadingState active={loading} compact label="Carregando interações" className="py-12" fallback={() => timelineLoadError ? (
+        {<LoadingState active={loading} label="Carregando interações" placeholder={<RecordListSkeleton />} fallback={() => timelineLoadError ? (
           <Text className="py-8 text-sm text-[var(--text-muted)]">
             As interações não estão disponíveis enquanto o histórico não for carregado.
           </Text>

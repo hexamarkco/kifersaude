@@ -1,4 +1,4 @@
-import { useMinimumLoading, Text, Heading } from '../../../design-system';
+import { Text, Heading, RecordListSkeleton } from '../../../design-system';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -25,7 +25,7 @@ import { toast } from "../../../lib/toast";
 import ConfigOptionManager from "./components/ConfigOptionManager";
 import LeadOriginsManager from "./components/LeadOriginsManager";
 import LeadStatusManager from "./components/LeadStatusManager";
-import { PanelAdaptiveLoadingFrame } from '../../../design-system';
+import { SystemSettingsSkeleton, PanelAdaptiveLoadingFrame } from '../../../design-system';
 import { LoadingState } from '../../../design-system';
 import {
   Alert,
@@ -85,7 +85,6 @@ export default function SystemSettingsScreen() {
     "contract_status",
   );
   const { loading: configLoading, getRoleModulePermission, options } = useConfig();
-  const showConfigLoading = useMinimumLoading(configLoading);
   const timezoneOptions = useMemo(
     () => [
       { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
@@ -296,6 +295,7 @@ export default function SystemSettingsScreen() {
   if (loading && !settings) {
     return (
       <PanelAdaptiveLoadingFrame
+        placeholder={<SystemSettingsSkeleton />}
         loading
         label="Carregando configurações do sistema"
         hasContent={false}
@@ -328,6 +328,7 @@ export default function SystemSettingsScreen() {
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<SystemSettingsSkeleton />}
       loading={loading}
       label="Carregando configurações do sistema"
       hasContent
@@ -584,9 +585,9 @@ export default function SystemSettingsScreen() {
           <section id="settings-section-access" className="space-y-4">
             {shouldExpandSection("access") && (
               <div className="space-y-4">
-                {showConfigLoading ? (
+                {configLoading ? (
                   <Surface variant="muted" padding="md">
-                    <LoadingState label="Carregando opções" />
+                    <LoadingState label="Carregando opções" placeholder={<RecordListSkeleton rows={3} />} />
                   </Surface>
                 ) : (
                   <AccessControlManagerScreen hideSectionTitle />
@@ -600,9 +601,9 @@ export default function SystemSettingsScreen() {
           <section id="settings-section-leads" className="space-y-4">
             {shouldExpandSection("leads") && (
               <div className="space-y-6">
-                {showConfigLoading ? (
+                {configLoading ? (
                   <Surface variant="muted" padding="md">
-                    <LoadingState label="Carregando opções" />
+                    <LoadingState label="Carregando opções" placeholder={<RecordListSkeleton rows={3} />} />
                   </Surface>
                 ) : (
                   <>
@@ -650,9 +651,9 @@ export default function SystemSettingsScreen() {
           <section id="settings-section-contracts" className="space-y-4">
             {shouldExpandSection("contracts") && (
               <div className="space-y-6">
-                {showConfigLoading ? (
+                {configLoading ? (
                   <Surface variant="muted" padding="md">
-                    <LoadingState label="Carregando opções" />
+                    <LoadingState label="Carregando opções" placeholder={<RecordListSkeleton rows={3} />} />
                   </Surface>
                 ) : (
                   contractConfigurationTabs.length > 0 ? (

@@ -103,7 +103,7 @@ import {
 import { downloadXlsx } from "../../lib/xlsxExport";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { useWorkspaceCreate } from "../../hooks/useWorkspaceCreate";
-import { PanelAdaptiveLoadingFrame } from '../../design-system';
+import { LeadsPageSkeleton, PanelAdaptiveLoadingFrame } from '../../design-system';
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import { LeadStatusMutationLock } from "./shared/leadStatusMutationLock";
 import LeadKanbanBoard from "./components/LeadKanbanBoard";
@@ -1643,6 +1643,7 @@ export default function LeadsManager({
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<LeadsPageSkeleton />}
       loading={loading}
       label="Carregando contatos"
       hasContent={hasLeadsSnapshot}

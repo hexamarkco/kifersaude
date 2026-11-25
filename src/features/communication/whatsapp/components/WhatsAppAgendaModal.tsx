@@ -1,5 +1,5 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
-import { useMinimumLoading, LoadingMonogram, Heading, Text, FieldLabel } from '../../../../design-system';
+import { LoadingState, RecordListSkeleton, Heading, Text, FieldLabel } from '../../../../design-system';
 import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
@@ -152,7 +152,6 @@ export default function WhatsAppAgendaModal({
 }: WhatsAppAgendaModalProps) {
   const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const showLoading = useMinimumLoading(loading);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -1532,10 +1531,8 @@ export default function WhatsAppAgendaModal({
           </div>
         }
       >
-        {showLoading ? (
-          <div className="whatsapp-inbox-report-loading">
-            <LoadingMonogram label="Carregando agenda" />
-          </div>
+        {loading ? (
+          <LoadingState label="Carregando agenda" placeholder={<RecordListSkeleton />} />
         ) : (
           <div className="whatsapp-inbox-agenda-workspace">
             {error ? <Alert tone="danger" title="Não foi possível atualizar a agenda.">{error}</Alert> : (

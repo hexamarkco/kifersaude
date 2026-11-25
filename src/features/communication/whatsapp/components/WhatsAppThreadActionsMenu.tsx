@@ -66,7 +66,7 @@ export function WhatsAppThreadActionsMenu({
           disabled={disabled}
           title={title}
         >
-          <LoadingMonogram active={loading ?? false} fallback={<Icon className="kds-control-icon" aria-hidden="true" />} className="kds-control-icon" />
+          <LoadingMonogram active={loading ?? false} fallback={<Icon className="kds-control-icon" aria-hidden="true" />} size="control" />
           <span>{label}</span>
         </DropdownOption>
       ))}

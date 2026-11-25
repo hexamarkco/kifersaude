@@ -1,5 +1,5 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
-import { LoadingState, Text } from '../../../../design-system';
+import { LoadingState, Skeleton, Text } from '../../../../design-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, AlertTriangle, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, MessageCircle, RefreshCw, RotateCw, SendHorizontal, WifiOff } from 'lucide-react';
 
@@ -458,7 +458,17 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
         </div>
       )}
     >
-      <LoadingState active={loading && !metrics} className="whatsapp-inbox-report-loading" label="Carregando métricas do WhatsApp" fallback={() => error && !metrics ? (
+      <LoadingState active={loading && !metrics} label="Carregando métricas do WhatsApp" placeholder={
+        <div className="whatsapp-inbox-report">
+          <div className="kds-workspace-record-metrics">
+            {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} variant="card" />)}
+          </div>
+          <div className="whatsapp-inbox-report-columns">
+            <Skeleton variant="card" />
+            <Skeleton variant="card" />
+          </div>
+        </div>
+      } fallback={() => error && !metrics ? (
         <EmptyState icon={<AlertTriangle aria-hidden="true" />} title="Não foi possível carregar o painel do WhatsApp"
           description={error} action={<Button variant="secondary" onClick={() => void loadMetrics()}>Tentar novamente</Button>} />
       ) : metrics ? (

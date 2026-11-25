@@ -9,7 +9,7 @@ import type { ControlSize } from '../tokens';
 import { useMinimumLoading } from '../useMinimumLoading';
 import { IconButton } from './Button';
 import { DesignSystemProvider } from './DesignSystemProvider';
-import { LoadingMonogram } from './LoadingMonogram';
+import { LoadingMonogram, type LoadingMonogramSize } from './LoadingMonogram';
 
 export type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
   /** Hides the decorative placeholder from assistive technologies by default. */
@@ -35,8 +35,9 @@ export type LoadingStateProps = HTMLAttributes<HTMLDivElement> & {
   compact?: boolean;
   active?: boolean;
   fallback?: () => ReactNode;
-  /** Uses a larger monogram. Labels remain available to assistive technologies. */
-  indicator?: 'brand';
+  size?: LoadingMonogramSize;
+  /** Decorative preview of the content that will occupy this region. */
+  placeholder?: ReactNode;
 };
 
 export function LoadingState({
@@ -45,12 +46,14 @@ export function LoadingState({
   compact = false,
   active,
   fallback,
-  indicator,
+  size = compact ? 'inline' : 'section',
+  placeholder,
   className,
   ...props
 }: LoadingStateProps) {
-  const visible = useMinimumLoading(active === true);
-  if (active !== undefined && !visible) return fallback?.() ?? null;
+  const hasPlaceholder = placeholder != null;
+  const visible = useMinimumLoading(active === true, !hasPlaceholder);
+  if (active !== undefined && !(hasPlaceholder ? active : visible)) return fallback?.() ?? null;
 
   return (
     <div
@@ -59,12 +62,12 @@ export function LoadingState({
       className={cx(
         'kds-loading-state',
         compact && 'kds-loading-state-compact',
-        indicator === 'brand' && 'kds-loading-state-brand',
+        hasPlaceholder && 'kds-loading-state-placeholder',
         className,
       )}
       {...props}
     >
-      <LoadingMonogram />
+      {hasPlaceholder ? <div aria-hidden="true">{placeholder}</div> : <LoadingMonogram size={size} />}
       <div className="sr-only">
         <p className="kds-loading-state-label">{label}</p>
         {description && <p className="kds-loading-state-description">{description}</p>}
@@ -130,7 +133,7 @@ function AppLoadingView({ className, theme }: AppLoadingScreenProps) {
       <div className="flex flex-col items-center gap-4 text-center">
         <LoadingState
           compact
-          indicator="brand"
+          size="screen"
           label={isStalled ? 'Isso está demorando mais que o esperado' : 'Carregando'}
           description={isStalled ? 'Verifique sua conexão ou tente novamente em instantes.' : undefined}
         />

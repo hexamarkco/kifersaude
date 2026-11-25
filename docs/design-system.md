@@ -88,6 +88,14 @@ Agenda e Comissões usam as classes `kds-month-*` para a grade mensal. Os evento
 
 A central reúne Automações, Integrações e IA em abas acessíveis conforme as permissões. A aba de Automações organiza Fluxos, Modelos de mensagem e Operação. O editor usa uma paleta lateral, um canvas vertical e um painel de edição por etapa.
 
+## Carregamento
+
+Use `LoadingState placeholder` quando os dados ainda estão chegando e a estrutura do conteúdo é conhecida. O skeleton ocupa o lugar das linhas, campos, indicadores ou mensagens e tem um único anúncio de carregamento. Navegações internas mantêm o menu e o cabeçalho do workspace enquanto a seção abre.
+
+`PanelAdaptiveLoadingFrame` usa o skeleton na primeira carga. Durante uma atualização, o conteúdo que já chegou permanece visível e recebe um indicador compacto de progresso.
+
+`LoadingMonogram` usa a logo KS em toda espera com spinner. Use `inline` para indicadores em linha, `control` para botões e controles, `section` para operações em uma área e `screen` para a abertura do aplicativo. A escala de referência é de 16, 20 e 28 px, com 44 a 56 px na abertura. A animação respeita a preferência por movimento reduzido e a cor acompanha o fundo.
+
 ## Limites dos exemplos
 
 `src/pages/dev/showcase/demoData.ts` contém apenas dados ilustrativos. Busca, ordenação, filtros, seleção e paginação operam nessa base. Criar e editar atualiza o estado React da prévia; recarregar ou trocar de padrão restaura os exemplos. Observações são preservadas nos detalhes. A seleção de data não agenda um atendimento real.

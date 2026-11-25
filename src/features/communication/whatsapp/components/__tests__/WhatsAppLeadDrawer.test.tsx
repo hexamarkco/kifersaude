@@ -123,10 +123,10 @@ test('mantém telefone, presença, renomeação e estado da IA nas informações
     assert.match(panel.textContent ?? '', /SP · DDD 11/);
     assert.match(panel.textContent ?? '', /digitando…/);
     assert.match(panel.textContent ?? '', /IA atendendo/);
-    const disclosure = panel.querySelector('details');
-    assert.equal(disclosure?.querySelector('summary')?.textContent, 'Ações da conversa');
-    const filesButton = disclosure?.querySelector('button');
+    const actions = panel.querySelector('[role="group"][aria-label="Ações da conversa"]');
+    const filesButton = actions?.querySelector<HTMLButtonElement>('button[aria-label="Arquivos da conversa"]');
     assert.ok(filesButton);
+    assert.equal(filesButton.textContent?.trim(), '');
     act(() => filesButton.click());
     assert.equal(openFilesCalls, 1);
     const renameButton = panel.querySelector<HTMLButtonElement>('button[aria-label="Renomear contato"]');

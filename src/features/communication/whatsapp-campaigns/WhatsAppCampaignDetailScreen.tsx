@@ -1,4 +1,4 @@
-import { useMinimumLoading, ButtonGroup, LoadingState } from '../../../design-system';
+import { useMinimumLoading, ButtonGroup, LoadingState, RecordFieldsSkeleton, RecordListSkeleton } from '../../../design-system';
 import { Text, Heading } from '../../../design-system';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Ban, Clock3, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, RefreshCw, Search, Send, Users } from 'lucide-react';
@@ -707,7 +707,7 @@ export default function WhatsAppCampaignDetailScreen() {
       )}
 
       {showCampaignLoading ? (
-        <Card><LoadingState className="h-48" label="Carregando campanha" /></Card>
+        <Card><LoadingState className="p-4" label="Carregando campanha" placeholder={<RecordFieldsSkeleton />} /></Card>
       ) : campaign ? (
         <>
           <Tabs value={view} onChange={setView} ariaLabel="Visões da campanha" listClassName="flex-nowrap overflow-x-auto"
@@ -1019,7 +1019,7 @@ function CampaignMessageSequence({ campaignId, initialMessage, onEdit }: { campa
 
   if (error) return <Alert tone="danger" title="Não foi possível carregar a sequência."
     action={<Button variant="secondary" onClick={() => setRequest((value) => value + 1)}>Tentar novamente</Button>}>Consulte novamente para ver as mensagens.</Alert>;
-  if (!steps) return <LoadingState label="Carregando a sequência" className="min-h-40" />;
+  if (!steps) return <LoadingState label="Carregando a sequência" placeholder={<RecordListSkeleton rows={3} />} />;
   if (steps.length === 0) return initialMessage ? (
     <CrmCard title="Primeiro contato" actions={<Button variant="secondary" size="sm" onClick={onEdit}>Editar campanha</Button>}>
       <Text className="whitespace-pre-wrap">{initialMessage}</Text>

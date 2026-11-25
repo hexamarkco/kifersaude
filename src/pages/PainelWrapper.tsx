@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback, type ComponentType } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import type { Lead } from '../features/leads';
@@ -19,11 +19,41 @@ import { useConfig } from '../contexts/ConfigContext';
 import {
   Alert,
   AppLoadingScreen,
+  AutomationFlowsSkeleton,
+  BlogTabSkeletonList,
   Button,
+  CommissionCalendarSkeleton,
+  ContractsPageSkeleton,
+  DashboardPageSkeleton,
+  LeadsPageSkeleton,
+  LoadingState,
+  RecordFieldsSkeleton,
+  RecordListSkeleton,
+  RemindersPageSkeleton,
+  WhatsAppPageSkeleton,
 } from '../design-system';
 import { RefreshCw } from 'lucide-react';
 import type { TabNavigationOptions } from '../types/navigation';
 import { getConfigAreaForTab, hasConfigAreaAccess } from '../features/config';
+
+const workspaceRouteSkeletons: Record<string, ComponentType> = {
+  agenda: RemindersPageSkeleton,
+  automacoes: AutomationFlowsSkeleton,
+  blog: BlogTabSkeletonList,
+  comissoes: CommissionCalendarSkeleton,
+  config: RecordFieldsSkeleton,
+  contratos: ContractsPageSkeleton,
+  dashboard: DashboardPageSkeleton,
+  disparos: RecordListSkeleton,
+  inbox: WhatsAppPageSkeleton,
+  leads: LeadsPageSkeleton,
+};
+
+function WorkspaceRouteLoading({ pathname }: { pathname: string }) {
+  const route = pathname === '/chat' ? 'inbox' : pathname.split('/')[2];
+  const Placeholder = workspaceRouteSkeletons[route];
+  return <LoadingState label="Carregando seção do painel" placeholder={Placeholder && <Placeholder />} className={route === 'inbox' ? 'kds-workspace-inbox-loading' : undefined} />;
+}
 
 const ROUTE_TAB_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
@@ -314,7 +344,8 @@ export default function PainelWrapper() {
         newLeadsCount={newLeadsCount}
         useFullBleedContent={activeTab === 'whatsapp-inbox'}
       >
-        <Outlet context={{ 
+        <Suspense fallback={<WorkspaceRouteLoading pathname={location.pathname} />}>
+        <Outlet context={{
           activeTab, 
           handleTabChange, 
           leadToConvert, 
@@ -327,6 +358,7 @@ export default function PainelWrapper() {
           createRequested,
           consumeCreateRequest,
         }} />
+        </Suspense>
       </Layout>
 
       {activeNotifications.map((reminder) => (

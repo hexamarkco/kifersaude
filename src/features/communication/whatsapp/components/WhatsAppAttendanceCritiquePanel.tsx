@@ -1,4 +1,4 @@
-import { LoadingState, Heading, Text } from '../../../../design-system';
+import { LoadingState, RecordListSkeleton, Heading, Text } from '../../../../design-system';
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, Sparkles, XCircle } from 'lucide-react';
 
@@ -148,7 +148,7 @@ export default function WhatsAppAttendanceCritiquePanel({ chatId, isActive }: Wh
         </Alert>
       ) : null}
 
-      {<LoadingState active={listLoading} className="flex items-center justify-center py-10 text-sm text-[var(--text-muted)]" label="Carregando análises..." fallback={() => listError ? (
+      {<LoadingState active={listLoading} label="Carregando análises..." placeholder={<RecordListSkeleton rows={3} />} fallback={() => listError ? (
         <Alert tone="danger">
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

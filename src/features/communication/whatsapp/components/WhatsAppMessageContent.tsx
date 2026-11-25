@@ -55,7 +55,7 @@ export function MediaSendingOverlay({
   return (
     <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-[1px]">
       <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm">
-        <LoadingMonogram className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+        <LoadingMonogram />
         <span className="sr-only" role="status">{progress === null ? 'Enviando' : `${progress}%`}</span>
         {onCancel && active ? (
           <Button variant="ghost"
@@ -213,7 +213,7 @@ export function WhatsAppAudioPlayerCard({
 
   const transcriptionAction = showTranscribing ? (
     <span className="whatsapp-inbox-transcribe-button whatsapp-inbox-transcribe-status whatsapp-inbox-audio-transcribe-button" role="status" aria-live="polite">
-      <LoadingMonogram className="h-3 w-3" />
+      <LoadingMonogram />
       <span className="sr-only">Transcrevendo...</span>
     </span>
   ) : canTranscribe ? (

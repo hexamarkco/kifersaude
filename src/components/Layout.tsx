@@ -1,6 +1,6 @@
 import {
   ActionSurface, BrandWordmark, Button, ConfirmDialog, DesignSystemProvider, DialogTitle, Drawer,
-  DrawerBody, DrawerHeader, DropdownOption, IconButton, LoadingState, PANEL_THEME_STORAGE_KEY,
+  DrawerBody, DrawerHeader, DropdownOption, IconButton, LoadingState, RecordListSkeleton, PANEL_THEME_STORAGE_KEY,
   Popover, PopoverContent, PopoverTrigger, Text, WorkspaceHeader, readPanelTheme,
 } from '../design-system';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -706,7 +706,7 @@ export default function Layout({
           {canView('agenda') && <div className="kds-workspace-notification-actions">
             <Button variant="secondary" size="sm" onClick={() => { onTabChange('agenda'); setShowNotificationsDropdown(false); }}>Abrir agenda</Button>
           </div>}
-          <LoadingState active={notificationsLoading} compact className="px-4 py-6" label="Carregando notificações" fallback={() => notificationsError ? (
+          <LoadingState active={notificationsLoading} label="Carregando notificações" placeholder={<RecordListSkeleton rows={3} />} fallback={() => notificationsError ? (
             <div className="px-4 py-6 text-sm text-[var(--danger-text)]">{notificationsError}</div>
           ) : (
             <div className="kds-workspace-notification-list">

@@ -79,7 +79,7 @@ export default function BlogEditor({
             <div className="kds-blog-editor-attachments">
               <FieldLabel className="kds-blog-upload-inline">
                 <FileInput accept="image/jpeg,image/png,image/webp,image/gif" onChange={onContentImageUpload} className="sr-only" disabled={uploadingContent} />
-                <LoadingState active={uploadingContent} label="Adicionando imagem…" fallback={() => <><Upload className="kds-control-icon" aria-hidden="true" />Adicionar imagem ao conteúdo</>} />
+                <LoadingState compact size="inline" active={uploadingContent} label="Adicionando imagem…" fallback={() => <><Upload className="kds-control-icon" aria-hidden="true" />Adicionar imagem ao conteúdo</>} />
               </FieldLabel>
               {validationAttempted && !formData.content && <Text size="sm" tone="danger" role="alert">Escreva o conteúdo do artigo.</Text>}
             </div>
@@ -109,7 +109,7 @@ export default function BlogEditor({
               <Text size="sm" weight="semibold">Imagem de capa</Text>
               <FieldLabel className="kds-blog-cover-upload">
                 <FileInput accept="image/jpeg,image/png,image/webp,image/gif" onChange={onCoverImageUpload} className="sr-only" disabled={uploadingCover} />
-                <LoadingState active={uploadingCover} label="Enviando imagem…" fallback={() => (
+                <LoadingState compact size="section" active={uploadingCover} label="Enviando imagem…" fallback={() => (
                   <><ImagePlus aria-hidden="true" /><span>{formData.cover_image_url ? 'Trocar imagem de capa' : 'Escolher imagem de capa'}</span><small>JPG, PNG, WEBP ou GIF · até 5 MB</small></>
                 )} />
               </FieldLabel>

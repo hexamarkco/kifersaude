@@ -18,7 +18,7 @@ import {
   Input,
   LinkButton,
   LoadingState,
-  useMinimumLoading,
+  Skeleton,
   PublicEmptyState,
   PublicShell,
   Stepper,
@@ -65,7 +65,6 @@ export default function FormPage() {
   const { slug } = useParams<{ slug: string }>();
 
   const [loading, setLoading] = useState(true);
-  const showLoading = useMinimumLoading(loading);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [form, setForm] = useState<PublicForm | null>(null);
@@ -341,10 +340,15 @@ export default function FormPage() {
       </IconButton>
 
       <main className="w-full max-w-md">
-        {showLoading ? (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <LoadingState compact label="Carregando..." />
-          </div>
+        {loading ? (
+          <LoadingState className="min-h-[60vh] pt-10" label="Carregando formulário" placeholder={
+            <div className="space-y-4">
+              <Skeleton className="h-7 w-3/4" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton variant="control" className="w-full" />
+              <Skeleton variant="control" className="ml-auto w-24" />
+            </div>
+          } />
         ) : loadError ? (
           <PublicEmptyState
             icon={<PublicBrandMark className="kds-public-brand-mark kds-public-brand-mark-md" />}

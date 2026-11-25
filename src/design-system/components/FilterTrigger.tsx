@@ -58,7 +58,7 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(f
         </span>
       </span>
       <span className={cx('kds-filter-trigger-trailing', showLoading && 'col-span-full')}>
-        {showLoading ? <LoadingMonogram className="kds-control-icon" /> : trailingSlot ?? (
+        {showLoading ? <LoadingMonogram size="control" /> : trailingSlot ?? (
           <ChevronDown
             className={cx('kds-filter-trigger-chevron kds-control-icon transition-transform', open && 'rotate-180')}
             aria-hidden="true"

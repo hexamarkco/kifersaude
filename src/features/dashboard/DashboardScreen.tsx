@@ -24,7 +24,7 @@ import {
 import { useConfig } from "../../contexts/ConfigContext";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { PanelAdaptiveLoadingFrame } from '../../design-system';
+import { DashboardPageSkeleton, PanelAdaptiveLoadingFrame } from '../../design-system';
 import { Alert, Button, DisclosureTrigger, Tabs, type TabItem } from "../../design-system";
 import { DashboardAlerts } from "./components/DashboardAlerts";
 import { DashboardDistributionSection } from "./components/DashboardDistributionSection";
@@ -2277,6 +2277,7 @@ export default function DashboardScreen({
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<DashboardPageSkeleton />}
       loading={loading}
       label="Carregando painel"
       hasContent={hasDashboardSnapshot}

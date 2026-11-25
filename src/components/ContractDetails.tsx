@@ -54,8 +54,7 @@ import {
   Card,
   RecordActions,
   Field,
-  LoadingState,
-  useMinimumLoading,
+  LoadingState, RecordFieldsSkeleton,
   Surface,
   Textarea,
   type PanelTone,
@@ -133,7 +132,6 @@ export default function ContractDetails({
   const [adjustments, setAdjustments] = useState<ContractValueAdjustment[]>([]);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const showLoading = useMinimumLoading(loading);
   const [loadError, setLoadError] = useState(false);
   const [documentsLoadError, setDocumentsLoadError] = useState(false);
   const [eligibleLivesUpdateError, setEligibleLivesUpdateError] = useState<string | null>(null);
@@ -802,8 +800,8 @@ export default function ContractDetails({
     }
   };
 
-  const pendingContent = showLoading ? (
-    <LoadingState label="Carregando dados do contrato" />
+  const pendingContent = loading ? (
+    <LoadingState label="Carregando dados do contrato" placeholder={<RecordFieldsSkeleton />} />
   ) : loadError ? (
     <Alert tone="danger" role="alert">
       <Text>Não foi possível carregar este contrato. Tente buscar as informações novamente.</Text>
@@ -822,16 +820,16 @@ export default function ContractDetails({
     />
   ) : null;
 
-  if (presentation === 'drawer' && (showLoading || loadError)) return (
+  if (presentation === 'drawer' && (loading || loadError)) return (
     <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="lg" aria-label="Detalhes do contrato" className="kds-crm-dialog kds-contract-details-drawer">
       <DrawerHeader onClose={onClose}>
         <DialogTitle>Detalhes do contrato</DialogTitle>
-        <DialogDescription placement="visible" className={showLoading ? 'sr-only' : undefined}>
-          {showLoading ? 'Buscando as informações mais recentes.' : `Contrato ${contract.codigo_contrato}`}
+        <DialogDescription placement="visible" className={loading ? 'sr-only' : undefined}>
+          {loading ? 'Buscando as informações mais recentes.' : `Contrato ${contract.codigo_contrato}`}
         </DialogDescription>
       </DrawerHeader>
       <DrawerBody className="space-y-4">
-        {showLoading ? <LoadingState label="Carregando dados do contrato" /> : (
+        {loading ? <LoadingState label="Carregando dados do contrato" placeholder={<RecordFieldsSkeleton />} /> : (
           <Alert tone="danger" role="alert" className="items-start">
             <div className="min-w-0 flex-1">
               <Text className="font-medium">Não foi possível carregar os dados atualizados deste contrato.</Text>
@@ -848,22 +846,22 @@ export default function ContractDetails({
   );
 
   if (pendingContent && presentation === 'page') return (
-    <section className="kds-crm-detail kds-record-detail kds-detail-workspace" aria-busy={showLoading}>
+    <section className="kds-crm-detail kds-record-detail kds-detail-workspace" aria-busy={loading}>
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={onClose}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Gestão de contratos</Button>
       <PageHeader eyebrow="Contratos" title={`Ficha do contrato ${contract.codigo_contrato}`} />
       {pendingContent}
     </section>
   );
 
-  if (showLoading) {
+  if (loading) {
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
         <DialogHeader showCloseButton={false} className="sr-only">
           <DialogTitle>Carregando contrato</DialogTitle>
           <DialogDescription placement="visible">Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
         </DialogHeader>
-        <DialogBody className="flex min-h-[260px] items-center justify-center">
-          <LoadingState label="Carregando dados do contrato" />
+        <DialogBody className="min-h-[260px]">
+          <LoadingState label="Carregando dados do contrato" placeholder={<RecordFieldsSkeleton />} />
         </DialogBody>
       </Dialog>
     );
@@ -876,7 +874,7 @@ export default function ContractDetails({
           <DialogTitle>{contract.codigo_contrato}</DialogTitle>
           <DialogDescription placement="visible">Não foi possível carregar os dados atualizados do contrato.</DialogDescription>
         </DialogHeader>
-        <DialogBody className="flex min-h-[260px] items-center justify-center">
+        <DialogBody className="min-h-[260px]">
           <Alert tone="danger" role="alert" className="w-full max-w-xl items-start">
             <div className="flex items-start gap-2">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />

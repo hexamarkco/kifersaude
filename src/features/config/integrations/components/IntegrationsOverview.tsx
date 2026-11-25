@@ -8,7 +8,7 @@ import {
   Button,
   Card,
   Heading,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   SectionHeader,
   Text,
 } from '../../../../design-system';
@@ -242,7 +242,7 @@ export default function IntegrationsOverview({
             description="Acompanhe o estado dos canais usados pela operação."
             descriptionPlacement="visible"
           />
-          {<LoadingState active={state.loading && !state.whatsapp && !state.meta} compact label="Consultando conexões" className="mt-4" fallback={() => (
+          {<LoadingState active={state.loading && !state.whatsapp && !state.meta} label="Consultando conexões" placeholder={<RecordListSkeleton rows={2} />} className="mt-4" fallback={() => (
             <div className="mt-3">
               <div className="border-b border-[var(--border-subtle)] last:border-b-0">
                 <OverviewAction

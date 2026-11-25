@@ -54,12 +54,6 @@ export const panelIconButtonSizeClasses: Record<ControlSize, string> = {
   lg: 'kds-control-lg kds-icon-button-lg',
 };
 
-export const panelButtonSpinnerSizeClasses: Record<PanelButtonSize, string> = {
-  sm: 'kds-control-icon',
-  md: 'kds-control-icon',
-  lg: 'kds-control-icon',
-};
-
 type PanelButtonClassOptions = {
   variant: PanelButtonVariant;
   size: PanelButtonSize;

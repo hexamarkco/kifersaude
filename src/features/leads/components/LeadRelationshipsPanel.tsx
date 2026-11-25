@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import { Link2, Plus, Star, Unlink, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Alert, Badge, Button, ConfirmDialog, Field, Select, Heading, IconButton, Input, LoadingState, SearchInput, Surface, Text } from '../../../design-system';
+import { Alert, Badge, Button, ConfirmDialog, Field, Select, Heading, IconButton, Input, LoadingState, RecordListSkeleton, SearchInput, Surface, Text } from '../../../design-system';
 import { isOpportunityStatus, opportunityStatusLabels, type LeadOpportunity, type RelatedLead } from '../domain/leadOpportunities';
 import { useLeadOpportunities, useRelatedLeadSearch } from '../hooks/useLeadOpportunities';
 
@@ -33,7 +33,7 @@ function RelationshipsPanel({ lead }: { lead: LeadIdentity }) {
         <Button variant="secondary" size="sm" disabled={disabled || Boolean(editor)} onClick={() => setEditor({ opportunity: null, requestId: crypto.randomUUID() })}><Plus className="kds-control-icon" aria-hidden="true" />Vincular contato</Button>
       </div>
       {error ? <Alert tone="danger"><Text>{error}</Text><Button variant="secondary" size="sm" className="mt-2" disabled={saving} onClick={() => void reload()}>Atualizar vínculos</Button></Alert> : null}
-      <LoadingState active={loading} label="Consultando negociações deste contato..." fallback={() => <>
+      <LoadingState active={loading} label="Consultando negociações deste contato..." placeholder={<RecordListSkeleton rows={2} />} fallback={() => <>
         {!error && snapshot?.opportunities.length === 0 ? <Text className="text-sm text-[var(--text-muted)]">Este contato ainda não participa de uma negociação em conjunto.</Text> : null}
         {snapshot?.truncated ? <Alert tone="warning">Mostrando as 20 negociações atualizadas mais recentemente. Este contato participa de outras negociações.</Alert> : null}
         {snapshot?.opportunities.map((opportunity) => <Surface key={opportunity.id} variant="muted" padding="sm" className="space-y-3">

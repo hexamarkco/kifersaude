@@ -319,7 +319,7 @@ export function WhatsAppComposer({
                             aria-label="Enviar documento"
                             title={sendDisabledReason ?? undefined}
                           >
-                            {<LoadingMonogram active={sending} fallback={<SendHorizontal className="h-5 w-5" />} className="h-5 w-5" />}
+                            {<LoadingMonogram active={sending} fallback={<SendHorizontal className="h-5 w-5" />} size="control" />}
                           </ActionSurface>
                         </div>
 
@@ -454,7 +454,7 @@ export function WhatsAppComposer({
                           aria-label="Enviar mídia"
                           title={sendDisabledReason ?? undefined}
                         >
-                          {<LoadingMonogram active={sending} fallback={<SendHorizontal className="h-5 w-5" />} className="h-5 w-5" />}
+                          {<LoadingMonogram active={sending} fallback={<SendHorizontal className="h-5 w-5" />} size="control" />}
                         </ActionSurface>
                       </div>
 
@@ -515,7 +515,7 @@ export function WhatsAppComposer({
                     <div className="mb-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-sm">
                       <div className="flex items-start gap-2">
                         <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
-                          {<LoadingMonogram active={replySuggestionLoading} fallback={<Sparkles className="h-3.5 w-3.5" />} className="h-3.5 w-3.5" />}
+                          {<LoadingMonogram active={replySuggestionLoading} fallback={<Sparkles className="h-3.5 w-3.5" />} />}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -677,7 +677,7 @@ export function WhatsAppComposer({
                             title={composerRewriteDisabledReason ?? 'Corrigir texto com IA'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              {<LoadingMonogram active={rewritingComposer} fallback={<Pencil className="h-4 w-4" />} className="h-4 w-4" />}
+                              {<LoadingMonogram active={rewritingComposer} fallback={<Pencil className="h-4 w-4" />} />}
                             </span>
                             <span>Corrigir texto</span>
                           </DropdownOption>
@@ -692,7 +692,7 @@ export function WhatsAppComposer({
                             title={composerRewriteDisabledReason ?? 'Adaptar texto ao contexto'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
-                              {<LoadingMonogram active={rewritingComposer} fallback={<Sparkles className="h-4 w-4" />} className="h-4 w-4" />}
+                              {<LoadingMonogram active={rewritingComposer} fallback={<Sparkles className="h-4 w-4" />} />}
                             </span>
                             <span>Adaptar ao contexto</span>
                           </DropdownOption>
@@ -722,7 +722,7 @@ export function WhatsAppComposer({
                             title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
-                              {<LoadingMonogram active={replySuggestionLoading} fallback={<MessageCircle className="h-4 w-4" />} className="h-4 w-4" />}
+                              {<LoadingMonogram active={replySuggestionLoading} fallback={<MessageCircle className="h-4 w-4" />} />}
                             </span>
                             <span>Sugerir resposta</span>
                           </DropdownOption>
@@ -899,7 +899,7 @@ export function WhatsAppComposer({
                           <SendHorizontal className="h-5 w-5" />
                         ) : (
                           <Mic className="h-5 w-5" />
-                        )} className="h-5 w-5" />}
+                        )} size="control" />}
                         {hasSendPayload && <span className="whatsapp-inbox-composer-send-label">Enviar</span>}
                       </ActionSurface>
                     </div>

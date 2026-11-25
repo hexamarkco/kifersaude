@@ -356,11 +356,12 @@
 
 /* ── Loading ───────────────────────────────────────── */
 .kds-skeleton {
-  min-height: 1rem;
   border-radius: var(--radius-sm);
   background: var(--bg-inset);
   animation: kds-skeleton-pulse 1.5s ease-in-out infinite;
 }
+
+:where(.kds-skeleton) { height: 1rem; }
 
 .kds-loading-state {
   display: flex;
@@ -376,14 +377,15 @@
   min-height: auto;
 }
 
-.kds-loading-state-brand {
-  flex-direction: column;
-  text-align: center;
+.kds-loading-state-placeholder {
+  display: block;
+  min-width: 0;
+  min-height: 0;
 }
 
 :where(.kds-loading-monogram) {
-  width: 1rem;
-  height: 1rem;
+  width: var(--kds-loading-monogram-size);
+  height: var(--kds-loading-monogram-size);
   flex: none;
   color: var(--loading-monogram-color, var(--text-muted, currentColor));
 }
@@ -393,14 +395,30 @@
   color: var(--loading-monogram-color, var(--text-muted, currentColor));
 }
 
-.kds-loading-state > .kds-loading-monogram {
-  width: 1.5rem;
-  height: 1.5rem;
+.kds-loading-monogram-inline { --kds-loading-monogram-size: 1rem; }
+.kds-loading-monogram-control { --kds-loading-monogram-size: 1.25rem; }
+.kds-loading-monogram-section { --kds-loading-monogram-size: 1.75rem; }
+.kds-loading-monogram-screen { --kds-loading-monogram-size: clamp(2.75rem, 7vw, 3.5rem); }
+
+.kds-loading-refresh {
+  position: relative;
+  min-width: 0;
 }
 
-.kds-loading-state-brand > .kds-loading-monogram {
-  width: 5rem;
-  height: auto;
+.kds-loading-refresh:not([data-refreshing]),
+.kds-loading-refresh-content { display: contents; }
+
+.kds-loading-refresh-indicator {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-3);
+  min-width: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  pointer-events: none;
 }
 
 .kds-loading-monogram-stem,
@@ -1371,21 +1389,6 @@
   color: var(--text-secondary);
   font: var(--type-body);
 }
-
-.kds-skeleton,
-.panel-skeleton {
-  background: var(--bg-inset);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
-  animation: kds-skeleton-shimmer 1.55s ease-in-out infinite;
-}
-
-@keyframes kds-skeleton-shimmer {
-  0% { background-position: 120% 0; }
-  100% { background-position: -120% 0; }
-}
-
-
-
 
 /* Shared component calibration. Flat surfaces keep the editorial palette calm and legible. */
 .kds-surface,

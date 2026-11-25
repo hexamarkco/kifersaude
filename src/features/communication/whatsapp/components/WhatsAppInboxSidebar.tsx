@@ -1,4 +1,4 @@
-import { useMinimumLoading, LoadingState, LoadingMonogram, Text } from '../../../../design-system';
+import { useMinimumLoading, LoadingState, RecordListSkeleton, LoadingMonogram, Text } from '../../../../design-system';
 import { Archive, Calendar, CalendarClock, BarChart3, MessageCircle, MoreHorizontal, SquarePen, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import { useState, type MutableRefObject } from 'react';
 import type { LeadStatusConfig } from '../../../leads';
@@ -233,7 +233,7 @@ export function WhatsAppInboxSidebar({
             {chatRefreshError}
           </Alert>
         ) : null}
-        {<LoadingState active={loading} className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]" label="Carregando conversas..." fallback={() => chatLoadError ? (
+        {<LoadingState active={loading} placeholder={<RecordListSkeleton rows={7} />} label="Carregando conversas..." fallback={() => chatLoadError ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed border-[var(--danger)] p-6 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 text-[var(--danger)]" />
             <div className="space-y-1">
@@ -266,11 +266,11 @@ export function WhatsAppInboxSidebar({
               ) : null}
               {sidebarChats.length > 0 ? <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Conversas</div> : null}
               {showChatSearch ? (
-                <div className="flex items-center justify-center px-4 py-3"><LoadingMonogram className="h-4 w-4" label="Buscando conversas" /></div>
+                <div className="flex items-center justify-center px-4 py-3"><LoadingMonogram label="Buscando conversas" /></div>
               ) : null}
               {sidebarChats.map(renderChat)}
               {filteredMessageSearchResults.length > 0 || searchingMessages ? <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Mensagens</div> : null}
-              {showMessageSearch ? <div className="flex items-center justify-center px-4 py-3"><LoadingMonogram className="h-4 w-4" label="Buscando mensagens" /></div> : null}
+              {showMessageSearch ? <div className="flex items-center justify-center px-4 py-3"><LoadingMonogram label="Buscando mensagens" /></div> : null}
               {filteredMessageSearchResults.map((result) => (
                 <InboxMessageSearchListItem
                   key={result.message.id}
@@ -285,7 +285,7 @@ export function WhatsAppInboxSidebar({
             </>
           )
         ) : showArchiveLoading ? (
-          <div className="flex min-h-[240px] items-center justify-center"><LoadingMonogram className="h-4 w-4" label="Carregando conversas arquivadas" /></div>
+          <LoadingState label="Carregando conversas arquivadas" placeholder={<RecordListSkeleton />} />
         ) : archivedSectionOpen && chatRefreshError && sidebarChats.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 text-[var(--warning)]" />

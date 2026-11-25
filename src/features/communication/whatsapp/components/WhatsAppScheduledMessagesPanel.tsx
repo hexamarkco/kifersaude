@@ -13,7 +13,7 @@ import {
   IconButton,
   Input,
   KpiCard,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   TableCell,
   TableRow,
   Tabs,
@@ -645,9 +645,7 @@ export default function WhatsAppScheduledMessagesPanel({
           <Button onClick={onScheduleNew} size="sm"><Plus className="kds-control-icon" />Agendar mensagem</Button>
         </div> : null}
           {loading ? (
-            <div className="flex flex-1 items-center justify-center">
-              <LoadingState label="Carregando agendamentos" compact />
-            </div>
+            <LoadingState label="Carregando agendamentos" placeholder={<RecordListSkeleton />} />
           ) : loadError === 'all' ? (
             <div className="flex flex-1 items-center">
               <Alert

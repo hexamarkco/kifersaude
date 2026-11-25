@@ -7,12 +7,11 @@ import { LeadFavoriteBadge } from '../../../../components/LeadFavoriteStar';
 import ReminderSchedulerModal from './WhatsAppReminderSchedulerModal';
 import {
   LoadingMonogram,
-  LoadingState,
+  LoadingState, RecordFieldsSkeleton, RecordListSkeleton,
   useMinimumLoading,
   Badge,
   Button,
   DateTimePicker,
-  DisclosureTrigger,
   Drawer,
   DrawerBody,
   EmptyState,
@@ -24,6 +23,7 @@ import {
   Surface,
   Tabs,
   Text,
+  Tooltip,
   type RecordAction,
   type TabItem,
 } from '../../../../design-system';
@@ -495,7 +495,7 @@ export default function WhatsAppLeadDrawer({
           <Text size="sm">{agendaError}</Text>
         </Surface>
       ) : (
-        <LoadingState active={agendaLoading} label="Carregando lembretes" fallback={() => pendingAgendaReminders.length ? (
+        <LoadingState active={agendaLoading} label="Carregando lembretes" placeholder={<RecordListSkeleton rows={3} />} fallback={() => pendingAgendaReminders.length ? (
           [
             { title: 'Atrasados', items: overdueAgendaReminders },
             { title: 'Hoje', items: todayAgendaReminders },
@@ -552,17 +552,15 @@ export default function WhatsAppLeadDrawer({
         </WhatsAppInboxPanelHeader>
         <DrawerBody className={'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto'}>
           {conversationActions.length > 0 && (
-            <details key={chatId} className="whatsapp-inbox-contact-actions">
-              <DisclosureTrigger size="sm" className="w-full justify-between">Ações da conversa</DisclosureTrigger>
-              <div className="whatsapp-inbox-contact-action-list" role="group" aria-label="Ações da conversa">
-                {conversationActions.map(({ label, icon: Icon, onClick, disabled, loading, title }) => (
-                  <Button key={label} variant="ghost" size="sm" onClick={onClick} disabled={disabled} loading={loading} title={title}>
+            <div key={chatId} className="whatsapp-inbox-contact-actions" role="group" aria-label="Ações da conversa">
+              {conversationActions.map(({ label, icon: Icon, onClick, disabled, loading, title }) => (
+                <Tooltip key={label} content={title ? `${label} · ${title}` : label} size="sm">
+                  <IconButton variant="secondary" size="md" onClick={onClick} disabled={disabled} loading={loading} aria-label={label} aria-description={title}>
                     <Icon className="kds-control-icon" aria-hidden="true" />
-                    <span>{label}</span>
-                  </Button>
-                ))}
-              </div>
-            </details>
+                  </IconButton>
+                </Tooltip>
+              ))}
+            </div>
           )}
           <Tabs
             items={showAgendaTab ? LEAD_DRAWER_TABS : LEAD_DRAWER_TABS_WITHOUT_AGENDA}
@@ -576,7 +574,7 @@ export default function WhatsAppLeadDrawer({
 
           {currentTab === 'agenda' ? agendaContent : currentTab === 'critique' ? (
             <WhatsAppAttendanceCritiquePanel chatId={chatId} isActive />
-          ) : <LoadingState active={loading} className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]" label="Carregando informações do chat..." fallback={() => leadPanelError ? (
+          ) : <LoadingState active={loading} label="Carregando informações do chat..." placeholder={<RecordFieldsSkeleton />} fallback={() => leadPanelError ? (
             <Surface variant="danger" padding="sm" className="flex items-start gap-3" role="alert">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="min-w-0 flex-1">
@@ -707,7 +705,7 @@ export default function WhatsAppLeadDrawer({
                   </Surface>
                 ) : showSearchLoading ? (
                   <div className="flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] px-4 py-6 text-sm text-[var(--text-muted)]">
-                    <LoadingMonogram className="h-4 w-4" label="Buscando leads" />
+                    <LoadingMonogram label="Buscando leads" />
                   </div>
                 ) : searchResults.length === 0 ? (
                   <EmptyState title="Nenhum lead encontrado" description="Tente buscar por outro nome ou telefone." />

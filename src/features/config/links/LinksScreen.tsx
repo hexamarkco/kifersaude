@@ -9,7 +9,7 @@ import {
   ImageCropDialog,
   InfoTooltip,
   Input,
-  LoadingState,
+  LoadingState, RecordFieldsSkeleton,
   useMinimumLoading,
   PageActions,
   PageHeader,
@@ -483,7 +483,7 @@ export default function LinksScreen({
   };
 
   if (showLoading) {
-    return <LoadingState label="Carregando página de links..." />;
+    return <LoadingState label="Carregando página de links..." placeholder={<RecordFieldsSkeleton />} />;
   }
 
   const pageHeader = showPageHeader ? (

@@ -70,7 +70,7 @@ import {
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
-import { PanelAdaptiveLoadingFrame } from '../../design-system';
+import { ContractsPageSkeleton, PanelAdaptiveLoadingFrame } from '../../design-system';
 import { toast } from "../../lib/toast";
 import { downloadXlsx } from "../../lib/xlsxExport";
 import { getContractBonusSummary } from "../../lib/contractBonus";
@@ -690,6 +690,7 @@ export default function ContractsManager({
 
   return (
     <PanelAdaptiveLoadingFrame
+      placeholder={<ContractsPageSkeleton />}
       loading={loading && !selectedContract}
       label="Carregando contratos"
       hasContent={hasContractsSnapshot}

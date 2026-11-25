@@ -35,7 +35,7 @@ import {
   FilterSelect,
   EmptyState,
   KpiCard,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   Pagination,
   RecordActions,
   SearchInput,
@@ -1965,7 +1965,7 @@ export default function WhatsAppCampaignsScreen() {
           </Alert>
         ) : null}
 
-        {<LoadingState active={loading} compact label="Carregando campanhas" fallback={() => loadError === 'all' && campaigns.length === 0 ? (
+        {<LoadingState active={loading} label="Carregando campanhas" placeholder={<RecordListSkeleton rows={6} />} fallback={() => loadError === 'all' && campaigns.length === 0 ? (
           <EmptyState
             className="rounded-[var(--kds-radius-lg)]"
             icon={<Send aria-hidden="true" />}

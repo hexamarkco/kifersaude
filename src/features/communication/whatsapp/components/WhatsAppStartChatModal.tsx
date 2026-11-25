@@ -10,7 +10,7 @@ import {
   EmptyState,
   FieldLabel,
   Input,
-  LoadingState,
+  LoadingState, RecordListSkeleton,
   Surface,
   type TabItem,
   Tabs,
@@ -158,8 +158,7 @@ export default function WhatsAppStartChatModal({
                     </Button>
                   </div>
                 </Surface>
-              ) : <LoadingState active={(source === 'saved' ? contactsLoading : crmLoading)} compact
-                  className="min-h-[12rem] justify-center"
+              ) : <LoadingState active={(source === 'saved' ? contactsLoading : crmLoading)} placeholder={<RecordListSkeleton rows={3} />}
                   label={`Carregando ${source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...`} fallback={() => source === 'saved' ? (
                 contacts.length === 0 ? (
                   <EmptyState
@@ -191,7 +190,7 @@ export default function WhatsAppStartChatModal({
                           <Text className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name || contact.phone_number || contact.phone_digits || 'Contato'}</Text>
                           <Text className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</Text>
                         </div>
-                        {<LoadingMonogram active={startingKey === `saved:${contact.phone_digits}`} fallback={<UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />} className="h-4 w-4 shrink-0" />}
+                        {<LoadingMonogram active={startingKey === `saved:${contact.phone_digits}`} fallback={<UserRound className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />} />}
                       </ActionSurface>
                     ))}
 
@@ -242,7 +241,7 @@ export default function WhatsAppStartChatModal({
                           {lead.responsavel_label ? <Badge tone="neutral" size="sm">{lead.responsavel_label}</Badge> : null}
                         </div>
                       </div>
-                      {<LoadingMonogram active={startingKey === `crm:${lead.id}`} fallback={<UserCircle2 className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />} className="h-4 w-4 shrink-0" />}
+                      {<LoadingMonogram active={startingKey === `crm:${lead.id}`} fallback={<UserCircle2 className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />} />}
                     </ActionSurface>
                   ))}
                 </div>

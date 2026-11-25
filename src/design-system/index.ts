@@ -104,6 +104,7 @@ export type { DateRangeFilterProps, FilterMultiSelectProps, FilterSelectProps } 
 export { AppLoadingBoundary, AppLoadingScreen, LoadingState, Skeleton } from './components/LoadingState';
 export { useMinimumLoading } from './useMinimumLoading';
 export { LoadingMonogram } from './components/LoadingMonogram';
+export type { LoadingMonogramSize } from './components/LoadingMonogram';
 export type { AppLoadingScreenProps, LoadingStateProps, SkeletonProps } from './components/LoadingState';
 export { OperationalMetricChip, OperationalStatusBadge, OperationalStatusDot } from './components/Operational';
 export type { OperationalMetricChipProps, OperationalStatusBadgeProps, OperationalStatusDotProps, OperationalTone } from './components/Operational';

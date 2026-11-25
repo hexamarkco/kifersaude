@@ -17,7 +17,7 @@ import {
   PageActions,
   SearchInput,
   SectionHeader,
-  LoadingState,
+  LoadingState, RecordListSkeleton, RecordFieldsSkeleton,
   useMinimumLoading,
   Tabs,
   Text,
@@ -391,7 +391,7 @@ export default function AiConfigScreen() {
             />
           </div>
 
-          {<LoadingState active={loading} label="Carregando funcionalidades de IA" fallback={() => loadFailures.features ? (
+          {<LoadingState active={loading} label="Carregando funcionalidades de IA" placeholder={<RecordListSkeleton />} fallback={() => loadFailures.features ? (
             <EmptyState
               icon={<Brain />}
               title="Não foi possível carregar as funcionalidades"
@@ -425,7 +425,7 @@ export default function AiConfigScreen() {
       {section === "global" && (
         showGlobalLoading ? (
           <Card padding="md">
-            <LoadingState label="Carregando configurações globais" />
+            <LoadingState label="Carregando configurações globais" placeholder={<RecordFieldsSkeleton />} />
           </Card>
         ) : loadFailures.global ? (
           <Card padding="md">

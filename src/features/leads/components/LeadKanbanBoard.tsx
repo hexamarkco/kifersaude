@@ -11,7 +11,7 @@ import {
   Button,
   EmptyState,
   Input,
-  LoadingState,
+  LoadingState, Skeleton,
   RecordActions,
   OperationalMetricChip,
   OperationalStatusDot,
@@ -236,7 +236,7 @@ export default function LeadKanbanBoard({
   if (loading && localLeads.length === 0) {
     return (
       <Surface className="py-12">
-        <LoadingState label="Carregando Kanban" />
+        <LoadingState label="Carregando Kanban" placeholder={<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} variant="card" className="h-64" />)}</div>} />
       </Surface>
     );
   }

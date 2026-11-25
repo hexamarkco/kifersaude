@@ -97,7 +97,7 @@ export function WhatsAppMessagePopovers({
                 <ActionButton icon={<Reply className="h-4 w-4 shrink-0" />} label="Responder mensagem" onClick={() => onReplyToMessage(openMessageActionMenuMessage)} />
                 <ActionButton icon={<Forward className="h-4 w-4 shrink-0" />} label="Encaminhar mensagem" onClick={() => onOpenForwardMessageModal(openMessageActionMenuMessage)} />
                 <ActionButton
-                  icon={<LoadingMonogram active={starringMessageIds.has(openMessageActionMenuMessage.id)} fallback={<Star className={`h-4 w-4 shrink-0 ${isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : ''}`} />} className="h-4 w-4 shrink-0" />}
+                  icon={<LoadingMonogram active={starringMessageIds.has(openMessageActionMenuMessage.id)} fallback={<Star className={`h-4 w-4 shrink-0 ${isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : ''}`} />} />}
                   label={isMessageStarred(openMessageActionMenuMessage) ? 'Remover estrela' : 'Estrelar mensagem'}
                   disabled={starringMessageIds.has(openMessageActionMenuMessage.id)}
                   onClick={() => onToggleStarMessage(openMessageActionMenuMessage)}
@@ -105,7 +105,7 @@ export function WhatsAppMessagePopovers({
               </>
             ) : null}
             {canEditOutboundMessage(openMessageActionMenuMessage) ? <ActionButton icon={<Pencil className="h-4 w-4 shrink-0" />} label={openMessageActionMenuMessage.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda'} onClick={() => onOpenEditMessageModal(openMessageActionMenuMessage)} /> : null}
-            {canDeleteOutboundMessage(openMessageActionMenuMessage) ? <ActionButton destructive icon={<LoadingMonogram active={deletingMessageId === openMessageActionMenuMessage.id} fallback={<Trash2 className="h-4 w-4 shrink-0" />} className="h-4 w-4 shrink-0" />} label="Apagar mensagem" disabled={deletingMessageId === openMessageActionMenuMessage.id} onClick={() => onRequestDeleteMessage(openMessageActionMenuMessage)} /> : null}
+            {canDeleteOutboundMessage(openMessageActionMenuMessage) ? <ActionButton destructive icon={<LoadingMonogram active={deletingMessageId === openMessageActionMenuMessage.id} fallback={<Trash2 className="h-4 w-4 shrink-0" />} />} label="Apagar mensagem" disabled={deletingMessageId === openMessageActionMenuMessage.id} onClick={() => onRequestDeleteMessage(openMessageActionMenuMessage)} /> : null}
           </div>
         ) : null}
       </PanelPopoverShell>

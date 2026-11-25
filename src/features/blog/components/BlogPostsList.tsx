@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowUpRight, BookOpen, Edit2, Eye, EyeOff, FileText, HeartPulse, Newspaper, Plus, Search, Trash2 } from 'lucide-react';
 import {
   ActionSurface, Alert, Badge, Button, Card, DisclosureTrigger, EmptyState, Heading, Image, Input,
-  KpiCard, PageHeader, Pagination, PanelAdaptiveLoadingFrame, RecordActions, SegmentedControl, Text,
+  KpiCard, PageHeader, Pagination, BlogTabSkeletonList, PanelAdaptiveLoadingFrame, RecordActions, SegmentedControl, Text,
 } from '../../../design-system';
 import type { BlogPost } from '../shared/blogTypes';
 
@@ -55,7 +55,7 @@ export default function BlogPostsList({
           {hasPostsSnapshot ? 'Os artigos exibidos podem estar desatualizados.' : 'Tente novamente para consultar os artigos.'}
         </Alert>
       )}
-      <PanelAdaptiveLoadingFrame loading={loading} label="Carregando artigos" hasContent={hasPostsSnapshot} overlayLabel="Atualizando artigos…" stageClassName="min-h-48">
+      <PanelAdaptiveLoadingFrame placeholder={<BlogTabSkeletonList />} loading={loading} label="Carregando artigos" hasContent={hasPostsSnapshot} overlayLabel="Atualizando artigos…" stageClassName="min-h-48">
         {posts.length === 0 && loadError && !hasPostsSnapshot ? null : posts.length === 0 ? (
           <EmptyState icon={<FileText aria-hidden="true" />} title="Nenhum artigo encontrado"
             description={hasFilters ? 'Ajuste a busca ou o status para encontrar artigos.' : 'Crie um artigo para começar a biblioteca.'}

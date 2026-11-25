@@ -1,5 +1,5 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
-import { useMinimumLoading, LoadingMonogram, Text, Heading, FieldLabel } from '../../../../design-system';
+import { useMinimumLoading, LoadingMonogram, LoadingState, RecordListSkeleton, Text, Heading, FieldLabel } from '../../../../design-system';
 import { Checkbox, Input } from '../../../../design-system';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CalendarPlus, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, MessageSquare, Send, Settings, Sparkles } from 'lucide-react';
@@ -111,7 +111,6 @@ export default function WhatsAppBatchFollowUpModal({
 }: WhatsAppBatchFollowUpModalProps) {
   const [items, setItems] = useState<BatchItemState[]>([]);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'generating' | 'sending' | 'sent'>('loading');
-  const showInitialLoading = useMinimumLoading(phase === 'loading');
   const showSending = useMinimumLoading(phase === 'sending');
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
   const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
@@ -628,12 +627,10 @@ export default function WhatsAppBatchFollowUpModal({
 
   // ---- Render: loading state ----
 
-  if (showInitialLoading) {
+  if (phase === 'loading') {
     return (
       <WhatsAppInboxDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
-        <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
-          <LoadingMonogram className="h-8 w-8 text-[var(--brand-primary)]" label="Buscando follow-ups pendentes" />
-        </div>
+        <LoadingState label="Buscando follow-ups pendentes" placeholder={<RecordListSkeleton rows={6} />} />
       </WhatsAppInboxDialog>
     );
   }
@@ -659,7 +656,7 @@ export default function WhatsAppBatchFollowUpModal({
             ) : showSending ? (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
-                  <LoadingMonogram className="h-3.5 w-3.5" />
+                  <LoadingMonogram />
                   <span className="sr-only" role="status">Enviando {sendingFinished} de {sendingTotal}</span>
                 </div>
                 <Progress value={sendingProgressPercent} size="sm" className="min-w-[160px] flex-1" showLabel />

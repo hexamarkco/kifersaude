@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   CrmCard, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  DisclosureTrigger, IconButton, KpiCard, LoadingState, MonthlyTrendChart, Progress, Surface, Text,
+  DisclosureTrigger, IconButton, KpiCard, LoadingState, RecordListSkeleton, MonthlyTrendChart, Progress, Surface, Text,
 } from '../../../design-system';
 import { Alert, Button, Field, Input, Select, Table, TableHeader, TableHead, SortableTableHead, TableBody, TableRow, TableCell, useTableSorting, useSortedTableRows } from '../../../design-system';
 import { CalendarCheck, CalendarDays, FileCheck, RefreshCw, Users, UserRoundCheck } from 'lucide-react';
@@ -88,7 +88,7 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
       </Select></Field>
       <Button variant="secondary" disabled={model.loading} onClick={() => void model.reload()}>Atualizar produção</Button>
     </Surface>}
-    {model.loading && !report && <LoadingState compact label="Carregando produção…" />}
+    {model.loading && !report && <LoadingState placeholder={<RecordListSkeleton />} label="Carregando produção…" />}
     {model.error && <Alert tone="warning">{model.error}</Alert>}
     {report && !report.started_at && <Alert
       tone="info"

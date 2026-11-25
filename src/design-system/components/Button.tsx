@@ -5,7 +5,6 @@ import { useMinimumLoading } from '../useMinimumLoading';
 import {
   getPanelButtonClass,
   panelIconButtonSizeClasses,
-  panelButtonSpinnerSizeClasses,
   type ControlSize,
   type PanelButtonSize,
   type PanelButtonVariant,
@@ -53,7 +52,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       })}
       {...props}
     >
-      {showLoading && <LoadingMonogram className={cx('kds-button-spinner', panelButtonSpinnerSizeClasses[size])} />}
+      {showLoading && <LoadingMonogram size={size === 'sm' ? 'inline' : 'control'} className="kds-button-spinner" />}
       <span className={cx('kds-button-content', showLoading && 'kds-button-content-loading')}>{children}</span>
     </button>
   );

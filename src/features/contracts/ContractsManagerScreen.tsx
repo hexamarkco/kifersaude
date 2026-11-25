@@ -13,7 +13,7 @@ import type { ContractJsonBulkImportPayload } from "./domain/contractJsonImport"
 import {
   Plus,
   Search,
-  Filter,
+  SlidersHorizontal,
   FileText,
   Eye,
   Trash2,
@@ -62,6 +62,12 @@ import {
   type PanelTone,
   FilterSelect,
   FilterMultiSelect,
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+  Field,
   Pagination,
   KpiCard,
   RecordActions,
@@ -121,6 +127,7 @@ export default function ContractsManager({
   const [showForm, setShowForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState({ responsible: "todos", status: [] as string[], operator: [] as string[], dates: [] as string[] });
   const [selectedContract, setSelectedContract] = useState<Contract | null>(
     null,
   );
@@ -559,7 +566,18 @@ export default function ContractsManager({
       filterOperadora.length > 0 ||
       dateProximityFilter.length > 0,
   );
-  const advancedFilterCount = dateProximityFilter.length;
+  const advancedFilterCount = dateProximityFilter.length + (filterResponsavel !== "todos" ? 1 : 0);
+  const openAdvancedFilters = () => {
+    setFilterDraft({ responsible: filterResponsavel, status: [...filterStatus], operator: [...filterOperadora], dates: [...dateProximityFilter] });
+    setAdvancedFiltersOpen(true);
+  };
+  const applyAdvancedFilters = () => {
+    setFilterResponsavel(filterDraft.responsible);
+    setFilterStatus(filterDraft.status);
+    setFilterOperadora(filterDraft.operator);
+    setDateProximityFilter(filterDraft.dates);
+    setAdvancedFiltersOpen(false);
+  };
 
   const handleExportContracts = () => {
     const headers = [
@@ -794,7 +812,7 @@ export default function ContractsManager({
               <Input
                 type="text"
                 leftIcon={Search}
-                placeholder="Buscar por nome, contrato, plano..."
+                placeholder="Buscar contrato, pessoa ou operadora…"
                 aria-label="Buscar contratos"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -804,33 +822,20 @@ export default function ContractsManager({
               <FilterMultiSelect presentation="popover"
                 values={filterStatus}
                 onChange={setFilterStatus}
-                placeholder="Status"
+                placeholder="Todos os status"
                 dialogTitle="Filtrar contratos por status"
                 options={statusFilterOptions}
               />
               <FilterMultiSelect presentation="popover"
                 values={filterOperadora}
                 onChange={setFilterOperadora}
-                placeholder="Operadora"
+                placeholder="Todas as operadoras"
                 dialogTitle="Filtrar contratos por operadora"
                 options={operadoraOptions.map((operadora) => ({ value: operadora, label: operadora }))}
               />
-              <FilterSelect
-                value={filterResponsavel}
-                onChange={setFilterResponsavel}
-                placeholder="Corretor"
-                includePlaceholderOption={false}
-                neutralValues={["todos"]}
-                options={[
-                  { value: "todos", label: "Corretor" },
-                  ...responsavelFilterOptions.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  })),
-                ]}
-              />
-              <Button type="button" variant={advancedFiltersOpen || advancedFilterCount > 0 ? 'soft' : 'secondary'} aria-expanded={advancedFiltersOpen} aria-controls="contracts-filter-controls" onClick={() => setAdvancedFiltersOpen((open) => !open)}>
-                <Filter className="kds-control-icon" aria-hidden="true" /> Mais filtros{advancedFilterCount > 0 ? ` · ${advancedFilterCount}` : ''}
+              <Button type="button" variant="secondary" aria-haspopup="dialog" aria-expanded={advancedFiltersOpen} aria-controls="contracts-filter-controls" onClick={openAdvancedFilters}>
+                <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />Filtros
+                {advancedFilterCount > 0 && <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>}
               </Button>
               <Button type="button" variant="secondary" size="sm" className="kds-record-mobile-view" aria-pressed={showMobileCards} onClick={() => setShowMobileCards((show) => !show)}>
                 Cartões
@@ -846,21 +851,38 @@ export default function ContractsManager({
                   Limpar filtros
                 </Button>
               )}
+              <span className="kds-workspace-result-count">{filteredContracts.length} {filteredContracts.length === 1 ? "contrato" : "contratos"}</span>
             </ToolbarActions>
           </Toolbar>
 
-          {advancedFiltersOpen && <div id="contracts-filter-controls" className="kds-workspace-extra-filters">
-            <FilterMultiSelect presentation="popover"
-              icon={Calendar}
-              values={dateProximityFilter}
-              onChange={setDateProximityFilter}
-              placeholder="Todos os períodos"
-              dialogTitle="Filtrar datas críticas"
-              options={[
-                { value: "proximos-30", label: "Próximos 30 dias" },
-              ]}
-            />
-          </div>}
+          {advancedFiltersOpen && (
+            <Dialog id="contracts-filter-controls" open onOpenChange={setAdvancedFiltersOpen} size="md" className="kds-crm-dialog">
+              <DialogHeader onClose={() => setAdvancedFiltersOpen(false)}>
+                <DialogTitle>Filtrar contratos</DialogTitle>
+              </DialogHeader>
+              <DialogBody>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Responsável">
+                    <FilterSelect value={filterDraft.responsible} onChange={(responsible) => setFilterDraft((draft) => ({ ...draft, responsible }))} placeholder="Toda a equipe" includePlaceholderOption={false} neutralValues={["todos"]} options={[{ value: "todos", label: "Toda a equipe" }, ...responsavelFilterOptions.map(({ value, label }) => ({ value, label }))]} />
+                  </Field>
+                  <Field label="Status do contrato">
+                    <FilterMultiSelect presentation="popover" values={filterDraft.status} onChange={(status) => setFilterDraft((draft) => ({ ...draft, status }))} placeholder="Todos os status" dialogTitle="Filtrar contratos por status" options={statusFilterOptions} />
+                  </Field>
+                  <Field label="Operadora">
+                    <FilterMultiSelect presentation="popover" values={filterDraft.operator} onChange={(operator) => setFilterDraft((draft) => ({ ...draft, operator }))} placeholder="Todas as operadoras" dialogTitle="Filtrar contratos por operadora" options={operadoraOptions.map((operadora) => ({ value: operadora, label: operadora }))} />
+                  </Field>
+                  <Field label="Datas importantes">
+                    <FilterMultiSelect presentation="popover" values={filterDraft.dates} onChange={(dates) => setFilterDraft((draft) => ({ ...draft, dates }))} placeholder="Todos os períodos" dialogTitle="Filtrar datas críticas" options={[{ value: "proximos-30", label: "Próximos 30 dias" }]} />
+                  </Field>
+                </div>
+                <Button variant="text" onClick={() => setFilterDraft({ responsible: "todos", status: [], operator: [], dates: [] })}>Limpar filtros</Button>
+              </DialogBody>
+              <DialogFooter>
+                <Button variant="secondary" onClick={() => setAdvancedFiltersOpen(false)}>Cancelar</Button>
+                <Button onClick={applyAdvancedFilters}>Aplicar filtros</Button>
+              </DialogFooter>
+            </Dialog>
+          )}
         </Surface>
 
         <Surface className={`kds-record-results kds-contracts-results${showMobileCards ? ' is-mobile-cards' : ''}`} padding="none" data-panel-animate>

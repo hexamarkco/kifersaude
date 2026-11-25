@@ -8,7 +8,7 @@ import { isMetaQualified, metaConnectionLabel } from '../../domain/metaAds';
 const mocks = vi.hoisted(() => ({
   snapshot: null as MetaSnapshot | null,
   error: null as string | null,
-  refresh: async () => {}, review: async () => {}, requeue: async () => {}, requeueEvent: async () => {},search: () => {},loadHistory: async () => {},historyEnd: false,historyLoading: false,
+  refresh: async () => {}, saveForm: vi.fn(async () => {}), review: async () => {}, requeue: async () => {}, requeueEvent: async () => {},search: () => {},loadHistory: async () => {},historyEnd: false,historyLoading: false,
 }));
 vi.mock('../../hooks/useMetaAds', () => ({ useMetaAds: () => ({ ...mocks,loading: false,saving: false,message: null }) }));
 import MetaAdsPanel from '../MetaAdsPanel';
@@ -47,4 +47,16 @@ test('qualificação considera a modalidade e a elegibilidade; conexão depende 
   assert.equal(metaConnectionLabel(snapshot),'Aguardando primeiro lead importado');
   assert.equal(metaConnectionLabel({ ...snapshot,serverConfigured: false }),'Configuração do servidor pendente');
   assert.equal(metaConnectionLabel({ ...snapshot,settings: { ...snapshot.settings,enabled: false } }),'Recebimento pausado');
+});
+
+test('lista o formulário legado e os mapeamentos adicionais', () => {
+  mocks.snapshot={...emptySnapshot(), settings: {...emptySnapshot().settings, commercialField: 'business_profile', forms: {'888888888888888': 'has_company'}}};
+  mocks.error=null;
+  const view=render(<MetaAdsPanel />);
+  try {
+    assert.ok(document.body.textContent?.includes('Formulários configurados: 2'));
+    assert.ok(document.body.textContent?.includes('222222222222222'));
+    assert.ok(document.body.textContent?.includes('888888888888888'));
+    assert.ok(document.body.textContent?.includes('has_company'));
+  } finally { view.unmount(); }
 });

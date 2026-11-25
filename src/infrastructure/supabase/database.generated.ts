@@ -10473,6 +10473,15 @@ export type Database = {
         }
         Returns: string
       }
+      meta_ads_save_form: {
+        Args: {
+          p_actor: string
+          p_expected_field: string
+          p_field: string
+          p_form_id: string
+        }
+        Returns: boolean
+      }
       meta_ads_snapshot: {
         Args: { p_actor: string; p_search?: string }
         Returns: Json

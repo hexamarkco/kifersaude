@@ -44,6 +44,7 @@ import {
   Input,
   IconButton,
   PageHeader,
+  DropdownOption,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -711,8 +712,8 @@ export default function ContractsManager({
               <Popover open={headerMenuOpen} onOpenChange={setHeaderMenuOpen}>
                 <PopoverTrigger><IconButton variant="ghost" aria-label="Mais ações de contratos"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
                 <PopoverContent align="end" className="kds-workspace-action-menu">
-                  {canEditContracts && <Button variant="ghost" className="kds-popover-menu-item" onClick={() => { setHeaderMenuOpen(false); setShowBulkImport(true); }}><FileUp aria-hidden="true" />Importar em massa</Button>}
-                  <Button variant="ghost" className="kds-popover-menu-item" onClick={() => { setHeaderMenuOpen(false); handleExportContracts(); }}><Download aria-hidden="true" />Exportar contratos</Button>
+                  {canEditContracts && <DropdownOption role="button" onClick={() => { setHeaderMenuOpen(false); setShowBulkImport(true); }}><FileUp className="kds-control-icon" aria-hidden="true" />Importar em massa</DropdownOption>}
+                  <DropdownOption role="button" onClick={() => { setHeaderMenuOpen(false); handleExportContracts(); }}><Download className="kds-control-icon" aria-hidden="true" />Exportar contratos</DropdownOption>
                 </PopoverContent>
               </Popover>
               {canEditContracts && <Button onClick={handleCreateContract}>

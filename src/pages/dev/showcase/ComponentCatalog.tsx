@@ -89,6 +89,7 @@ import {
   OperationalStatusSelect,
   OpportunityCard,
   Pagination,
+  DropdownOption,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -1801,39 +1802,16 @@ function Overlays() {
                   <ChevronDown />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent aria-label="Ações do exemplo">
-                <div className="ds-stack ds-gap-small">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setMenu(false);
-                      setDialog(true);
-                    }}
-                  >
-                    <Pencil />
-                    Adicionar anotação
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setMenu(false);
-                      setDrawer(true);
-                    }}
-                  >
-                    <Users />
-                    Ver contato
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setMenu(false);
-                      setConfirm(true);
-                    }}
-                  >
-                    <Trash2 />
-                    Arquivar exemplo
-                  </Button>
-                </div>
+              <PopoverContent aria-label="Ações do exemplo" className="kds-workspace-action-menu">
+                <DropdownOption role="button" onClick={() => { setMenu(false); setDialog(true); }}>
+                  <Pencil className="kds-control-icon" aria-hidden="true" />Adicionar anotação
+                </DropdownOption>
+                <DropdownOption role="button" onClick={() => { setMenu(false); setDrawer(true); }}>
+                  <Users className="kds-control-icon" aria-hidden="true" />Ver contato
+                </DropdownOption>
+                <DropdownOption role="button" className="kds-record-action-danger" onClick={() => { setMenu(false); setConfirm(true); }}>
+                  <Trash2 className="kds-control-icon" aria-hidden="true" />Arquivar exemplo
+                </DropdownOption>
               </PopoverContent>
             </Popover>
           </div>

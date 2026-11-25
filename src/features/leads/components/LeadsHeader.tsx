@@ -3,7 +3,7 @@ import { BookOpen, MoreHorizontal, Plus } from "lucide-react";
 import {
   Button,
   IconButton,
-  LinkButton,
+  TextLink,
   PageHeader,
   Popover,
   PopoverContent,
@@ -36,7 +36,7 @@ export function LeadsHeader({
           <Popover>
             <PopoverTrigger><IconButton variant="ghost" aria-label="Mais ações de leads"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
             <PopoverContent align="end" className="kds-workspace-action-menu">
-              <LinkButton href="/painel/api" variant="ghost" className="kds-popover-menu-item"><BookOpen aria-hidden="true" />Documentação de integração</LinkButton>
+              <TextLink href="/painel/api" tone="secondary" className="kds-dropdown-option"><BookOpen className="kds-control-icon" aria-hidden="true" />Documentação de integração</TextLink>
             </PopoverContent>
           </Popover>
           <Button

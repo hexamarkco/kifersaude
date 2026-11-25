@@ -2064,24 +2064,28 @@ html,
   }
 }
 
-/* Compact operational controls keep touch targets generous without forcing
-   simple metadata into vertical stacks on narrow screens. */
-.kds-popover-menu-item {
-  display: flex;
-  width: 100%;
-  min-height: 2.75rem;
-  align-items: center;
-  border-radius: var(--radius-control);
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font: 600 0.8125rem/1.2 var(--font-sans);
-  text-align: left;
+/* Action menus share dropdown rows, including navigation links. */
+.kds-workspace-action-menu {
+  width: max-content;
+  min-width: min(11rem, 100%);
+  overflow-y: auto;
 }
-
-.kds-popover-menu-item:hover,
-.kds-popover-menu-item:focus-visible {
+.painel-theme.kifer-ds .kds-workspace-action-menu .kds-dropdown-option {
+  justify-content: flex-start;
+  border-color: transparent;
+  background: transparent;
+  text-decoration: none;
+}
+.painel-theme.kifer-ds .kds-workspace-action-menu .kds-dropdown-option:hover:not(:disabled) {
+  border-color: transparent;
   background: var(--bg-hover);
-  outline: none;
+}
+.painel-theme.kifer-ds .kds-workspace-action-menu .kds-dropdown-option:focus-visible {
+  outline: var(--border-width) solid var(--control-focus-color);
+  outline-offset: -1px;
+}
+.kds-workspace-action-menu .kds-control-icon {
+  flex-shrink: 0;
 }
 
 .dashboard-event-actions .kds-button {

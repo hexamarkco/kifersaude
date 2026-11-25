@@ -216,3 +216,47 @@ describe('admin HTTP boundary', () => {
     expect((await handler(request({ action: 'requeue',leadgenId: receipt.leadgen_id }))).status).toBe(409);
   });
 });
+
+describe('multiple Meta forms', () => {
+  const otherForm = '888888888888888';
+  const multi = { ...config, forms: { [otherForm]: 'has_company' } };
+  const otherReceipt = { ...receipt, form_id: otherForm };
+  const otherLead = { ...graphLead(), form_id: otherForm, field_data: [...graphLead().field_data, { name: 'has_company', values: ['Sim'] }] };
+  it('accepts both configured forms and ignores unknown forms', () => {
+    const payload = notification();
+    const change = payload.entry[0].changes[0];
+    payload.entry[0].changes.push({ ...change, value: { ...change.value, form_id: otherForm, leadgen_id: '888888888888889' } });
+    payload.entry[0].changes.push({ ...change, value: { ...change.value, form_id: '777777777777777', leadgen_id: '777777777777778' } });
+    expect(parseNotifications(payload, multi).map((r) => r.form_id)).toEqual([config.formId, otherForm]);
+  });
+  it('maps each form independently and rejects unauthorized origins', () => {
+    expect(mapGraphLead(graphLead(), receipt, multi).commercial_answer).toBe('MEI — duas vidas');
+    expect(mapGraphLead(otherLead, otherReceipt, multi).commercial_answer).toBe('Sim');
+    expect(() => mapGraphLead(otherLead, otherReceipt, config)).toThrow('ORIGIN_MISMATCH');
+  });
+  it('processes a second authorized form through the worker', async () => {
+    const deps = worker({ config: async () => multi, claimInbound: vi.fn().mockResolvedValueOnce(otherReceipt).mockResolvedValue(null), retrieve: vi.fn().mockResolvedValue(otherLead) });
+    expect((await runMetaWorker(deps)).imported).toBe(1);
+    expect(deps.importLead).toHaveBeenCalledWith(otherReceipt, expect.objectContaining({ commercial_answer: 'Sim' }));
+  });
+});
+
+describe('admin form mapping', () => {
+  const request = (body: unknown) => new Request('https://local.invalid/admin', { method: 'POST', body: JSON.stringify(body) });
+  const mapping = { action: 'saveForm', formId: '888888888888888', commercialField: 'has_company', expectedField: null };
+  it('validates input and uses the authenticated actor and optimistic concurrency', async () => {
+    const rpc = vi.fn().mockResolvedValue(true);
+    const handler = createAdminHandler({ authorize: async () => ({ actor: 'synthetic-admin' }), snapshot: async () => ({}), rpc });
+    expect((await handler(request(mapping))).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('meta_ads_save_form', { p_actor: 'synthetic-admin', p_form_id: mapping.formId, p_field: mapping.commercialField, p_expected_field: null });
+    expect((await handler(request({ ...mapping, formId: 888888888888888 }))).status).toBe(400);
+    rpc.mockResolvedValueOnce(false);
+    expect((await handler(request(mapping))).status).toBe(409);
+  });
+  it('does not let non-admin users save mappings', async () => {
+    const rpc = vi.fn();
+    const handler = createAdminHandler({ authorize: async () => ({ status: 403 }), snapshot: async () => ({}), rpc });
+    expect((await handler(request(mapping))).status).toBe(403);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});

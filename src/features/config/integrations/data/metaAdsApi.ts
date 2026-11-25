@@ -28,3 +28,8 @@ export async function requeueMetaEvent(eventId: string): Promise<void> {
   const { error } = await databaseClient.functions.invoke('meta-ads-admin', { body: { action: 'requeueEvent', eventId } });
   if (error) throw new Error('Não foi possível revisar este sinal. Confira a avaliação comercial e o prazo de envio.');
 }
+
+export async function saveMetaForm(formId: string, commercialField: string, expectedField: string | null): Promise<void> {
+  const { data, error } = await databaseClient.functions.invoke<{ changed?: boolean }>('meta-ads-admin', { body: { action: 'saveForm', formId, commercialField, expectedField } });
+  if (error || data?.changed !== true) throw new Error('Não foi possível salvar o mapeamento. Atualize a tela e confira o ID e a chave comercial.');
+}

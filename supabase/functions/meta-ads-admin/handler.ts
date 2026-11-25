@@ -26,6 +26,15 @@ export function createAdminHandler(deps: AdminDependencies) {
       if (body.action === 'snapshot' && (body.search === undefined || (typeof body.search === 'string' && body.search.length<=100))) {
         return json(await deps.snapshot(auth.actor,typeof body.search === 'string' ? body.search.trim() : ''));
       }
+      if (body.action === 'saveForm' && metaId(body.formId) &&
+        typeof body.commercialField === 'string' && body.commercialField.trim() === body.commercialField &&
+        body.commercialField.length >= 1 && body.commercialField.length <= 200 &&
+        (body.expectedField === null || typeof body.expectedField === 'string')) {
+        const changed = await deps.rpc('meta_ads_save_form', {
+          p_actor: auth.actor,p_form_id: body.formId,p_field: body.commercialField,p_expected_field: body.expectedField,
+        });
+        return changed === true ? json({ changed: true }) : json({ error: 'Mapeamento alterado. Atualize a tela antes de salvar.' }, 409);
+      }
       if (body.action === 'history' && typeof body.before === 'string' && /^\d{1,18}$/.test(body.before)) {
         return json(await deps.rpc('meta_ads_history',{ p_actor: auth.actor,p_before: body.before }));
       }
@@ -68,6 +77,7 @@ export function createAdminHandler(deps: AdminDependencies) {
     } catch (error) {
       if (error instanceof MetaError) {
         const messages: Record<string, string> = {
+          INVALID_FORM_MAPPING: 'Confira o ID do formulário e a chave comercial.',
           FORBIDDEN: 'Acesso exclusivo de administradores.',
           INVALID_REVIEW: 'Confira a modalidade, a quantidade de pessoas e os critérios da avaliação.',
           OPPORTUNITY_MISMATCH: 'Esta negociação não está mais vinculada ao contato. Atualize os dados.',

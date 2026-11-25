@@ -7,7 +7,7 @@ export function createMetaRepository(client: SupabaseClient, graphVersion: strin
     if (error) {
       const known = ['LEASE_LOST','ORIGIN_MISMATCH','MISSING_CONTACT_FIELDS','AMBIGUOUS_CONTACT','LEAD_DEFAULTS_MISSING',
         'INVALID_VALIDATION_CONTACT','VALIDATION_IMPORT_FAILED','VALIDATION_ROLLBACK_FAILED',
-        'FORBIDDEN','INVALID_REVIEW','OPPORTUNITY_MISMATCH','CONTRACT_MISMATCH','CONTRACT_ALREADY_ATTRIBUTED','CONTRACT_CONFIRMATION_REQUIRED'];
+        'FORBIDDEN','INVALID_FORM_MAPPING','INVALID_REVIEW','OPPORTUNITY_MISMATCH','CONTRACT_MISMATCH','CONTRACT_ALREADY_ATTRIBUTED','CONTRACT_CONFIRMATION_REQUIRED'];
       const code = known.find((item) => error.message === item);
       throw new MetaError(code ?? 'DATABASE_UNAVAILABLE', !code);
     }
@@ -22,6 +22,7 @@ export function createMetaRepository(client: SupabaseClient, graphVersion: strin
       pageId: typeof settings.pageId === 'string' ? settings.pageId : '',
       formId: typeof settings.formId === 'string' ? settings.formId : '',
       commercialField: typeof settings.commercialField === 'string' ? settings.commercialField : '',
+      forms: isRecord(settings.forms) ? Object.fromEntries(Object.entries(settings.forms).filter(([id, field]) => /^\d{1,32}$/.test(id) && typeof field === 'string').map(([id, field]) => [id, String(field)])) : {},
       graphVersion,
     };
   }

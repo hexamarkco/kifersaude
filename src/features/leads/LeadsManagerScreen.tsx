@@ -45,6 +45,7 @@ import {
   ArrowDown,
   Contact,
   MoreHorizontal,
+  BookOpen,
 } from "lucide-react";
 import LeadForm from "../../components/LeadForm";
 import LeadDetails from "../../components/LeadDetails";
@@ -85,7 +86,8 @@ import {
   DateRangeFilter,
   Pagination,
   RecordActions,
-  LinkButton,
+  DropdownOption,
+  TextLink,
   Dialog,
   DialogBody,
   DialogDescription,
@@ -150,6 +152,7 @@ export default function LeadsManager({
   const [filterProximoRetornoFrom, setFilterProximoRetornoFrom] = useState("");
   const [filterProximoRetornoTo, setFilterProximoRetornoTo] = useState("");
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [advancedFilterDraft, setAdvancedFilterDraft] = useState({
     origins: [] as string[],
     contractTypes: [] as string[],
@@ -1729,16 +1732,16 @@ export default function LeadsManager({
                 <Filter aria-hidden="true" />Filtros
                 {advancedFilterCount > 0 && <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>}
               </Button>
-              <Popover>
+              <Popover open={exportMenuOpen} onOpenChange={setExportMenuOpen}>
                 <PopoverTrigger className="inline-flex">
-                  <IconButton type="button" variant="ghost" size="md" aria-label="Mais opções dos leads" title="Exportar e outras opções">
+                  <IconButton type="button" variant="ghost" size="md" aria-label="Mais opções dos leads" aria-expanded={exportMenuOpen} aria-haspopup="dialog" title="Exportar e outras opções">
                     <MoreHorizontal className="kds-control-icon" />
                   </IconButton>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-56 space-y-1 p-2" aria-label="Mais opções dos leads">
-                  <Button variant="ghost" type="button" onClick={handleExportCurrentPage} className="kds-popover-menu-item">Exportar página atual</Button>
-                  <Button variant="ghost" type="button" onClick={handleExportFilteredLeads} className="kds-popover-menu-item">Exportar todos os resultados</Button>
-                  <LinkButton href="/painel/api" variant="ghost" className="kds-popover-menu-item kds-leads-mobile-docs">Documentação de integração</LinkButton>
+                <PopoverContent align="end" className="kds-workspace-action-menu" aria-label="Mais opções dos leads">
+                  <DropdownOption role="button" onClick={() => { setExportMenuOpen(false); handleExportCurrentPage(); }}><Download className="kds-control-icon" aria-hidden="true" />Exportar página atual</DropdownOption>
+                  <DropdownOption role="button" onClick={() => { setExportMenuOpen(false); handleExportFilteredLeads(); }}><Download className="kds-control-icon" aria-hidden="true" />Exportar todos os resultados</DropdownOption>
+                  <TextLink href="/painel/api" tone="secondary" className="kds-dropdown-option kds-leads-mobile-docs"><BookOpen className="kds-control-icon" aria-hidden="true" />Documentação de integração</TextLink>
                 </PopoverContent>
               </Popover>
             </ToolbarActions>

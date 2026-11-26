@@ -1959,7 +1959,6 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 .kds-workspace-theme .whatsapp-inbox-search-input .kds-input { min-height: var(--toolbar-control-height); height: var(--toolbar-control-height); font: var(--type-record-body); }
 .kds-workspace-theme .whatsapp-inbox-sidebar-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
 .kds-workspace-theme .whatsapp-inbox-sidebar-actions { width: 100%; margin: 0; justify-content: space-between; }
-.kds-workspace-theme .whatsapp-inbox-sidebar-actions > .kds-button { font: var(--type-record-body); justify-content: flex-start; }
 .kds-workspace-theme .whatsapp-inbox-quick-filters .whatsapp-inbox-filter-chip { font: var(--type-record-body); }
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-card,
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-card:hover { border-inline-start: 2px solid transparent; border-bottom: var(--border-width) solid var(--border-subtle); border-top: 0; border-inline-end: 0; }

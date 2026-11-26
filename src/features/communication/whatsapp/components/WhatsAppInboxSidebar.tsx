@@ -186,19 +186,19 @@ export function WhatsAppInboxSidebar({
               <InboxFilterChip active={unreadOnly} label="Não lidas" onClick={onShowUnread} />
             </div>
             <div className="whatsapp-inbox-sidebar-actions">
-              <Button
+              <IconButton
                 ref={advancedFiltersTriggerRef}
                 type="button"
                 onClick={onToggleAdvancedFilters}
                 aria-expanded={advancedFiltersOpen}
                 aria-haspopup="dialog"
                 aria-label={activeChatFiltersCount > 0 ? `Filtrar conversas (${activeChatFiltersCount})` : 'Filtrar conversas'}
+                title={activeChatFiltersCount > 0 ? `Filtrar conversas (${activeChatFiltersCount})` : 'Filtrar conversas'}
                 variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'ghost'}
                 size="sm"
               >
                 <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />
-                Filtrar conversas{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
-              </Button>
+              </IconButton>
               <Popover open={actionsOpen} onOpenChange={setActionsOpen}>
                 <PopoverTrigger><IconButton variant="ghost" size="sm" aria-label="Ações das conversas"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
                 <PopoverContent align="end" className="kds-workspace-action-menu" aria-label="Ações das conversas">

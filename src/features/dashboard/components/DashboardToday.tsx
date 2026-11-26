@@ -1,7 +1,7 @@
 import { ArrowUpRight, CalendarClock, ChevronRight, FileCheck, Heart, Sun, Target, UserPlus, Users, Wallet } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
 import {
-  ActionSurface, Badge, Button, ChartCard, CrmCard, DonutChart, FilterSelect,
+  ActionSurface, OperationalStatusBadge, Button, ChartCard, CrmCard, DonutChart, FilterSelect,
   IconButton, KpiCard, Progress, Surface, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text,
 } from '../../../design-system';
 import { formatDateTimeFullBR, formatTimeBR, getDateKey } from '../../../lib/dateUtils';
@@ -18,6 +18,7 @@ type DashboardTodayProps = {
   name?: string;
   analysis: DashboardCommercialAnalysis;
   funnel: DashboardChartDatum[];
+  statusColors?: Record<string, string | null | undefined>;
   leads: Lead[];
   contracts: Contract[];
   activeContracts: Contract[];
@@ -104,7 +105,7 @@ function OperationChart({ series }: { series: ReturnType<typeof getSeries> }) {
 }
 
 export function DashboardToday({
-  variant = 'today', name, analysis, funnel, leads, contracts, activeContracts, period, canViewAgenda, canViewLeads, canViewContracts,
+  variant = 'today', name, analysis, funnel, statusColors = {}, leads, contracts, activeContracts, period, canViewAgenda, canViewLeads, canViewContracts,
   agendaAvailable = true, showFinancialMetrics, onPeriodChange, onOpenAgenda, onOpenLeads, onOpenLead, onOpenContract, onOpenStage,
 }: DashboardTodayProps) {
   const series = useMemo(() => getSeries(leads, contracts, analysis.currentRange), [analysis.currentRange, contracts, leads]);
@@ -173,7 +174,7 @@ export function DashboardToday({
         <TableBody>{recentLeads.map((lead) => <TableRow key={lead.id}><TableCell>
           <div className="kds-dashboard-lead-cell">
             <span><Button size="sm" variant="text" onClick={() => onOpenLead(lead.id)}>{lead.nome_completo}</Button><small>{[lead.cidade, lead.tipo_contratacao].filter(Boolean).join(' · ') || lead.origem || '—'}</small></span>
-          </div></TableCell><TableCell><Badge tone="info">{lead.status || 'Sem etapa'}</Badge></TableCell><TableCell>{lead.responsavel || '—'}</TableCell><TableCell>{lead.proximo_retorno ? formatDateTimeFullBR(lead.proximo_retorno) : '—'}</TableCell></TableRow>)}</TableBody>
+          </div></TableCell><TableCell><OperationalStatusBadge statusColor={statusColors[lead.status ?? ''] ?? null}>{lead.status || 'Sem etapa'}</OperationalStatusBadge></TableCell><TableCell>{lead.responsavel || '—'}</TableCell><TableCell>{lead.proximo_retorno ? formatDateTimeFullBR(lead.proximo_retorno) : '—'}</TableCell></TableRow>)}</TableBody>
       </Table> : <Text className="kds-dashboard-overview-empty">Nenhum lead para mostrar no período.</Text>}
       {recentLeads.length > 0 && <div className="kds-dashboard-table-footer"><Text>{recentLeads.length} de {leads.length} registros no período</Text></div>}
     </CrmCard>}

@@ -2328,6 +2328,7 @@ export default function DashboardScreen({
           name={userProfile?.username}
           analysis={dashboardCommercial}
           funnel={donutChartData}
+          statusColors={Object.fromEntries(leadStatuses.map((status) => [status.nome, status.cor]))}
           leads={filteredLeads}
           contracts={filteredContracts}
           activeContracts={dashboardScopedContracts.filter((contract) => contract.status === 'Ativo')}

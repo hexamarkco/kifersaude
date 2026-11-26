@@ -57,19 +57,23 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
     { title: 'Pessoas na equipe', value: activeParticipants.length, icon: Users, description: 'Com atividade no período', tone: 'purple' },
   ];
 
-  return <section aria-label="Relatório de produção da equipe" className={finance ? 'kds-finance-production' : 'kds-dashboard-overview'}>
-    {report?.started_at && <section className={finance ? 'kds-workspace-record-metrics' : 'kds-dashboard-metric-grid kds-dashboard-metric-grid-compact'} aria-label="Indicadores de produção">
-      {indicators.map(({ title, value, icon: Icon, description, tone }) => (
-        <KpiCard key={title} title={title} value={<span>{value ?? '—'}</span>} trend={description} data-tone={tone} icon={<Icon aria-hidden="true" />} />
-      ))}
-    </section>}
-    <div className={finance ? "kds-finance-production-controls" : "kds-dashboard-production-controls"} role="group" aria-label="Filtros da produção">
+  const productionControls = (
+<div className={finance ? "kds-finance-production-controls" : "kds-dashboard-production-controls"} role="group" aria-label="Filtros da produção">
       <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setFilterDraft({ ...model.range, operator: model.operator })}>
         <CalendarDays className="kds-control-icon" aria-hidden="true" />
         {periodLabel}
       </Button>
       <IconButton variant="secondary" size="sm" aria-label="Atualizar produção" title="Atualizar produção" onClick={() => void model.reload()} disabled={model.loading}><RefreshCw aria-hidden="true" /></IconButton>
     </div>
+  );
+  return <section aria-label="Relatório de produção da equipe" className={finance ? 'kds-finance-production' : 'kds-dashboard-overview'}>
+    {!finance && productionControls}
+    {report?.started_at && <section className={finance ? 'kds-workspace-record-metrics' : 'kds-dashboard-metric-grid kds-dashboard-metric-grid-compact'} aria-label="Indicadores de produção">
+      {indicators.map(({ title, value, icon: Icon, description, tone }) => (
+        <KpiCard key={title} title={title} value={<span>{value ?? '—'}</span>} trend={description} data-tone={tone} icon={<Icon aria-hidden="true" />} />
+      ))}
+    </section>}
+    {finance && productionControls}
     {model.loading && !report && <LoadingState placeholder={<RecordListSkeleton />} label="Carregando produção…" />}
     {model.error && <Alert tone="warning">{model.error}</Alert>}
     {report && !report.started_at && <Alert

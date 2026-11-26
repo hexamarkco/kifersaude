@@ -2623,3 +2623,67 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
     border-radius: var(--radius-dialog) !important;
   }
 }
+
+/* Visão geral — original prototype geometry; shared record scale, real operational data. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-workspace { display: grid; gap: var(--space-5); min-width: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-page-header .kds-page-title { font: var(--type-record-title); letter-spacing: -.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-page-header .kds-page-description { font: var(--type-record-description); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-header-actions .kds-button { font: var(--type-toolbar-control); min-height: var(--toolbar-control-height); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-view-tabs .kds-tab { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-welcome { padding: var(--space-4) var(--space-5); gap: var(--space-3); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-welcome p { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-welcome .kds-button { font: var(--type-toolbar-control); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid { gap: var(--space-4); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid > .kds-card-kpi { min-height: var(--dashboard-metric-height); padding: var(--space-5); border-radius: var(--dashboard-card-radius); gap: var(--space-3); box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-card-title { font: var(--type-dashboard-metric-label); color: var(--text-muted); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-card-icon { width: var(--record-metric-icon-size); height: var(--record-metric-icon-size); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-kpi-value { font: var(--type-record-metric); letter-spacing: -.05em; overflow-wrap: anywhere; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-kpi-trend { font: var(--type-dashboard-metric-caption); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview { gap: var(--space-5); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-columns { gap: var(--space-5); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview :is(.kds-card-chart,.kds-card-base) { border-radius: var(--dashboard-card-radius); box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview :is(.kds-card-chart,.kds-card-base):not(.kds-dashboard-recent-leads,.kds-dashboard-task-card,.kds-dashboard-table-card) { padding: var(--dashboard-card-padding); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview :is(.kds-card-chart,.kds-card-base) .kds-card-title { font: var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview .kds-card-subtitle { font: var(--type-dashboard-card-subtitle); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview .kds-card-actions :is(.kds-button,.kds-filter-trigger) { font: var(--type-toolbar-caption); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview .kds-card-chart .kds-card-actions .kds-filter-trigger { min-height: var(--record-metric-icon-size); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-operation-chart-legend { font: var(--type-record-secondary); margin-bottom: var(--space-5); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-operation-chart-grid { grid-template-rows: var(--dashboard-chart-height) auto; font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-funnel { min-height: var(--dashboard-chart-height); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-funnel-key .kds-action-surface { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-dashboard-task-row,.kds-dashboard-activity-row) { min-height: var(--record-table-row-height); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-dashboard-task-row,.kds-dashboard-activity-row,.kds-dashboard-lead-cell) small,
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-task-row time { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview-empty { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-lead-cell .kds-button { font: var(--type-record-field-label); text-align: start; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-workspace .kds-table-head { height: var(--record-table-head-height); font: var(--type-record-heading); text-transform: none; letter-spacing: normal; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-workspace .kds-table-cell { height: var(--record-table-row-height); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-table-footer { padding: var(--space-4) var(--space-5); border-top: var(--border-width) solid var(--border-subtle); color: var(--text-muted); font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-inline-bars li { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr) auto; align-items: center; gap: var(--space-3); font: var(--type-record-body); }
+.kds-dashboard-inline-bars li > span { overflow-wrap: anywhere; }
+.kds-dashboard-inline-bars li:nth-child(4n + 2) .kds-progress-fill { background: var(--info-text); }
+.kds-dashboard-inline-bars li:nth-child(4n + 3) .kds-progress-fill { background: var(--cyan-text); }
+.kds-dashboard-inline-bars li:nth-child(4n + 4) .kds-progress-fill { background: var(--purple-text); }
+.kds-dashboard-production-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); }
+.kds-dashboard-production-controls .kds-button { font: var(--type-toolbar-control); }
+.kds-dashboard-chart-skeleton { height: var(--dashboard-chart-height); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-dashboard-filter-dialog,.kds-dashboard-period-dialog) { width: var(--record-dialog-width); max-width: 100%; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-dashboard-filter-dialog,.kds-dashboard-period-dialog) .kds-dialog-body { padding: var(--dialog-body-padding); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-dashboard-filter-dialog,.kds-dashboard-period-dialog) .kds-field-label { font: var(--type-record-field-label); color: var(--text-primary); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-dashboard-filter-dialog,.kds-dashboard-period-dialog) :is(.kds-select,.kds-input,.kds-filter-trigger) { font: var(--type-record-field); min-height: var(--form-control-height); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-period-option .kds-radio-label { font: var(--type-record-field); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-period-footer { flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 1023px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-3); }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-workspace { gap: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-page-header .kds-page-title { font-size: 1.4375rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid > .kds-card-kpi { min-height: 8rem; padding: var(--space-3); gap: var(--space-2); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-metric-grid .kds-kpi-value { font-size: clamp(1.125rem,5.5vw,1.5rem); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-overview :is(.kds-card-chart,.kds-card-base):not(.kds-dashboard-recent-leads,.kds-dashboard-task-card,.kds-dashboard-table-card) { padding: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-columns { grid-template-columns: minmax(0,1fr); gap: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-task-row { padding-inline: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-funnel-key .kds-action-surface { min-height: var(--touch-target); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-filter-footer { flex-wrap: wrap; }
+}

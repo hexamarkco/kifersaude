@@ -2287,7 +2287,7 @@ export default function DashboardScreen({
     >
       <div
         ref={dashboardRootRef}
-        className="panel-dashboard-immersive panel-page-shell kds-dashboard-workspace space-y-6"
+        className="panel-dashboard-immersive panel-page-shell kds-dashboard-workspace"
       >
         <DashboardHeader
           {...dashboardHeadings[dashboardView]}
@@ -2322,7 +2322,7 @@ export default function DashboardScreen({
           isCustomPeriodValid={isCustomPeriodValid}
           onRetry={loadData}
         />
-        <Tabs items={dashboardViews} value={dashboardView} onChange={setDashboardView} ariaLabel="Visões do painel" variant="underline" />
+        <Tabs items={dashboardViews} value={dashboardView} onChange={setDashboardView} ariaLabel="Visões do painel" variant="underline" className="kds-dashboard-view-tabs" />
         {(dashboardView === 'today' || dashboardView === 'sales') && <DashboardToday
           variant={dashboardView === 'sales' ? 'commercial' : 'today'}
           name={userProfile?.username}
@@ -2333,6 +2333,7 @@ export default function DashboardScreen({
           activeContracts={dashboardScopedContracts.filter((contract) => contract.status === 'Ativo')}
           period={periodFilter}
           canViewAgenda={canViewAgenda}
+          agendaAvailable={!decisionSnapshotError}
           canViewLeads={canViewLeads}
           canViewContracts={canViewContracts}
           showFinancialMetrics={!isObserver}
@@ -2467,6 +2468,7 @@ export default function DashboardScreen({
         )}
         {selectedContract && (
           <ContractDetails
+            presentation="drawer"
             contract={selectedContract}
             onClose={() => setSelectedContract(null)}
             onUpdate={loadData}

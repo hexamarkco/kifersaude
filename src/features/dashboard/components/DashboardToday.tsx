@@ -1,4 +1,4 @@
-import { ArrowUpRight, CalendarClock, FileCheck, Heart, Sun, Target, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowUpRight, CalendarClock, ChevronRight, FileCheck, Heart, Sun, Target, UserPlus, Users, Wallet } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
 import {
   ActionSurface, Badge, Button, ChartCard, CrmCard, DonutChart, FilterSelect,
@@ -23,6 +23,7 @@ type DashboardTodayProps = {
   activeContracts: Contract[];
   period: DashboardPeriodFilter;
   canViewAgenda: boolean;
+  agendaAvailable?: boolean;
   canViewLeads: boolean;
   canViewContracts: boolean;
   showFinancialMetrics: boolean;
@@ -104,7 +105,7 @@ function OperationChart({ series }: { series: ReturnType<typeof getSeries> }) {
 
 export function DashboardToday({
   variant = 'today', name, analysis, funnel, leads, contracts, activeContracts, period, canViewAgenda, canViewLeads, canViewContracts,
-  showFinancialMetrics, onPeriodChange, onOpenAgenda, onOpenLeads, onOpenLead, onOpenContract, onOpenStage,
+  agendaAvailable = true, showFinancialMetrics, onPeriodChange, onOpenAgenda, onOpenLeads, onOpenLead, onOpenContract, onOpenStage,
 }: DashboardTodayProps) {
   const series = useMemo(() => getSeries(leads, contracts, analysis.currentRange), [analysis.currentRange, contracts, leads]);
   const isCommercial = variant === 'commercial';
@@ -125,7 +126,7 @@ export function DashboardToday({
   return <div className="kds-dashboard-overview">
     <Surface className="kds-dashboard-welcome" padding="none">
       <span className="kds-dashboard-activity-icon" data-tone="brand"><Sun size={18} aria-hidden="true" /></span>
-      <Text><strong>{name ? `Olá, ${name.split(' ')[0]}.` : 'Olá.'}</strong> {canViewAgenda && (todayCount === 1 ? 'Você tem 1 acompanhamento para hoje.' : `Você tem ${todayCount} acompanhamentos para hoje.`)}</Text>
+      <Text><strong>{name ? `Olá, ${name.split(' ')[0]}.` : 'Olá.'}</strong> {canViewAgenda && (!agendaAvailable ? 'Não foi possível atualizar os acompanhamentos.' : todayCount === 1 ? 'Você tem 1 acompanhamento pendente.' : `Você tem ${todayCount} acompanhamentos pendentes.`)}</Text>
       {canViewAgenda && <Button size="sm" variant="secondary" onClick={onOpenAgenda}>Organizar meu dia <ArrowUpRight aria-hidden="true" /></Button>}
     </Surface>
 
@@ -144,18 +145,18 @@ export function DashboardToday({
         ))}</div>
       </ChartCard>
       {canViewAgenda && <CrmCard className="kds-dashboard-task-card" title={isCommercial ? "Oportunidades em destaque" : "Atenção para os próximos passos"} subtitle={isCommercial ? "Negociações com retorno programado." : "Pequenas ações que mantêm o cuidado em dia."} subtitlePlacement="visible" actions={<Button variant="text" size="sm" onClick={onOpenAgenda}>Ver agenda <ArrowUpRight aria-hidden="true" /></Button>}>
-        {agenda.length ? <div>{agenda.map((item) => <div key={item.id} className="kds-dashboard-task-row">
-          <CalendarClock size={16} aria-hidden="true" /><span><strong>{item.title}</strong><small>{[item.leadName, item.type].filter(Boolean).join(' · ')}</small></span><time dateTime={item.date}>{formatTimeBR(item.date)}</time>
+        {!agendaAvailable ? <Text className="kds-dashboard-overview-empty">Acompanhamentos indisponíveis. Consulte a Agenda.</Text> : agenda.length ? <div>{agenda.map((item) => <div key={item.id} className="kds-dashboard-task-row">
+          <CalendarClock className="kds-control-icon" aria-hidden="true" /><span><strong>{item.title}</strong><small>{[item.leadName, item.type].filter(Boolean).join(' · ')}</small></span><time dateTime={item.date}>{formatTimeBR(item.date)}</time>
+          <IconButton variant="ghost" size="sm" aria-label={`Abrir acompanhamento: ${item.title}`} onClick={() => item.leadId && canViewLeads ? onOpenLead(item.leadId) : onOpenAgenda()}><ChevronRight aria-hidden="true" /></IconButton>
         </div>)}</div> : <Text className="kds-dashboard-overview-empty">Nenhum acompanhamento pendente no período.</Text>}
       </CrmCard>}
       {isCommercial ? (
         <CrmCard title="De onde chegam os leads" subtitle="Canais de entrada das oportunidades.">
           {analysis.origins.some((row) => row.leads > 0) ? (
-            <ul className="kds-dashboard-bar-list">
+            <ul className="kds-dashboard-bar-list kds-dashboard-inline-bars">
               {analysis.origins.filter((row) => row.leads > 0).slice(0, 6).map((row) => (
                 <li key={row.label}>
-                  <div><span>{row.label}</span><strong>{row.leads}</strong></div>
-                  <Progress size="sm" value={row.leads} max={maxOriginLeads} />
+                  <span>{row.label}</span><Progress size="sm" value={row.leads} max={maxOriginLeads} /><strong>{row.leads}</strong>
                 </li>
               ))}
             </ul>
@@ -171,9 +172,10 @@ export function DashboardToday({
         <TableHeader><TableRow><TableHead>Lead</TableHead><TableHead>Etapa</TableHead><TableHead>Responsável</TableHead><TableHead>Próximo acompanhamento</TableHead></TableRow></TableHeader>
         <TableBody>{recentLeads.map((lead) => <TableRow key={lead.id}><TableCell>
           <div className="kds-dashboard-lead-cell">
-            <span><Button size="sm" variant="text" onClick={() => onOpenLead(lead.id)}>{lead.nome_completo}</Button><small>{lead.cidade || lead.origem || '—'}</small></span>
+            <span><Button size="sm" variant="text" onClick={() => onOpenLead(lead.id)}>{lead.nome_completo}</Button><small>{[lead.cidade, lead.tipo_contratacao].filter(Boolean).join(' · ') || lead.origem || '—'}</small></span>
           </div></TableCell><TableCell><Badge tone="info">{lead.status || 'Sem etapa'}</Badge></TableCell><TableCell>{lead.responsavel || '—'}</TableCell><TableCell>{lead.proximo_retorno ? formatDateTimeFullBR(lead.proximo_retorno) : '—'}</TableCell></TableRow>)}</TableBody>
       </Table> : <Text className="kds-dashboard-overview-empty">Nenhum lead para mostrar no período.</Text>}
+      {recentLeads.length > 0 && <div className="kds-dashboard-table-footer"><Text>{recentLeads.length} de {leads.length} registros no período</Text></div>}
     </CrmCard>}
   </div>;
 }

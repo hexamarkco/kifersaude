@@ -95,6 +95,19 @@ export function DashboardHeader({
   onStatusFilterChange,
 }: DashboardHeaderProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState({ owner: dashboardOwnerFilter, status: dashboardStatusFilter, origin: dashboardOriginFilter, contractType: dashboardContractTypeFilter, operator: dashboardOperatorFilter });
+  const openFilters = () => {
+    setFilterDraft({ owner: dashboardOwnerFilter, status: dashboardStatusFilter, origin: dashboardOriginFilter, contractType: dashboardContractTypeFilter, operator: dashboardOperatorFilter });
+    setFiltersOpen(true);
+  };
+  const applyFilters = () => {
+    onOwnerFilterChange(filterDraft.owner);
+    onStatusFilterChange(filterDraft.status);
+    onOriginFilterChange(filterDraft.origin);
+    onContractTypeFilterChange(filterDraft.contractType);
+    onOperatorFilterChange(filterDraft.operator);
+    setFiltersOpen(false);
+  };
   const [periodOpen, setPeriodOpen] = useState(false);
   const [draftPeriod, setDraftPeriod] = useState(periodFilter);
   const [draftStartDate, setDraftStartDate] = useState(customStartDate);
@@ -145,7 +158,7 @@ export function DashboardHeader({
       aria-haspopup="dialog"
       aria-expanded={filtersOpen}
       aria-controls="dashboard-advanced-filters"
-      onClick={() => setFiltersOpen((open) => !open)}
+      onClick={() => filtersOpen ? setFiltersOpen(false) : openFilters()}
       className="shrink-0"
     >
       <MoreHorizontal aria-hidden="true" />
@@ -170,11 +183,11 @@ export function DashboardHeader({
   );
 
   const filters = [
-    { label: 'Responsável', all: 'Todos os responsáveis', value: dashboardOwnerFilter, onChange: onOwnerFilterChange, options: responsavelOptions },
-    { label: 'Etapa do lead', all: 'Todos os estágios', value: dashboardStatusFilter, onChange: onStatusFilterChange, options: statusOptions },
-    { label: 'Origem', all: 'Todas as origens', value: dashboardOriginFilter, onChange: onOriginFilterChange, options: visibleLeadOrigins.map(({ nome }) => ({ value: nome, label: nome })) },
-    { label: 'Tipo de contratação', all: 'Todos os tipos', value: dashboardContractTypeFilter, onChange: onContractTypeFilterChange, options: contractTypeOptions },
-    { label: 'Operadora', all: 'Todas as operadoras', value: dashboardOperatorFilter, onChange: onOperatorFilterChange, options: operatorOptions.map((operator) => ({ value: operator, label: operator })) },
+    { label: 'Responsável', all: 'Todos os responsáveis', value: filterDraft.owner, onChange: (value: string) => setFilterDraft((draft) => ({ ...draft, owner: value })), options: responsavelOptions },
+    { label: 'Etapa do lead', all: 'Todos os estágios', value: filterDraft.status, onChange: (value: string) => setFilterDraft((draft) => ({ ...draft, status: value })), options: statusOptions },
+    { label: 'Origem', all: 'Todas as origens', value: filterDraft.origin, onChange: (value: string) => setFilterDraft((draft) => ({ ...draft, origin: value })), options: visibleLeadOrigins.map(({ nome }) => ({ value: nome, label: nome })) },
+    { label: 'Tipo de contratação', all: 'Todos os tipos', value: filterDraft.contractType, onChange: (value: string) => setFilterDraft((draft) => ({ ...draft, contractType: value })), options: contractTypeOptions },
+    { label: 'Operadora', all: 'Todas as operadoras', value: filterDraft.operator, onChange: (value: string) => setFilterDraft((draft) => ({ ...draft, operator: value })), options: operatorOptions.map((operator) => ({ value: operator, label: operator })) },
   ];
 
   const filterActions = (
@@ -183,19 +196,12 @@ export function DashboardHeader({
         type="button"
         variant="text"
         size="sm"
-        onClick={() => {
-          onOriginFilterChange('');
-          onOwnerFilterChange('');
-          onOperatorFilterChange('');
-          onContractTypeFilterChange('');
-          onStatusFilterChange('');
-        }}
+        onClick={() => setFilterDraft({ owner: '', status: '', origin: '', contractType: '', operator: '' })}
       >
         Limpar filtros
       </Button>
-      <Button type="button" variant="secondary" onClick={() => setFiltersOpen(false)}>
-        Concluído
-      </Button>
+      <Button type="button" variant="secondary" onClick={() => setFiltersOpen(false)}>Cancelar</Button>
+      <Button type="button" onClick={applyFilters}>Aplicar filtros</Button>
     </>
   );
 
@@ -222,7 +228,7 @@ export function DashboardHeader({
   const customPeriodFields = (
     <div className="kds-dashboard-period-custom-fields">
       <Text className="kds-dashboard-period-help">Defina as datas inicial e final para atualizar o dashboard.</Text>
-      <Field label="De" required description="Data inicial do intervalo.">
+      <Field label="Data inicial" required description="Data inicial do intervalo.">
         <DateTimePicker
           type="date"
           value={toDatePickerValue(draftStartDate)}
@@ -232,7 +238,7 @@ export function DashboardHeader({
         />
       </Field>
       <Field
-        label="Até"
+        label="Data final"
         required
         description="Data final do intervalo."
         error={customRangeIsInverted ? 'A data final deve ser igual ou posterior à data inicial.' : undefined}
@@ -249,7 +255,7 @@ export function DashboardHeader({
     </div>
   );
 
-  const periodTitle = <DialogTitle>{periodStep === 'custom' ? 'Período personalizado' : 'Período do dashboard'}</DialogTitle>;
+  const periodTitle = <DialogTitle>{periodStep === 'custom' ? 'Período personalizado' : 'Selecionar período'}</DialogTitle>;
   const periodBody = (
     periodStep === 'custom' ? customPeriodFields : periodOptions
   );
@@ -258,6 +264,7 @@ export function DashboardHeader({
       {periodStep === 'custom' ? (
         <Button type="button" variant="secondary" onClick={() => setPeriodStep('options')}>Voltar</Button>
       ) : null}
+      <Button type="button" variant="secondary" onClick={() => setPeriodOpen(false)}>Cancelar</Button>
       {draftPeriod === 'personalizado' && periodStep === 'options' ? (
         <Button type="button" variant="primary" onClick={() => setPeriodStep('custom')}>Continuar</Button>
       ) : (
@@ -273,6 +280,7 @@ export function DashboardHeader({
       id="dashboard-advanced-filters"
       open
       onOpenChange={setFiltersOpen}
+      className="kds-crm-dialog kds-dashboard-filter-dialog"
       aria-label="Filtros avançados do dashboard"
     >
       <DialogHeader onClose={() => setFiltersOpen(false)}>
@@ -300,6 +308,7 @@ export function DashboardHeader({
       id="dashboard-period-filter"
       open
       onOpenChange={setPeriodOpen}
+      className="kds-crm-dialog kds-dashboard-period-dialog"
       aria-label="Período do dashboard"
     >
       <DialogHeader onClose={() => setPeriodOpen(false)}>

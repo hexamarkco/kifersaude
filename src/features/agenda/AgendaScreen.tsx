@@ -68,7 +68,7 @@ import {
   EmptyState,
   Field,
   Input,
-  LoadingState, RecordListSkeleton, RemindersPageSkeleton,
+  LoadingState, RemindersPageSkeleton,
   PageHeader,
   RecordActions,
   Select,
@@ -1124,9 +1124,11 @@ export default function AgendaScreen() {
   const showCalendar = statusFilter === "todos";
   return (
     <>
-      {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." placeholder={showCalendar ? <RemindersPageSkeleton /> : <RecordListSkeleton rows={7} />} fallback={() => (
-      <div className="kds-agenda-page panel-page-shell space-y-4 sm:space-y-5">
+      {<LoadingState active={loading && !hasAgendaSnapshot} label="Carregando agenda..." placeholder={<RemindersPageSkeleton view={showCalendar ? calendarView : "list"} />} fallback={() => (
+      <div className="kds-agenda-page panel-page-shell">
         <PageHeader
+          className="kds-agenda-page-header"
+          descriptionPlacement="visible"
           title={statusFilter === 'nao-lidos' ? 'O que precisa acontecer.' : statusFilter === 'lidos' ? 'O trabalho que já foi feito.' : calendarView === 'week' ? 'Uma semana com mais clareza.' : 'Sua rotina, bem organizada.'}
           description={statusFilter === 'nao-lidos' ? 'Priorize os retornos e mantenha o acompanhamento em dia.' : statusFilter === 'lidos' ? 'Consulte o histórico de tarefas e lembretes concluídos.' : calendarView === 'week' ? 'Atendimentos, tarefas e follow-ups distribuídos no tempo.' : 'Encontre tempo para o que merece a sua atenção.'}
           actions={(
@@ -1156,6 +1158,7 @@ export default function AgendaScreen() {
                 setStatusFilter(view);
               }
             }}
+            variant="underline"
             className="kds-agenda-status-switcher"
             listClassName="flex-nowrap overflow-x-auto pb-1"
             ariaLabel="Visões da agenda"
@@ -1182,7 +1185,7 @@ export default function AgendaScreen() {
                     <Heading level={2}>{selectedDateLabel}</Heading>
                     <Text>O que está reservado para este dia.</Text>
                   </div>
-                  <IconButton variant="secondary" size="sm" aria-label="Adicionar tarefa neste dia" onClick={() => openNewTask()}><Plus /></IconButton>
+                  <IconButton variant="ghost" size="sm" aria-label="Adicionar tarefa neste dia" onClick={() => openNewTask()}><Plus /></IconButton>
                 </div>
                 <div className="kds-agenda-day-body">
                   {selectedDateReminders.length > 0 ? selectedDateReminders.map(renderReminderRow) : (
@@ -1232,7 +1235,7 @@ export default function AgendaScreen() {
                   : formatAgendaCount(filteredReminders.length, "concluído", "concluídos")}
               </Text>
             </div>
-            <Surface padding="none" className="kds-agenda-task-list">
+            <Surface padding="none" className="kds-agenda-task-list" aria-label={statusFilter === "lidos" ? "Tarefas concluídas" : "Tarefas pendentes"}>
               {filteredReminders.length > 0 ? filteredReminders.map(renderReminderRow) : (
                 <EmptyState
                   icon={<CheckCircle2 />}
@@ -1245,10 +1248,10 @@ export default function AgendaScreen() {
         )}
 
         {filterDraft && (
-          <Dialog open size="md" className="kds-agenda-dialog" onOpenChange={(open) => !open && setFilterDraft(null)}>
+          <Dialog open size="md" className="kds-crm-dialog kds-agenda-dialog kds-agenda-filter-dialog" onOpenChange={(open) => !open && setFilterDraft(null)}>
             <DialogHeader onClose={() => setFilterDraft(null)}>
+              <div className="kds-dialog-eyebrow">Agenda</div>
               <DialogTitle>Filtrar agenda</DialogTitle>
-              <DialogDescription placement="visible">Encontre as tarefas e os lembretes que você quer acompanhar.</DialogDescription>
             </DialogHeader>
             <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => {
               event.preventDefault();
@@ -1273,7 +1276,7 @@ export default function AgendaScreen() {
                     <Select id="agenda-filter-priority" value={filterDraft.priorityFilter} options={PRIORITY_OPTIONS} onChange={(event) => setFilterDraft({ ...filterDraft, priorityFilter: event.target.value })} />
                   </Field>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setFilterDraft({ ...EMPTY_FILTERS })}>Limpar filtros</Button>
+                <Button variant="text" size="sm" onClick={() => setFilterDraft({ ...EMPTY_FILTERS })}>Limpar filtros</Button>
               </DialogBody>
               <DialogFooter>
                 <Button variant="secondary" onClick={() => setFilterDraft(null)}>Cancelar</Button>
@@ -1284,10 +1287,10 @@ export default function AgendaScreen() {
         )}
 
         {detail && (
-          <Dialog open size="md" className="kds-agenda-dialog" onOpenChange={(open) => !open && setDetailId(null)}>
+          <Dialog open size="md" className="kds-crm-dialog kds-agenda-dialog kds-agenda-detail-dialog" onOpenChange={(open) => !open && setDetailId(null)}>
             <DialogHeader onClose={() => setDetailId(null)}>
+              <div className="kds-dialog-eyebrow">Agenda</div>
               <DialogTitle>Detalhes do lembrete</DialogTitle>
-              <DialogDescription placement="visible">Informações e ações deste item da agenda.</DialogDescription>
             </DialogHeader>
             <DialogBody className="space-y-4">
               <div className="kds-agenda-detail-summary">
@@ -1319,35 +1322,32 @@ export default function AgendaScreen() {
         )}
 
         {reschedule && (
-          <Dialog open size="md" className="kds-agenda-dialog" onOpenChange={(open) => !open && !reschedulingInFlightId && setReschedule(null)}>
+          <Dialog open size="md" className="kds-crm-dialog kds-agenda-dialog kds-agenda-reschedule-dialog" onOpenChange={(open) => !open && !reschedulingInFlightId && setReschedule(null)}>
             <DialogHeader onClose={reschedulingInFlightId ? undefined : () => setReschedule(null)}>
+              <div className="kds-dialog-eyebrow">Agenda</div>
               <DialogTitle>Reagendar lembrete</DialogTitle>
-              <DialogDescription placement="visible">Escolha quando este lembrete deve aparecer na agenda.</DialogDescription>
             </DialogHeader>
             <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => {
               event.preventDefault();
               if (reschedule.date && reschedule.time) void handleRescheduleReminder(reschedule.id, reschedule.date, reschedule.time);
             }}>
               <DialogBody className="space-y-4">
-                {rescheduledItem && (
-                  <div className="kds-agenda-reschedule-summary">
-                    <span className="kds-agenda-detail-icon">{getReminderIcon(rescheduledItem.tipo)}</span>
-                    <div>
-                      <Text weight="semibold">{rescheduledItem.titulo}</Text>
-                      {rescheduledItem.descricao && <Text size="sm" tone="muted">{rescheduledItem.descricao}</Text>}
-                    </div>
-                  </div>
-                )}
+                {rescheduledItem && <div className="kds-agenda-form-grid">
+                  <Field label="Título do lembrete"><Input value={rescheduledItem.titulo} readOnly /></Field>
+                  <Field label="Contato relacionado"><Input value={leadsMap.get(getLeadIdForReminder(rescheduledItem) ?? "")?.nome_completo || (rescheduledItem.contract_id ? contractsMap.get(rescheduledItem.contract_id)?.codigo_contrato || "Contrato vinculado" : rescheduledItem.lead_id ? "Contato vinculado" : "Sem vínculo")} readOnly /></Field>
+                </div>}
                 <div className="kds-agenda-form-grid">
-                  <Field label="Nova data" htmlFor="agenda-reschedule-date" required>
+                  <Field label="Lembrar no dia" htmlFor="agenda-reschedule-date" required>
                     <DateTimePicker id="agenda-reschedule-date" type="date" value={reschedule.date} disabled={Boolean(reschedulingInFlightId)} onChange={({ target }) => setReschedule({ ...reschedule, date: target.value })} />
                   </Field>
-                  <Field label="Horário" htmlFor="agenda-reschedule-time" required>
+                  <Field label="Às" htmlFor="agenda-reschedule-time" required>
                     <DateTimePicker id="agenda-reschedule-time" type="time" value={reschedule.time} disabled={Boolean(reschedulingInFlightId)} onChange={({ target }) => setReschedule({ ...reschedule, time: target.value })} />
                   </Field>
                 </div>
+                {rescheduledItem && <Field label="Observação"><Textarea value={rescheduledItem.descricao ?? ""} rows={4} readOnly /></Field>}
               </DialogBody>
               <DialogFooter>
+                <Text className="kds-dialog-footer-note">Somente data e hora serão alteradas.</Text>
                 <Button variant="secondary" onClick={() => setReschedule(null)} disabled={Boolean(reschedulingInFlightId)}>Cancelar</Button>
                 <Button type="submit" variant="primary" loading={Boolean(reschedulingInFlightId)} disabled={!reschedule.date || !reschedule.time || Boolean(reschedulingInFlightId)}>Salvar reagendamento</Button>
               </DialogFooter>
@@ -1359,13 +1359,14 @@ export default function AgendaScreen() {
           <Dialog
             open
             aria-label="Remover item da agenda"
-            className="kds-agenda-dialog"
+            className="kds-crm-dialog kds-agenda-dialog kds-agenda-remove-dialog"
             onOpenChange={(open) => {
               if (!open && !isDeletingReminder) setReminderPendingDeletion(null);
             }}
             size="sm"
           >
             <DialogHeader onClose={isDeletingReminder ? undefined : () => setReminderPendingDeletion(null)}>
+              <div className="kds-dialog-eyebrow">Agenda</div>
               <DialogTitle>Remover item</DialogTitle>
               <DialogDescription placement="visible">Esta ação não pode ser desfeita.</DialogDescription>
             </DialogHeader>
@@ -1391,7 +1392,7 @@ export default function AgendaScreen() {
           <Dialog
             open
             aria-label="Criar nova tarefa"
-            className="kds-agenda-dialog"
+            className="kds-crm-dialog kds-agenda-dialog kds-agenda-create-dialog"
             onOpenChange={(open) => !open && !savingTask && closeAddTaskModal()}
             size="md"
           >
@@ -1399,7 +1400,6 @@ export default function AgendaScreen() {
               <DialogHeader onClose={savingTask ? undefined : closeAddTaskModal}>
                 <Text className="kds-dialog-eyebrow">Agenda</Text>
                 <DialogTitle>Nova tarefa</DialogTitle>
-                <DialogDescription placement="visible">Reserve um horário para o próximo passo.</DialogDescription>
               </DialogHeader>
               <DialogBody className="space-y-4">
                 <Field label="Título da tarefa" htmlFor="agenda-task-title" required>
@@ -1415,27 +1415,29 @@ export default function AgendaScreen() {
                 </Field>
 
                 <div className="kds-agenda-form-grid">
-                  <Field label="Data" htmlFor="agenda-task-date" required>
+                  <Field label="Lembrar no dia" htmlFor="agenda-task-date" required>
                     <DateTimePicker id="agenda-task-date" type="date" value={newTaskDate} onChange={({ target }) => setNewTaskDate(target.value)} disabled={savingTask} />
                   </Field>
-                  <Field label="Horário" htmlFor="agenda-task-time" required>
+                  <Field label="Às" htmlFor="agenda-task-time" required>
                     <DateTimePicker id="agenda-task-time" type="time" value={newTaskTime} onChange={({ target }) => setNewTaskTime(target.value)} disabled={savingTask} />
                   </Field>
                 </div>
                 <Field label="Prioridade" htmlFor="agenda-task-priority">
                   <Select id="agenda-task-priority" value={newTaskPriority} options={TASK_PRIORITIES} onChange={({ target }) => setNewTaskPriority(target.value)} disabled={savingTask} />
                 </Field>
-                <Field label="Detalhes (opcional)" htmlFor="agenda-task-description">
+                <Field label="Observação (opcional)" htmlFor="agenda-task-description">
                   <Textarea
                     id="agenda-task-description"
                     value={newTaskDescription}
                     onChange={(event) => setNewTaskDescription(event.target.value)}
                     placeholder="Adicione detalhes da tarefa"
+                    rows={4}
                     disabled={savingTask}
                   />
                 </Field>
               </DialogBody>
               <DialogFooter>
+                <Text className="kds-dialog-footer-note">Campos com * são obrigatórios.</Text>
                 <Button type="button" onClick={closeAddTaskModal} disabled={savingTask} variant="secondary" size="md">
                   Cancelar
                 </Button>

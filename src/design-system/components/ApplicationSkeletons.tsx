@@ -252,72 +252,25 @@ export function ContractsPageSkeleton() {
   );
 }
 
-export function RemindersPageSkeleton() {
+export function RemindersPageSkeleton({ view = 'month' }: { view?: 'month' | 'week' | 'list' } = {}) {
   return (
-    <div className="panel-dashboard-immersive space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-9 w-64" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <Skeleton className="h-10 w-24 rounded-lg" />
-          <Skeleton className="h-10 w-24 rounded-lg" />
-          <Skeleton className="h-10 w-24 rounded-lg" />
-        </div>
+    <div className="kds-agenda-page panel-page-shell" aria-hidden="true">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 space-y-2"><Skeleton className="h-8 w-64 max-w-full" /><Skeleton variant="line" className="h-4 w-72 max-w-full" /></div>
+        <Skeleton className="h-9 w-28" />
       </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <PanelCard key={`reminder-stat-${index}`} className="space-y-2">
-            <Skeleton variant="line" className="h-4 w-20" />
-            <Skeleton className="h-8 w-16" />
-          </PanelCard>
-        ))}
-      </div>
-
-      <PanelCard className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <Skeleton className="h-10 w-full rounded-lg lg:flex-1" />
-          <Skeleton className="h-10 w-full rounded-lg lg:w-52" />
-          <Skeleton className="h-10 w-full rounded-lg lg:w-44" />
+      <div className="flex gap-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 w-16" />)}</div>
+      {view === 'list' ? <>
+        <div className="kds-agenda-toolbar"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-20" /></div>
+        <PanelCard className="space-y-2">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
+      </> : <div className={view === 'month' ? 'kds-agenda-workspace-grid kds-month-layout' : 'kds-agenda-workspace-grid'}>
+        <div className="kds-card kds-card-default kds-agenda-calendar">
+          <div className="kds-month-header"><Skeleton className="h-5 w-40" /><Skeleton className="h-8 w-24" /></div>
+          <div className="kds-month-weekdays">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="line" className="mx-auto h-3 w-6" />)}</div>
+          <div className="kds-month-grid">{Array.from({ length: view === 'month' ? 42 : 35 }, (_, i) => <div key={i} className="kds-agenda-skeleton-cell"><Skeleton className="h-4 w-4" /></div>)}</div>
         </div>
-        <div className="space-y-6">
-          {['Atrasados', 'Hoje', 'Amanhã'].map((group, groupIndex) => (
-            <div key={group} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Skeleton variant="line" className="h-5 w-24" />
-                  <Skeleton variant="line" className="h-5 w-16" />
-                </div>
-                <Skeleton variant="line" className="h-4 w-20" />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {Array.from({ length: groupIndex === 0 ? 2 : 1 }).map((_, index) => (
-                  <article
-                    key={`${group}-reminder-${index}`}
-                    className="kds-card kds-card-default p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <Skeleton className="h-5 w-56" />
-                        <Skeleton variant="line" className="h-4 w-32" />
-                        <Skeleton variant="line" className="h-4 w-48" />
-                      </div>
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </PanelCard>
+        {view === 'month' && <PanelCard className="space-y-3"><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-3 w-40" />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-14 w-full" />)}</PanelCard>}
+      </div>}
     </div>
   );
 }

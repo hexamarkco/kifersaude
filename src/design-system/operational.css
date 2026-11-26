@@ -2693,3 +2693,70 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media (max-width: 390px) {
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-filter-fields { grid-template-columns: minmax(0,1fr); }
 }
+
+/* Agenda: original calendar, week, pending and completed reference; operational touch targets remain intact. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page { display: grid; min-width: 0; gap: var(--space-5); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page-header .kds-page-title { font: var(--type-record-title); letter-spacing: -.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page-header .kds-page-description { font: var(--type-record-description); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-header-actions .kds-button,
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-toolbar :is(.kds-input,.kds-filter-trigger,.kds-button) { min-height: var(--toolbar-control-height); font: var(--type-toolbar-control); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-status-switcher .kds-tab { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-agenda-calendar,.kds-agenda-selected-day,.kds-agenda-task-list) { border-radius: var(--radius-panel); box-shadow: none; overflow: hidden; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-month-header,.kds-agenda-selected-heading) h2 { font: var(--type-agenda-calendar-title); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-month-nav .kds-button { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-month-weekdays { font: var(--type-agenda-calendar-label); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-month-calendar .kds-month-day { min-height: var(--agenda-day-height); gap: var(--space-1); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-month-day-number { width: var(--agenda-day-number-size); height: var(--agenda-day-number-size); font: var(--type-agenda-calendar-label); border-radius: var(--radius-sm); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-month-overflow,.kds-month-event) { font: var(--type-agenda-calendar-event); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-month-event { border-radius: var(--agenda-event-radius); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-month-day:disabled { opacity: .4; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-week-grid > div { min-height: var(--agenda-week-hour-height); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-agenda-week-heading,.kds-agenda-week-hour) { font: var(--type-agenda-calendar-label); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-week-slot .kds-month-event:hover { box-shadow: none; filter: brightness(.96); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-selected-heading p,
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-notice { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-task-row { min-height: var(--record-table-row-height); padding-block: var(--space-3); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-task-copy { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-agenda-task-copy small,.kds-agenda-task-time) { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body .kds-agenda-task-row { grid-template-columns: auto minmax(0,1fr) auto; row-gap: var(--space-1); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body .kds-agenda-task-time { grid-column: 3; grid-row: 1; align-self: center; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body .kds-record-actions { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-toolbar-count { font: var(--type-toolbar-caption); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page .kds-record-actions .kds-icon-button { border-color: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page .kds-record-actions .kds-icon-button:hover { border-color: transparent; background: var(--bg-hover); }
+.painel-theme.kifer-ds .kds-agenda-dialog:not(.kds-agenda-organizer-dialog,.kds-agenda-remove-dialog) { width: var(--record-dialog-width); max-width: calc(100vw - var(--space-6)); }
+.painel-theme.kifer-ds .kds-agenda-organizer-dialog { width: var(--record-dialog-wide); max-width: calc(100vw - var(--space-6)); }
+.painel-theme.kifer-ds :is(.kds-agenda-dialog,.kds-lead-reminder-dialog) .kds-dialog-body { padding: var(--dialog-body-padding); }
+.painel-theme.kifer-ds :is(.kds-agenda-dialog,.kds-lead-reminder-dialog) .kds-field-label { font: var(--type-record-field-label); color: var(--text-primary); }
+.painel-theme.kifer-ds :is(.kds-agenda-dialog,.kds-lead-reminder-dialog) :is(.kds-input,.kds-select,.kds-filter-trigger,.kds-textarea) { font: var(--type-record-field); }
+.painel-theme.kifer-ds :is(.kds-agenda-dialog,.kds-lead-reminder-dialog) :is(.kds-input,.kds-select,.kds-filter-trigger) { min-height: var(--form-control-height); }
+.painel-theme.kifer-ds .kds-agenda-detail-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: var(--space-3); }
+.painel-theme.kifer-ds .kds-agenda-detail-summary .kds-heading { flex: 1; min-width: 0; font: var(--type-agenda-calendar-title); }
+.painel-theme.kifer-ds .kds-agenda-detail-grid { font: var(--type-record-field); border-top: var(--border-width) solid var(--border-subtle); padding-top: var(--space-4); }
+.painel-theme.kifer-ds .kds-agenda-detail-grid dd { margin: 0; min-width: 0; }
+.painel-theme.kifer-ds .kds-agenda-organizer-preview .kds-table-head { font: var(--type-record-heading); text-transform: none; }
+.painel-theme.kifer-ds .kds-agenda-organizer-preview .kds-table-cell { font: var(--type-record-body); }
+.painel-theme.kifer-ds .kds-lead-reminder-title { grid-column: 1 / -1; }
+.painel-theme.kifer-ds .kds-lead-reminder-observations { grid-column: 1 / -1; }
+.painel-theme.kifer-ds .kds-agenda-dialog .kds-dialog-footer-note { margin-inline-end: auto; font: var(--type-record-secondary); color: var(--text-muted); }
+.kds-agenda-skeleton-cell { min-height: var(--agenda-day-height); padding: var(--space-2); border-inline-end: var(--border-width) solid var(--border-subtle); border-block-end: var(--border-width) solid var(--border-subtle); }
+@media (min-width: 1100px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-month-layout { grid-template-columns: minmax(0,1fr) var(--agenda-day-panel-width-compact); }
+}
+@media (min-width: 1440px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-month-layout { grid-template-columns: minmax(0,1fr) var(--agenda-day-panel-width); }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-month-calendar .kds-month-day,.kds-agenda-skeleton-cell { min-height: var(--agenda-day-height-compact); }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page { gap: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page-header .kds-page-title { font-size: 1.4375rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-month-calendar .kds-month-day,.kds-agenda-skeleton-cell { min-height: var(--agenda-day-height-mobile); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-toolbar { grid-template-columns: minmax(0,1fr) auto; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-toolbar > :first-child { grid-column: 1 / -1; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-toolbar-count { grid-column: 1 / -1; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body,.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-note { padding-inline: var(--space-3); }
+  .painel-theme.kifer-ds .kds-agenda-dialog .kds-dialog-footer { flex-wrap: wrap; }
+  .painel-theme.kifer-ds .kds-agenda-dialog .kds-dialog-footer-note { flex-basis: 100%; }
+}

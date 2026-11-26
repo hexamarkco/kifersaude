@@ -142,9 +142,10 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
         open={isOpen}
         onOpenChange={(open) => !open && !busy && onClose()}
         size="xl"
-        className="kds-agenda-dialog"
+        className="kds-crm-dialog kds-agenda-dialog kds-agenda-organizer-dialog"
       >
         <DialogHeader onClose={busy ? undefined : onClose}>
+          <div className="kds-dialog-eyebrow">Agenda</div>
           <DialogTitle>Organizar follow-ups</DialogTitle>
           <DialogDescription placement="visible">
             Distribua os retornos respeitando a disponibilidade da equipe e a prioridade das negociações.

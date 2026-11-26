@@ -163,3 +163,30 @@ test('aplica prazo e busca juntos ao confirmar os filtros da agenda', async () =
     assert.equal(checkbox(), null);
   } finally { view.unmount(); }
 });
+
+test('cancelar o filtro mantém os itens e não modifica lembretes', async () => {
+  resetMocks();
+  mocks.reminders = [pendingReminder()];
+  const view = render(<AgendaScreen />);
+  try {
+    await waitForAgenda(() => Boolean(checkbox()));
+    const pending = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(item => item.textContent === 'Pendentes');
+    assert.ok(pending);
+    await act(async () => pending.click());
+    const filters = [...document.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === 'Filtros');
+    assert.ok(filters);
+    await act(async () => filters.click());
+    const dialog = document.querySelector('.kds-agenda-filter-dialog');
+    assert.ok(dialog);
+    const clear = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === 'Limpar filtros');
+    assert.ok(clear);
+    await act(async () => clear.click());
+    const cancel = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === 'Cancelar');
+    assert.ok(cancel);
+    await act(async () => cancel.click());
+    assert.equal(document.querySelector('.kds-agenda-filter-dialog'), null);
+    assert.ok(checkbox());
+    assert.equal(mocks.update.mock.calls.length, 0);
+    assert.equal(mocks.create.mock.calls.length, 0);
+  } finally { view.unmount(); }
+});

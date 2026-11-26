@@ -1957,8 +1957,8 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 }
 .kds-workspace-theme .whatsapp-inbox-sidebar-header { padding: var(--space-5) var(--space-4) var(--space-2); }
 .kds-workspace-theme .whatsapp-inbox-search-input .kds-input { min-height: var(--toolbar-control-height); height: var(--toolbar-control-height); font: var(--type-record-body); }
-.kds-workspace-theme .whatsapp-inbox-sidebar-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
-.kds-workspace-theme .whatsapp-inbox-sidebar-actions { width: 100%; margin: 0; justify-content: space-between; }
+.kds-workspace-theme .whatsapp-inbox-sidebar-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); }
+.kds-workspace-theme .whatsapp-inbox-sidebar-actions { flex: 0 0 auto; margin-inline-start: auto; justify-content: flex-end; }
 .kds-workspace-theme .whatsapp-inbox-quick-filters .whatsapp-inbox-filter-chip { font: var(--type-record-body); }
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-card,
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-chat-card:hover { border-inline-start: 2px solid transparent; border-bottom: var(--border-width) solid var(--border-subtle); border-top: 0; border-inline-end: 0; }

@@ -22,13 +22,12 @@ test('contract workspace keeps the same production fields and form submission ta
     const form = page.container.querySelector('form#contract-form'); assert.ok(form);
     fieldCount = form.querySelectorAll('input,select,textarea').length; assert.ok(fieldCount > 10);
     assert.equal(page.container.querySelector('[role="dialog"]'), null);
-    assert.ok(page.container.textContent?.includes('Informações do Contrato'));
+    assert.ok(page.container.textContent?.includes('Identificação e vínculo'));
     assert.deepEqual([...form.querySelectorAll('fieldset > legend > span:not(.kds-tooltip-anchor):not(.kds-form-section-step)')].map(legend => legend.textContent), [
-      'Informações do Contrato',
-      'Vigência e valores',
-      'Comissão e recebimento',
-      'Vidas e bonificações',
-      'Responsáveis e observações',
+      'Identificação e vínculo',
+      'Empresa e endereço',
+      'Plano e vigência',
+      'Valores e previsões',
     ]);
     const submit = page.container.querySelector('button[type="submit"]'); assert.equal(submit?.getAttribute('form'), 'contract-form');
     const cancel = [...page.container.querySelectorAll('button')].find(button => button.textContent === 'Cancelar');assert.ok(cancel);await act(async () => cancel.click());assert.equal(canceled,1);
@@ -38,7 +37,9 @@ test('contract workspace keeps the same production fields and form submission ta
     await act(async () => { await Promise.resolve(); });
     const contextual = document.querySelector('[role="dialog"] form#contract-form');assert.ok(contextual);
     assert.equal(contextual.querySelectorAll('input,select,textarea').length,fieldCount);
-    assert.equal(contextual.querySelectorAll('fieldset').length, 5);
+    assert.equal(contextual.querySelectorAll('fieldset[data-contract-step]').length, 4);
+    assert.equal(contextual.querySelectorAll('fieldset[data-contract-step]:not([hidden])').length, 1);
+    assert.equal(contextual.querySelector('fieldset:not([hidden])')?.getAttribute('data-contract-step'), '0');
   } finally { dialog.unmount(); }
 });
 
@@ -137,4 +138,25 @@ test('cadastro de contrato preenche a empresa pela alternativa após bloqueio da
     page.unmount();
     globalThis.fetch = originalFetch;
   }
+});
+
+test('editing uses the same four-step contract wizard and does not save while advancing', async () => {
+  let saves = 0;
+  const view = render(<ContractForm contract={{ id: 'contract-demo', codigo_contrato: 'DEMO-1', status: 'Ativo', modalidade: 'Pessoa Física', operadora: 'Amil', produto_plano: 'Bronze', responsavel: 'Nick', created_at: '2026-10-29T12:00:00Z', updated_at: '2026-10-29T12:00:00Z' }} onClose={() => undefined} onSave={() => { saves++; }} />);
+  try {
+    await act(async () => { await Promise.resolve(); });
+    const dialog = document.querySelector<HTMLElement>('.kds-contract-form-dialog');
+    assert.ok(dialog);
+    assert.equal(dialog.querySelectorAll('[data-contract-step]').length, 4);
+    assert.equal(dialog.querySelector('[data-contract-step]:not([hidden])')?.getAttribute('data-contract-step'), '0');
+    const next = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Continuar');
+    assert.ok(next);
+    await act(async () => { next.click(); });
+    assert.equal(dialog.querySelector('[data-contract-step]:not([hidden])')?.getAttribute('data-contract-step'), '1');
+    const back = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim() === 'Voltar');
+    assert.ok(back);
+    await act(async () => { back.click(); });
+    assert.equal(dialog.querySelector('[data-contract-step]:not([hidden])')?.getAttribute('data-contract-step'), '0');
+    assert.equal(saves, 0);
+  } finally { view.unmount(); }
 });

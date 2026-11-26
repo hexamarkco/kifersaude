@@ -1623,7 +1623,7 @@ export default function ContractForm({
 
           </FormSection>
           <FormSection data-contract-step="3" hidden={isStepped && formStep !== 3} tabIndex={-1} title="Valores e previsões">
-              <Field label="Mensalidade Base (R$)" className="md:col-span-2">
+              <Field label="Mensalidade Base (R$)">
                 <Input
                   type="text"
                   value={formData.mensalidade_total}
@@ -1741,7 +1741,7 @@ export default function ContractForm({
                 </div>
               )}
 
-            <div className="mb-4 mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+            <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="Quantidade de Vidas *" descriptionPlacement="tooltip" description="Titular + dependentes">
                 <Input
                   type="number"

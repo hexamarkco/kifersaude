@@ -87,6 +87,18 @@ const CONTRACT_DETAIL_TABS = [
   { id: 'documents', label: 'Documentos' },
 ] as const;
 type ContractDetailTab = typeof CONTRACT_DETAIL_TABS[number]['id'];
+const CONTRACT_DOCUMENT_TABS = [
+  { id: 'documents', label: 'Documentos' },
+  { id: 'images', label: 'Imagens' },
+  { id: 'audio', label: 'Áudios' },
+] as const;
+type ContractDocumentTab = typeof CONTRACT_DOCUMENT_TABS[number]['id'];
+
+const getDocumentTab = (name: string): ContractDocumentTab => {
+  if (/\.(png|jpe?g|webp|gif|heic|bmp|tiff?)$/i.test(name)) return 'images';
+  if (/\.(mp3|wav|ogg|opus|m4a|aac|flac|amr)$/i.test(name)) return 'audio';
+  return 'documents';
+};
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
 const detailPanelClass = "kds-card kds-card-default";
@@ -146,6 +158,7 @@ export default function ContractDetails({
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailTab, setDetailTab] = useState<ContractDetailTab>('overview');
+  const [documentTab, setDocumentTab] = useState<ContractDocumentTab>('documents');
   const [loadError, setLoadError] = useState(false);
   const [documentsLoadError, setDocumentsLoadError] = useState(false);
   const [eligibleLivesUpdateError, setEligibleLivesUpdateError] = useState<string | null>(null);
@@ -489,9 +502,10 @@ export default function ContractDetails({
   }, [documents]);
 
   const renderDocumentList = (entityId: string) => {
-    const docs = documentsByEntity.get(entityId) || [];
+    const allDocs = documentsByEntity.get(entityId) || [];
+    const docs = presentation === 'drawer' ? allDocs.filter((doc) => getDocumentTab(doc.nome_arquivo ?? '') === documentTab) : allDocs;
     if (docs.length === 0) {
-      return <Text className={detailBodyTextClass}>Sem documentos enviados.</Text>;
+      return <Text className={detailBodyTextClass}>{presentation === 'drawer' ? 'Nenhum arquivo desta categoria.' : 'Sem documentos enviados.'}</Text>;
     }
 
     return (
@@ -514,7 +528,7 @@ export default function ContractDetails({
               href={doc.url_arquivo}
               target="_blank"
               rel="noreferrer"
-              className={detailAccentLinkClass}
+              className={`${detailAccentLinkClass} inline-flex items-center gap-1`}
             >
               <Eye className="kds-control-icon" aria-hidden="true" /> Abrir
             </TextLink>
@@ -916,9 +930,10 @@ export default function ContractDetails({
   }
 
   const isDrawer = presentation === 'drawer';
-  const primaryName = holders[0]?.nome_completo || contract.nome_fantasia || contract.razao_social || contract.codigo_contrato;
-  const companyName = contract.nome_fantasia || contract.razao_social;
-  const displayName = companyName || primaryName;
+  const primaryHolder = holders[0];
+  const modality = formatContractModalityLabel(contract.modalidade);
+  const holderName = modality === 'MEI' || modality === 'CNPJ' ? primaryHolder?.nome_fantasia || primaryHolder?.razao_social || primaryHolder?.nome_completo : primaryHolder?.nome_completo;
+  const displayName = formatContractEntityName(holderName ?? '') || contract.codigo_contrato;
   const detailStatusTone: PanelTone = ({ Ativo: 'success', Suspenso: 'danger', Cancelado: 'danger', 'Em análise': 'info', 'Documentos pendentes': 'warning', 'Aguardando assinatura': 'accent', 'Proposta enviada': 'accent', Emitido: 'info' } as Record<string, PanelTone>)[contract.status] ?? 'neutral';
   const overviewFields = [
     ['Operadora', normalizeOperadoraLabel(contract.operadora)],
@@ -1649,9 +1664,10 @@ export default function ContractDetails({
           <div className="kds-detail-section-header mb-4 items-center justify-between">
             <Heading level={4} className={detailTitleClass}>Documentos</Heading>
             <span className={detailMutedTextClass}>
-              {documents.length} arquivo(s)
+              {isDrawer ? documents.filter((doc) => getDocumentTab(doc.nome_arquivo ?? '') === documentTab).length : documents.length} arquivo(s)
             </span>
           </div>
+          {isDrawer && <Tabs items={CONTRACT_DOCUMENT_TABS} value={documentTab} onChange={setDocumentTab} size="sm" className="kds-contract-document-tabs" ariaLabel="Categorias de arquivos" />}
           {documentsLoadError ? (
             <Alert tone="danger" role="alert" className="items-start">
               <div className="flex items-start gap-2">

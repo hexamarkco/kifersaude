@@ -1,4 +1,5 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
+import FollowUpAgendaOrganizerModal from './FollowUpAgendaOrganizerModal';
 import { LoadingState, RecordListSkeleton, Heading, Text, FieldLabel } from '../../../../design-system';
 import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -150,6 +151,7 @@ export default function WhatsAppAgendaModal({
   onOpenLeadChat,
   onSendBatchFollowUps,
 }: WhatsAppAgendaModalProps) {
+  const [showOrganizer, setShowOrganizer] = useState(canEdit);
   const [reminders, setReminders] = useState<ReminderListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1507,13 +1509,30 @@ export default function WhatsAppAgendaModal({
   };
 
   const emptyStateMessage = 'Nenhum item encontrado com os filtros atuais.';
+  const organizerOpen = isOpen && canEdit && showOrganizer;
+  const pendingReturns = reminders.filter((item) => !item.lido && item.tipo === 'Follow-up').map((item) => ({
+    id: item.id,
+    title: item.titulo,
+    leadName: leadsMap.get(getLeadIdForReminder(item) ?? '')?.nome_completo ?? 'Lead não identificado',
+    currentDateTime: item.data_lembrete,
+    priority: item.prioridade,
+  }));
 
   return (
     <>
+      {organizerOpen && <FollowUpAgendaOrganizerModal
+        isOpen
+        onClose={onClose}
+        onApplied={() => loadReminders({ showLoading: true })}
+        onViewDailyAgenda={() => setShowOrganizer(false)}
+        pendingReturns={pendingReturns}
+        pendingReturnsLoading={loading}
+        pendingReturnsError={error}
+      />}
       <WhatsAppInboxDialog
         panelClassName="whatsapp-inbox-agenda-panel"
         icon={Calendar}
-        isOpen={isOpen}
+        isOpen={isOpen && !organizerOpen}
         onClose={() => {
           setQuickScheduleReminderId(null);
           onClose();
@@ -1525,6 +1544,7 @@ export default function WhatsAppAgendaModal({
         bodyClassName="whatsapp-inbox-agenda-body"
         footer={
           <div className="flex items-center justify-end gap-3">
+            {canEdit && <Button variant="secondary" onClick={() => setShowOrganizer(true)}><Sparkles className="kds-control-icon" />Organizar retornos</Button>}
             <Button variant="secondary" onClick={onClose}>
               Fechar
             </Button>

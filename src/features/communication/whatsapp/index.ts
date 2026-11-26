@@ -6,3 +6,5 @@ export { formatConnectionStatusLabel } from './domain/inboxPresentation';
 export { default as WhatsAppInboxScreen } from './WhatsAppInboxScreen';
 export { default as WhatsAppProviderOperationsPanel } from './components/WhatsAppProviderOperationsPanel';
 export type { ZapiOperation, ZapiOperationInput } from './domain/zapiOperationContract.generated';
+
+export { default as FollowUpAgendaOrganizerModal } from './components/FollowUpAgendaOrganizerModal';

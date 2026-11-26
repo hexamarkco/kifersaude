@@ -1988,7 +1988,7 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer:not(.is-voice-mode) { background: transparent; border-color: transparent; border-radius: 0; box-shadow: none; padding-inline: 0; }
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer:not(.is-voice-mode).is-focused { box-shadow: none; border-color: transparent; }
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer-row .whatsapp-inbox-composer-input { border: 0; background: transparent; border-radius: 0; font: var(--inbox-message-type); padding: var(--space-1) 0; min-height: 3.625rem; box-shadow: none; }
-.kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer-row .whatsapp-inbox-composer-input:focus-visible { outline: none; }
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer-row .whatsapp-inbox-composer-input:focus-visible { outline: var(--border-width) solid var(--control-focus-color); outline-offset: var(--space-1); }
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer-send .whatsapp-inbox-composer-action.is-active { font: var(--type-record-body); border-radius: var(--radius-control); }
 .kds-workspace-theme .whatsapp-inbox-contact-summary { border: 0; border-radius: 0; background: transparent; padding: var(--space-2) 0; gap: var(--space-3); }
 .kds-workspace-theme .whatsapp-inbox-contact-identity h3 { font: var(--inbox-dialog-title); }
@@ -2035,4 +2035,35 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
   .painel-theme.kifer-ds .kds-dialog.whatsapp-inbox-dialog:is(.whatsapp-inbox-agenda-panel,.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel,.whatsapp-inbox-start-chat) { width: 100%; max-width: none; height: 100dvh; max-height: 100dvh; border-radius: 0; }
   .painel-theme.kifer-ds .kds-dialog-container:has(.whatsapp-inbox-dialog:is(.whatsapp-inbox-agenda-panel,.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel,.whatsapp-inbox-start-chat)),.painel-theme.kifer-ds .kds-dialog-container:has(:is(.comm-whatsapp-chat-files-drawer,.comm-whatsapp-lead-drawer)) { padding: 0; }
   .painel-theme.kifer-ds :is(.comm-whatsapp-chat-files-drawer,.comm-whatsapp-lead-drawer).kds-drawer { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+}
+
+/* Keep text and secondary actions legible without decorative people icons. */
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-message-copy,
+.kds-workspace-theme .comm-terracotta .whatsapp-inbox-media-caption { font: var(--inbox-message-type); }
+.painel-theme.kifer-ds .whatsapp-inbox-contact-action.kds-button { width: 100%; min-width: 0; min-height: 3.25rem; border-color: var(--border-subtle); background: transparent; box-shadow: none; padding: var(--space-2) var(--space-1); }
+.painel-theme.kifer-ds .whatsapp-inbox-contact-action.kds-button .kds-button-content { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); font: var(--inbox-meta-type); white-space: normal; overflow-wrap: anywhere; }
+.painel-theme.kifer-ds .whatsapp-inbox-contact-action.kds-button:hover:not(:disabled) { border-color: var(--border-subtle); background: var(--bg-hover); }
+.painel-theme.kifer-ds .whatsapp-inbox-forward-target { border: 0; border-block-end: var(--border-width) solid var(--border-subtle); border-radius: 0; }
+.painel-theme.kifer-ds .whatsapp-inbox-forward-target:hover { background: var(--bg-hover); }
+.painel-theme.kifer-ds .whatsapp-inbox-forward-target[aria-pressed="true"] { background: var(--brand-primary-soft); }
+.whatsapp-inbox-message-details-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-4); padding-block: var(--space-3); border-block: var(--border-width) solid var(--border-subtle); }
+.whatsapp-inbox-delivery-event { padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); }
+.painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-agenda-panel,.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) { width: var(--record-dialog-wide); max-width: calc(100vw - var(--space-6)); }
+.painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) .kds-card-kpi { gap: var(--space-2); padding: var(--space-4); box-shadow: none; }
+.painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) .kds-kpi-value { font: var(--type-record-metric); letter-spacing: -.04em; }
+.painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) .kds-card-title { font: var(--type-record-field-label); }
+.painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) .kds-kpi-trend { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds .whatsapp-inbox-scheduled-table .kds-table-head { font: var(--type-record-heading); text-transform: none; }
+.painel-theme.kifer-ds .whatsapp-inbox-scheduled-table .kds-table-cell { font: var(--type-record-body); }
+.whatsapp-inbox-agenda-toolbar { background: var(--bg-surface); border-radius: var(--radius-control); gap: var(--space-3); }
+.whatsapp-inbox-agenda-item .kds-record-actions .kds-button { border-color: transparent; box-shadow: none; }
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-agenda-panel,.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) { max-width: none; width: 100%; }
+  .painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) .kds-card-kpi { padding: var(--space-2); }
+  .painel-theme.kifer-ds .whatsapp-inbox-dialog:is(.whatsapp-inbox-dashboard,.whatsapp-inbox-scheduled-panel) .kds-kpi-value { font-size: clamp(1rem,5vw,1.5rem); }
+  .painel-theme.kifer-ds .whatsapp-inbox-dialog .kds-dialog-body,
+  .painel-theme.kifer-ds .whatsapp-inbox-dialog .kds-dialog-footer { padding-inline: var(--space-4); }
+  .kds-workspace-theme .whatsapp-inbox-search-input .kds-input { height: var(--form-control-height); min-height: var(--form-control-height); }
+  .kds-workspace-theme .comm-terracotta .whatsapp-inbox-thread-header :is(.whatsapp-inbox-heading,.whatsapp-inbox-thread-identity .kds-heading) { font-size: .8125rem; }
+  .kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer-row .whatsapp-inbox-composer-input { font-size: .875rem; }
 }

@@ -2120,6 +2120,7 @@ export default function WhatsAppInboxScreen() {
                     ? 'IA encerrada enquanto aguarda cotação'
                     : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat',
                   icon: Bot,
+                  compactLabel: 'IA',
                   loading: assumingControlChatId === selectedChat.id,
                   disabled: isSelectedChatWaitingForQuote,
                   onClick: () => {
@@ -2130,18 +2131,20 @@ export default function WhatsAppInboxScreen() {
                     }
                   },
                 }] : []),
-                { label: 'Arquivos da conversa', icon: FolderOpen, onClick: () => setChatFilesOpen(true) },
+                { label: 'Arquivos da conversa', compactLabel: 'Arquivos', icon: FolderOpen, onClick: () => setChatFilesOpen(true) },
                 {
                   label: 'Pesquisar neste chat',
+                  compactLabel: 'Buscar',
                   icon: Search,
                   onClick: () => {
                     setContactContextPanelOpen(false);
                     handleToggleChatMessageSearch();
                   },
                 },
-                { label: 'Mensagens agendadas', icon: CalendarClock, onClick: () => setScheduledMessagesPanelOpen(true) },
+                { label: 'Mensagens agendadas', compactLabel: 'Agendadas', icon: CalendarClock, onClick: () => setScheduledMessagesPanelOpen(true) },
                 {
                   label: 'Recuperar histórico antigo',
+                  compactLabel: 'Histórico',
                   icon: Download,
                   onClick: () => void handleRecoverChatHistory(),
                   disabled: Boolean(historyRecoveryDisabledReason),
@@ -2150,6 +2153,7 @@ export default function WhatsAppInboxScreen() {
                 },
                 {
                   label: 'Gerar follow-up com IA',
+                  compactLabel: 'Follow-up',
                   icon: Sparkles,
                   onClick: () => {
                     setContactContextPanelOpen(false);

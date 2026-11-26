@@ -91,7 +91,7 @@ export function WhatsAppInboxDialogs({
   return (
     <>
       {forwardDialogOpen ? (
-        <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagens" className="comm-whatsapp-overlay whatsapp-inbox-dialog">
+        <Dialog open onOpenChange={(open) => { if (!open) onCloseForwardMessage(); }} size="sm" closeOnEscape={false} closeOnOverlay={false} aria-label="Encaminhar mensagens" className="comm-whatsapp-overlay whatsapp-inbox-dialog whatsapp-inbox-forward-dialog">
           <WhatsAppInboxPanelHeader icon={Forward} title={forwardingMessages.length === 1 ? 'Encaminhar mensagem' : `Encaminhar ${forwardingMessages.length} mensagens`} description="Escolha as conversas que vão receber as mensagens selecionadas, na ordem do histórico." onClose={onCloseForwardMessage} showCloseButton={!forwardingInProgress} />
           <DialogBody className="space-y-3">
             <div className="max-h-32 space-y-1 overflow-y-auto">
@@ -102,7 +102,7 @@ export function WhatsAppInboxDialogs({
               {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => {
                 const isSelected = forwardingTargetIds.includes(chat.id);
                 return (
-                  <ActionSurface variant="plain" padding="none" key={chat.id} type="button" aria-pressed={isSelected} onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70 ${isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : ''}`}>
+                  <ActionSurface variant="plain" padding="none" key={chat.id} type="button" aria-pressed={isSelected} onClick={() => onToggleForwardTarget(chat.id)} disabled={forwardingInProgress} className="whatsapp-inbox-forward-target flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition disabled:opacity-70">
                     <div className="min-w-0 flex-1"><Text className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--text-primary)]"><LeadFavoriteBadge favorito={chat.lead_id ? favoritedLeadIds.has(chat.lead_id) : false} />{getSafeChatDisplayName(chat, connectedUserName)}</Text><Text className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</Text></div>
                     {isSelected ? <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]"><Check className="h-3 w-3" /></span> : <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />}
                   </ActionSurface>

@@ -87,7 +87,16 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
 
   useEffect(() => {
     if (!isOpen || activeIndex < 0) return;
-    optionRefs.current[activeIndex]?.focus();
+    const option = optionRefs.current[activeIndex];
+    if (!option) return;
+    // Focus the option without scrolling the page or its containing dialog.
+    option.focus({ preventScroll: true });
+    const listbox = option.closest<HTMLElement>('[role="listbox"]');
+    if (!listbox) return;
+    const optionRect = option.getBoundingClientRect();
+    const listRect = listbox.getBoundingClientRect();
+    if (optionRect.top < listRect.top) listbox.scrollTop -= listRect.top - optionRect.top;
+    else if (optionRect.bottom > listRect.bottom) listbox.scrollTop += optionRect.bottom - listRect.bottom;
   }, [activeIndex, isOpen]);
 
   const assignHiddenSelectRef = (element: HTMLSelectElement | null) => {

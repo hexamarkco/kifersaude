@@ -297,6 +297,7 @@ export default function DependentForm({
   return (
     <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="md" initialFocus="first-content" className="kds-crm-dialog kds-dependent-form-dialog">
       <DialogHeader onClose={saving ? undefined : onClose}>
+        <div className="kds-dialog-eyebrow">Contratos</div>
         <DialogTitle>{dependent ? 'Editar dependente' : 'Novo dependente'}</DialogTitle>
         <DialogDescription>Vincule o dependente ao titular e informe as condições individuais.</DialogDescription>
       </DialogHeader>

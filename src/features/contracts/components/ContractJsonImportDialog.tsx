@@ -17,6 +17,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Stepper,
 } from '../../../design-system';
 
 type ContractJsonImportDialogProps = {
@@ -95,11 +96,13 @@ export function ContractJsonImportDialog({
       className="kds-contract-json-import-dialog kds-crm-dialog"
     >
       <DialogHeader onClose={loading ? undefined : onClose}>
+        <div className="kds-dialog-eyebrow">Contratos</div>
         <DialogTitle>Importar contrato de arquivo</DialogTitle>
         <DialogDescription placement="visible">
           Selecione um arquivo .json preenchido conforme o modelo abaixo. Revise os dados no formulário antes de salvar o contrato.
         </DialogDescription>
       </DialogHeader>
+      <div className="kds-contract-form-steps"><Stepper steps={[{ label: 'Arquivo' }, { label: 'Conferir campos' }, { label: 'Confirmação' }]} currentStep={payload ? 2 : loading ? 1 : 0} /></div>
       <DialogBody className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3">
           <div className="min-w-0 text-sm text-[var(--text-secondary)]">
@@ -112,7 +115,7 @@ export function ContractJsonImportDialog({
           </Button>
         </div>
 
-        <div className="rounded-[var(--kds-radius-sm)] border border-dashed border-[var(--border-default)] bg-[var(--surface-primary)] p-5 text-center">
+        <div className="kds-contract-import-upload">
           <FileUp className="mx-auto h-7 w-7 text-[var(--brand-primary)]" />
           <Text className="mt-2 font-medium text-[var(--text-primary)]">
             {file ? file.name : 'Escolha o arquivo .json do contrato'}

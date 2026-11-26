@@ -95,19 +95,18 @@ type CommissionInstallment = {
 };
 
 const CONTRACT_STEPS = [
-  { label: 'Identificação' },
-  { label: 'Vigência e valores' },
-  { label: 'Comissão' },
-  { label: 'Vidas e bônus' },
-  { label: 'Responsáveis' },
+  { label: 'Identificação e vínculo' },
+  { label: 'Empresa e endereço' },
+  { label: 'Plano e vigência' },
+  { label: 'Valores e previsões' },
 ];
 
 const REQUIRED_CONTRACT_FIELDS = [
   { field: 'status', label: 'status', step: 0 },
   { field: 'modalidade', label: 'modalidade', step: 0 },
-  { field: 'operadora', label: 'operadora', step: 0 },
-  { field: 'produto_plano', label: 'produto/plano', step: 0 },
-  { field: 'responsavel', label: 'responsável', step: 4 },
+  { field: 'operadora', label: 'operadora', step: 2 },
+  { field: 'produto_plano', label: 'produto/plano', step: 2 },
+  { field: 'responsavel', label: 'responsável', step: 0 },
 ] as const;
 
 type BonusDistributionRow = {
@@ -311,7 +310,7 @@ export default function ContractForm({
 }: ContractFormProps) {
   const [formStep, setFormStep] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
-  const isStepped = presentation === 'dialog' && !contract;
+  const isStepped = presentation === 'dialog';
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsLoadError, setLeadsLoadError] = useState(false);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -1015,7 +1014,7 @@ export default function ContractForm({
 
       if (!formData.comissao_recebimento_adiantado) {
         if (installmentsPayload.length === 0) {
-          setFormStep(2);
+          setFormStep(3);
           toast.warning(
             "Adicione ao menos uma parcela de comissão ou marque como adiantamento.",
           );
@@ -1027,7 +1026,7 @@ export default function ContractForm({
           (parcel) => !parcel.data_pagamento,
         );
         if (hasMissingDates) {
-          setFormStep(2);
+          setFormStep(3);
           toast.warning(
             "Informe a data prevista de pagamento para cada parcela.",
           );
@@ -1036,7 +1035,7 @@ export default function ContractForm({
         }
 
         if (commissionExpectedValue <= 0) {
-          setFormStep(2);
+          setFormStep(3);
           toast.warning(
             "Informe a comissão prevista antes de distribuir em parcelas.",
           );
@@ -1045,7 +1044,7 @@ export default function ContractForm({
         }
 
         if (totalInstallmentValue > commissionExpectedValue) {
-          setFormStep(2);
+          setFormStep(3);
           toast.warning(
             "O total das parcelas não pode ultrapassar o valor total da comissão.",
           );
@@ -1264,13 +1263,7 @@ export default function ContractForm({
           noValidate={isStepped}
           className="kds-form-page"
         >
-          <FormSection
-            step="01"
-            data-contract-step="0" hidden={isStepped && formStep !== 0} tabIndex={-1}
-            descriptionPlacement="visible"
-            title="Informações do Contrato"
-            description="Identifique o contrato, o vínculo comercial e o plano contratado."
-          >
+          <FormSection data-contract-step="0" hidden={isStepped && formStep !== 0} tabIndex={-1} title="Identificação e vínculo">
               <Field label="Código do Contrato *">
                 <Input
                   type="text"
@@ -1360,6 +1353,39 @@ export default function ContractForm({
                 )}
               </Field>
 
+              <Field label="Responsável *">
+                {responsavelOptions.length > 0 ? (
+                  <FilterSelect
+                    icon={User}
+                    value={formData.responsavel}
+                    onChange={(value) =>
+                      setFormData({ ...formData, responsavel: value })
+                    }
+                    placeholder="Responsável"
+                    includePlaceholderOption={false}
+                    options={responsavelSelectOptions}
+                  />
+                ) : (
+                  <Input
+                    type="text"
+                    required
+                    value={formData.responsavel}
+                    onChange={(e) =>
+                      setFormData({ ...formData, responsavel: e.target.value })
+                    }
+                    placeholder="Informe o responsável"
+                  />
+                )}
+              </Field>
+
+              <Field label="Responsável pela venda (produção)">
+                <Select value={saleOperator} disabled={Boolean(contract?.sale_operator_user_id)} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolha no fechamento' }, ...productionOperators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
+                {productionOperatorsError && <Text role="alert">{productionOperatorsError}</Text>}
+                <Text className="text-xs text-[var(--text-muted)]">O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.</Text>
+              </Field>
+
+          </FormSection>
+          <FormSection data-contract-step="1" hidden={isStepped && formStep !== 1} tabIndex={-1} title="Empresa e endereço">
               {modalidadeRequerCNPJ && (
                 <>
                   <Field label="CNPJ (Receita)" error={cnpjLookupError || undefined}>
@@ -1436,6 +1462,9 @@ export default function ContractForm({
                 </>
               )}
 
+              {!modalidadeRequerCNPJ && <Text className="kds-contract-form-note">Esta modalidade não exige dados empresariais. Continue para informar o plano.</Text>}
+          </FormSection>
+          <FormSection data-contract-step="2" hidden={isStepped && formStep !== 2} tabIndex={-1} title="Plano e vigência">
               <Field
                 label="Operadora *"
                 descriptionPlacement="tooltip" description="Comissão e bônus serão preenchidos automaticamente"
@@ -1519,15 +1548,6 @@ export default function ContractForm({
                   />
                 )}
               </Field>
-          </FormSection>
-
-          <FormSection
-            step="02"
-            data-contract-step="1" hidden={isStepped && formStep !== 1} tabIndex={-1}
-            descriptionPlacement="visible"
-            title="Vigência e valores"
-            description="Registre as datas importantes e o valor mensal do contrato."
-          >
               <Field label="Data de Início">
                 <DateTimePicker
                   type="date"
@@ -1601,6 +1621,8 @@ export default function ContractForm({
                 )}
               </Field>
 
+          </FormSection>
+          <FormSection data-contract-step="3" hidden={isStepped && formStep !== 3} tabIndex={-1} title="Valores e previsões">
               <Field label="Mensalidade Base (R$)" className="md:col-span-2">
                 <Input
                   type="text"
@@ -1719,15 +1741,199 @@ export default function ContractForm({
                 </div>
               )}
 
-          </FormSection>
+            <div className="mb-4 mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+              <Field label="Quantidade de Vidas *" descriptionPlacement="tooltip" description="Titular + dependentes">
+                <Input
+                  type="number"
+                  min="1"
+                  required
+                  value={formData.vidas}
+                  onChange={(e) =>
+                    setFormData({ ...formData, vidas: e.target.value })
+                  }
+                  placeholder="1"
+                />
+              </Field>
 
-          <FormSection
-            step="03"
-            data-contract-step="2" hidden={isStepped && formStep !== 2} tabIndex={-1}
-            descriptionPlacement="visible"
-            title="Comissão e recebimento"
-            description="Confira o cálculo da comissão e defina como e quando será recebida."
-          >
+              <div>
+                <FieldLabel className="mt-4 flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={formData.bonus_por_vida_aplicado}
+                    onChange={(e) => handleToggleBonus(e.target.checked)}
+                  />
+                   <span className="text-sm font-medium text-[var(--text-secondary)]">
+                    Aplicar Bônus por Vida
+                  </span>
+                </FieldLabel>
+                <Text className="mt-1 text-xs text-[var(--text-muted)]">
+                  Pagamento único por vida do contrato
+                </Text>
+              </div>
+
+              {formData.bonus_por_vida_aplicado && (
+                <Surface variant="strong" padding="sm" className="xl:col-span-2">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <Text className="text-sm font-semibold text-[var(--text-primary)]">
+                        Distribuição do bônus
+                      </Text>
+                      <Text className="mt-1 text-xs text-[var(--text-muted)]">
+                        Cadastre uma faixa por valor. Exemplo: 1 vida com R$
+                        200,00 e outra com R$ 120,00.
+                      </Text>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleAddBonusRow}
+                    >
+                      <Plus className="kds-control-icon" />
+                      Adicionar faixa
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {bonusDistribution.length === 0 ? (
+                      <Surface variant="muted" padding="sm" className="border-dashed text-sm text-[var(--text-muted)]">
+                        Nenhuma faixa criada ainda. Adicione uma linha para
+                        informar quantas vidas recebem cada valor.
+                      </Surface>
+                    ) : (
+                      bonusDistribution.map((row, index) => {
+                        const subtotal =
+                          (parseInt(row.quantidade || "0", 10) || 0) *
+                          parseFormattedNumber(row.valor || "");
+
+                        return (
+                          <Surface
+                            key={row.id}
+                            padding="sm"
+                            className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]"
+                          >
+                            <Field label="Vidas">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.quantidade}
+                                onChange={(e) =>
+                                  handleBonusRowChange(
+                                    row.id,
+                                    "quantidade",
+                                    e.target.value,
+                                  )
+                                }
+                                placeholder="0"
+                              />
+                            </Field>
+
+                            <Field label="Bônus por vida">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.valor}
+                                onChange={(e) =>
+                                  handleBonusRowChange(
+                                    row.id,
+                                    "valor",
+                                    e.target.value,
+                                  )
+                                }
+                                placeholder="0,00"
+                              />
+                            </Field>
+
+                            <Surface variant="muted" padding="sm" className="flex flex-col justify-center">
+                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                Subtotal da faixa {index + 1}
+                              </span>
+                              <span className="text-base font-semibold text-[var(--text-primary)]">
+                                R${" "}
+                                {subtotal.toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </span>
+                            </Surface>
+
+                            <div className="flex items-end">
+                              <IconButton
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveBonusRow(row.id)}
+                                disabled={bonusDistribution.length === 1}
+                                aria-label="Remover faixa de bônus"
+                                title="Remover faixa"
+                              >
+                                <Trash2 />
+                              </IconButton>
+                            </div>
+                          </Surface>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <Surface padding="sm">
+                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        Vidas com bônus
+                      </Text>
+                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
+                        {distributedBonusLives}
+                      </Text>
+                    </Surface>
+                    <Surface padding="sm">
+                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        Vidas sem bônus
+                      </Text>
+                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
+                        {livesWithoutBonus}
+                      </Text>
+                    </Surface>
+                    <Surface padding="sm">
+                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        Total previsto
+                      </Text>
+                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
+                        R${" "}
+                        {distributedBonusTotal.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </Text>
+                    </Surface>
+                  </div>
+
+                  {distributedBonusLives > vidasNumber && (
+                    <Alert tone="warning" className="mt-3">
+                      <AlertCircle className="h-4 w-4" />A soma das faixas
+                      ultrapassa a quantidade total de vidas do contrato.
+                    </Alert>
+                  )}
+                </Surface>
+              )}
+            </div>
+
+            {(formData.bonus_por_vida_aplicado ||
+              formData.previsao_pagamento_bonificacao) && (
+              <Field
+                label="Previsão Pagamento Bonificação"
+                descriptionPlacement="tooltip" description="Informe quando a bonificação deverá ser recebida."
+                className="mb-4"
+              >
+                <DateTimePicker
+                  type="date"
+                  value={formData.previsao_pagamento_bonificacao}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      previsao_pagamento_bonificacao: event.target.value,
+                    })
+                  }
+                  placeholder="Selecionar data"
+                />
+              </Field>
+            )}
               <Field label="Multiplicador de Comissão" className="md:col-span-2">
                 <Surface variant="strong" padding="sm" className="sm:p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -2093,249 +2299,6 @@ export default function ContractForm({
                   </div>
                 )}
               </div>
-          </FormSection>
-
-          <FormSection
-            step="04"
-            data-contract-step="3" hidden={isStepped && formStep !== 3} tabIndex={-1}
-            descriptionPlacement="visible"
-            title="Vidas e bonificações"
-            description="Informe a quantidade de pessoas cobertas e configure os bônus aplicáveis."
-          >
-            <div className="mb-4 mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-              <Field label="Quantidade de Vidas *" descriptionPlacement="tooltip" description="Titular + dependentes">
-                <Input
-                  type="number"
-                  min="1"
-                  required
-                  value={formData.vidas}
-                  onChange={(e) =>
-                    setFormData({ ...formData, vidas: e.target.value })
-                  }
-                  placeholder="1"
-                />
-              </Field>
-
-              <div>
-                <FieldLabel className="mt-4 flex items-center space-x-2 cursor-pointer">
-                  <Checkbox
-                    checked={formData.bonus_por_vida_aplicado}
-                    onChange={(e) => handleToggleBonus(e.target.checked)}
-                  />
-                   <span className="text-sm font-medium text-[var(--text-secondary)]">
-                    Aplicar Bônus por Vida
-                  </span>
-                </FieldLabel>
-                <Text className="mt-1 text-xs text-[var(--text-muted)]">
-                  Pagamento único por vida do contrato
-                </Text>
-              </div>
-
-              {formData.bonus_por_vida_aplicado && (
-                <Surface variant="strong" padding="sm" className="xl:col-span-2">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <Text className="text-sm font-semibold text-[var(--text-primary)]">
-                        Distribuição do bônus
-                      </Text>
-                      <Text className="mt-1 text-xs text-[var(--text-muted)]">
-                        Cadastre uma faixa por valor. Exemplo: 1 vida com R$
-                        200,00 e outra com R$ 120,00.
-                      </Text>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleAddBonusRow}
-                    >
-                      <Plus className="kds-control-icon" />
-                      Adicionar faixa
-                    </Button>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    {bonusDistribution.length === 0 ? (
-                      <Surface variant="muted" padding="sm" className="border-dashed text-sm text-[var(--text-muted)]">
-                        Nenhuma faixa criada ainda. Adicione uma linha para
-                        informar quantas vidas recebem cada valor.
-                      </Surface>
-                    ) : (
-                      bonusDistribution.map((row, index) => {
-                        const subtotal =
-                          (parseInt(row.quantidade || "0", 10) || 0) *
-                          parseFormattedNumber(row.valor || "");
-
-                        return (
-                          <Surface
-                            key={row.id}
-                            padding="sm"
-                            className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]"
-                          >
-                            <Field label="Vidas">
-                              <Input
-                                type="text"
-                                inputMode="numeric"
-                                value={row.quantidade}
-                                onChange={(e) =>
-                                  handleBonusRowChange(
-                                    row.id,
-                                    "quantidade",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="0"
-                              />
-                            </Field>
-
-                            <Field label="Bônus por vida">
-                              <Input
-                                type="text"
-                                inputMode="numeric"
-                                value={row.valor}
-                                onChange={(e) =>
-                                  handleBonusRowChange(
-                                    row.id,
-                                    "valor",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="0,00"
-                              />
-                            </Field>
-
-                            <Surface variant="muted" padding="sm" className="flex flex-col justify-center">
-                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                Subtotal da faixa {index + 1}
-                              </span>
-                              <span className="text-base font-semibold text-[var(--text-primary)]">
-                                R${" "}
-                                {subtotal.toLocaleString("pt-BR", {
-                                  minimumFractionDigits: 2,
-                                })}
-                              </span>
-                            </Surface>
-
-                            <div className="flex items-end">
-                              <IconButton
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveBonusRow(row.id)}
-                                disabled={bonusDistribution.length === 1}
-                                aria-label="Remover faixa de bônus"
-                                title="Remover faixa"
-                              >
-                                <Trash2 />
-                              </IconButton>
-                            </div>
-                          </Surface>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <Surface padding="sm">
-                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        Vidas com bônus
-                      </Text>
-                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-                        {distributedBonusLives}
-                      </Text>
-                    </Surface>
-                    <Surface padding="sm">
-                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        Vidas sem bônus
-                      </Text>
-                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-                        {livesWithoutBonus}
-                      </Text>
-                    </Surface>
-                    <Surface padding="sm">
-                      <Text className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        Total previsto
-                      </Text>
-                      <Text className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-                        R${" "}
-                        {distributedBonusTotal.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </Text>
-                    </Surface>
-                  </div>
-
-                  {distributedBonusLives > vidasNumber && (
-                    <Alert tone="warning" className="mt-3">
-                      <AlertCircle className="h-4 w-4" />A soma das faixas
-                      ultrapassa a quantidade total de vidas do contrato.
-                    </Alert>
-                  )}
-                </Surface>
-              )}
-            </div>
-
-            {(formData.bonus_por_vida_aplicado ||
-              formData.previsao_pagamento_bonificacao) && (
-              <Field
-                label="Previsão Pagamento Bonificação"
-                descriptionPlacement="tooltip" description="Informe quando a bonificação deverá ser recebida."
-                className="mb-4"
-              >
-                <DateTimePicker
-                  type="date"
-                  value={formData.previsao_pagamento_bonificacao}
-                  onChange={(event) =>
-                    setFormData({
-                      ...formData,
-                      previsao_pagamento_bonificacao: event.target.value,
-                    })
-                  }
-                  placeholder="Selecionar data"
-                />
-              </Field>
-            )}
-          </FormSection>
-
-          <FormSection
-            step="05"
-            data-contract-step="4" hidden={isStepped && formStep !== 4} tabIndex={-1}
-            descriptionPlacement="visible"
-            title="Responsáveis e observações"
-            description="Defina as pessoas responsáveis pelo relacionamento e registre notas internas."
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Field label="Responsável *">
-                {responsavelOptions.length > 0 ? (
-                  <FilterSelect
-                    icon={User}
-                    value={formData.responsavel}
-                    onChange={(value) =>
-                      setFormData({ ...formData, responsavel: value })
-                    }
-                    placeholder="Responsável"
-                    includePlaceholderOption={false}
-                    options={responsavelSelectOptions}
-                  />
-                ) : (
-                  <Input
-                    type="text"
-                    required
-                    value={formData.responsavel}
-                    onChange={(e) =>
-                      setFormData({ ...formData, responsavel: e.target.value })
-                    }
-                    placeholder="Informe o responsável"
-                  />
-                )}
-              </Field>
-
-              <Field label="Responsável pela venda (produção)">
-                <Select value={saleOperator} disabled={Boolean(contract?.sale_operator_user_id)} onChange={(event) => setSaleOperator(event.target.value)} options={[{ value: '', label: 'Escolha no fechamento' }, ...productionOperators.map((operator) => ({ value: operator.user_id, label: operator.display_name }))]} />
-                {productionOperatorsError && <Text role="alert">{productionOperatorsError}</Text>}
-                <Text className="text-xs text-[var(--text-muted)]">O crédito da venda permanece com a pessoa escolhida, mesmo que o responsável pelo cliente mude.</Text>
-              </Field>
-
               <Field label="Observações Internas" className="md:col-span-2">
                 <Textarea
                   value={formData.observacoes_internas}
@@ -2348,7 +2311,6 @@ export default function ContractForm({
                   rows={3}
                 />
               </Field>
-            </div>
           </FormSection>
         </form>
 </>);
@@ -2363,6 +2325,7 @@ export default function ContractForm({
     </section> : <>
       <Dialog open onOpenChange={(open) => !open && !saving && onClose()} initialFocus="first-content" size={isStepped ? 'xl' : 'lg'} className="kds-crm-dialog kds-contract-form-dialog">
         <DialogHeader onClose={saving ? undefined : onClose}>
+          <div className="kds-dialog-eyebrow">Contratos</div>
           <DialogTitle>{title}</DialogTitle>
           {leadToConvert && (
             <DialogDescription placement="visible" className="flex items-center gap-1.5">
@@ -2370,18 +2333,6 @@ export default function ContractForm({
               {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
             </DialogDescription>
           )}
-          {!leadToConvert && <DialogDescription placement="visible">Registre os dados comerciais, financeiros e de vigência do contrato.</DialogDescription>}
-          <Button
-            type="button"
-            variant="soft"
-            size="sm"
-            className="mt-3"
-            onClick={() => setShowJsonImport(true)}
-            disabled={saving}
-          >
-            <FileUp className="kds-control-icon" />
-            Importar de arquivo
-          </Button>
         </DialogHeader>
         {isStepped && (
           <div className="kds-contract-form-steps">
@@ -2391,16 +2342,14 @@ export default function ContractForm({
         <DialogBody>{formContent}</DialogBody>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
+          <span className="kds-dialog-footer-note">{isStepped ? `Etapa ${formStep + 1} de ${CONTRACT_STEPS.length}` : ""}</span>
+          {formStep === 0 && <Button type="button" variant="text" size="sm" onClick={() => setShowJsonImport(true)} disabled={saving}><FileUp className="kds-control-icon" />Importar de arquivo</Button>}
+          {(!isStepped || formStep === 0) && <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancelar</Button>}
           {isStepped && formStep > 0 && <Button type="button" variant="secondary" onClick={() => moveToStep(formStep - 1)} disabled={saving}>Voltar</Button>}
           <Button type="submit" form="contract-form" loading={saving}>
             {saving
               ? "Salvando..."
-              : contract
-                ? "Salvar"
-                : isStepped && formStep < CONTRACT_STEPS.length - 1 ? "Continuar" : "Continuar para titular"}
+              : isStepped && formStep < CONTRACT_STEPS.length - 1 ? "Continuar" : contract ? "Salvar" : "Continuar para titular"}
           </Button>
         </DialogFooter>
       </Dialog>

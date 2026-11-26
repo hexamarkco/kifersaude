@@ -126,3 +126,9 @@ Componentes visuais devem ser importados pela API pública de `src/design-system
 Um novo componente precisa primeiro existir na biblioteca e ter exemplo funcional no showcase. `npm run audit:design-system` verifica esse contrato e a cobertura da API consumida pelas telas; o build executa o gate. Isso complementa a auditoria visual de tokens e os testes, sem substituir a revisão visual dos estados.
 
 A migração e suas evidências estão em [design-system-adoption.md](design-system-adoption.md).
+
+## Referência de layout obrigatória
+
+O protótipo `PAINEL-KS-PROTOTIPO` (23/11/2026), especialmente `PROTOTIPO-KS.html` e as capturas de desktop, dark, mobile, detalhes e modais, é a fonte de verdade visual do CRM. Em caso de divergência visual, adapte os componentes e tokens da biblioteca ao protótipo; não crie uma linguagem paralela por feature. Preserve funcionalidades, dados reais, validação, permissões e contratos de API. Elementos ilustrativos sem implementação real devem ser explicitamente registrados como divergências, não simulados como funcionalidades operacionais.
+
+Contratos usa os tokens `--type-record-*`, `--record-*` e os componentes compartilhados para lista, indicadores, abas, drawer de 660px, modal de 620px e modal amplo de 960px. As etapas de criação/edição e titular reutilizam Stepper; filtros usam o padrão de diálogo com rascunho. Referências: `imagens/desktop/contratos.png`, `imagens/escuro/contratos.png`, `imagens/mobile/contratos.png`, `imagens/detalhes/contrato-*.png`, `imagens/modais/contract-*.png`, `holder-*.png`, `dependent-create.png` e `value-adjustment.png`.

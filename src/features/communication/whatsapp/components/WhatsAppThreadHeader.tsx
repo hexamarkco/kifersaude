@@ -95,6 +95,9 @@ export function WhatsAppThreadHeader({
       </div>
       <div className="whatsapp-inbox-thread-actions">
         <ButtonGroup className="whatsapp-inbox-action-group kds-control-group-md" role="group" aria-label="Ações da conversa">
+          <IconButton type="button" onClick={onCopyTranscript} loading={copyingTranscript} variant="ghost" aria-label="Copiar conversa formatada" title="Copiar conversa formatada" size="md">
+            <Copy className="kds-control-icon" aria-hidden="true" />
+          </IconButton>
           {!selectedChat.is_group ? (
             <IconButton
               type="button"
@@ -111,9 +114,6 @@ export function WhatsAppThreadHeader({
               </span>
             </IconButton>
           ) : null}
-          <IconButton type="button" onClick={onCopyTranscript} loading={copyingTranscript} variant="ghost" aria-label="Copiar conversa formatada" title="Copiar conversa formatada" size="md">
-            <Copy className="kds-control-icon" aria-hidden="true" />
-          </IconButton>
         </ButtonGroup>
         {selectedChat.is_group && (
           <IconButton ref={threadActionsMenuTriggerRef} type="button" onClick={onToggleThreadActionsMenu} variant={threadActionsMenuOpen ? 'secondary' : 'ghost'} aria-label="Abrir ações da conversa" aria-expanded={threadActionsMenuOpen} aria-haspopup="menu" title="Ações da conversa" size="md">

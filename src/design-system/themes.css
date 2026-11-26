@@ -321,6 +321,8 @@
   --type-ui-heading: 600 .9375rem / 1.5 var(--font-display);
   --type-body-sm: 400 .875rem / 1.55 var(--font-sans);
   --type-badge: 500 .8125rem / 1.25 var(--font-sans);
+  --workspace-caption-size: .8125rem;
+  --workspace-meta-size: .75rem;
   --type-caption: 400 .8125rem / 1.5 var(--font-sans);
   --type-label: 500 .875rem / 1.5 var(--font-sans);
   --control-height-md: 2.5rem;
@@ -537,4 +539,13 @@
     --page-gutter: 1rem;
     --type-ui-title: 600 1.3125rem / 1.5 var(--font-display);
   }
+}
+
+
+/* Shared primitives with legacy explicit sizes must respect workspace legibility. */
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-badge-sm,.kds-badge-md,.kds-op-status-badge,.kds-op-chip-label,.kds-op-section-label,.kds-tooltip-sm,.kds-tooltip-md,.kds-stepper-description,.kds-progress-label,.kds-radio-description,.kds-op-inline-action) {
+  font-size: var(--workspace-caption-size);
+}
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-calendar-event-count,.kds-stepper:not(.kds-stepper-vertical) .kds-stepper-circle) {
+  font-size: var(--workspace-meta-size);
 }

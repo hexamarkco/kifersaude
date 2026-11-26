@@ -11,7 +11,6 @@ import {
   Button,
   Card,
   CrmCard,
-  DialogDescription,
   DialogTitle,
   Drawer,
   DrawerBody,
@@ -627,8 +626,8 @@ export default function WhatsAppCampaignDetailScreen() {
     (right.last_attempt_at ?? '').localeCompare(left.last_attempt_at ?? ''));
 
   return (
-    <div className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell space-y-5">
-      <PageHeader
+    <div className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell kds-campaign-page kds-campaign-detail-page">
+      <PageHeader className="kds-campaign-page-header"
         title={view === 'overview' ? campaign?.name ?? 'Detalhe do disparo' : campaignDetailCopy[view].title}
         breadcrumbs={<Button variant="ghost" size="sm" onClick={() => navigate('/painel/disparos')}><ArrowLeft className="kds-control-icon" />Todos os disparos</Button>}
         description={view === 'overview' ? campaign?.objective || 'Resultados, público e mensagens da campanha.' : campaignDetailCopy[view].description}
@@ -710,17 +709,17 @@ export default function WhatsAppCampaignDetailScreen() {
         <Card><LoadingState className="p-4" label="Carregando campanha" placeholder={<RecordFieldsSkeleton />} /></Card>
       ) : campaign ? (
         <>
-          <Tabs value={view} onChange={setView} ariaLabel="Visões da campanha" listClassName="flex-nowrap overflow-x-auto"
+          <Tabs value={view} onChange={setView} variant="underline" className="kds-campaign-detail-tabs" ariaLabel="Visões da campanha" listClassName="flex-nowrap overflow-x-auto"
             items={[{ id: 'overview', label: 'Visão geral' }, { id: 'audience', label: 'Público' }, { id: 'messages', label: 'Mensagens' }, { id: 'activity', label: 'Atividade' }]} />
           {view === 'overview' && <>
           <section className="kds-workspace-record-metrics" aria-label="Indicadores da campanha">
             <KpiCard title="Público selecionado" value={String(campaign.total_targets || targetsTotal)} trend="Destinatários da campanha" icon={<Users />} />
-            <KpiCard title="Mensagens enviadas" value={String(targetCounts.sent + targetCounts.responded)} trend="Contatos enviados ou respondidos" icon={<Send />} data-tone="info" />
+            <KpiCard title="Contatos alcançados" value={String(targetCounts.sent + targetCounts.responded)} trend="Contatos enviados ou respondidos" icon={<Send />} data-tone="info" />
             <KpiCard title="Pessoas que responderam" value={String(respondedCount)} trend={`${conversionRate}% dos contatos com tentativa`} icon={<MessageCircle />} data-tone="cyan" />
             <KpiCard title="Aguardando envio" value={String(targetCounts.pending + targetCounts.scheduled + targetCounts.sending)} trend="Pendentes, agendados ou em envio" icon={<Clock3 />} data-tone="purple" />
           </section>
           <div className="kds-campaign-overview-pair">
-            <CrmCard title="Evolução da campanha" subtitle="Situação dos contatos no momento." subtitlePlacement="visible">
+            <CrmCard title="Andamento da campanha" subtitle="Situação dos contatos no momento." subtitlePlacement="visible">
               {[
                 { label: 'Enviados', count: targetCounts.sent },
                 { label: 'Responderam', count: respondedCount },
@@ -974,14 +973,14 @@ export default function WhatsAppCampaignDetailScreen() {
             </CrmCard>
           )}
           {selectedTarget && (
-            <Drawer open size="md" className="kds-campaign-workspace" onOpenChange={(open) => !open && setSelectedTargetId(null)}>
+            <Drawer open side="right" size="lg" className="kds-crm-dialog kds-campaign-workspace kds-campaign-contact-drawer" onOpenChange={(open) => !open && setSelectedTargetId(null)}>
               <DrawerHeader onClose={() => setSelectedTargetId(null)}>
+                <div className="kds-dialog-eyebrow">Disparos</div>
                 <DialogTitle>Contato na campanha</DialogTitle>
-                <DialogDescription placement="visible">{getCampaignTargetDisplayName(selectedTarget)}</DialogDescription>
               </DrawerHeader>
               <DrawerBody className="space-y-4">
-                <Badge tone={targetStatusTones[selectedTarget.status]}>{targetStatusLabels[selectedTarget.status]}</Badge>
-                <dl className="divide-y divide-[var(--border-subtle)]">
+                <div className="kds-campaign-contact-summary"><Heading level={3} className="kds-record-entity-title">{getCampaignTargetDisplayName(selectedTarget)}</Heading><Badge tone={targetStatusTones[selectedTarget.status]}>{targetStatusLabels[selectedTarget.status]}</Badge></div>
+                <dl className="kds-campaign-contact-facts divide-y divide-[var(--border-subtle)]">
                   <CampaignFact label="Telefone" value={selectedTarget.phone_number || selectedTarget.phone_digits} />
                   <CampaignFact label="Etapa" value={String(selectedTarget.current_step_index + 1)} />
                   <CampaignFact label="Próximo envio" value={formatDateTime(selectedTarget.next_send_at)} />
@@ -1033,7 +1032,7 @@ function CampaignMessageSequence({ campaignId, initialMessage, onEdit }: { campa
         <Surface padding="md" className="kds-campaign-sequence-row">
           <span className="kds-campaign-sequence-number">{String(stage + 1).padStart(2, '0')}</span>
           <div>
-            <Badge size="sm">{stage === 0 ? 'Primeiro contato' : `Etapa ${stage + 1}`}</Badge>
+            <Badge size="sm">{stage === 0 ? 'Primeiro contato' : step.delay_amount > 0 ? `Etapa ${stage + 1} · Espera: ${step.delay_amount} ${step.delay_unit === 'days' ? 'dia(s)' : step.delay_unit === 'hours' ? 'hora(s)' : step.delay_unit === 'seconds' ? 'segundo(s)' : 'minuto(s)'}` : `Etapa ${stage + 1}`}</Badge>
             {step.variant_label !== 'ANY' && <Badge size="sm" className="ml-2">Variação {step.variant_label}</Badge>}
             <Text weight="semibold">{step.step_kind === 'status_change' ? 'Mudança de status' : 'Mensagem'}</Text>
             <Text size="sm" className="whitespace-pre-wrap">{step.step_kind === 'status_change' ? step.status_to_set : step.message_text}</Text>
@@ -1048,7 +1047,7 @@ function CampaignMessageSequence({ campaignId, initialMessage, onEdit }: { campa
 
 function CampaignFact({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+    <div className="kds-campaign-fact grid gap-1 py-3 first:pt-0 last:pb-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
       <dt className="text-xs font-medium text-[color:var(--panel-text-muted)]">{label}</dt>
       <dd className="min-w-0 sm:text-right">
         <Text className="text-sm font-medium text-[color:var(--panel-text)]">{value}</Text>

@@ -215,13 +215,14 @@ export function CampaignSequenceFlow({ stages, statusOptions, interMessageInterv
         </div>
       </details>
       {selectedIndex !== null && stages[activeIndex] && (
-        <Dialog open size="lg" className="kds-campaign-workspace" onOpenChange={(open) => !open && setSelectedIndex(null)}>
+        <Dialog open size="wide" className="kds-crm-dialog kds-campaign-workspace kds-campaign-dialog kds-campaign-stage-dialog" onOpenChange={(open) => !open && setSelectedIndex(null)}>
           <DialogHeader onClose={() => setSelectedIndex(null)}>
+            <div className="kds-dialog-eyebrow">Disparos</div>
             <DialogTitle>{stages[activeIndex].kind === 'message' ? 'Editar mensagem da campanha' : 'Editar mudança de status'}</DialogTitle>
             <DialogDescription placement="visible">Etapa {activeIndex + 1} · {describeWait(stages[activeIndex], activeIndex)}</DialogDescription>
           </DialogHeader>
           <DialogBody>{renderStageEditor(stages[activeIndex], activeIndex)}</DialogBody>
-          <DialogFooter><Button onClick={() => setSelectedIndex(null)}>Concluir edição</Button></DialogFooter>
+          <DialogFooter><Text className="kds-campaign-footer-note">Alterações ficam no rascunho até salvar a campanha.</Text><Button onClick={() => setSelectedIndex(null)}>Concluir edição</Button></DialogFooter>
         </Dialog>
       )}
       <Text className="text-xs text-[color:var(--panel-text-muted)]">Entre as mensagens da mesma etapa: {interMessageIntervalSeconds > 0 ? `espera mínima de ${interMessageIntervalSeconds} segundos` : 'cerca de 3 segundos'}. As etapas seguintes respeitam a espera indicada e podem parar se o contato responder.</Text>

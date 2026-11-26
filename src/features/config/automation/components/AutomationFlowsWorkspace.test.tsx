@@ -44,6 +44,10 @@ test('mostra o resumo e disponibiliza os fluxos em cartões responsivos', () => 
   const view = renderWorkspace([activeFlow, pausedFlow]);
 
   try {
+    const summary = view.container.querySelector('[aria-label="Resumo das automações"]');
+    assert.ok(summary);
+    assert.equal(summary.children.length, 4);
+    assert.equal(view.container.querySelector('.kds-avatar'), null);
     assert.ok(view.container.textContent?.includes('Fluxos ativos'));
     assert.ok(view.container.textContent?.includes('2 configurados'));
     assert.ok(view.container.textContent?.includes('Mensagens hoje'));

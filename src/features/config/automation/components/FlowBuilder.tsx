@@ -1100,8 +1100,9 @@ export default function FlowBuilder({
       </div>
 
       {selectedNode && (
-        <Drawer open size="md" className="kds-automation-drawer" onOpenChange={(open) => !open && finishEditingNode()}>
+        <Drawer open side="right" size="lg" className="kds-crm-dialog kds-automation-drawer kds-automation-step-drawer" onOpenChange={(open) => !open && finishEditingNode()}>
           <DrawerHeader onClose={finishEditingNode}>
+            <div className="kds-dialog-eyebrow">Automações</div>
             <DialogTitle>Editar etapa da jornada</DialogTitle>
             <DialogDescription placement="visible">{selectedNode.data.label || "Etapa do fluxo"}</DialogDescription>
           </DrawerHeader>

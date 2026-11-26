@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Card,
+  DialogTitle,
   Drawer,
   DrawerBody,
   DrawerFooter,
@@ -339,15 +340,16 @@ export default function FeatureEditorDrawer({ feature, onClose, onSaved }: Props
         if (!open) onClose();
       }}
       size="lg"
-      className="kds-ai-editor-drawer"
+      side="right"
+      className="kds-crm-dialog kds-ai-editor-drawer"
     >
       <div className="flex h-full min-h-0 flex-col">
         {/* Header */}
         <DrawerHeader onClose={onClose}>
           <div>
-            <Heading level={2} className="text-base font-semibold text-[var(--text-primary)]">
-              {label}
-            </Heading>
+            <div className="kds-dialog-eyebrow">Inteligência artificial</div>
+            <DialogTitle>Configurar funcionalidade de IA</DialogTitle>
+            <Heading level={3} className="kds-ai-editor-feature-name">{label}</Heading>
             <Text className="mt-0.5 text-xs text-[var(--text-muted)]">
               {feature.key}
               {(feature.active_config ?? feature.latest_config) && ` · v${(feature.active_config ?? feature.latest_config)!.version}`}

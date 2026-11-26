@@ -14,6 +14,7 @@ test('keeps publication and record actions available in the responsive collectio
   const view = render(<FormsScreen />);
   try {
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
+    assert.equal(view.container.querySelector('[aria-label="Resumo dos formulários"]')?.children.length, 3);
     assert.ok(view.container.querySelector('.kds-collection-table'));
     assert.ok(view.container.querySelector('.kds-collection-cards'));
     assert.ok(view.container.querySelector('input[aria-label="Buscar formulários"]'));

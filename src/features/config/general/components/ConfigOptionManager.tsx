@@ -231,7 +231,8 @@ export default function ConfigOptionManager({
             setNewLabel('');
           }
         }}
-        size="sm"
+        size="md"
+        className="kds-crm-dialog kds-settings-dialog"
       >
         <DialogHeader
           onClose={() => {
@@ -239,6 +240,7 @@ export default function ConfigOptionManager({
             setNewLabel('');
           }}
         >
+          <div className="kds-dialog-eyebrow">Configurações</div>
           <DialogTitle>{createDialogTitle ?? `Nova opção${title ? ` - ${title}` : ''}`}</DialogTitle>
           <DialogDescription>Adicione um novo item a esta lista.</DialogDescription>
         </DialogHeader>

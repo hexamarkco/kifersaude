@@ -49,8 +49,8 @@ export default function BlogEditor({
     : BLOG_CATEGORY_OPTIONS;
 
   return (
-    <div className="panel-page-shell kds-blog-workspace kds-blog-editor-page space-y-5">
-      <PageHeader title="Cuidado começa com informação." description="Escreva, revise e prepare a publicação do seu artigo." />
+    <div className="panel-page-shell kds-blog-workspace kds-blog-editor-page">
+      <PageHeader className="kds-blog-page-header" descriptionPlacement="visible" title="Cuidado começa com informação." description="Escreva, revise e prepare a publicação do seu artigo." />
       <div className="kds-blog-editor-toolbar">
         <Button variant="ghost" onClick={onClose} disabled={busy}>
           <ArrowLeft className="kds-control-icon" aria-hidden="true" /> Voltar para artigos
@@ -66,7 +66,7 @@ export default function BlogEditor({
       </div>
       {uploading && <Text size="sm" tone="muted" role="status">Aguarde o envio da imagem para salvar ou sair.</Text>}
 
-      <fieldset disabled={saving} className="kds-blog-editor-layout">
+      <fieldset disabled={saving} className="kds-blog-editor-layout" aria-label="Editor de artigo">
         <Surface padding="none" className="kds-blog-editor-content">
           <div className="kds-blog-editor-title">
             <Field label="Título do artigo" htmlFor="blog-title" required error={validationAttempted && !formData.title ? 'Informe o título do artigo.' : undefined}>
@@ -87,7 +87,7 @@ export default function BlogEditor({
         </Surface>
 
         <aside className="kds-blog-editor-settings" aria-label="Detalhes da publicação">
-          <Surface className="space-y-4">
+          <Surface className="kds-blog-settings-card space-y-4">
             <Heading level={2} size="sm">Detalhes da publicação</Heading>
             <Field label="Categoria" htmlFor="blog-category" required>
               <Select id="blog-category" value={formData.category} options={categories}
@@ -113,7 +113,7 @@ export default function BlogEditor({
                   <><ImagePlus aria-hidden="true" /><span>{formData.cover_image_url ? 'Trocar imagem de capa' : 'Escolher imagem de capa'}</span><small>JPG, PNG, WEBP ou GIF · até 5 MB</small></>
                 )} />
               </FieldLabel>
-              {formData.cover_image_url && <Image src={formData.cover_image_url} alt="Imagem de capa" className="kds-blog-cover-thumbnail" />}
+              {formData.cover_image_url && <div className="kds-blog-cover-current"><Image src={formData.cover_image_url} alt="Imagem de capa" className="kds-blog-cover-thumbnail" /><Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => onFormDataChange({ ...formData, cover_image_url: "" })}>Remover capa do rascunho</Button></div>}
               <Field label="Endereço da imagem" htmlFor="article-cover-url">
                 <Input id="article-cover-url" value={formData.cover_image_url} placeholder="https://…"
                   onChange={(event) => onFormDataChange({ ...formData, cover_image_url: event.target.value })} />
@@ -121,7 +121,7 @@ export default function BlogEditor({
             </div>
           </Surface>
 
-          <Surface className="space-y-4">
+          <Surface className="kds-blog-settings-card space-y-4">
             <Heading level={2} size="sm">Busca e compartilhamento</Heading>
             <Field label="Título para os buscadores" htmlFor="blog-meta-title" hint={`${formData.meta_title.length}/60 caracteres`}>
               <Input id="blog-meta-title" value={formData.meta_title} maxLength={60}

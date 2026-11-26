@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { CalendarDays, Eye, FileText, Search, SlidersHorizontal } from 'lucide-react';
 import {
-  ActionSurface, Badge, Button, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader,
+  ActionSurface, Badge, Button, DateTimePicker, Dialog, DialogBody, DialogFooter, DialogHeader,
   DialogTitle, EmptyState, Field, FilterSelect, Input, Pagination, RecordActions, Select, SortableTableHead,
   Surface, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, useSortedTableRows, useTableSorting,
 } from '../../../design-system';
@@ -88,7 +88,7 @@ export function CommissionForecastList({ monthKey, events, monthControl, onSelec
           <FilterSelect placeholder="Tipo de previsão" includePlaceholderOption={false} neutralValues={['all']} options={TYPES} value={type} onChange={(value) => { setType(value); updatePage(1); }} />
         </div>
         {monthControl}
-        <Button className="kds-forecast-filter" variant="secondary" onClick={() => setDraft({ ...filters })} aria-haspopup="dialog">
+        <Button className="kds-forecast-filter" variant="secondary" onClick={() => setDraft({ ...filters })} aria-haspopup="dialog" aria-expanded={Boolean(draft)}>
           <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />
           Filtros
           {activeFilters > 0 && <Badge size="sm" tone="accent">{activeFilters}</Badge>}
@@ -124,7 +124,7 @@ export function CommissionForecastList({ monthKey, events, monthControl, onSelec
                   <TableRow key={event.id}>
                     <TableCell>
                       <ActionSurface variant="plain" padding="none" className="kds-forecast-contract" onClick={() => onSelectEvent(event)}>
-                        <strong>{name}</strong>
+                        <strong className="kds-record-row-name">{name}</strong>
                         {((code && code !== name) || isInstallment) && <small>
                           {[code && code !== name ? code : null, isInstallment ? `Parcela ${event.installmentIndex} de ${event.installmentCount}` : null].filter(Boolean).join(' · ')}
                         </small>}
@@ -132,7 +132,7 @@ export function CommissionForecastList({ monthKey, events, monthControl, onSelec
                     </TableCell>
                     <TableCell>{event.contract.operadora || 'Não informada'}</TableCell>
                     <TableCell><Badge tone="neutral" className="kds-forecast-type-badge" data-forecast-type={event.type}>{event.type === 'comissao' ? 'Comissão' : 'Bonificação'}</Badge></TableCell>
-                    <TableCell className="whitespace-nowrap font-semibold tabular-nums">{formatCommissionCurrency(event.value)}</TableCell>
+                    <TableCell className="kds-forecast-amount whitespace-nowrap font-semibold tabular-nums">{formatCommissionCurrency(event.value)}</TableCell>
                     <TableCell>{parseCommissionDate(event.date)?.toLocaleDateString('pt-BR') ?? '—'}</TableCell>
                     <TableCell>{event.contract.responsavel || '—'}</TableCell>
                     <TableCell align="right"><RecordActions label={`Ações da previsão de ${name}`} actions={actions} visibleCount={0} /></TableCell>
@@ -148,10 +148,10 @@ export function CommissionForecastList({ monthKey, events, monthControl, onSelec
       </Surface>
       <CommissionNotice />
       {draft && (
-        <Dialog open size="md" className="kds-finance-dialog" onOpenChange={(open) => !open && setDraft(null)}>
+        <Dialog open size="md" className="kds-crm-dialog kds-finance-dialog kds-finance-filter-dialog" onOpenChange={(open) => !open && setDraft(null)}>
           <DialogHeader onClose={() => setDraft(null)}>
+            <div className="kds-dialog-eyebrow">Financeiro</div>
             <DialogTitle>Filtrar previsões</DialogTitle>
-            <DialogDescription placement="visible">Refine os lançamentos da competência selecionada.</DialogDescription>
           </DialogHeader>
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => {
             event.preventDefault();
@@ -175,10 +175,10 @@ export function CommissionForecastList({ monthKey, events, monthControl, onSelec
                   <DateTimePicker id="forecast-to" type="date" value={draft.end} onChange={({ target }) => setDraft({ ...draft, end: target.value })} />
                 </Field>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setDraft({ ...EMPTY_FILTERS })}>Limpar filtros</Button>
+              <Button type="button" variant="text" size="sm" onClick={() => setDraft({ ...EMPTY_FILTERS })}>Limpar filtros</Button>
             </DialogBody>
             <DialogFooter>
-              <Button variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
+              <Button type="button" variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
               <Button type="submit" disabled={invalidRange}>Aplicar filtros</Button>
             </DialogFooter>
           </form>

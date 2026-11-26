@@ -1,8 +1,5 @@
 import type { ReactNode } from 'react';
 import { Skeleton } from './LoadingState';
-import { ResponsiveCollection } from './Application';
-import Table, { TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table';
-import { Surface } from './Surface';
 
 type PanelCardProps = {
   children: ReactNode;
@@ -252,72 +249,31 @@ export function ContractsPageSkeleton() {
   );
 }
 
-export function RemindersPageSkeleton() {
+export function RemindersPageSkeleton({ view = 'month' }: { view?: 'month' | 'week' | 'list' } = {}) {
   return (
-    <div className="panel-dashboard-immersive space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-9 w-64" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <Skeleton className="h-10 w-24 rounded-lg" />
-          <Skeleton className="h-10 w-24 rounded-lg" />
-          <Skeleton className="h-10 w-24 rounded-lg" />
-        </div>
+    <div className="kds-agenda-page panel-page-shell" aria-hidden="true">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 space-y-2"><Skeleton className="h-8 w-64 max-w-full" /><Skeleton variant="line" className="h-4 w-72 max-w-full" /></div>
+        <Skeleton className="h-9 w-28" />
       </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <PanelCard key={`reminder-stat-${index}`} className="space-y-2">
-            <Skeleton variant="line" className="h-4 w-20" />
-            <Skeleton className="h-8 w-16" />
-          </PanelCard>
-        ))}
-      </div>
-
-      <PanelCard className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <Skeleton className="h-10 w-full rounded-lg lg:flex-1" />
-          <Skeleton className="h-10 w-full rounded-lg lg:w-52" />
-          <Skeleton className="h-10 w-full rounded-lg lg:w-44" />
+      <div className="flex gap-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 w-16" />)}</div>
+      {view === 'list' ? <>
+        <div className="kds-agenda-toolbar"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-20" /></div>
+        <PanelCard className="space-y-2">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
+      </> : <div className={view === 'month' ? 'kds-agenda-workspace-grid kds-month-layout' : 'kds-agenda-workspace-grid'}>
+        <div className="kds-card kds-card-default kds-agenda-calendar">
+          <div className="kds-month-header"><Skeleton className="h-5 w-40" /><Skeleton className="h-8 w-24" /></div>
+          {view === 'month' ? <>
+            <div className="kds-month-weekdays">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="line" className="mx-auto h-3 w-6" />)}</div>
+            <div className="kds-month-grid">{Array.from({ length: 42 }, (_, i) => <div key={i} className="kds-agenda-skeleton-cell"><Skeleton className="h-4 w-4" /></div>)}</div>
+          </> : <div className="kds-agenda-week-scroll"><div className="kds-agenda-week-grid">
+            {Array.from({ length: 80 }, (_, i) => <div key={i} className={i < 8 ? 'kds-agenda-week-heading' : i % 8 === 0 ? 'kds-agenda-week-hour' : 'kds-agenda-week-slot'}>
+              {(i < 8 || i % 8 === 0) && <Skeleton variant="line" className="mx-auto h-3 w-8" />}
+            </div>)}
+          </div></div>}
         </div>
-        <div className="space-y-6">
-          {['Atrasados', 'Hoje', 'Amanhã'].map((group, groupIndex) => (
-            <div key={group} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Skeleton variant="line" className="h-5 w-24" />
-                  <Skeleton variant="line" className="h-5 w-16" />
-                </div>
-                <Skeleton variant="line" className="h-4 w-20" />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {Array.from({ length: groupIndex === 0 ? 2 : 1 }).map((_, index) => (
-                  <article
-                    key={`${group}-reminder-${index}`}
-                    className="kds-card kds-card-default p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <Skeleton className="h-5 w-56" />
-                        <Skeleton variant="line" className="h-4 w-32" />
-                        <Skeleton variant="line" className="h-4 w-48" />
-                      </div>
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </PanelCard>
+        {view === 'month' && <PanelCard className="space-y-3"><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-3 w-40" />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-14 w-full" />)}</PanelCard>}
+      </div>}
     </div>
   );
 }
@@ -357,70 +313,38 @@ export function WhatsAppPageSkeleton() {
 }
 
 export function BlogTabSkeletonList() {
-  return (
-    <div role="status" aria-label="Carregando artigos">
-      <ResponsiveCollection table={<Table aria-label="Artigos em carregamento" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
-        <TableHeader><TableRow>{Array.from({ length: 6 }, (_, index) => <TableHead key={index}><Skeleton variant="line" className="h-3 w-16" /></TableHead>)}</TableRow></TableHeader>
-        <TableBody>{Array.from({ length: 4 }, (_, row) => <TableRow key={row}>
-          {Array.from({ length: 6 }, (_, column) => <TableCell key={column}><Skeleton variant="line" className={column === 0 ? 'h-4 w-4/5' : 'h-4 w-16'} /></TableCell>)}
-        </TableRow>)}</TableBody>
-      </Table>} cards={<div className="grid gap-3">{Array.from({ length: 4 }, (_, index) => <Surface key={index} padding="sm" className="space-y-3">
-        <Skeleton variant="line" className="h-4 w-3/4" /><Skeleton variant="line" className="h-4 w-full" />
-        <Skeleton variant="line" className="h-4 w-1/2" /><Skeleton variant="line" className="h-4 w-2/3" />
-      </Surface>)}</div>} />
-    </div>
-  );
+  return <div role="status" aria-label="Carregando artigos" className="kds-blog-library">
+    {Array.from({ length: 6 }, (_, index) => <PanelCard key={index} className="kds-blog-article-card kds-blog-skeleton-card">
+      <Skeleton className="kds-blog-skeleton-cover w-full" />
+      <div className="kds-blog-article-body">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton variant="line" className="h-3 w-24" />
+        <Skeleton variant="line" className="h-4 w-full" />
+        <Skeleton variant="line" className="h-4 w-3/4" />
+        <div className="flex justify-between gap-2"><Skeleton variant="line" className="h-3 w-20" /><Skeleton variant="line" className="h-3 w-12" /></div>
+      </div>
+    </PanelCard>)}
+  </div>;
 }
 
-export function CommissionCalendarSkeleton() {
+export function CommissionCalendarSkeleton({ view = 'calendar' }: { view?: 'forecasts' | 'calendar' } = {}) {
   return (
-    <section className="kds-card kds-card-default space-y-6 p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-72" />
-          <Skeleton variant="line" className="h-4 w-80" />
-        </div>
-        <div className="flex gap-4">
-          <div className="space-y-1">
-            <Skeleton variant="line" className="h-3 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-          <div className="space-y-1">
-            <Skeleton variant="line" className="h-3 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-        </div>
+    <div className="kds-finance-loading" aria-hidden="true">
+      <div className="kds-workspace-record-metrics">
+        {Array.from({ length: 4 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}
       </div>
-
-      <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-default)]">
-        <div className="flex items-center justify-between bg-[var(--bg-inset)] px-4 py-3">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-8 w-8 rounded-md" />
+      {view === 'forecasts' ? <>
+        <div className="kds-forecast-toolbar"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-32 max-w-full" /><Skeleton className="h-9 w-20 justify-self-end" /></div>
+        <PanelCard className="space-y-2">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
+      </> : <div className="kds-month-layout kds-finance-calendar-layout">
+        <div className="kds-card kds-card-default kds-month-calendar kds-finance-calendar">
+          <div className="kds-month-header"><Skeleton className="h-5 w-40" /><Skeleton className="h-8 w-24" /></div>
+          <div className="kds-month-weekdays">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="line" className="mx-auto h-3 w-6" />)}</div>
+          <div className="kds-month-grid">{Array.from({ length: 42 }, (_, i) => <div key={i} className="kds-finance-calendar-skeleton-cell"><Skeleton className="h-4 w-4" /></div>)}</div>
         </div>
-        <div className="p-4">
-          <CalendarGridSkeleton tone="success" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PanelCard>
-          <Skeleton className="h-6 w-40" />
-          <div className="mt-4 space-y-3">
-            <Skeleton className="h-16 w-full rounded-lg" />
-            <Skeleton className="h-16 w-full rounded-lg" />
-          </div>
-        </PanelCard>
-        <PanelCard>
-          <Skeleton className="h-6 w-44" />
-          <div className="mt-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={`commission-event-${index}`} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-        </PanelCard>
-      </div>
-    </section>
+        <PanelCard className="space-y-3"><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-3 w-40" /><Skeleton className="h-32 w-full" /></PanelCard>
+      </div>}
+    </div>
   );
 }
 
@@ -585,38 +509,11 @@ export function OperadorasSkeleton() {
 }
 
 export function UsersSkeleton() {
-  return (
-    <div className="space-y-6">
-      <PanelCard className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-52" />
-          <Skeleton className="h-10 w-36 rounded-lg" />
-        </div>
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={`user-row-${index}`} className="kds-card kds-card-default p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton variant="line" className="h-3.5 w-48" />
-                    <Skeleton variant="line" className="h-3.5 w-24" />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Skeleton className="h-9 w-9 rounded-md" />
-                  <Skeleton className="h-9 w-9 rounded-md" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </PanelCard>
-      <PanelCard>
-        <Skeleton className="h-28 w-full rounded-xl" />
-      </PanelCard>
-    </div>
-  );
+  return <div className="kds-settings-content" aria-hidden="true">
+    <div className="kds-settings-metrics">{Array.from({ length: 3 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-2/3" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}</div>
+    <div className="flex flex-wrap gap-3"><Skeleton className="h-9 w-64 max-w-full" /><Skeleton className="h-9 w-32" /></div>
+    <PanelCard className="space-y-2">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
+  </div>;
 }
 
 export function IntegrationsSkeleton() {
@@ -674,56 +571,13 @@ export function IntegrationsSkeleton() {
 
 export function AutomationFlowsSkeleton() {
   return (
-    <div className="kds-card kds-card-default p-6">
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`automation-metric-${index}`} className="kds-card kds-card-muted p-4">
-              <Skeleton variant="line" className="h-3 w-20" />
-              <Skeleton className="mt-2 h-8 w-16" />
-              <Skeleton variant="line" className="mt-2 h-3 w-24" />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="kds-card kds-card-default p-4">
-            <Skeleton className="h-6 w-32" />
-            <div className="mt-4 space-y-3">
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-            </div>
-          </div>
-          <div className="kds-card kds-card-default p-4">
-            <Skeleton className="h-6 w-44" />
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="kds-card kds-card-default space-y-3 p-4">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={`automation-flow-${index}`} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-          <div className="kds-card kds-card-default space-y-4 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-9 w-2/3 rounded-lg" />
-              <div className="flex gap-2">
-                <Skeleton className="h-9 w-9 rounded-md" />
-                <Skeleton className="h-9 w-9 rounded-md" />
-              </div>
-            </div>
-            <Skeleton className="h-[420px] w-full rounded-xl" />
-          </div>
-        </div>
-      </div>
+    <div className="kds-automation-page" aria-hidden="true">
+      <div className="flex flex-wrap justify-between gap-3"><div className="space-y-2"><Skeleton className="h-8 w-64 max-w-full" /><Skeleton variant="line" className="h-4 w-72 max-w-full" /></div><Skeleton className="h-9 w-28" /></div>
+      <div className="flex gap-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-8 w-20" />)}</div>
+      <div className="kds-workspace-record-metrics">{Array.from({ length: 4 }, (_, index) => <PanelCard key={index} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}</div>
+      <div className="kds-automation-list-toolbar"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /></div>
+      <div className="kds-automation-journey-grid">{Array.from({ length: 3 }, (_, index) => <PanelCard key={index} className="kds-automation-journey-card"><Skeleton className="h-9 w-9" /><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-4 w-full" /><Skeleton className="h-8 w-24" /></PanelCard>)}</div>
+      <div className="kds-automation-workspace-resources">{Array.from({ length: 2 }, (_, index) => <PanelCard key={index} className="space-y-3"><Skeleton className="h-5 w-40 max-w-full" /><Skeleton variant="line" className="h-4 w-full" /><Skeleton className="h-8 w-28" /></PanelCard>)}</div>
     </div>
   );
 }

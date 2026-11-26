@@ -173,14 +173,16 @@ export default function StepEditorDialog({ open, initialStep, saving, onClose, o
       closeOnOverlay={!saving}
       closeOnEscape={!saving}
       size="md"
+      className="kds-crm-dialog kds-settings-dialog"
     >
       <DialogHeader onClose={saving ? undefined : onClose}>
+        <div className="kds-dialog-eyebrow">Formulários</div>
         <DialogTitle>{initialStep ? "Editar pergunta" : "Nova pergunta"}</DialogTitle>
       </DialogHeader>
       <DialogBody>
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Título" required error={errors.title}>
+            <Field label="Título da pergunta" required error={errors.title}>
               <Input ref={titleRef} disabled={saving} value={title} onChange={(event) => { setTitle(event.target.value); setErrors(prev => ({ ...prev, title: undefined })); }} placeholder="Ex: Você já tem plano de saúde?" />
             </Field>
             <Field label="Tipo de pergunta">

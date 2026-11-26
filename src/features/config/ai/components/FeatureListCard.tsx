@@ -92,6 +92,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
     </section>
 
     <ConfirmDialog
+      className="kds-crm-dialog kds-automation-dialog kds-ai-toggle-dialog"
       open={!!confirmTarget}
       onOpenChange={() => setConfirmTarget(null)}
       onConfirm={() => {
@@ -103,7 +104,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
         }
         setConfirmTarget(null);
       }}
-      title={confirmTarget?.action === "deactivate" ? "Desativar configuração?" : "Ativar configuração?"}
+      title="Alterar uso da IA"
       description={
         confirmTarget?.action === "deactivate"
           ? "A funcionalidade voltará a usar os valores padrão do sistema enquanto nenhuma versão estiver ativa."

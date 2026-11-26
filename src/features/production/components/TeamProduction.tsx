@@ -87,7 +87,7 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
           subtitle={salesTrend.length > 0 ? 'Vendas fechadas por dia.' : 'Vendas e retornos concluídos por atendente.'}
         >
           {salesTrend.length > 0 ? (
-            <MonthlyTrendChart data={salesTrend} height={220} embedded ariaLabel="Vendas fechadas por dia" />
+            <MonthlyTrendChart data={salesTrend} height={finance ? 190 : 220} embedded ariaLabel="Vendas fechadas por dia" />
           ) : activeParticipants.length > 0 ? (
             <ul className="kds-dashboard-bar-list">
               {activeParticipants.map((row) => (
@@ -163,9 +163,9 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
       </details>
     </>}
     {filterDraft && (
-      <Dialog open size="md" className={finance ? "kds-finance-dialog" : "kds-crm-dialog kds-dashboard-filter-dialog"} onOpenChange={(open) => !open && setFilterDraft(null)}>
+      <Dialog open size="md" className={finance ? "kds-crm-dialog kds-finance-dialog kds-finance-production-dialog" : "kds-crm-dialog kds-dashboard-filter-dialog"} onOpenChange={(open) => !open && setFilterDraft(null)}>
         <DialogHeader onClose={() => setFilterDraft(null)}>
-          {!finance && <Text className="kds-dialog-eyebrow">Visão geral</Text>}
+          <Text className="kds-dialog-eyebrow">{finance ? "Financeiro" : "Visão geral"}</Text>
           <DialogTitle>Filtrar produção</DialogTitle>
           <DialogDescription placement="visible">Escolha o período e quem aparece no relatório.</DialogDescription>
         </DialogHeader>
@@ -192,7 +192,7 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
               <Field label="Até" htmlFor="finance-production-to" required error={filterDraft.start && filterDraft.end && !validDraft ? 'Escolha uma data igual ou posterior à inicial.' : undefined}>
                 <DateTimePicker id="finance-production-to" type="date" value={filterDraft.end} onChange={({ target }) => setFilterDraft({ ...filterDraft, end: target.value })} />
               </Field>
-              <Field label="Responsável" htmlFor="finance-production-owner">
+              <Field label="Executor" htmlFor="finance-production-owner">
                 <Select id="finance-production-owner" value={filterDraft.operator} onChange={({ target }) => setFilterDraft({ ...filterDraft, operator: target.value })}>
                   <option value="">Toda a equipe</option>
                   {report?.operators.map((operator) => <option key={operator.user_id} value={operator.user_id}>{operator.display_name}</option>)}

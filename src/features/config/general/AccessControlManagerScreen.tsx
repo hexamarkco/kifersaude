@@ -188,7 +188,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
   const createProfileAction = <Button onClick={startCreatingProfile} disabled={loading || loadError}><Plus className="kds-control-icon" aria-hidden="true" />Novo perfil</Button>;
 
   return (
-    <div className="space-y-6">
+    <div className="kds-access-workspace">
       {hideSectionTitle
         ? <div className="flex justify-end lg:hidden">{createProfileAction}</div>
         : <SectionHeader as="h3" title="Perfis e acessos" description="Escolha um perfil para definir o que seus usuários podem visualizar e editar." action={createProfileAction} />}
@@ -199,7 +199,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
       </Alert>}
 
       {<LoadingState active={loading && profiles.length === 0} label="Carregando perfis e acessos…" placeholder={<RecordListSkeleton />} fallback={() => selectedProfile ? (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
+        <div className="kds-access-layout grid items-start gap-5 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
           <Card padding="md" className="sticky top-4 hidden min-w-0 lg:block">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
@@ -269,7 +269,7 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
                     const columns = [modules.slice(0, splitIndex), modules.slice(splitIndex)];
                     return <section key={group.id} aria-labelledby={`access-group-${group.id}`}>
                       <Heading level={6} id={`access-group-${group.id}`} className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{group.label}</Heading>
-                      <div className="grid gap-x-8 2xl:grid-cols-2">
+                      <div className="kds-access-permission-grid">
                         {columns.map((column, columnIndex) => <ul key={`${group.id}-column-${columnIndex}`} className="divide-y divide-[var(--border-subtle)]">
                           {column.map((module) => {
                             const permission = getPermission(selectedProfile.slug, module.id, selectedProfile.is_admin);
@@ -277,12 +277,12 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
                             const permissionKey = `${selectedProfile.slug}:${module.id}`;
                             const isUpdating = updatingKey === permissionKey;
                             const error = permissionErrors[permissionKey];
-                            return <li key={module.id} className="flex min-w-0 flex-col gap-3 py-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4" aria-busy={isUpdating}>
+                            return <li key={module.id} className="kds-access-permission-row flex min-w-0 flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between" aria-busy={isUpdating}>
                               <div className="min-w-0 flex-1">
                                 <Text className="text-sm font-medium text-[var(--text-primary)]">{module.label}</Text>
                                 <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{module.description}</Text>
                               </div>
-                              <div className="w-full min-w-0 shrink-0 xl:w-48">
+                              <div className="w-full min-w-0 shrink-0 sm:w-48">
                                 <Field
                                   label={<span className="sr-only">Acesso a {module.label}</span>}
                                   error={error ?? undefined}
@@ -310,8 +310,9 @@ export default function AccessControlManagerScreen({ hideSectionTitle = false }:
         </div>
       ) : !loadError && <EmptyState icon={<ShieldCheck aria-hidden="true" />} title="Nenhum perfil cadastrado" description="Crie um perfil para definir as áreas que seus usuários poderão acessar." action={<Button onClick={startCreatingProfile}>Criar primeiro perfil</Button>} />} />}
 
-      <Dialog open={creatingProfile || Boolean(editingProfileId)} onOpenChange={(open) => { if (!open && !savingProfile) resetProfileForm(); }} size="sm" initialFocus="first-content" closeOnEscape={!savingProfile} closeOnOverlay={!savingProfile} className="kds-access-profile-dialog">
+      <Dialog open={creatingProfile || Boolean(editingProfileId)} onOpenChange={(open) => { if (!open && !savingProfile) resetProfileForm(); }} size="md" initialFocus="first-content" closeOnEscape={!savingProfile} closeOnOverlay={!savingProfile} className="kds-crm-dialog kds-settings-dialog kds-access-profile-dialog">
         <DialogHeader onClose={savingProfile ? undefined : resetProfileForm}>
+          <div className="kds-dialog-eyebrow">Configurações</div>
           <DialogTitle>{editingProfileId ? "Editar perfil" : "Novo perfil"}</DialogTitle>
           <DialogDescription>{editingProfileId ? "Atualize o nome, a descrição e o tipo de acesso." : "Depois de criar, escolha as áreas que este perfil poderá acessar."}</DialogDescription>
         </DialogHeader>

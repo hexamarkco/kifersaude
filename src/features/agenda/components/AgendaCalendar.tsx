@@ -9,10 +9,10 @@ const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 const dateLabel = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long' });
 const weekdayLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric' });
-const eventTone = (item: ReminderListItem, index: number) => {
+const eventTone = (item: ReminderListItem) => {
   if (item.lido) return 'success';
   if (isOverdue(item.data_lembrete)) return 'danger';
-  return item.prioridade === 'alta' || index === 0 ? 'accent' : 'info';
+  return item.prioridade === 'alta' || /follow.up|retorno|tarefa/i.test(item.tipo) ? 'accent' : 'info';
 };
 
 type Props = {
@@ -87,12 +87,12 @@ export function AgendaCalendar({ view, selected, remindersByDay, onSelect, onMov
                   onClick={() => onSelect(date)}
                 >
                   <span className="kds-month-day-number">{date.getDate()}</span>
-                  {items.slice(0, 2).map((item, itemIndex) => (
-                    <span key={item.id} className="kds-month-event" data-tone={eventTone(item, itemIndex)} aria-hidden="true">
+                  {items.slice(0, 2).map((item) => (
+                    <span key={item.id} className="kds-month-event" data-tone={eventTone(item)} aria-hidden="true">
                       {formatTimeBR(item.data_lembrete)} {item.titulo}
                     </span>
                   ))}
-                  {items.length > 2 && <small className="kds-month-overflow" aria-hidden="true">+{items.length - 2}</small>}
+                  {items.length > 2 && <small className="kds-month-overflow" aria-hidden="true">+{items.length - 2} {items.length === 3 ? "item" : "itens"}</small>}
                 </ActionSurface>
               );
             })}
@@ -117,8 +117,8 @@ export function AgendaCalendar({ view, selected, remindersByDay, onSelect, onMov
                     const items = itemsByHour[dayIndex].get(hour) ?? [];
                     return (
                       <div key={agendaDateKey(date)} className="kds-agenda-week-slot">
-                        {items.length > 0 ? items.map((item, index) => (
-                          <ActionSurface variant="plain" padding="none" key={item.id} className="kds-month-event" data-tone={eventTone(item, index)} onClick={() => onDetail(item.id)}>
+                        {items.length > 0 ? items.map((item) => (
+                          <ActionSurface variant="plain" padding="none" key={item.id} className="kds-month-event" data-tone={eventTone(item)} onClick={() => onDetail(item.id)}>
                             {formatTimeBR(item.data_lembrete)} · {item.titulo}
                           </ActionSurface>
                         )) : (

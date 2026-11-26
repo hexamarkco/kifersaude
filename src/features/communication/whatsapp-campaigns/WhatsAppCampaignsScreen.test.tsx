@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
     getGlobalStatus: vi.fn(),
     listTemplates: vi.fn(),
     listCampaignSteps: vi.fn(),
+    getActivationPreview: vi.fn(),
+    activateCampaign: vi.fn(),
     normalizePhoneDigits: vi.fn((value: unknown) => typeof value === 'string' ? value.replace(/\D/g, '') : ''),
   },
   subscribeToCampaignListChanges: vi.fn(),
@@ -159,6 +161,9 @@ test('apresenta as campanhas em tabela paginada e navega pelo menu compartilhado
 
   assert.equal(view.container.querySelector('[role="progressbar"][aria-label="Consumo do limite global em 24 horas"]')?.getAttribute('aria-valuemax'), '20');
   assert.ok(view.container.querySelector('table[aria-label="Todas as campanhas"]'));
+  const quota = view.container.querySelector('.kds-campaign-quota');
+  assert.ok(quota);
+  assert.equal(quota.closest('details'), null);
 
   const rows = () => Array.from(view.container.querySelectorAll<HTMLTableRowElement>('tbody tr'));
   assert.equal(rows().length, 10);
@@ -200,4 +205,47 @@ test('abre o editor de página completa ao receber uma solicitação vinda do de
   assert.ok(campaignNameInput);
   assert.equal(serviceMocks.listCampaignSteps.mock.calls.length, 1);
   assert.equal(serviceMocks.listCampaignSteps.mock.calls[0][0], campaign.id);
+});
+
+test('exige revisão explícita antes de ativar e descarta a confirmação ao cancelar', async () => {
+  setupMocks();
+  const campaign = createCampaign(1);
+  serviceMocks.listCampaigns.mockResolvedValue([campaign]);
+  mocks.service.getActivationPreview.mockResolvedValue({
+    campaign, steps: [], estimatedTargets: 2, materializedTargets: 2,
+    sample: [], variables: [], unknownVariables: [], estimatedMinutes: 2,
+  });
+  mocks.service.activateCampaign.mockClear();
+  const view = renderCampaigns();
+  try {
+    await settleCampaignLoading();
+    const openReview = async () => {
+      const trigger = [...view.container.querySelectorAll<HTMLButtonElement>('[aria-haspopup="menu"]')].find(button => button.getAttribute('aria-label')?.includes('campanha 1'));
+      assert.ok(trigger);
+      await act(async () => trigger.click());
+      const activate = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(button => button.textContent?.trim() === 'Ativar');
+      assert.ok(activate);
+      await act(async () => activate.click());
+      const dialog = document.querySelector('.kds-campaign-activation-dialog');
+      assert.ok(dialog);
+      return dialog;
+    };
+    const dialog = await openReview();
+    const confirm = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Confirmar ativação');
+    assert.ok(confirm);
+    assert.equal(confirm.disabled, true);
+    const reviewed = dialog.querySelector<HTMLInputElement>('.kds-campaign-review-confirm input[type="checkbox"]');
+    assert.ok(reviewed);
+    await act(async () => reviewed.click());
+    assert.equal(confirm.disabled, false);
+    const cancel = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Cancelar');
+    assert.ok(cancel);
+    await act(async () => cancel.click());
+    assert.equal(document.querySelector('.kds-campaign-activation-dialog'), null);
+    const reopened = await openReview();
+    const confirmAgain = [...reopened.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Confirmar ativação');
+    assert.ok(confirmAgain);
+    assert.equal(confirmAgain.disabled, true);
+    assert.equal(mocks.service.activateCampaign.mock.calls.length, 0);
+  } finally { view.unmount(); }
 });

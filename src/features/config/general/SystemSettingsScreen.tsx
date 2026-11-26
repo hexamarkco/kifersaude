@@ -336,7 +336,7 @@ export default function SystemSettingsScreen() {
       overlayLabel="Atualizando configurações do sistema..."
       stageClassName="min-h-[440px]"
     >
-      <div className="panel-page-shell kds-system-settings-layout">
+      <div className="kds-system-settings-layout">
         <nav className="kds-system-settings-nav" aria-label="Seções das configurações gerais">
           <Text>Organização</Text>
           {SECTION_OVERVIEW.filter(({ id }) => id !== 'access' || canViewAccessSettings).map(({ id, title, icon: Icon }) => (
@@ -346,7 +346,7 @@ export default function SystemSettingsScreen() {
           ))}
           {getRoleModulePermission(role, 'config-integrations').can_view && <Link className="kds-system-settings-integration-link" to="/painel/automacoes?tab=integrations"><Plug aria-hidden="true" /><span>Integrações</span><ArrowUpRight aria-hidden="true" /></Link>}
         </nav>
-        <div className="kds-system-settings-content space-y-5">
+        <div className="kds-system-settings-content kds-settings-content">
         {(activeVisibleSection !== "general" || searchTerm.length > 0) && (
           <div className="w-full lg:max-w-md">
               <Input

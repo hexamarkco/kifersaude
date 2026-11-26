@@ -91,6 +91,8 @@ test('remove o cabeçalho duplicado e mantém busca e contagem de usuários', as
   try {
     await waitForUsersReady(view);
     assert.equal(view.container.querySelectorAll('h2').length, 0);
+    assert.equal(view.container.querySelector('[aria-label="Resumo dos usuários"]')?.children.length, 3);
+    assert.equal(view.container.querySelector('.kds-avatar'), null);
     assert.equal(view.container.querySelector('[role="status"]')?.textContent, '2 usuários');
 
     const search = view.container.querySelector<HTMLInputElement>('input[placeholder="Buscar por usuário, e-mail ou perfil"]');
@@ -159,4 +161,23 @@ test('abrir e cancelar os formulários não cria nem altera usuários', async ()
   } finally {
     view.unmount();
   }
+});
+
+test('filtra por perfil sem alterar usuários cadastrados', async () => {
+  reset();
+  const view = render(<UsersScreen createDialogOpen={false} onCreateDialogOpenChange={() => {}} />);
+  try {
+    await waitForUsersReady(view);
+    const filter = view.container.querySelector<HTMLButtonElement>('button[aria-label="Filtrar por perfil"]');
+    assert.ok(filter);
+    await act(async () => filter.click());
+    const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(item => item.textContent?.trim() === 'Observador');
+    assert.ok(option);
+    await act(async () => option.click());
+    assert.equal(view.container.querySelector('[role="status"]')?.textContent, '1 usuário');
+    assert.match(view.container.textContent ?? '', /@Bruno Exemplo/);
+    assert.doesNotMatch(view.container.textContent ?? '', /@Ana Demonstração/);
+    assert.equal(mocks.createCalls.length, 0);
+    assert.equal(mocks.updateCalls.length, 0);
+  } finally { view.unmount(); }
 });

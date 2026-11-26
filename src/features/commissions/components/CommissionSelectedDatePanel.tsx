@@ -12,7 +12,7 @@ type Props = {
 export default function CommissionSelectedDatePanel({ date, events, onSelectEvent }: Props) {
   const totals = sumCommissionTotals(events);
   return (
-    <Surface padding="none" className="kds-forecast-day">
+    <Surface padding="none" className="kds-forecast-day" aria-label="Previsões do dia selecionado">
       <div className="kds-forecast-day-header">
         <Heading level={2} size="sm">{date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</Heading>
         <Text size="sm" tone="muted">Previsões para a data selecionada.</Text>
@@ -31,7 +31,7 @@ export default function CommissionSelectedDatePanel({ date, events, onSelectEven
               {event.type === 'comissao' ? <Wallet aria-hidden="true" /> : <Gift aria-hidden="true" />}
             </span>
             <span className="kds-forecast-event-copy">
-              <strong>{getCommissionContractName(event.contract)}</strong>
+              <strong className="kds-record-row-name">{getCommissionContractName(event.contract)}</strong>
               <small>{[event.contract.operadora, event.contract.codigo_contrato].filter(Boolean).join(' · ')}</small>
               <strong className="kds-forecast-event-value">{formatCommissionCurrency(event.value)}</strong>
               <small>{event.type === 'comissao' ? 'Comissão' : 'Bonificação'}{event.installmentIndex && event.installmentCount ? ` · Parcela ${event.installmentIndex} de ${event.installmentCount}` : ''}</small>

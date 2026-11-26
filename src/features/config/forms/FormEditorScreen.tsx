@@ -33,6 +33,7 @@ import {
   SectionHeader,
   Switch,
   Textarea,
+  Tabs,
   IconButton,
 } from "../../../design-system";
 import StepEditorDialog, { type StepEditorPayload } from "./StepEditorDialog";
@@ -67,6 +68,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     whatsapp_message_template: form.whatsapp_message_template ?? "",
     is_published: form.is_published,
   });
+  const [editorSection, setEditorSection] = useState<"settings" | "questions" | "responses">("questions");
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsErrors, setSettingsErrors] = useState<{ title?: string; slug?: string }>({});
   const [settingsSaveError, setSettingsSaveError] = useState("");
@@ -170,7 +172,8 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
     setSettingsErrors(errors);
     setSettingsSaveError("");
     if (errors.title || errors.slug) {
-      (errors.title ? titleRef : slugRef).current?.focus();
+      setEditorSection("settings");
+      requestAnimationFrame(() => (errors.title ? titleRef : slugRef).current?.focus());
       return;
     }
 
@@ -192,6 +195,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
       if (error || !data) {
         if (error?.code === "23505") {
           setSettingsErrors({ slug: "Já existe um formulário com esse endereço." });
+          setEditorSection("settings");
           requestAnimationFrame(() => slugRef.current?.focus());
         } else {
           setSettingsSaveError("Não foi possível salvar as configurações. Confira sua conexão e tente novamente.");
@@ -350,7 +354,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
   };
 
   return (
-    <div className="space-y-6">
+    <div className="kds-settings-form-editor kds-settings-content">
       <div className="flex items-center gap-3">
         <IconButton variant="secondary" onClick={onBack} disabled={stepMutationInFlight || savingSettings} size="sm" aria-label="Voltar para formulários" title="Voltar">
           <ArrowLeft aria-hidden="true" />
@@ -358,6 +362,8 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
         <SectionHeader eyebrow="Editor de formulário" title={form.title} description={`/forms/${form.slug}`} className="flex-1" action={<PageActions primary={{ label: savingSettings ? "Salvando..." : "Salvar configurações", icon: Save, loading: savingSettings, onClick: () => void handleSaveSettings() }} />} />
       </div>
 
+      <Tabs<"settings" | "questions" | "responses"> items={[{ id: "questions", label: "Perguntas" }, { id: "settings", label: "Dados e publicação" }, { id: "responses", label: "Respostas" }]} value={editorSection} onChange={setEditorSection} variant="underline" ariaLabel="Áreas do editor de formulário" />
+      <section hidden={editorSection !== "settings"}>
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="kds-card-title-row"><Heading level={3} className="kds-card-title">Dados e publicação</Heading><InfoTooltip content="Configure o endereço, a mensagem de confirmação e o acesso público." label="Informações sobre os dados e publicação" /></div>
@@ -435,7 +441,9 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           {settingsSaveError && <Alert tone="danger" role="alert" title="Não foi possível salvar">{settingsSaveError}</Alert>}
         </div>
       </Card>
-
+      </section>
+      <section hidden={editorSection !== "questions"}>
+      <div className="kds-settings-question-layout">
       <Card>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -465,7 +473,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           <div className="space-y-3">
             {questionSteps.map((step, index) => {
               return (
-                <Card key={step.id} variant="muted" padding="sm" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <Card key={step.id} variant="muted" padding="sm" className="kds-settings-question-row flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <ButtonGroup size="sm" aria-label="Ordenar etapa" orientation="vertical">
                       <IconButton type="button" size="sm" variant="ghost" onClick={() => void moveStep(index, -1)} disabled={index === 0 || stepMutationInFlight} aria-label="Mover para cima">
@@ -515,7 +523,15 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           </div>
         )}
       </Card>
-
+        <Card className="kds-settings-question-preview">
+          <Heading level={3}>Estrutura do formulário</Heading>
+          <Text tone="muted" size="sm">Ordem das perguntas salvas. Nenhum envio é realizado nesta prévia.</Text>
+          {stepsLoadError ? <Text tone="muted">Perguntas indisponíveis.</Text> : <ol className="kds-settings-preview-steps">{questionSteps.map((step, index) => <li key={step.id}><span>{index + 1}</span><div><Text>{step.title}</Text><Text size="sm" tone="muted">{STEP_TYPE_LABELS[step.step_type]}</Text></div></li>)}{contactStep && <li><span>{questionSteps.length + 1}</span><div><Text>{contactStep.title}</Text><Text size="sm" tone="muted">Contato · etapa final</Text></div></li>}</ol>}
+          <Button variant="secondary" size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}><ExternalLink className="kds-control-icon" aria-hidden="true" />Abrir formulário público</Button>
+        </Card>
+      </div>
+      </section>
+      <section hidden={editorSection !== "responses"}>
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <div className="kds-card-title-row">
@@ -570,6 +586,7 @@ export default function FormEditorScreen({ form, onBack, onFormUpdated }: FormEd
           </div>
         )} />}
       </Card>
+      </section>
 
       <StepEditorDialog
         open={Boolean(stepDialog)}

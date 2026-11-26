@@ -323,6 +323,7 @@ export default function WhatsAppCampaignsScreen() {
   const [loadingCampaignEdit, setLoadingCampaignEdit] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [activationPreview, setActivationPreview] = useState<CommWhatsAppCampaignActivationPreview | null>(null);
+  const [activationReviewed, setActivationReviewed] = useState(false);
   const [loadingActivationPreview, setLoadingActivationPreview] = useState(false);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('crm');
   const [name, setName] = useState('');
@@ -1063,6 +1064,7 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   const openActivationPreview = async (campaign: CommWhatsAppCampaign) => {
+    setActivationReviewed(false);
     const requestId = ++activationPreviewRequestIdRef.current;
     setCampaignActionId(campaign.id);
     setLoadingActivationPreview(true);
@@ -1087,12 +1089,13 @@ export default function WhatsAppCampaignsScreen() {
   const closeActivationPreview = () => {
     activationPreviewRequestIdRef.current += 1;
     setActivationPreview(null);
+    setActivationReviewed(false);
     setCampaignActionId(null);
     setLoadingActivationPreview(false);
   };
 
   const handleConfirmActivateCampaign = async () => {
-    if (!activationPreview) return;
+    if (!activationPreview || !activationReviewed) return;
     if (campaignMutationLockRef.current) return;
     campaignMutationLockRef.current = true;
     setCampaignActionId(activationPreview.campaign.id);
@@ -1187,7 +1190,7 @@ export default function WhatsAppCampaignsScreen() {
         variant="plain"
         padding="none"
         type="button"
-        className="inline-flex items-center rounded-full text-left transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-accent-strong)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+        className="kds-campaign-priority-control inline-flex items-center rounded-full text-left disabled:cursor-wait disabled:opacity-60"
         aria-label={'Prioridade ' + label + ' de ' + campaign.name + '. Alterar para ' + nextLabel}
         title={'Clique para alterar a prioridade para ' + nextLabel}
         disabled={Boolean(campaignActionId)}
@@ -1233,13 +1236,13 @@ export default function WhatsAppCampaignsScreen() {
   ];
 
   if (campaignModalOpen) return (
-    <section className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell space-y-5">
+    <section className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell kds-campaign-page">
       <Button variant="text" size="sm" className="kds-lead-form-back" onClick={closeCampaignModal} disabled={saving}><ArrowLeft className="kds-control-icon" aria-hidden="true" />Disparos WhatsApp</Button>
-      <PageHeader title={editingCampaign ? 'Editar disparo' : 'Uma nova conversa com o seu público.'} description="Prepare o público, as mensagens e as condições antes de ativar." />
+      <PageHeader className="kds-campaign-page-header" descriptionPlacement="visible" title={editingCampaign ? 'Editar disparo' : 'Uma nova conversa com o seu público.'} description="Prepare o público, as mensagens e as condições antes de ativar." />
       <Stepper className="kds-campaign-stepper" currentStep={wizardStep} steps={campaignWizardSteps} />
       <div className="kds-campaign-editor-layout">
         <div className="kds-campaign-editor-content">
-      <Surface className="space-y-5">
+      <Surface className="kds-campaign-editor-form space-y-5">
           <Heading level={2} size="sm">{campaignWizardSteps[wizardStep]?.description}</Heading>
           {wizardStep === 0 && (
           <div className="grid gap-4 md:grid-cols-2">
@@ -1727,8 +1730,8 @@ export default function WhatsAppCampaignsScreen() {
         </CrmCard>
       </div>
       {csvImportOpen && (
-        <Dialog open size="md" className="kds-campaign-workspace" onOpenChange={(open) => !open && setCsvImportOpen(false)}>
-          <DialogHeader onClose={() => setCsvImportOpen(false)}><DialogTitle>Importar público</DialogTitle><DialogDescription placement="visible">Carregue um CSV ou cole os nomes e telefones.</DialogDescription></DialogHeader>
+        <Dialog open size="md" className="kds-crm-dialog kds-campaign-workspace kds-campaign-dialog kds-campaign-import-dialog" onOpenChange={(open) => !open && setCsvImportOpen(false)}>
+          <DialogHeader onClose={() => setCsvImportOpen(false)}><div className="kds-dialog-eyebrow">Disparos</div><DialogTitle>Importar público</DialogTitle><DialogDescription placement="visible">Carregue um CSV ou cole os nomes e telefones.</DialogDescription></DialogHeader>
           <DialogBody>
             <Surface variant="muted" padding="sm" className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1767,8 +1770,8 @@ export default function WhatsAppCampaignsScreen() {
   );
 
   return (
-    <div className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell space-y-5">
-      <PageHeader
+    <div className="comm-terracotta comm-terracotta-campaigns kds-campaign-workspace panel-page-shell kds-campaign-page">
+      <PageHeader className="kds-campaign-page-header" descriptionPlacement="visible"
         title="Boas mensagens, para as pessoas certas."
         description="Planeje campanhas e acompanhe cada etapa com clareza."
       />
@@ -1777,14 +1780,15 @@ export default function WhatsAppCampaignsScreen() {
         <KpiCard title="Campanhas ativas ou pausadas" value={loading || loadError === 'all' ? '—' : stats.active.toLocaleString('pt-BR')} trend="Na fila, em execução ou pausadas" icon={<Radio />} />
         <KpiCard title="Envios concluídos" value={loading || loadError === 'all' ? '—' : deliveryTotals.sent.toLocaleString('pt-BR')} trend="Contatos com status Enviado" icon={<Users />} />
         <KpiCard title="Respostas recebidas" value={loading || loadError === 'all' ? '—' : deliveryTotals.responses.toLocaleString('pt-BR')} trend="Contatos que responderam" icon={<MessageCircle />} data-tone="cyan" />
-        <KpiCard title="Taxa de resposta" value={loading || !deliveryTotals.audience ? '—' : (deliveryTotals.responses / deliveryTotals.audience).toLocaleString('pt-BR', { style: 'percent', maximumFractionDigits: 1 })} trend="Sobre o público das campanhas" icon={<Percent />} data-tone="info" />
+        <KpiCard title="Taxa de resposta" value={loading || loadError === 'all' || !deliveryTotals.audience ? '—' : (deliveryTotals.responses / deliveryTotals.audience).toLocaleString('pt-BR', { style: 'percent', maximumFractionDigits: 1 })} trend="Sobre o público das campanhas" icon={<Percent />} data-tone="info" />
       </section>
 
       {activationPreview && (
-        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="lg" className="comm-whatsapp-overlay kds-campaign-workspace">
+        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="wide" className="kds-crm-dialog comm-whatsapp-overlay kds-campaign-workspace kds-campaign-dialog kds-campaign-activation-dialog">
             <DialogHeader onClose={closeActivationPreview}>
               <div>
-                <DialogTitle>Revisar antes de ativar</DialogTitle>
+                <div className="kds-dialog-eyebrow">Disparos</div>
+                <DialogTitle>Revisar campanha</DialogTitle>
                 <DialogDescription placement="visible">Confirme público, ritmo, janela e mensagens antes de colocar o disparo na fila.</DialogDescription>
               </div>
             </DialogHeader>
@@ -1877,13 +1881,14 @@ export default function WhatsAppCampaignsScreen() {
                   <Text className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuração.</Text>
                 )}
               </Card>
+              <DsFieldLabel className="kds-campaign-review-confirm flex items-start gap-2"><Checkbox checked={activationReviewed} onChange={(event) => setActivationReviewed(event.target.checked)} />Conferi o público, as mensagens e as condições de envio.</DsFieldLabel>
             </DialogBody>
 
             <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Text className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha será processada automaticamente, mesmo com o navegador fechado.</Text>
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={closeActivationPreview}>Cancelar</Button>
-                <Button className="w-full sm:w-auto" disabled={activationPreview.estimatedTargets <= 0 || Boolean(getCampaignActivationBlocker(activationPreview.campaign, activationPreview.steps))} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
+                <Button className="w-full sm:w-auto" disabled={!activationReviewed || activationPreview.estimatedTargets <= 0 || Boolean(getCampaignActivationBlocker(activationPreview.campaign, activationPreview.steps))} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
                   {campaignActionId !== activationPreview.campaign.id && <PlayCircle className="kds-control-icon" />}
                   Confirmar ativação
                 </Button>
@@ -1891,6 +1896,103 @@ export default function WhatsAppCampaignsScreen() {
             </DialogFooter>
         </Dialog>
       )}
+
+      <Surface padding="sm" className="kds-campaign-quota" aria-label="Cota global de disparos do WhatsApp">
+        <div className="kds-campaign-quota-grid">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-accent-soft)] text-[color:var(--panel-accent-strong)]">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <Heading level={2} className="text-base font-semibold">Limite global de novos contatos</Heading>
+                <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
+                  Um contato conta uma vez por campanha. As novas abordagens são distribuídas ao longo da janela de envio, sem concentrar todas as vagas pela manhã. Janela móvel de 24 horas.
+                </Text>
+              </div>
+            </div>
+
+            <div className="kds-campaign-quota-meter">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <Text className="text-xs font-medium text-[color:var(--panel-text-muted)]">Novos contatos iniciados nas últimas 24h</Text>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-semibold tabular-nums text-[color:var(--panel-text)]">
+                      {globalQuota ? globalQuota.started_contacts_24h.toLocaleString('pt-BR') : '—'}
+                    </span>
+                    <span className="text-sm tabular-nums text-[color:var(--panel-text-muted)]">
+                      / {globalQuota ? globalQuota.daily_contact_limit.toLocaleString('pt-BR') : '—'}
+                    </span>
+                  </div>
+                </div>
+                {globalQuota && (
+                  <Badge tone={globalQuota.remaining_contacts > 0 ? 'success' : 'warning'} size="sm">
+                    {globalQuota.remaining_contacts.toLocaleString('pt-BR')} disponíveis
+                  </Badge>
+                )}
+              </div>
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-[color:var(--panel-border-subtle)]"
+                role="progressbar"
+                aria-label="Consumo do limite global em 24 horas"
+                aria-valuemin={0}
+                aria-valuemax={globalQuota?.daily_contact_limit ?? 100}
+                aria-valuenow={globalQuota ? Math.min(globalQuota.started_contacts_24h, globalQuota.daily_contact_limit) : undefined}
+              >
+                <div
+                  className="h-full rounded-full bg-[color:var(--panel-accent-strong)] transition-[width]"
+                  style={{ width: globalQuota ? Math.min(100, (globalQuota.started_contacts_24h / Math.max(1, globalQuota.daily_contact_limit)) * 100) + '%' : '0%' }}
+                />
+              </div>
+              <Text className="mt-3 text-xs text-[color:var(--panel-text-muted)]">
+                Balões adicionais, follow-ups e tentativas de reenvio não gastam novas vagas. Limites individuais continuam valendo.
+              </Text>
+            </div>
+            {globalQuota?.next_available_at && (
+              <Text className="text-xs text-[color:var(--panel-text-muted)]">
+                Próxima liberação prevista: {new Date(globalQuota.next_available_at).toLocaleString('pt-BR')}
+              </Text>
+            )}
+          </div>
+
+          <div className="kds-campaign-quota-settings">
+            <div>
+              <Heading level={3} className="text-sm font-semibold">Configurar teto</Heading>
+              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
+                Ajuste quantos destinatários podem ser abordados pela primeira vez em cada campanha no período.
+              </Text>
+            </div>
+            <div className="space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <Field label="Novos contatos por 24h" className="min-w-0 flex-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10000}
+                    value={globalLimitDraft}
+                    onChange={(event) => setGlobalLimitDraft(Math.min(10000, Math.max(1, Number(event.target.value) || 1)))}
+                  />
+                </Field>
+                <Button
+                  variant="secondary"
+                  className="w-full shrink-0 sm:w-auto"
+                  disabled={!globalQuota || globalLimitDraft === globalQuota.daily_contact_limit}
+                  loading={savingGlobalLimit}
+                  onClick={() => void handleSaveGlobalLimit()}
+                >
+                  Salvar
+                </Button>
+              </div>
+              {globalQuota && globalLimitDraft !== globalQuota.daily_contact_limit && (
+                <Text className="text-xs text-[color:var(--panel-text-muted)]">
+                  O novo teto só entra em vigor ao salvar.
+                </Text>
+              )}
+            </div>
+          </div>
+        </div>
+      </Surface>
+
 
       <section aria-label="Todas as campanhas" className="kds-campaign-collection">
         <div className="kds-campaign-collection-tools" aria-label="Filtros das campanhas">
@@ -1998,7 +2100,7 @@ export default function WhatsAppCampaignsScreen() {
               <Table
                 size="sm"
                 aria-label="Todas as campanhas"
-                columnWidths={['34%', '15%', '14%', '10%', '10%', '12%', '5%']}
+                columnWidths={['29%', '15%', '14%', '10%', '10%', '15%', '7%']}
               >
                 <TableHeader>
                   <TableRow>
@@ -2021,8 +2123,8 @@ export default function WhatsAppCampaignsScreen() {
                           className="flex max-w-full flex-col items-start gap-1 text-left"
                           onClick={() => navigate(`/painel/disparos/${campaign.id}`)}
                         >
-                          <span className="max-w-full truncate font-medium text-[color:var(--panel-text)]">{campaign.name}</span>
-                          <span className="max-w-full truncate text-xs text-[color:var(--panel-text-muted)]">
+                          <span className="kds-record-row-name max-w-full truncate">{campaign.name}</span>
+                          <span className="kds-record-row-secondary max-w-full truncate">
                             {campaign.scheduled_at ? `Envio em ${formatCampaignDate(campaign.scheduled_at)}` : `Criada em ${formatCampaignDate(campaign.created_at)}`}
                           </span>
                         </ActionSurface>
@@ -2119,102 +2221,6 @@ export default function WhatsAppCampaignsScreen() {
           <Badge tone="neutral">{stats.drafts.toLocaleString('pt-BR')} rascunhos</Badge>
           <Badge tone="info">{stats.scheduled.toLocaleString('pt-BR')} agendadas</Badge>
         </div>}
-      <Surface padding="sm" className="overflow-hidden" aria-label="Cota global de disparos do WhatsApp">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(17rem,0.75fr)] lg:gap-5">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-accent-soft)] text-[color:var(--panel-accent-strong)]">
-                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <Heading level={2} className="text-base font-semibold">Limite global de novos contatos</Heading>
-                <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
-                  Um contato conta uma vez por campanha. As novas abordagens são distribuídas ao longo da janela de envio, sem concentrar todas as vagas pela manhã. Janela móvel de 24 horas.
-                </Text>
-              </div>
-            </div>
-
-            <div className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] px-4 py-3.5">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <Text className="text-xs font-medium text-[color:var(--panel-text-muted)]">Novos contatos iniciados nas últimas 24h</Text>
-                  <div className="mt-1 flex items-baseline gap-1.5">
-                    <span className="text-2xl font-semibold tabular-nums text-[color:var(--panel-text)]">
-                      {globalQuota ? globalQuota.started_contacts_24h.toLocaleString('pt-BR') : '—'}
-                    </span>
-                    <span className="text-sm tabular-nums text-[color:var(--panel-text-muted)]">
-                      / {globalQuota ? globalQuota.daily_contact_limit.toLocaleString('pt-BR') : '—'}
-                    </span>
-                  </div>
-                </div>
-                {globalQuota && (
-                  <Badge tone={globalQuota.remaining_contacts > 0 ? 'success' : 'warning'} size="sm">
-                    {globalQuota.remaining_contacts.toLocaleString('pt-BR')} disponíveis
-                  </Badge>
-                )}
-              </div>
-              <div
-                className="mt-3 h-2 overflow-hidden rounded-full bg-[color:var(--panel-border-subtle)]"
-                role="progressbar"
-                aria-label="Consumo do limite global em 24 horas"
-                aria-valuemin={0}
-                aria-valuemax={globalQuota?.daily_contact_limit ?? 100}
-                aria-valuenow={globalQuota ? Math.min(globalQuota.started_contacts_24h, globalQuota.daily_contact_limit) : 0}
-              >
-                <div
-                  className="h-full rounded-full bg-[color:var(--panel-accent-strong)] transition-[width]"
-                  style={{ width: globalQuota ? Math.min(100, (globalQuota.started_contacts_24h / Math.max(1, globalQuota.daily_contact_limit)) * 100) + '%' : '0%' }}
-                />
-              </div>
-              <Text className="mt-3 text-xs text-[color:var(--panel-text-muted)]">
-                Balões adicionais, follow-ups e tentativas de reenvio não gastam novas vagas. Limites individuais continuam valendo.
-              </Text>
-            </div>
-            {globalQuota?.next_available_at && (
-              <Text className="text-xs text-[color:var(--panel-text-muted)]">
-                Próxima liberação prevista: {new Date(globalQuota.next_available_at).toLocaleString('pt-BR')}
-              </Text>
-            )}
-          </div>
-
-          <div className="flex flex-col justify-between gap-4 rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
-            <div>
-              <Heading level={3} className="text-sm font-semibold">Configurar teto</Heading>
-              <Text className="mt-1 text-xs text-[color:var(--panel-text-muted)]">
-                Ajuste quantos destinatários podem ser abordados pela primeira vez em cada campanha no período.
-              </Text>
-            </div>
-            <div className="space-y-2">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <Field label="Novos contatos por 24h" className="min-w-0 flex-1">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10000}
-                    value={globalLimitDraft}
-                    onChange={(event) => setGlobalLimitDraft(Math.min(10000, Math.max(1, Number(event.target.value) || 1)))}
-                  />
-                </Field>
-                <Button
-                  variant="secondary"
-                  className="w-full shrink-0 sm:w-auto"
-                  disabled={!globalQuota || globalLimitDraft === globalQuota.daily_contact_limit}
-                  loading={savingGlobalLimit}
-                  onClick={() => void handleSaveGlobalLimit()}
-                >
-                  Salvar
-                </Button>
-              </div>
-              {globalQuota && globalLimitDraft !== globalQuota.daily_contact_limit && (
-                <Text className="text-xs text-[color:var(--panel-text-muted)]">
-                  O novo teto só entra em vigor ao salvar.
-                </Text>
-              )}
-            </div>
-          </div>
-        </div>
-      </Surface>
-
       <CampaignDeliveryStatusCard health={workerHealth} available={workerHealthAvailable} loading={loading} />
 
       {aiSuggestions.length > 0 && (

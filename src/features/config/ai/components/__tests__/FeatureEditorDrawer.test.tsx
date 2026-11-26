@@ -93,6 +93,10 @@ test('libera o botão de salvar quando a criação da configuração falha por e
   );
 
   await waitForSelector<HTMLTextAreaElement>('textarea[placeholder="Descreva como a IA deve agir nesta tarefa..."]');
+  const drawer = document.querySelector('.kds-ai-editor-drawer');
+  assert.ok(drawer?.classList.contains('kds-drawer-right'));
+  assert.ok(drawer?.textContent?.includes('Configurar funcionalidade de IA'));
+  assert.equal(drawer?.querySelector('.kds-avatar'), null);
   const saveButton = await waitForBodyText('Criar versão e ativar');
   assert.ok(saveButton instanceof HTMLButtonElement);
 

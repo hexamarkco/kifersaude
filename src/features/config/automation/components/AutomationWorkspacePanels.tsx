@@ -121,12 +121,14 @@ export function AutomationOperation({ flows, enabled, dailyCount, dailyLoading, 
         ) : <EmptyState icon={<Activity />} title="Nenhum fluxo na operação" description="Cadastre um fluxo na central para acompanhar sua configuração." />}
       </Surface>
       {detail && schedule && (
-        <Drawer open size="md" className="kds-automation-drawer" onOpenChange={(open) => !open && setDetailId(null)}>
+        <Drawer open side="right" size="lg" className="kds-crm-dialog kds-automation-drawer kds-automation-execution-drawer" onOpenChange={(open) => !open && setDetailId(null)}>
           <DrawerHeader onClose={() => setDetailId(null)}>
-            <DialogTitle>{detail.name || 'Fluxo sem nome'}</DialogTitle>
-            <DialogDescription placement="visible">Configuração atual do fluxo.</DialogDescription>
+            <div className="kds-dialog-eyebrow">Automações</div>
+            <DialogTitle>Detalhes do fluxo</DialogTitle>
+            <DialogDescription placement="visible">Configuração atual, não um histórico de execução.</DialogDescription>
           </DrawerHeader>
-          <DrawerBody>
+          <DrawerBody className="space-y-4">
+            <Heading level={3} className="kds-record-entity-title">{detail.name || 'Fluxo sem nome'}</Heading>
             <dl className="kds-automation-detail-data">
               <dt>Situação</dt><dd>{detail.ativo === false ? 'Pausado' : enabled ? 'Ativo' : 'Envio pausado na central'}</dd>
               <dt>Gatilho</dt><dd>{automationTriggerLabels[detail.triggerType]}</dd>

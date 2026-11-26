@@ -144,9 +144,9 @@ export function AiSandboxChatPage({
 
   return (
     <PageContainer size="full" className="kds-ai-page kds-operational">
-      <PageHeader
+      <PageHeader className="kds-ai-sandbox-header"
         eyebrow="Kifer Saúde · Inteligência artificial"
-        title="Chat e testes de IA"
+        title="Uma boa conversa começa no teste."
         description="Valide o atendimento automatizado em uma simulação controlada. As mensagens desta tela não são enviadas a clientes."
         descriptionPlacement="visible"
         actions={(
@@ -363,7 +363,7 @@ export function AiSandboxChatPage({
         </CrmCard>
       </div>
 
-      <Drawer open={historyOpen} onOpenChange={onHistoryOpenChange} side="left" size="md" aria-label="Histórico de simulações">
+      <Drawer open={historyOpen} onOpenChange={onHistoryOpenChange} side="left" size="lg" className="kds-crm-dialog kds-ai-sandbox-drawer" aria-label="Histórico de simulações">
         <DrawerHeader onClose={() => onHistoryOpenChange(false)}>
           <div>
             <DialogTitle>Histórico de simulações</DialogTitle>
@@ -407,7 +407,7 @@ export function AiSandboxChatPage({
         </DrawerBody>
       </Drawer>
 
-      <Drawer open={showScenarioPicker} onOpenChange={onScenarioPickerOpenChange} side="right" size="md" aria-label="Cenários de teste">
+      <Drawer open={showScenarioPicker} onOpenChange={onScenarioPickerOpenChange} side="right" size="lg" className="kds-crm-dialog kds-ai-sandbox-drawer" aria-label="Cenários de teste">
         <DrawerHeader onClose={() => onScenarioPickerOpenChange(false)}>
           <div>
             <DialogTitle>Cenários de teste</DialogTitle>

@@ -789,7 +789,7 @@ export default function IntegrationsScreen() {
       overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >
-      <div className="space-y-6">
+      <div className="kds-automation-integrations space-y-5">
         {activeSection === "overview" ? (
           <IntegrationsOverview
             onOpen={setActiveSection}

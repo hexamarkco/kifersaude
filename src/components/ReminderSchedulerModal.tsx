@@ -190,9 +190,10 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="form" className={`kds-lead-reminder-dialog${className ? ` ${className}` : ''}`}>
+    <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="form" className={`kds-crm-dialog kds-lead-reminder-dialog${className ? ` ${className}` : ''}`}>
       {renderHeader ? renderHeader({ onClose: () => { if (!saving) onClose(); }, showCloseButton: !saving }) : <DialogHeader onClose={saving ? undefined : onClose}>
         <div>
+          <div className="kds-dialog-eyebrow">Lembretes</div>
           <DialogTitle>Agendar novo lembrete</DialogTitle>
           <DialogDescription placement="visible" className="flex items-center gap-1.5">
             <LeadFavoriteBadge favorito={lead.favorito} />
@@ -208,7 +209,7 @@ export default function ReminderSchedulerModal({
           </Text>
 
           <div className="kds-lead-reminder-fields">
-            <Field label="Título *" className="kds-lead-reminder-title">
+            <Field label="Título do lembrete *" className="kds-lead-reminder-title">
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -245,7 +246,7 @@ export default function ReminderSchedulerModal({
               />
             </Field>
 
-            <Field label="Data e hora *" className="kds-lead-reminder-datetime">
+            <Field label="Lembrar em *" className="kds-lead-reminder-datetime">
               <DateTimePicker
                 type="datetime-local"
                 value={scheduledFor}
@@ -262,7 +263,7 @@ export default function ReminderSchedulerModal({
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                rows={3}
+                rows={4}
                 placeholder="Anote detalhes importantes para o próximo contato"
               />
             </Field>

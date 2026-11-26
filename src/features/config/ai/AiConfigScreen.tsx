@@ -367,6 +367,8 @@ export default function AiConfigScreen() {
         value={section}
         onChange={setSection}
         size="sm"
+        variant="underline"
+        className="kds-ai-config-tabs"
         ariaLabel="Áreas das configurações de IA"
       />
 
@@ -376,7 +378,7 @@ export default function AiConfigScreen() {
             <SectionHeader
               className="kds-ai-options-section-header"
               as="h3"
-              title="Opções de IA"
+              title="Funcionalidades de IA"
               description="Ative recursos e mantenha os prompts organizados por área."
               descriptionPlacement="visible"
               action={
@@ -451,6 +453,7 @@ export default function AiConfigScreen() {
       )}
 
       <ConfirmDialog
+        className="kds-crm-dialog kds-automation-dialog kds-ai-import-dialog"
         open={!!importConfirm}
         onOpenChange={() => setImportConfirm(null)}
         onConfirm={handleImportConfirm}
@@ -461,11 +464,11 @@ export default function AiConfigScreen() {
         closeOnConfirm
       >
         {importConfirm && (
-          <div className="max-h-80 space-y-4 overflow-y-auto text-sm">
+          <div className="kds-ai-import-review max-h-80 space-y-4 overflow-y-auto">
             <div className="rounded-lg border border-[var(--border-subtle)] p-3 text-[var(--text-secondary)]">
-              <Text>{importConfirm.features.length} Feature(s) e {importConfirm.globalConfigs.length} configuração(ões) global(is) prontas para importar.</Text>
+              <Text>{importConfirm.features.length} funcionalidade(s) e {importConfirm.globalConfigs.length} configuração(ões) global(is) prontas para importar.</Text>
               {importConfirm.skippedFeatures > 0 && (
-                <Text className="mt-1">{importConfirm.skippedFeatures} Feature(s) sem configuração aplicável serão ignoradas.</Text>
+                <Text className="mt-1">{importConfirm.skippedFeatures} funcionalidade(s) sem configuração aplicável serão ignoradas.</Text>
               )}
               <Text className="mt-1 text-xs text-[var(--text-muted)]">
                 Exemplos, catálogo de modelos e snapshots de roteamento do arquivo são somente informativos e nunca são aplicados.

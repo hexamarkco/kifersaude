@@ -1110,7 +1110,7 @@ export default function AutoContactFlowSettingsScreen() {
     const confirmed = await requestConfirmation({
       title: activate ? "Revisar antes de ativar" : "Pausar fluxo",
       description: activate
-        ? `“${flow.name || "Fluxo sem nome"}” poderá executar as etapas configuradas quando o envio automático estiver liberado.`
+        ? `“${flow.name || "Fluxo sem nome"}” contém ${flow.steps.length} etapa(s). Gatilho: ${automationTriggerLabels[flow.triggerType]}. O fluxo poderá executar as etapas configuradas quando o envio automático estiver liberado. Confira a jornada e as regras antes de confirmar.`
         : `“${flow.name || "Fluxo sem nome"}” ficará pausado até ser ativado novamente.`,
       confirmLabel: activate ? "Ativar fluxo" : "Pausar fluxo",
     });
@@ -1766,7 +1766,7 @@ export default function AutoContactFlowSettingsScreen() {
   const hasFlowSnapshot = autoContactIntegration !== null;
 
   const workspaceHeader = !activeFlowId && (
-    <PageHeader
+    <PageHeader className="kds-automation-page-header"
       {...workspaceHeadings[activeWorkspace]}
       descriptionPlacement="visible"
       actions={<div className="kds-automation-header-actions">
@@ -1780,7 +1780,7 @@ export default function AutoContactFlowSettingsScreen() {
         onChange={setActiveWorkspace}
         className="kds-automation-workspace-tabs"
         listClassName="flex-nowrap overflow-x-auto"
-        variant="pill"
+        variant="underline"
         ariaLabel="Visões das automações"
       />
     </PageHeader>
@@ -2071,6 +2071,7 @@ export default function AutoContactFlowSettingsScreen() {
                     )}
                   >
                     <Tabs
+                      variant="underline"
                       className="kds-flow-detail-tabs"
                       listClassName="flex-nowrap overflow-x-auto"
                       ariaLabel="Etapas da edição do fluxo"
@@ -2730,8 +2731,9 @@ export default function AutoContactFlowSettingsScreen() {
           </div>
           {ConfirmationDialog}
           {newFlowDraft && (
-            <Dialog open size="md" className="kds-automation-dialog" onOpenChange={(open) => !open && setNewFlowDraft(null)}>
+            <Dialog open size="md" className="kds-crm-dialog kds-automation-dialog kds-automation-create-dialog" onOpenChange={(open) => !open && setNewFlowDraft(null)}>
               <DialogHeader onClose={() => setNewFlowDraft(null)}>
+                <div className="kds-dialog-eyebrow">Automações</div>
                 <DialogTitle>Novo fluxo</DialogTitle>
                 <DialogDescription placement="visible">Dê um nome à jornada e escolha o que inicia o acompanhamento.</DialogDescription>
               </DialogHeader>
@@ -2754,8 +2756,9 @@ export default function AutoContactFlowSettingsScreen() {
             </Dialog>
           )}
           {exitDraft && activeFlow && (
-            <Dialog open size="md" className="kds-automation-dialog" onOpenChange={(open) => !open && setExitDraft(null)}>
+            <Dialog open size="md" className="kds-crm-dialog kds-automation-dialog kds-automation-condition-dialog" onOpenChange={(open) => !open && setExitDraft(null)}>
               <DialogHeader onClose={() => setExitDraft(null)}>
+                <div className="kds-dialog-eyebrow">Automações</div>
                 <DialogTitle>Condição de saída</DialogTitle>
                 <DialogDescription placement="visible">Defina quando este fluxo deve encerrar o acompanhamento.</DialogDescription>
               </DialogHeader>
@@ -2806,7 +2809,7 @@ export default function AutoContactFlowSettingsScreen() {
               descriptionPlacement="visible"
               initialFocus="first-content"
               size="lg"
-              panelClassName="kds-automation-dialog"
+              panelClassName="kds-crm-dialog kds-automation-dialog kds-automation-template-dialog"
               footer={
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <Button

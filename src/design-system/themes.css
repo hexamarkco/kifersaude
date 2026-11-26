@@ -348,6 +348,11 @@
   --record-kanban-column-width: 15.625rem;
   --record-drawer-gutter: .875rem;
   --record-event-icon-size: 2rem;
+  --finance-day-panel-width: 18.75rem;
+  --finance-day-panel-width-compact: 15.9375rem;
+  --finance-calendar-cell-height: 6.25rem;
+  --finance-calendar-cell-mobile: 4.875rem;
+  --finance-calendar-event-type: 400 .5625rem / 1.6 var(--font-sans);
   --record-dialog-width: 38.75rem;
   --record-dialog-wide: 60rem;
   --record-table-row-height: 4.0625rem;

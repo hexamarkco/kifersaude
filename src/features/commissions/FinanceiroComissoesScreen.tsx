@@ -29,13 +29,13 @@ export default function FinanceiroComissoesScreen() {
   ];
   if (canViewProduction) tabs.push({ id: 'production', label: 'Produção' });
   const header = (
-    <PageHeader {...headings[activeView]}>
-      <Tabs items={tabs} value={activeView} onChange={setView} ariaLabel="Visões do financeiro" />
+    <PageHeader {...headings[activeView]} className="kds-finance-page-header" descriptionPlacement="visible">
+      <Tabs items={tabs} value={activeView} onChange={setView} variant="underline" className="kds-finance-view-tabs" ariaLabel="Visões do financeiro" />
     </PageHeader>
   );
 
   return activeView === 'production' ? (
-    <div className="panel-page-shell kds-finance-page space-y-5">
+    <div className="panel-page-shell kds-finance-page">
       {header}
       <TeamProduction appearance="finance" onNavigateToLead={(id) => {
         if (canViewLeads) navigate({ pathname: '/painel/leads', search: new URLSearchParams({ busca: id }).toString() });

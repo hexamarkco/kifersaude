@@ -54,7 +54,7 @@ export default function CommissionMonthGrid({ currentMonth, eventsByDay, onSelec
                   {formatCommissionCurrency(event.value)}
                 </span>
               ))}
-              {count > 2 && <small className="kds-month-overflow" aria-hidden="true">+{count - 2}</small>}
+              {count > 2 && <small className="kds-month-overflow" aria-hidden="true">+{count - 2} {count === 3 ? "previsão" : "previsões"}</small>}
             </ActionSurface>
           );
         })}

@@ -372,55 +372,24 @@ export function BlogTabSkeletonList() {
   );
 }
 
-export function CommissionCalendarSkeleton() {
+export function CommissionCalendarSkeleton({ view = 'calendar' }: { view?: 'forecasts' | 'calendar' } = {}) {
   return (
-    <section className="kds-card kds-card-default space-y-6 p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-72" />
-          <Skeleton variant="line" className="h-4 w-80" />
-        </div>
-        <div className="flex gap-4">
-          <div className="space-y-1">
-            <Skeleton variant="line" className="h-3 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-          <div className="space-y-1">
-            <Skeleton variant="line" className="h-3 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-        </div>
+    <div className="kds-finance-loading" aria-hidden="true">
+      <div className="kds-workspace-record-metrics">
+        {Array.from({ length: 4 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}
       </div>
-
-      <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-default)]">
-        <div className="flex items-center justify-between bg-[var(--bg-inset)] px-4 py-3">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-8 w-8 rounded-md" />
+      {view === 'forecasts' ? <>
+        <div className="kds-forecast-toolbar"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-32 max-w-full" /><Skeleton className="h-9 w-20 justify-self-end" /></div>
+        <PanelCard className="space-y-2">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
+      </> : <div className="kds-month-layout kds-finance-calendar-layout">
+        <div className="kds-card kds-card-default kds-month-calendar kds-finance-calendar">
+          <div className="kds-month-header"><Skeleton className="h-5 w-40" /><Skeleton className="h-8 w-24" /></div>
+          <div className="kds-month-weekdays">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="line" className="mx-auto h-3 w-6" />)}</div>
+          <div className="kds-month-grid">{Array.from({ length: 42 }, (_, i) => <div key={i} className="kds-finance-calendar-skeleton-cell"><Skeleton className="h-4 w-4" /></div>)}</div>
         </div>
-        <div className="p-4">
-          <CalendarGridSkeleton tone="success" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PanelCard>
-          <Skeleton className="h-6 w-40" />
-          <div className="mt-4 space-y-3">
-            <Skeleton className="h-16 w-full rounded-lg" />
-            <Skeleton className="h-16 w-full rounded-lg" />
-          </div>
-        </PanelCard>
-        <PanelCard>
-          <Skeleton className="h-6 w-44" />
-          <div className="mt-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={`commission-event-${index}`} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-        </PanelCard>
-      </div>
-    </section>
+        <PanelCard className="space-y-3"><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-3 w-40" /><Skeleton className="h-32 w-full" /></PanelCard>
+      </div>}
+    </div>
   );
 }
 

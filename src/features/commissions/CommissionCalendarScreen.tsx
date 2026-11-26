@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, FileText, Gift, Wallet } from 'lucide-react';
 import {
-  Alert, Badge, Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Field, Heading, IconButton, KpiCard, CommissionCalendarSkeleton, RecordListSkeleton, PanelAdaptiveLoadingFrame, Select, Surface, Text,
+  Alert, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Input,
+  Field, Heading, IconButton, KpiCard, CommissionCalendarSkeleton, PanelAdaptiveLoadingFrame, Select, Surface, Text,
 } from '../../design-system';
 import { listActiveCommissionContracts } from './data/commissionRepository';
 import type { CommissionContract } from './domain/types';
 import CommissionMonthGrid from './components/CommissionMonthGrid';
-import CommissionSelectedDatePanel, { CommissionNotice } from './components/CommissionSelectedDatePanel';
+import CommissionSelectedDatePanel from './components/CommissionSelectedDatePanel';
 import { CommissionForecastList } from './components/CommissionForecastList';
 import type { CommissionEvent } from './shared/commissionCalendarTypes';
 import {
@@ -90,7 +90,7 @@ export default function CommissionCalendarScreen({ view, header, onOpenContract 
   );
 
   return (
-    <div className="panel-page-shell kds-finance-page space-y-5">
+    <div className="panel-page-shell kds-finance-page">
       {header}
       {!loading && !error && (
         <section aria-label="Resumo de previsões do mês" className="kds-workspace-record-metrics">
@@ -103,7 +103,7 @@ export default function CommissionCalendarScreen({ view, header, onOpenContract 
         </section>
       )}
       <PanelAdaptiveLoadingFrame
-        placeholder={view === 'forecasts' ? <RecordListSkeleton /> : <CommissionCalendarSkeleton />}
+        placeholder={<CommissionCalendarSkeleton view={view} />}
         loading={loading}
         label="Carregando previsões"
         hasContent={contracts.length > 0}
@@ -119,8 +119,8 @@ export default function CommissionCalendarScreen({ view, header, onOpenContract 
             onOpenContract={onOpenContract}
           />
         ) : (
-          <section aria-label="Calendário financeiro" className="kds-month-layout">
-            <Surface padding="none" className="kds-month-calendar">
+          <section aria-label="Calendário financeiro" className="kds-month-layout kds-finance-calendar-layout">
+            <Surface padding="none" className="kds-month-calendar kds-finance-calendar">
               <div className="kds-month-header">
                 <Heading level={2} size="sm">{monthLabel}</Heading>
                 <div className="kds-month-nav">
@@ -136,10 +136,10 @@ export default function CommissionCalendarScreen({ view, header, onOpenContract 
         )}
       </PanelAdaptiveLoadingFrame>
       {monthDraft && (
-        <Dialog open size="sm" className="kds-finance-dialog" onOpenChange={(open) => !open && setMonthDraft(null)}>
+        <Dialog open size="md" className="kds-crm-dialog kds-finance-dialog kds-finance-period-dialog" onOpenChange={(open) => !open && setMonthDraft(null)}>
           <DialogHeader onClose={() => setMonthDraft(null)}>
+            <div className="kds-dialog-eyebrow">Financeiro</div>
             <DialogTitle>Selecionar competência</DialogTitle>
-            <DialogDescription placement="visible">Escolha o mês das previsões.</DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <div className="kds-forecast-year">
@@ -158,27 +158,25 @@ export default function CommissionCalendarScreen({ view, header, onOpenContract 
         </Dialog>
       )}
       {detail && (
-        <Dialog open size="md" className="kds-finance-dialog" onOpenChange={(open) => !open && setDetail(null)}>
+        <Dialog open size="md" className="kds-crm-dialog kds-finance-dialog kds-finance-event-dialog" onOpenChange={(open) => !open && setDetail(null)}>
           <DialogHeader onClose={() => setDetail(null)}>
+            <div className="kds-dialog-eyebrow">Financeiro</div>
             <DialogTitle>{detail.type === 'comissao' ? 'Previsão de comissão' : 'Previsão de bonificação'}</DialogTitle>
-            <DialogDescription placement="visible">Consulte os dados do lançamento previsto.</DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4">
-            <div className="kds-forecast-detail-heading">
-              <Badge tone="neutral" className="kds-forecast-type-badge" data-forecast-type={detail.type}>{detail.type === 'comissao' ? 'Comissão' : 'Bonificação'}</Badge>
-              <Heading level={3}>{formatCommissionCurrency(detail.value)}</Heading>
+            <Alert tone="info" title="Este valor é uma previsão.">O lançamento não confirma que a comissão ou bonificação foi recebida.</Alert>
+            <div className="kds-finance-form-grid kds-finance-event-fields">
+              <Field label="Contrato"><Input value={[detail.contract.codigo_contrato, getCommissionContractName(detail.contract)].filter((value, index, all) => Boolean(value) && all.indexOf(value) === index).join(' · ')} readOnly /></Field>
+              <Field label="Tipo de previsão"><Input value={detail.type === 'comissao' ? 'Comissão' : 'Bonificação'} readOnly /></Field>
+              <Field label="Valor previsto (R$)"><Input value={formatCommissionCurrency(detail.value)} readOnly /></Field>
+              <Field label="Data prevista"><Input value={parseCommissionDate(detail.date)?.toLocaleDateString('pt-BR') ?? '—'} readOnly /></Field>
+              <Field label="Operadora"><Input value={detail.contract.operadora || 'Não informada'} readOnly /></Field>
+              <Field label="Responsável"><Input value={detail.contract.responsavel || 'Não informado'} readOnly /></Field>
+              {detail.installmentIndex && detail.installmentCount && <Field label="Parcela"><Input value={`${detail.installmentIndex} de ${detail.installmentCount}`} readOnly /></Field>}
             </div>
-            <dl className="kds-forecast-detail-grid">
-              <dt>Contrato</dt><dd>{getCommissionContractName(detail.contract)}</dd>
-              {detail.contract.codigo_contrato && <><dt>Código</dt><dd>{detail.contract.codigo_contrato}</dd></>}
-              <dt>Operadora</dt><dd>{detail.contract.operadora || 'Não informada'}</dd>
-              <dt>Data prevista</dt><dd>{parseCommissionDate(detail.date)?.toLocaleDateString('pt-BR') ?? '—'}</dd>
-              <dt>Responsável</dt><dd>{detail.contract.responsavel || 'Não informado'}</dd>
-              {detail.installmentIndex && detail.installmentCount && <><dt>Parcela</dt><dd>{detail.installmentIndex} de {detail.installmentCount}</dd></>}
-            </dl>
-            <CommissionNotice />
           </DialogBody>
           <DialogFooter>
+            <Text className="kds-finance-footer-note">Previsão vinculada ao contrato.</Text>
             <Button variant="secondary" onClick={() => setDetail(null)}>Fechar</Button>
             {onOpenContract && detail.contract.codigo_contrato && (
               <Button onClick={() => onOpenContract(detail.contract.codigo_contrato)}>Abrir contrato</Button>

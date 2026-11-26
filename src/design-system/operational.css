@@ -2693,3 +2693,79 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media (max-width: 390px) {
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-filter-fields { grid-template-columns: minmax(0,1fr); }
 }
+
+/* Financeiro — source: original prototype, with real forecast semantics. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page { display: grid; gap: var(--space-5); min-width: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page-header .kds-page-title { font: var(--type-record-title); letter-spacing: -.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page-header .kds-page-description { font: var(--type-record-description); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-view-tabs .kds-tab { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics { gap: var(--space-4); grid-template-columns: repeat(4,minmax(0,1fr)); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics > .kds-card-kpi { min-height: var(--dashboard-metric-height); padding: var(--space-5); gap: var(--space-3); border-radius: var(--dashboard-card-radius); box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics .kds-card-title { font: var(--type-dashboard-metric-label); color: var(--text-muted); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics .kds-card-icon { width: var(--record-metric-icon-size); height: var(--record-metric-icon-size); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics .kds-kpi-value { font: var(--type-record-metric); letter-spacing: -.05em; overflow-wrap: anywhere; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics .kds-kpi-trend { font: var(--type-dashboard-metric-caption); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-toolbar { gap: var(--space-2); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-forecast-toolbar,.kds-finance-production-controls) :is(.kds-input,.kds-filter-trigger,.kds-button) { min-height: var(--toolbar-control-height); font: var(--type-toolbar-control); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-toolbar .kds-forecast-month { min-width: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-table-head { height: var(--record-table-head-height); font: var(--type-record-heading); text-transform: none; letter-spacing: normal; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-table-cell { height: var(--record-table-row-height); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page :is(.kds-forecast-list,.kds-finance-calendar,.kds-forecast-day) { border-radius: var(--radius-panel); box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-list .kds-table-wrapper { border: 0; border-radius: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-contract { font: var(--type-record-field-label); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-forecast-contract small,.kds-forecast-event-copy small,.kds-forecast-type-badge,.kds-forecast-list .kds-pagination) { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-amount { font-weight: var(--font-weight-semibold); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-list .kds-record-actions .kds-icon-button:hover { background: var(--bg-hover); border-color: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-notice .kds-text { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-notice .kds-text-weight-semibold { font-weight: var(--font-weight-medium); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-finance-calendar .kds-month-header h2,.kds-forecast-day-header .kds-heading) { font: var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-calendar .kds-month-day { min-height: var(--finance-calendar-cell-height); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-calendar :is(.kds-month-event,.kds-month-overflow) { font: var(--finance-calendar-event-type); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-calendar :is(.kds-month-weekdays,.kds-month-day-number,.kds-month-nav .kds-button) { font: var(--type-record-heading); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-day-header .kds-text { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-day-body { gap: 0; padding: var(--space-3) var(--space-4); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-event { padding: var(--space-3) 0; border: 0; border-bottom: var(--border-width) solid var(--border-subtle); border-radius: 0; background: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-event:last-child { border-bottom: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-event:hover { background: var(--bg-hover); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-event-copy > strong { font: var(--type-record-field-label); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-day-totals { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production { gap: var(--space-5); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production-charts > .kds-card { padding: var(--dashboard-card-padding); border-radius: var(--dashboard-card-radius); box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production .kds-card-title { font: var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production .kds-card-kpi .kds-card-title { font: var(--type-dashboard-metric-label); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production .kds-card-subtitle { font: var(--type-dashboard-card-subtitle); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-participation li { font: var(--type-record-body); }
+.painel-theme.kifer-ds .kds-finance-dialog { width: var(--record-dialog-width); max-width: calc(100vw - var(--space-6)); }
+.painel-theme.kifer-ds .kds-finance-dialog .kds-dialog-body { padding: var(--dialog-body-padding); }
+.painel-theme.kifer-ds .kds-finance-dialog .kds-field-label { font: var(--type-record-field-label); color: var(--text-primary); }
+.painel-theme.kifer-ds .kds-finance-dialog :is(.kds-select,.kds-input,.kds-filter-trigger) { font: var(--type-record-field); min-height: var(--form-control-height); }
+.painel-theme.kifer-ds .kds-finance-event-fields .kds-input[readonly] { color: var(--text-primary); }
+.kds-finance-footer-note { margin-inline-end: auto; font: var(--type-record-secondary); color: var(--text-muted); }
+.kds-finance-loading { display: grid; gap: var(--space-5); min-width: 0; }
+.kds-finance-calendar-skeleton-cell { min-height: var(--finance-calendar-cell-height); padding: var(--space-2); border-inline-end: var(--border-width) solid var(--border-subtle); border-block-end: var(--border-width) solid var(--border-subtle); }
+@media (min-width: 1100px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-calendar-layout { grid-template-columns: minmax(0,1fr) var(--finance-day-panel-width-compact); }
+}
+@media (min-width: 1440px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-calendar-layout { grid-template-columns: minmax(0,1fr) var(--finance-day-panel-width); }
+}
+@media (max-width: 1023px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-3); }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page,.painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production { gap: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page-header .kds-page-title { font-size: 1.4375rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics > .kds-card-kpi { min-height: 8rem; padding: var(--space-3); gap: var(--space-2); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-page .kds-workspace-record-metrics .kds-kpi-value { font-size: clamp(1rem,5.5vw,1.5rem); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-toolbar { grid-template-columns: minmax(0,1fr) minmax(0,1.5fr) auto; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-toolbar > :first-child { grid-column: 1 / -1; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-forecast-toolbar .kds-forecast-month .kds-button-content { min-width: 0; white-space: normal; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-calendar .kds-month-day,.kds-finance-calendar-skeleton-cell { min-height: var(--finance-calendar-cell-mobile); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production-charts { grid-template-columns: minmax(0,1fr); gap: var(--space-4); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-finance-production-charts > .kds-card { padding: var(--space-4); }
+  .painel-theme.kifer-ds .kds-finance-dialog .kds-dialog-footer { flex-wrap: wrap; }
+  .painel-theme.kifer-ds .kds-finance-footer-note { flex-basis: 100%; }
+}
+@media (pointer: coarse) {
+  .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-forecast-toolbar,.kds-finance-production-controls,.kds-finance-calendar .kds-month-nav) :is(.kds-button,.kds-icon-button,.kds-input,.kds-filter-trigger) { min-height: var(--touch-target); }
+}

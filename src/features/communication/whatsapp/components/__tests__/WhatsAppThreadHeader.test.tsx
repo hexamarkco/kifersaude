@@ -54,10 +54,10 @@ test('mostra o status ao lado do nome, o lembrete abaixo e dois atalhos para cha
     assert.equal(header.nextElementSibling, null);
     const actions = [...header.querySelectorAll<HTMLButtonElement>('.whatsapp-inbox-thread-actions button')];
     assert.deepEqual(actions.map((button) => button.getAttribute('aria-label')), [
-      'Abrir informações do contato',
       'Copiar conversa formatada',
+      'Abrir informações do contato',
     ]);
-    act(() => actions[1].click());
+    act(() => actions[0].click());
     assert.equal(copyCalls, 1);
   } finally {
     view.unmount();

@@ -18,6 +18,7 @@ import {
   Field,
   Input,
   OperationalMetricChip,
+  Pagination,
   Select,
   Table,
   TableBody,
@@ -76,6 +77,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
   const [options, setOptions] = useState<FollowUpAgendaOrganizerOptions>(defaultOptions);
   const [preview, setPreview] = useState<FollowUpAgendaOrganizerPreview | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [applying, setApplying] = useState(false);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -85,10 +87,18 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
   const selectableItems = preview?.changes.filter((change) => change.changed) ?? [];
   const allSelected = selectableItems.length > 0 && selectableItems.every((change) => selectedIds.has(change.reminderId));
   const inbox = Boolean(onViewDailyAgenda);
+  const pageSize = 5;
+  const totalRows = preview?.changes.length ?? pendingReturns?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageOffset = (currentPage - 1) * pageSize;
+  const displayedChanges = inbox ? preview?.changes.slice(pageOffset, pageOffset + pageSize) : preview?.changes;
+  const displayedPendingReturns = pendingReturns?.slice(pageOffset, pageOffset + pageSize);
   const updateOption = <K extends keyof FollowUpAgendaOrganizerOptions>(key: K, value: FollowUpAgendaOrganizerOptions[K]) => {
     setOptions((current) => ({ ...current, [key]: value }));
     setPreview(null);
     setSelectedIds(new Set());
+    setPage(1);
   };
 
   const handleDailyLimitChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -101,6 +111,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
     try {
       const result = await whatsappFollowUpService.previewAgendaOrganization(options);
       setPreview(result);
+      setPage(1);
       setSelectedIds(new Set(result.changes.filter((change) => change.changed).map((change) => change.reminderId)));
       if (result.totalCandidates === 0) {
         toast.info('Nenhum follow-up pendente encontrado para reorganizar.');
@@ -246,7 +257,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {preview.changes.map((change) => (
+                      {displayedChanges?.map((change) => (
                         <TableRow key={change.reminderId}>
                           <TableCell><Checkbox aria-label={`Selecionar ${change.title}`} checked={selectedIds.has(change.reminderId)} disabled={busy || !change.changed} onChange={(event) => setSelectedIds((current) => { const next = new Set(current); if (event.target.checked) next.add(change.reminderId); else next.delete(change.reminderId); return next; })} /></TableCell>
                           <TableCell>
@@ -274,7 +285,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                   <Text tone="muted" size="sm">Retornos pendentes carregados da agenda. A elegibilidade e os novos horários são confirmados ao sugerir a organização.</Text>
                   <Table aria-label="Retornos pendentes" size="sm" stickyHeader>
                     <TableHeader><TableRow><TableHead scope="col">Acompanhamento</TableHead><TableHead scope="col">Horário atual</TableHead><TableHead scope="col">Prioridade</TableHead></TableRow></TableHeader>
-                    <TableBody>{pendingReturns.map((item) => (
+                    <TableBody>{displayedPendingReturns?.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell><strong>{item.title}</strong><Text tone="muted" size="sm">{item.leadName}</Text></TableCell>
                         <TableCell>{formatDateTimeFullBR(item.currentDateTime)}</TableCell>
@@ -291,6 +302,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
                 />
               )
             )} />
+            {inbox && totalRows > 0 && !loadingPreview && <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={totalRows} itemsPerPage={pageSize} onPageChange={setPage} />}
           </section>
         </DialogBody>
 

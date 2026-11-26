@@ -126,6 +126,7 @@ export default function Tooltip({
               left: position.left,
               maxHeight: position.maxHeight,
               maxWidth: position.maxWidth,
+              visibility: position.hidden ? 'hidden' : undefined,
             }}
           >
             {content}

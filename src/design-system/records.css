@@ -415,41 +415,41 @@
 }
 
 /* Contracts — original PAINEL-KS-PROTOTIPO, 23/11/2026. Real data and actions are retained. */
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header .kds-page-title { font: var(--type-record-title); letter-spacing: -.035em; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header .kds-page-description { font: var(--type-record-description); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-header, .kds-leads-header) .kds-page-title { font: var(--type-record-title); letter-spacing: -.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-header, .kds-leads-header) .kds-page-description { font: var(--type-record-description); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--space-4); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid > .kds-card-kpi { padding: var(--space-5); border-radius: var(--radius-panel); gap: var(--space-3); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-card-title { font: var(--type-record-body); color: var(--text-muted); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-card-icon { width: var(--record-metric-icon-size); height: var(--record-metric-icon-size); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-kpi-value { font: var(--type-record-metric); letter-spacing: -.05em; margin: 0; }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-kpi-trend { font: var(--type-record-secondary); margin: 0; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-table-head { height: var(--record-table-head-height); font: var(--type-record-heading); text-transform: none; letter-spacing: normal; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-table-cell { height: var(--record-table-row-height); font: var(--type-record-body); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-table-cell .kds-lead-identity { font: var(--type-record-body); gap: var(--space-2); }
-.kds-contract-row-name { color: var(--text-primary); font: var(--type-record-body); font-weight: var(--font-weight-medium); }
-.kds-contract-row-code { color: var(--text-muted); font: var(--type-record-secondary); }
-.kds-contract-row-avatar.kds-avatar { width: var(--record-avatar-size); height: var(--record-avatar-size); border-radius: var(--radius-md); font: var(--type-record-body); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-op-status-badge { font: var(--type-record-secondary); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-record-actions .kds-button { border-color: transparent; background: transparent; box-shadow: none; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-record-actions .kds-button:hover { background: var(--bg-hover); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container:has(.kds-contract-details-drawer) { padding: var(--record-drawer-gutter); align-items: center; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer { width: min(var(--record-drawer-width),100%); max-width: 100%; height: calc(100dvh - 2 * var(--record-drawer-gutter)); max-height: calc(100dvh - 2 * var(--record-drawer-gutter)); border-radius: var(--radius-panel); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-table-head { height: var(--record-table-head-height); font: var(--type-record-heading); text-transform: none; letter-spacing: normal; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-table-cell { height: var(--record-table-row-height); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-table-cell .kds-lead-identity { font: var(--type-record-body); gap: var(--space-2); }
+:is(.kds-contract-row-name, .kds-record-row-name) { color: var(--text-primary); font: var(--type-record-body); font-weight: var(--font-weight-medium); }
+:is(.kds-contract-row-code, .kds-record-row-secondary) { color: var(--text-muted); font: var(--type-record-secondary); }
+:is(.kds-contract-row-avatar.kds-avatar, .kds-record-row-avatar.kds-avatar) { width: var(--record-avatar-size); height: var(--record-avatar-size); border-radius: var(--radius-md); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-op-status-badge { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-record-actions .kds-button { border-color: transparent; background: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-record-actions .kds-button:hover { background: var(--bg-hover); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container:has(:is(.kds-contract-details-drawer,.kds-lead-details-drawer,.kds-lead-relationships-drawer)) { padding: var(--record-drawer-gutter); align-items: center; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-details-drawer,.kds-lead-details-drawer,.kds-lead-relationships-drawer) { width: min(var(--record-drawer-width),100%); max-width: 100%; height: calc(100dvh - 2 * var(--record-drawer-gutter)); max-height: calc(100dvh - 2 * var(--record-drawer-gutter)); border-radius: var(--radius-panel); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer .kds-drawer-body { background: var(--bg-surface); padding: var(--dialog-body-padding); }
-.kds-contract-entity-summary { flex: none; display: grid; gap: var(--space-2); padding: var(--space-5) var(--dialog-inline-padding); background: var(--bg-surface); }
-.kds-contract-entity-avatar.kds-avatar { width: var(--record-entity-avatar-size); height: var(--record-entity-avatar-size); border-radius: var(--radius-md); }
-.kds-contract-entity-title { min-width: 0; overflow-wrap: anywhere; font: var(--type-record-title); letter-spacing: -.035em; }
+:is(.kds-contract-entity-summary, .kds-record-entity-summary) { flex: none; display: grid; gap: var(--space-2); padding: var(--space-5) var(--dialog-inline-padding); background: var(--bg-surface); }
+:is(.kds-contract-entity-avatar.kds-avatar, .kds-record-entity-avatar.kds-avatar) { width: var(--record-entity-avatar-size); height: var(--record-entity-avatar-size); border-radius: var(--radius-md); }
+:is(.kds-contract-entity-title, .kds-record-entity-title) { min-width: 0; overflow-wrap: anywhere; font: var(--type-record-title); letter-spacing: -.035em; }
 .kds-contract-entity-code { font: var(--type-record-secondary); color: var(--text-muted); }
-.kds-contract-entity-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block-start: var(--space-2); }
-.kds-contract-detail-tabs { flex: none; padding-inline: var(--dialog-inline-padding); border-bottom: var(--border-width) solid var(--border-subtle); }
-.kds-contract-detail-tabs .kds-tab { font: var(--type-record-body); }
+:is(.kds-contract-entity-actions, .kds-record-entity-actions) { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block-start: var(--space-2); }
+:is(.kds-contract-detail-tabs, .kds-record-detail-tabs) { flex: none; padding-inline: var(--dialog-inline-padding); border-bottom: var(--border-width) solid var(--border-subtle); }
+:is(.kds-contract-detail-tabs, .kds-record-detail-tabs) .kds-tab { font: var(--type-record-body); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contract-detail-content > .kds-contract-detail-sections { gap: var(--space-5); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contract-detail-content > .kds-contract-detail-sections > .kds-contract-detail-section { border: 0; background: transparent; padding: 0; margin: 0; box-shadow: none; min-width: 0; }
 .kds-contract-detail-section[hidden], .kds-holder-form-dialog [data-holder-step][hidden] { display: none !important; }
 .kds-contract-detail-heading { font: var(--type-record-field-label); color: var(--text-primary); }
-.kds-contract-overview-fields { display: grid; gap: var(--space-4); margin-block: var(--space-5); font: var(--type-record-body); }
-.kds-contract-overview-fields > div { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: var(--space-5); }
-.kds-contract-overview-fields dt, .kds-contract-event-row time { color: var(--text-muted); }
-.kds-contract-overview-fields dd { margin: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+:is(.kds-contract-overview-fields, .kds-record-overview-fields) { display: grid; gap: var(--space-4); margin-block: var(--space-5); font: var(--type-record-body); }
+:is(.kds-contract-overview-fields, .kds-record-overview-fields) > div { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: var(--space-5); }
+:is(.kds-contract-overview-fields, .kds-record-overview-fields) dt, .kds-contract-event-row time { color: var(--text-muted); }
+:is(.kds-contract-overview-fields, .kds-record-overview-fields) dd { margin: 0; color: var(--text-primary); overflow-wrap: anywhere; }
 .kds-contract-overview-events { border-top: var(--border-width) solid var(--border-subtle); padding-block: var(--space-4); }
 .kds-contract-event-row { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); font: var(--type-record-body); }
 .kds-contract-document-row { display: flex; align-items: center; gap: var(--space-3); padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); }
@@ -473,13 +473,13 @@
   .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-3); }
 }
 @media (max-width: 767px) {
-  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header .kds-page-title { font-size: 1.4375rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-header, .kds-leads-header) .kds-page-title { font-size: 1.4375rem; }
   .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid > .kds-card-kpi { padding: var(--space-3); }
   .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-kpi-value { font-size: clamp(1rem,5.4vw,1.5rem); overflow-wrap: anywhere; }
-  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container:has(.kds-contract-details-drawer) { padding: 0; }
-  .painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-  .kds-contract-entity-summary { padding: var(--space-4) var(--dialog-inline-padding); }
-  .kds-contract-entity-title { font-size: 1.3125rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container:has(:is(.kds-contract-details-drawer,.kds-lead-details-drawer,.kds-lead-relationships-drawer)) { padding: 0; }
+  .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-details-drawer,.kds-lead-details-drawer,.kds-lead-relationships-drawer) { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  :is(.kds-contract-entity-summary, .kds-record-entity-summary) { padding: var(--space-4) var(--dialog-inline-padding); }
+  :is(.kds-contract-entity-title, .kds-record-entity-title) { font-size: 1.3125rem; }
   .kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog) .kds-dialog-footer { flex-wrap: wrap; }
   .kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog) .kds-dialog-footer-note { flex: 1 0 100%; }
 }
@@ -489,3 +489,83 @@
 
 .kds-contract-document-tabs { margin-block: var(--space-2) var(--space-4); }
 .kds-contract-document-tabs .kds-tab { font: var(--type-record-body); }
+
+/* Leads: original prototype's list, funnel and contextual overlays.
+   Use the same record geometry and type ramp as Contracts. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-search-toolbar {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-toolbar-actions {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-search-toolbar :is(.kds-input,.kds-filter-trigger,.kds-button,.kds-tab) { font: var(--type-toolbar-control); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-search-toolbar .kds-workspace-result-count { font: var(--type-toolbar-caption); }
+.kds-leads-toolbar-view { flex: none; }
+.kds-leads-toolbar-view .kds-tabs-list { padding: var(--space-1); gap: var(--space-1); border-radius: var(--radius-control); }
+.kds-leads-view-tabs .kds-tab { font: var(--type-record-body); }
+.kds-record-owner { display: flex; align-items: center; min-width: 0; gap: var(--space-2); }
+.kds-record-owner-avatar.kds-avatar { width: var(--record-owner-avatar-size); height: var(--record-owner-avatar-size); border-radius: var(--radius-control); font: var(--type-record-secondary); flex: none; }
+.kds-record-row-avatar.kds-avatar { flex: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-results .kds-record-actions .kds-button { border-color: transparent; background: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-results .kds-record-actions .kds-button:hover { background: var(--bg-hover); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-page .kds-kanban-board { padding: 0; border: 0; background: transparent; }
+.kds-leads-page .kds-kanban-track { gap: var(--space-4); align-items: flex-start; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-page .kds-kanban-column {
+  flex: 0 0 var(--record-kanban-column-width);
+  padding: var(--space-3);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface-muted);
+}
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-page .kds-kanban-column:has(.kds-op-lead-danger) { border-color: var(--danger-border); }
+.kds-kanban-column-heading { margin-bottom: var(--space-4); }
+.kds-leads-page .kds-kanban-column-title { font: var(--type-record-field-label); }
+.kds-leads-page .kds-kanban-column-body { max-height: none; padding: 0; scrollbar-gutter: auto; overflow: visible; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-leads-page .kds-kanban-card { background: var(--bg-surface); border-color: var(--border-subtle); border-radius: var(--radius-control); box-shadow: none; padding: var(--space-3); min-width: 0; display: grid; gap: var(--space-2); }
+.kds-leads-page .kds-kanban-card-heading { align-items: center; margin: 0; }
+.kds-leads-page .kds-kanban-card-heading .kds-op-lead-title { font: var(--type-record-field-label); white-space: normal; overflow-wrap: anywhere; }
+.kds-kanban-card-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.kds-kanban-card-contact { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); min-height: var(--record-owner-avatar-size); }
+.kds-kanban-card-contact > * { min-width: 0; overflow-wrap: anywhere; }
+.kds-leads-page .kds-kanban-card-footer { font: var(--type-record-secondary); border: 0; padding: 0; margin-top: var(--space-1); gap: var(--space-1); }
+.kds-leads-page .kds-kanban-card-footer .kds-record-date { min-width: 0; white-space: normal; }
+.kds-leads-page .kds-kanban-card-footer .kds-record-actions { flex: none; }
+.kds-leads-page .kds-kanban-add-lead { justify-content: flex-start; width: 100%; margin-top: var(--space-2); font: var(--type-record-body); }
+.kds-leads-page .kds-kanban-wip { margin: var(--space-1) 0 0; border: 0; background: transparent; font: var(--type-record-secondary); color: var(--text-muted); }
+.kds-leads-page .kds-kanban-wip summary { cursor: pointer; padding: var(--space-2); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-lead-details-drawer .kds-drawer-body { background: var(--bg-surface); padding: var(--dialog-body-padding); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-lead-details-drawer-content { padding: 0; gap: var(--space-5); }
+.kds-lead-details-drawer .kds-record-overview-fields { margin: 0; }
+.kds-record-context { font: var(--type-record-field); color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.kds-record-event-icon { display: grid; place-items: center; width: var(--record-avatar-size); height: var(--record-avatar-size); background: var(--brand-primary-soft); color: var(--brand-primary); border-radius: var(--radius-control); flex: none; }
+.kds-lead-details-drawer .kds-section-title { font: var(--type-record-field-label); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-lead-details-drawer :is(.kds-detail-interactions,.kds-lead-timeline-event) { border: 0; box-shadow: none; background: transparent; padding: 0; }
+.kds-lead-details-drawer .kds-lead-timeline-event { border-bottom: var(--border-width) solid var(--border-subtle); padding-block: var(--space-3); }
+.kds-lead-details-drawer .kds-lead-timeline-event time { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-lead-form-dialog,.kds-leads-filter-dialog,.kds-leads-bulk-dialog,.kds-lead-interaction-dialog,.kds-lead-reminder-dialog.kds-crm-dialog) { width: var(--record-dialog-width); max-width: 100%; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-lead-form-dialog,.kds-leads-filter-dialog,.kds-leads-bulk-dialog,.kds-lead-interaction-dialog,.kds-lead-reminder-dialog.kds-crm-dialog,.kds-lead-relationships-drawer) :is(.kds-dialog-body,.kds-drawer-body) { padding: var(--dialog-body-padding); background: var(--bg-surface); }
+.kds-workspace-theme :is(.kds-lead-form-dialog,.kds-leads-filter-dialog,.kds-leads-bulk-dialog,.kds-lead-interaction-dialog,.kds-lead-reminder-dialog.kds-crm-dialog,.kds-lead-relationships-drawer) :is(.kds-input,.kds-select,.kds-filter-trigger,.kds-textarea) { font: var(--type-record-field); }
+.kds-workspace-theme :is(.kds-lead-form-dialog,.kds-leads-filter-dialog,.kds-leads-bulk-dialog,.kds-lead-interaction-dialog,.kds-lead-reminder-dialog.kds-crm-dialog,.kds-lead-relationships-drawer) .kds-field-label { font: var(--type-record-field-label); color: var(--text-primary); }
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-section > legend { font: var(--type-record-field-label); }
+.kds-workspace-theme .kds-lead-form-dialog .kds-form-fields { gap: var(--space-5); }
+.kds-workspace-theme .kds-leads-filter-dialog .kds-leads-advanced-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-4); }
+.kds-leads-filter-dialog .kds-field .kds-filter-multi-trigger { display: flex; width: 100%; }
+.kds-leads-filter-dialog .kds-field .kds-filter-trigger { width: 100%; }
+.kds-workspace-theme .kds-leads-bulk-dialog .kds-leads-bulk-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-4); }
+.kds-leads-bulk-dialog .kds-leads-bulk-date { grid-column: 1 / -1; }
+@media (min-width: 768px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-leads-search-toolbar :is(.kds-input,.kds-filter-trigger,.kds-button) { min-height: var(--toolbar-control-height); height: var(--toolbar-control-height); }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-leads-search-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-leads-search-toolbar :is(.kds-toolbar-search,.kds-leads-toolbar-actions) { grid-column: 1 / -1; width: 100%; }
+  .kds-leads-search-toolbar .kds-workspace-result-count { margin: 0; justify-self: start; }
+  .kds-leads-toolbar-view { justify-self: end; }
+  .kds-record-entity-summary { padding: var(--space-4) var(--dialog-inline-padding); }
+  .kds-record-entity-title { font-size: 1.3125rem; }
+  .kds-lead-form-dialog .kds-dialog-footer-note { flex: 1 0 100%; }
+}
+@media (max-width: 390px) {
+  .kds-workspace-theme :is(.kds-leads-filter-dialog .kds-leads-advanced-fields,.kds-leads-bulk-dialog .kds-leads-bulk-controls) { grid-template-columns: minmax(0,1fr); }
+}

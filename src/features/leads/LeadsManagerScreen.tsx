@@ -1772,7 +1772,7 @@ export default function LeadsManager({
               </Popover>
             </ToolbarActions>
             <span className="kds-workspace-result-count">{filteredLeads.length} {filteredLeads.length === 1 ? 'lead' : 'leads'}</span>
-            <Tabs items={[{ id: "list", label: "Lista", icon: List }, { id: "kanban", label: "Funil", icon: LayoutGrid }]} value={viewMode} onChange={setViewMode} variant="pill" size="sm" className="kds-leads-toolbar-view" ariaLabel="Alternar visão de leads" />
+            <Tabs<LeadsViewMode> items={[{ id: "list", label: "Lista", icon: List }, { id: "kanban", label: "Funil", icon: LayoutGrid }]} value={viewMode} onChange={setViewMode} variant="pill" size="sm" className="kds-leads-toolbar-view" ariaLabel="Alternar visão de leads" />
           </Toolbar>
           {(Boolean(searchTerm.trim()) || filterStatus.length > 0 || filterResponsavel.length > 0 || advancedFilterCount > 0) && (
             <Button className="kds-leads-reset" type="button" variant="text" size="sm" onClick={resetFilters}>Limpar filtros</Button>
@@ -2077,9 +2077,10 @@ export default function LeadsManager({
         )}
         {selectedLead && !showForm && (
           <LeadDetails
+            key={selectedLead.id}
             presentation={leadDetailsPresentation}
             onScheduleReminder={openReminderScheduler}
-            onConvert={handleConvertToContract}
+            onConvert={onConvertToContract ? handleConvertToContract : undefined}
             lead={selectedLead}
             onClose={() => setSelectedLead(null)}
             onUpdate={loadLeads}

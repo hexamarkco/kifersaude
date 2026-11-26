@@ -42,8 +42,9 @@ export default function LeadKanbanBoard({
   onStatusChange,
   leads,
 }: LeadKanbanBoardProps) {
-  const { leadStatuses, leadOrigins } = useConfig();
-  const { isObserver } = useAuth();
+  const { leadStatuses, leadOrigins, getRoleModulePermission } = useConfig();
+  const { isObserver, role } = useAuth();
+  const canMoveLead = !isObserver && getRoleModulePermission(role, 'leads').can_edit;
   const [localLeads, setLocalLeads] = useState<Lead[]>(leads ?? []);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -198,7 +199,7 @@ export default function LeadKanbanBoard({
   }, [wipLimits]);
 
   const handleDrop = async (newStatusId: string) => {
-    if (!draggedLead) {
+    if (!draggedLead || !canMoveLead) {
       setDraggedLead(null);
       return;
     }
@@ -334,8 +335,8 @@ export default function LeadKanbanBoard({
                           <Surface
                             key={lead.id}
                             padding="sm"
-                            draggable={!isObserver}
-                            onDragStart={() => { if (!isObserver) setDraggedLead(lead); }}
+                            draggable={canMoveLead}
+                            onDragStart={() => { if (canMoveLead) setDraggedLead(lead); }}
                             onDragEnd={() => setDraggedLead(null)}
                             className="kds-kanban-card cursor-move transition-colors"
                           >

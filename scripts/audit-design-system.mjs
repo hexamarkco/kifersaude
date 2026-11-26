@@ -83,7 +83,7 @@ if (rootArg < 0) {
   for (const [token, floor] of Object.entries(floors)) {
     const declarations = [...theme.matchAll(new RegExp(`--${token}:\\s*([^;]+);`, 'g'))];
     if (!declarations.length || declarations.some(([, value]) => {
-      const size = value.match(/(?:^|\\s)(\\d*\\.?\\d+)rem\\s*\\//);
+      const size = value.match(/(?:^|\s)(\d*\.?\d+)rem\s*\//);
       return !size || Number(size[1]) * 16 < floor;
     })) violations.push(`Workspace typography: --${token} must be at least ${floor}px at the default root size`);
   }

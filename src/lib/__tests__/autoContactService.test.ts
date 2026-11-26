@@ -122,3 +122,23 @@ test('preserva mensagens IA e a ordem mista de uma etapa', () => {
   });
   assert.deepEqual(items[2], { ai: { instruction: 'pergunte pelo melhor horário' } });
 });
+
+
+test('janela de cada fluxo independe do horário e dias globais legados', () => {
+  const settings = normalizeAutoContactSettings({
+    scheduling: { startHour: '10:00', endHour: '11:00', allowedWeekdays: [1] },
+    flows: [
+      { id: 'all-day', name: 'Abordagem', scheduling: { startHour: '00:00', endHour: '23:59', allowedWeekdays: [1, 2, 3, 4, 5, 6, 7] }, steps: [] },
+      { id: 'restricted', name: 'Follow-up', scheduling: { startHour: '10:05', endHour: '19:00', allowedWeekdays: [1, 2, 3, 4, 5, 6], dailySendLimit: 15 }, steps: [] },
+      { id: 'legacy', name: 'Sem janela', steps: [] },
+    ],
+  });
+  const now = new Date('2026-11-26T22:52:00Z');
+  const outreach = { ...settings.scheduling, ...settings.flows[0].scheduling };
+  const restricted = { ...settings.scheduling, ...settings.flows[1].scheduling };
+  assert.equal(getNextAllowedSendAt(now, outreach).toISOString(), now.toISOString());
+  assert.ok(getNextAllowedSendAt(now, restricted).getTime() > now.getTime());
+  assert.equal(settings.flows[1].scheduling?.dailySendLimit, 15);
+  assert.equal(settings.flows[2].scheduling?.startHour, '08:00');
+  assert.equal(settings.flows[2].scheduling?.endHour, '19:00');
+});

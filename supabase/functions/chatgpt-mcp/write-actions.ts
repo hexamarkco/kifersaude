@@ -412,10 +412,6 @@ const automationSettingsView = (settings: AutomationSettings) => {
     auto_send: settings.autoSend !== false,
     scheduling: {
       timezone: text(scheduling.timezone) || 'America/Sao_Paulo',
-      start_hour: text(scheduling.startHour) || '08:00',
-      end_hour: text(scheduling.endHour) || '19:00',
-      allowed_weekdays: Array.isArray(scheduling.allowedWeekdays) ? scheduling.allowedWeekdays : [1, 2, 3, 4, 5],
-      daily_send_limit: typeof scheduling.dailySendLimit === 'number' ? scheduling.dailySendLimit : null,
     },
     monitoring: isRecord(settings.monitoring)
       ? { refresh_seconds: boundedInteger(settings.monitoring.refreshSeconds, 5, 3600), realtime_enabled: settings.monitoring.realtimeEnabled !== false }
@@ -1867,22 +1863,14 @@ async function updateAutomationSettings(supabase: SupabaseClient, params: Record
   if (!integration || !current) return errorResult('NOT_FOUND', 'Configuração de automação não encontrada.');
   const requested = isRecord(params.settings) ? params.settings : null;
   if (!requested) return errorResult('INVALID_INPUT', 'Informe o objeto settings com campos permitidos.');
-  const allowed = new Set(['enabled', 'auto_send', 'timezone', 'start_hour', 'end_hour', 'allowed_weekdays', 'daily_send_limit', 'refresh_seconds']);
+  const allowed = new Set(['enabled', 'auto_send', 'timezone', 'refresh_seconds']);
   if (Object.keys(requested).some((key) => !allowed.has(key))) return errorResult('NOT_ALLOWED', 'A ferramenta só aceita os campos operacionais explicitamente permitidos.');
   const scheduling = { ...(isRecord(current.scheduling) ? current.scheduling : {}) };
   if ('enabled' in requested && typeof requested.enabled !== 'boolean') return errorResult('INVALID_INPUT', 'enabled deve ser booleano.');
   if ('auto_send' in requested && typeof requested.auto_send !== 'boolean') return errorResult('INVALID_INPUT', 'auto_send deve ser booleano.');
   if ('timezone' in requested && !/^America\/[A-Za-z_]+$|^UTC$/.test(text(requested.timezone))) return errorResult('INVALID_INPUT', 'timezone inválido.');
-  if ('start_hour' in requested && !validHour(requested.start_hour)) return errorResult('INVALID_INPUT', 'start_hour deve estar no formato HH:MM.');
-  if ('end_hour' in requested && !validHour(requested.end_hour)) return errorResult('INVALID_INPUT', 'end_hour deve estar no formato HH:MM.');
-  if ('allowed_weekdays' in requested && !validWeekdays(requested.allowed_weekdays)) return errorResult('INVALID_INPUT', 'allowed_weekdays deve conter dias únicos de 0 a 6.');
-  if ('daily_send_limit' in requested && requested.daily_send_limit !== null && boundedInteger(requested.daily_send_limit, 1, 1000) === null) return errorResult('INVALID_INPUT', 'daily_send_limit deve ser nulo ou entre 1 e 1000.');
   if ('refresh_seconds' in requested && boundedInteger(requested.refresh_seconds, 5, 3600) === null) return errorResult('INVALID_INPUT', 'refresh_seconds deve estar entre 5 e 3600.');
   if ('timezone' in requested) scheduling.timezone = text(requested.timezone);
-  if ('start_hour' in requested) scheduling.startHour = validHour(requested.start_hour);
-  if ('end_hour' in requested) scheduling.endHour = validHour(requested.end_hour);
-  if ('allowed_weekdays' in requested) scheduling.allowedWeekdays = validWeekdays(requested.allowed_weekdays);
-  if ('daily_send_limit' in requested) scheduling.dailySendLimit = requested.daily_send_limit === null ? null : boundedInteger(requested.daily_send_limit, 1, 1000);
   const monitoring = { ...(isRecord(current.monitoring) ? current.monitoring : {}) };
   if ('refresh_seconds' in requested) monitoring.refreshSeconds = boundedInteger(requested.refresh_seconds, 5, 3600);
   const updated = {

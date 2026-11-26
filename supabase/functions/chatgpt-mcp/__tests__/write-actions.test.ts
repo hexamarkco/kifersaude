@@ -1737,3 +1737,15 @@ test('não cria lead quando telefone ou e-mail já existe', async () => {
   assert.equal(result?.error_code, 'DUPLICATE_LEAD');
   assert.equal(supabase.writes.filter((write) => write.table === 'leads' && write.operation === 'insert').length, 0);
 });
+
+
+test('recusa janelas globais de envio; horários pertencem ao fluxo', async () => {
+  for (const settings of [{ start_hour: '08:00' }, { end_hour: '19:00' }, { allowed_weekdays: [1] }, { daily_send_limit: 15 }]) {
+    const supabase = client({
+      integration_settings: { data: { id: 'integration-1', settings: { enabled: true, autoSend: true, scheduling: {} } } },
+      mcp_action_audit_log: {},
+    });
+    const result = await executeMcpWriteAction({ supabase: supabase as never, toolName: 'kifer_update_automation_settings', arguments: { settings }, actor });
+    assert.equal(result?.error_code, 'NOT_ALLOWED');
+  }
+});

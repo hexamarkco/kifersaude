@@ -137,8 +137,8 @@ export default function BlogTabScreen() {
       const confirmed = await requestConfirmation({
         title: "Publicar artigo?",
         description: `“${formData.title}” ficará disponível no blog da Kifer Saúde.`,
-          dialogClassName: "kds-crm-dialog kds-blog-publish-dialog",
-          content: <BlogPublishReview title={formData.title} category={formData.category} slug={formData.slug} />,
+        dialogClassName: "kds-crm-dialog kds-blog-publish-dialog",
+        content: <BlogPublishReview title={formData.title} category={formData.category} slug={formData.slug} />,
         confirmLabel: "Publicar artigo",
         cancelLabel: "Cancelar",
       });

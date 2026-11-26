@@ -1,8 +1,5 @@
 import type { ReactNode } from 'react';
 import { Skeleton } from './LoadingState';
-import { ResponsiveCollection } from './Application';
-import Table, { TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table';
-import { Surface } from './Surface';
 
 type PanelCardProps = {
   children: ReactNode;

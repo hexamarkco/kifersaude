@@ -1890,6 +1890,8 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 .painel-theme.kifer-ds .whatsapp-inbox-contact-actions .kds-icon-button {
   inline-size: 100%;
   min-inline-size: 0;
+  block-size: var(--touch-target);
+  min-block-size: var(--touch-target);
 }
 .whatsapp-inbox-contact-actions .kds-icon-button:disabled { pointer-events: none; }
 .whatsapp-inbox-contact-metadata { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
@@ -1996,7 +1998,7 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 .kds-workspace-theme .whatsapp-inbox-contact-metadata { gap: var(--space-1); }
 .kds-workspace-theme .whatsapp-inbox-contact-actions { grid-template-columns: repeat(3,minmax(0,1fr)); padding-block-end: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); }
 .kds-workspace-theme .whatsapp-inbox-contact-actions .kds-icon-button { border-color: var(--border-subtle); background: transparent; box-shadow: none; }
-.kds-workspace-theme .whatsapp-inbox-contact-actions .kds-icon-button:hover { background: var(--bg-hover); }
+.kds-workspace-theme .whatsapp-inbox-contact-actions .kds-icon-button:hover:not(:disabled) { border-color: var(--border-subtle); background: var(--bg-hover); }
 .kds-workspace-theme .comm-whatsapp-lead-drawer-tabs .kds-tabs-list { justify-content: flex-start; }
 .kds-workspace-theme .comm-whatsapp-lead-drawer-tabs .kds-tab { font: var(--type-record-body); }
 .painel-theme.kifer-ds .whatsapp-inbox-dialog .whatsapp-inbox-panel-header { padding: var(--space-5) var(--dialog-inline-padding); }
@@ -2040,9 +2042,6 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 /* Keep text and secondary actions legible without decorative people icons. */
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-message-copy,
 .kds-workspace-theme .comm-terracotta .whatsapp-inbox-media-caption { font: var(--inbox-message-type); }
-.painel-theme.kifer-ds .whatsapp-inbox-contact-action.kds-button { width: 100%; min-width: 0; min-height: 3.25rem; border-color: var(--border-subtle); background: transparent; box-shadow: none; padding: var(--space-2) var(--space-1); }
-.painel-theme.kifer-ds .whatsapp-inbox-contact-action.kds-button .kds-button-content { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); font: var(--inbox-meta-type); white-space: normal; overflow-wrap: anywhere; }
-.painel-theme.kifer-ds .whatsapp-inbox-contact-action.kds-button:hover:not(:disabled) { border-color: var(--border-subtle); background: var(--bg-hover); }
 .painel-theme.kifer-ds .whatsapp-inbox-forward-target { border: 0; border-block-end: var(--border-width) solid var(--border-subtle); border-radius: 0; }
 .painel-theme.kifer-ds .whatsapp-inbox-forward-target:hover { background: var(--bg-hover); }
 .painel-theme.kifer-ds .whatsapp-inbox-forward-target[aria-pressed="true"] { background: var(--brand-primary-soft); }

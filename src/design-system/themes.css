@@ -335,6 +335,16 @@
   --type-record-field: 400 .75rem / 1.5 var(--font-sans);
   --type-record-field-label: 500 .6875rem / 1.6 var(--font-sans);
   --record-drawer-width: 41.25rem;
+  --inbox-list-width: 18.125rem;
+  --inbox-list-width-wide: 20rem;
+  --inbox-contact-width: 16.5625rem;
+  --inbox-contact-width-wide: 18.125rem;
+  --inbox-list-name: 500 .75rem / 1.5 var(--font-sans);
+  --inbox-list-preview: 400 .6875rem / 1.6 var(--font-sans);
+  --inbox-message-type: 400 .75rem / 1.85 var(--font-sans);
+  --inbox-meta-type: 400 .625rem / 1.5 var(--font-sans);
+  --inbox-dialog-title: 600 1.25rem / 1.35 var(--font-display);
+  --inbox-bubble-radius: .625rem;
   --record-kanban-column-width: 15.625rem;
   --record-drawer-gutter: .875rem;
   --record-event-icon-size: 2rem;

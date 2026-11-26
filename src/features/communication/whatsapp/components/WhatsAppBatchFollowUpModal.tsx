@@ -536,7 +536,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'sent' && sentSummary && !showSending) {
     return (
-      <WhatsAppInboxDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="full"
+      <WhatsAppInboxDialog panelClassName="whatsapp-inbox-batch-followup-dialog" isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="wide"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex flex-col items-center gap-6 py-12">
@@ -629,7 +629,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'loading') {
     return (
-      <WhatsAppInboxDialog panelClassName="comm-whatsapp-overlay" isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="full" footer={null}>
+      <WhatsAppInboxDialog panelClassName="whatsapp-inbox-batch-followup-dialog" isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="wide" footer={null}>
         <LoadingState label="Buscando follow-ups pendentes" placeholder={<RecordListSkeleton rows={6} />} />
       </WhatsAppInboxDialog>
     );
@@ -639,12 +639,12 @@ export default function WhatsAppBatchFollowUpModal({
 
   return (
     <WhatsAppInboxDialog
-      panelClassName="comm-whatsapp-overlay"
+      panelClassName="whatsapp-inbox-batch-followup-dialog"
       isOpen={isOpen}
       onClose={handleClose}
       title="Follow-ups em lote"
       description={phase === 'sending' ? '' : 'Cada lead é interpretado individualmente pela IA — selecione, gere e envie de uma vez.'}
-      size="full"
+      size="wide"
       footer={
         <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Left footer: contextual actions */}

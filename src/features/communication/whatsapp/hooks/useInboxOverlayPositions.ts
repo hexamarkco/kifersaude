@@ -2,7 +2,6 @@ import { useLayoutEffect, type Dispatch, type SetStateAction } from 'react';
 
 import {
   createVirtualOverlayAnchorRect,
-  getAdvancedFiltersPosition,
   getMediaDrawerPosition,
   getPointerMenuPosition,
   getReactionPickerPosition,
@@ -61,7 +60,6 @@ type InboxOverlayPositionRefs = {
   messageActionMenuRef: ElementRef<HTMLDivElement>;
   chatMenuTriggerRefs: CurrentValue<Record<string, HTMLButtonElement | null>>;
   chatMenuRef: ElementRef<HTMLDivElement>;
-  advancedFiltersTriggerRef: ElementRef<HTMLButtonElement>;
   threadActionsMenuTriggerRef: ElementRef<HTMLButtonElement>;
   mediaDrawerTriggerRef: ElementRef<HTMLButtonElement>;
 };
@@ -72,14 +70,12 @@ type UseInboxOverlayPositionsOptions = {
   messageActionMenuPointerAnchor: InboxPointerAnchor | null;
   openChatMenuChatId: string | null;
   chatMenuPointerAnchor: InboxPointerAnchor | null;
-  advancedFiltersOpen: boolean;
   threadActionsMenuOpen: boolean;
   mediaDrawerOpen: boolean;
   refs: InboxOverlayPositionRefs;
   setReactionPickerPosition: PositionSetter;
   setMessageActionMenuPosition: PositionSetter;
   setChatMenuPosition: PositionSetter;
-  setAdvancedFiltersPosition: PositionSetter;
   setThreadActionsMenuPosition: PositionSetter;
   setMediaDrawerPosition: PositionSetter;
 };
@@ -90,14 +86,12 @@ export const useInboxOverlayPositions = ({
   messageActionMenuPointerAnchor,
   openChatMenuChatId,
   chatMenuPointerAnchor,
-  advancedFiltersOpen,
   threadActionsMenuOpen,
   mediaDrawerOpen,
   refs,
   setReactionPickerPosition,
   setMessageActionMenuPosition,
   setChatMenuPosition,
-  setAdvancedFiltersPosition,
   setThreadActionsMenuPosition,
   setMediaDrawerPosition,
 }: UseInboxOverlayPositionsOptions) => {
@@ -108,7 +102,6 @@ export const useInboxOverlayPositions = ({
     messageActionMenuRef,
     chatMenuTriggerRefs,
     chatMenuRef,
-    advancedFiltersTriggerRef,
     threadActionsMenuTriggerRef,
     mediaDrawerTriggerRef,
   } = refs;
@@ -195,26 +188,6 @@ export const useInboxOverlayPositions = ({
 
     return subscribeToViewportChanges(syncPosition, true);
   }, [chatMenuPointerAnchor, chatMenuRef, chatMenuTriggerRefs, openChatMenuChatId, setChatMenuPosition]);
-
-  useLayoutEffect(() => {
-    if (!advancedFiltersOpen || !advancedFiltersTriggerRef.current || typeof window === 'undefined') {
-      return;
-    }
-
-    const syncPosition = () => {
-      const trigger = advancedFiltersTriggerRef.current;
-      if (!trigger) {
-        return;
-      }
-      applyPosition(setAdvancedFiltersPosition, getAdvancedFiltersPosition(
-        trigger.getBoundingClientRect(),
-        { width: window.innerWidth, height: window.innerHeight },
-        trigger.parentElement?.getBoundingClientRect().right,
-      ));
-    };
-
-    return subscribeToViewportChanges(syncPosition);
-  }, [advancedFiltersOpen, advancedFiltersTriggerRef, setAdvancedFiltersPosition]);
 
   useLayoutEffect(() => {
     if (!threadActionsMenuOpen || !threadActionsMenuTriggerRef.current || typeof window === 'undefined') {

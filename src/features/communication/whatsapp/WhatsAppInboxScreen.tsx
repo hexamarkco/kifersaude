@@ -147,7 +147,6 @@ export default function WhatsAppInboxScreen() {
   const [chatRefreshError, setChatRefreshError] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<InboxOverlayPosition | null>(null);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [leadResponsavelFilters, setLeadResponsavelFilters] = useState<string[]>([]);
@@ -1066,7 +1065,6 @@ export default function WhatsAppInboxScreen() {
     messageActionMenuPointerAnchor,
     openChatMenuChatId,
     chatMenuPointerAnchor,
-    advancedFiltersOpen,
     threadActionsMenuOpen,
     mediaDrawerOpen,
     refs: {
@@ -1076,14 +1074,12 @@ export default function WhatsAppInboxScreen() {
       messageActionMenuRef,
       chatMenuTriggerRefs,
       chatMenuRef,
-      advancedFiltersTriggerRef,
       threadActionsMenuTriggerRef,
       mediaDrawerTriggerRef,
     },
     setReactionPickerPosition,
     setMessageActionMenuPosition,
     setChatMenuPosition,
-    setAdvancedFiltersPosition,
     setThreadActionsMenuPosition,
     setMediaDrawerPosition,
   });
@@ -2086,6 +2082,8 @@ export default function WhatsAppInboxScreen() {
           onRetrySearch={retrySearch}
           selectedChatId={selectedChatId}
           connectedUserName={channelState?.connected_user_name ?? null}
+          channelStatusLabel={connectionStatusLabel}
+          channelConnected={isChannelConnected}
           composerDraftsByChatId={composerDraftsByChatId}
           favoritedLeadIds={favoritedLeadIds}
           onSelectChat={handleSelectSidebarChat}
@@ -2586,8 +2584,6 @@ export default function WhatsAppInboxScreen() {
 
         <WhatsAppInboxAdvancedFiltersDialog
           isOpen={advancedFiltersOpen}
-          triggerRef={advancedFiltersTriggerRef}
-          position={advancedFiltersPosition}
           activityFilter={chatActivityFilter}
           leadStatusFilters={leadStatusFilters}
           leadResponsavelFilters={leadResponsavelFilters}

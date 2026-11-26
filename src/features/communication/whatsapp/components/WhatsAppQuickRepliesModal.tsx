@@ -129,7 +129,7 @@ export default function WhatsAppQuickRepliesModal({
       initialFocus="first-content"
       title="Mensagens rápidas"
       description="Edite atalhos existentes ou crie novos para inserir respostas no compositor do WhatsApp."
-      size="form"
+      size="wide"
       footer={(
         <div className="flex w-full gap-2 sm:w-auto sm:justify-end">
           <Button variant="secondary" className="min-w-0 flex-1 sm:flex-none" onClick={onClose} disabled={saving}>

@@ -66,6 +66,8 @@ type WhatsAppInboxSidebarProps = {
   onRetrySearch: () => void;
   selectedChatId: string | null;
   connectedUserName: string | null;
+  channelStatusLabel?: string;
+  channelConnected?: boolean;
   composerDraftsByChatId: Record<string, string>;
   favoritedLeadIds: ReadonlySet<string>;
   onSelectChat: (chat: CommWhatsAppChat) => void;
@@ -116,6 +118,8 @@ export function WhatsAppInboxSidebar({
   onRetrySearch,
   selectedChatId,
   connectedUserName,
+  channelStatusLabel,
+  channelConnected,
   composerDraftsByChatId,
   favoritedLeadIds,
   onSelectChat,
@@ -189,11 +193,11 @@ export function WhatsAppInboxSidebar({
                 aria-expanded={advancedFiltersOpen}
                 aria-haspopup="dialog"
                 aria-label={activeChatFiltersCount > 0 ? `Filtrar conversas (${activeChatFiltersCount})` : 'Filtrar conversas'}
-                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
+                variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'ghost'}
                 size="sm"
               >
                 <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />
-                Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
+                Filtrar conversas{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
               </Button>
               <Popover open={actionsOpen} onOpenChange={setActionsOpen}>
                 <PopoverTrigger><IconButton variant="ghost" size="sm" aria-label="Ações das conversas"><MoreHorizontal aria-hidden="true" /></IconButton></PopoverTrigger>
@@ -316,6 +320,7 @@ export function WhatsAppInboxSidebar({
           </>
         )} />}
       </div>
+      {channelStatusLabel && <footer className="whatsapp-inbox-channel-footer"><span className="whatsapp-inbox-channel-indicator" data-connected={channelConnected ? 'true' : 'false'} aria-hidden="true" /><span className="min-w-0 truncate" title={channelStatusLabel}>WhatsApp · {channelStatusLabel}</span><Button variant="text" size="sm" onClick={onOpenDashboard}>Ver canal</Button></footer>}
     </div>
   );
 }

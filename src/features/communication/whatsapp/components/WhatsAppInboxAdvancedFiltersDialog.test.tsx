@@ -9,7 +9,6 @@ import {
 } from './WhatsAppInboxAdvancedFiltersDialog';
 
 const sharedProps = {
-  position: { top: 40, left: 40, width: 360, maxHeight: 560 },
   activityFilter: 'all' as const,
   leadStatusFilters: [] as string[],
   leadResponsavelFilters: [] as string[],
@@ -36,7 +35,7 @@ const openOptions = (dialog: HTMLElement, label: string) => {
   return summary;
 };
 
-test('advanced filters are staged and applied together from an anchored non-modal dropdown', () => {
+test('advanced filters are staged and applied together from the shared modal', () => {
   const applied: InboxAdvancedFilterValues[] = [];
   let closeCount = 0;
   const view = render(
@@ -51,9 +50,9 @@ test('advanced filters are staged and applied together from an anchored non-moda
   try {
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
     assert.ok(dialog);
-    assert.equal(dialog.getAttribute('aria-modal'), null);
-    assert.equal(document.querySelector('.kds-dialog-backdrop'), null);
-    assert.notEqual(document.body.style.overflow, 'hidden');
+    assert.equal(dialog.getAttribute('aria-modal'), 'true');
+    assert.ok(document.querySelector('.kds-dialog-backdrop'));
+    assert.equal(document.body.style.overflow, 'hidden');
     assert.equal(dialog.querySelector('h2')?.textContent, 'Filtrar conversas');
     assert.equal(dialog.querySelectorAll('details[open]').length, 0);
 
@@ -125,7 +124,7 @@ test('closing the filters discards draft selections and reopening starts from ap
 });
 
 
-test('clicking outside dismisses the filter dropdown without applying the draft', () => {
+test('clicking the backdrop dismisses the filter modal without applying the draft', () => {
   let closed = 0;
   let applied = 0;
   const view = render(<WhatsAppInboxAdvancedFiltersDialog {...sharedProps} isOpen onClose={() => { closed += 1; }} onApply={() => { applied += 1; }} />);
@@ -134,7 +133,7 @@ test('clicking outside dismisses the filter dropdown without applying the draft'
     assert.ok(panel);
     act(() => panel.dispatchEvent(new Event('pointerdown', { bubbles: true })));
     assert.equal(closed, 0);
-    act(() => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    click(document.querySelector('.kds-dialog-backdrop'));
     assert.equal(closed, 1);
     assert.equal(applied, 0);
   } finally { view.unmount(); }

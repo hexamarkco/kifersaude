@@ -126,8 +126,8 @@ export function WhatsAppInboxDialogs({
         <DialogBody className="space-y-4">
           <DialogDescription placement="visible">{savedContactNameExists ? 'Atualize o apelido deste contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.' : 'Escolha um apelido para este contato aqui no CRM. Isso não altera o WhatsApp da pessoa nem a sua agenda de contatos do celular — é só para facilitar identificar essa conversa no Inbox.'}</DialogDescription>
           <div><FieldLabel className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">Nome do contato</FieldLabel><Input id="save-contact-name" type="text" value={saveContactName} onChange={(event) => onSaveContactNameChange(event.target.value)} placeholder="Nome do contato" autoFocus disabled={savingContact} onKeyDown={(event) => { if (event.key === 'Enter' && !savingContact) onSaveContact(); }} /></div>
-          <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onCloseSaveContact} disabled={savingContact}>Cancelar</Button><Button variant="primary" onClick={onSaveContact} loading={savingContact} disabled={savingContact}>{savedContactNameExists ? 'Renomear' : 'Salvar'}</Button></div>
         </DialogBody>
+        <DialogFooter><Button variant="secondary" onClick={onCloseSaveContact} disabled={savingContact}>Cancelar</Button><Button variant="primary" onClick={onSaveContact} loading={savingContact} disabled={savingContact}>{savedContactNameExists ? 'Renomear' : 'Salvar'}</Button></DialogFooter>
       </Dialog>
     </>
   );

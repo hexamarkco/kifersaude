@@ -567,7 +567,7 @@ export default function WhatsAppScheduleMessageModal({
           ? 'Atualize o conteúdo ou a programação do envio automático.'
           : 'Configure quando a mensagem deve ser enviada automaticamente.'}
       descriptionPlacement="visible"
-      size="lg"
+      size="wide"
       footer={(
         <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button

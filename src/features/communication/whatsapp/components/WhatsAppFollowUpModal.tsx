@@ -310,12 +310,12 @@ export default function WhatsAppFollowUpModal({
 
   return (
     <WhatsAppInboxDialog
-      panelClassName="comm-whatsapp-overlay"
+      panelClassName="whatsapp-inbox-followup-dialog"
       isOpen={isOpen}
       onClose={handleClose}
       title="Gerar follow-up"
       description="A IA interpreta a conversa inteira antes de escrever. Ajustes manuais continuam disponíveis quando precisar."
-      size="full"
+      size="wide"
       footer={(
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="text-xs leading-5 text-[var(--text-muted)]">

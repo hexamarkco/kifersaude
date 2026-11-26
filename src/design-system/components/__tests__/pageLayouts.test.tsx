@@ -390,6 +390,78 @@ test('listbox inside a modal stays below its field without covering the footer',
   view.unmount();
 });
 
+
+test('overlay keeps its preferred side when it fits and only slides on the cross axis', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height });
+  const viewport = { width: 1024, height: 768 };
+  const trigger = rect(900, 100, 100, 40);
+  const content = rect(0, 0, 240, 180);
+  const below = getOverlayPosition(trigger, content, 'bottom', 'start', 8, viewport);
+  assert.equal(below.side, 'bottom');
+  assert.equal(below.top, 148);
+  assert.equal(below.left, 776);
+
+  const tallList = rect(0, 0, 240, 600);
+  const scrollable = getOverlayPosition(rect(100, 400, 120, 40), tallList, 'bottom', 'start', 8, viewport, 80);
+  assert.equal(scrollable.side, 'bottom');
+  assert.equal(scrollable.top, 448);
+  assert.equal(scrollable.maxHeight, 312);
+
+  const nearBottom = getOverlayPosition(rect(100, 690, 120, 40), content, 'bottom', 'start', 8, viewport, 80);
+  assert.equal(nearBottom.side, 'top');
+  assert.equal(nearBottom.top + content.height + 8, 690);
+
+  const oversized = getOverlayPosition(rect(100, 320, 120, 40), rect(0, 0, 240, 900), 'bottom', 'start', 8, viewport);
+  assert.equal(oversized.side, 'bottom');
+  assert.equal(oversized.top, 368);
+  assert.equal(oversized.top + oversized.maxHeight, 760);
+});
+
+test('calendar and cramped modal listbox use the real viewport and follow the button on scroll', () => {
+  const view = render(
+    <Dialog open onOpenChange={() => {}}>
+      <DialogBody>
+        <Popover defaultOpen>
+          <PopoverTrigger><button>Data</button></PopoverTrigger>
+          <PopoverContent aria-label="Calendário de teste"><button>Hoje</button></PopoverContent>
+        </Popover>
+        <Popover defaultOpen>
+          <PopoverTrigger><button>Perfil</button></PopoverTrigger>
+          <PopoverContent aria-label="Perfis de teste" role="listbox"><button>Operador</button></PopoverContent>
+        </Popover>
+      </DialogBody>
+      <DialogFooter>Salvar</DialogFooter>
+    </Dialog>,
+  );
+  try {
+    const body = document.querySelector<HTMLElement>('.kds-dialog-body');
+    const triggers = [...document.querySelectorAll<HTMLElement>('.kds-popover-trigger')];
+    const popovers = [...document.querySelectorAll<HTMLElement>('.kds-popover')];
+    assert.ok(body && triggers.length === 2 && popovers.length === 2);
+    const rect = (left: number, top: number, width: number, height: number) =>
+      ({ left, top, width, height, right: left + width, bottom: top + height });
+    Object.defineProperty(body, 'getBoundingClientRect', { value: () => rect(20, 100, 360, 180) });
+    let top = 220;
+    triggers.forEach((trigger) => {
+      Object.defineProperty(trigger, 'getBoundingClientRect', { value: () => rect(40, top, 280, 40) });
+      Object.defineProperty(trigger.querySelector('button'), 'getBoundingClientRect', { value: () => rect(60, top, 120, 40) });
+    });
+    popovers.forEach((popover) => {
+      Object.defineProperty(popover, 'getBoundingClientRect', { value: () => rect(0, 0, 240, 150) });
+    });
+    act(() => window.dispatchEvent(new Event('resize')));
+    for (const popover of popovers) {
+      assert.equal(popover.style.left, '60px');
+      assert.equal(popover.style.top, '268px');
+      assert.equal(popover.dataset.side, 'bottom');
+    }
+    top = 180;
+    act(() => body.dispatchEvent(new Event('scroll')));
+    for (const popover of popovers) assert.equal(popover.style.top, '228px');
+  } finally { view.unmount(); }
+});
+
 test('nested popovers keep the parent open on child interaction and Escape closes one layer', () => {
   const view = render(
     <Popover defaultOpen>

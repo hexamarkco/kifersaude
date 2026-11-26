@@ -3,7 +3,7 @@ import {
   CrmCard, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   DisclosureTrigger, IconButton, KpiCard, LoadingState, RecordListSkeleton, MonthlyTrendChart, Progress, Surface, Text,
 } from '../../../design-system';
-import { Alert, Button, Field, Input, Select, Table, TableHeader, TableHead, SortableTableHead, TableBody, TableRow, TableCell, useTableSorting, useSortedTableRows } from '../../../design-system';
+import { Alert, Button, Field, Select, Table, TableHeader, TableHead, SortableTableHead, TableBody, TableRow, TableCell, useTableSorting, useSortedTableRows } from '../../../design-system';
 import { CalendarCheck, CalendarDays, FileCheck, RefreshCw, Users, UserRoundCheck } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProduction } from '../hooks/useProduction';
@@ -23,7 +23,7 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
 }) {
   const finance = appearance === 'finance';
   const { isAdmin } = useAuth();
-  const model = useProduction(finance ? 'month' : 'day');
+  const model = useProduction('month');
   const [filterDraft, setFilterDraft] = useState<{ start: string; end: string; operator: string } | null>(null);
   const { report } = model;
   const names = new Map(report?.operators.map((operator) => [operator.user_id, operator.display_name]));
@@ -44,7 +44,7 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
   const team = sortedSummary.find((row) => row.user_id === null);
   const activeParticipants = participants.filter((row) => metrics.some(([metric]) => row[metric] > 0));
   const maxActivity = Math.max(1, ...participants.flatMap((row) => [row.sales, row.reminders]));
-  const salesTrend = finance && report && model.offset === 0 ? productionSalesTrend(report, model.range) : [];
+  const salesTrend = report && model.offset === 0 ? productionSalesTrend(report, model.range) : [];
   const validDraft = Boolean(filterDraft?.start && filterDraft.end && filterDraft.start <= filterDraft.end);
   const formatDate = (date: string) => date.split('-').reverse().join('/');
   const periodLabel = model.range.start === model.range.end
@@ -57,37 +57,23 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
     { title: 'Pessoas na equipe', value: activeParticipants.length, icon: Users, description: 'Com atividade no período', tone: 'purple' },
   ];
 
+  const productionControls = (
+<div className={finance ? "kds-finance-production-controls" : "kds-dashboard-production-controls"} role="group" aria-label="Filtros da produção">
+      <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setFilterDraft({ ...model.range, operator: model.operator })}>
+        <CalendarDays className="kds-control-icon" aria-hidden="true" />
+        {periodLabel}
+      </Button>
+      <IconButton variant="secondary" size="sm" aria-label="Atualizar produção" title="Atualizar produção" onClick={() => void model.reload()} disabled={model.loading}><RefreshCw aria-hidden="true" /></IconButton>
+    </div>
+  );
   return <section aria-label="Relatório de produção da equipe" className={finance ? 'kds-finance-production' : 'kds-dashboard-overview'}>
+    {!finance && productionControls}
     {report?.started_at && <section className={finance ? 'kds-workspace-record-metrics' : 'kds-dashboard-metric-grid kds-dashboard-metric-grid-compact'} aria-label="Indicadores de produção">
       {indicators.map(({ title, value, icon: Icon, description, tone }) => (
         <KpiCard key={title} title={title} value={<span>{value ?? '—'}</span>} trend={description} data-tone={tone} icon={<Icon aria-hidden="true" />} />
       ))}
     </section>}
-    {finance ? (
-      <div className="kds-finance-production-controls" role="group" aria-label="Filtros da produção">
-        <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setFilterDraft({ ...model.range, operator: model.operator })}>
-          <CalendarDays className="kds-control-icon" aria-hidden="true" />
-          {periodLabel}
-        </Button>
-        <IconButton variant="secondary" size="sm" aria-label="Atualizar produção" title="Atualizar produção" onClick={() => void model.reload()} disabled={model.loading}>
-          <RefreshCw aria-hidden="true" />
-        </IconButton>
-      </div>
-    ) : <Surface padding="sm" className="kds-production-filters" aria-label="Filtros da produção">
-      <div className="kds-production-shortcuts" role="group" aria-label="Períodos rápidos">
-        {[1, 7, 30].map((days) => {
-          const range = productionRange(days);
-          const active = model.range.start === range.start && model.range.end === range.end;
-          return <Button size="sm" key={days} variant={active ? 'soft' : 'secondary'} aria-pressed={active} onClick={() => model.setRange(range)}>{days === 1 ? 'Hoje' : `${days} dias`}</Button>;
-        })}
-      </div>
-      <Field label="De"><Input type="date" value={model.range.start} onChange={(event) => model.setRange({ ...model.range, start: event.target.value })} /></Field>
-      <Field label="Até"><Input type="date" value={model.range.end} onChange={(event) => model.setRange({ ...model.range, end: event.target.value })} /></Field>
-      <Field label="Executor"><Select value={model.operator} onChange={(event) => model.setOperator(event.target.value)}>
-        <option value="">Toda a equipe</option>{report?.operators.map((operator) => <option key={operator.user_id} value={operator.user_id}>{operator.display_name}</option>)}
-      </Select></Field>
-      <Button variant="secondary" disabled={model.loading} onClick={() => void model.reload()}>Atualizar produção</Button>
-    </Surface>}
+    {finance && productionControls}
     {model.loading && !report && <LoadingState placeholder={<RecordListSkeleton />} label="Carregando produção…" />}
     {model.error && <Alert tone="warning">{model.error}</Alert>}
     {report && !report.started_at && <Alert
@@ -118,12 +104,12 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
         </CrmCard>
         <CrmCard title="Participação da equipe" subtitle="Proporção das vendas atribuídas a cada pessoa.">
           {team && team.sales > 0 && activeParticipants.length > 0 ? (
-            <ul className={finance ? 'kds-finance-participation' : 'kds-dashboard-bar-list'}>
+            <ul className={finance ? 'kds-finance-participation' : 'kds-dashboard-bar-list kds-dashboard-inline-bars'}>
               {activeParticipants.map((row) => (
                 <li key={row.user_id}>
-                  {finance ? <span>{row.display_name}</span> : <div><span>{row.display_name}</span><strong>{row.sales} {row.sales === 1 ? 'venda' : 'vendas'}</strong></div>}
+                  <span>{row.display_name}</span>
                   <Progress size="sm" value={row.sales} max={team.sales} />
-                  {finance && <strong>{row.sales} {row.sales === 1 ? 'venda' : 'vendas'}</strong>}
+                  <strong>{row.sales} {row.sales === 1 ? 'venda' : 'vendas'}</strong>
                 </li>
               ))}
             </ul>
@@ -177,8 +163,9 @@ export function TeamProduction({ onNavigateToLead, appearance = 'dashboard' }: {
       </details>
     </>}
     {filterDraft && (
-      <Dialog open size="md" className="kds-finance-dialog" onOpenChange={(open) => !open && setFilterDraft(null)}>
+      <Dialog open size="md" className={finance ? "kds-finance-dialog" : "kds-crm-dialog kds-dashboard-filter-dialog"} onOpenChange={(open) => !open && setFilterDraft(null)}>
         <DialogHeader onClose={() => setFilterDraft(null)}>
+          {!finance && <Text className="kds-dialog-eyebrow">Visão geral</Text>}
           <DialogTitle>Filtrar produção</DialogTitle>
           <DialogDescription placement="visible">Escolha o período e quem aparece no relatório.</DialogDescription>
         </DialogHeader>

@@ -185,3 +185,31 @@ test('divide o período personalizado em seleção e datas e não aplica interva
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
   }
 });
+
+test('advanced filters are drafted, cancel discards them and apply commits them', async () => {
+  const changes: string[] = [];
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<DashboardHeader {...props} onOriginFilterChange={(value) => changes.push(value)} />));
+    const trigger = container.querySelector<HTMLButtonElement>('button[aria-label="Filtros avançados"]');
+    assert.ok(trigger);
+    const find = (label: string) => [...document.querySelectorAll<HTMLButtonElement>('#dashboard-advanced-filters button')].find(button => button.textContent?.trim() === label);
+    await act(async () => trigger.click());
+    const clear = find('Limpar filtros'); assert.ok(clear);
+    await act(async () => clear.click());
+    assert.deepEqual(changes, []);
+    const cancel = find('Cancelar'); assert.ok(cancel);
+    await act(async () => cancel.click());
+    assert.deepEqual(changes, []);
+    await act(async () => trigger.click());
+    assert.ok(document.querySelector('#dashboard-advanced-filters')?.textContent?.includes('Indicação'));
+    const clearAgain = find('Limpar filtros'); assert.ok(clearAgain);
+    await act(async () => clearAgain.click());
+    const apply = find('Aplicar filtros'); assert.ok(apply);
+    await act(async () => apply.click());
+    assert.deepEqual(changes, ['']);
+    assert.equal(document.querySelector('#dashboard-advanced-filters'), null);
+  } finally { act(() => root.unmount()); container.remove(); }
+});

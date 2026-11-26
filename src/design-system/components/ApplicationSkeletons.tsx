@@ -137,125 +137,17 @@ export function PanelBootSkeleton() {
 
 export function DashboardPageSkeleton() {
   return (
-    <div className="panel-dashboard-immersive space-y-6">
-      <div className="kds-card kds-card-default p-4 sm:p-6">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-52" />
-              <Skeleton variant="line" className="h-4 w-80" />
-            </div>
-            <div className="flex w-full flex-wrap gap-2 lg:w-auto">
-              <Skeleton variant="line" className="h-9 w-28" />
-              <Skeleton variant="line" className="h-9 w-28" />
-              <Skeleton variant="line" className="h-9 w-28" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-            <div className="space-y-3 xl:col-span-8">
-              <div className="flex flex-wrap gap-2">
-                <Skeleton className="h-10 w-44 rounded-lg" />
-                <Skeleton className="h-10 w-32 rounded-lg" />
-                <Skeleton className="h-10 w-32 rounded-lg" />
-                <Skeleton className="h-10 w-36 rounded-lg" />
-                <Skeleton className="h-10 w-36 rounded-lg" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Skeleton className="h-10 w-56 rounded-lg" />
-                <Skeleton className="h-10 w-56 rounded-lg" />
-              </div>
-            </div>
-
-            <div className="space-y-2 xl:col-span-4">
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-            </div>
-          </div>
-        </div>
+    <div className="panel-dashboard-immersive kds-dashboard-workspace" aria-hidden="true">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0 space-y-2"><Skeleton variant="line" className="h-3 w-40" /><Skeleton className="h-8 w-56 max-w-full" /><Skeleton variant="line" className="h-4 w-72 max-w-full" /></div>
+        <Skeleton className="h-9 w-36" />
       </div>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <PanelCard key={`dashboard-primary-${index}`} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton variant="line" className="h-4 w-28" />
-              <Skeleton variant="avatar" className="h-10 w-10" />
-            </div>
-            <Skeleton className="h-11 w-3/4" />
-            <Skeleton variant="line" className="h-4 w-1/2" />
-          </PanelCard>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <PanelCard key={`dashboard-secondary-${index}`} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton variant="line" className="h-4 w-32" />
-              <Skeleton variant="avatar" className="h-9 w-9" />
-            </div>
-            <Skeleton className="h-10 w-2/3" />
-            <Skeleton variant="line" className="h-4 w-1/2" />
-          </PanelCard>
-        ))}
-      </div>
-
-      <PanelCard className="space-y-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton variant="line" className="h-4 w-96" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-9 w-36 rounded-md" />
-            <Skeleton className="h-9 w-24 rounded-md" />
-            <Skeleton className="h-9 w-24 rounded-md" />
-            <Skeleton className="h-9 w-28 rounded-md" />
-          </div>
-        </div>
-
-        <div className="mt-2 grid gap-6 lg:grid-cols-5">
-          <div className="space-y-4 lg:col-span-2">
-            <Skeleton className="h-28 w-full rounded-xl" />
-            <Skeleton className="h-28 w-full rounded-xl" />
-          </div>
-          <Skeleton className="h-[320px] w-full rounded-xl lg:col-span-3" />
-        </div>
-      </PanelCard>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PanelCard className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-44" />
-            <Skeleton variant="line" className="h-4 w-20" />
-          </div>
-          <Skeleton className="h-[240px] w-full rounded-xl" />
-        </PanelCard>
-        <PanelCard className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton variant="line" className="h-4 w-24" />
-          </div>
-          <Skeleton className="h-[240px] w-full rounded-xl" />
-        </PanelCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PanelCard className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-56" />
-            <Skeleton className="h-8 w-24 rounded-md" />
-          </div>
-          <Skeleton className="h-[280px] w-full rounded-xl" />
-        </PanelCard>
-        <PanelCard className="space-y-3">
-          <Skeleton className="h-6 w-56" />
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={`dashboard-list-${index}`} className="h-16 w-full rounded-xl" />
-          ))}
-        </PanelCard>
-      </div>
+      <div className="flex gap-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} variant="line" className="h-8 w-16" />)}</div>
+      <PanelCard className="flex items-center gap-3"><Skeleton className="h-8 w-8" /><Skeleton variant="line" className="h-4 w-64 max-w-full" /></PanelCard>
+      <div className="kds-dashboard-metric-grid">{Array.from({ length: 4 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}</div>
+      <div className="kds-dashboard-columns">{Array.from({ length: 2 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-5 w-40 max-w-full" /><Skeleton className="kds-dashboard-chart-skeleton w-full" /></PanelCard>)}</div>
+      <div className="kds-dashboard-columns">{Array.from({ length: 2 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-5 w-40 max-w-full" />{Array.from({ length: 4 }, (_, j) => <Skeleton key={j} className="h-12 w-full" />)}</PanelCard>)}</div>
+      <PanelCard className="space-y-3"><Skeleton variant="line" className="h-5 w-56 max-w-full" />{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
     </div>
   );
 }

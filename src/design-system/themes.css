@@ -351,6 +351,14 @@
   --record-dialog-width: 38.75rem;
   --record-dialog-wide: 60rem;
   --record-table-row-height: 4.0625rem;
+  --dashboard-card-padding: 1.375rem;
+  --dashboard-card-radius: .75rem;
+  --dashboard-metric-height: 9.875rem;
+  --dashboard-chart-height: 11.875rem;
+  --type-dashboard-card-title: 600 .9375rem / 1.5 var(--font-display);
+  --type-dashboard-card-subtitle: 400 .6875rem / 1.65 var(--font-sans);
+  --type-dashboard-metric-label: 400 .6875rem / 1.5 var(--font-sans);
+  --type-dashboard-metric-caption: 400 .5625rem / 1.6 var(--font-sans);
   --record-table-head-height: 2.6875rem;
   --record-metric-icon-size: 1.875rem;
   --control-font-md: .875rem;

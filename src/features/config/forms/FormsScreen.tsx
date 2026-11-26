@@ -271,7 +271,7 @@ export default function FormsScreen({
   };
 
   if (loading) {
-    return <LoadingState label="Carregando formulários..." placeholder={<RecordListSkeleton rows={6} />} />;
+    return <LoadingState label="Carregando formulários..." placeholder={<div className="kds-settings-content"><div className="kds-settings-metrics">{Array.from({ length: 3 }, (_, index) => <Card key={index} padding="md"><RecordListSkeleton rows={1} /></Card>)}</div><RecordListSkeleton rows={6} /></div>} />;
   }
 
   const pageHeader = showPageHeader ? (

@@ -2760,3 +2760,6 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media (pointer:coarse) {
  .painel-theme.kifer-ds .kds-settings-area :is(.kds-settings-users-toolbar,.kds-settings-catalog-toolbar,.kds-system-settings-nav,.kds-settings-form-editor) :is(.kds-button,.kds-icon-button,.kds-input,.kds-filter-trigger,.kds-action-surface) { min-height:var(--touch-target); }
 }
+
+.kds-settings-public-link-list { display:grid; width:100%; gap:var(--space-2); }
+.kds-settings-public-link-list > li { padding:var(--space-3); border:var(--border-width) solid var(--border-subtle); border-radius:var(--radius-control); font:var(--type-record-body); background:var(--bg-surface); overflow-wrap:anywhere; }

@@ -312,7 +312,7 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
   const hasUsersSnapshot = users.length > 0;
   const emptyUsersMessage = usersLoadError
     ? "A lista de usuários não pôde ser carregada."
-    : searchTerm.trim()
+    : searchTerm.trim() || profileFilter !== "all"
       ? "Nenhum usuário encontrado para esta busca."
       : "Nenhum usuário cadastrado";
   const currentUserManagementId = user?.id ?? null;

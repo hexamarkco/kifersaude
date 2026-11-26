@@ -81,7 +81,6 @@ test('libera o salvamento do perfil quando a chamada de rede rejeita', async () 
   const profileDisclosure = profileDetails?.querySelector('summary');
   assert.ok(profileDetails);
   assert.ok(profileDisclosure);
-  await act(async () => profileDisclosure.click());
   assert.equal(profileDetails.open, true);
   const saveButton = await waitForButtonText('Salvar perfil');
 
@@ -166,6 +165,8 @@ test('apresenta links na coleção do design system e filtra nome ou endereço l
 
   assert.equal(view.container.querySelectorAll('.kds-responsive-collection .kds-table-body > tr').length, 1);
   assert.ok(view.container.textContent?.includes('Site Kifer Saúde'));
-  assert.ok(!view.container.textContent?.includes('Canal WhatsApp'));
+  assert.ok(!view.container.querySelector('.kds-responsive-collection')?.textContent?.includes('Canal WhatsApp'));
+  assert.ok(view.container.querySelector('[aria-label="Links ativos na prévia"]')?.textContent?.includes('Canal WhatsApp'));
+  assert.ok(!view.container.querySelector('[aria-label="Links ativos na prévia"]')?.textContent?.includes('Site Kifer Saúde'));
   view.unmount();
 });

@@ -886,6 +886,7 @@ export default function LinksScreen({
             {profileForm.subtitle && <Text tone="muted">{profileForm.subtitle}</Text>}
             {profileForm.bio && <Text className="kds-settings-public-bio">{profileForm.bio}</Text>}
             <Text size="sm" tone="muted">{profileForm.is_published ? 'Publicação habilitada no rascunho' : 'Página despublicada no rascunho'}</Text>
+            <ul className="kds-settings-public-link-list" aria-label="Links ativos na prévia">{links.filter(link => link.is_active).map(link => <li key={link.id}>{link.title}</li>)}</ul>
             <Button variant="secondary" size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}><ExternalLink className="kds-control-icon" aria-hidden="true" />Abrir página pública</Button>
           </div>
         </Card>

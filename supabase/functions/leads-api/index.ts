@@ -1704,17 +1704,9 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
     timezone: typeof (rawScheduling as any).timezone === 'string'
       ? (rawScheduling as any).timezone
       : DEFAULT_SCHEDULING.timezone,
-    startHour: typeof (rawScheduling as any).startHour === 'string'
-      ? (rawScheduling as any).startHour
-      : DEFAULT_SCHEDULING.startHour,
-    endHour: typeof (rawScheduling as any).endHour === 'string'
-      ? (rawScheduling as any).endHour
-      : DEFAULT_SCHEDULING.endHour,
-    allowedWeekdays: Array.isArray((rawScheduling as any).allowedWeekdays)
-      ? (rawScheduling as any).allowedWeekdays
-          .map((value: unknown) => Number(value))
-          .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
-      : DEFAULT_SCHEDULING.allowedWeekdays,
+    startHour: DEFAULT_SCHEDULING.startHour,
+    endHour: DEFAULT_SCHEDULING.endHour,
+    allowedWeekdays: DEFAULT_SCHEDULING.allowedWeekdays,
     skipHolidays: (rawScheduling as any).skipHolidays !== false,
     dailySendLimit,
   };
@@ -1882,14 +1874,14 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
       const rawFlowDailySendLimit = Number((rawFlowScheduling as any).dailySendLimit);
       const flowScheduling: AutoContactFlowScheduling = {
         startHour:
-          typeof rawFlowScheduling.startHour === 'string' ? rawFlowScheduling.startHour : scheduling.startHour,
+          typeof rawFlowScheduling.startHour === 'string' ? rawFlowScheduling.startHour : DEFAULT_SCHEDULING.startHour,
         endHour:
-          typeof rawFlowScheduling.endHour === 'string' ? rawFlowScheduling.endHour : scheduling.endHour,
+          typeof rawFlowScheduling.endHour === 'string' ? rawFlowScheduling.endHour : DEFAULT_SCHEDULING.endHour,
         allowedWeekdays: Array.isArray(rawFlowScheduling.allowedWeekdays)
           ? rawFlowScheduling.allowedWeekdays
               .map((value: unknown) => Number(value))
               .filter((value: number) => Number.isFinite(value) && value >= 1 && value <= 7)
-          : scheduling.allowedWeekdays,
+          : DEFAULT_SCHEDULING.allowedWeekdays,
         dailySendLimit:
           Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
             ? Math.floor(rawFlowDailySendLimit)
@@ -2450,10 +2442,10 @@ async function scheduleFlowJobs({
   const now = new Date();
   const effectiveScheduling: AutoContactSchedulingSettings = {
     ...scheduling,
-    startHour: flow.scheduling?.startHour ?? scheduling.startHour,
-    endHour: flow.scheduling?.endHour ?? scheduling.endHour,
+    startHour: flow.scheduling?.startHour ?? DEFAULT_SCHEDULING.startHour,
+    endHour: flow.scheduling?.endHour ?? DEFAULT_SCHEDULING.endHour,
     allowedWeekdays:
-      flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
+      flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : DEFAULT_SCHEDULING.allowedWeekdays,
     dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
   };
 
@@ -2669,10 +2661,10 @@ async function scheduleNextFlowStep({
 
   const effectiveScheduling: AutoContactSchedulingSettings = {
     ...scheduling,
-    startHour: flow.scheduling?.startHour ?? scheduling.startHour,
-    endHour: flow.scheduling?.endHour ?? scheduling.endHour,
+    startHour: flow.scheduling?.startHour ?? DEFAULT_SCHEDULING.startHour,
+    endHour: flow.scheduling?.endHour ?? DEFAULT_SCHEDULING.endHour,
     allowedWeekdays:
-      flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
+      flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : DEFAULT_SCHEDULING.allowedWeekdays,
     dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
   };
 
@@ -2805,11 +2797,11 @@ async function getDynamicInactivityReactivationIntervalSeconds(
     if (!INACTIVITY_REACTIVATION_FLOW_IDS.has(flow.id) || flow.ativo === false) continue;
     const scheduling: AutoContactSchedulingSettings = {
       ...settings.scheduling,
-      startHour: flow.scheduling?.startHour ?? settings.scheduling.startHour,
-      endHour: flow.scheduling?.endHour ?? settings.scheduling.endHour,
+      startHour: flow.scheduling?.startHour ?? DEFAULT_SCHEDULING.startHour,
+      endHour: flow.scheduling?.endHour ?? DEFAULT_SCHEDULING.endHour,
       allowedWeekdays: flow.scheduling?.allowedWeekdays?.length
         ? flow.scheduling.allowedWeekdays
-        : settings.scheduling.allowedWeekdays,
+        : DEFAULT_SCHEDULING.allowedWeekdays,
       dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
     };
     const dailyLimit = Number(scheduling.dailySendLimit);
@@ -3003,10 +2995,10 @@ async function processFlowJobs({
 
     const effectiveScheduling: AutoContactSchedulingSettings = {
       ...settings.scheduling,
-      startHour: flow.scheduling?.startHour ?? settings.scheduling.startHour,
-      endHour: flow.scheduling?.endHour ?? settings.scheduling.endHour,
+      startHour: flow.scheduling?.startHour ?? DEFAULT_SCHEDULING.startHour,
+      endHour: flow.scheduling?.endHour ?? DEFAULT_SCHEDULING.endHour,
       allowedWeekdays:
-        flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
+        flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : DEFAULT_SCHEDULING.allowedWeekdays,
       dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
     };
     const rawFlowDailySendLimit = Number(effectiveScheduling.dailySendLimit);

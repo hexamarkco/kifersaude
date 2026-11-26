@@ -97,7 +97,7 @@ type WhatsAppLeadDrawerProps = {
   canViewAgenda: boolean;
   canEditAgenda: boolean;
   onSaveContact: (name: string) => void;
-  conversationActions: readonly (RecordAction & { title?: string })[];
+  conversationActions: readonly (RecordAction & { title?: string; pressed?: boolean })[];
 };
 
 const DAY_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
@@ -553,9 +553,9 @@ export default function WhatsAppLeadDrawer({
         <DrawerBody className={'comm-whatsapp-lead-drawer-body min-h-0 flex-1 overflow-y-auto'}>
           {conversationActions.length > 0 && (
             <div key={chatId} className="whatsapp-inbox-contact-actions" role="group" aria-label="Ações da conversa">
-              {conversationActions.map(({ label, icon: Icon, onClick, disabled, loading, title }) => (
+              {conversationActions.map(({ label, icon: Icon, onClick, disabled, loading, title, pressed }) => (
                 <Tooltip key={label} content={title ? `${label} · ${title}` : label} size="sm">
-                  <IconButton variant="secondary" size="md" onClick={onClick} disabled={disabled} loading={loading} aria-label={label} aria-description={title}>
+                  <IconButton variant="secondary" size="md" onClick={onClick} disabled={disabled} loading={loading} aria-label={label} aria-description={title} aria-pressed={pressed}>
                     <Icon className="kds-control-icon" aria-hidden="true" />
                   </IconButton>
                 </Tooltip>

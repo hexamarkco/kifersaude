@@ -1,19 +1,19 @@
 import { useId, useRef, useState } from 'react';
 import { Link2, Plus, Star, Unlink, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Alert, Badge, Button, ConfirmDialog, Field, Select, Heading, IconButton, Input, LoadingState, RecordListSkeleton, SearchInput, Surface, Text } from '../../../design-system';
+import { Alert, Badge, Button, ConfirmDialog, Field, Select, Heading, IconButton, Input, LoadingState, RecordListSkeleton, SearchInput, Surface, Text, Drawer, DrawerHeader, DrawerBody, DrawerFooter, DialogTitle } from '../../../design-system';
 import { isOpportunityStatus, opportunityStatusLabels, type LeadOpportunity, type RelatedLead } from '../domain/leadOpportunities';
 import { useLeadOpportunities, useRelatedLeadSearch } from '../hooks/useLeadOpportunities';
 
 type LeadIdentity = { id: string; nome_completo: string };
 type Editor = { opportunity: LeadOpportunity | null; requestId: string };
 
-export function LeadRelationshipsPanel({ lead }: { lead: LeadIdentity }) {
+export function LeadRelationshipsPanel({ lead, editorPresentation = 'inline' }: { lead: LeadIdentity; editorPresentation?: 'inline' | 'drawer' }) {
   const { role } = useAuth();
-  return role === 'admin' ? <RelationshipsPanel key={lead.id} lead={lead} /> : null;
+  return role === 'admin' ? <RelationshipsPanel key={lead.id} lead={lead} editorPresentation={editorPresentation} /> : null;
 }
 
-function RelationshipsPanel({ lead }: { lead: LeadIdentity }) {
+function RelationshipsPanel({ lead, editorPresentation }: { lead: LeadIdentity; editorPresentation: 'inline' | 'drawer' }) {
   const { snapshot, loading, error, saving, reload, mutate } = useLeadOpportunities(lead.id);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [removal, setRemoval] = useState<{ opportunity: LeadOpportunity; memberId: string; memberName: string } | null>(null);
@@ -64,7 +64,7 @@ function RelationshipsPanel({ lead }: { lead: LeadIdentity }) {
         </Surface>)}
       </>} />
       {editorUnavailable && !loading ? <Alert tone="warning">Esta negociação deixou de aparecer nos vínculos deste contato. Cancele a inclusão e confira os vínculos atualizados.</Alert> : null}
-      {editor ? <RelationshipEditor key={editor.requestId} lead={lead} editor={{ ...editor, opportunity: currentEditorOpportunity ?? editor.opportunity }} disabled={disabled || editorUnavailable} saving={saving} onCancel={() => setEditor(null)} onSave={async (input) => {
+      {editor ? <RelationshipEditor key={editor.requestId} presentation={editorPresentation} lead={lead} editor={{ ...editor, opportunity: currentEditorOpportunity ?? editor.opportunity }} disabled={disabled || editorUnavailable} saving={saving} onCancel={() => setEditor(null)} onSave={async (input) => {
         const saved = await mutate(input);
         if (saved) setEditor(null);
       }} /> : null}
@@ -77,8 +77,8 @@ function RelationshipsPanel({ lead }: { lead: LeadIdentity }) {
   );
 }
 
-function RelationshipEditor({ lead, editor, disabled, saving, onCancel, onSave }: {
-  lead: LeadIdentity; editor: Editor; disabled: boolean; saving: boolean; onCancel: () => void;
+function RelationshipEditor({ lead, editor, disabled, saving, onCancel, onSave, presentation }: {
+  lead: LeadIdentity; editor: Editor; disabled: boolean; saving: boolean; onCancel: () => void; presentation: 'inline' | 'drawer';
   onSave: (input: Parameters<ReturnType<typeof useLeadOpportunities>['mutate']>[0]) => Promise<void>;
 }) {
   const fieldId = useId();
@@ -106,7 +106,7 @@ function RelationshipEditor({ lead, editor, disabled, saving, onCancel, onSave }
     await onSave({ ...draft, clientRequestId: draftRequest.current.id });
   };
 
-  return <Surface variant="muted" padding="sm" className="space-y-3" aria-label="Vincular pessoas à negociação">
+  const fields = <>
     <Heading level={4} className="text-sm">{editor.opportunity ? `Adicionar pessoa a ${editor.opportunity.name}` : 'Nova negociação em conjunto'}</Heading>
     {!editor.opportunity ? <Field label="Nome da negociação" htmlFor={`${fieldId}-name`}><Input id={`${fieldId}-name`} value={name} maxLength={160} disabled={disabled} onChange={(event) => setName(event.target.value)} /></Field> : null}
     <Field label="Buscar contato por nome ou telefone" htmlFor={`${fieldId}-search`}><SearchInput id={`${fieldId}-search`} placeholder="Digite ao menos 2 caracteres" value={query} disabled={disabled || selected.length >= maxSelection} onChange={(event) => setQuery(event.target.value)} /></Field>
@@ -120,6 +120,12 @@ function RelationshipEditor({ lead, editor, disabled, saving, onCancel, onSave }
       {selected.map((item) => <div key={item.id} className="flex items-center justify-between gap-2"><Text className="text-sm">{item.name}</Text><IconButton variant="ghost" size="sm" disabled={disabled} aria-label={`Desmarcar ${item.name}`} onClick={() => { setSelected((current) => current.filter((person) => person.id !== item.id)); if (primary === item.id) setPrimary(lead.id); }}><X className="kds-control-icon" /></IconButton></div>)}
     </div>
     {!editor.opportunity && selected.length > 0 ? <Field label="Contato principal desta negociação" htmlFor={`${fieldId}-primary`}><Select id={`${fieldId}-primary`} value={primary} disabled={disabled} onChange={(event) => setPrimary(event.target.value)} options={[{ value: lead.id, label: lead.nome_completo }, ...selected.map((item) => ({ value: item.id, label: item.name }))]} /></Field> : null}
-    <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" size="sm" disabled={saving} onClick={onCancel}>Cancelar</Button><Button variant="primary" size="sm" loading={saving} disabled={disabled || selected.length === 0 || (!editor.opportunity && !name.trim())} onClick={() => void submit()}>{editor.opportunity ? 'Adicionar pessoa' : 'Salvar vínculo'}</Button></div>
-  </Surface>;
+  </>;
+  const actions = <><Button variant="secondary" size="sm" disabled={saving} onClick={onCancel}>Cancelar</Button><Button variant="primary" size="sm" loading={saving} disabled={disabled || selected.length === 0 || (!editor.opportunity && !name.trim())} onClick={() => void submit()}>{editor.opportunity ? 'Adicionar pessoa' : 'Salvar vínculo'}</Button></>;
+  if (presentation === 'drawer') return <Drawer open side="right" size="lg" className="kds-crm-dialog kds-lead-relationships-drawer" aria-label="Vincular pessoas à negociação" onOpenChange={(open) => { if (!open && !saving) onCancel(); }}>
+    <DrawerHeader onClose={saving ? undefined : onCancel}><div className="kds-dialog-eyebrow">Leads</div><DialogTitle>Vincular pessoas à negociação</DialogTitle></DrawerHeader>
+    <DrawerBody className="space-y-4"><Alert tone="info">Pessoas da mesma contratação mantêm seus cadastros, conversas e históricos.</Alert>{fields}</DrawerBody>
+    <DrawerFooter>{actions}</DrawerFooter>
+  </Drawer>;
+  return <Surface variant="muted" padding="sm" className="space-y-3" aria-label="Vincular pessoas à negociação">{fields}<div className="flex flex-wrap justify-end gap-2">{actions}</div></Surface>;
 }

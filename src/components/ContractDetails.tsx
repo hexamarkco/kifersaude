@@ -51,7 +51,6 @@ import {
   DialogTitle,
   Drawer,
   DrawerBody,
-  Avatar,
   Tabs,
   DialogFooter,
   DrawerHeader,
@@ -2032,18 +2031,17 @@ export default function ContractDetails({
           <DialogTitle>Detalhes do contrato</DialogTitle>
         </DrawerHeader>
         <div className="kds-contract-entity-summary">
-          <div className="flex items-center justify-between">
-            <Avatar name={displayName} size="lg" tone="brand" className="kds-contract-entity-avatar" />
+          <div className="flex items-center justify-between gap-2">
+            <Heading level={3} className="kds-contract-entity-title">{displayName}</Heading>
             {canEditContracts && <RecordActions actions={[
               { label: 'Editar contrato', icon: Edit, onClick: handleEditContract },
               ...(onDelete ? [{ label: 'Excluir contrato', icon: Trash2, onClick: () => onDelete(contract), destructive: true }] : []),
             ]} visibleCount={0} label="Ações do contrato" />}
           </div>
           <div className="flex items-center justify-between gap-2">
-            <Heading level={3} className="kds-contract-entity-title">{displayName}</Heading>
+            <Text className="kds-contract-entity-code">{contract.codigo_contrato}</Text>
             <Badge tone={detailStatusTone} size="sm">{normalizeSentenceCase(contract.status) ?? contract.status}</Badge>
           </div>
-          <Text className="kds-contract-entity-code">{contract.codigo_contrato}</Text>
           <div className="kds-contract-entity-actions">
             {whatsappDigits && <Button variant="secondary" size="sm" onClick={() => window.open(`https://wa.me/${whatsappDigits}`, '_blank', 'noopener,noreferrer')}><MessageCircle className="kds-control-icon" aria-hidden="true" />Conversar</Button>}
             {canEditContracts && <Button variant="secondary" size="sm" onClick={() => { setDetailTab('history'); setEditingInteraction(null); setInteractionData(initialInteractionData); setShowInteractionForm(true); }}><Plus className="kds-control-icon" aria-hidden="true" />Interação</Button>}

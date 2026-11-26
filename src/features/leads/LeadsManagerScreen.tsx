@@ -28,6 +28,11 @@ import {
 import {
   Search,
   Filter,
+  SlidersHorizontal,
+  Globe,
+  MousePointerClick,
+  List,
+  LayoutGrid,
   MessageCircle,
   FileText,
   Calendar,
@@ -60,6 +65,8 @@ import { useConfig } from "../../contexts/ConfigContext";
 import {
   Alert,
   Badge,
+  Field,
+  Tabs,
   Button,
   Checkbox,
   DateTimePicker,
@@ -154,6 +161,8 @@ export default function LeadsManager({
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [advancedFilterDraft, setAdvancedFilterDraft] = useState({
+    statuses: [] as string[],
+    owners: [] as string[],
     origins: [] as string[],
     contractTypes: [] as string[],
     sortField: "created_at" as SortField,
@@ -174,6 +183,7 @@ export default function LeadsManager({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadDetailsPresentation, setLeadDetailsPresentation] = useState<'drawer' | 'page'>('drawer');
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [newLeadStatus, setNewLeadStatus] = useState<string | undefined>();
   const [reminderLead, setReminderLead] = useState<Lead | null>(null);
   const [reminderPromptMessage, setReminderPromptMessage] = useState<
     string | undefined
@@ -347,6 +357,8 @@ export default function LeadsManager({
 
   const openAdvancedFilters = () => {
     setAdvancedFilterDraft({
+      statuses: [...filterStatus],
+      owners: [...filterResponsavel],
       origins: [...filterOrigem],
       contractTypes: [...filterTipoContratacao],
       sortField,
@@ -365,6 +377,8 @@ export default function LeadsManager({
 
   const applyAdvancedFilters = () => {
     startTransition(() => {
+      setFilterStatus(advancedFilterDraft.statuses);
+      setFilterResponsavel(advancedFilterDraft.owners);
       setFilterOrigem(advancedFilterDraft.origins);
       setFilterTipoContratacao(advancedFilterDraft.contractTypes);
       setSortField(advancedFilterDraft.sortField);
@@ -1414,6 +1428,7 @@ export default function LeadsManager({
   };
 
   const handleCreateLead = useCallback(() => {
+    setNewLeadStatus(undefined);
     setEditingLead(null);
     setShowForm(true);
   }, []);
@@ -1532,6 +1547,9 @@ export default function LeadsManager({
 
   const advancedFilterFields = (
     <div className="kds-leads-advanced-fields">
+      <Field label="Responsável"><FilterMultiSelect presentation="popover" options={responsavelFilterOptions} placeholder="Toda a equipe" dialogTitle="Filtrar leads por responsável" values={advancedFilterDraft.owners} onChange={(owners) => setAdvancedFilterDraft((current) => ({ ...current, owners }))} /></Field>
+      <Field label="Etapa do lead"><FilterMultiSelect presentation="popover" options={statusFilterOptions} placeholder="Todas as etapas" dialogTitle="Filtrar leads por status" values={advancedFilterDraft.statuses} onChange={(statuses) => setAdvancedFilterDraft((current) => ({ ...current, statuses }))} /></Field>
+      <Field label="Origem">
       <FilterMultiSelect presentation="popover"
         icon={MapPin}
         options={origemFilterOptions}
@@ -1540,6 +1558,8 @@ export default function LeadsManager({
         values={advancedFilterDraft.origins}
         onChange={(origins) => setAdvancedFilterDraft((current) => ({ ...current, origins }))}
       />
+      </Field>
+      <Field label="Tipo de contratação">
       <FilterMultiSelect presentation="popover"
         icon={Layers}
         options={tipoContratacaoFilterOptions}
@@ -1548,6 +1568,8 @@ export default function LeadsManager({
         values={advancedFilterDraft.contractTypes}
         onChange={(contractTypes) => setAdvancedFilterDraft((current) => ({ ...current, contractTypes }))}
       />
+      </Field>
+      <Field label="Tags">
       <FilterMultiSelect presentation="popover"
         icon={Tag}
         options={tagFilterOptions}
@@ -1556,6 +1578,8 @@ export default function LeadsManager({
         values={advancedFilterDraft.tags}
         onChange={(tags) => setAdvancedFilterDraft((current) => ({ ...current, tags }))}
       />
+      </Field>
+      <Field label="Canal">
       <FilterMultiSelect presentation="popover"
         icon={Share2}
         options={canalFilterOptions}
@@ -1564,6 +1588,7 @@ export default function LeadsManager({
         values={advancedFilterDraft.channels}
         onChange={(channels) => setAdvancedFilterDraft((current) => ({ ...current, channels }))}
       />
+      </Field>
       <DateRangeFilter
         icon={Calendar}
         label="Criação"
@@ -1633,10 +1658,10 @@ export default function LeadsManager({
       className="kds-leads-filter-dialog kds-crm-dialog"
     >
       <DialogHeader onClose={() => setAdvancedFiltersOpen(false)}>
+        <div className="kds-dialog-eyebrow">Leads</div>
         <DialogTitle>Filtros avançados</DialogTitle>
-        <DialogDescription placement="visible">Refine a carteira por origem, perfil, tags, canais e datas.</DialogDescription>
       </DialogHeader>
-      <DialogBody className="kds-leads-filter-fields">{advancedFilterFields}</DialogBody>
+      <DialogBody className="kds-leads-filter-fields">{advancedFilterFields}<Button variant="text" size="sm" onClick={() => setAdvancedFilterDraft((current) => ({ ...current, statuses: [], owners: [], origins: [], contractTypes: [], tags: [], channels: [], createdFrom: "", createdTo: "", lastContactFrom: "", lastContactTo: "", nextFollowUpFrom: "", nextFollowUpTo: "" }))}>Limpar filtros</Button></DialogBody>
       <DialogFooter className="kds-leads-filter-footer">
         <Button type="button" variant="secondary" className="kds-leads-filter-action" onClick={() => setAdvancedFiltersOpen(false)}>Cancelar</Button>
         <Button type="button" variant="primary" className="kds-leads-filter-action" onClick={applyAdvancedFilters}>Aplicar filtros</Button>
@@ -1729,7 +1754,7 @@ export default function LeadsManager({
                 </Button>
               )}
               <Button variant="secondary" aria-haspopup="dialog" aria-expanded={advancedFiltersOpen} aria-controls="leads-advanced-filters" onClick={openAdvancedFilters}>
-                <Filter aria-hidden="true" />Filtros
+                <SlidersHorizontal className="kds-control-icon" aria-hidden="true" />Filtros
                 {advancedFilterCount > 0 && <Badge tone="accent" size="sm">{advancedFilterCount}</Badge>}
               </Button>
               <Popover open={exportMenuOpen} onOpenChange={setExportMenuOpen}>
@@ -1746,6 +1771,7 @@ export default function LeadsManager({
               </Popover>
             </ToolbarActions>
             <span className="kds-workspace-result-count">{filteredLeads.length} {filteredLeads.length === 1 ? 'lead' : 'leads'}</span>
+            <Tabs<LeadsViewMode> items={[{ id: "list", label: "Lista", icon: List }, { id: "kanban", label: "Funil", icon: LayoutGrid }]} value={viewMode} onChange={setViewMode} variant="pill" size="sm" className="kds-leads-toolbar-view" ariaLabel="Alternar visão de leads" />
           </Toolbar>
           {(Boolean(searchTerm.trim()) || filterStatus.length > 0 || filterResponsavel.length > 0 || advancedFilterCount > 0) && (
             <Button className="kds-leads-reset" type="button" variant="text" size="sm" onClick={resetFilters}>Limpar filtros</Button>
@@ -1758,8 +1784,9 @@ export default function LeadsManager({
           <div data-panel-animate>
             <LeadKanbanBoard
               leads={filteredLeads}
-              onLeadClick={setSelectedLead}
-              onConvertToContract={handleConvertToContract}
+              onLeadClick={openLeadDetails}
+              onCreateLead={canEditLeads ? (status) => { setNewLeadStatus(status); setEditingLead(null); setShowForm(true); } : undefined}
+              onConvertToContract={canEditLeads && onConvertToContract ? handleConvertToContract : undefined}
               onStatusChange={handleStatusChange}
             />
           </div>
@@ -1795,14 +1822,15 @@ export default function LeadsManager({
               </div>
             )}
             {bulkEditorOpen && selectedLeadIds.length > 0 && (
-              <Dialog open size="md" onOpenChange={(open) => !open && !isBulkUpdating && setBulkEditorOpen(false)}>
+              <Dialog open size="md" className="kds-crm-dialog kds-leads-bulk-dialog" onOpenChange={(open) => !open && !isBulkUpdating && setBulkEditorOpen(false)}>
                 <DialogHeader onClose={isBulkUpdating ? undefined : () => setBulkEditorOpen(false)}>
+                  <div className="kds-dialog-eyebrow">Leads</div>
                   <DialogTitle>Atualizar leads selecionados</DialogTitle>
                   <DialogDescription placement="visible">{selectedLeadIds.length} {selectedLeadIds.length === 1 ? 'lead selecionado' : 'leads selecionados'}</DialogDescription>
                 </DialogHeader>
                 <DialogBody>
                   <div className="kds-leads-bulk-controls">
-                    <div className="kds-leads-bulk-control">
+                    <Field label="Nova etapa" className="kds-leads-bulk-control">
                       <FilterSelect
                         icon={Tag}
                         value={bulkStatus}
@@ -1819,8 +1847,8 @@ export default function LeadsManager({
                           })),
                         ]}
                       />
-                    </div>
-                    <div className="kds-leads-bulk-control">
+                    </Field>
+                    <Field label="Responsável" className="kds-leads-bulk-control">
                       <FilterSelect
                         icon={UserCircle}
                         value={bulkResponsavel}
@@ -1837,8 +1865,8 @@ export default function LeadsManager({
                           })),
                         ]}
                       />
-                    </div>
-                    <DateTimePicker
+                    </Field>
+                    <Field label="Próximo follow-up" className="kds-leads-bulk-date"><DateTimePicker
                       type="datetime-local"
                       value={bulkProximoRetorno}
                       onChange={(event) => setBulkProximoRetorno(event.target.value)}
@@ -1846,12 +1874,12 @@ export default function LeadsManager({
                       className="kds-leads-bulk-date"
                       disabled={isBulkUpdating}
                       placeholder="Próximo follow-up"
-                    />
+                    /></Field>
 
                   </div>
                 </DialogBody>
                 <DialogFooter>
-                  <Button variant="text" size="sm" onClick={() => setBulkEditorOpen(false)} disabled={isBulkUpdating}>Fechar</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setBulkEditorOpen(false)} disabled={isBulkUpdating}>Cancelar</Button>
                   <Button
                     type="button"
                     onClick={handleBulkStatusApply}
@@ -1896,7 +1924,7 @@ export default function LeadsManager({
                     {canSelectLeads && <TableHead align="center" className="w-12"><Checkbox checked={areAllPageLeadsSelected} ref={(input) => { if (input) input.indeterminate = isPageSelectionMixed; }} aria-checked={isPageSelectionMixed ? 'mixed' : undefined} disabled={isBulkUpdating || paginatedLeads.length === 0} onChange={toggleSelectAllCurrentPage} aria-label={areAllPageLeadsSelected ? 'Desselecionar página' : 'Selecionar página'} /></TableHead>}
                     <SortableTableHead label="Lead" sortDirection={sortDirectionFor("nome")} onSort={() => toggleColumnSort("nome")} />
                     <SortableTableHead label="Etapa do funil" sortDirection={sortDirectionFor("status")} onSort={() => toggleColumnSort("status")} />
-                    <TableHead>Perfil</TableHead>
+                    <SortableTableHead label="Perfil" sortDirection={sortDirectionFor("tipo_contratacao")} onSort={() => toggleColumnSort("tipo_contratacao")} />
                     <SortableTableHead label="Origem" sortDirection={sortDirectionFor("origem")} onSort={() => toggleColumnSort("origem")} />
                     <SortableTableHead label="Responsável" sortDirection={sortDirectionFor("responsavel")} onSort={() => toggleColumnSort("responsavel")} />
                     <SortableTableHead label="Próximo retorno" sortDirection={sortDirectionFor("proximo_retorno")} onSort={() => toggleColumnSort("proximo_retorno")} />
@@ -1937,7 +1965,7 @@ export default function LeadsManager({
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <ActionSurface variant="plain" padding="none" type="button" onClick={() => openLeadDetails(lead)} className="kds-lead-identity">
-                              <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{lead.nome_completo}</span><span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span></span>
+                              <span className="min-w-0"><span className="kds-record-row-name block truncate">{lead.nome_completo}</span><span className="kds-record-row-secondary block truncate">{lead.telefone || lead.email || "Sem contato"}</span></span>
                             </ActionSurface>
                           </div>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
@@ -1952,8 +1980,8 @@ export default function LeadsManager({
                         <TableCell>
                           <span>{lead.tipo_contratacao || "—"}</span>
                         </TableCell>
-                        <TableCell>{lead.origem ? <span className="kds-record-date"><MapPin aria-hidden="true" />{lead.origem}</span> : "—"}</TableCell>
-                        <TableCell>{lead.responsavel || "Não atribuído"}</TableCell>
+                        <TableCell>{lead.origem ? <span className="kds-record-date">{/site/i.test(lead.origem) ? <Globe aria-hidden="true" /> : /meta|ads/i.test(lead.origem) ? <MousePointerClick aria-hidden="true" /> : <MessageCircle aria-hidden="true" />}{lead.origem}</span> : "—"}</TableCell>
+                        <TableCell><span className="kds-record-owner"><span>{lead.responsavel || "Não atribuído"}</span></span></TableCell>
                         <TableCell>
                           {nextReminder ? (
                             <span className="kds-record-date"><Calendar aria-hidden="true" />{formatDateTimeFullBR(nextReminder)}</span>
@@ -2033,6 +2061,7 @@ export default function LeadsManager({
         {showForm && (
           <LeadForm
             lead={editingLead}
+            initialValues={editingLead ? undefined : { status: newLeadStatus }}
             onClose={() => {
               setShowForm(false);
               setEditingLead(null);
@@ -2046,15 +2075,17 @@ export default function LeadsManager({
         )}
         {selectedLead && !showForm && (
           <LeadDetails
+            key={selectedLead.id}
             presentation={leadDetailsPresentation}
             onScheduleReminder={openReminderScheduler}
-            onConvert={handleConvertToContract}
+            onConvert={onConvertToContract ? handleConvertToContract : undefined}
             lead={selectedLead}
             onClose={() => setSelectedLead(null)}
             onUpdate={loadLeads}
             onOpenFullPage={() => setLeadDetailsPresentation('page')}
             onEdit={(lead) => {
               setSelectedLead(null);
+              setNewLeadStatus(undefined);
               setEditingLead(lead);
               setShowForm(true);
             }}

@@ -1935,3 +1935,6 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
   .kds-workspace-skeleton-inbox { grid-template-columns: 23.75rem minmax(0, 1fr); }
   .kds-workspace-skeleton-thread { display: flex; }
 }
+
+/* Circular cancel affordance for the sending overlay belongs to the design system. */
+.kds-workspace-theme .kds-media-send-cancel { border-radius: var(--radius-full); }

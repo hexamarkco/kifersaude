@@ -64,7 +64,7 @@ export function MediaSendingOverlay({
             onClick={onCancel}
             aria-label="Cancelar envio"
             title="Cancelar envio"
-            className="group/media-cancel !rounded-full !border-transparent !bg-transparent !shadow-none"
+            className="group/media-cancel kds-media-send-cancel !border-transparent !bg-transparent !shadow-none"
           >
             <span className="grid grid-cols-1 place-items-center [@media(hover:none)]:grid-cols-2">
               <span className="col-start-1 row-start-1 transition-opacity group-hover/media-cancel:opacity-0 group-focus-visible/media-cancel:opacity-0 [@media(hover:none)]:!opacity-100">

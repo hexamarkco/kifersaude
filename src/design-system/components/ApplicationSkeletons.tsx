@@ -357,19 +357,18 @@ export function WhatsAppPageSkeleton() {
 }
 
 export function BlogTabSkeletonList() {
-  return (
-    <div role="status" aria-label="Carregando artigos">
-      <ResponsiveCollection table={<Table aria-label="Artigos em carregamento" columnWidths={['36%', '14%', '12%', '12%', '14%', '12%']}>
-        <TableHeader><TableRow>{Array.from({ length: 6 }, (_, index) => <TableHead key={index}><Skeleton variant="line" className="h-3 w-16" /></TableHead>)}</TableRow></TableHeader>
-        <TableBody>{Array.from({ length: 4 }, (_, row) => <TableRow key={row}>
-          {Array.from({ length: 6 }, (_, column) => <TableCell key={column}><Skeleton variant="line" className={column === 0 ? 'h-4 w-4/5' : 'h-4 w-16'} /></TableCell>)}
-        </TableRow>)}</TableBody>
-      </Table>} cards={<div className="grid gap-3">{Array.from({ length: 4 }, (_, index) => <Surface key={index} padding="sm" className="space-y-3">
-        <Skeleton variant="line" className="h-4 w-3/4" /><Skeleton variant="line" className="h-4 w-full" />
-        <Skeleton variant="line" className="h-4 w-1/2" /><Skeleton variant="line" className="h-4 w-2/3" />
-      </Surface>)}</div>} />
-    </div>
-  );
+  return <div role="status" aria-label="Carregando artigos" className="kds-blog-library">
+    {Array.from({ length: 6 }, (_, index) => <PanelCard key={index} className="kds-blog-article-card kds-blog-skeleton-card">
+      <Skeleton className="kds-blog-skeleton-cover w-full" />
+      <div className="kds-blog-article-body">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton variant="line" className="h-3 w-24" />
+        <Skeleton variant="line" className="h-4 w-full" />
+        <Skeleton variant="line" className="h-4 w-3/4" />
+        <div className="flex justify-between gap-2"><Skeleton variant="line" className="h-3 w-20" /><Skeleton variant="line" className="h-3 w-12" /></div>
+      </div>
+    </PanelCard>)}
+  </div>;
 }
 
 export function CommissionCalendarSkeleton() {

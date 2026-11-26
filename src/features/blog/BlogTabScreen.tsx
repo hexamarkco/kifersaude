@@ -23,13 +23,25 @@ import {
   mapBlogPostToFormData,
 } from "./shared/blogUtils";
 import type { BlogPost } from "./shared/blogTypes";
-import { Badge, BrandWordmark, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Heading, Image, RichTextEditor, Text } from '../../design-system';
+import { Badge, BrandWordmark, Button, Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, Field, Heading, Image, Input, RichTextEditor, Text } from '../../design-system';
 import {
   deleteBlogPost,
   listBlogPosts,
   saveBlogPost,
   setBlogPostPublished,
 } from "./data/blogRepository";
+
+function BlogPublishReview({ title, category, slug }: Pick<BlogPost, "title" | "category" | "slug">) {
+  return <div className="kds-blog-publish-review">
+    <Field label="Artigo"><Input value={title} readOnly /></Field>
+    <div className="kds-blog-publish-fields">
+      <Field label="Publicação"><Input value="Publicar agora" readOnly /></Field>
+      <Field label="Categoria"><Input value={category} readOnly /></Field>
+    </div>
+    <Field label="Endereço do artigo"><Input value={`/blog/${slug}`} readOnly /></Field>
+    <Text tone="muted" size="sm">Ao confirmar, o artigo ficará disponível publicamente. Não há agendamento futuro nesta tela.</Text>
+  </div>;
+}
 
 export default function BlogTabScreen() {
   const { user } = useAuth();
@@ -125,6 +137,8 @@ export default function BlogTabScreen() {
       const confirmed = await requestConfirmation({
         title: "Publicar artigo?",
         description: `“${formData.title}” ficará disponível no blog da Kifer Saúde.`,
+          dialogClassName: "kds-crm-dialog kds-blog-publish-dialog",
+          content: <BlogPublishReview title={formData.title} category={formData.category} slug={formData.slug} />,
         confirmLabel: "Publicar artigo",
         cancelLabel: "Cancelar",
       });
@@ -191,6 +205,8 @@ export default function BlogTabScreen() {
         const confirmed = await requestConfirmation({
           title: "Publicar artigo?",
           description: `“${post.title}” ficará disponível no blog da Kifer Saúde.`,
+          dialogClassName: "kds-crm-dialog kds-blog-publish-dialog",
+          content: <BlogPublishReview title={post.title} category={post.category} slug={post.slug} />,
           confirmLabel: "Publicar artigo",
           cancelLabel: "Cancelar",
         });
@@ -334,14 +350,14 @@ export default function BlogTabScreen() {
         />
       )}
       {ConfirmationDialog}
-      <Dialog open={Boolean(previewPost)} onOpenChange={open => { if (!open) setPreviewPost(null); }} size="xl" className="kds-blog-workspace kds-blog-preview" aria-label="Prévia do artigo">
+      <Dialog open={Boolean(previewPost)} onOpenChange={open => { if (!open) setPreviewPost(null); }} size="wide" className="kds-crm-dialog kds-blog-workspace kds-blog-preview" aria-label="Prévia do artigo">
         {previewPost && <>
-          <DialogHeader onClose={() => setPreviewPost(null)}><DialogTitle>Prévia do artigo</DialogTitle></DialogHeader>
+          <DialogHeader onClose={() => setPreviewPost(null)}><div className="kds-dialog-eyebrow">Blog</div><DialogTitle>Prévia do artigo</DialogTitle></DialogHeader>
           <DialogBody>
             <article className="kds-blog-preview-body">
               <BrandWordmark variant="lockup" />
               <div className="space-y-2">
-                <Text size="sm" tone="brand">{previewPost.category}</Text>
+                <Text size="sm" tone="brand" className="kds-blog-preview-category">{previewPost.category}</Text>
                 <Heading level={3} family="display" className="kds-blog-preview-title">{previewPost.title || "Artigo sem título"}</Heading>
                 <div className="flex flex-wrap items-center gap-2">
                   <Text size="sm" tone="muted">Por Kifer Saúde{previewPost.published_at && ` · ${new Date(previewPost.published_at).toLocaleDateString("pt-BR")}`}{previewPost.read_time && ` · ${previewPost.read_time} de leitura`}</Text>
@@ -351,11 +367,11 @@ export default function BlogTabScreen() {
               {previewPost.cover_image_url
                 ? <Image src={previewPost.cover_image_url} alt="" className="kds-blog-preview-cover" />
                 : <div className="kds-blog-preview-cover" aria-hidden="true"><BookOpen /></div>}
-              <Text>{previewPost.excerpt}</Text>
+              <Text className="kds-blog-preview-excerpt">{previewPost.excerpt}</Text>
               <RichTextEditor className="kds-rich-text-preview" value={previewPost.content} readOnly modules={{ toolbar: false }} />
             </article>
           </DialogBody>
-          <DialogFooter><Button variant="secondary" onClick={() => setPreviewPost(null)}>Fechar</Button></DialogFooter>
+          <DialogFooter><Text className="kds-blog-preview-note">Prévia somente para leitura.</Text><Button variant="secondary" onClick={() => setPreviewPost(null)}>Fechar</Button></DialogFooter>
         </>}
       </Dialog>
     </>

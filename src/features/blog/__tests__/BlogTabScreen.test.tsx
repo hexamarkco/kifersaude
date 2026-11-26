@@ -205,6 +205,11 @@ test('requires confirmation before publishing from an article card', async () =>
     assert.ok(dialog);
     assert.ok(dialog.textContent?.includes('Orientação para escolher um plano'));
     assert.equal(calls.publish, 0);
+    assert.ok(dialog.classList.contains('kds-blog-publish-dialog'));
+    const inputs = [...dialog.querySelectorAll<HTMLInputElement>('input')];
+    assert.equal(inputs.length, 4);
+    assert.ok(inputs.every(input => input.readOnly));
+    assert.ok(inputs.some(input => input.value === 'Publicar agora'));
     const confirm = Array.from(dialog.querySelectorAll('button')).find(button => button.textContent === 'Publicar artigo');
     assert.ok(confirm);
     await act(async () => confirm.click());

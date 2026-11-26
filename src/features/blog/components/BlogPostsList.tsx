@@ -6,7 +6,14 @@ import {
 } from '../../../design-system';
 import type { BlogPost } from '../shared/blogTypes';
 
-const coverSymbols = [BookOpen, HeartPulse, Newspaper];
+const fallbackCover = (category: string) => {
+  switch (category.toLocaleLowerCase("pt-BR")) {
+    case "dicas": return { Symbol: HeartPulse, tone: "cyan" };
+    case "economia": return { Symbol: Newspaper, tone: "info" };
+    case "novidades": return { Symbol: FileText, tone: "purple" };
+    default: return { Symbol: BookOpen, tone: "brand" };
+  }
+};
 
 type BlogPostsListProps = {
   hasPostsSnapshot: boolean;
@@ -39,8 +46,8 @@ export default function BlogPostsList({
   const showSummary = hasPostsSnapshot || (!loading && !loadError);
 
   return (
-    <div className="panel-page-shell kds-blog-workspace space-y-5">
-      <PageHeader title="Conteúdo que aproxima." description="Organize os artigos e as informações que você compartilha." />
+    <div className="panel-page-shell kds-blog-workspace kds-blog-library-page">
+      <PageHeader className="kds-blog-page-header" descriptionPlacement="visible" title="Conteúdo que aproxima." description="Organize os artigos e as informações que você compartilha." />
       <div className="kds-blog-library-toolbar" aria-label="Filtros dos artigos">
         <Input type="search" aria-label="Buscar artigos" value={searchTerm} leftIcon={Search} placeholder="Buscar artigo…"
           onChange={(event) => { setPage(1); onSearchTermChange(event.target.value); }} />
@@ -66,13 +73,13 @@ export default function BlogPostsList({
         ) : (
           <div className="space-y-4">
             <ul className="kds-blog-library" aria-label="Biblioteca de artigos">
-              {pagePosts.map((post, index) => {
-                const CoverSymbol = coverSymbols[index % coverSymbols.length];
+              {pagePosts.map((post) => {
+                const { Symbol: CoverSymbol, tone } = fallbackCover(post.category);
                 return (
                   <li key={post.id}>
                     <Card padding="none" className="kds-blog-article-card">
                       <ActionSurface variant="plain" padding="none" className="kds-blog-article-cover"
-                        aria-label={`Editar artigo: ${post.title}`} onClick={() => onEditPost(post)}>
+                        data-cover-tone={tone} aria-label={`Editar artigo: ${post.title}`} onClick={() => onEditPost(post)}>
                         {post.cover_image_url ? <Image src={post.cover_image_url} alt="" /> : <CoverSymbol aria-hidden="true" />}
                       </ActionSurface>
                       <div className="kds-blog-article-body">

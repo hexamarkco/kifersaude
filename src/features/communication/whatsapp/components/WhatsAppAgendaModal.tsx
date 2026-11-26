@@ -4,13 +4,11 @@ import { LoadingState, RecordListSkeleton, Heading, Text, FieldLabel } from '../
 import { Radio } from '../../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
-  AlertCircle,
   AlertTriangle,
   Bell,
   Calendar,
   CalendarClock,
   CalendarPlus,
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -34,14 +32,13 @@ import {
   Alert,
   Badge,
   Button,
-  DropdownOption,
+  Checkbox,
+  RecordActions,
+  type RecordAction,
   DateTimePicker,
   ControlGroup,
   EmptyState,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Surface,
   Textarea,
   IconButton,
@@ -166,7 +163,6 @@ export default function WhatsAppAgendaModal({
     reminderId: string;
     daysAhead: 1 | 2 | 3 | 4 | 5;
   } | null>(null);
-  const [quickScheduleReminderId, setQuickScheduleReminderId] = useState<string | null>(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -1148,13 +1144,6 @@ export default function WhatsAppAgendaModal({
     () => filteredReminders.filter((item) => !item.lido && isOverdue(item.data_lembrete) && getDateKey(item.data_lembrete) !== selectedDateKey),
     [filteredReminders, selectedDateKey],
   );
-  const visiblePendingReminders = useMemo(() => {
-    const next = new Map<string, ReminderListItem>();
-    [...overdueReminders, ...pendingSelectedReminders].forEach((reminder) => {
-      next.set(reminder.id, reminder);
-    });
-    return Array.from(next.values());
-  }, [overdueReminders, pendingSelectedReminders]);
   const hasActiveFilters = [typeFilter !== 'all', searchQuery.trim() !== '', onlyCurrentLead].filter(Boolean).length;
 
   const selectedDateLabel = selectedDate.toLocaleDateString('pt-BR', {
@@ -1218,293 +1207,80 @@ export default function WhatsAppAgendaModal({
     return tones[priority as keyof typeof tones] ?? 'neutral';
   };
 
-  const getReminderTypeTone = (type: string): PanelTone => {
-    const tones = {
-      'Documentos pendentes': 'warning',
-      Assinatura: 'accent',
-      Ativacao: 'info',
-      Renovacao: 'warning',
-      Retorno: 'neutral',
-      'Follow-up': 'accent',
-      Tarefa: 'accent',
-      Outro: 'neutral',
-      Aniversario: 'warning',
-      'Aniversário': 'warning',
-      Reajuste: 'info',
-    } as const;
-
-    return tones[type as keyof typeof tones] ?? 'neutral';
-  };
-
-  const getReminderIcon = (type: string) => {
-    const icons = {
-      'Documentos pendentes': AlertCircle,
-      Assinatura: AlertCircle,
-      Ativacao: Calendar,
-      Renovacao: Calendar,
-      'Renovação': Calendar,
-      Retorno: Bell,
-      Tarefa: CheckCircle2,
-      'Follow-up': CalendarPlus,
-      Aniversario: Calendar,
-      'Aniversário': Calendar,
-      Reajuste: Calendar,
-    } as const;
-
-    const Icon = icons[type as keyof typeof icons] ?? Bell;
-    return <Icon className="h-5 w-5" />;
-  };
-
-  const getReminderCardVariant = (reminder: ReminderListItem): 'success' | 'danger' | 'default' => {
-    if (reminder.lido) {
-      return 'success';
-    }
-
-    if (isOverdue(reminder.data_lembrete)) {
-      return 'danger';
-    }
-
-    return 'default';
-  };
-
   const renderReminderCard = (reminder: ReminderListItem) => {
     const leadId = getLeadIdForReminder(reminder);
     const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
     const leadInfo = leadId ? leadsMap.get(leadId) : undefined;
-    const hasLeadPhone = Boolean(leadInfo?.telefone);
     const overdue = isOverdue(reminder.data_lembrete) && !reminder.lido;
-    const isDuplicate = duplicateReminderIds.has(reminder.id);
-    const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
     const matchesCurrentLead = currentLeadMatchesReminder(reminder);
-    const isOpeningChat = leadId ? openingLeadChatId === leadId : false;
-    const isMarkingLostLead = leadId ? markingLostLeadIds.has(leadId) : false;
+    const scheduling = quickSchedulingAction?.reminderId === reminder.id;
+    const updating = updatingReminderIds.has(reminder.id);
+    const actions: RecordAction[] = [];
+    if (onOpenLeadChat && leadId) actions.push({
+      label: matchesCurrentLead ? 'Ir para chat' : 'Abrir chat', icon: MessageCircle,
+      onClick: () => void handleOpenReminderChat(reminder), loading: openingLeadChatId === leadId,
+    });
+    if (canEdit && leadId) actions.push({
+      label: 'Novo lembrete', icon: CalendarPlus, onClick: () => void handleOpenScheduler(reminder),
+    });
+    if (matchesCurrentLead && onGenerateFollowUp) actions.push({
+      label: 'Gerar follow-up', icon: Sparkles, onClick: () => { onClose(); onGenerateFollowUp(); },
+    });
+    if (!onOpenLeadChat && leadInfo?.telefone) actions.push({
+      label: 'Abrir WhatsApp oficial', icon: ExternalLink, onClick: () => openLeadInOfficialWhatsApp(leadInfo),
+    });
+    if (!reminder.lido && canEdit) {
+      for (const days of [1, 2, 3, 4, 5] as const) actions.push({
+        label: `Agendar em ${days} ${days === 1 ? 'dia útil' : 'dias úteis'} e concluir atual`,
+        compactLabel: `+${days}d`, menuGroup: 'Reagendar e concluir', icon: CalendarClock,
+        disabled: scheduling || updating, onClick: () => void handleQuickSchedule(reminder, days),
+      });
+    }
+    if (leadId && canEdit) actions.push({
+      label: 'Marcar lead como perdido e limpar lembretes', icon: X, destructive: true,
+      loading: markingLostLeadIds.has(leadId), onClick: () => void handleMarkLeadAsLost(reminder),
+    });
+    if (canEdit) actions.push({
+      label: 'Excluir item', icon: Trash2, destructive: true,
+      loading: deletingReminderIds.has(reminder.id), onClick: () => void handleDeleteReminder(reminder),
+    });
 
     return (
-      <Surface
-        key={reminder.id}
-        variant={getReminderCardVariant(reminder)}
-        padding="sm"
-        className="whatsapp-inbox-agenda-item"
-      >
+      <div key={reminder.id} className="whatsapp-inbox-agenda-item" data-completed={reminder.lido}>
         <div className="whatsapp-inbox-agenda-row">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className={`whatsapp-inbox-reminder-symbol kds-surface-${reminder.lido ? 'success' : getReminderTypeTone(reminder.tipo)}`}>
-                {getReminderIcon(reminder.tipo)}
-              </div>
-
-              <div className="min-w-0 flex-1 space-y-2">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Heading level={3} className="text-base font-semibold text-[var(--text-primary)]">
-                      {reminder.titulo}
-                    </Heading>
-                    {overdue ? (
-                      <Badge tone="danger">Atrasado</Badge>
-                    ) : null}
-                    {isDuplicate ? (
-                      <Badge tone="warning" icon={Copy}>Duplicado</Badge>
-                    ) : null}
-                    {matchesCurrentLead ? (
-                      <Badge tone="accent">Chat atual</Badge>
-                    ) : null}
-                    {reminder.lido ? (
-                      <Badge tone="success">Concluído</Badge>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {leadInfo?.nome_completo ? (
-                      <Badge tone="neutral" icon={<LeadFavoriteBadge favorito={leadInfo.favorito} />}>
-                        {leadInfo.nome_completo}
-                      </Badge>
-                    ) : null}
-                    {contract?.codigo_contrato ? (
-                      <Badge tone="info">Contrato {contract.codigo_contrato}</Badge>
-                    ) : null}
-                    <Badge tone={getReminderTypeTone(reminder.tipo)}>{reminder.tipo}</Badge>
-                    <Badge tone={getReminderPriorityTone(reminder.prioridade)}>{reminder.prioridade}</Badge>
-                    {reminder.tempo_estimado_minutos ? (
-                      <Badge tone="info" icon={Timer}>
-                        {formatEstimatedTime(reminder.tempo_estimado_minutos)}
-                      </Badge>
-                    ) : null}
-                  </div>
-
-                  {reminder.descricao ? (
-                    <Text className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      {reminder.descricao}
-                    </Text>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--text-muted)]">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
-                  </div>
-                  {hasLeadPhone ? (
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="h-4 w-4" />
-                      <span>{formatCommWhatsAppPhoneLabel(leadInfo?.telefone ?? '')}</span>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+          {canEdit && <Checkbox
+            checked={reminder.lido}
+            disabled={updating || scheduling}
+            aria-busy={updating || scheduling}
+            aria-label={`${reminder.lido ? 'Reabrir' : 'Concluir'}: ${reminder.titulo}`}
+            onChange={() => void handleMarkAsRead(reminder.id, reminder.lido)}
+            className="whatsapp-inbox-agenda-complete"
+          />}
+          <div className="whatsapp-inbox-agenda-task-copy">
+            <div className="whatsapp-inbox-agenda-task-title">
+              <Heading level={3}>{reminder.titulo}</Heading>
+              {duplicateReminderIds.has(reminder.id) && <Badge tone="warning" size="sm" icon={Copy}>Duplicado</Badge>}
+              {matchesCurrentLead && <Badge tone="accent" size="sm">Chat atual</Badge>}
             </div>
+            <div className="whatsapp-inbox-agenda-task-meta">
+              {leadInfo?.nome_completo && <span><LeadFavoriteBadge favorito={leadInfo.favorito} />{leadInfo.nome_completo}</span>}
+              {contract?.codigo_contrato && <span>Contrato {contract.codigo_contrato}</span>}
+              <span>{reminder.tipo}</span>
+              {reminder.prioridade !== 'normal' && <Badge tone={getReminderPriorityTone(reminder.prioridade)} size="sm">{reminder.prioridade}</Badge>}
+              {reminder.tempo_estimado_minutos ? <span><Timer className="kds-control-icon" />{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span> : null}
+              {leadInfo?.telefone && <span>{formatCommWhatsAppPhoneLabel(leadInfo.telefone)}</span>}
+            </div>
+            {reminder.descricao && <Text className="whatsapp-inbox-agenda-task-description">{reminder.descricao}</Text>}
           </div>
-
-          <ControlGroup size="md" aria-label="Ações do lembrete" className="whatsapp-inbox-agenda-item-actions">
-            {onOpenLeadChat && leadId ? (
-              <IconButton
-                onClick={() => void handleOpenReminderChat(reminder)}
-                variant={matchesCurrentLead ? 'primary' : 'secondary'}
-                className="shrink-0"
-                loading={isOpeningChat}
-                disabled={isOpeningChat}
-                title={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
-                aria-label={matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
-                size="md"
-              >
-                {!isOpeningChat && <MessageCircle aria-hidden="true" />}
-              </IconButton>
-            ) : null}
-
-            {!reminder.lido && canEdit ? (
-              <>
-                <Popover
-                  open={quickScheduleReminderId === reminder.id}
-                  onOpenChange={(open) => setQuickScheduleReminderId(open ? reminder.id : null)}
-                >
-                  <PopoverTrigger>
-                    <IconButton
-                      loading={isQuickSchedulingCurrentReminder}
-                      type="button"
-                      disabled={isQuickSchedulingCurrentReminder}
-                      variant="secondary"
-                      title="Agendar dias úteis e marcar atual como lido"
-                      aria-label="Agendar dias úteis e marcar atual como lido"
-                      aria-expanded={quickScheduleReminderId === reminder.id}
-                      size="md"
-                    >
-                      <CalendarClock className="kds-control-icon" aria-hidden="true" />
-                    </IconButton>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="end"
-                    aria-label="Selecionar dias para agendar"
-                    role="menu"
-                    className="comm-whatsapp-action-menu comm-quick-schedule-popover"
-                  >
-                    {([1, 2, 3, 4, 5] as const).map((days) => (
-                      <DropdownOption
-                        key={days}
-                        role="menuitem"
-                        type="button"
-                        onClick={() => {
-                          setQuickScheduleReminderId(null);
-                          void handleQuickSchedule(reminder, days);
-                        }}
-                        disabled={isQuickSchedulingCurrentReminder}
-                      >
-                        <CalendarPlus className="kds-control-icon" aria-hidden="true" />
-                        +{days} {days === 1 ? 'dia' : 'dias'}
-                      </DropdownOption>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </>
-            ) : null}
-
-            {canEdit ? (
-              <IconButton
-                onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
-                variant={reminder.lido ? 'secondary' : 'soft'}
-                className="shrink-0"
-                loading={updatingReminderIds.has(reminder.id)}
-                disabled={updatingReminderIds.has(reminder.id) || isQuickSchedulingCurrentReminder}
-                title={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
-                aria-label={reminder.lido ? 'Marcar como não lido' : 'Marcar como lido'}
-                size="md"
-              >
-                {!updatingReminderIds.has(reminder.id) && <Check aria-hidden="true" />}
-              </IconButton>
-            ) : null}
-
-            {canEdit && leadId ? (
-              <IconButton
-                onClick={() => void handleOpenScheduler(reminder)}
-                variant="secondary"
-                className="shrink-0"
-                title="Novo lembrete"
-                aria-label="Novo lembrete"
-                size="md"
-              >
-                <CalendarPlus aria-hidden="true" />
-              </IconButton>
-            ) : null}
-
-            {matchesCurrentLead && onGenerateFollowUp ? (
-              <IconButton
-                onClick={() => {
-                  onClose();
-                  onGenerateFollowUp();
-                }}
-                variant="warning"
-                className="shrink-0"
-                title="Gerar follow-up"
-                aria-label="Gerar follow-up"
-                size="md"
-              >
-                <Sparkles aria-hidden="true" />
-              </IconButton>
-            ) : null}
-
-            {!onOpenLeadChat && hasLeadPhone ? (
-              <IconButton
-                onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
-                variant="soft"
-                className="shrink-0"
-                title="Abrir WhatsApp oficial"
-                aria-label="Abrir WhatsApp oficial"
-                size="md"
-              >
-                <ExternalLink aria-hidden="true" />
-              </IconButton>
-            ) : null}
-
-            {leadId && canEdit ? (
-              <IconButton
-                onClick={() => void handleMarkLeadAsLost(reminder)}
-                variant="danger"
-                className="shrink-0"
-                title="Marcar lead como perdido e limpar lembretes"
-                aria-label="Marcar lead como perdido e limpar lembretes"
-                disabled={isMarkingLostLead}
-                loading={isMarkingLostLead}
-                size="md"
-              >
-                {!isMarkingLostLead && <X aria-hidden="true" />}
-              </IconButton>
-            ) : null}
-
-            {canEdit ? (
-              <IconButton
-                onClick={() => void handleDeleteReminder(reminder)}
-                variant="danger"
-                className="shrink-0"
-                loading={deletingReminderIds.has(reminder.id)}
-                disabled={deletingReminderIds.has(reminder.id)}
-                title="Excluir item"
-                aria-label="Excluir item"
-                size="md"
-              >
-                {!deletingReminderIds.has(reminder.id) && <Trash2 aria-hidden="true" />}
-              </IconButton>
-            ) : null}
-          </ControlGroup>
+          <div className="whatsapp-inbox-agenda-task-end">
+            <div className="whatsapp-inbox-agenda-task-time" data-overdue={overdue}>
+              <time dateTime={reminder.data_lembrete}>{formatDateTimeFullBR(reminder.data_lembrete)}</time>
+              {overdue && <span>Atrasado</span>}
+            </div>
+            {actions.length > 0 && <RecordActions actions={actions} visibleCount={0} label="Ações do lembrete" />}
+          </div>
         </div>
-      </Surface>
+      </div>
     );
   };
 
@@ -1530,48 +1306,24 @@ export default function WhatsAppAgendaModal({
         pendingReturnsError={error}
       />}
       <WhatsAppInboxDialog
-        panelClassName="whatsapp-inbox-agenda-panel"
+        panelClassName="whatsapp-inbox-agenda-panel whatsapp-inbox-daily-agenda"
         icon={Calendar}
         isOpen={isOpen && !organizerOpen}
-        onClose={() => {
-          setQuickScheduleReminderId(null);
-          onClose();
-        }}
+        onClose={onClose}
         title="Agenda do WhatsApp"
-        description="Organize os retornos e lembretes das suas conversas."
         size="xl"
         initialFocus="first-content"
         bodyClassName="whatsapp-inbox-agenda-body"
-        footer={
-          <div className="flex items-center justify-end gap-3">
-            {canEdit && <Button variant="secondary" onClick={() => setShowOrganizer(true)}><Sparkles className="kds-control-icon" />Organizar retornos</Button>}
-            <Button variant="secondary" onClick={onClose}>
-              Fechar
-            </Button>
-          </div>
-        }
       >
         {loading ? (
           <LoadingState label="Carregando agenda" placeholder={<RecordListSkeleton />} />
         ) : (
           <div className="whatsapp-inbox-agenda-workspace">
-            {error ? <Alert tone="danger" title="Não foi possível atualizar a agenda.">{error}</Alert> : (
-              <Alert tone="info" title="Os próximos passos das suas conversas.">
-                {visiblePendingReminders.length > 0
-                  ? `${pendingSelectedReminders.length} para o dia selecionado e ${overdueReminders.length} em atraso.`
-                  : 'Nenhum retorno pendente para este dia com os filtros selecionados.'}
-              </Alert>
-            )}
+            {error && <Alert tone="danger" title="Não foi possível atualizar a agenda.">{error}</Alert>}
             <div className="whatsapp-inbox-agenda-toolbar" aria-label="Navegação e filtros da agenda">
             <section className="whatsapp-inbox-agenda-day-control">
               <div>
-                <div>
-                  <Heading level={3}>
-                    {selectedDateLabel}
-                  </Heading>
-                </div>
-
-                <ControlGroup aria-label="Ações do dia" className="whatsapp-inbox-agenda-day-actions">
+                <div className="whatsapp-inbox-agenda-date-controls">
                   <ControlGroup aria-label="Navegar entre dias" className="whatsapp-inbox-agenda-date-nav">
                     <IconButton onClick={goToPreviousDay} variant="secondary" aria-label="Dia anterior" size="md">
                       <ChevronLeft className="kds-control-icon" />
@@ -1583,13 +1335,12 @@ export default function WhatsAppAgendaModal({
                       <ChevronRight className="kds-control-icon" />
                     </IconButton>
                   </ControlGroup>
-                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="whatsapp-inbox-agenda-day-button">
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'ghost' : 'secondary'} size="md" className="whatsapp-inbox-agenda-day-button">
                     Hoje
                   </Button>
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="whatsapp-inbox-agenda-day-button" disabled={!canEdit}>
-                    <Plus className="kds-control-icon" />
-                    Nova tarefa
-                  </Button>
+                </div>
+                <div role="group" aria-label="Ações do dia" className="whatsapp-inbox-agenda-day-actions">
+                  {canEdit && <Button variant="secondary" size="md" onClick={() => setShowOrganizer(true)}>Organizar retornos</Button>}
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
                       <IconButton variant="secondary"  size="md" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
@@ -1598,7 +1349,11 @@ export default function WhatsAppAgendaModal({
                       {pendingCount !== null && pendingCount > 0 && <Badge className="whatsapp-inbox-agenda-pending-count" tone="warning" size="sm">{pendingCount}</Badge>}
                     </div>
                   ) : null}
-                </ControlGroup>
+                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md" className="whatsapp-inbox-agenda-day-button" disabled={!canEdit}>
+                    <Plus className="kds-control-icon" />
+                    Nova tarefa
+                  </Button>
+                </div>
               </div>
             </section>
 
@@ -1632,12 +1387,13 @@ export default function WhatsAppAgendaModal({
                   onChange={setTypeFilter}
                   placeholder="Todos os tipos"
                   includePlaceholderOption={false}
+                  neutralValues={['all']}
                   options={typeOptions}
                 />
 
                 {currentLead ? (
-                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md" >
-                    {onlyCurrentLead ? 'Só chat atual' : 'Filtrar chat atual'}
+                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} aria-pressed={onlyCurrentLead} variant={onlyCurrentLead ? 'soft' : 'secondary'} size="md">
+                    Chat atual
                   </Button>
                 ) : null}
 
@@ -1654,12 +1410,17 @@ export default function WhatsAppAgendaModal({
                 ) : null}
 
                 {hasActiveFilters > 0 ? (
-                  <Button onClick={clearFilters} variant="ghost" size="md" >
-                    Limpar filtros ({hasActiveFilters})
-                  </Button>
+                  <IconButton onClick={clearFilters} variant="ghost" size="md" aria-label={`Limpar filtros (${hasActiveFilters})`} title="Limpar filtros">
+                    <X className="kds-control-icon" aria-hidden="true" />
+                  </IconButton>
                 ) : null}
               </div>
             </section>
+            <div className="whatsapp-inbox-agenda-summary" aria-live="polite">
+              <span>{pendingSelectedReminders.length} pendentes</span>
+              <span data-overdue={overdueReminders.length > 0}>{overdueReminders.length} em atraso</span>
+              <span>{completedSelectedReminders.length} concluídos</span>
+            </div>
             </div>
             <div className="whatsapp-inbox-agenda-results">
             {duplicateReminderCount > 0 ? (

@@ -16,8 +16,12 @@ import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
+  Avatar,
   Badge,
+  OperationalStatusBadge,
   Button,
+  DialogFooter,
+  Heading,
   Alert,
   EmptyState,
   Field,
@@ -35,7 +39,6 @@ import {
   Tabs,
   Drawer,
   DrawerBody,
-  DrawerFooter,
   DrawerHeader,
   RecordActions,
 } from '../design-system';
@@ -60,9 +63,10 @@ type LeadDetailsProps = {
 
 export default function LeadDetails({ lead, presentation = 'dialog', onClose, onUpdate, onEdit, onDelete, onOpenFullPage, onScheduleReminder, onConvert }: LeadDetailsProps) {
   const { role } = useAuth();
-  const { getRoleModulePermission } = useConfig();
+  const { getRoleModulePermission, leadStatuses } = useConfig();
   const canEditLead = getRoleModulePermission(role, 'leads').can_edit;
   const [activeSection, setActiveSection] = useState('overview');
+  const [drawerTab, setDrawerTab] = useState<'overview' | 'history' | 'links' | 'notes'>('overview');
   const [favorito, setFavorito] = useState(Boolean(lead.favorito));
   const [interactions, setInteractions] = useState<LeadTimelineInteraction[]>([]);
   const [statusHistory, setStatusHistory] = useState<LeadTimelineStatusHistory[]>([]);
@@ -201,6 +205,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
     : [];
   const drawerActions = [
     ...(onOpenFullPage ? [{ label: 'Abrir ficha completa', icon: FileText, onClick: onOpenFullPage }] : []),
+    ...(canEditLead ? [{ label: 'Editar lead', icon: Pencil, onClick: () => onEdit(lead) }] : []),
     ...deleteActions,
   ];
   const actions = <div className="kds-lead-detail-actions">
@@ -250,7 +255,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
           ) : (
             <div className="space-y-3">
               {timelineEvents.map((event) => (
-                <Surface key={event.id} variant="muted" padding="sm">
+                <Surface key={event.id} variant="muted" padding="sm" className="kds-lead-timeline-event">
                   <div className="flex items-start gap-3">
                     <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-surface)] text-[var(--text-muted)]">
                       {event.type === 'interaction' && <MessageCircle className="h-4 w-4" aria-hidden="true" />}
@@ -300,8 +305,13 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
         />
 
         {showForm && (
-          <Surface variant="warning" padding="sm" className="mb-6">
-            <form onSubmit={handleAddInteraction}>
+          <Dialog open size="md" className="kds-crm-dialog kds-lead-interaction-dialog" onOpenChange={(open) => { if (!open && !savingInteraction) setShowForm(false); }}>
+            <DialogHeader onClose={savingInteraction ? undefined : () => setShowForm(false)}>
+              <div className="kds-dialog-eyebrow">Leads</div>
+              <DialogTitle>Registrar interação</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+            <form id="lead-interaction-form" onSubmit={handleAddInteraction}>
               <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Tipo de interação">
                   <FilterSelect
@@ -346,7 +356,9 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
                   placeholder="Descreva o que foi tratado nesta interação..."
                 />
               </Field>
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-2">
+            </form>
+            </DialogBody>
+            <DialogFooter>
                 <Button
                   type="button"
                   onClick={() => setShowForm(false)}
@@ -356,12 +368,11 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto" loading={savingInteraction}>
+                <Button type="submit" form="lead-interaction-form" className="w-full sm:w-auto" loading={savingInteraction}>
                   {savingInteraction ? 'Adicionando...' : 'Adicionar'}
                 </Button>
-              </div>
-            </form>
-          </Surface>
+            </DialogFooter>
+          </Dialog>
         )}
 
         {<LoadingState active={loading} label="Carregando interações" placeholder={<RecordListSkeleton />} fallback={() => timelineLoadError ? (
@@ -433,60 +444,65 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
     </section>
   );
 
-  if (presentation === 'drawer') return (
-    <Drawer
-      open
-      onOpenChange={(open) => !open && onClose()}
-      side="right"
-      size="md"
-      aria-label="Detalhes do lead"
-      className="kds-lead-details-drawer kds-crm-dialog"
-    >
-      <DrawerHeader onClose={onClose}>
-        <div className="min-w-0">
+  if (presentation === 'drawer') {
+    const status = lead.status_nome ?? lead.status ?? 'Sem status';
+    const statusColor = leadStatuses?.find((option) => option.nome === status)?.cor ?? null;
+    const phone = lead.telefone?.replace(/\D/g, '') ?? '';
+    const whatsapp = phone.length === 10 || phone.length === 11 ? `55${phone}` : phone.startsWith('55') && (phone.length === 12 || phone.length === 13) ? phone : '';
+    const nextReminder = reminders.filter((item) => !item.lido).sort((a, b) => new Date(a.data_lembrete).getTime() - new Date(b.data_lembrete).getTime())[0];
+    const overview = [
+      ['Etapa', status], ['Origem', lead.origem], ['Contratação', lead.tipo_contratacao],
+      ['Cidade', [lead.cidade, lead.estado].filter(Boolean).join(', ')], ['E-mail', lead.email],
+      ['Responsável', lead.responsavel_label ?? lead.responsavel],
+      ['Entrada', lead.data_criacao ? formatDateTimeFullBR(lead.data_criacao) : null],
+      ['Operadora atual', lead.operadora_atual], ['Canal', lead.canal],
+    ];
+    const nextDate = nextReminder?.data_lembrete || lead.proximo_retorno;
+    return (
+      <Drawer open onOpenChange={(open) => !open && onClose()} side="right" size="lg" aria-label="Detalhes do lead" className="kds-lead-details-drawer kds-crm-dialog">
+        <DrawerHeader onClose={onClose}>
+          <div className="kds-dialog-eyebrow">Leads</div>
           <DialogTitle>Detalhes do lead</DialogTitle>
-          <DialogDescription>Visualização e ações do registro</DialogDescription>
-        </div>
-      </DrawerHeader>
-      <DrawerBody className="kds-lead-details-drawer-body">
-        <div className="kds-lead-details-drawer-content">
-          <Surface className="kds-lead-details-drawer-summary">
-            <div className="kds-lead-details-drawer-identity">
-              <div className="kds-lead-details-drawer-copy">
-                <Text className="font-semibold text-[var(--text-primary)]">{lead.nome_completo}</Text>
-                <Badge>{lead.status_nome ?? lead.status ?? 'Sem status'}</Badge>
-              </div>
-              {drawerActions.length > 0 && <RecordActions actions={drawerActions} visibleCount={0} label="Ações do lead" />}
-            </div>
-            <dl className="kds-lead-details-drawer-fields">
-              {[
-                ['Telefone', lead.telefone],
-                ['E-mail', lead.email],
-                ['Origem', lead.origem],
-                ['Responsável', lead.responsavel_label ?? lead.responsavel],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{value || 'Não informado'}</dd>
-                </div>
-              ))}
-            </dl>
-          </Surface>
-          <div className="kds-lead-drawer-quick-actions" aria-label="Ações rápidas do lead">
-            {onOpenFullPage && <Button variant="secondary" onClick={onOpenFullPage}><FileText className="kds-control-icon" aria-hidden="true" />Abrir ficha completa</Button>}
-            {canEditLead && onScheduleReminder && <Button onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Agendar follow-up</Button>}
-            {canEditLead && onConvert && <Button variant="secondary" onClick={() => onConvert(lead)}>Converter em contrato</Button>}
+        </DrawerHeader>
+        <div className="kds-record-entity-summary">
+          <div className="flex items-center justify-between gap-2">
+            <Avatar name={lead.nome_completo} size="lg" tone="brand" className="kds-record-entity-avatar" />
+            <div className="flex items-center gap-1">{favorite}{drawerActions.length > 0 && <RecordActions actions={drawerActions} visibleCount={0} label="Ações do lead" />}</div>
           </div>
-          <LeadRelationshipsPanel lead={lead} />
-          {renderTimeline('Histórico de interações')}
+          <div className="flex items-center justify-between gap-3"><Heading level={3} className="kds-record-entity-title">{lead.nome_completo}</Heading><OperationalStatusBadge statusColor={statusColor}>{status}</OperationalStatusBadge></div>
+          <Text className="kds-record-row-secondary">{lead.telefone || lead.email || 'Sem contato cadastrado'}</Text>
+          <div className="kds-record-entity-actions" aria-label="Ações rápidas do lead">
+            {whatsapp && <Button variant="secondary" size="sm" onClick={() => window.open(`https://wa.me/${whatsapp}`, '_blank', 'noopener,noreferrer')}><MessageCircle className="kds-control-icon" aria-hidden="true" />Conversar</Button>}
+            {canEditLead && <Button variant="secondary" size="sm" onClick={() => { setDrawerTab('history'); setShowForm(true); }}><Plus className="kds-control-icon" aria-hidden="true" />Interação</Button>}
+            {canEditLead && onScheduleReminder && <Button variant="secondary" size="sm" onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Lembrete</Button>}
+          </div>
         </div>
-      </DrawerBody>
-      <DrawerFooter className="kds-lead-details-drawer-footer">
-        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-        {canEditLead && <Button onClick={() => onEdit(lead)}><Pencil className="kds-control-icon" aria-hidden="true" />Editar lead</Button>}
-      </DrawerFooter>
-    </Drawer>
-  );
+        <Tabs items={[{ id: 'overview', label: 'Resumo' }, { id: 'history', label: 'Histórico' }, { id: 'links', label: 'Vínculos' }, { id: 'notes', label: 'Anotações' }]} value={drawerTab} onChange={setDrawerTab} size="sm" className="kds-record-detail-tabs" ariaLabel="Seções do lead" />
+        <DrawerBody className="kds-lead-details-drawer-body">
+          <div className="kds-lead-details-drawer-content">
+            {drawerTab === 'overview' && <>
+              <SectionHeader as="h3" title="Sobre a negociação" action={canEditLead ? <Button variant="text" size="sm" onClick={() => onEdit(lead)}>Editar lead</Button> : undefined} />
+              <dl className="kds-record-overview-fields">{overview.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}</dl>
+              <Surface variant="muted" padding="sm" className="kds-lead-next-step">
+                <div className="kds-record-owner"><span className="kds-record-event-icon"><Bell className="kds-control-icon" aria-hidden="true" /></span><div className="min-w-0 flex-1"><Text className="kds-record-row-secondary">PRÓXIMO PASSO</Text><Text className="kds-record-row-name">{timelineLoadError ? 'Não foi possível consultar lembretes' : loading ? 'Consultando lembretes' : nextReminder?.titulo || (lead.proximo_retorno ? 'Retorno agendado' : 'Nenhum retorno agendado')}</Text>{!timelineLoadError && !loading && nextDate && <Text className="kds-record-row-secondary">{formatDateTimeFullBR(nextDate)}</Text>}</div>{canEditLead && onScheduleReminder && <Button variant="text" size="sm" onClick={() => onScheduleReminder(lead)}><Pencil className="kds-control-icon" aria-hidden="true" />Editar</Button>}</div>
+              </Surface>
+              <SectionHeader as="h3" title="Contexto da conversa" />
+              <Text className="kds-record-context">{lead.observacoes || 'Nenhuma observação registrada.'}</Text>
+              {canEditLead && onConvert && <Button variant="secondary" size="sm" onClick={() => onConvert(lead)}><FileText className="kds-control-icon" aria-hidden="true" />Converter em contrato</Button>}
+            </>}
+            {drawerTab === 'history' && <>{renderTimeline('Histórico de interações')}{interaction}</>}
+            {drawerTab === 'links' && (role === 'admin' ? <LeadRelationshipsPanel lead={lead} editorPresentation="drawer" /> : <EmptyState title="Vínculos disponíveis para administradores" />)}
+            {drawerTab === 'notes' && <>
+              <SectionHeader as="h3" title="Anotações" action={canEditLead ? <Button variant="text" size="sm" onClick={() => onEdit(lead)}>Editar</Button> : undefined} />
+              {lead.observacoes ? <Surface variant="muted" padding="sm"><Text className="kds-record-context">{lead.observacoes}</Text></Surface> : <EmptyState title="Nenhuma anotação registrada" description="As observações internas do lead aparecem aqui." />}
+              <SectionHeader as="h3" title="Dados complementares" />
+              <dl className="kds-record-overview-fields">{leadData.map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Não informado'}</dd></div>)}</dl>
+            </>}
+          </div>
+        </DrawerBody>
+      </Drawer>
+    );
+  }
 
   return <Dialog open onOpenChange={(open) => !open && onClose()} size="xl" className="kds-crm-dialog">
     <DialogHeader onClose={onClose}><div><DialogTitle className="flex items-center gap-2">{favorite}{lead.nome_completo}</DialogTitle><DialogDescription>Histórico de interações, status e lembretes.</DialogDescription></div></DialogHeader>

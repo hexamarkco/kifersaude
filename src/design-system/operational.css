@@ -2786,3 +2786,7 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media (pointer:coarse) {
  .painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-header-actions,.kds-automation-list-toolbar,.kds-automation-palette,.kds-automation-rule-nav) :is(.kds-button,.kds-input,.kds-filter-trigger) { min-height:var(--touch-target); }
 }
+
+.painel-theme.kifer-ds .kds-ai-import-dialog .kds-ai-import-review { max-height:min(45vh,25rem); }
+.painel-theme.kifer-ds .kds-ai-toggle-dialog .kds-dialog-footer .kds-button { min-width:6rem; }
+.painel-theme.kifer-ds .kds-ai-config-page .kds-ai-category-heading .kds-heading { font:var(--type-dashboard-card-title); }

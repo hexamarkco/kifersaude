@@ -453,6 +453,7 @@ export default function AiConfigScreen() {
       )}
 
       <ConfirmDialog
+        className="kds-crm-dialog kds-automation-dialog kds-ai-import-dialog"
         open={!!importConfirm}
         onOpenChange={() => setImportConfirm(null)}
         onConfirm={handleImportConfirm}

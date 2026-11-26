@@ -92,6 +92,7 @@ export default function FeatureListCard({ category, onEdit, onDeactivate, onActi
     </section>
 
     <ConfirmDialog
+      className="kds-crm-dialog kds-automation-dialog kds-ai-toggle-dialog"
       open={!!confirmTarget}
       onOpenChange={() => setConfirmTarget(null)}
       onConfirm={() => {

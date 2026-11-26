@@ -2080,3 +2080,169 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
   .kds-workspace-theme .comm-terracotta .whatsapp-inbox-thread-header :is(.whatsapp-inbox-heading,.whatsapp-inbox-thread-identity .kds-heading) { font-size: .8125rem; }
   .kds-workspace-theme .comm-terracotta .whatsapp-inbox-composer-row .whatsapp-inbox-composer-input { font-size: .875rem; }
 }
+
+/* Daily Inbox agenda — compact pending-task list, based on the Agenda prototype. */
+.painel-theme.kifer-ds .whatsapp-inbox-daily-agenda .whatsapp-inbox-panel-header {
+  padding-block: var(--space-4);
+}
+.painel-theme.kifer-ds .whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-body {
+  padding-block: var(--space-4);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-workspace,
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-results {
+  gap: var(--space-3);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-toolbar {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  gap: var(--space-3);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-day-control > div {
+  align-items: center;
+  gap: var(--space-2);
+}
+.whatsapp-inbox-daily-agenda :is(.whatsapp-inbox-agenda-date-controls,.whatsapp-inbox-agenda-day-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-date-nav {
+  flex: 0 0 auto;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-date {
+  flex: 0 1 auto;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-filter-row {
+  gap: var(--space-2);
+}
+.whatsapp-inbox-agenda-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--text-muted);
+  font: var(--type-record-secondary);
+}
+.whatsapp-inbox-agenda-summary [data-overdue='true'],
+.whatsapp-inbox-agenda-task-time[data-overdue='true'] {
+  color: var(--danger-text);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-section {
+  background: var(--bg-surface);
+  border-radius: var(--radius-panel);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-section-header {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface-muted);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-section h4 {
+  font: var(--type-record-heading);
+  color: var(--text-secondary);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-item {
+  padding: var(--space-3);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.whatsapp-inbox-agenda-complete {
+  flex: 0 0 auto;
+}
+.whatsapp-inbox-agenda-task-copy {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.whatsapp-inbox-agenda-task-title,
+.whatsapp-inbox-agenda-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-task-title h3 {
+  font: var(--type-record-body);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+.whatsapp-inbox-agenda-task-meta {
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font: var(--type-record-secondary);
+}
+.whatsapp-inbox-agenda-task-meta > span:not(.kds-badge) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.whatsapp-inbox-agenda-task-meta > span:not(.kds-badge) + span:not(.kds-badge)::before {
+  content: '·';
+  color: var(--text-muted);
+}
+.whatsapp-inbox-agenda-task-description {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font: var(--type-record-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.whatsapp-inbox-agenda-task-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.whatsapp-inbox-agenda-task-time {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font: var(--type-record-secondary);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-task-end .kds-record-actions {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-task-end .kds-icon-button {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-task-end .kds-icon-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: transparent;
+}
+@media (max-width: 800px) {
+  .whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-task-copy {
+    flex: 1 1 min(16rem, 75%);
+  }
+  .whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-task-end {
+    margin-inline-start: auto;
+  }
+}
+@media (max-width: 600px) {
+  .whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-day-actions {
+    justify-content: flex-start;
+  }
+  .whatsapp-inbox-daily-agenda .whatsapp-inbox-agenda-filter-row > :first-child {
+    flex-basis: 100%;
+  }
+}

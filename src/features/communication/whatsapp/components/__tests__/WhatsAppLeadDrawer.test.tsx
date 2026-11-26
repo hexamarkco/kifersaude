@@ -112,7 +112,10 @@ test('mantém telefone, presença, renomeação e estado da IA nas informações
   const onSaveContact = (name: string) => saveContactNames.push(name);
   props.onSaveContact = onSaveContact;
   let openFilesCalls = 0;
-  props.conversationActions = [{ label: 'Arquivos da conversa', icon: FolderOpen, onClick: () => { openFilesCalls += 1; } }];
+  props.conversationActions = [
+    { label: 'Arquivos da conversa', compactLabel: 'Arquivos', icon: FolderOpen, onClick: () => { openFilesCalls += 1; } },
+    { label: 'Recuperar histórico antigo', compactLabel: 'Histórico', icon: FolderOpen, disabled: true, title: 'Indisponível', onClick: () => { throw Error('Disabled action'); } },
+  ];
 
   const view = render(<WhatsAppLeadDrawer {...props} />);
 
@@ -127,6 +130,13 @@ test('mantém telefone, presença, renomeação e estado da IA nas informações
     const filesButton = actions?.querySelector<HTMLButtonElement>('button[aria-label="Arquivos da conversa"]');
     assert.ok(filesButton);
     assert.equal(filesButton.textContent?.trim(), '');
+    assert.ok(filesButton.classList.contains('kds-icon-button'));
+    assert.ok(filesButton.querySelector('svg[aria-hidden="true"]'));
+    const historyButton = actions?.querySelector<HTMLButtonElement>('button[aria-label="Recuperar histórico antigo"]');
+    assert.ok(historyButton?.disabled);
+    assert.equal(historyButton.getAttribute('aria-description'), 'Indisponível');
+    assert.equal(historyButton.textContent?.trim(), '');
+    act(() => historyButton.click());
     act(() => filesButton.click());
     assert.equal(openFilesCalls, 1);
     const renameButton = panel.querySelector<HTMLButtonElement>('button[aria-label="Renomear contato"]');

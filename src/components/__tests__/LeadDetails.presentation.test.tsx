@@ -59,6 +59,17 @@ test('lead details drawer preserves close, edit and full-page callbacks', async 
     await act(async () => notes.click());
     assert.ok(drawer.textContent?.includes('Contexto de demonstração'));
     await act(async () => tabs[0].click());
+    const interactionButton = [...drawer.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Interação');
+    assert.ok(interactionButton);
+    await act(async () => interactionButton.click());
+    const interactionDialog = document.querySelector<HTMLElement>('.kds-lead-interaction-dialog');
+    assert.ok(interactionDialog?.querySelector('form#lead-interaction-form'));
+    assert.equal(interactionDialog.querySelector('button[type="submit"]')?.getAttribute('form'), 'lead-interaction-form');
+    const cancelInteraction = [...interactionDialog.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Cancelar');
+    assert.ok(cancelInteraction);
+    await act(async () => cancelInteraction.click());
+    assert.equal(document.querySelector('.kds-lead-interaction-dialog'), null);
+    await act(async () => tabs[0].click());
     assert.ok(document.body.textContent?.includes('Contato Demonstração'));
     const more = document.body.querySelector<HTMLButtonElement>('[aria-label="Mais ações do lead"]');
     assert.ok(more);

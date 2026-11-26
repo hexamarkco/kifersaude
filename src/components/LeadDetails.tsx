@@ -477,7 +477,7 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
             {canEditLead && onScheduleReminder && <Button variant="secondary" size="sm" onClick={() => onScheduleReminder(lead)}><Bell className="kds-control-icon" aria-hidden="true" />Lembrete</Button>}
           </div>
         </div>
-        <Tabs items={[{ id: 'overview', label: 'Resumo' }, { id: 'history', label: 'Histórico' }, { id: 'links', label: 'Vínculos' }, { id: 'notes', label: 'Anotações' }]} value={drawerTab} onChange={setDrawerTab} size="sm" className="kds-record-detail-tabs" ariaLabel="Seções do lead" />
+        <Tabs<'overview' | 'history' | 'links' | 'notes'> items={[{ id: 'overview', label: 'Resumo' }, { id: 'history', label: 'Histórico' }, { id: 'links', label: 'Vínculos' }, { id: 'notes', label: 'Anotações' }]} value={drawerTab} onChange={(tab) => { setShowForm(false); setDrawerTab(tab); }} size="sm" className="kds-record-detail-tabs" ariaLabel="Seções do lead" />
         <DrawerBody className="kds-lead-details-drawer-body">
           <div className="kds-lead-details-drawer-content">
             {drawerTab === 'overview' && <>

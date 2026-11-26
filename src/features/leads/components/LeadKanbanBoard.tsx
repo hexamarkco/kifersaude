@@ -338,7 +338,7 @@ export default function LeadKanbanBoard({
                             draggable={canMoveLead}
                             onDragStart={() => { if (canMoveLead) setDraggedLead(lead); }}
                             onDragEnd={() => setDraggedLead(null)}
-                            className="kds-kanban-card cursor-move transition-colors"
+                            className={`kds-kanban-card transition-colors${canMoveLead ? " cursor-move" : ""}`}
                           >
                             <div className="kds-kanban-card-heading">
                               <ActionSurface variant="plain" padding="none" onClick={() => onLeadClick?.(lead)} aria-label={`Abrir detalhes de ${lead.nome_completo}`}><Heading level={5} className="kds-op-lead-title">{lead.nome_completo}</Heading></ActionSurface>

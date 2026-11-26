@@ -2760,3 +2760,8 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
   .painel-theme.kifer-ds .kds-agenda-dialog .kds-dialog-footer { flex-wrap: wrap; }
   .painel-theme.kifer-ds .kds-agenda-dialog .kds-dialog-footer-note { flex-basis: 100%; }
 }
+
+@media (pointer: coarse) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page :is(.kds-agenda-header-actions,.kds-month-nav,.kds-agenda-toolbar) :is(.kds-icon-button,.kds-button,.kds-input,.kds-filter-trigger) { min-height: var(--touch-target); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-status-switcher .kds-tab { min-height: var(--touch-target); }
+}

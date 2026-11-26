@@ -178,9 +178,13 @@ test('cancelar o filtro mantém os itens e não modifica lembretes', async () =>
     await act(async () => filters.click());
     const dialog = document.querySelector('.kds-agenda-filter-dialog');
     assert.ok(dialog);
-    const clear = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === 'Limpar filtros');
-    assert.ok(clear);
-    await act(async () => clear.click());
+    const search = dialog.querySelector<HTMLInputElement>('#agenda-filter-search');
+    assert.ok(search);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'inexistente');
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    assert.equal(search.value, 'inexistente');
     const cancel = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === 'Cancelar');
     assert.ok(cancel);
     await act(async () => cancel.click());

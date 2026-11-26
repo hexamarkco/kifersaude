@@ -266,8 +266,14 @@ export function RemindersPageSkeleton({ view = 'month' }: { view?: 'month' | 'we
       </> : <div className={view === 'month' ? 'kds-agenda-workspace-grid kds-month-layout' : 'kds-agenda-workspace-grid'}>
         <div className="kds-card kds-card-default kds-agenda-calendar">
           <div className="kds-month-header"><Skeleton className="h-5 w-40" /><Skeleton className="h-8 w-24" /></div>
-          <div className="kds-month-weekdays">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="line" className="mx-auto h-3 w-6" />)}</div>
-          <div className="kds-month-grid">{Array.from({ length: view === 'month' ? 42 : 35 }, (_, i) => <div key={i} className="kds-agenda-skeleton-cell"><Skeleton className="h-4 w-4" /></div>)}</div>
+          {view === 'month' ? <>
+            <div className="kds-month-weekdays">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="line" className="mx-auto h-3 w-6" />)}</div>
+            <div className="kds-month-grid">{Array.from({ length: 42 }, (_, i) => <div key={i} className="kds-agenda-skeleton-cell"><Skeleton className="h-4 w-4" /></div>)}</div>
+          </> : <div className="kds-agenda-week-scroll"><div className="kds-agenda-week-grid">
+            {Array.from({ length: 80 }, (_, i) => <div key={i} className={i < 8 ? 'kds-agenda-week-heading' : i % 8 === 0 ? 'kds-agenda-week-hour' : 'kds-agenda-week-slot'}>
+              {(i < 8 || i % 8 === 0) && <Skeleton variant="line" className="mx-auto h-3 w-8" />}
+            </div>)}
+          </div></div>}
         </div>
         {view === 'month' && <PanelCard className="space-y-3"><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-3 w-40" />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-14 w-full" />)}</PanelCard>}
       </div>}

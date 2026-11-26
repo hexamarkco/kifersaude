@@ -5,7 +5,7 @@ import {
 } from '../features/contracts';
 import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import {
-  ActionSurface,
+  FilterSelect,
   Alert,
   Button,
   Dialog,
@@ -84,7 +84,8 @@ export default function ValueAdjustmentForm({
   return (
     <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="sm" className="kds-crm-dialog kds-value-adjustment-dialog">
       <DialogHeader onClose={saving ? undefined : onClose}>
-        <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
+        <div className="kds-dialog-eyebrow">Contratos</div>
+        <DialogTitle>{adjustment ? 'Editar ajuste de mensalidade' : 'Ajustar mensalidade'}</DialogTitle>
       </DialogHeader>
       <DialogBody>
         <form id="value-adjustment-form" onSubmit={handleSubmit}>
@@ -95,31 +96,8 @@ export default function ValueAdjustmentForm({
           )}
 
           <div className="space-y-4">
-            <Field label="Tipo de Ajuste *">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <ActionSurface
-                  type="button"
-                  onClick={() => setFormData({ ...formData, tipo: 'acrescimo' })}
-                  variant={formData.tipo === 'acrescimo' ? 'success' : 'muted'}
-                  padding="sm"
-                  className="w-full cursor-pointer text-left transition-colors hover:border-[var(--border-strong)]"
-                  aria-pressed={formData.tipo === 'acrescimo'}
-                >
-                  <div className="font-semibold">Acréscimo</div>
-                  <div className="text-xs mt-1">Adicionar valor</div>
-                </ActionSurface>
-                <ActionSurface
-                  type="button"
-                  onClick={() => setFormData({ ...formData, tipo: 'desconto' })}
-                  variant={formData.tipo === 'desconto' ? 'danger' : 'muted'}
-                  padding="sm"
-                  className="w-full cursor-pointer text-left transition-colors hover:border-[var(--border-strong)]"
-                  aria-pressed={formData.tipo === 'desconto'}
-                >
-                  <div className="font-semibold">Desconto</div>
-                  <div className="text-xs mt-1">Reduzir valor</div>
-                </ActionSurface>
-              </div>
+            <Field label="Como ajustar">
+              <FilterSelect value={formData.tipo} onChange={(tipo) => { if (tipo === 'acrescimo' || tipo === 'desconto') setFormData({ ...formData, tipo }); }} placeholder="Tipo de ajuste" includePlaceholderOption={false} options={[{ value: 'acrescimo', label: 'Acréscimo de valor' }, { value: 'desconto', label: 'Desconto de valor' }]} />
             </Field>
 
             <Field label="Valor (R$) *">

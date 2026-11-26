@@ -413,3 +413,79 @@
     max-width: none;
   }
 }
+
+/* Contracts — original PAINEL-KS-PROTOTIPO, 23/11/2026. Real data and actions are retained. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header .kds-page-title { font: var(--type-record-title); letter-spacing: -.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header .kds-page-description { font: var(--type-record-description); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--space-4); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid > .kds-card-kpi { padding: var(--space-5); border-radius: var(--radius-panel); gap: var(--space-3); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-card-title { font: var(--type-record-body); color: var(--text-muted); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-card-icon { width: var(--record-metric-icon-size); height: var(--record-metric-icon-size); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-kpi-value { font: var(--type-record-metric); letter-spacing: -.05em; margin: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-kpi-trend { font: var(--type-record-secondary); margin: 0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-table-head { height: var(--record-table-head-height); font: var(--type-record-heading); text-transform: none; letter-spacing: normal; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-table-cell { height: var(--record-table-row-height); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-table-cell .kds-lead-identity { font: var(--type-record-body); gap: var(--space-2); }
+.kds-contract-row-name { color: var(--text-primary); font: var(--type-record-body); font-weight: var(--font-weight-medium); }
+.kds-contract-row-code { color: var(--text-muted); font: var(--type-record-secondary); }
+.kds-contract-row-avatar.kds-avatar { width: var(--record-avatar-size); height: var(--record-avatar-size); border-radius: var(--radius-md); font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-op-status-badge { font: var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-record-actions .kds-button { border-color: transparent; background: transparent; box-shadow: none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-results .kds-record-actions .kds-button:hover { background: var(--bg-hover); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container:has(.kds-contract-details-drawer) { padding: var(--record-drawer-gutter); align-items: center; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer { width: min(var(--record-drawer-width),100%); max-width: 100%; height: calc(100dvh - 2 * var(--record-drawer-gutter)); max-height: calc(100dvh - 2 * var(--record-drawer-gutter)); border-radius: var(--radius-panel); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer .kds-drawer-body { background: var(--bg-surface); padding: var(--dialog-body-padding); }
+.kds-contract-entity-summary { flex: none; display: grid; gap: var(--space-2); padding: var(--space-5) var(--dialog-inline-padding); background: var(--bg-surface); }
+.kds-contract-entity-avatar.kds-avatar { width: var(--record-entity-avatar-size); height: var(--record-entity-avatar-size); border-radius: var(--radius-md); }
+.kds-contract-entity-title { min-width: 0; overflow-wrap: anywhere; font: var(--type-record-title); letter-spacing: -.035em; }
+.kds-contract-entity-code { font: var(--type-record-secondary); color: var(--text-muted); }
+.kds-contract-entity-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block-start: var(--space-2); }
+.kds-contract-detail-tabs { flex: none; padding-inline: var(--dialog-inline-padding); border-bottom: var(--border-width) solid var(--border-subtle); }
+.kds-contract-detail-tabs .kds-tab { font: var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contract-detail-content > .kds-contract-detail-sections { gap: var(--space-5); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-contract-detail-content > .kds-contract-detail-sections > .kds-contract-detail-section { border: 0; background: transparent; padding: 0; margin: 0; box-shadow: none; min-width: 0; }
+.kds-contract-detail-section[hidden], .kds-holder-form-dialog [data-holder-step][hidden] { display: none !important; }
+.kds-contract-detail-heading { font: var(--type-record-field-label); color: var(--text-primary); }
+.kds-contract-overview-fields { display: grid; gap: var(--space-4); margin-block: var(--space-5); font: var(--type-record-body); }
+.kds-contract-overview-fields > div { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: var(--space-5); }
+.kds-contract-overview-fields dt, .kds-contract-event-row time { color: var(--text-muted); }
+.kds-contract-overview-fields dd { margin: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+.kds-contract-overview-events { border-top: var(--border-width) solid var(--border-subtle); padding-block: var(--space-4); }
+.kds-contract-event-row { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); font: var(--type-record-body); }
+.kds-contract-document-row { display: flex; align-items: center; gap: var(--space-3); padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); }
+.kds-contract-document-icon { display: grid; place-items: center; width: var(--record-avatar-size); height: var(--record-avatar-size); background: var(--brand-primary-soft); color: var(--brand-primary); border-radius: var(--radius-control); flex: none; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-filter-dialog,.kds-contract-interaction-dialog,.kds-dependent-form-dialog,.kds-value-adjustment-dialog,.kds-contract-json-import-dialog,.kds-holder-import-dialog) { width: var(--record-dialog-width); max-width: 100%; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog,.kds-contract-bulk-import-dialog) { width: var(--record-dialog-wide); max-width: 100%; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog,.kds-dependent-form-dialog,.kds-value-adjustment-dialog,.kds-contract-json-import-dialog,.kds-contract-bulk-import-dialog,.kds-holder-import-dialog,.kds-contract-filter-dialog,.kds-contract-interaction-dialog) .kds-dialog-body { background: var(--bg-surface); padding: var(--dialog-body-padding); }
+.kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog,.kds-dependent-form-dialog,.kds-value-adjustment-dialog,.kds-contract-json-import-dialog,.kds-contract-bulk-import-dialog,.kds-holder-import-dialog,.kds-contract-filter-dialog,.kds-contract-interaction-dialog) :is(.kds-input,.kds-select,.kds-filter-trigger,.kds-textarea) { font: var(--type-record-field); }
+.kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog,.kds-dependent-form-dialog,.kds-value-adjustment-dialog,.kds-contract-filter-dialog,.kds-contract-interaction-dialog,.kds-holder-import-dialog) .kds-field-label { font: var(--type-record-field-label); color: var(--text-primary); }
+.kds-workspace-theme .kds-contract-form-steps .kds-stepper-label { font: var(--type-record-secondary); }
+.kds-contract-form-note { color: var(--text-muted); font: var(--type-record-body); }
+.kds-workspace-theme .kds-contract-form-dialog .kds-form-section > legend { font: var(--type-record-field-label); color: var(--text-primary); }
+.kds-workspace-theme .kds-contract-form-dialog .kds-form-fields { gap: var(--space-5); }
+.kds-workspace-theme .kds-contract-form-dialog #contract-form { gap: 0; }
+.kds-workspace-theme .kds-holder-form-dialog #holder-form > .grid { display: block; }
+.kds-workspace-theme .kds-holder-form-dialog [data-holder-step] { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.kds-workspace-theme .kds-holder-form-dialog [data-holder-step] > .grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.kds-workspace-theme .kds-holder-form-dialog [data-holder-step] > .grid > * { grid-column: auto; }
+.kds-workspace-theme .kds-contract-import-upload { display: grid; justify-items: center; align-content: center; gap: var(--space-2); background: var(--bg-surface-muted); border: var(--border-width) dashed var(--border-default); border-radius: var(--radius-panel); padding: var(--space-6); min-height: 12rem; text-align: center; font: var(--type-record-body); }
+@media (max-width: 1023px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-3); }
+}
+@media (max-width: 767px) {
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-header .kds-page-title { font-size: 1.4375rem; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid > .kds-card-kpi { padding: var(--space-3); }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contracts-summary-grid .kds-kpi-value { font-size: clamp(1rem,5.4vw,1.5rem); overflow-wrap: anywhere; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-dialog-container:has(.kds-contract-details-drawer) { padding: 0; }
+  .painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .kds-contract-entity-summary { padding: var(--space-4) var(--dialog-inline-padding); }
+  .kds-contract-entity-title { font-size: 1.3125rem; }
+  .kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog) .kds-dialog-footer { flex-wrap: wrap; }
+  .kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog) .kds-dialog-footer-note { flex: 1 0 100%; }
+}
+@media (max-width: 390px) {
+  .kds-workspace-theme .kds-holder-form-dialog [data-holder-step] > .grid { grid-template-columns: minmax(0,1fr); }
+}
+
+.kds-contract-document-tabs { margin-block: var(--space-2) var(--space-4); }
+.kds-contract-document-tabs .kds-tab { font: var(--type-record-body); }

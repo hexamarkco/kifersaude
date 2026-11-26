@@ -35,6 +35,7 @@ import ContractStatusDropdown from "./components/ContractStatusDropdown";
 import { useContractStatus } from "./hooks/useContractStatus";
 import { useProductionOperators } from "../production";
 import {
+  Avatar,
   Badge,
   Button,
   Alert,
@@ -856,8 +857,9 @@ export default function ContractsManager({
           </Toolbar>
 
           {advancedFiltersOpen && (
-            <Dialog id="contracts-filter-controls" open onOpenChange={setAdvancedFiltersOpen} size="md" className="kds-crm-dialog">
+            <Dialog id="contracts-filter-controls" open onOpenChange={setAdvancedFiltersOpen} size="md" className="kds-crm-dialog kds-contract-filter-dialog">
               <DialogHeader onClose={() => setAdvancedFiltersOpen(false)}>
+                <div className="kds-dialog-eyebrow">Contratos</div>
                 <DialogTitle>Filtrar contratos</DialogTitle>
               </DialogHeader>
               <DialogBody>
@@ -923,7 +925,8 @@ export default function ContractsManager({
                         className="kds-lead-identity"
                         title={`${displayName} · ${contract.codigo_contrato}`}
                       >
-                        <span className="min-w-0"><span className="block truncate font-medium text-[var(--text-primary)]">{displayName}</span><span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">{contract.codigo_contrato}</span></span>
+                        <Avatar name={displayName} size="sm" tone="brand" className="kds-contract-row-avatar" />
+                        <span className="min-w-0"><span className="kds-contract-row-name block truncate">{displayName}</span><span className="kds-contract-row-code block truncate">{contract.codigo_contrato}</span></span>
                       </ActionSurface>
                     </TableCell>
                     <TableCell>
@@ -942,9 +945,9 @@ export default function ContractsManager({
                     </TableCell>
                     <TableCell>
                       <span className="kds-contracts-cell-secondary font-medium text-[var(--text-secondary)]" title={operatorLabel} aria-label={operatorLabel}>{operatorLabel}</span>
-                      <span className="kds-contracts-cell-secondary mt-1 text-xs text-[var(--text-muted)]" title={planLabel} aria-label={planLabel}>{planLabel}</span>
+                      <span className="kds-contracts-cell-secondary kds-contract-row-code" title={planLabel} aria-label={planLabel}>{planLabel}</span>
                     </TableCell>
-                    <TableCell>{contract.vidas ?? '—'}</TableCell>
+                    <TableCell align="center">{contract.vidas ?? '—'}</TableCell>
                     <TableCell>
                       <span className="kds-contracts-cell-secondary font-medium text-[var(--text-primary)]" title={contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}>
                         {contract.mensalidade_total != null ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}

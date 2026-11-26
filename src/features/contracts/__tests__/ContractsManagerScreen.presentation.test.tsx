@@ -185,8 +185,22 @@ test('opening a contract loads the real details drawer over the retained list', 
 
     await act(async () => { await vi.advanceTimersByTimeAsync(LOADING_CYCLE_MS); });
     const loadedDrawer = document.body.querySelector('[role="dialog"][aria-label="Detalhes do contrato"]');
-    assert.ok(loadedDrawer?.querySelector('nav[aria-label="Seções do contrato"]'));
-    assert.ok(loadedDrawer?.textContent?.includes('Adicionar titular'));
+    const tabs = loadedDrawer?.querySelector('[role="tablist"][aria-label="Seções do contrato"]');
+    assert.ok(tabs);
+    assert.deepEqual([...tabs.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent), ['Resumo', 'Beneficiários', 'Financeiro', 'Histórico', 'Documentos']);
+    assert.equal(tabs.querySelector('[aria-selected="true"]')?.textContent, 'Resumo');
+    const holdersSection = loadedDrawer?.querySelector<HTMLElement>(`#contract-${contract.id}-holders`);
+    assert.ok(holdersSection?.hidden);
+    const beneficiaries = [...tabs.querySelectorAll<HTMLButtonElement>('button')].find((tab) => tab.textContent === 'Beneficiários');
+    assert.ok(beneficiaries);
+    await act(async () => { beneficiaries.click(); });
+    assert.equal(holdersSection.hidden, false);
+    assert.ok(holdersSection.textContent?.includes('Adicionar titular'));
+    const documentsTab = [...tabs.querySelectorAll<HTMLButtonElement>('button')].find((tab) => tab.textContent === 'Documentos');
+    assert.ok(documentsTab);
+    await act(async () => { documentsTab.click(); });
+    assert.equal(holdersSection.hidden, true);
+    assert.ok(loadedDrawer?.querySelector('[role="tablist"][aria-label="Categorias de arquivos"]'));
     assert.ok(loadedDrawer?.querySelector('.kds-contract-detail-content'));
     assert.equal(loadedDrawer?.querySelector('.kds-contract-detail-expanded'), null);
     assert.ok(view.container.querySelector('h1')?.textContent?.trim() === 'Cuidado que vira compromisso.');

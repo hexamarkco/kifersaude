@@ -233,10 +233,11 @@ export default function HolderImportPreparation({ contract }: { contract: Contra
             close();
           }
         }}
-        size="wide"
+        size="md"
         className="kds-crm-dialog kds-holder-import-dialog"
       >
         <DialogHeader>
+          <div className="kds-dialog-eyebrow">Contratos</div>
           <DialogTitle>Preparar titular para importação</DialogTitle>
           <DialogDescription placement="visible">
             Contrato {contract.codigo_contrato}. Os dados ficam protegidos por até 24 horas e podem ser usados uma única vez pelo assistente conectado.

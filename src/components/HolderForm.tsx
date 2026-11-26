@@ -32,7 +32,6 @@ import {
   DateTimePicker,
   Dialog,
   DialogBody,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -43,6 +42,7 @@ import {
   FilterSelect,
   PageActions,
   PageHeader,
+  Stepper,
 } from '../design-system';
 
 type HolderFormProps = {
@@ -147,6 +147,7 @@ export default function HolderForm({
     [bonusPorVidaDefault, holder, initialData],
   );
   const [formData, setFormData] = useState<HolderFormState>(initialFormData);
+  const [holderStep, setHolderStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [holders, setHolders] = useState<ContractHolder[]>([]);
@@ -523,11 +524,34 @@ export default function HolderForm({
     }
   };
 
+  const holderSteps = [
+    { label: 'Documentos e identificação' },
+    { label: 'Endereço' },
+    ...(isCNPJModalidade ? [{ label: 'Dados da empresa' }] : []),
+  ];
+  const isHolderWizard = presentation === 'dialog';
+  const handleHolderFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!isHolderWizard) { void handleSubmit(event); return; }
+    event.preventDefault();
+    const last = holderStep === holderSteps.length - 1;
+    const scope = last ? event.currentTarget : event.currentTarget.querySelector(`[data-holder-step="${holderStep}"]`);
+    const invalid = Array.from(scope?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea') ?? []).find((control) => control.willValidate && !control.validity.valid);
+    if (invalid) {
+      const section = invalid.closest<HTMLElement>('[data-holder-step]');
+      if (section) setHolderStep(Number(section.dataset.holderStep));
+      requestAnimationFrame(() => invalid.reportValidity());
+      return;
+    }
+    if ((holderStep === 0 || last) && !formData.data_nascimento.trim()) { setHolderStep(0); toast.error('Informe a data de nascimento do titular'); return; }
+    if (last) { void handleSubmit(event); return; }
+    setHolderStep((step) => step + 1);
+  };
+
   const holderFormFields = (
-        <form id="holder-form" onSubmit={handleSubmit}>
+        <form id="holder-form" onSubmit={handleHolderFormSubmit} noValidate={isHolderWizard}>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <Surface variant="muted" padding="sm">
-              <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informações Pessoais</Heading>
+            <Surface variant="muted" padding="sm" data-holder-step="0" hidden={isHolderWizard && holderStep !== 0}>
+              <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">Documentos e identificação</Heading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CPF *" error={cpfLookupError || undefined}>
                   <div className="relative">
@@ -656,7 +680,7 @@ export default function HolderForm({
               </div>
             </Surface>
 
-            <Surface variant="muted" padding="sm">
+            <Surface variant="muted" padding="sm" data-holder-step="1" hidden={isHolderWizard && holderStep !== 1}>
               <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">Endereço</Heading>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CEP">
@@ -760,7 +784,7 @@ export default function HolderForm({
             </Surface>
 
             {isCNPJModalidade && (
-              <Surface variant="muted" padding="sm">
+              <Surface variant="muted" padding="sm" data-holder-step="2" hidden={isHolderWizard && holderStep !== 2}>
                 <Heading level={4} className="mb-4 text-base font-semibold text-[var(--text-primary)]">
                   Informações Empresariais
                 </Heading>
@@ -862,20 +886,18 @@ export default function HolderForm({
       ) : (
       <Dialog open onOpenChange={(open) => !open && !saving && onClose()} size="xl" className="kds-crm-dialog kds-holder-form-dialog">
         <DialogHeader onClose={saving ? undefined : onClose}>
-          <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
-          <DialogDescription>
-            Cadastre os dados pessoais, de contato e de elegibilidade do titular.
-          </DialogDescription>
+          <div className="kds-dialog-eyebrow">Contratos</div>
+          <DialogTitle>{holder ? 'Editar titular' : 'Novo titular'}</DialogTitle>
         </DialogHeader>
+        <div className="kds-contract-form-steps"><Stepper steps={holderSteps} currentStep={holderStep} /></div>
         <DialogBody>
           {holderFormFields}
         </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
+          <span className="kds-dialog-footer-note">Etapa {holderStep + 1} de {holderSteps.length}</span>
+          {holderStep === 0 ? <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancelar</Button> : <Button type="button" variant="secondary" onClick={() => setHolderStep((step) => step - 1)} disabled={saving}>Voltar</Button>}
           <Button type="submit" form="holder-form" loading={saving}>
-            {saving ? 'Salvando...' : 'Salvar Titular'}
+            {saving ? 'Salvando...' : holderStep < holderSteps.length - 1 ? 'Continuar' : 'Salvar titular'}
           </Button>
         </DialogFooter>
       </Dialog>

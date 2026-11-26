@@ -1999,6 +1999,12 @@ label.whatsapp-inbox-filter-option:is(:hover, :focus-within) { background: var(-
 .kds-workspace-theme .whatsapp-inbox-contact-actions { grid-template-columns: repeat(3,minmax(0,1fr)); padding-block-end: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); }
 .kds-workspace-theme .whatsapp-inbox-contact-actions .kds-icon-button { border-color: var(--border-subtle); background: transparent; box-shadow: none; }
 .kds-workspace-theme .whatsapp-inbox-contact-actions .kds-icon-button:hover:not(:disabled) { border-color: var(--border-subtle); background: var(--bg-hover); }
+.painel-theme.kifer-ds .whatsapp-inbox-contact-actions .kds-icon-button[aria-pressed="true"],
+.painel-theme.kifer-ds .whatsapp-inbox-contact-actions .kds-icon-button[aria-pressed="true"]:hover:not(:disabled) {
+  color: var(--success-text);
+  background: var(--success-soft);
+  border-color: var(--success-border);
+}
 .kds-workspace-theme .comm-whatsapp-lead-drawer-tabs .kds-tabs-list { justify-content: flex-start; }
 .kds-workspace-theme .comm-whatsapp-lead-drawer-tabs .kds-tab { font: var(--type-record-body); }
 .painel-theme.kifer-ds .whatsapp-inbox-dialog .whatsapp-inbox-panel-header { padding: var(--space-5) var(--dialog-inline-padding); }

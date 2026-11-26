@@ -2116,11 +2116,12 @@ export default function WhatsAppInboxScreen() {
               onSaveContact={handleOpenSaveContactDialog}
               conversationActions={[
                 ...(selectedChat.lead_id ? [{
-                  label: isSelectedChatWaitingForQuote
+                  label: 'Atendimento com IA',
+                  title: isSelectedChatWaitingForQuote
                     ? 'IA encerrada enquanto aguarda cotação'
-                    : selectedChat.autonomous_attendance_status === 'active' ? 'Desativar IA neste chat' : 'Ativar IA neste chat',
+                    : selectedChat.autonomous_attendance_status === 'active' ? 'IA ativa — desativar' : 'IA inativa — ativar',
                   icon: Bot,
-                  compactLabel: 'IA',
+                  pressed: !isSelectedChatWaitingForQuote && selectedChat.autonomous_attendance_status === 'active',
                   loading: assumingControlChatId === selectedChat.id,
                   disabled: isSelectedChatWaitingForQuote,
                   onClick: () => {

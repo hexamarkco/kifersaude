@@ -523,10 +523,11 @@ export default function LinksScreen({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="kds-settings-links kds-settings-content">
       {pageHeader}
 
-      <details className="min-w-0">
+      <div className="kds-settings-link-layout"><div className="kds-settings-content min-w-0">
+      <details open className="min-w-0">
         <DisclosureTrigger icon={ImageIcon} size="sm">
           {profileForm.is_published ? 'Editar perfil público · Publicado' : 'Editar perfil público · Despublicado'}
         </DisclosureTrigger>
@@ -875,6 +876,20 @@ export default function LinksScreen({
         )}
       </Card>
 
+      </div>
+        <Card className="kds-settings-link-preview">
+          <Heading level={3}>Prévia do perfil público</Heading>
+          <Text tone="muted" size="sm">Visualização do rascunho, sem publicar alterações.</Text>
+          <div className="kds-settings-public-preview">
+            {profileForm.avatar_url && <Image src={profileForm.avatar_url} alt="Foto configurada para a página pública" className="kds-settings-public-photo" />}
+            <Heading level={3}>{profileForm.title || 'Página de links'}</Heading>
+            {profileForm.subtitle && <Text tone="muted">{profileForm.subtitle}</Text>}
+            {profileForm.bio && <Text className="kds-settings-public-bio">{profileForm.bio}</Text>}
+            <Text size="sm" tone="muted">{profileForm.is_published ? 'Publicação habilitada no rascunho' : 'Página despublicada no rascunho'}</Text>
+            <Button variant="secondary" size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}><ExternalLink className="kds-control-icon" aria-hidden="true" />Abrir página pública</Button>
+          </div>
+        </Card>
+      </div>
       <Dialog
         open={isCreateModalOpen}
         onOpenChange={(open) => {
@@ -883,7 +898,8 @@ export default function LinksScreen({
             setCreateForm(EMPTY_LINK_FORM);
           }
         }}
-        size="sm"
+        size="md"
+        className="kds-crm-dialog kds-settings-dialog"
       >
         <DialogHeader
           onClose={() => {
@@ -891,12 +907,13 @@ export default function LinksScreen({
             setCreateForm(EMPTY_LINK_FORM);
           }}
         >
+          <div className="kds-dialog-eyebrow">Links</div>
           <DialogTitle>Novo link</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <form
             id="link-create-form"
-            className="space-y-4"
+            className="kds-settings-link-create-grid"
             onSubmit={(event) => {
               event.preventDefault();
               void handleCreateLink();

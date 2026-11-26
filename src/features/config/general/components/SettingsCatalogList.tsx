@@ -35,10 +35,10 @@ export function SettingsCatalogList<T>({ title, description, hint, items, column
   const visibleItems = sortedItems.filter((item) => normalizeConfigSearchText(getSearchText(item)).includes(normalizedSearch));
   const sortableColumns = columns.filter((column) => column.getValue);
 
-  return <Surface padding="md" className="min-w-0">
+  return <Surface padding="md" className="kds-settings-catalog min-w-0">
     <div className="min-w-0 space-y-4">
     {hideSectionTitle ? <div className="flex justify-end">{action}</div> : <SectionHeader as="h3" title={title} description={description} action={action} />}
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="kds-settings-catalog-toolbar flex flex-wrap items-center justify-between gap-3">
       <div className="w-full sm:max-w-72"><Input size="sm" leftIcon={Search} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome" aria-label={`Buscar em ${title}`} /></div>
       <Text className="text-xs text-[var(--text-muted)]" role="status">{normalizedSearch ? `${visibleItems.length} de ${items.length}` : items.length} {items.length === 1 ? 'item' : 'itens'}</Text>
       <div className="flex w-full items-center gap-2 md:hidden">
@@ -66,7 +66,7 @@ export function SettingsCatalogList<T>({ title, description, hint, items, column
         })}
       </div>
       <ul aria-label={title} className="divide-y divide-[var(--border-subtle)] border-b border-[var(--border-default)]">
-        {visibleItems.map((item) => <li key={getId(item)} className={`grid grid-cols-1 items-center gap-3 px-1 py-3 ${gridClassName}`}>{renderItem(item)}</li>)}
+        {visibleItems.map((item) => <li key={getId(item)} className={`kds-settings-catalog-row grid grid-cols-1 items-center gap-3 px-1 py-3 ${gridClassName}`}>{renderItem(item)}</li>)}
       </ul>
     </div>}
     </div>

@@ -10,6 +10,7 @@ import {
   Alert,
   Button,
   Card,
+  KpiCard,
   Dialog,
   DialogBody,
   DialogFooter,
@@ -324,8 +325,13 @@ export default function FormsScreen({
   const hasFilters = Boolean(search.trim() || statusFilter);
 
   return (
-    <div className="space-y-6">
+    <div className="kds-settings-forms kds-settings-content">
       {pageHeader}
+      <div className="kds-settings-metrics" aria-label="Resumo dos formulários">
+        <KpiCard title="Formulários publicados" value={String(forms.filter(form => form.is_published).length)} icon={<FileText aria-hidden="true" />} />
+        <KpiCard title="Respostas recebidas" value={String(forms.reduce((sum, form) => sum + form.submission_count, 0))} icon={<FileText aria-hidden="true" />} />
+        <KpiCard title="Formulários em rascunho" value={String(forms.filter(form => !form.is_published).length)} icon={<Edit2 aria-hidden="true" />} />
+      </div>
 
       <Card>
         <Toolbar>
@@ -369,7 +375,7 @@ export default function FormsScreen({
           return <ResponsiveCollection table={<Table aria-label="Formulários de captação" className="min-w-[700px]" columnWidths={['42%', '18%', '25%', '15%']}>
             <TableHeader><TableRow><TableHead>Formulário</TableHead><TableHead>Envios</TableHead><TableHead>Publicação</TableHead><TableHead align="right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>{visibleForms.map(form => <TableRow key={form.id}>
-              <TableCell><Text className="font-semibold">{form.title}</Text><Text size="sm" tone="muted">/forms/{form.slug}</Text></TableCell>
+              <TableCell><Text className="kds-record-row-name">{form.title}</Text><Text className="kds-record-row-secondary">/forms/{form.slug}</Text></TableCell>
               <TableCell>{form.submission_count}</TableCell>
               <TableCell><Switch checked={form.is_published} onChange={() => void handleTogglePublish(form)} disabled={busyIds.has(form.id)} label={form.is_published ? "Publicado" : "Rascunho"} /></TableCell>
               <TableCell align="right"><RecordActions label={`Ações de ${form.title}`} actions={actions(form)} /></TableCell>
@@ -389,15 +395,17 @@ export default function FormsScreen({
         onOpenChange={(open) => {
           if (!open) closeCreateDialog();
         }}
-        size="sm"
+        size="md"
+        className="kds-crm-dialog kds-settings-dialog"
       >
         <DialogHeader onClose={closeCreateDialog} showCloseButton={!creating}>
+          <div className="kds-dialog-eyebrow">Formulários</div>
           <DialogTitle>Novo formulário</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <form
             id="form-create-form"
-            className="space-y-4"
+            className="kds-settings-form-create-grid"
             noValidate
             onSubmit={(event) => {
               event.preventDefault();

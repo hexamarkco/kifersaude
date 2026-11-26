@@ -249,7 +249,8 @@ export default function LeadStatusManager() {
             setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
           }
         }}
-        size="sm"
+        size="md"
+        className="kds-crm-dialog kds-settings-dialog"
       >
         <DialogHeader
           onClose={() => {
@@ -257,6 +258,7 @@ export default function LeadStatusManager() {
             setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
           }}
         >
+          <div className="kds-dialog-eyebrow">Configurações</div>
           <DialogTitle>Novo status</DialogTitle>
           <DialogDescription>Crie uma nova etapa para o funil de leads.</DialogDescription>
         </DialogHeader>

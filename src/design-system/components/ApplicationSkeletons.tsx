@@ -585,38 +585,11 @@ export function OperadorasSkeleton() {
 }
 
 export function UsersSkeleton() {
-  return (
-    <div className="space-y-6">
-      <PanelCard className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-52" />
-          <Skeleton className="h-10 w-36 rounded-lg" />
-        </div>
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={`user-row-${index}`} className="kds-card kds-card-default p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton variant="line" className="h-3.5 w-48" />
-                    <Skeleton variant="line" className="h-3.5 w-24" />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Skeleton className="h-9 w-9 rounded-md" />
-                  <Skeleton className="h-9 w-9 rounded-md" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </PanelCard>
-      <PanelCard>
-        <Skeleton className="h-28 w-full rounded-xl" />
-      </PanelCard>
-    </div>
-  );
+  return <div className="kds-settings-content" aria-hidden="true">
+    <div className="kds-settings-metrics">{Array.from({ length: 3 }, (_, i) => <PanelCard key={i} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-2/3" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}</div>
+    <div className="flex flex-wrap gap-3"><Skeleton className="h-9 w-64 max-w-full" /><Skeleton className="h-9 w-32" /></div>
+    <PanelCard className="space-y-2">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-12 w-full" />)}</PanelCard>
+  </div>;
 }
 
 export function IntegrationsSkeleton() {

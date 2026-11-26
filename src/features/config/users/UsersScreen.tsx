@@ -8,7 +8,6 @@ import {
   Shield,
   Trash2,
   AlertCircle,
-  User as UserIcon,
   Pencil,
   RefreshCw,
   Search,
@@ -24,7 +23,7 @@ import {
   Badge,
   Button,
   Card,
-  CardIcon,
+  KpiCard,
   Dialog,
   DialogBody,
   DialogDescription,
@@ -78,6 +77,7 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
   const [editUserRole, setEditUserRole] = useState("observer");
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [profileFilter, setProfileFilter] = useState("all");
   const { sorting, sortBy } = useTableSorting<"username" | "role" | "created_at">("username");
   const usersLoadRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -104,16 +104,16 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
 
   const filteredUsers = useMemo(() => {
     const normalizedTerm = searchTerm.trim().toLocaleLowerCase("pt-BR");
-    if (!normalizedTerm) return users;
-
     return users.filter((userProfile) => {
+      if (profileFilter !== "all" && userProfile.role !== profileFilter) return false;
+      if (!normalizedTerm) return true;
       const profile = profileBySlug.get(userProfile.role);
       const profileLabel = formatProfileLabel(userProfile.role, profile?.name);
       return [userProfile.username, userProfile.email, userProfile.role, profileLabel]
         .filter(Boolean)
         .some((value) => value.toLocaleLowerCase("pt-BR").includes(normalizedTerm));
     });
-  }, [profileBySlug, searchTerm, users]);
+  }, [profileBySlug, searchTerm, profileFilter, users]);
   const sortedUsers = useSortedTableRows(filteredUsers, sorting, (userProfile, key) => {
     if (key === "username") return userProfile.username || userProfile.email || "";
     if (key === "role") return formatProfileLabel(userProfile.role, profileBySlug.get(userProfile.role)?.name);
@@ -339,7 +339,7 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
       overlayLabel="Atualizando usuários..."
       stageClassName="min-h-[420px]"
     >
-      <div className="space-y-4">
+      <div className="kds-settings-users kds-settings-content">
         {usersLoadError ? (
           <Alert
             tone="danger"
@@ -355,17 +355,24 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
           </Alert>
         ) : null}
 
-        <Surface padding="sm" className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="kds-settings-metrics" aria-label="Resumo dos usuários">
+          <KpiCard title="Usuários cadastrados" value={usersLoadError ? "—" : String(users.length)} icon={<Users aria-hidden="true" />} />
+          <KpiCard title="Perfis atribuídos" value={usersLoadError ? "—" : String(new Set(users.map(item => item.role)).size)} icon={<Shield aria-hidden="true" />} />
+          <KpiCard title="Perfis disponíveis" value={accessProfiles.length ? String(accessProfiles.length) : "—"} icon={<Shield aria-hidden="true" />} />
+        </div>
+        <Surface padding="sm" className="kds-settings-users-toolbar flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="w-full min-w-0 sm:flex-1">
             <Input
               type="search"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               leftIcon={Search}
+              aria-label="Buscar por usuário, e-mail ou perfil"
               placeholder="Buscar por usuário, e-mail ou perfil"
             />
           </div>
-          <Text className="shrink-0 text-xs text-[var(--text-muted)]" role="status">
+          <FilterSelect value={profileFilter} onChange={setProfileFilter} options={[{ value: "all", label: "Todos os perfis" }, ...profileOptions]} includePlaceholderOption={false} neutralValues={["all"]} aria-label="Filtrar por perfil" />
+          <Text className="shrink-0 kds-settings-result-count" role="status">
             {filteredUsers.length} {filteredUsers.length === 1 ? "usuário" : "usuários"}
           </Text>
         </Surface>
@@ -400,10 +407,9 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
                       <TableRow key={userProfile.id} className="align-middle">
                         <TableCell className="min-w-64">
                           <div className="flex items-center gap-3">
-                            <CardIcon><UserIcon className="h-4 w-4" /></CardIcon>
                             <div className="min-w-0">
-                              <span className="block truncate font-semibold text-[var(--text-primary)]">@{userProfile.username}</span>
-                              <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{userProfile.email}</span>
+                              <span className="kds-record-row-name block truncate">@{userProfile.username}</span>
+                              <span className="kds-record-row-secondary block truncate">{userProfile.email}</span>
                             </div>
                           </div>
                         </TableCell>
@@ -449,9 +455,6 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
                     padding="sm"
                   >
                     <div className="flex min-w-0 items-start gap-3">
-                      <CardIcon className="shrink-0">
-                        <UserIcon className="h-5 w-5" />
-                      </CardIcon>
                       <div className="min-w-0">
                         <Text className="break-words font-medium text-[color:var(--text-primary)]">
                           @{userProfile.username}
@@ -505,8 +508,9 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
           </div>
         </div>
 
-        <Dialog open={createDialogOpen} onOpenChange={(open) => !open && resetCreateForm()} size="lg">
+        <Dialog open={createDialogOpen} onOpenChange={(open) => !open && resetCreateForm()} size="md" className="kds-crm-dialog kds-settings-dialog">
           <DialogHeader onClose={resetCreateForm}>
+            <div className="kds-dialog-eyebrow">Usuários</div>
             <DialogTitle>Novo usuário</DialogTitle>
             <DialogDescription>Crie um novo usuário e associe a um perfil dinâmico de acesso.</DialogDescription>
           </DialogHeader>
@@ -578,8 +582,9 @@ export default function UsersScreen({ createDialogOpen, onCreateDialogOpenChange
             </DialogFooter>
           </form>
         </Dialog>
-        <Dialog open={Boolean(editingUser)} onOpenChange={(open) => !open && resetEditForm()} size="lg">
+        <Dialog open={Boolean(editingUser)} onOpenChange={(open) => !open && resetEditForm()} size="md" className="kds-crm-dialog kds-settings-dialog">
           <DialogHeader onClose={resetEditForm}>
+            <div className="kds-dialog-eyebrow">Usuários</div>
             <DialogTitle>Editar usuário</DialogTitle>
             <DialogDescription>Atualize os dados e o perfil de acesso do usuário.</DialogDescription>
           </DialogHeader>

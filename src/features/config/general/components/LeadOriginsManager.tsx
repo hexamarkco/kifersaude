@@ -191,7 +191,8 @@ export default function LeadOriginsManager() {
             setNewOrigin('');
           }
         }}
-        size="sm"
+        size="md"
+        className="kds-crm-dialog kds-settings-dialog"
       >
         <DialogHeader
           onClose={() => {
@@ -199,6 +200,7 @@ export default function LeadOriginsManager() {
             setNewOrigin('');
           }}
         >
+          <div className="kds-dialog-eyebrow">Configurações</div>
           <DialogTitle>Nova origem</DialogTitle>
           <DialogDescription>Cadastre um novo canal de entrada de leads.</DialogDescription>
         </DialogHeader>

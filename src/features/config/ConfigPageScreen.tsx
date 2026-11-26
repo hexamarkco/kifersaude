@@ -125,7 +125,7 @@ export default function ConfigPageScreen({ area = "settings" }: { area?: ConfigA
     />
   );
   return (
-    <div className="kds-config-screen panel-page-shell w-full space-y-6">
+    <div className={`kds-config-screen panel-page-shell w-full ${area === "settings" ? "kds-settings-area" : "space-y-6"}`}>
       {area === "automation" && !(isAutomationWorkspace && query.has("flowId")) && areaNavigation}
       {!isAutomationWorkspace && (
         <PageHeader

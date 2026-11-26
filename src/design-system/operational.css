@@ -2693,3 +2693,70 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media (max-width: 390px) {
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-filter-fields { grid-template-columns: minmax(0,1fr); }
 }
+
+/* Configurações — original reference, without decorative avatars or invented settings. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-settings-area,.kds-settings-content,.kds-access-workspace { display:grid; gap:var(--space-5); min-width:0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-settings-area .kds-page-title { font:var(--type-record-title); letter-spacing:-.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-settings-area .kds-page-description { font:var(--type-record-description); }
+.painel-theme.kifer-ds .kds-settings-area .kds-tab { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-settings-area .kds-system-settings-nav > :is(.kds-action-surface,a) { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-settings-area .kds-system-settings-nav > :is(.kds-action-surface,a):hover { border-color:transparent; box-shadow:none; }
+.painel-theme.kifer-ds .kds-settings-area .kds-system-settings-heading .kds-heading { font:var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds .kds-settings-area .kds-system-settings-heading .kds-text { font:var(--type-record-secondary); }
+.painel-theme.kifer-ds .kds-settings-area .kds-system-settings-brand { margin-block:var(--space-4) var(--space-5); }
+.painel-theme.kifer-ds .kds-settings-area .kds-card { box-shadow:none; }
+.painel-theme.kifer-ds .kds-settings-area .kds-card-title { font:var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds .kds-settings-area .kds-card-subtitle { font:var(--type-dashboard-card-subtitle); }
+.painel-theme.kifer-ds :is(.kds-settings-area,.kds-settings-dialog) .kds-field-label { font:var(--type-record-field-label); color:var(--text-primary); }
+.painel-theme.kifer-ds :is(.kds-settings-area,.kds-settings-dialog) :is(.kds-input,.kds-select,.kds-textarea,.kds-filter-trigger) { font:var(--type-record-field); }
+.painel-theme.kifer-ds .kds-settings-area :is(.kds-settings-users-toolbar,.kds-settings-catalog-toolbar,.kds-toolbar) :is(.kds-button,.kds-input,.kds-filter-trigger) { font:var(--type-toolbar-control); min-height:var(--toolbar-control-height); }
+.painel-theme.kifer-ds .kds-settings-result-count { font:var(--type-toolbar-caption); color:var(--text-muted); }
+.painel-theme.kifer-ds .kds-settings-area .kds-table-head { height:var(--record-table-head-height); font:var(--type-record-heading); text-transform:none; letter-spacing:normal; }
+.painel-theme.kifer-ds .kds-settings-area .kds-table-cell { height:var(--record-table-row-height); font:var(--type-record-body); vertical-align:middle; }
+.painel-theme.kifer-ds .kds-settings-area .kds-record-actions .kds-button { border-color:transparent; background:transparent; box-shadow:none; }
+.painel-theme.kifer-ds .kds-settings-area .kds-record-actions .kds-button:hover { background:var(--bg-hover); }
+.kds-settings-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-4); }
+.painel-theme.kifer-ds .kds-settings-metrics > .kds-card-kpi { min-height:var(--dashboard-metric-height); padding:var(--space-5); gap:var(--space-3); border-radius:var(--dashboard-card-radius); }
+.painel-theme.kifer-ds .kds-settings-metrics .kds-card-title { font:var(--type-dashboard-metric-label); color:var(--text-muted); }
+.painel-theme.kifer-ds .kds-settings-metrics .kds-kpi-value { font:var(--type-record-metric); letter-spacing:-.05em; overflow-wrap:anywhere; }
+.painel-theme.kifer-ds .kds-settings-catalog-row { min-height:var(--record-table-row-height); font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-settings-catalog .kds-catalog-sort { font:var(--type-record-heading); }
+.painel-theme.kifer-ds .kds-settings-catalog .kds-catalog-sort:hover { box-shadow:none; border-color:transparent; }
+.kds-access-permission-grid { display:grid; grid-template-columns:minmax(0,1fr); }
+.kds-access-permission-grid > ul + ul { border-top:var(--border-width) solid var(--border-subtle); }
+.painel-theme.kifer-ds .kds-access-permission-row { min-height:var(--record-table-row-height); }
+.painel-theme.kifer-ds .kds-access-permission-row .kds-text { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-access-permission-row .kds-text + .kds-text { font:var(--type-record-secondary); }
+.kds-settings-link-layout,.kds-settings-question-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-5); align-items:start; min-width:0; }
+.kds-settings-link-preview,.kds-settings-question-preview { display:grid; gap:var(--space-3); min-width:0; }
+.kds-settings-public-preview { display:grid; justify-items:center; gap:var(--space-3); text-align:center; padding:var(--space-5); border:var(--border-width) solid var(--border-subtle); border-radius:var(--radius-panel); background:var(--bg-surface-muted); overflow-wrap:anywhere; }
+.kds-settings-public-photo { width:4rem; height:4rem; border-radius:var(--radius-full); object-fit:cover; }
+.kds-settings-public-bio { white-space:pre-wrap; overflow-wrap:anywhere; }
+.kds-settings-preview-steps { display:grid; gap:var(--space-2); }
+.kds-settings-preview-steps > li { display:flex; gap:var(--space-2); align-items:start; padding-block:var(--space-2); border-bottom:var(--border-width) solid var(--border-subtle); font:var(--type-record-body); overflow-wrap:anywhere; }
+.kds-settings-preview-steps > li > span { color:var(--brand-primary); font-weight:600; flex:none; }
+.painel-theme.kifer-ds .kds-settings-question-row { border-color:var(--border-subtle); background:transparent; }
+.kds-settings-form-editor > section[hidden] { display:none; }
+.kds-settings-link-create-grid,.kds-settings-form-create-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-4); }
+.painel-theme.kifer-ds .kds-settings-dialog { width:var(--record-dialog-width); max-width:calc(100vw - var(--space-6)); }
+.painel-theme.kifer-ds .kds-settings-dialog .kds-dialog-body { padding:var(--dialog-body-padding); }
+.painel-theme.kifer-ds .kds-settings-dialog :is(.kds-input,.kds-select,.kds-filter-trigger) { min-height:var(--form-control-height); }
+@media (min-width:640px) {
+ .kds-settings-link-create-grid,.kds-settings-form-create-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (min-width:1200px) {
+ .painel-theme.kifer-ds .kds-settings-area .kds-system-settings-layout { grid-template-columns:12.8125rem minmax(0,1fr); gap:var(--space-5); }
+ .painel-theme.kifer-ds .kds-access-layout { grid-template-columns:minmax(12rem,15rem) minmax(0,1fr); }
+ .kds-settings-link-layout,.kds-settings-question-layout { grid-template-columns:minmax(0,1fr) minmax(14rem,27%); }
+}
+@media (max-width:767px) {
+ .painel-theme.kifer-ds.kds-workspace-theme .kds-settings-area,.kds-settings-content { gap:var(--space-4); }
+ .painel-theme.kifer-ds.kds-workspace-theme .kds-settings-area .kds-page-title { font-size:1.4375rem; }
+ .kds-settings-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
+ .painel-theme.kifer-ds .kds-settings-metrics > .kds-card-kpi { min-height:8rem; padding:var(--space-3); gap:var(--space-2); }
+ .painel-theme.kifer-ds .kds-settings-metrics .kds-kpi-value { font-size:clamp(1rem,5.5vw,1.5rem); }
+ .painel-theme.kifer-ds .kds-settings-dialog .kds-dialog-footer { flex-wrap:wrap; }
+}
+@media (pointer:coarse) {
+ .painel-theme.kifer-ds .kds-settings-area :is(.kds-settings-users-toolbar,.kds-settings-catalog-toolbar,.kds-system-settings-nav,.kds-settings-form-editor) :is(.kds-button,.kds-icon-button,.kds-input,.kds-filter-trigger,.kds-action-surface) { min-height:var(--touch-target); }
+}

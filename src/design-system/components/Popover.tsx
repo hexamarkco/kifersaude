@@ -144,11 +144,12 @@ export function PopoverContent({
       ref={contentRef}
       data-popover-id={id}
       data-popover-parent={parentId}
+      data-side={position.side}
       role="dialog"
       aria-label={props['aria-label'] ?? 'Conteudo adicional'}
       className={cx('kds-popover modal-theme-host painel-theme kifer-ds', appearance ? `theme-${appearance.theme} kds-operational` : theme, appearance?.workspace && 'kds-workspace-theme', className)}
       {...props}
-      style={{ position: 'fixed', top: position.top, left: position.left, maxHeight: position.maxHeight, maxWidth: position.maxWidth, ...style }}
+      style={{ position: 'fixed', top: position.top, left: position.left, maxHeight: position.maxHeight, maxWidth: position.maxWidth, ...style, visibility: position.hidden ? 'hidden' : style?.visibility }}
     >
       {children}
     </div>,

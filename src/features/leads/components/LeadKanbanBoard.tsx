@@ -1,6 +1,6 @@
 import { Text, Heading, FieldLabel } from '../../../design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Calendar, FileText, Mail, Phone, UserCircle, Users } from "lucide-react";
+import { ArrowRight, Calendar, FileText, Plus, Users } from "lucide-react";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
@@ -8,6 +8,8 @@ import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
 import {
   ActionSurface,
   Alert,
+  Avatar,
+  Badge,
   Button,
   EmptyState,
   Input,
@@ -28,6 +30,7 @@ import {
 type LeadKanbanBoardProps = {
   onLeadClick?: (lead: Lead) => void;
   onConvertToContract?: (lead: Lead) => void;
+  onCreateLead?: (status: string) => void;
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>;
   leads?: Lead[];
 };
@@ -35,6 +38,7 @@ type LeadKanbanBoardProps = {
 export default function LeadKanbanBoard({
   onLeadClick,
   onConvertToContract,
+  onCreateLead,
   onStatusChange,
   leads,
 }: LeadKanbanBoardProps) {
@@ -276,25 +280,6 @@ export default function LeadKanbanBoard({
           Os leads já carregados foram preservados. Tente novamente para atualizar as colunas.
         </Alert>
       )}
-      <div className="kds-kanban-header mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Text className="kds-op-section-label">
-            Funil visual
-          </Text>
-          <Heading level={3} className="kds-op-panel-title mt-2">
-            Contatos por etapa
-          </Heading>
-          <Text className="kds-op-lead-muted mt-1 text-sm">
-            Arraste os cards entre etapas para atualizar o status.
-          </Text>
-        </div>
-
-        <div className="kds-kanban-summary flex flex-wrap gap-2">
-          <OperationalMetricChip value={statusColumns.length} label="etapas ativas" />
-          <OperationalMetricChip value={localLeads.length} label="leads visíveis" />
-        </div>
-      </div>
-
       <div className="kds-kanban-workspace">
         <div className="kds-kanban-scroll overflow-x-auto pb-4 snap-x snap-mandatory">
           <div className="kds-kanban-track">
@@ -307,7 +292,7 @@ export default function LeadKanbanBoard({
               return (
                 <div
                   key={column.id}
-                  className={`kds-kanban-column w-80 flex-shrink-0 snap-start rounded-2xl p-3 ${
+                  className={`kds-kanban-column flex-shrink-0 snap-start ${
                     isOverLimit
                       ? "border border-[var(--danger-border)] bg-[var(--danger-soft)]"
                       : "bg-[var(--bg-surface)]"
@@ -315,7 +300,7 @@ export default function LeadKanbanBoard({
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => void handleDrop(column.id)}
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="kds-kanban-column-heading flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <OperationalStatusDot statusColor={chipColor} />
@@ -335,7 +320,45 @@ export default function LeadKanbanBoard({
                     <OperationalMetricChip value={columnLeads.length} active={isOverLimit} tone={isOverLimit ? "danger" : "neutral"} />
                   </div>
 
-                  <div className="kds-kanban-wip">
+                  <div className="kds-kanban-column-body space-y-3 overflow-y-auto pr-1">
+                    {columnLeads.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] px-4 py-8 text-center">
+                        <Users className="mx-auto mb-2 h-8 w-8 opacity-70" />
+                        <Text className="text-sm font-medium">Nenhum lead</Text>
+                      </div>
+                    ) : (
+                      columnLeads.map((lead) => {
+                        const responsavelLabel = getResponsavelLabel(lead);
+
+                        return (
+                          <Surface
+                            key={lead.id}
+                            padding="sm"
+                            draggable={!isObserver}
+                            onDragStart={() => { if (!isObserver) setDraggedLead(lead); }}
+                            onDragEnd={() => setDraggedLead(null)}
+                            className="kds-kanban-card cursor-move transition-colors"
+                          >
+                            <div className="kds-kanban-card-heading">
+                              <ActionSurface variant="plain" padding="none" onClick={() => onLeadClick?.(lead)} aria-label={`Abrir detalhes de ${lead.nome_completo}`}><Heading level={5} className="kds-op-lead-title">{lead.nome_completo}</Heading></ActionSurface>
+                              <LeadFavoriteToggle leadId={lead.id} favorito={Boolean(lead.favorito)} size="sm" onToggled={(next) => { loadLeadsRequestIdRef.current += 1; setLocalLeads((current) => current.map((item) => item.id === lead.id ? { ...item, favorito: next } : item)); }} />
+                            </div>
+                            <Text className="kds-record-row-secondary">{[lead.cidade, lead.tipo_contratacao].filter(Boolean).join(' · ') || 'Perfil não informado'}</Text>
+                            {lead.tags?.length ? <div className="kds-kanban-card-tags">{lead.tags.map((tag) => <Badge key={tag} tone="neutral" size="sm">{tag}</Badge>)}</div> : null}
+                            <div className="kds-kanban-card-contact"><Text className="kds-record-row-name">{lead.telefone || lead.email || 'Sem contato'}</Text>{lead.responsavel && <span className="kds-record-owner" title={responsavelLabel}><Avatar name={responsavelLabel} size="xs" tone="brand" className="kds-record-owner-avatar" /><span className="sr-only">{responsavelLabel}</span></span>}</div>
+                            <div className="kds-kanban-card-footer">
+                              <span className="kds-record-date">{lead.proximo_retorno ? <><Calendar aria-hidden="true" />{formatDateTimeFullBR(lead.proximo_retorno)}</> : 'Sem retorno'}</span>
+                              <span className="truncate" title={lead.origem || undefined}>{lead.origem || 'Sem origem'}</span>
+                              <RecordActions visibleCount={0} label="Ações do lead" actions={[{ label: 'Abrir detalhes do lead', icon: ArrowRight, onClick: () => onLeadClick?.(lead) }, ...(onConvertToContract ? [{ label: 'Converter em contrato', icon: FileText, onClick: () => onConvertToContract(lead) }] : [])]} />
+                            </div>
+                          </Surface>
+                        );
+                      })
+                    )}
+                  </div>
+                  {onCreateLead && <Button variant="text" size="sm" onClick={() => onCreateLead(column.nome)} className="kds-kanban-add-lead"><Plus className="kds-control-icon" aria-hidden="true" />Adicionar lead</Button>}
+                  <details className="kds-kanban-wip">
+                    <summary>Limite WIP</summary>
                     <FieldLabel className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium">
                       <span className="kds-op-lead-muted">
                         Limite WIP
@@ -354,61 +377,7 @@ export default function LeadKanbanBoard({
                         />
                       </div>
                     </FieldLabel>
-                  </div>
-
-                  <div className="kds-kanban-column-body space-y-3 overflow-y-auto pr-1">
-                    {columnLeads.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-hover)] px-4 py-8 text-center">
-                        <Users className="mx-auto mb-2 h-8 w-8 opacity-70" />
-                        <Text className="text-sm font-medium">Nenhum lead</Text>
-                      </div>
-                    ) : (
-                      columnLeads.map((lead) => {
-                        const responsavelLabel = getResponsavelLabel(lead);
-
-                        return (
-                          <Surface
-                            key={lead.id}
-                            padding="sm"
-                            draggable
-                            onDragStart={() => setDraggedLead(lead)}
-                            className="kds-kanban-card cursor-move transition-colors"
-                          >
-                            <div className="kds-kanban-card-heading">
-                              <LeadFavoriteToggle
-                                leadId={lead.id}
-                                favorito={Boolean(lead.favorito)}
-                                size="sm"
-                                onToggled={(next) => {
-                                  loadLeadsRequestIdRef.current += 1;
-                                  setLocalLeads((current) => current.map((item) => item.id === lead.id ? { ...item, favorito: next } : item));
-                                }}
-                              />
-                              <ActionSurface variant="plain" padding="none" onClick={() => onLeadClick?.(lead)} aria-label={`Abrir detalhes de ${lead.nome_completo}`}>
-                                <Heading level={5} className="kds-op-lead-title">{lead.nome_completo}</Heading>
-                              </ActionSurface>
-                            </div>
-                            <div className="kds-op-lead-meta space-y-2">
-                              {lead.telefone && <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{lead.telefone}</span></div>}
-                              {lead.email && <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate" title={lead.email}>{lead.email}</span></div>}
-                              <div className="flex items-center gap-2"><UserCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span>{responsavelLabel}</span></div>
-                              {lead.proximo_retorno && <div className="kds-op-lead-accent flex items-center gap-2"><Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span>{formatDateTimeFullBR(lead.proximo_retorno)}</span></div>}
-                            </div>
-                            <div className="kds-kanban-card-footer">
-                              <div className="min-w-0">
-                                <span className="block truncate">{lead.origem || 'Sem origem'}</span>
-                                {lead.data_criacao && <span className="block">{new Date(lead.data_criacao).toLocaleDateString('pt-BR')}</span>}
-                              </div>
-                              <RecordActions label="Ações do lead" actions={[
-                                { label: 'Abrir detalhes do lead', icon: ArrowRight, onClick: () => onLeadClick?.(lead) },
-                                ...(onConvertToContract ? [{ label: 'Converter em contrato', icon: FileText, onClick: () => onConvertToContract(lead) }] : []),
-                              ]} />
-                            </div>
-                          </Surface>
-                        );
-                      })
-                    )}
-                  </div>
+                  </details>
                 </div>
               );
             })}

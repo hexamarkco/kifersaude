@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import {
   Alert,
-  Avatar,
   Badge,
   Breadcrumb,
   BreadcrumbItem,
@@ -439,7 +438,6 @@ export function ContactList({
                     </TableCell>
                     <TableCell>
                       <div className="ds-person">
-                        <Avatar name={row.name} size="sm" />
                         <div>
                           <strong>{row.name}</strong>
                           <small>{row.email}</small>
@@ -503,7 +501,6 @@ export function ContactList({
               <Card key={row.id} padding="sm">
                 <div className="ds-between">
                   <div className="ds-person">
-                    <Avatar name={row.name} size="sm" />
                     <strong>{row.name}</strong>
                   </div>
                   <Checkbox
@@ -655,8 +652,6 @@ export default function WorkspacePreview({
     title: titles[view],
     description: descriptions[view],
     breadcrumbs,
-    identity:
-      view === 'detail' ? <Avatar name={contact.name} size="md" /> : undefined,
     status:
       view === 'detail' ? <ContactStatus status={contact.status} /> : undefined,
     actions:
@@ -739,7 +734,6 @@ export default function WorkspacePreview({
           >
             <Menu />
           </IconButton>
-          <Avatar name="Marina Costa" size="sm" />
         </div>
       </div>
       <div className="ds-workspace-body">
@@ -941,7 +935,6 @@ function Dashboard({
                 key={row.id}
                 onClick={() => onOpen(row)}
               >
-                <Avatar name={row.name} size="sm" />
                 <span>
                   {row.name}
                   <small>{row.operator}</small>

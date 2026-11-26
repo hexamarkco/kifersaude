@@ -47,6 +47,7 @@ test('lead details drawer preserves close, edit and full-page callbacks', async 
     assert.match(drawer.className, /kds-drawer-right/);
     assert.equal(drawer.getAttribute('aria-label'), 'Detalhes do lead');
     assert.ok(drawer.textContent?.includes('Sobre a negociação'));
+    assert.equal(drawer.querySelector('.kds-avatar'), null);
     const tabs = [...drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
     assert.deepEqual(tabs.map(tab => tab.textContent), ['Resumo', 'Histórico', 'Vínculos', 'Anotações']);
     const history = tabs.find(tab => tab.textContent === 'Histórico'); assert.ok(history);

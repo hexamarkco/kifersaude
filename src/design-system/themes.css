@@ -336,10 +336,8 @@
   --type-record-field-label: 500 .6875rem / 1.6 var(--font-sans);
   --record-drawer-width: 41.25rem;
   --record-kanban-column-width: 15.625rem;
-  --record-owner-avatar-size: 1.5625rem;
   --record-drawer-gutter: .875rem;
-  --record-avatar-size: 2rem;
-  --record-entity-avatar-size: 3rem;
+  --record-event-icon-size: 2rem;
   --record-dialog-width: 38.75rem;
   --record-dialog-wide: 60rem;
   --record-table-row-height: 4.0625rem;

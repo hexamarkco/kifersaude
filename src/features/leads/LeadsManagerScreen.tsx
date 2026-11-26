@@ -64,7 +64,6 @@ import { toast } from "../../lib/toast";
 import { useConfig } from "../../contexts/ConfigContext";
 import {
   Alert,
-  Avatar,
   Badge,
   Field,
   Tabs,
@@ -1966,7 +1965,6 @@ export default function LeadsManager({
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <ActionSurface variant="plain" padding="none" type="button" onClick={() => openLeadDetails(lead)} className="kds-lead-identity">
-                              <Avatar name={lead.nome_completo} tone="brand" size="sm" className="kds-record-row-avatar" />
                               <span className="min-w-0"><span className="kds-record-row-name block truncate">{lead.nome_completo}</span><span className="kds-record-row-secondary block truncate">{lead.telefone || lead.email || "Sem contato"}</span></span>
                             </ActionSurface>
                           </div>
@@ -1983,7 +1981,7 @@ export default function LeadsManager({
                           <span>{lead.tipo_contratacao || "—"}</span>
                         </TableCell>
                         <TableCell>{lead.origem ? <span className="kds-record-date">{/site/i.test(lead.origem) ? <Globe aria-hidden="true" /> : /meta|ads/i.test(lead.origem) ? <MousePointerClick aria-hidden="true" /> : <MessageCircle aria-hidden="true" />}{lead.origem}</span> : "—"}</TableCell>
-                        <TableCell><span className="kds-record-owner">{lead.responsavel && <Avatar name={lead.responsavel} size="xs" tone="brand" className="kds-record-owner-avatar" />}<span>{lead.responsavel || "Não atribuído"}</span></span></TableCell>
+                        <TableCell><span className="kds-record-owner"><span>{lead.responsavel || "Não atribuído"}</span></span></TableCell>
                         <TableCell>
                           {nextReminder ? (
                             <span className="kds-record-date"><Calendar aria-hidden="true" />{formatDateTimeFullBR(nextReminder)}</span>

@@ -8,7 +8,6 @@ import { LeadFavoriteToggle } from "../../../components/LeadFavoriteStar";
 import {
   ActionSurface,
   Alert,
-  Avatar,
   Badge,
   Button,
   EmptyState,
@@ -346,7 +345,7 @@ export default function LeadKanbanBoard({
                             </div>
                             <Text className="kds-record-row-secondary">{[lead.cidade, lead.tipo_contratacao].filter(Boolean).join(' · ') || 'Perfil não informado'}</Text>
                             {lead.tags?.length ? <div className="kds-kanban-card-tags">{lead.tags.map((tag) => <Badge key={tag} tone="neutral" size="sm">{tag}</Badge>)}</div> : null}
-                            <div className="kds-kanban-card-contact"><Text className="kds-record-row-name">{lead.telefone || lead.email || 'Sem contato'}</Text>{lead.responsavel && <span className="kds-record-owner" title={responsavelLabel}><Avatar name={responsavelLabel} size="xs" tone="brand" className="kds-record-owner-avatar" /><span className="sr-only">{responsavelLabel}</span></span>}</div>
+                            <div className="kds-kanban-card-contact"><Text className="kds-record-row-name">{lead.telefone || lead.email || 'Sem contato'}</Text>{lead.responsavel && <span className="kds-record-owner" title={responsavelLabel}><span className="kds-record-row-secondary">{responsavelLabel}</span></span>}</div>
                             <div className="kds-kanban-card-footer">
                               <span className="kds-record-date">{lead.proximo_retorno ? <><Calendar aria-hidden="true" />{formatDateTimeFullBR(lead.proximo_retorno)}</> : 'Sem retorno'}</span>
                               <span className="truncate" title={lead.origem || undefined}>{lead.origem || 'Sem origem'}</span>

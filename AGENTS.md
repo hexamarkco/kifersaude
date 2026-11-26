@@ -22,6 +22,7 @@ Domínios principais: leads, contratos, agenda/lembretes, dashboard, configuraç
 - Regras de negócio devem ser funções puras quando possível e os testes devem importar a implementação de produção, nunca cópias.
 - Prefira módulos coesos a arquivos arbitrariamente pequenos. Não crie wrappers de uma linha sem uma fronteira real.
 - Pequena duplicação entre browser e Deno é aceitável quando evita acoplamento de deploy; mantenha fixtures/testes de paridade para regras críticas.
+- Não use avatares decorativos de pessoas ou iniciais nas telas operacionais, mesmo quando aparecem no protótipo. Identifique contatos e responsáveis por texto; preserve ícones funcionais e fotos de perfil públicas configuradas.
 - Preserve a linguagem visual Terracota CRM light-first, dark opcional, tokens semânticos, raios `6/8/12/16px`, Sora para títulos e Poppins para UI/corpo.
 - Escreva e organize todas as telas para operadores sem formação técnica. Títulos, status e avisos devem explicar o que acontece, o impacto no trabalho e a próxima ação em português claro. Use termos de negócio; mantenha códigos, nomes de serviços e detalhes de programação em áreas expansíveis de suporte/configuração avançada. Não apresente ausência de dados ou confirmação como sucesso.
 - Scripts suportados ficam em `scripts/` e no `package.json`. `scripts/legacy` é somente referência histórica e não deve ser executado sem auditoria humana.

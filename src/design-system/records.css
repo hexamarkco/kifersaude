@@ -428,7 +428,6 @@
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-table-cell .kds-lead-identity { font: var(--type-record-body); gap: var(--space-2); }
 :is(.kds-contract-row-name, .kds-record-row-name) { color: var(--text-primary); font: var(--type-record-body); font-weight: var(--font-weight-medium); }
 :is(.kds-contract-row-code, .kds-record-row-secondary) { color: var(--text-muted); font: var(--type-record-secondary); }
-:is(.kds-contract-row-avatar.kds-avatar, .kds-record-row-avatar.kds-avatar) { width: var(--record-avatar-size); height: var(--record-avatar-size); border-radius: var(--radius-md); font: var(--type-record-body); }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-op-status-badge { font: var(--type-record-secondary); }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-record-actions .kds-button { border-color: transparent; background: transparent; box-shadow: none; }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contracts-results, .kds-leads-results) .kds-record-actions .kds-button:hover { background: var(--bg-hover); }
@@ -436,7 +435,6 @@
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-details-drawer,.kds-lead-details-drawer,.kds-lead-relationships-drawer) { width: min(var(--record-drawer-width),100%); max-width: 100%; height: calc(100dvh - 2 * var(--record-drawer-gutter)); max-height: calc(100dvh - 2 * var(--record-drawer-gutter)); border-radius: var(--radius-panel); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-contract-details-drawer .kds-drawer-body { background: var(--bg-surface); padding: var(--dialog-body-padding); }
 :is(.kds-contract-entity-summary, .kds-record-entity-summary) { flex: none; display: grid; gap: var(--space-2); padding: var(--space-5) var(--dialog-inline-padding); background: var(--bg-surface); }
-:is(.kds-contract-entity-avatar.kds-avatar, .kds-record-entity-avatar.kds-avatar) { width: var(--record-entity-avatar-size); height: var(--record-entity-avatar-size); border-radius: var(--radius-md); }
 :is(.kds-contract-entity-title, .kds-record-entity-title) { min-width: 0; overflow-wrap: anywhere; font: var(--type-record-title); letter-spacing: -.035em; }
 .kds-contract-entity-code { font: var(--type-record-secondary); color: var(--text-muted); }
 :is(.kds-contract-entity-actions, .kds-record-entity-actions) { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block-start: var(--space-2); }
@@ -453,7 +451,7 @@
 .kds-contract-overview-events { border-top: var(--border-width) solid var(--border-subtle); padding-block: var(--space-4); }
 .kds-contract-event-row { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); font: var(--type-record-body); }
 .kds-contract-document-row { display: flex; align-items: center; gap: var(--space-3); padding-block: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); }
-.kds-contract-document-icon { display: grid; place-items: center; width: var(--record-avatar-size); height: var(--record-avatar-size); background: var(--brand-primary-soft); color: var(--brand-primary); border-radius: var(--radius-control); flex: none; }
+.kds-contract-document-icon { display: grid; place-items: center; width: var(--record-event-icon-size); height: var(--record-event-icon-size); background: var(--brand-primary-soft); color: var(--brand-primary); border-radius: var(--radius-control); flex: none; }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-filter-dialog,.kds-contract-interaction-dialog,.kds-dependent-form-dialog,.kds-value-adjustment-dialog,.kds-contract-json-import-dialog,.kds-holder-import-dialog) { width: var(--record-dialog-width); max-width: 100%; }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog,.kds-contract-bulk-import-dialog) { width: var(--record-dialog-wide); max-width: 100%; }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-contract-form-dialog,.kds-holder-form-dialog,.kds-dependent-form-dialog,.kds-value-adjustment-dialog,.kds-contract-json-import-dialog,.kds-contract-bulk-import-dialog,.kds-holder-import-dialog,.kds-contract-filter-dialog,.kds-contract-interaction-dialog) .kds-dialog-body { background: var(--bg-surface); padding: var(--dialog-body-padding); }
@@ -506,8 +504,6 @@
 .kds-leads-toolbar-view .kds-tabs-list { padding: var(--space-1); gap: var(--space-1); border-radius: var(--radius-control); }
 .kds-leads-view-tabs .kds-tab { font: var(--type-record-body); }
 .kds-record-owner { display: flex; align-items: center; min-width: 0; gap: var(--space-2); }
-.kds-record-owner-avatar.kds-avatar { width: var(--record-owner-avatar-size); height: var(--record-owner-avatar-size); border-radius: var(--radius-control); font: var(--type-record-secondary); flex: none; }
-.kds-record-row-avatar.kds-avatar { flex: none; }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-leads-results .kds-record-actions .kds-button { border-color: transparent; background: transparent; box-shadow: none; }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-leads-results .kds-record-actions .kds-button:hover { background: var(--bg-hover); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-leads-page .kds-kanban-board { padding: 0; border: 0; background: transparent; }
@@ -526,7 +522,7 @@
 .kds-leads-page .kds-kanban-card-heading { align-items: center; margin: 0; }
 .kds-leads-page .kds-kanban-card-heading .kds-op-lead-title { font: var(--type-record-field-label); white-space: normal; overflow-wrap: anywhere; }
 .kds-kanban-card-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
-.kds-kanban-card-contact { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); min-height: var(--record-owner-avatar-size); }
+.kds-kanban-card-contact { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .kds-kanban-card-contact > * { min-width: 0; overflow-wrap: anywhere; }
 .kds-leads-page .kds-kanban-card-footer { font: var(--type-record-secondary); border: 0; padding: 0; margin-top: var(--space-1); gap: var(--space-1); }
 .kds-leads-page .kds-kanban-card-footer .kds-record-date { min-width: 0; white-space: normal; }
@@ -538,7 +534,7 @@
 .painel-theme.kifer-ds.kds-workspace-theme .kds-lead-details-drawer-content { padding: 0; gap: var(--space-5); }
 .kds-lead-details-drawer .kds-record-overview-fields { margin: 0; }
 .kds-record-context { font: var(--type-record-field); color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
-.kds-record-event-icon { display: grid; place-items: center; width: var(--record-avatar-size); height: var(--record-avatar-size); background: var(--brand-primary-soft); color: var(--brand-primary); border-radius: var(--radius-control); flex: none; }
+.kds-record-event-icon { display: grid; place-items: center; width: var(--record-event-icon-size); height: var(--record-event-icon-size); background: var(--brand-primary-soft); color: var(--brand-primary); border-radius: var(--radius-control); flex: none; }
 .kds-lead-details-drawer .kds-section-title { font: var(--type-record-field-label); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-lead-details-drawer :is(.kds-detail-interactions,.kds-lead-timeline-event) { border: 0; box-shadow: none; background: transparent; padding: 0; }
 .kds-lead-details-drawer .kds-lead-timeline-event { border-bottom: var(--border-width) solid var(--border-subtle); padding-block: var(--space-3); }

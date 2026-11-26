@@ -16,7 +16,6 @@ import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import { LeadFavoriteToggle } from './LeadFavoriteStar';
 import {
-  Avatar,
   Badge,
   OperationalStatusBadge,
   Button,
@@ -466,11 +465,10 @@ export default function LeadDetails({ lead, presentation = 'dialog', onClose, on
         </DrawerHeader>
         <div className="kds-record-entity-summary">
           <div className="flex items-center justify-between gap-2">
-            <Avatar name={lead.nome_completo} size="lg" tone="brand" className="kds-record-entity-avatar" />
+            <Heading level={3} className="kds-record-entity-title">{lead.nome_completo}</Heading>
             <div className="flex items-center gap-1">{favorite}{drawerActions.length > 0 && <RecordActions actions={drawerActions} visibleCount={0} label="Ações do lead" />}</div>
           </div>
-          <div className="flex items-center justify-between gap-3"><Heading level={3} className="kds-record-entity-title">{lead.nome_completo}</Heading><OperationalStatusBadge statusColor={statusColor}>{status}</OperationalStatusBadge></div>
-          <Text className="kds-record-row-secondary">{lead.telefone || lead.email || 'Sem contato cadastrado'}</Text>
+          <div className="flex items-center justify-between gap-3"><Text className="kds-record-row-secondary">{lead.telefone || lead.email || 'Sem contato cadastrado'}</Text><OperationalStatusBadge statusColor={statusColor}>{status}</OperationalStatusBadge></div>
           <div className="kds-record-entity-actions" aria-label="Ações rápidas do lead">
             {whatsapp && <Button variant="secondary" size="sm" onClick={() => window.open(`https://wa.me/${whatsapp}`, '_blank', 'noopener,noreferrer')}><MessageCircle className="kds-control-icon" aria-hidden="true" />Conversar</Button>}
             {canEditLead && <Button variant="secondary" size="sm" onClick={() => { setDrawerTab('history'); setShowForm(true); }}><Plus className="kds-control-icon" aria-hidden="true" />Interação</Button>}

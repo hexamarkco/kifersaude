@@ -595,7 +595,6 @@ export function SystemSettingsSkeleton() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <PanelCard className="space-y-4 xl:col-span-7">
           <div className="flex items-center gap-3">
-            <Skeleton variant="avatar" className="h-11 w-11" />
             <div className="space-y-2">
               <Skeleton className="h-5 w-48" />
               <Skeleton variant="line" className="h-4 w-64 max-w-full" />
@@ -613,7 +612,6 @@ export function SystemSettingsSkeleton() {
         </PanelCard>
         <PanelCard className="space-y-4 xl:col-span-5">
           <div className="flex items-center gap-3">
-            <Skeleton variant="avatar" className="h-11 w-11" />
             <div className="space-y-2">
               <Skeleton className="h-5 w-40" />
               <Skeleton variant="line" className="h-4 w-52 max-w-full" />
@@ -625,7 +623,6 @@ export function SystemSettingsSkeleton() {
         </PanelCard>
         <PanelCard className="space-y-4 xl:col-span-12">
           <div className="flex items-center gap-3">
-            <Skeleton variant="avatar" className="h-11 w-11" />
             <div className="space-y-2">
               <Skeleton className="h-5 w-36" />
               <Skeleton variant="line" className="h-4 w-56 max-w-full" />
@@ -708,7 +705,6 @@ export function UsersSkeleton() {
             <div key={`user-row-${index}`} className="kds-card kds-card-default p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <Skeleton variant="avatar" className="h-10 w-10" />
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-36" />
                     <Skeleton variant="line" className="h-3.5 w-48" />

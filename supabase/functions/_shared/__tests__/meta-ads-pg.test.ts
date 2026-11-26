@@ -58,6 +58,7 @@ beforeAll(async () => {
     INSERT INTO public.lead_origens VALUES('${origin}','tráfego pago',true);
     INSERT INTO public.lead_responsaveis VALUES('${responsible}','Luiza','Luiza',true);
     INSERT INTO public.lead_status_config VALUES('${status}','Novo',true,true,0);`);
+  await db.exec(readFileSync(resolve('supabase/migrations/20261126141000_meta_ads_stable_default_ids.sql'),'utf8'));
 },60000);
 beforeEach(async () => {
   await db.exec(`TRUNCATE public.meta_integration_attempts,public.meta_conversion_events,public.meta_commercial_reviews,
@@ -85,6 +86,24 @@ const review = (attr: string,eligible = true,lives = 2,contract: string | null =
   scalar<string>('meta_ads_review',[actor,attr,eligible,lives,true,true,opportunity,contract,completed]);
 const reviewV2 = (attr: string,modality = 'individual',eligible = true,lives = 1,closed = false,contract: string | null = null,completed = false,opportunity: string | null = null,actor = admin) =>
   scalar<string>('meta_ads_review_v2',[actor,attr,modality,eligible,lives,true,true,closed,opportunity,contract,completed]);
+
+it('uses stable CRM origin and owner IDs after either display name is renamed', async () => {
+  await db.query("UPDATE integration_settings SET settings = settings || jsonb_build_object('defaultOrigemId',$1::text,'defaultResponsavelId',$2::text)",[origin,responsible]);
+  await db.query("UPDATE lead_origens SET nome='Meta Ads' WHERE id=$1",[origin]);
+  await db.query("UPDATE lead_responsaveis SET label='Luiza Atualizada',value='Luiza Atualizada' WHERE id=$1",[responsible]);
+  try {
+    const { leadId } = await imported();
+    expect(await value<string>('SELECT origem_id::text AS value FROM leads WHERE id=$1',[leadId])).toBe(origin);
+    expect(await value<string>('SELECT responsavel_id::text AS value FROM leads WHERE id=$1',[leadId])).toBe(responsible);
+    expect(await count('meta_lead_attributions')).toBe(1);
+    expect(await db.query("SELECT status FROM meta_lead_receipts")).toMatchObject({rows:[{status:'imported'}]});
+    await expect(db.query("UPDATE integration_settings SET settings = jsonb_set(settings,'{defaultOrigemId}',to_jsonb($1::text))",[id(999)])).rejects.toThrow('INVALID_META_DEFAULT_ORIGIN');
+    await expect(db.query("UPDATE integration_settings SET settings = jsonb_set(settings,'{defaultResponsavelId}',to_jsonb($1::text))",[id(999)])).rejects.toThrow('INVALID_META_DEFAULT_RESPONSIBLE');
+  } finally {
+    await db.query("UPDATE lead_origens SET nome='tráfego pago' WHERE id=$1",[origin]);
+    await db.query("UPDATE lead_responsaveis SET label='Luiza',value='Luiza' WHERE id=$1",[responsible]);
+  }
+});
 
 it('atomically deduplicates notifications and imports through the canonical lead insertion', async () => {
   expect(await enqueue()).toBe(1); expect(await enqueue()).toBe(0);

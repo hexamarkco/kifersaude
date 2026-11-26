@@ -69,7 +69,7 @@ export default function GlobalConfigSection({ configs, onReload }: Props) {
     <Card padding="md" className="kds-ai-global-card">
       <SectionHeader
         as="h3"
-        title="Configurações globais"
+        title="Uma base para toda a equipe"
         description="Diretrizes compartilhadas por todos os recursos de inteligência artificial."
         descriptionPlacement="visible"
       />

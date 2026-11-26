@@ -81,7 +81,7 @@ export default function AutomationFlowsWorkspace({
         : 'Mensagens automáticas registradas hoje';
 
   return (
-    <div className="space-y-6">
+    <div className="kds-automation-flow-overview">
       <section aria-label="Resumo das automações" className="kds-workspace-record-metrics">
         <KpiCard title="Fluxos ativos" value={<span>{activeFlows}</span>} trend={`${totalFlows} configurados`} icon={<Activity aria-hidden="true" />} />
         <KpiCard title="Etapas configuradas" data-tone="info" value={<span>{totalSteps}</span>} trend="Distribuídas entre os fluxos" icon={<Layers3 aria-hidden="true" />} />
@@ -126,7 +126,7 @@ export default function AutomationFlowsWorkspace({
                 ]}
                 aria-label="Filtrar fluxos por tag"
               />
-              <Text className="text-sm tabular-nums text-[var(--text-muted)] xl:text-right">
+              <Text className="kds-automation-result-count tabular-nums xl:text-right">
                 {flows.length} {flows.length === 1 ? 'fluxo encontrado' : 'fluxos encontrados'}
               </Text>
             </div>

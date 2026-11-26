@@ -674,56 +674,13 @@ export function IntegrationsSkeleton() {
 
 export function AutomationFlowsSkeleton() {
   return (
-    <div className="kds-card kds-card-default p-6">
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`automation-metric-${index}`} className="kds-card kds-card-muted p-4">
-              <Skeleton variant="line" className="h-3 w-20" />
-              <Skeleton className="mt-2 h-8 w-16" />
-              <Skeleton variant="line" className="mt-2 h-3 w-24" />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="kds-card kds-card-default p-4">
-            <Skeleton className="h-6 w-32" />
-            <div className="mt-4 space-y-3">
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-            </div>
-          </div>
-          <div className="kds-card kds-card-default p-4">
-            <Skeleton className="h-6 w-44" />
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="kds-card kds-card-default space-y-3 p-4">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={`automation-flow-${index}`} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-          <div className="kds-card kds-card-default space-y-4 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-9 w-2/3 rounded-lg" />
-              <div className="flex gap-2">
-                <Skeleton className="h-9 w-9 rounded-md" />
-                <Skeleton className="h-9 w-9 rounded-md" />
-              </div>
-            </div>
-            <Skeleton className="h-[420px] w-full rounded-xl" />
-          </div>
-        </div>
-      </div>
+    <div className="kds-automation-page" aria-hidden="true">
+      <div className="flex flex-wrap justify-between gap-3"><div className="space-y-2"><Skeleton className="h-8 w-64 max-w-full" /><Skeleton variant="line" className="h-4 w-72 max-w-full" /></div><Skeleton className="h-9 w-28" /></div>
+      <div className="flex gap-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-8 w-20" />)}</div>
+      <div className="kds-workspace-record-metrics">{Array.from({ length: 4 }, (_, index) => <PanelCard key={index} className="space-y-3"><Skeleton variant="line" className="h-4 w-28 max-w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton variant="line" className="h-3 w-1/2" /></PanelCard>)}</div>
+      <div className="kds-automation-list-toolbar"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /></div>
+      <div className="kds-automation-journey-grid">{Array.from({ length: 3 }, (_, index) => <PanelCard key={index} className="kds-automation-journey-card"><Skeleton className="h-9 w-9" /><Skeleton className="h-5 w-32" /><Skeleton variant="line" className="h-4 w-full" /><Skeleton className="h-8 w-24" /></PanelCard>)}</div>
+      <div className="kds-automation-workspace-resources">{Array.from({ length: 2 }, (_, index) => <PanelCard key={index} className="space-y-3"><Skeleton className="h-5 w-40 max-w-full" /><Skeleton variant="line" className="h-4 w-full" /><Skeleton className="h-8 w-28" /></PanelCard>)}</div>
     </div>
   );
 }

@@ -2693,3 +2693,96 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 @media (max-width: 390px) {
   .painel-theme.kifer-ds.kds-workspace-theme .kds-dashboard-filter-fields { grid-template-columns: minmax(0,1fr); }
 }
+
+/* Automações e IA — original prototype, existing execution and configuration contracts. */
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area { display:grid; gap:var(--space-5); min-width:0; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-automation-area,.kds-ai-page) .kds-page-title { font:var(--type-record-title); letter-spacing:-.035em; }
+.painel-theme.kifer-ds.kds-workspace-theme :is(.kds-automation-area,.kds-ai-page) .kds-page-description { font:var(--type-record-description); }
+.painel-theme.kifer-ds .kds-automation-flow-overview { display:grid; gap:var(--space-5); min-width:0; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-tab { font:var(--type-record-body); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-workspace-record-metrics { grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--space-4); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-card-kpi { min-height:var(--dashboard-metric-height); padding:var(--space-5); gap:var(--space-3); box-shadow:none; border-radius:var(--dashboard-card-radius); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-card-kpi .kds-card-title { font:var(--type-dashboard-metric-label); color:var(--text-muted); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-kpi-value { font:var(--type-record-metric); letter-spacing:-.05em; overflow-wrap:anywhere; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-kpi-trend { font:var(--type-dashboard-metric-caption); }
+.painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-list-toolbar,.kds-automation-header-actions,.kds-ai-options-header) :is(.kds-button,.kds-input,.kds-filter-trigger) { font:var(--type-toolbar-control); min-height:var(--toolbar-control-height); }
+.kds-automation-result-count { font:var(--type-toolbar-caption); color:var(--text-muted); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-automation-journey-card { min-height:13.5rem; padding:var(--dashboard-card-padding); gap:var(--space-3); box-shadow:none; border-radius:var(--dashboard-card-radius); }
+.painel-theme.kifer-ds .kds-automation-journey-card:hover { border-color:var(--border-subtle); box-shadow:none; }
+.painel-theme.kifer-ds .kds-automation-area :is(.kds-card-title,.kds-automation-rule-card .kds-heading) { font:var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds .kds-automation-area .kds-card-kpi .kds-card-title { font:var(--type-dashboard-metric-label); }
+.painel-theme.kifer-ds .kds-automation-area :is(.kds-card-subtitle,.kds-automation-card-description,.kds-automation-template-preview) { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-automation-card-meta,.painel-theme.kifer-ds .kds-automation-card-footer .kds-text { font:var(--type-record-secondary); }
+.painel-theme.kifer-ds .kds-automation-card-footer .kds-button { font:var(--type-record-field-label); }
+.painel-theme.kifer-ds .kds-automation-area .kds-table-head { height:var(--record-table-head-height); font:var(--type-record-heading); text-transform:none; letter-spacing:normal; }
+.painel-theme.kifer-ds .kds-automation-area .kds-table-cell { height:var(--record-table-row-height); font:var(--type-record-body); vertical-align:middle; }
+.painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-rule-card,.kds-automation-setting-card,.kds-ai-global-card) { padding:var(--dashboard-card-padding); border-radius:var(--radius-panel); box-shadow:none; }
+.painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-builder,.kds-automation-rules-layout) { gap:var(--space-4); }
+.painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-palette,.kds-automation-rule-nav) { padding:var(--space-3); box-shadow:none; }
+.painel-theme.kifer-ds .kds-automation-palette .kds-button,.painel-theme.kifer-ds .kds-automation-rule-nav .kds-button { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-automation-node { border-color:var(--border-subtle); box-shadow:none; border-radius:var(--radius-control); }
+.painel-theme.kifer-ds .kds-automation-node:hover:not([data-selected="true"]) { border-color:var(--border-subtle); }
+.painel-theme.kifer-ds .kds-automation-node[data-selected="true"] { border-color:var(--brand-primary); }
+.painel-theme.kifer-ds .kds-automation-node-heading strong { font:var(--type-record-field-label); }
+.painel-theme.kifer-ds :is(.kds-automation-node-heading small,.kds-automation-node-branches) { font:var(--type-record-secondary); }
+.painel-theme.kifer-ds .kds-automation-canvas { background:var(--bg-canvas); box-shadow:none; }
+.painel-theme.kifer-ds .kds-automation-canvas-bar { background:var(--bg-surface); }
+.painel-theme.kifer-ds :is(.kds-automation-area,.kds-automation-dialog,.kds-automation-drawer,.kds-ai-editor-drawer) .kds-field-label { font:var(--type-record-field-label); color:var(--text-primary); }
+.painel-theme.kifer-ds :is(.kds-automation-area,.kds-automation-dialog,.kds-automation-drawer,.kds-ai-editor-drawer) :is(.kds-input,.kds-select,.kds-textarea,.kds-filter-trigger) { font:var(--type-record-field); }
+.painel-theme.kifer-ds :is(.kds-automation-area,.kds-automation-dialog,.kds-automation-drawer,.kds-ai-editor-drawer) :is(.kds-input,.kds-select,.kds-filter-trigger) { min-height:var(--form-control-height); }
+.painel-theme.kifer-ds .kds-automation-dialog { width:var(--record-dialog-width); max-width:calc(100vw - var(--space-6)); }
+.painel-theme.kifer-ds .kds-automation-template-dialog { width:var(--record-dialog-wide); }
+.painel-theme.kifer-ds .kds-automation-dialog .kds-dialog-body { padding:var(--dialog-body-padding); }
+.painel-theme.kifer-ds .kds-dialog-container:has(:is(.kds-automation-drawer,.kds-ai-editor-drawer,.kds-ai-sandbox-drawer)) { padding:var(--record-drawer-gutter); align-items:center; }
+.painel-theme.kifer-ds :is(.kds-automation-drawer,.kds-ai-editor-drawer,.kds-ai-sandbox-drawer).kds-drawer { width:min(var(--record-drawer-width),100%); height:calc(100dvh - 2 * var(--record-drawer-gutter)); max-height:calc(100dvh - 2 * var(--record-drawer-gutter)); border-radius:var(--radius-panel); }
+.painel-theme.kifer-ds :is(.kds-automation-drawer,.kds-ai-editor-drawer,.kds-ai-sandbox-drawer) .kds-drawer-body { padding:var(--dialog-body-padding); }
+.painel-theme.kifer-ds .kds-automation-detail-data { font:var(--type-record-field); padding-block:var(--space-4); border-block-start:var(--border-width) solid var(--border-subtle); }
+.painel-theme.kifer-ds .kds-ai-config-overview { padding:var(--dashboard-card-padding); box-shadow:none; }
+.painel-theme.kifer-ds .kds-ai-summary-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-3); }
+.painel-theme.kifer-ds .kds-ai-summary-row { display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2); padding:var(--space-3); border:var(--border-width) solid var(--border-subtle); border-radius:var(--radius-control); }
+.painel-theme.kifer-ds .kds-ai-summary-label { font:var(--type-record-field-label); }
+.painel-theme.kifer-ds .kds-ai-summary-description { font:var(--type-record-secondary); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-ai-feature-row { min-height:12rem; gap:var(--space-3); padding:var(--dashboard-card-padding); border-radius:var(--dashboard-card-radius); box-shadow:none; }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-ai-feature-row:hover { border-color:var(--border-subtle); background:var(--bg-surface); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-ai-feature-title { font:var(--type-dashboard-card-title); }
+.painel-theme.kifer-ds.kds-workspace-theme .kds-ai-feature-description { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-ai-feature-actions .kds-button { font:var(--type-record-field-label); }
+.painel-theme.kifer-ds .kds-ai-editor-feature-name { font:var(--type-record-field-label); margin-top:var(--space-2); }
+.painel-theme.kifer-ds .kds-ai-import-review { font:var(--type-record-body); }
+.painel-theme.kifer-ds .kds-ai-global-updated { font:var(--type-record-secondary); }
+.painel-theme.kifer-ds .kds-automation-integrations .kds-integration-overview-action { font:var(--type-record-body); min-height:var(--record-table-row-height); }
+.painel-theme.kifer-ds .kds-ai-page .kds-ai-chat-layout { grid-template-columns:minmax(0,1fr) minmax(16rem,25%); gap:var(--space-4); }
+.painel-theme.kifer-ds .kds-ai-chat-card,.painel-theme.kifer-ds .kds-ai-context-card { border-radius:var(--radius-panel); box-shadow:none; }
+.painel-theme.kifer-ds .kds-ai-chat-thread { background:var(--bg-canvas); border-color:var(--border-subtle); }
+.painel-theme.kifer-ds .kds-ai-message-bubble.kds-card { border-radius:var(--inbox-bubble-radius); box-shadow:none; }
+.painel-theme.kifer-ds .kds-ai-message-copy { font:var(--inbox-message-type); }
+.painel-theme.kifer-ds .kds-ai-message-row.is-lead { align-items:flex-end; }
+.painel-theme.kifer-ds .kds-ai-context-label { font:var(--type-record-field-label); }
+.painel-theme.kifer-ds .kds-ai-context-value { font:var(--type-record-body); }
+@media (min-width:1200px) {
+ .painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-builder,.kds-automation-rules-layout) { grid-template-columns:minmax(0,13.5rem) minmax(0,1fr); }
+ .painel-theme.kifer-ds .kds-ai-page .kds-ai-chat-layout { grid-template-columns:minmax(15rem,24%) minmax(0,1fr); }
+ .painel-theme.kifer-ds .kds-ai-context-card { grid-column:1; grid-row:1; }
+ .painel-theme.kifer-ds .kds-ai-chat-card { grid-column:2; grid-row:1; }
+}
+@media (max-width:1023px) {
+ .painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-workspace-record-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
+ .painel-theme.kifer-ds .kds-ai-page .kds-ai-chat-layout { grid-template-columns:minmax(0,1fr); }
+ .painel-theme.kifer-ds .kds-ai-summary-list { grid-template-columns:1fr; }
+}
+@media (max-width:767px) {
+ .painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area { gap:var(--space-4); }
+ .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-automation-area,.kds-ai-page) .kds-page-title { font-size:1.4375rem; }
+ .painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-card-kpi { min-height:8rem; padding:var(--space-3); gap:var(--space-2); }
+ .painel-theme.kifer-ds.kds-workspace-theme .kds-automation-area .kds-kpi-value { font-size:clamp(1rem,5.5vw,1.5rem); }
+ .painel-theme.kifer-ds .kds-automation-journey-card,.painel-theme.kifer-ds.kds-workspace-theme .kds-ai-feature-row { padding:var(--space-4); }
+ .painel-theme.kifer-ds .kds-automation-list-toolbar { grid-template-columns:minmax(0,1fr) auto; }
+ .painel-theme.kifer-ds .kds-automation-list-toolbar > :first-child { grid-column:1/-1; }
+ .painel-theme.kifer-ds .kds-ai-feature-actions { flex-wrap:wrap; }
+ .painel-theme.kifer-ds .kds-ai-global-field-footer { flex-wrap:wrap; }
+ .painel-theme.kifer-ds .kds-dialog-container:has(:is(.kds-automation-drawer,.kds-ai-editor-drawer,.kds-ai-sandbox-drawer)) { padding:0; }
+ .painel-theme.kifer-ds :is(.kds-automation-drawer,.kds-ai-editor-drawer,.kds-ai-sandbox-drawer).kds-drawer { width:100%; height:100dvh; max-height:100dvh; border-radius:0; }
+}
+@media (pointer:coarse) {
+ .painel-theme.kifer-ds .kds-automation-area :is(.kds-automation-header-actions,.kds-automation-list-toolbar,.kds-automation-palette,.kds-automation-rule-nav) :is(.kds-button,.kds-input,.kds-filter-trigger) { min-height:var(--touch-target); }
+}

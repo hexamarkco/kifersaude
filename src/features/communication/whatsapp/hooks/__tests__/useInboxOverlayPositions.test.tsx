@@ -38,8 +38,7 @@ const PositionHarness = ({
     messageActionMenuPointerAnchor: null,
     openChatMenuChatId: null,
     chatMenuPointerAnchor: null,
-    advancedFiltersOpen: enabled,
-    threadActionsMenuOpen: false,
+    threadActionsMenuOpen: enabled,
     mediaDrawerOpen: false,
     refs: {
       messagesContainerRef: { current: null },
@@ -48,15 +47,13 @@ const PositionHarness = ({
       messageActionMenuRef: { current: null },
       chatMenuTriggerRefs: { current: {} },
       chatMenuRef: { current: null },
-      advancedFiltersTriggerRef: { current: trigger },
-      threadActionsMenuTriggerRef: { current: null },
+      threadActionsMenuTriggerRef: { current: trigger },
       mediaDrawerTriggerRef: { current: null },
     },
     setReactionPickerPosition: ignorePosition,
     setMessageActionMenuPosition: ignorePosition,
     setChatMenuPosition: ignorePosition,
-    setAdvancedFiltersPosition: setPosition,
-    setThreadActionsMenuPosition: ignorePosition,
+    setThreadActionsMenuPosition: setPosition,
     setMediaDrawerPosition: ignorePosition,
   });
   capture(position);
@@ -65,7 +62,7 @@ const PositionHarness = ({
 
 test('overlay positions update on viewport changes and stop listening after unmount', () => {
   const trigger = document.createElement('button');
-  let triggerRect = rect(100, 20, 40, 30);
+  let triggerRect = rect(400, 20, 40, 30);
   let reads = 0;
   Object.defineProperty(trigger, 'getBoundingClientRect', {
     configurable: true,
@@ -77,11 +74,11 @@ test('overlay positions update on viewport changes and stop listening after unmo
 
   const positions: Array<InboxOverlayPosition | null> = [];
   const view = render(<PositionHarness trigger={trigger} enabled capture={(position) => positions.push(position)} />);
-  assert.deepEqual(positions[positions.length - 1], { top: 58, left: 100, width: 360, maxHeight: 560 });
+  assert.deepEqual(positions[positions.length - 1], { top: 58, left: 152, width: 288, maxHeight: 420 });
 
-  triggerRect = rect(250, 70, 40, 30);
+  triggerRect = rect(550, 70, 40, 30);
   act(() => window.dispatchEvent(new Event('resize')));
-  assert.deepEqual(positions[positions.length - 1], { top: 108, left: 250, width: 360, maxHeight: 560 });
+  assert.deepEqual(positions[positions.length - 1], { top: 108, left: 302, width: 288, maxHeight: 420 });
 
   const readsAtUnmount = reads;
   view.unmount();

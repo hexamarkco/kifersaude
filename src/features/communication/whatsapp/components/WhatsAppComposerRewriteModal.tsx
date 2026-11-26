@@ -1,6 +1,6 @@
 import { WhatsAppInboxDialog } from './WhatsAppInboxDialog';
-import { Heading, Text } from '../../../../design-system';
-import { ActionSurface } from '../../../../design-system';
+import { Sparkles } from 'lucide-react';
+import { Field, Select, Text } from '../../../../design-system';
 import {
   Button,
   Surface,
@@ -74,104 +74,33 @@ export default function WhatsAppComposerRewriteModal({
 }: WhatsAppComposerRewriteModalProps) {
   return (
     <WhatsAppInboxDialog
-      panelClassName="comm-whatsapp-overlay"
+      panelClassName="whatsapp-inbox-rewrite-dialog"
       isOpen={isOpen}
       onClose={onClose}
-      title="Reescrever mensagem com IA"
-      description="Ajuste o objetivo, clique em reescrever e aplique o texto final no composer quando estiver bom."
-      size="xl"
-      footer={(
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" onClick={onClose} disabled={generating}>
-            Fechar
-          </Button>
-          <Button variant="secondary" onClick={onGenerate} loading={generating} disabled={!sourceValue.trim()}>
-            Reescrever
-          </Button>
-          <Button onClick={onApply} disabled={generating || !value.trim()}>
-            Aplicar no composer
-          </Button>
-        </div>
-      )}
+      title="Reescrever com IA"
+      size="wide"
+      footer={<><Button variant="secondary" onClick={onClose} disabled={generating}>Cancelar</Button><Button onClick={onApply} disabled={generating || !value.trim()}>Usar este texto</Button></>}
     >
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <Surface variant="muted" padding="sm">
-            <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Objetivo da reescrita</Heading>
-            <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Escolha o ajuste principal. A IA preserva a intenção da mensagem e dados confirmados.
-            </Text>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-              {TONE_OPTIONS.map((option) => {
-                const active = tone === option.value;
-                return (
-                  <ActionSurface variant="plain" padding="none"
-                    key={option.value}
-                    type="button"
-                    onClick={() => onChangeTone(option.value)}
-                    className={`rounded-2xl border px-3 py-3 text-left transition ${active
-                      ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--text-primary)]'
-                      : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]'}`}
-                  >
-                    <Text className="text-sm font-semibold">{option.label}</Text>
-                    <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{option.description}</Text>
-                  </ActionSurface>
-                );
-              })}
-            </div>
-          </Surface>
-
-          <Surface padding="sm">
-            <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Instruções extras</Heading>
-            <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Opcional. Ex.: não use emoji, termine com pergunta objetiva, mantenha linguagem simples.
-            </Text>
-            <Textarea
-              value={customInstructions}
-              onChange={(event) => onChangeCustomInstructions(event.target.value)}
-              rows={4}
-              className="mt-3 leading-6"
-              placeholder="Adicione instruções extras só para esta reescrita."
-              disabled={generating}
-            />
-          </Surface>
-
-          <Surface padding="sm">
-            <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Texto base</Heading>
-            <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Você pode ajustar o texto aqui antes de pedir uma nova reescrita.
-            </Text>
-            <Textarea
-              value={sourceValue}
-              onChange={(event) => onChangeSourceValue(event.target.value)}
-              rows={8}
-              className="mt-3 leading-6"
-              placeholder="Digite a mensagem que você quer reescrever."
-              disabled={generating}
-            />
-          </Surface>
+      <div className="whatsapp-inbox-rewrite-grid">
+        <div className="whatsapp-inbox-rewrite-fields">
+          <Field label="Seu texto original">
+            <Textarea value={sourceValue} onChange={(event) => onChangeSourceValue(event.target.value)} rows={7} placeholder="Digite a mensagem que você quer reescrever." disabled={generating} />
+          </Field>
+          <Field label="Tom da mensagem" hint={TONE_OPTIONS.find((option) => option.value === tone)?.description}>
+            <Select value={tone} options={TONE_OPTIONS.map(({ value, label }) => ({ value, label }))} onChange={(event) => { const next = TONE_OPTIONS.find((option) => option.value === event.target.value); if (next) onChangeTone(next.value); }} disabled={generating} />
+          </Field>
+          <Field label="Instruções extras (opcional)">
+            <Textarea value={customInstructions} onChange={(event) => onChangeCustomInstructions(event.target.value)} rows={3} placeholder="Ex.: não use emoji, termine com uma pergunta." disabled={generating} />
+          </Field>
+          <Button variant="secondary" onClick={onGenerate} loading={generating} disabled={!sourceValue.trim()}><Sparkles className="kds-control-icon" aria-hidden="true" />Gerar nova versão</Button>
         </div>
-
-        <div className="space-y-4">
-          <Surface padding="sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <Heading level={3} className="text-sm font-semibold text-[var(--text-primary)]">Sugestão da IA</Heading>
-                <Text className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                  Revise e edite livremente antes de aplicar no composer.
-                </Text>
-              </div>
-            </div>
-            <Textarea
-              value={value}
-              onChange={(event) => onChangeValue(event.target.value)}
-              rows={18}
-              className="mt-3 leading-6"
-              placeholder="A mensagem reescrita vai aparecer aqui."
-              disabled={generating}
-            />
-          </Surface>
-        </div>
+        <Surface variant="muted" padding="sm" className="whatsapp-inbox-rewrite-result">
+          <Text className="whatsapp-inbox-rewrite-eyebrow"><Sparkles className="kds-control-icon" aria-hidden="true" /> Sugestão para revisar</Text>
+          <Field label="Texto sugerido">
+            <Textarea value={value} onChange={(event) => onChangeValue(event.target.value)} rows={12} placeholder="A mensagem reescrita vai aparecer aqui." disabled={generating} />
+          </Field>
+          <Text tone="muted" size="sm">Revise e edite o texto antes de usar. A mensagem não será enviada automaticamente.</Text>
+        </Surface>
       </div>
     </WhatsAppInboxDialog>
   );

@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import { ListFilter, SlidersHorizontal, UsersRound, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { ListFilter, UsersRound, type LucideIcon } from 'lucide-react';
 
 import {
   Button,
   Checkbox,
   DisclosureTrigger,
   FieldLabel,
-  PositionedPopover,
+  Dialog,
   DialogBody,
   DialogFooter,
   DialogHeader,
@@ -15,7 +15,6 @@ import {
   Text,
   type SegmentedControlItem,
 } from '../../../../design-system';
-import type { InboxOverlayPosition } from '../domain/inboxOverlayPosition';
 import type { ChatActivityFilter } from '../domain/chatFilters';
 
 const ACTIVITY_OPTIONS: SegmentedControlItem<ChatActivityFilter>[] = [
@@ -66,8 +65,6 @@ export type InboxAdvancedFilterValues = {
 
 type InboxAdvancedFiltersDialogProps = {
   isOpen: boolean;
-  position: InboxOverlayPosition | null;
-  triggerRef?: RefObject<HTMLButtonElement | null>;
   activityFilter: ChatActivityFilter;
   leadStatusFilters: string[];
   leadResponsavelFilters: string[];
@@ -79,8 +76,6 @@ type InboxAdvancedFiltersDialogProps = {
 
 export function WhatsAppInboxAdvancedFiltersDialog({
   isOpen,
-  position,
-  triggerRef,
   activityFilter,
   leadStatusFilters,
   leadResponsavelFilters,
@@ -89,55 +84,22 @@ export function WhatsAppInboxAdvancedFiltersDialog({
   onClose,
   onApply,
 }: InboxAdvancedFiltersDialogProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const positioned = position !== null;
-
-  useEffect(() => {
-    if (!isOpen || !positioned) return;
-    const trigger = triggerRef?.current ?? document.activeElement;
-    const panel = panelRef.current;
-    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('.kds-dialog-body button, .kds-dialog-body input')?.focus());
-    return () => {
-      cancelAnimationFrame(frame);
-      if ((document.activeElement === document.body || panel?.contains(document.activeElement)) && trigger instanceof HTMLElement) trigger.focus();
-    };
-  }, [isOpen, positioned, triggerRef]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const dismissOutside = (event: PointerEvent) => {
-      if (!(event.target instanceof Node) || panelRef.current?.contains(event.target) || triggerRef?.current?.contains(event.target)) return;
-      onClose();
-    };
-    document.addEventListener('pointerdown', dismissOutside);
-    return () => document.removeEventListener('pointerdown', dismissOutside);
-  }, [isOpen, onClose, triggerRef]);
-
   return (
-    <PositionedPopover
-      ref={panelRef}
-      isOpen={isOpen}
-      position={position}
-      onClose={onClose}
-      ariaLabel="Filtrar conversas"
-      className="whatsapp-inbox-filter-dropdown"
-    >
-      {isOpen ? (
-        <InboxAdvancedFiltersDialogContent
-          activityFilter={activityFilter}
-          leadStatusFilters={leadStatusFilters}
-          leadResponsavelFilters={leadResponsavelFilters}
-          statusOptions={statusOptions}
-          responsavelOptions={responsavelOptions}
-          onApply={onApply}
-          onClose={onClose}
-        />
-      ) : null}
-    </PositionedPopover>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} size="md" aria-label="Filtrar conversas" className="whatsapp-inbox-dialog comm-whatsapp-overlay whatsapp-inbox-filter-modal">
+      {isOpen && <InboxAdvancedFiltersDialogContent
+        activityFilter={activityFilter}
+        leadStatusFilters={leadStatusFilters}
+        leadResponsavelFilters={leadResponsavelFilters}
+        statusOptions={statusOptions}
+        responsavelOptions={responsavelOptions}
+        onApply={onApply}
+        onClose={onClose}
+      />}
+    </Dialog>
   );
 }
 
-type InboxAdvancedFiltersDialogContentProps = Omit<InboxAdvancedFiltersDialogProps, 'isOpen' | 'position' | 'triggerRef'>;
+type InboxAdvancedFiltersDialogContentProps = Omit<InboxAdvancedFiltersDialogProps, 'isOpen'>;
 
 function InboxAdvancedFiltersDialogContent({
   activityFilter: appliedActivityFilter,
@@ -167,7 +129,8 @@ function InboxAdvancedFiltersDialogContent({
   return (
     <>
       <DialogHeader onClose={onClose}>
-        <DialogTitle><SlidersHorizontal aria-hidden="true" className="kds-control-icon" />Filtrar conversas</DialogTitle>
+        <div className="kds-dialog-eyebrow">Inbox</div>
+        <DialogTitle>Filtrar conversas</DialogTitle>
       </DialogHeader>
       <DialogBody className="whatsapp-inbox-filter-dialog-body">
         <div className="whatsapp-inbox-filter-activity">
@@ -194,6 +157,7 @@ function InboxAdvancedFiltersDialogContent({
         <Button type="button" variant="ghost" size="sm" onClick={clearDraftFilters} disabled={!hasDraftFilters}>
           Limpar filtros
         </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
         <Button type="button" variant="primary" size="sm" onClick={applyDraftFilters}>
           Aplicar filtros
         </Button>

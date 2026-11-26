@@ -96,7 +96,7 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
       }}
       size="sm"
       aria-label="Dados da mensagem"
-      className="comm-whatsapp-overlay whatsapp-inbox-dialog"
+      className="comm-whatsapp-overlay whatsapp-inbox-dialog whatsapp-inbox-message-details"
     >
       <WhatsAppInboxPanelHeader icon={Info} title="Dados da mensagem" onClose={onClose} />
       <DialogBody className="space-y-4">
@@ -107,7 +107,7 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
               Acompanhe quando a mensagem foi enviada e os retornos confirmados pelo WhatsApp.
             </DialogDescription>
 
-            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+            <div className="whatsapp-inbox-message-details-fields">
               <div className="min-w-0">
                 <Text className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Tipo</Text>
                 <Text className="mt-1 truncate text-sm font-medium text-[var(--text-primary)]">{formatMessageType(message.message_type)}</Text>
@@ -132,7 +132,7 @@ export default function WhatsAppMessageDetailsModal({ message, onClose }: WhatsA
                 {timeline.length > 0 ? timeline.map((event, index) => {
                   const Icon = event.icon;
                   return (
-                    <div key={`${event.status}:${event.at}:${index}`} className="flex items-start gap-3 rounded-xl px-2 py-2.5">
+                    <div key={`${event.status}:${event.at}:${index}`} className="whatsapp-inbox-delivery-event flex items-start gap-3">
                       <span className={cx(
                         'mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
                         event.tone === 'error'

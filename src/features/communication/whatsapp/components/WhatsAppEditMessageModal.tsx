@@ -27,7 +27,7 @@ export default function WhatsAppEditMessageModal({
 }: WhatsAppEditMessageModalProps) {
   return (
     <WhatsAppInboxDialog
-      panelClassName="comm-whatsapp-overlay"
+      panelClassName="whatsapp-inbox-edit-message-dialog"
       isOpen={isOpen}
       onClose={onClose}
       title={title}

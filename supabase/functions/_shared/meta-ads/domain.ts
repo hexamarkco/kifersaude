@@ -39,7 +39,7 @@ export function parseNotifications(payload: unknown, config: MetaConfig): Receip
         throw new MetaError('INVALID_NOTIFICATION');
       }
       receipts.set(id, {
-        leadgen_id: id, page_id: config.pageId, form_id: config.formId,
+        leadgen_id: id, page_id: config.pageId, form_id: v.form_id,
         ad_id: metaId(v.ad_id), meta_created_at: new Date(time * 1000).toISOString(),
       });
     }

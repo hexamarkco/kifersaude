@@ -227,7 +227,10 @@ describe('multiple Meta forms', () => {
     const change = payload.entry[0].changes[0];
     payload.entry[0].changes.push({ ...change, value: { ...change.value, form_id: otherForm, leadgen_id: '888888888888889' } });
     payload.entry[0].changes.push({ ...change, value: { ...change.value, form_id: '777777777777777', leadgen_id: '777777777777778' } });
-    expect(parseNotifications(payload, multi).map((r) => r.form_id)).toEqual([config.formId, otherForm]);
+    const captured = parseNotifications(payload, multi);
+    expect(captured.map((r) => r.form_id)).toEqual([config.formId, otherForm]);
+    expect(captured[1]).toMatchObject({ leadgen_id: '888888888888889', form_id: otherForm, page_id: config.pageId });
+    expect(mapGraphLead({ ...otherLead, id: '888888888888889' }, captured[1], multi).commercial_answer).toBe('Sim');
   });
   it('maps each form independently and rejects unauthorized origins', () => {
     expect(mapGraphLead(graphLead(), receipt, multi).commercial_answer).toBe('MEI — duas vidas');

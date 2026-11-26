@@ -66,6 +66,29 @@ if (rootArg < 0) for (const component of applicationComponents) {
   if (!catalogComponents.has(component)) violations.push(`Showcase coverage: ${component} is consumed by the application but has no catalog example`);
 }
 
+// Keep the operational typography floor independent of prototype export density.
+if (rootArg < 0) {
+  const theme = readFileSync(join(library, 'themes.css'), 'utf8');
+  const floors = {
+    'type-toolbar-control': 14, 'type-toolbar-caption': 13,
+    'type-record-description': 14, 'type-record-body': 14,
+    'type-record-secondary': 13, 'type-record-heading': 13,
+    'type-record-field': 14, 'type-record-field-label': 14,
+    'inbox-list-name': 14, 'inbox-list-preview': 13,
+    'inbox-message-type': 15, 'inbox-meta-type': 12,
+    'type-agenda-calendar-label': 13, 'type-agenda-calendar-event': 13,
+    'finance-calendar-event-type': 13, 'type-dashboard-card-subtitle': 14,
+    'type-dashboard-metric-label': 14, 'type-dashboard-metric-caption': 13,
+  };
+  for (const [token, floor] of Object.entries(floors)) {
+    const declarations = [...theme.matchAll(new RegExp(`--${token}:\\s*([^;]+);`, 'g'))];
+    if (!declarations.length || declarations.some(([, value]) => {
+      const size = value.match(/(?:^|\\s)(\\d*\\.?\\d+)rem\\s*\\//);
+      return !size || Number(size[1]) * 16 < floor;
+    })) violations.push(`Workspace typography: --${token} must be at least ${floor}px at the default root size`);
+  }
+}
+
 if (violations.length) {
   console.error(`Design-system contract failed (${violations.length} violations):\n${violations.join('\n')}`);
   process.exitCode = 1;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { act, type ComponentProps } from 'react';
 import { test, vi } from 'vitest';
-import { FolderOpen } from 'lucide-react';
+import { Bot, FolderOpen } from 'lucide-react';
 
 import { render } from '../../../../../testing-library/react';
 import WhatsAppLeadDrawer from '../WhatsAppLeadDrawer';
@@ -179,5 +179,29 @@ test('coloca a agenda e seus controles em uma aba própria quando há acesso', a
     assert.match(agenda.textContent ?? '', /Agendar lembrete/);
   } finally {
     view.unmount();
+  }
+});
+
+test('sinaliza a ação de IA ativa e inativa sem alterar as outras ações', () => {
+  for (const pressed of [true, false]) {
+    const props = createProps(() => undefined);
+    props.chat.autonomous_attendance_status = pressed ? 'active' : 'inactive';
+    const toggle = vi.fn();
+    props.conversationActions = [
+      { label: 'Atendimento com IA', title: pressed ? 'IA ativa — desativar' : 'IA inativa — ativar', icon: Bot, pressed, onClick: toggle },
+      { label: 'Arquivos da conversa', icon: FolderOpen, onClick: vi.fn() },
+    ];
+    const view = render(<WhatsAppLeadDrawer {...props} />);
+    try {
+      const button = document.querySelector<HTMLButtonElement>('button[aria-label="Atendimento com IA"]');
+      assert.ok(button);
+      assert.equal(button.getAttribute('aria-pressed'), String(pressed));
+      assert.equal(button.textContent?.trim(), '');
+      assert.equal(document.querySelector('button[aria-label="Arquivos da conversa"]')?.hasAttribute('aria-pressed'), false);
+      act(() => button.click());
+      assert.equal(toggle.mock.calls.length, 1);
+    } finally {
+      view.unmount();
+    }
   }
 });

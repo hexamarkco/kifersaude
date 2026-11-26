@@ -164,10 +164,13 @@ export function useOverlayPosition(
         }
       }
 
-      let hidden = isOutside(triggerRect, viewport);
+      // Zero-size geometry can occur before layout (and in non-layout test
+      // environments). Only hide when a measured anchor is actually clipped.
+      const hasAnchorGeometry = triggerRect.width > 0 && triggerRect.height > 0;
+      let hidden = hasAnchorGeometry && isOutside(triggerRect, viewport);
       // Hide overlays when their trigger is scrolled out of a clipping ancestor;
       // don't leave a detached floating menu above the dialog or table.
-      for (let ancestor = trigger.parentElement; ancestor && !hidden; ancestor = ancestor.parentElement) {
+      for (let ancestor = trigger.parentElement; ancestor && hasAnchorGeometry && !hidden; ancestor = ancestor.parentElement) {
         const style = window.getComputedStyle(ancestor);
         const clipsX = /^(auto|scroll|hidden|clip)$/.test(style.overflowX);
         const clipsY = /^(auto|scroll|hidden|clip)$/.test(style.overflowY);

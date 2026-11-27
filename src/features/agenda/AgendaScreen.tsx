@@ -1063,7 +1063,7 @@ export default function AgendaScreen() {
     return <Icon className="h-4 w-4" aria-hidden="true" />;
   };
 
-  const renderReminderRow = (reminder: ReminderListItem) => {
+  const renderReminderRow = (reminder: ReminderListItem, compact = false) => {
     const leadId = getLeadIdForReminder(reminder);
     const lead = leadId ? leadsMap.get(leadId) : undefined;
     const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
@@ -1072,6 +1072,9 @@ export default function AgendaScreen() {
     const dueTime = formatTimeBR(reminder.data_lembrete);
     const showDay = statusFilter !== "todos" && dueDay && dueDay !== getDateKey(new Date());
     const busy = reminderBusy(reminder.id);
+    const typeLabel = getReminderTypeLabel(reminder.tipo);
+    const leadName = lead?.nome_completo;
+    const compactLeadTitle = compact && leadName && reminder.titulo.trim() === `${typeLabel}: ${leadName}` ? leadName : null;
     const actions: RecordAction[] = [
       { label: "Ver detalhes", menuGroup: "Lembrete", icon: Eye, onClick: () => setDetailId(reminder.id) },
     ];
@@ -1104,11 +1107,11 @@ export default function AgendaScreen() {
       <article key={reminder.id} className="kds-agenda-task-row" data-completed={reminder.lido}>
         <Checkbox touchTarget checked={reminder.lido} disabled={busy} aria-label={`${reminder.lido ? "Reabrir" : "Concluir"} ${reminder.titulo}`} onChange={() => void handleMarkAsRead(reminder.id, reminder.lido)} />
         <ActionSurface variant="plain" padding="none" className="kds-agenda-task-copy" onClick={() => setDetailId(reminder.id)}>
-          <strong>{reminder.titulo}</strong>
+          <strong>{compactLeadTitle ? <><LeadFavoriteBadge favorito={lead?.favorito} />{compactLeadTitle}</> : reminder.titulo}</strong>
           <small>
-            {lead?.nome_completo && <><LeadFavoriteBadge favorito={lead.favorito} />{lead.nome_completo}<span aria-hidden="true">·</span></>}
+            {!compactLeadTitle && lead?.nome_completo && <><LeadFavoriteBadge favorito={lead.favorito} />{lead.nome_completo}<span aria-hidden="true">·</span></>}
             {!lead?.nome_completo && contract?.codigo_contrato && <>{contract.codigo_contrato}<span aria-hidden="true">·</span></>}
-            {getReminderTypeLabel(reminder.tipo)}
+            {typeLabel}
           </small>
         </ActionSurface>
         <time className="kds-agenda-task-time" data-overdue={overdue} dateTime={reminder.data_lembrete} title={dueDay ? formatDateTimeFullBR(reminder.data_lembrete) : undefined}>
@@ -1188,7 +1191,7 @@ export default function AgendaScreen() {
                   <IconButton variant="ghost" size="sm" aria-label="Adicionar tarefa neste dia" onClick={() => openNewTask()}><Plus /></IconButton>
                 </div>
                 <div className="kds-agenda-day-body">
-                  {selectedDateReminders.length > 0 ? selectedDateReminders.map(renderReminderRow) : (
+                  {selectedDateReminders.length > 0 ? selectedDateReminders.map((reminder) => renderReminderRow(reminder, true)) : (
                     <EmptyState
                       icon={<Calendar />}
                       title={hasActiveFilters ? "Nenhum item com esses filtros." : "Um espaço livre na sua agenda."}
@@ -1236,7 +1239,7 @@ export default function AgendaScreen() {
               </Text>
             </div>
             <Surface padding="none" className="kds-agenda-task-list" aria-label={statusFilter === "lidos" ? "Tarefas concluídas" : "Tarefas pendentes"}>
-              {filteredReminders.length > 0 ? filteredReminders.map(renderReminderRow) : (
+              {filteredReminders.length > 0 ? filteredReminders.map((reminder) => renderReminderRow(reminder)) : (
                 <EmptyState
                   icon={<CheckCircle2 />}
                   title={statusFilter === "lidos" && !hasActiveFilters ? "Ainda não há tarefas concluídas." : hasActiveFilters ? "Nenhuma tarefa com esses filtros." : "Nenhuma tarefa pendente."}

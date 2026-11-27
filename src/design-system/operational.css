@@ -1200,7 +1200,7 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-system-settings-theme-options .kds-action-surface > span:last-child { display: flex; align-items: center; gap: .375rem; }
 .kds-system-settings-theme-options .kds-action-surface svg { width: 1rem; height: 1rem; }
 .kds-system-settings-theme-preview { --preview-background: #f5f6f8; --preview-tile: #fff; display: grid; grid-template-columns: 1fr 2.8fr; grid-template-rows: 1fr 1fr; gap: .375rem; height: 5.25rem; padding: .625rem; border: 1px solid var(--border-subtle); border-radius: .3125rem; background: var(--preview-background); }
-.kds-system-settings-theme-preview[data-theme='dark'] { --preview-background: #13161b; --preview-tile: #20252d; }
+.kds-system-settings-theme-preview[data-theme='dark'] { --preview-background: #191411; --preview-tile: #2a221d; }
 .kds-system-settings-theme-preview i { display: block; border-radius: .1875rem; background: var(--preview-tile); }
 .kds-system-settings-theme-preview i:first-child { grid-row: span 2; }
 /* Central de automações */

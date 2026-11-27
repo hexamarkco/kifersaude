@@ -194,3 +194,26 @@ test('cancelar o filtro mantém os itens e não modifica lembretes', async () =>
     assert.equal(mocks.create.mock.calls.length, 0);
   } finally { view.unmount(); }
 });
+
+test('painel do dia evita repetir o contato em títulos padronizados, preservando títulos personalizados', async () => {
+  resetMocks();
+  mocks.reminders = [
+    { ...pendingReminder('standard'), titulo: 'Follow-up: Cliente' },
+    { ...pendingReminder('custom'), titulo: 'Conferir documentação' },
+  ];
+  const view = render(<AgendaScreen />);
+  try {
+    await waitForAgenda(() => document.querySelectorAll('.kds-agenda-day-body .kds-agenda-task-row').length === 2);
+    const rows = [...document.querySelectorAll('.kds-agenda-day-body .kds-agenda-task-row')];
+    const standard = rows.find((row) => row.querySelector('input')?.getAttribute('aria-label') === 'Concluir Follow-up: Cliente');
+    const custom = rows.find((row) => row.querySelector('input')?.getAttribute('aria-label') === 'Concluir Conferir documentação');
+    assert.ok(standard && custom);
+    assert.equal(standard.querySelector('.kds-agenda-task-copy strong')?.textContent, 'Cliente');
+    assert.equal(standard.querySelector('.kds-agenda-task-copy small')?.textContent?.trim(), 'Follow-up');
+    assert.equal(custom.querySelector('.kds-agenda-task-copy strong')?.textContent, 'Conferir documentação');
+    assert.ok(custom.querySelector('.kds-agenda-task-copy small')?.textContent?.includes('Cliente'));
+    assert.ok(standard.querySelector('time'));
+    assert.ok(standard.querySelector('.kds-record-actions button'));
+    assert.equal(mocks.update.mock.calls.length, 0);
+  } finally { view.unmount(); }
+});

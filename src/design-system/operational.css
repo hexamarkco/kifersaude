@@ -2166,12 +2166,26 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-agenda-task-time[data-overdue="true"] { color: var(--danger-text); }
 .kds-agenda-day-body .kds-agenda-task-row {
   grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "check copy menu" "check copy time";
   padding-inline: 0;
-  column-gap: var(--space-1);
-  row-gap: var(--space-1);
+  column-gap: var(--space-2);
+  row-gap: 0;
 }
-.kds-agenda-day-body .kds-agenda-task-time { grid-column: 2; }
-.kds-agenda-day-body .kds-record-actions { grid-column: 3; grid-row: 1 / span 2; }
+.kds-agenda-day-body .kds-agenda-task-row > .kds-checkbox-target { grid-area: check; align-self: center; }
+.kds-agenda-day-body .kds-agenda-task-row > .kds-agenda-task-copy { grid-area: copy; align-self: center; }
+.kds-agenda-day-body .kds-agenda-task-row > .kds-agenda-task-time {
+  grid-area: time;
+  justify-self: end;
+  align-self: start;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.kds-agenda-day-body .kds-agenda-task-row > .kds-record-actions {
+  grid-area: menu;
+  align-self: end;
+  justify-self: end;
+}
+.kds-agenda-day-body .kds-agenda-task-copy strong > svg { display: inline-block; vertical-align: middle; margin-inline-end: var(--space-1); }
 .kds-agenda-selected-day .kds-empty, .kds-agenda-task-list .kds-empty { border: 0; }
 .kds-agenda-selected-day .kds-empty { padding: var(--space-8) var(--space-2); }
 .kds-agenda-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
@@ -2718,9 +2732,6 @@ body:has(.kds-ai-editor-drawer) .kds-toast-viewport { bottom: calc(6rem + env(sa
 .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-task-row { min-height: var(--record-table-row-height); padding-block: var(--space-3); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-task-copy { font: var(--type-record-body); }
 .painel-theme.kifer-ds.kds-workspace-theme :is(.kds-agenda-task-copy small,.kds-agenda-task-time) { font: var(--type-record-secondary); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body .kds-agenda-task-row { grid-template-columns: auto minmax(0,1fr) auto; row-gap: var(--space-1); }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body .kds-agenda-task-time { grid-column: 3; grid-row: 1; align-self: center; }
-.painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-day-body .kds-record-actions { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-toolbar-count { font: var(--type-toolbar-caption); }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page .kds-record-actions .kds-icon-button { border-color: transparent; box-shadow: none; }
 .painel-theme.kifer-ds.kds-workspace-theme .kds-agenda-page .kds-record-actions .kds-icon-button:hover { border-color: transparent; background: var(--bg-hover); }

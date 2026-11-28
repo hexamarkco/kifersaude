@@ -1075,6 +1075,9 @@ export default function AgendaScreen() {
     const typeLabel = getReminderTypeLabel(reminder.tipo);
     const leadName = lead?.nome_completo;
     const compactLeadTitle = compact && leadName && reminder.titulo.trim() === `${typeLabel}: ${leadName}` ? leadName : null;
+    const leadAlreadyInTitle = Boolean(compact && leadName && (compactLeadTitle || reminder.titulo.trim() === leadName || [`${leadName} — `, `${leadName} – `, `${leadName}: `, `${leadName} - `].some((prefix) => reminder.titulo.trim().startsWith(prefix))));
+    const timeLabel = overdue ? "Atrasado" : showDay ? `${dueDay.slice(8, 10)}/${dueDay.slice(5, 7)} · ${dueTime}` : dueTime || "Sem horário";
+    const reminderTime = <time className="kds-agenda-task-time" data-overdue={overdue} dateTime={reminder.data_lembrete} title={dueDay ? formatDateTimeFullBR(reminder.data_lembrete) : undefined}>{timeLabel}</time>;
     const actions: RecordAction[] = [
       { label: "Ver detalhes", menuGroup: "Lembrete", icon: Eye, onClick: () => setDetailId(reminder.id) },
     ];
@@ -1106,17 +1109,16 @@ export default function AgendaScreen() {
     return (
       <article key={reminder.id} className="kds-agenda-task-row" data-completed={reminder.lido}>
         <Checkbox touchTarget checked={reminder.lido} disabled={busy} aria-label={`${reminder.lido ? "Reabrir" : "Concluir"} ${reminder.titulo}`} onChange={() => void handleMarkAsRead(reminder.id, reminder.lido)} />
-        <ActionSurface variant="plain" padding="none" className="kds-agenda-task-copy" onClick={() => setDetailId(reminder.id)}>
-          <strong>{compactLeadTitle ? <><LeadFavoriteBadge favorito={lead?.favorito} />{compactLeadTitle}</> : reminder.titulo}</strong>
+        <ActionSurface variant="plain" padding="none" className="kds-agenda-task-copy" title={compact ? reminder.titulo : undefined} onClick={() => setDetailId(reminder.id)}>
+          <strong>{leadAlreadyInTitle && <LeadFavoriteBadge favorito={lead?.favorito} />}{compactLeadTitle || reminder.titulo}</strong>
           <small>
-            {!compactLeadTitle && lead?.nome_completo && <><LeadFavoriteBadge favorito={lead.favorito} />{lead.nome_completo}<span aria-hidden="true">·</span></>}
-            {!lead?.nome_completo && contract?.codigo_contrato && <>{contract.codigo_contrato}<span aria-hidden="true">·</span></>}
+            {!leadAlreadyInTitle && lead?.nome_completo && <><LeadFavoriteBadge favorito={lead.favorito} />{lead.nome_completo}<span aria-hidden="true">{compact ? " · " : "·"}</span></>}
+            {!lead?.nome_completo && contract?.codigo_contrato && <>{contract.codigo_contrato}<span aria-hidden="true">{compact ? " · " : "·"}</span></>}
             {typeLabel}
+            {compact && <><span aria-hidden="true"> · </span>{reminderTime}</>}
           </small>
         </ActionSurface>
-        <time className="kds-agenda-task-time" data-overdue={overdue} dateTime={reminder.data_lembrete} title={dueDay ? formatDateTimeFullBR(reminder.data_lembrete) : undefined}>
-          {overdue ? "Atrasado" : showDay ? `${dueDay.slice(8, 10)}/${dueDay.slice(5, 7)} · ${dueTime}` : dueTime || "Sem horário"}
-        </time>
+        {!compact && reminderTime}
         <RecordActions label={`Ações de ${reminder.titulo}`} actions={actions} visibleCount={0} />
       </article>
     );

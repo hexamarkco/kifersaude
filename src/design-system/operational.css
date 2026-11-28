@@ -2185,10 +2185,12 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
   gap: var(--space-1);
 }
 .kds-agenda-day-body .kds-agenda-task-copy strong {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kds-agenda-day-body .kds-agenda-task-copy small {
   display: block;

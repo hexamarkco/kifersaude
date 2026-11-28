@@ -2260,6 +2260,22 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 
 @media (min-width: 1100px) {
   .kds-month-layout { grid-template-columns: minmax(0, 1fr) minmax(15rem, 18.75rem); }
+
+  /* Let the calendar determine the row height, not the number of reminders. */
+  .kds-agenda-workspace-grid.kds-month-layout > .kds-agenda-selected-day {
+    contain: size;
+    align-self: stretch;
+    min-block-size: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+  .kds-agenda-workspace-grid.kds-month-layout .kds-agenda-day-body {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
 }
 @media (max-width: 639px) {
   .kds-agenda-status-switcher .kds-tab { padding-inline: var(--space-2); font: var(--type-label); }

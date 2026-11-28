@@ -200,19 +200,25 @@ test('painel do dia evita repetir o contato em títulos padronizados, preservand
   mocks.reminders = [
     { ...pendingReminder('standard'), titulo: 'Follow-up: Cliente' },
     { ...pendingReminder('custom'), titulo: 'Conferir documentação' },
+    { ...pendingReminder('named'), titulo: 'Cliente — conferir resposta e avaliar pausa' },
   ];
   const view = render(<AgendaScreen />);
   try {
-    await waitForAgenda(() => document.querySelectorAll('.kds-agenda-day-body .kds-agenda-task-row').length === 2);
+    await waitForAgenda(() => document.querySelectorAll('.kds-agenda-day-body .kds-agenda-task-row').length === 3);
     const rows = [...document.querySelectorAll('.kds-agenda-day-body .kds-agenda-task-row')];
     const standard = rows.find((row) => row.querySelector('input')?.getAttribute('aria-label') === 'Concluir Follow-up: Cliente');
     const custom = rows.find((row) => row.querySelector('input')?.getAttribute('aria-label') === 'Concluir Conferir documentação');
     assert.ok(standard && custom);
     assert.equal(standard.querySelector('.kds-agenda-task-copy strong')?.textContent, 'Cliente');
-    assert.equal(standard.querySelector('.kds-agenda-task-copy small')?.textContent?.trim(), 'Follow-up');
+    assert.ok(standard.querySelector('.kds-agenda-task-copy small')?.textContent?.trim().startsWith('Follow-up · '));
+    const named = rows.find((row) => row.querySelector('input')?.getAttribute('aria-label') === 'Concluir Cliente — conferir resposta e avaliar pausa');
+    assert.ok(named);
+    assert.equal(named.querySelector('.kds-agenda-task-copy strong')?.textContent, 'Cliente — conferir resposta e avaliar pausa');
+    assert.ok(!named.querySelector('.kds-agenda-task-copy small')?.textContent?.includes('Cliente'));
+    assert.equal(named.querySelector('.kds-agenda-task-copy')?.getAttribute('title'), 'Cliente — conferir resposta e avaliar pausa');
     assert.equal(custom.querySelector('.kds-agenda-task-copy strong')?.textContent, 'Conferir documentação');
     assert.ok(custom.querySelector('.kds-agenda-task-copy small')?.textContent?.includes('Cliente'));
-    assert.ok(standard.querySelector('time'));
+    assert.ok(standard.querySelector('.kds-agenda-task-copy small time'));
     assert.ok(standard.querySelector('.kds-record-actions button'));
     assert.equal(mocks.update.mock.calls.length, 0);
   } finally { view.unmount(); }

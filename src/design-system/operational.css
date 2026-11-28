@@ -2166,26 +2166,50 @@ details[open] > .kds-disclosure-trigger .kds-disclosure-chevron { transform: rot
 .kds-agenda-task-time[data-overdue="true"] { color: var(--danger-text); }
 .kds-agenda-day-body .kds-agenda-task-row {
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "check copy menu" "check copy time";
+  grid-template-areas: "check copy menu";
   padding-inline: 0;
   column-gap: var(--space-2);
   row-gap: 0;
+  align-items: start;
 }
-.kds-agenda-day-body .kds-agenda-task-row > .kds-checkbox-target { grid-area: check; align-self: center; }
-.kds-agenda-day-body .kds-agenda-task-row > .kds-agenda-task-copy { grid-area: copy; align-self: center; }
-.kds-agenda-day-body .kds-agenda-task-row > .kds-agenda-task-time {
-  grid-area: time;
-  justify-self: end;
+.kds-agenda-day-body .kds-agenda-task-row > .kds-checkbox-target {
+  grid-area: check;
   align-self: start;
+  min-width: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+}
+.kds-agenda-day-body .kds-agenda-task-row > .kds-agenda-task-copy {
+  grid-area: copy;
+  align-self: center;
+  width: 100%;
+  gap: var(--space-1);
+}
+.kds-agenda-day-body .kds-agenda-task-copy strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.kds-agenda-day-body .kds-agenda-task-copy small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.kds-agenda-day-body .kds-agenda-task-time {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .kds-agenda-day-body .kds-agenda-task-row > .kds-record-actions {
   grid-area: menu;
-  align-self: end;
+  align-self: start;
   justify-self: end;
 }
-.kds-agenda-day-body .kds-agenda-task-copy strong > svg { display: inline-block; vertical-align: middle; margin-inline-end: var(--space-1); }
+.kds-agenda-day-body .kds-agenda-task-copy strong > span { margin-inline-end: var(--space-1); }
+@media (pointer: coarse) {
+  .kds-agenda-day-body .kds-agenda-task-row > .kds-checkbox-target {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}
 .kds-agenda-selected-day .kds-empty, .kds-agenda-task-list .kds-empty { border: 0; }
 .kds-agenda-selected-day .kds-empty { padding: var(--space-8) var(--space-2); }
 .kds-agenda-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
